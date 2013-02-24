@@ -255,7 +255,7 @@
 //v class Note promeni nf na nf_id --done
 
 //>iz4istvane na licencing-a --done
-//version control
+//version control --done
 
 //da ima i izbirane na papka kato za beli hora
 
