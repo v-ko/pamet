@@ -1,0 +1,5 @@
+
+MisliInstance handles everything
+
+main()+all:
+
