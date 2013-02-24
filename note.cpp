@@ -28,6 +28,9 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
     ry2=y-b-0.01;
     if(move_on){return 0;}
 
+    move_orig_x=x;
+    move_orig_y=y;
+
     //Init drawing tools
     double A = a*FONT_TRANSFORM_FACTOR;
     double B = b*FONT_TRANSFORM_FACTOR;

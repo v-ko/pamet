@@ -1,24 +1,12 @@
 /* This program is licensed under GNU GPL . For the full notice see the
  * license.txt file or google the full text of the GPL*/
 
-#include <unistd.h>
-#include <QDir>
-
 #include "misliinstance.h"
-#include "getdirwindow.h"
-#include "noteswindow.h"
-#include "getnfname.h"
-#include "notefile.h"
-#include "../../petko10.h"
-#include "../../petko10q.h"
-
-#include "common.h"
-
 
 MisliInstance::MisliInstance(int md,QString nts_dir)
 {
     //Make objects
-    dir_w = new GetDirWindow(this);
+    dir_w = new GetDirDialogue(this);
     edit_w = new EditNoteWindow(this);
     get_nf_name_w = new GetNFName(this);
     nt_w = new NotesWindow(this);

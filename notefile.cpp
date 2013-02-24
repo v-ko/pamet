@@ -141,7 +141,14 @@ qstr=line;
         }
 
         if(!strcmp(cstr,"dt_made")){
-            dt_made.fromString(QString(q_get_text_between(line,'=',0,MAX_STRING_LENGTH)),"d,M,yyyy");
+            qstr=q_get_text_between(line,'=',0,MAX_STRING_LENGTH);
+            dt_made=dt_made.fromString(qstr,"d.M.yyyy");
+            continue;
+        }
+
+        if(!strcmp(cstr,"dt_mod")){
+            qstr=q_get_text_between(line,'=',0,MAX_STRING_LENGTH);
+            dt_mod=dt_mod.fromString(qstr,"d.M.yyyy");
             continue;
         }
     }
@@ -331,7 +338,7 @@ void NoteFile::find_free_ids()
 Note *NoteFile::add_note_base(MisliInstance *m_i,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //common parameters for all addnote functions
 
 Note nt;
-QDate dt_default(2012,11,18);//date of introduction of the property
+QDate dt_default(2013,2,23);//date on which I fixed the property ... (I introduced it ~18.11.2012)
 
 if(!dt_made.isValid()){dt_made=dt_default;}
 if(!dt_mod.isValid()){dt_mod=dt_default;}

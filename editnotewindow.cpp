@@ -94,6 +94,12 @@ void EditNoteWindow::input_done(){
     QString qstr = text_edit->toPlainText().trimmed();
     char *text=strdup(qstr.toUtf8().data());
 
+    if(qstr.size()>600){
+        QMessageBox mb(QMessageBox::Warning,"Too much text","This note is more than 600 characters . This would slow down the program . This limitation won't be in the next release",QMessageBox::Ok);
+        mb.exec();
+        return;
+    }
+
     float x,y;
     Note *nt;
 

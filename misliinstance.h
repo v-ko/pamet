@@ -6,13 +6,24 @@
 
 #include <QWidget>
 #include <QString>
+#include <unistd.h>
+
 #include <QSettings>
+#include <QDir>
+
+#include "../../petko10.h"
+#include "../../petko10q.h"
 
 #include "noteswindow.h"
-#include "getdirwindow.h"
-#include "editnotewindow.h"
+#include "getdirdialogue.h"
 #include "getnfname.h"
+#include "editnotewindow.h"
 #include "helpwindow.h"
+
+#include "notefile.h"
+#include "common.h"
+
+class GetDirDialogue;
 
 class MisliInstance : public QWidget
 {
@@ -22,7 +33,6 @@ public:
     //Functions
     MisliInstance(int md,QString nts_dir = 0); //0 = no visualisation ; 1 = normal
     int check_settings();
-    int get_dir();
     int make_notes_file(const char*);
     void set_current_notes(int);
     NoteFile * nf_by_id(int);
@@ -36,7 +46,7 @@ public:
 
 
     //Window classes
-    GetDirWindow *dir_w;
+    GetDirDialogue *dir_w;
     GetNFName *get_nf_name_w;
     NotesWindow *nt_w;
     GLWidget *gl_w;

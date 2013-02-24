@@ -293,6 +293,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
     int y = event->y();
 
     if(event->modifiers()==Qt::ControlModifier){ctrl_is_pressed=1;}else ctrl_is_pressed=0;
+    if(event->modifiers()==Qt::ShiftModifier){shift_is_pressed=1;}else shift_is_pressed=0;
 
         if (event->button()==Qt::LeftButton) { //on left button
 
@@ -324,22 +325,16 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 
                 }
 
-                nt_for_resize=get_note_clicked_for_resize(x,y);
-                if (nt_for_resize!=NULL){ // -----------RESIZE---------------
-                    resize_on=1;
-                    resize_x=nt_for_resize->x;
-                    resize_y=nt_for_resize->y;
-                    return;
-                }
 
+
+                //----------SELECT------------
                 nt_under_mouse = get_note_under_mouse(x,y);
 
-                if( !ctrl_is_pressed ) { //ako ne e natisnat ctrl iz4istvame selection-a
+                if( (!ctrl_is_pressed) && (!shift_is_pressed) ) { //ako ne e natisnat ctrl iz4istvame selection-a
                     misl_i->curr_nf()->clear_note_selection();
                     misl_i->curr_nf()->clear_link_selection();
                 }
 
-                //----------SELECT------------
                 ln_under_mouse = get_link_under_mouse(x,y); //Za linkove
                 if (ln_under_mouse!=NULL){
                     ln_under_mouse->selected=1;
@@ -347,14 +342,37 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 
                 if (nt_under_mouse!=NULL){ //Za notes
 
-                    nt_under_mouse->selected=1;
+                    if(nt_under_mouse->selected){
+                        nt_under_mouse->selected=0;
+                    }else {
+                        nt_under_mouse->selected=1;
+                    }
+
                     move_x=x-nt_under_mouse->x;
                     move_y=y-nt_under_mouse->y;
-                    nt_under_mouse->move_orig_x=nt_under_mouse->x; //za da moje da se mestqt pove4e ednovremenno trqbva da im se pazi pyrvona4alnata poziciq prez mesteneto
-                    nt_under_mouse->move_orig_y=nt_under_mouse->y;
+                    //nt_under_mouse->move_orig_x=nt_under_mouse->x; //za da moje da se mestqt pove4e ednovremenno trqbva da im se pazi pyrvona4alnata poziciq prez mesteneto
+                    //nt_under_mouse->move_orig_y=nt_under_mouse->y;
+
+                    if(shift_is_pressed){
+                        nt_under_mouse->selected=1;
+                        for(unsigned int i=0;i<nt_under_mouse->outlink.size();i++){ //select all child notes
+                            misl_i->nf_by_id(nt_under_mouse->nf_id)->get_note_by_id(nt_under_mouse->outlink[i].id)->selected=1;
+                        }
+                    }
+
                     timed_out_move=1;
                     move_func_timeout->start(MOVE_FUNC_TIMEOUT);
 
+                }
+
+                // -----------RESIZE---------------
+                nt_for_resize=get_note_clicked_for_resize(x,y);
+                if (nt_for_resize!=NULL){
+                    nt_for_resize->selected=1;
+                    resize_on=1;
+                    resize_x=nt_for_resize->x;
+                    resize_y=nt_for_resize->y;
+                    return;
                 }
 
         }
@@ -372,14 +390,15 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event)
         PushLeft = 0;
 
         if(move_on){
+            move_on=0;
             for(unsigned int i=0;i<curr_note->size();i++){
                 if((*curr_note)[i].selected){
                     (*curr_note)[i].z=0;
+                    (*curr_note)[i].init();
                     (*curr_note)[i].correct_links(); //korigirame linkovete
                 }
             }
             misl_i->curr_nf()->save(); //save na novite pozicii
-            move_on=0;
 
         }else if (resize_on){
 

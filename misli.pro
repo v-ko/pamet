@@ -17,7 +17,6 @@ CONFIG += console
 SOURCES += main.cpp\
         noteswindow.cpp \
     misliinstance.cpp \
-    getdirwindow.cpp \
     notefile.cpp \
     note.cpp \
     glwidget.cpp \
@@ -27,11 +26,11 @@ SOURCES += main.cpp\
     getnfname.cpp \
     helpwindow.cpp \
     common.cpp \
-    ../../petko10q.cpp
+    ../../petko10q.cpp \
+    getdirdialogue.cpp
 
 HEADERS  += noteswindow.h \
     misliinstance.h \
-    getdirwindow.h \
     notefile.h \
     note.h \
     glwidget.h \
@@ -41,7 +40,8 @@ HEADERS  += noteswindow.h \
     getnfname.h \
     helpwindow.h \
     common.h \
-    ../../petko10q.h
+    ../../petko10q.h \
+    getdirdialogue.h
 
 OTHER_FILES += \
     program_logic.txt \
@@ -62,3 +62,6 @@ unix{
 }
 
 RESOURCES +=   misli.qrc
+
+FORMS += \
+    getdirdialogue.ui

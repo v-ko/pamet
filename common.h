@@ -23,7 +23,7 @@ extern int EkranY;
 extern int XonPush,YonPush,PushLeft; //poziciq na mi6kata pri natiskane na buton
 extern float EyeXOnPush,EyeYOnPush;
 extern int current_mouse_x,current_mouse_y;
-extern bool ctrl_is_pressed;
+extern bool ctrl_is_pressed,shift_is_pressed;
 extern bool timed_out_move,move_on,resize_on;
 //extern int current_note_file;
 extern float note_x,note_y;

@@ -257,29 +257,33 @@
 //>iz4istvane na licencing-a --done
 //version control --done
 
-//da ima i izbirane na papka kato za beli hora
+//BUG:da ima i izbirane na papka kato za beli hora --done
 
-//opravqne na algoritma za orazmerqvane
-//vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
+//prevodi na angl i bg
+//na pyrviq prozorec da ima belejka za F1 i link kym pokaznoto video (ili napravo da se otvarq browser tab)vj qtdesktopservices::openurl
 
-//cvetove: sinio,zeleno,4erveno,sivo,4erno,prazno
-//link file-ove s tekst razli4en ot imeto na file (text: atribut na nov red)
+//ubuntu application
+//sourceforge
 
-//gledai za promeni v papkata i reload-vai
-
-//napravi paketirane
+//----release ver1+build na Win------------------------------------------
 
 //klip4e s predstavqne
 
-//na pyrviq prozorec da ima belejka za F1 i link kym pokaznoto video (ili napravo da se otvarq browser tab)vj qtdesktopservices::openurl
+//BUG:opravqne na algoritma za orazmerqvane na teksta
 
+//nqkolko direktorii da mogat da se vkarvat (s menu za smqna?)
+//gledai za promeni v papkata i reload-vai
 
-// release ver 1
+//za dolnite vij shemata v misli/misli
+//>vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
+//>cvetove: sinio,zeleno,4erveno,sivo,4erno,prazno
+//>link file-ove s tekst razli4en ot imeto na file (text: atribut na nov red)
 
-//build na Win
-
+//BUG:pri orazmerqvane na neselektirana zapiska se orazmerqva selektiranata
 
 //-------------Late features--------------------:
+//command line reset - ako se preebe kato pri kosio
+//Search + tags
 //>avtoorazmerqvane na nova zapiska
 //kontekstovi menu-ta s edit/delete...
 //>config window i vkarvane na raznite #definirani ne6ta v settings
@@ -292,11 +296,14 @@
 //>opravqne skysqvaneto na teksta v linkovete
 //>risuvane text-a na linkovete
 //>link position set (auto,left,right,top,bottom)+ izvivane
+//>zapiski po4ervenqva6ti s datata
+//ako nqma zapiski na ekrana - naso4vane kym nai-blizkite
+//keyboard navigation (sys centrirane na mi6kata ako se polzva za da izlizat zapiskite v centyra)
 
 
 //>da opravq render funkciqta 4e e mn skalypena
 //>>BUG:pusni depth bufera za da ne sa strelkite pod senkite
-
+//BUG: strelkite ne si update-vat posokata (na vyrhovete samo) pri mestene
 
 //>semi-kanonizirane na koda
 //>translations
