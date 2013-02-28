@@ -9,30 +9,39 @@
 #include <QtOpenGL>
 
 #include "glwidget.h"
-#include "common.h"
-#include "misliinstance.h"
-#include "../../petko10.h"
+#include "misliwindow.h"
 
 #ifndef GL_MULTISAMPLE
 #define GL_MULTISAMPLE  0x809D
 #endif
 
-GLWidget::GLWidget(MisliInstance *m_i)
+GLWidget::GLWidget(MisliWindow *msl_w_)
     : QGLWidget(QGLFormat(QGL::SampleBuffers|QGL::AlphaChannel|QGL::DepthBuffer))
 {
     //Random
-    misl_i=m_i;
-    font.setFamily("Halvetica");
-    //makeCurrent();
-    //initializeGL ();
+    msl_w=msl_w_;
+    mouse_note=NULL;
+    PushLeft=0;
+    timed_out_move=0;
+    move_on=0;
+    resize_on=0;
 
-    setMouseTracking(1);
+    eye.x=0;
+    eye.y=0;
+    eye.z=100;
+    eye.scenex=0;
+    eye.sceney=0;
+    eye.scenez=0;
+    eye.upx=0;
+    eye.upy=1;
+    eye.upz=0;
 
     //Setting the timer for the move_func
     move_func_timeout = new QTimer(this);
     move_func_timeout->setSingleShot(1);
     connect(move_func_timeout, SIGNAL(timeout()), this, SLOT(move_func()));
 
+    setMouseTracking(1);
 }
 
 GLWidget::~GLWidget()
@@ -41,6 +50,45 @@ GLWidget::~GLWidget()
 QSize GLWidget::sizeHint() const
 {
     return QSize(1000, 700);
+}
+
+NotesVector * GLWidget::curr_note()
+{
+    if(msl_w->notes_rdy){
+        return msl_w->curr_misli()->curr_nf()->note;
+    }
+    else {
+        d("tyrsi current note dokato nqma gotovi zapiski");
+        exit (6666);
+    }
+}
+
+MisliInstance * GLWidget::misl_i()
+{
+    if(msl_w->notes_rdy){
+        return msl_w->curr_misli();
+    }
+    else {
+        d("tyrsi current note dokato nqma gotovi zapiski");
+        exit (6666);
+    }
+}
+
+void GLWidget::set_eye_coords_from_curr_nf()
+{
+    eye.x=misl_i()->curr_nf()->eye_x;
+    eye.y=misl_i()->curr_nf()->eye_y;
+    eye.z=misl_i()->curr_nf()->eye_z;
+    eye.scenex=misl_i()->curr_nf()->eye_x;
+    eye.sceney=misl_i()->curr_nf()->eye_y;
+    eye.scenez=0;
+}
+
+void GLWidget::save_eye_coords_to_nf()
+{
+    misl_i()->curr_nf()->eye_x=eye.x;
+    misl_i()->curr_nf()->eye_y=eye.y;
+    misl_i()->curr_nf()->eye_z=eye.z;
 }
 
 void GLWidget::startGLState()//not in use
@@ -103,9 +151,6 @@ void GLWidget::initializeGL() //the init is distributed so that function is ommi
 
 void GLWidget::setupViewport(int width, int height)
 {
-    EkranX=width;
-    EkranY=height; //they get used by the function that calculates the "drag to move around" action
-
     glViewport(0, 0, width, height);
 
     glMatrixMode(GL_PROJECTION); //otvarqme proekcionnata matrica
@@ -118,12 +163,12 @@ void GLWidget::setupViewport(int width, int height)
 
 void GLWidget::paintGL()
 {
-    if(!misl_i->notes_rdy){
-        glClearColor(1, 1, 1, 1);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        misl_i->nt_w->setWindowTitle("Loading notefiles...");
+    if(!msl_w->notes_rdy){
+        //glClearColor(1, 1, 1, 1);
+        //glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         return;
     }
+
 
     //glEnable( GL_DEPTH_TEST );
 
@@ -147,9 +192,9 @@ void GLWidget::paintGL()
     glGetDoublev(GL_PROJECTION_MATRIX, projection);
     glGetIntegerv(GL_VIEWPORT, viewport);
 
-    for(unsigned int i=0;i<curr_note->size();i++){
+    for(unsigned int i=0;i<curr_note()->size();i++){
 
-        nt=&(*curr_note)[i];
+        nt=&(*curr_note())[i];
 
         x=nt->x;//text coordinates
         y=nt->y;
@@ -285,7 +330,7 @@ void GLWidget::resizeGL(int width, int height)
 
 void GLWidget::mousePressEvent(QMouseEvent *event)
 {
-    if(!misl_i->notes_rdy){return;}
+    if(!msl_w->notes_rdy){return;}
 
     updateGL();//don't put at the end , return get's called earlier in some cases
 
@@ -316,7 +361,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
                     if(nt_under_mouse!=NULL){
                         set_linking_off();
                         nt_under_mouse->link_to_selected();
-                        misl_i->curr_nf()->save();
+                        misl_i()->curr_nf()->save();
                         return;
                     }else{ //if there's no note under the mouse
                         set_linking_off();
@@ -331,8 +376,8 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
                 nt_under_mouse = get_note_under_mouse(x,y);
 
                 if( (!ctrl_is_pressed) && (!shift_is_pressed) ) { //ako ne e natisnat ctrl iz4istvame selection-a
-                    misl_i->curr_nf()->clear_note_selection();
-                    misl_i->curr_nf()->clear_link_selection();
+                    misl_i()->curr_nf()->clear_note_selection();
+                    misl_i()->curr_nf()->clear_link_selection();
                 }
 
                 ln_under_mouse = get_link_under_mouse(x,y); //Za linkove
@@ -356,7 +401,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
                     if(shift_is_pressed){
                         nt_under_mouse->selected=1;
                         for(unsigned int i=0;i<nt_under_mouse->outlink.size();i++){ //select all child notes
-                            misl_i->nf_by_id(nt_under_mouse->nf_id)->get_note_by_id(nt_under_mouse->outlink[i].id)->selected=1;
+                            misl_i()->nf_by_id(nt_under_mouse->nf_id)->get_note_by_id(nt_under_mouse->outlink[i].id)->selected=1;
                         }
                     }
 
@@ -382,7 +427,7 @@ void GLWidget::mousePressEvent(QMouseEvent *event)
 }
 void GLWidget::mouseReleaseEvent(QMouseEvent *event)
 {
-    if(!misl_i->notes_rdy){return;}
+    if(!msl_w->notes_rdy){return;}
 
     if (event->button()==Qt::LeftButton) { //on left button
 
@@ -391,27 +436,27 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event)
 
         if(move_on){
             move_on=0;
-            for(unsigned int i=0;i<curr_note->size();i++){
-                if((*curr_note)[i].selected){
-                    (*curr_note)[i].z=0;
-                    (*curr_note)[i].init();
-                    (*curr_note)[i].correct_links(); //korigirame linkovete
+            for(unsigned int i=0;i<curr_note()->size();i++){
+                if((*curr_note())[i].selected){
+                    (*curr_note())[i].z=0;
+                    (*curr_note())[i].init();
+                    (*curr_note())[i].correct_links(); //korigirame linkovete
                 }
             }
-            misl_i->curr_nf()->save(); //save na novite pozicii
+            misl_i()->curr_nf()->save(); //save na novite pozicii
 
         }else if (resize_on){
 
-            for(unsigned int i=0;i<curr_note->size();i++){
-                if((*curr_note)[i].selected){
-                    (*curr_note)[i].correct_links(); //korigirame linkovete
+            for(unsigned int i=0;i<curr_note()->size();i++){
+                if((*curr_note())[i].selected){
+                    (*curr_note())[i].correct_links(); //korigirame linkovete
                 }
             }
-            misl_i->curr_nf()->save(); //save na novite razmeri
+            misl_i()->curr_nf()->save(); //save na novite razmeri
             resize_on=0;
         }
         else { //normal move about the canvas
-            misl_i->save_eye_coords_to_nf();
+            misl_i()->gl_w->save_eye_coords_to_nf();
         }
     }
     updateGL();
@@ -419,7 +464,7 @@ void GLWidget::mouseReleaseEvent(QMouseEvent *event)
 }
 void GLWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if(!misl_i->notes_rdy){return;}
+    if(!msl_w->notes_rdy){return;}
 
     Note *nt;
 
@@ -429,11 +474,11 @@ void GLWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
         if(nt!=NULL){ //if we've clicked on a note
             if(nt->type==1){ //if it's a valid redirecting note
-                misl_i->set_current_notes(misl_i->nf_by_name(nt->short_text)->id); //change notefile
+                msl_w->curr_misli()->set_current_notes(msl_w->curr_misli()->nf_by_name(nt->short_text)->id); //change notefile
             }
         }
         else {//if not on note
-            misl_i->edit_w->new_note();
+            msl_w->edit_w->new_note();
         }
     }
 updateGL();
@@ -441,7 +486,7 @@ updateGL();
 
 void GLWidget::wheelEvent(QWheelEvent *event)
 {
-    if(!misl_i->notes_rdy){return;}
+    if(!msl_w->notes_rdy){return;}
 
     int numDegrees = event->delta() / 8;
     int numSteps = numDegrees / 15;
@@ -455,7 +500,8 @@ void GLWidget::wheelEvent(QWheelEvent *event)
 }
 void GLWidget::mouseMoveEvent(QMouseEvent *event)
 {
-    if(!misl_i->notes_rdy){return;}
+    //d("report move");
+    if(!msl_w->notes_rdy){return;}
 
     double scr_x,scr_y,scr_z,scr2_x,scr2_y,nt_x,nt_y,m_x,m_y,d_x,d_y,t_x,t_y;
 
@@ -468,39 +514,40 @@ void GLWidget::mouseMoveEvent(QMouseEvent *event)
     if(PushLeft){
         if(move_on){
 
-            for(unsigned int i=0;i<curr_note->size();i++){
-                if((*curr_note)[i].selected){
-                    project_from_plane((*curr_note)[i].move_orig_x+move_x,(*curr_note)[i].move_orig_y+move_y,0,scr_x,scr_y,scr_z);//poziciq na mi6kata pri natiskaneto (pri mnogo obekti vseki si ima teoreti4na takava,za tova ne se polzva x_on_push)
+            for(unsigned int i=0;i<curr_note()->size();i++){
+                if((*curr_note())[i].selected){
+                    project_from_plane((*curr_note())[i].move_orig_x+move_x,(*curr_note())[i].move_orig_y+move_y,0,scr_x,scr_y,scr_z);//poziciq na mi6kata pri natiskaneto (pri mnogo obekti vseki si ima teoreti4na takava,za tova ne se polzva x_on_push)
                     scr2_x=scr_x+x-XonPush;//poziciq na mi6kata v momenta (pak teoreti4na za vseki obekt, realna za tozi ot koito e trygnalo mesteneto)
                     scr2_y=scr_y+y-YonPush;
                     unproject_to_plane(0,scr2_x,scr2_y,nt_x , nt_y); //namirame realnata poziciq na mi6kata
-                    (*curr_note)[i].x=nt_x-move_x; //ot neq vadim move za namirane na ygyla na kutiqta na note-a
-                    (*curr_note)[i].y=nt_y-move_y;
-                    (*curr_note)[i].init();
-                    (*curr_note)[i].correct_links(); //korigirame linkovete
+                    (*curr_note())[i].x=nt_x-move_x; //ot neq vadim move za namirane na ygyla na kutiqta na note-a
+                    (*curr_note())[i].y=nt_y-move_y;
+                    (*curr_note())[i].init();
+                    (*curr_note())[i].correct_links(); //korigirame linkovete
                 }
             }
 
         }else if(resize_on){
 
-            for(unsigned int i=0;i<curr_note->size();i++){
-                if((*curr_note)[i].selected){
+            for(unsigned int i=0;i<curr_note()->size();i++){
+                if((*curr_note())[i].selected){
 
                     unproject_to_plane(0,x,y,m_x,m_y);
                     d_x=m_x-resize_x;
                     d_y=resize_y-m_y;
 
-                    (*curr_note)[i].a=stop(d_x,3,1000);
+                    (*curr_note())[i].a=stop(d_x,3,1000);
 
-                    (*curr_note)[i].b=stop(d_y,1.3,1000);
-                    (*curr_note)[i].init();
-                    (*curr_note)[i].correct_links(); //korigirame linkovete
+                    (*curr_note())[i].b=stop(d_y,1.3,1000);
+                    (*curr_note())[i].init();
+                    (*curr_note())[i].correct_links(); //korigirame linkovete
                 }
             }
 
         }else{
+
         float xrel=x-XonPush,yrel=y-YonPush;
-        float s1=(float(EkranY)/2)/tan(float(AngleOfSight)/2*pi/180); //razstoqnie do ekrana (t.e. ekvivalenta na ekrana v koord sistema)
+        float s1=(float(size().height())/2)/tan(float(AngleOfSight)/2*pi/180); //razstoqnie do ekrana (t.e. ekvivalenta na ekrana v koord sistema)
         float s=eye.scenez - eye.z; //razstoqnie do realnata ravnina
             eye.x=EyeXOnPush+xrel*s/s1;
             eye.y=EyeYOnPush-yrel*s/s1;
@@ -524,20 +571,20 @@ Note *GLWidget::get_note_under_mouse(int x , int y){
 
 GLdouble rx1,ry1,rx2,ry2,rz;
 
-for(unsigned int i=0;i<curr_note->size();i++){
+for(unsigned int i=0;i<curr_note()->size();i++){
 
-    rx1=(*curr_note)[i].rx1; //koordinati na poleto
-    ry1=(*curr_note)[i].ry1;
-    rx2=(*curr_note)[i].rx2;
-    ry2=(*curr_note)[i].ry2;
-    rz=(*curr_note)[i].z;
+    rx1=(*curr_note())[i].rx1; //koordinati na poleto
+    ry1=(*curr_note())[i].ry1;
+    rx2=(*curr_note())[i].rx2;
+    ry2=(*curr_note())[i].ry2;
+    rz=(*curr_note())[i].z;
 
     project_from_plane(rx1,ry1,rz,rx1,ry1,rz); //yglite na kutiqta
     project_from_plane(rx2,ry2,rz,rx2,ry2,rz);
 
 
     if( point_intersects_with_rectangle(float(x),float(y),rx1,ry1,rx2,ry2)) {
-        return &(*curr_note)[i];
+        return &(*curr_note())[i];
     }
 
 }
@@ -548,25 +595,25 @@ Note *GLWidget::get_note_clicked_for_resize(int x , int y){
 
 GLdouble rx1,ry1,rx2,ry2,ryy,rz,rrz,radius_x,scr_radius,r;
 Note nt;
-for(unsigned int i=0;i<curr_note->size();i++){
+for(unsigned int i=0;i<curr_note()->size();i++){
 
-    rx1=(*curr_note)[i].rx1; //koordinati na poleto
-    ry1=(*curr_note)[i].ry1;
-    rx2=(*curr_note)[i].rx2;
-    ry2=(*curr_note)[i].ry2;
-    rz=(*curr_note)[i].z;
-nt=(*curr_note)[i];
+    rx1=(*curr_note())[i].rx1; //koordinati na poleto
+    ry1=(*curr_note())[i].ry1;
+    rx2=(*curr_note())[i].rx2;
+    ry2=(*curr_note())[i].ry2;
+    rz=(*curr_note())[i].z;
+nt=(*curr_note())[i];
     radius_x=rx2+double(CLICK_RADIUS);
 
     project_from_plane(rx1,ry1,rz,rx1,ry1,rrz); //yglite na kutiqta
     project_from_plane(rx2,ry2,rz,rx2,ry2,rz);
-    project_from_plane(radius_x,(*curr_note)[i].ry2,(*curr_note)[i].z,radius_x,ryy,rz); //to4ka ot radiusa na kryga za resize koqto 6te polzvame da vidim kolko e radiusa na ekrana
+    project_from_plane(radius_x,(*curr_note())[i].ry2,(*curr_note())[i].z,radius_x,ryy,rz); //to4ka ot radiusa na kryga za resize koqto 6te polzvame da vidim kolko e radiusa na ekrana
 
     scr_radius=mod(radius_x-rx2); //radiusa na kryga na ekrana
     r=mod(dottodot(rx2,ry2,float(x),float(y)));
 
     if(r<=scr_radius){ //ako mi6kata e v kryga za resize(razst ot neq do ygyla na kutiqta e po-malko ot radiusa na kryga)
-        return &(*curr_note)[i]; //za da ne se opitva da mesti ili selectira i t.n.
+        return &(*curr_note())[i]; //za da ne se opitva da mesti ili selectira i t.n.
     }
 
 }
@@ -580,9 +627,9 @@ double a,b,c,h,m_x,m_y;
 
 unproject_to_plane(0,x,y,m_x,m_y);
 
-for(unsigned int i=0;i<curr_note->size();i++){
-    for(unsigned int l=0;l<(*curr_note)[i].outlink.size();l++){
-        ln=&(*curr_note)[i].outlink[l];
+for(unsigned int i=0;i<curr_note()->size();i++){
+    for(unsigned int l=0;l<(*curr_note())[i].outlink.size();l++){
+        ln=&(*curr_note())[i].outlink[l];
         a=dottodot3(ln->x1,ln->y1,ln->z1,ln->x2,ln->y2,ln->z2);
         b=dottodot3(m_x,m_y,0,ln->x2,ln->y2,ln->z2);
         c=dottodot3(m_x,m_y,0,ln->x1,ln->y1,ln->z1);
@@ -600,12 +647,17 @@ return NULL;
 
 void GLWidget::move_func(){ //ako sled opredelenoto vreme mi6kata e na sy6toto mqsto i time_out_move ne e izkl (pri vdigane na butona) se vdiga flag-a za move
 
-    if( (timed_out_move && PushLeft ) && ( (XonPush==current_mouse_x) && (YonPush==current_mouse_y) ) ){
+    int x=current_mouse_x;
+    int y=current_mouse_y;
+
+    if( (timed_out_move && PushLeft ) && ( (XonPush==x) && (YonPush==y) ) ){
+
+        get_note_under_mouse(x,y)->selected=1; //to pickup a selected note with control pressed (not to deselect it)
         move_on=1;
-        for(unsigned int i=0;i<curr_note->size();i++){
-            if((*curr_note)[i].selected){
-                    (*curr_note)[i].z=move_z;
-                    (*curr_note)[i].correct_links(); //korigirame linkovete
+        for(unsigned int i=0;i<curr_note()->size();i++){
+            if((*curr_note())[i].selected){
+                    (*curr_note())[i].z=move_z;
+                    (*curr_note())[i].correct_links(); //korigirame linkovete
             }
         }
     }
@@ -620,8 +672,8 @@ void GLWidget::set_linking_on()
     int y = current_mouse_y;
     double t_x,t_y;
 
-    if(misl_i->curr_nf()->get_first_selected_note()!=NULL && mouse_note==NULL){
-        mouse_note=misl_i->curr_nf()->add_note(misl_i,"L",t_x,t_y,0,1,1,1,QDate(1,1,1),QDate(1,1,1));
+    if(misl_i()->curr_nf()->get_first_selected_note()!=NULL && mouse_note==NULL){
+        mouse_note=misl_i()->curr_nf()->add_note(misl_i(),"L",t_x,t_y,0,1,1,1,QDate(1,1,1),QDate(1,1,1));
         unproject_to_plane(0,x,y,t_x,t_y);
         mouse_note->x=t_x;
         mouse_note->y=t_y;
@@ -630,7 +682,7 @@ void GLWidget::set_linking_on()
 }
 void GLWidget::set_linking_off()
 {
-    misl_i->curr_nf()->delete_note(mouse_note);
+    misl_i()->curr_nf()->delete_note(mouse_note);
     mouse_note=NULL;
 }
 
@@ -681,4 +733,96 @@ gluProject(x_on_plane,y_on_plane,z_plane,modelview, projection, viewport,&x,&y,&
 y = viewport[3]-y;
 
 return 0;
+}
+
+int GLWidget::copy()
+{
+    NoteFile *clipnf=msl_w->curr_misli()->clipboard_nf();
+    int err=0;
+    int x=current_mouse_x;
+    int y=current_mouse_y;
+
+    while(clipnf->get_lowest_id_note()!=NULL){ //delete all notes in clipnf
+        clipnf->delete_note(clipnf->get_lowest_id_note());
+    }
+
+    err+=msl_w->curr_misli()->copy_selected_notes(msl_w->curr_misli()->curr_nf(),clipnf ); //dumm copy the selected notes
+
+    //make coordinates relative
+    if(get_note_under_mouse(x,y)!=NULL){ //to the note under the mouse if there's one
+        clipnf->make_coords_relative_to(get_note_under_mouse(x,y)->x,get_note_under_mouse(x,y)->y);
+    }else {
+        clipnf->make_coords_relative_to(clipnf->get_lowest_id_note()->x,clipnf->get_lowest_id_note()->y);
+    }
+
+    return err;
+}
+int GLWidget::cut()
+{
+    int err=0;
+
+    err+=copy();
+    err+=msl_w->curr_misli()->delete_selected();
+
+    return err;
+}
+int GLWidget::paste()
+{
+    NoteFile *nf=msl_w->curr_misli()->clipboard_nf();
+    Note *nt;
+    Link *ln;
+    double x,y;
+    int old_id;
+
+    //Make all the id-s negative (and select all notes)
+    for(unsigned int n=0;n<nf->note->size();n++){ //for every note
+        nt=&(*nf->note)[n];
+        nt->id = -nt->id;
+        nt->selected=1;//for the copy later
+
+        for(unsigned int l=0;l<nt->outlink.size();l++){
+            ln=&nt->outlink[l];
+            ln->id= -ln->id;
+        }
+        for(unsigned int in=0;in<nt->inlink.size();in++){ //for every inlink
+            nt->inlink[in]= -nt->inlink[in]; //if it has the old id - set it up with the new one
+        }
+    }
+
+    //Make coordinates relative to the mouse
+    x=current_mouse_x; //get mouse coords
+    y=current_mouse_y;
+    unproject_to_plane(0,x,y,x,y); //translate them to real GL coords
+    nf->make_coords_relative_to(-x,-y);
+
+    //Copy the notes over to the target
+    msl_w->curr_misli()->copy_selected_notes(nf,msl_w->curr_misli()->curr_nf());
+
+    //return clipboard notes' coordinates to 0
+    nf->make_coords_relative_to(x,y);
+
+    nf=msl_w->curr_misli()->curr_nf();
+
+    //Replace the negative id-s with real ones
+    for(unsigned int n=0;n<nf->note->size();n++){ //for every note
+        nt=&(*nf->note)[n];
+        old_id = nt->id;
+        nt->id = nf->get_new_id();
+
+        //Fix the id-s in the links
+        for(unsigned int i=0;i<nf->note->size();i++){ //for every note
+            for(unsigned int l=0;l<(*nf->note)[i].outlink.size();l++){ //for every outlink
+                ln=&(*nf->note)[i].outlink[l];
+                if(ln->id==old_id){ ln->id=nt->id ; } //if it has the old id - set it up with the new one
+            }
+            for(unsigned int in=0;in<(*nf->note)[i].inlink.size();in++){ //for every inlink
+                if((*nf->note)[i].inlink[in]==old_id){ (*nf->note)[i].inlink[in]=nt->id ; } //if it has the old id - set it up with the new one
+            }
+        }
+        nt->init();
+        nt->init_links();
+    }
+
+    nf->save();
+    return 0;
 }

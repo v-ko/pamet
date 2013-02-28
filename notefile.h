@@ -14,14 +14,14 @@ class NoteFile { // all notes and supporting elements (info) for a note file
 public:
     //Variables
     int id; //reserved ids: -1=clipboard nf
-    char *name;
+    QString name;
     NotesVector *note;
     int last_note_id;
-    std::vector<std::string> comment; //komentarite vyv file-a
+    std::vector<QString> comment; //komentarite vyv file-a
     std::vector<int> free_id; //komentarite vyv file-a
-    char *full_file_addr;
+    QString full_file_addr;
     MisliInstance *misl_i;
-    double eye_x,eye_y,eye_z;
+    float eye_x,eye_y,eye_z;
     std::vector<std::string> *nf_z; //history of the notefile
     bool is_displayed_first_on_startup;
 
@@ -36,26 +36,24 @@ public:
     void make_coords_relative_to(double x,double y);
     int get_new_id();
 
-    Note *add_note_base(MisliInstance *m_i,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
-    Note *add_note(MisliInstance *m_i,int id,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
-    Note *add_note(MisliInstance *m_i,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
+    Note *add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
+    Note *add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
+    Note *add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
     Note *add_note(Note* nt);
 
     int delete_note(Note *);
     int delete_note(unsigned int);
     int delete_selected();
 
-    int init(MisliInstance*,const char*,const char*);
+    int init(MisliInstance*, QString, QString);
+    int init(MisliInstance*, QString, QString, int id);
     int init(NoteFile* nf);
     int init_links();
     int init_notes();
+    int virtual_save();
     int save();
     void set_to_current();
     void find_free_ids();
-
-    //File parser
-    //new_vaule()
-    //read_value(int i);
 
 };
 

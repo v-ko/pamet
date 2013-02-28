@@ -16,42 +16,60 @@
 
 #include "../../petko10.h"
 
+Note::Note()
+{
+    x=0;
+    y=0;
+    z=0;
+    a=10;
+    b=4;
+    font_size=1;
+    selected=false;
+    nf_id=0;
+    type=0;
+}
+
 int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie nakraq + vkarva koordinatite na kutiqta
 
     int resized=0;
 
-    //Random
+    //---------Random-----------
 
-    rx1=x-0.01; //koordinati na poleto
+    //Coordinates for the note rectangle
+    rx1=x-0.01;
     ry1=y+0.01;
     rx2=x+a+0.01;
     ry2=y-b-0.01;
-    if(move_on){return 0;}
+
+    if(misl_i->using_external_classes){
+        if(misl_i->gl_w->move_on){return 0;}
+    }
+
 
     move_orig_x=x;
     move_orig_y=y;
 
-    //Init drawing tools
+    //-------Init drawing tools----------
     double A = a*FONT_TRANSFORM_FACTOR;
     double B = b*FONT_TRANSFORM_FACTOR;
 
-    //printf("A,B:%f,%f\n",A,B);
     QRectF rect(0,0,A,B),rect2;
     QImage pixm(A,B,QImage::Format_ARGB32);
+
     QPainter p(&pixm);
     QFont font("Halvetica");font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
-    font.setStyleStrategy(QFont::StyleStrategy(0x0080)); //style aliasing
+    font.setStyleStrategy(QFont::PreferAntialias); //QFont::StyleStrategy(0x0080)); //style aliasing
     p.setFont(font);
 
     //=========Shortening the text in the box=============
-    QString txt = QString::fromUtf8(text);
+    QString txt = text;
 
     //Check if we have a link to a file
     if (txt.startsWith(QString("this_note_points_to:"))){
-        txt=q_get_text_between(txt.toUtf8().data(),':',0,200); //get text between ":" and the end
+        txt=q_get_text_between(txt,':',0,200); //get text between ":" and the end
         txt=txt.trimmed(); //remove white spaces from both sides
         type=1;
-        if(misl_i->nf_by_name(txt.toUtf8().data())==NULL){//if we have a wrong/missing name
+        if(misl_i->nf_by_name(txt)==NULL){//if we have a wrong/missing name
             type=-1;
             txt="missing note file";
         }
@@ -73,28 +91,31 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         txt+="...";
     }
     after_shortening:
-    short_text=strdup(txt.toUtf8().data());
+    short_text=txt;
 
-    //Drawing the text into the pixmap
 
-    p.setPen(QColor(0,0,255,255)); //set color
-    p.setBrush(Qt::SolidPattern); // set fill style
-    pixm.fill(QColor(0,0,0,0)); //clear color to 0
-    p.drawText(rect,Qt::TextWordWrap | Qt::AlignCenter,QString::fromUtf8(short_text));
-    p.end();
 
-    //if(id==1){//sample for testing
-    //    d("saving texture");
-    //    if (!pixm.save("/home/Pepi/C++/misli/note.jpg")){d("bad save");}
-   // }
+    if(misl_i->using_external_classes){
+        //Drawing the text into the pixmap
 
-    //Loading it as a texture in GL
-    glEnable( GL_TEXTURE_2D );
-        texture=misl_i->gl_w->bindTexture(pixm,GL_TEXTURE_2D,GL_RGBA,QGLContext::DefaultBindOption);
-        //glBindTexture(GL_TEXTURE_2D,texture); //the manual way pixelates for some reason
-        //pixm=QGLWidget::convertToGLFormat(pixm);
-        //gluBuild2DMipmaps(GL_TEXTURE_2D, 4, pixm.width(), pixm.height(),GL_RGBA, GL_UNSIGNED_BYTE, pixm.bits());
-    glDisable( GL_TEXTURE_2D );
+        p.setPen(QColor(0,0,255,255)); //set color
+        p.setBrush(Qt::SolidPattern); // set fill style
+        pixm.fill(QColor(0,0,0,0)); //clear color to 0
+        p.drawText(rect,Qt::TextWordWrap | Qt::AlignCenter,short_text);
+        p.end();
+
+        //if(id==1){//sample for testing
+        //    d("saving texture");
+        //    if (!pixm.save("/home/Pepi/C++/misli/note.jpg")){d("bad save");}
+        //}
+        //Loading it as a texture in GL
+        glEnable( GL_TEXTURE_2D );
+            texture=misl_i->gl_w->bindTexture(pixm,GL_TEXTURE_2D,GL_RGBA,QGLContext::DefaultBindOption);
+            //glBindTexture(GL_TEXTURE_2D,texture); //the manual way pixelates for some reason
+            //pixm=QGLWidget::convertToGLFormat(pixm);
+            //gluBuild2DMipmaps(GL_TEXTURE_2D, 4, pixm.width(), pixm.height(),GL_RGBA, GL_UNSIGNED_BYTE, pixm.bits());
+        glDisable( GL_TEXTURE_2D );
+    }
 
     return 0;
 
@@ -108,15 +129,6 @@ Link *ln;
 
 lx1=rx2-(rx2-rx1)/2; //koordinati na sredata na poleto (izpolzvam gi za linkovete)
 ly1=ry2-(ry2-ry1)/2;
-
-//for(unsigned int n=0;n<outlink.size();n++){
-//    //find the target note
-//    ln = &outlink[n];
-//    nf = misl_i->nf_by_id(nf);
-//    nt = nf->get_note_by_id(ln->id);
-//    //add the link
-//    nt->inlink.push_back(id);
-//}
 
 for(unsigned int n=0;n<outlink.size();n++){
 
@@ -211,7 +223,8 @@ work_string.resize(res);
 work_string+="...";
 }
 ln->short_text=strdup(work_string.c_str());
-*/ln->short_text=strdup(ln->text);
+*/
+    //ln->short_text=strdup(ln->text);
 
 
 }
@@ -237,7 +250,7 @@ int Note::link_to_selected(){
 
 if(nf_id!=misl_i->current_note_file){d("bad call for link_to_selected");exit(1);} //if the function is called for a note that's not displayed
 
-Link ln=null_link;
+Link ln;
 
 for(unsigned int i=0;i<misl_i->curr_note->size();i++){ //za vseki note ot current
     if((*misl_i->curr_note)[i].selected && ( (*misl_i->curr_note)[i].id != id ) ){ //ako e selectiran
@@ -255,12 +268,12 @@ return 0;
 
 int Note::add_link(Link *ln) //adds the link (+inlink), doesn't init it
 {
-    Link lnk=null_link;
+    Link lnk;
 
     if(misl_i->nf_by_id(nf_id)->get_note_by_id(ln->id)!=NULL){ //if the note at the given id exists - create the link
 
         lnk.id=ln->id;
-        lnk.text=strdup(ln->text);
+        lnk.text=ln->text;
         outlink.push_back(lnk); //in the note
 
         misl_i->nf_by_id(nf_id)->get_note_by_id(ln->id)->inlink.push_back(id); //in the target note

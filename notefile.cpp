@@ -13,229 +13,118 @@
 
 NoteFile::NoteFile()
 {
-    name=strdup("");
     last_note_id=0;
     is_displayed_first_on_startup=0;
+    eye_x=0;
+    eye_y=0;
+    eye_z=100;
+}
+int NoteFile::init(MisliInstance *m_i,QString ime,QString path){
+
+    m_i->last_nf_id++;
+    id=m_i->last_nf_id;
+
+    return init(m_i,ime,path,id);
 }
 
-/*NoteFile::NoteFile(MisliInstance *m_i, const char *ime, int idd)
-{
-    is_first=0;
-    full_file_addr=NULL;
-    last_note_id=idd;
-    misl_i=m_i;
-    id=-1; //not a real id , because it's a service object
-    misl_i->last_nf_id++;
-    name=strdup(ime);
-    note=new NotesVector;
+int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
+
+    //Tmp , function stuff
+    Link ln;
+    Note *nt,*target_nt;
+
+    QFile ntFile(path);
+    QString file,tmpqstr;
+    QByteArray qbytear;
+    QStringList lines,groups,group_names,l_id;
+
+    int err;
+
+    //-------------Note properties---------------------
+    int nt_id=0;
+    QString txt;
+    float x,y,z,a,b,font_size;
+    QDate dt_made,dt_mod;
+
+    //------------Class initialisations---------------
+    id=id_;
+    last_note_id=0;
+    misl_i=m_i; //eto tuk se preebava predniq notefile (comment,last note id i ime i note), po-to4no pointer-a na note-ovete v nego (nf) so4i kym preeban obekt ,na koito samo full_file_addr ba4ka
+
+    name=ime;
+    full_file_addr=path;
+
+    note = new NotesVector;
     nf_z = new std::vector<std::string>;
 
-}
-*/
-int NoteFile::init(MisliInstance *m_i,const char *ime,const char * path){
+    //----Open file------
+    if(!ntFile.open(QIODevice::ReadOnly)){d("error opening ntFile");exit(434);}
+    qbytear = ntFile.readAll();
+    ntFile.close();
+    file=file.fromUtf8(qbytear.data());
+    lines = file.split("\n",QString::SkipEmptyParts);
 
-//Tmp , function stuff
-Link ln;
-Note *nt,*target_nt;
-char line[MAX_LINE_LENGTH],*cstr;
-std::string tmpstr;
-std::fstream ntFile;
-bool new_note=0;
-int nt_id=0;
-QString qstr;
 
-//Note properties
-char *txt;
-double x,y,z,a,b,font_size;
-std::vector<int> l_id;
-std::vector<std::string> l_txt;
-QDate dt_made,dt_mod;
+    //=================The parser========================== da e funkciq
 
-//Class initialisations
-last_note_id=0;
-misl_i=m_i; //eto tuk se preebava predniq notefile (comment,last note id i ime i note), po-to4no pointer-a na note-ovete v nego (nf) so4i kym preeban obekt ,na koito samo full_file_addr ba4ka
-id=misl_i->last_nf_id;
-misl_i->last_nf_id++;
-name=strdup(ime);
-full_file_addr=strdup(path);
-note=new NotesVector;
-nf_z = new std::vector<std::string>;
-
-eye_x=eye.x;
-eye_y=eye.y;
-eye_z=eye.z;
-
-ntFile.open(path,std::ios_base::in);
-if(!ntFile.good()){d("error opening ntFile");exit(434);}
-
-int count=0;
-
-//The parser
-
-while(ntFile.getline(line,MAX_LINE_LENGTH)){ //get one line from the note file
-count++;
-qstr=line;
-
-    if(ntFile.fail()){d("error when resetting ntFile");}
-
-    tmpstr=line;
-
-    if(line[0]=='#'){ //if there's a comment
-        tmpstr=line;
-        comment.push_back(tmpstr);
-        continue;
-    }
-
-    if(qstr.startsWith("is_displayed_first_on_startup")){
-        is_displayed_first_on_startup=true;
-        continue;
-    }
-
-    if(line[0]=='['){ //if we encounter a bracket for a new group(=note=id)
-        if(new_note) add_note(misl_i,nt_id,txt,x,y,z,a,b,font_size,dt_made,dt_mod); //add the last note if there was one
-        new_note=1;
-        cstr=q_get_text_between(line,'[',']',20); //get the string with the id
-        nt_id=strtol(cstr,NULL,10); //convert to int
-        continue;
-    }
-
-    if(strstr(line,"=")!=NULL){ //if we're on a key-value pair
-        cstr=q_get_text_between(line,0,'=',20); //get text between the beginning of the line and the "="
-
-        if(!strcmp(cstr,"txt")){ //if cstr is equal to "txt"
-            txt=q_get_text_between(line,'=',0,MAX_STRING_LENGTH);
-            qstr=txt;
-            qstr.replace(QString("\\n"),QString("\n"));
-            txt=strdup(qstr.toStdString().c_str());
-            continue;
+    //-------Get the comments and tags--------
+    for(int i=0;i<lines.size();i++){ //for every line of text
+        if(lines[i].startsWith("#")){//if it's a comment
+            comment.push_back(lines[i]);
         }
-
-        if(!strcmp(cstr,"x")){
-            x=strtod(q_get_text_between(line,'=',0,100),NULL);
-            continue;
-        }
-
-        if(!strcmp(cstr,"y")){
-            y=strtod(q_get_text_between(line,'=',0,100),NULL);
-            continue;
-        }
-
-        if(!strcmp(cstr,"z")){
-            z=strtod(q_get_text_between(line,'=',0,100),NULL);
-            continue;
-        }
-
-        if(!strcmp(cstr,"a")){
-            a=strtod(q_get_text_between(line,'=',0,100),NULL);
-            continue;
-        }
-
-        if(!strcmp(cstr,"b")){
-            b=strtod(q_get_text_between(line,'=',0,100),NULL);
-            continue;
-        }
-
-        if(!strcmp(cstr,"font_size")){
-            font_size=strtod(q_get_text_between(line,'=',0,100),NULL);
-            continue;
-        }
-
-        if(!strcmp(cstr,"dt_made")){
-            qstr=q_get_text_between(line,'=',0,MAX_STRING_LENGTH);
-            dt_made=dt_made.fromString(qstr,"d.M.yyyy");
-            continue;
-        }
-
-        if(!strcmp(cstr,"dt_mod")){
-            qstr=q_get_text_between(line,'=',0,MAX_STRING_LENGTH);
-            dt_mod=dt_mod.fromString(qstr,"d.M.yyyy");
+        if(lines[i].startsWith("is_displayed_first_on_startup")){
+            is_displayed_first_on_startup=true;
             continue;
         }
     }
 
-}if(new_note){add_note(misl_i,nt_id,txt,x,y,z,a,b,font_size,dt_made,dt_mod);} //add the last note
 
-ntFile.clear(); //reset file position and flags
-ntFile.seekg (0);
-if(!ntFile.good()){
-    d("error when resetting ntFile");exit(434);
+    //------Extract the groups(notes)----------
+    if(q_get_groups(file,group_names,groups)!=1){d("error when extracting the groups");exit(43);}
+
+
+    for(int i=0;i<groups.size();i++){ //get the notes
+
+        nt_id = group_names[i].toInt();
+
+        err += q_get_value_for_key(groups[i],"txt",txt);
+            txt.replace(QString("\\n"),QString("\n"));
+        err += q_get_value_for_key(groups[i],"x",x);
+        err += q_get_value_for_key(groups[i],"y",y);
+        err += q_get_value_for_key(groups[i],"z",z);
+        err += q_get_value_for_key(groups[i],"a",a);
+        err += q_get_value_for_key(groups[i],"b",b);
+        err += q_get_value_for_key(groups[i],"font_size",font_size);
+        err += q_get_value_for_key(groups[i],"dt_made",tmpqstr);
+            dt_made=dt_made.fromString(tmpqstr,"d.M.yyyy");
+        err += q_get_value_for_key(groups[i],"dt_mod",tmpqstr);
+            dt_mod=dt_mod.fromString(tmpqstr,"d.M.yyyy");
+
+        add_note(misl_i,nt_id,txt,x,y,z,a,b,font_size,dt_made,dt_mod);
+
     }
 
-count=0;
+    for(int i=0;i<groups.size();i++){ //get the notes
 
-//A second loop to get the link info (needs to be separate for the links to have their target notes created)
-while(ntFile.getline(line,MAX_LINE_LENGTH)){
-count++;
+        nt_id = group_names[i].toInt();
+        nt=get_note_by_id(nt_id);
 
-    if(line[0]=='['){ //if we encounter a bracket for a new group (=note=id)
-        cstr=q_get_text_between(line,'[',']',20); //get the string with the id
-        nt_id=strtoul(cstr,NULL,10);
-        continue;
-    }
+        err += q_get_value_for_key(groups[i],"l_id",l_id);
 
-    if(strstr(line,"=")!=NULL){ //if we're on a key-value pair
-        cstr=q_get_text_between(line,0,'=',20);
+        for(int l=0;l<l_id.size();l++){ //getting the links in the notes
+            ln=Link(); //construct *clean that
+            ln.id=l_id[l].toInt(); //vkarvame id
+            nt->outlink.push_back(ln); //dobavqme linka
 
-        if(!strcmp(cstr,"l_id")){  // ------- L_ID------------------------
-            cstr=q_get_text_between(line,'=',0,MAX_STRING_LENGTH);
+            target_nt=get_note_by_id(ln.id); //namirame target note-a na tozi link
 
-            if(q_get_text_between(cstr,0,';',100)!=NULL){l_id.push_back(strtoul(q_get_text_between(cstr,0,';',100),NULL,10));} //get the target id of the first link
-            cstr=strstr(&cstr[1],";"); //moving to the first semicolon
-
-            while(q_get_text_between(cstr,';',';',100)!=NULL){
-                l_id.push_back(strtoul(q_get_text_between(cstr,';',';',100),NULL,10));
-                cstr=strstr(&cstr[1],";"); //moving past one semicolon
-            }
-            continue;
+            target_nt->inlink.push_back(nt->id); //vkarvame v inlist-a mu syotvetnoto id
         }
-
-        if(!strcmp(cstr,"l_txt")){ //-------L_TXT-----------------------
-            cstr=line;
-
-            if(q_get_text_between(cstr,'=',';',MAX_STRING_LENGTH)!=NULL){//get the target text of the first link
-                tmpstr=q_get_text_between(cstr,'=',';',100);
-                l_txt.push_back(tmpstr);
-                }
-
-            cstr=strstr(&cstr[1],";"); //moving to the first semicolon
-
-            while(q_get_text_between(cstr,';',';',MAX_STRING_LENGTH)!=NULL){
-                tmpstr=q_get_text_between(cstr,';',';',MAX_STRING_LENGTH);
-                l_txt.push_back(tmpstr);
-                cstr=strstr(&cstr[1],";"); //moving past one semicolon
-            }
-
-            if(l_id.size()!=l_txt.size()){ //debugging artefact
-                //int pd=l_id.size();
-                //int ptxt=l_txt.size();
-                d("problem - 4ete gre6no linkovete i se razminavat broq idta i txt-ta");
-                exit(666);}
-
-            nt=get_note_by_id(nt_id);
-            for(unsigned int l=0;l<l_id.size();l++){ //getting the links in the notes
-                ln=null_link; //zanulqvame
-                ln.id=l_id[l]; //vkarvame id
-                ln.text=strdup(l_txt[l].c_str()); //vkarvame text
-                nt->outlink.push_back(ln); //dobavqme linka
-
-                target_nt=get_note_by_id(l_id[l]); //namirame target note-a na tozi link
-                target_nt->inlink.push_back(nt->id); //vkarvame v inlist-a mu syotvetnoto id
-            }
-
-            l_id.clear();
-            l_txt.clear(); //on the last link parameter list we've done the recording in the Note-s and it's time to clear the vectors
-
-            continue;
-        }
-
     }
-
-}
 
 find_free_ids();
 
 init_links();
-ntFile.close();
 
 return id;
 }
@@ -260,17 +149,17 @@ int NoteFile::init_notes(){ //init all the links in the note_file notes
 
 return 0;
 }
-int NoteFile::save(){ //save the notes to their file
+
+int NoteFile::virtual_save(){ //save the notes to their file
 
 Note *nt;
 QString txt;
 
 std::stringstream sstr;
-std::fstream ntFile;
 
 for(unsigned int c=0;c<comment.size();c++){ //adding the comments
 
-    sstr<<comment[c]<<std::endl;
+    sstr<<comment[c].toUtf8().data()<<std::endl;
 
 }
 
@@ -285,15 +174,15 @@ for(unsigned int i=0;i<note->size();i++){
     sstr<<"["<<nt->id<<"]"<<std::endl;
     txt=nt->text;
     txt.replace(QString("\n"),QString("\\n"));
-    sstr<<"txt="<<txt.toStdString().c_str()<<std::endl;//toUtf8().data()
+    sstr<<"txt="<<nt->text.toStdString()<<std::endl;//
     sstr<<"x="<<nt->x<<std::endl;
     sstr<<"y="<<nt->y<<std::endl;
     sstr<<"z="<<nt->z<<std::endl;
     sstr<<"a="<<nt->a<<std::endl;
     sstr<<"b="<<nt->b<<std::endl;
     sstr<<"font_size="<<nt->font_size<<std::endl;
-    sstr<<"dt_made="<<nt->dt_made.toString("d.M.yyyy").toUtf8().data()<<std::endl;
-    sstr<<"dt_mod="<<nt->dt_mod.toString("d.M.yyyy").toUtf8().data()<<std::endl;
+    sstr<<"dt_made="<<nt->dt_made.toString("d.M.yyyy").toStdString()<<std::endl;
+    sstr<<"dt_mod="<<nt->dt_mod.toString("d.M.yyyy").toStdString()<<std::endl;
 
     sstr<<"l_id=";
     for(unsigned int l=0;l<nt->outlink.size();l++){
@@ -304,10 +193,10 @@ for(unsigned int i=0;i<note->size();i++){
     sstr<<"l_txt=";
     for(unsigned int l=0;l<nt->outlink.size();l++){
         //Remove ";"s from the text to avoid breaking the ini standard
-        txt=nt->outlink[l].text;
-        txt.replace(QString(";"),QString(":"));
+        nt->outlink[l].text.replace(QString(";"),QString(":"));;
+
         //Save the text
-        sstr<<nt->outlink[l].text<<";";
+        sstr<<nt->outlink[l].text.toStdString()<<";";
     }
     sstr<<std::endl;
 
@@ -318,11 +207,21 @@ if(nf_z->size()>MAX_UNDO_STEPS){ //max undo steps
     nf_z->erase(nf_z->begin()); //erase the oldest
 }
 
-if(full_file_addr==NULL){return 0;} //for example for the copyPasteCut nf
+misl_i->emit_current_nf_updated();
 
-ntFile.open(full_file_addr,std::ios_base::out);
-ntFile<<sstr.str();
-ntFile.close();
+return 0;
+}
+int NoteFile::save(){ //save the notes to their file
+
+    std::fstream ntFile;
+
+    virtual_save();
+
+    if(id>=0){ //for example for the copyPasteCut nf
+        ntFile.open(full_file_addr.toStdString().c_str(),std::ios_base::out);
+        ntFile<<nf_z->back();
+        ntFile.close();
+    }
 
 return 0;
 }
@@ -335,7 +234,7 @@ void NoteFile::find_free_ids()
     }
 }
 
-Note *NoteFile::add_note_base(MisliInstance *m_i,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //common parameters for all addnote functions
+Note *NoteFile::add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //common parameters for all addnote functions
 
 Note nt;
 QDate dt_default(2013,2,23);//date on which I fixed the property ... (I introduced it ~18.11.2012)
@@ -344,7 +243,7 @@ if(!dt_made.isValid()){dt_made=dt_default;}
 if(!dt_mod.isValid()){dt_mod=dt_default;}
 
 //Hard written stuff
-nt.text = strdup(text);
+nt.text = text;
 nt.x = x;
 nt.y = y;
 nt.z = z;
@@ -365,7 +264,7 @@ note->push_back(nt);
 return &(*note)[note->size()-1];
 
 }
-Note *NoteFile::add_note(MisliInstance *m_i,int id,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //import a note (one that has an id)
+Note *NoteFile::add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //import a note (one that has an id)
 
 //=======Dobavqne v programata=========
 
@@ -378,7 +277,7 @@ nt->init();
 
 return nt;
 }
-Note *NoteFile::add_note(MisliInstance *m_i,const char *text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //completely new note (assign new id)
+Note *NoteFile::add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //completely new note (assign new id)
 
 //=======Dobavqne v programata=========
 

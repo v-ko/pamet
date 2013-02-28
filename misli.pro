@@ -15,33 +15,33 @@ TEMPLATE = app
 CONFIG += console
 
 SOURCES += main.cpp\
-        noteswindow.cpp \
     misliinstance.cpp \
     notefile.cpp \
     note.cpp \
     glwidget.cpp \
     ../../petko10.cpp \
-    editnotewindow.cpp \
     link.cpp \
-    getnfname.cpp \
-    helpwindow.cpp \
-    common.cpp \
     ../../petko10q.cpp \
-    getdirdialogue.cpp
+    getdirdialogue.cpp \
+    editnotedialogue.cpp \
+    newnfdialogue.cpp \
+    misliwindow.cpp \
+    emitmynameaction.cpp
 
-HEADERS  += noteswindow.h \
+HEADERS  += \
     misliinstance.h \
     notefile.h \
     note.h \
     glwidget.h \
     ../../petko10.h \
-    editnotewindow.h \
     link.h \
-    getnfname.h \
-    helpwindow.h \
     common.h \
     ../../petko10q.h \
-    getdirdialogue.h
+    getdirdialogue.h \
+    editnotedialogue.h \
+    newnfdialogue.h \
+    misliwindow.h \
+    emitmynameaction.h
 
 OTHER_FILES += \
     program_logic.txt \
@@ -64,4 +64,10 @@ unix{
 RESOURCES +=   misli.qrc
 
 FORMS += \
-    getdirdialogue.ui
+    getdirdialogue.ui \
+    editnotedialogue.ui \
+    newnfdialogue.ui \
+    misliwindow.ui
+
+CODECFORTR = UTF-8
+TRANSLATIONS += ./translations/misli_bg.ts

@@ -1,15 +1,8 @@
 /* This program is licensed under GNU GPL . For the full notice see the
  * license.txt file or google the full text of the GPL*/
 
-#include <QApplication>
-#include <QFont>
+//LOG
 
-#include "common.h"
-#include "misliinstance.h"
-#include "note.h"
-#include "notefile.h"
-#include <GL/gl.h>
-//../../petko10.cpp
 //v momenta parse-vaneto na key file-a (notes.ini) ne raboti , ne se znae dali izob6to zapisvaneto v obekta KeyFile raboti , ta tova e naleja6toto - done
 //11.09.12 mai ima problem s razpredelqneto po redove --done
 //+ horizontalniqt razmer na bukvite ne e 1 i teksta ne syvpada s poleto /+ima funkciq za tova v FTGL --done
@@ -259,30 +252,48 @@
 
 //BUG:da ima i izbirane na papka kato za beli hora --done
 
-//prevodi na angl i bg
-//na pyrviq prozorec da ima belejka za F1 i link kym pokaznoto video (ili napravo da se otvarq browser tab)vj qtdesktopservices::openurl
+//nov parser - mnogo griji ima ... --done
 
-//ubuntu application
+//prevodi na angl i bg:--done
+//>nadpisi v programata --done
+//>>sloji tr navsqkyde --done
+//>>izpolzvai linguist za prevoda --done
+//>prevod na help NF --done
+//>izpolzvane na noviq help pri F1 --done
+
+//BUG:add new dir ne ba4ka --done
+
+//quit s Q --done
+//debugging (ebasi kolko zor be6e) --done
+
+//nqkolko direktorii da mogat da se vkarvat (s menu za smqna?)--done
+//remove current folder; --done
+//ezici v settings + translator-a --done
+
+//windows build
 //sourceforge
+//>setup git
+//>setup binary download
+
+//gledai za promeni v papkata i reload-vai
+
+//video za predstavqne na angl i bg
 
 //----release ver1+build na Win------------------------------------------
-
-//klip4e s predstavqne
+//razprostranenie
 
 //BUG:opravqne na algoritma za orazmerqvane na teksta
-
-//nqkolko direktorii da mogat da se vkarvat (s menu za smqna?)
-//gledai za promeni v papkata i reload-vai
+//BUG:pri orazmerqvane na neselektirana zapiska se orazmerqva selektiranata
 
 //za dolnite vij shemata v misli/misli
 //>vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
 //>cvetove: sinio,zeleno,4erveno,sivo,4erno,prazno
 //>link file-ove s tekst razli4en ot imeto na file (text: atribut na nov red)
 
-//BUG:pri orazmerqvane na neselektirana zapiska se orazmerqva selektiranata
+
 
 //-------------Late features--------------------:
-//command line reset - ako se preebe kato pri kosio
+//command line reset - ako se preebe kato pri kosio + kato udari nqkyde critical - da wipe-va settings
 //Search + tags
 //>avtoorazmerqvane na nova zapiska
 //kontekstovi menu-ta s edit/delete...
@@ -300,7 +311,7 @@
 //ako nqma zapiski na ekrana - naso4vane kym nai-blizkite
 //keyboard navigation (sys centrirane na mi6kata ako se polzva za da izlizat zapiskite v centyra)
 
-
+//da pomislq za max line lenght
 //>da opravq render funkciqta 4e e mn skalypena
 //>>BUG:pusni depth bufera za da ne sa strelkite pod senkite
 //BUG: strelkite ne si update-vat posokata (na vyrhovete samo) pri mestene
@@ -316,6 +327,7 @@
 //minimum resize da e kolkto 3 bukvi za x i kolkoto viso4inata na reda + spacing za y
 
 //Belejki:
+//pokazvaneto na message box predi splash screen-a go opravq mai
 //pri nf->save texta bi sledvalo da se obry6ta ne vyv std::string , a v utf8 , no tova dava gre6en output po nqkakva pri4ina
 //pri promeni v petko10.h/.cpp trqbva da update-vam ry4no win/linux
 //ideq : backlight (kato neonovite svetlini pod kolite) za note-ovete ,za da se razgrani4at nqkolko oblasti ot note-file-a vizualno (vsqka sys svoi cvqt)
@@ -324,61 +336,44 @@
 //pri promqna na vectora pointeri kym obekti v nego so4at kym s4upeni obekti
 //politikata za semicolon-i (to4ki zapetai) e ,4e v teksta na linkovete ne sa pozvoleni (obry6tat se na ":"), a v teksta na note ne pre4at
 
+
+#include <QApplication>
+#include <QSplashScreen>
+#include <QFont>
+#include <QTextCodec>
+
+#include "common.h"
+#include "misliwindow.h"
+#include "note.h"
+#include "notefile.h"
+
 int main(int argc, char *argv[])
 {
-    if(true){ //initial camera/eye position and setting up null stuff
-
-    //current_note_file=0;
-
-    eye.x=0;
-    eye.y=0;
-    eye.z=100;
-    eye.scenex=0;
-    eye.sceney=0;
-    eye.scenez=0;
-    eye.upx=0;
-    eye.upy=1;
-    eye.upz=0;
-
-    null_note.x=0;
-    null_note.y=0;
-    null_note.z=0;
-    null_note.a=10;
-    null_note.b=4;
-    null_note.font_size=1;
-    null_note.selected=false;
-    null_note.nf_id=0;
-    null_note.type=0;
-
-    //null_note_file.name=strdup("");
-    //null_note_file.last_note_id=0; ve4e sa v konstruktura
-
-    null_link.x1=0;
-    null_link.y1=0;
-    null_link.z1=0;
-    null_link.x2=0;
-    null_link.y2=0;
-    null_link.z2=0;
-    null_link.text=strdup(" ");
-
-    }
 
     QApplication a(argc, argv);
     QFont default_font("Halvetica"); //Arial
     a.setFont(default_font);// tva mai ni6to ne promenq6e
-    QPixmap pixmap(":/img/icon.png");
 
-    //QCoreApplication::setOrganizationName("misli");
-    //QCoreApplication::setOrganizationDomain() ;
     QCoreApplication::setApplicationName("misli");
+    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("utf8"));
+    QTextCodec::setCodecForTr(QTextCodec::codecForName("utf8"));
 
+    QTranslator translator;
+    QSettings settings;
+    if(settings.contains("language")){
+        QString qstr="misli_"+settings.value("language").toString();
+        translator.load(qstr,QString(":/translations/"));
+        a.installTranslator(&translator);
+    }
 
+    QPixmap pixmap(":/img/icon.png");
     QSplashScreen *splash = new QSplashScreen(pixmap);
     splash->show();
+    a.processEvents();
 
-    MisliInstance misli(1);
+    MisliWindow msl_w(&a);
 
-    splash->finish(misli.nt_w);
+    splash->finish(&msl_w);
 
     return a.exec();
 }

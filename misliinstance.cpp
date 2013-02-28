@@ -2,56 +2,56 @@
  * license.txt file or google the full text of the GPL*/
 
 #include "misliinstance.h"
+#include "misliwindow.h"
 
-MisliInstance::MisliInstance(int md,QString nts_dir)
+MisliInstance::MisliInstance(QString nts_dir, MisliWindow *msl_w_ = NULL)
 {
-    //Make objects
-    dir_w = new GetDirDialogue(this);
-    edit_w = new EditNoteWindow(this);
-    get_nf_name_w = new GetNFName(this);
-    nt_w = new NotesWindow(this);
-    gl_w=nt_w->gl_w;
-    help_w = new HelpWindow;
-
-    //Connect signals-slots
-    connect(this,SIGNAL(no_notes_dir()),dir_w,SLOT(show()));
-
-    connect(this,SIGNAL(settings_ready()),this,SLOT(init_notes_files()));
-
-    connect(this,SIGNAL(notes_ready()),this,SLOT(set_notes_ready()));
-    connect(this,SIGNAL(notes_ready()),this,SLOT(reinit_redirect_notes()));
-
     //Init
-    mode = md;
     notes_dir=nts_dir;
     current_note_file=0;
     last_nf_id=0;
-    notes_rdy=0;
-    gl_w->updateGL(); //if the first paint isn't called before the texture init for the texts there's a bug with the textures
-    check_settings();
+    msl_w=msl_w_;
+    if(msl_w==NULL){
+        using_external_classes=false;
+    }else{
+        using_external_classes=true;
+        gl_w=msl_w->gl_w;
+    }
+
+    error=0;
 
     //Creating the clipboard_nf (id=-1) which holds the notes on copy operations
-    note_file.push_back(null_note_file);
+    note_file.push_back(NoteFile());
     note_file.back().id=-1;
-    note_file.back().name=strdup("ClipboardNf");
+    note_file.back().name="ClipboardNf";
     note_file.back().misl_i=this;
-    note_file.back().full_file_addr=NULL;
     note_file.back().note = new NotesVector;
     note_file.back().nf_z = new std::vector<std::string>;
 
+    if(using_external_classes){
+
+        //Creating the help NF
+        QString qstr;
+        qstr=":/help/help_"+msl_w->language;
+        qstr+=".misl";
+        note_file.push_back(NoteFile());
+        note_file.back().init(this,"HelpNoteFile",qstr,-2);
+    }
+
+    init_notes_files();
 }
 
-void MisliInstance::set_notes_ready()
+void MisliInstance::emit_current_nf_switched()
 {
-    if(mode!=0){
-        nt_w->showMaximized();
-        notes_rdy=1;
+    if(using_external_classes){
+        msl_w->switch_current_nf();
     }
 }
-
-void MisliInstance::settings_ready_publ()
+void MisliInstance::emit_current_nf_updated()
 {
-    emit settings_ready();
+    if(using_external_classes){
+        msl_w->update_current_nf();
+    }
 }
 
 NoteFile * MisliInstance::nf_by_id(int id)
@@ -61,17 +61,15 @@ NoteFile * MisliInstance::nf_by_id(int id)
             return &note_file[i];
         }
     }
-    //d("vyrna se 0 na nf_by_id");
     return NULL;
 }
-NoteFile * MisliInstance::nf_by_name(const char * ime)
+NoteFile * MisliInstance::nf_by_name(QString name)
 {
     for(unsigned int i=0; i<note_file.size() ; i++){
-        if(!strcmp(note_file[i].name,ime)){
+        if(note_file[i].name==name){
             return &note_file[i];
         }
     }
-    //d("vyrna se 0 na nf_by_name");
     return NULL;
 }
 NoteFile * MisliInstance::curr_nf()
@@ -91,48 +89,19 @@ NoteFile * MisliInstance::default_nf_on_startup()
     return NULL;
 }
 
-int MisliInstance::check_settings() //loads the settings . Returns 0 on success.
+int MisliInstance::make_notes_file(QString name)
 {
-    //Settings
-    settings = new QSettings;
-
-    QString path=settings->value("notes_dir","no_dir").toString(); //get notes dir from settings
-    if(path=="no_dir" && notes_dir.isEmpty()){
-        emit no_notes_dir();
-        return 1;
-    }
-
-    if(!notes_dir.isEmpty()){ //manual override if the string at class init isn't null
-         path=notes_dir;
-    }
-
-    QDir dir(path);
-
-    if( !dir.exists() ){
-        emit no_notes_dir();
-        d("The notes directory specified in the settings file doesn't exist");
-        return 1;
-    }else {
-        notes_dir=dir.absolutePath();
-        emit settings_ready();
-    }
-
-    return 0;
-}
-
-int MisliInstance::make_notes_file(const char * name)
-{
-    std::fstream ntFile;
-    std::stringstream ss;
-    std::string filename;
     int err=1;
+    std::fstream ntFile;
 
+    if(nf_by_name(name)!=NULL){
+        return -1;
+    }
     err+=chdir(notes_dir.toStdString().c_str());
 
-    ss<<name<<".misl";
-    filename=ss.str();
+    name+=".misl";
 
-    ntFile.open(filename.c_str(),std::ios_base::out);
+     ntFile.open(name.toStdString().c_str(),std::ios_base::out);
     if(ntFile.fail()){err++;}
 
     ntFile<<"#Notes database for Misli"<<std::endl;
@@ -142,45 +111,33 @@ int MisliInstance::make_notes_file(const char * name)
     if(err!=true){d("error making new notes file");}
     return err;
 }
-void MisliInstance::set_eye_coords(double x, double y, double z)
-{
-    eye.x=x;
-    eye.y=y;
-    eye.z=z;
-    eye.scenex=x;
-    eye.sceney=y;
-    eye.scenez=0;
-}
-void MisliInstance::save_eye_coords_to_nf()
-{
-    curr_nf()->eye_x=eye.x;
-    curr_nf()->eye_y=eye.y;
-    curr_nf()->eye_z=eye.z;
-}
 
 void MisliInstance::set_current_notes(int n)
 {
-    if(n<0) return; //in order to not show system files to the user
-    QString txt;
+
+    if(nf_by_id(n)==NULL){
+        return;
+    }
+
     current_note_file=n;
     curr_note=nf_by_id(n)->note; //the one for this class
-    gl_w->curr_note=curr_note; //the one in gl_w (it's separate to keep the code shorter there)
-    //emit curr_nf_changed();
-    set_eye_coords(curr_nf()->eye_x,curr_nf()->eye_y,curr_nf()->eye_z);
-    txt="Misli - ";
-    //d(curr_nf()->name);
-    txt+=curr_nf()->name;
 
-    nt_w->setWindowTitle(txt);
+    emit_current_nf_switched();
 }
 
-int MisliInstance::next_nf()
+int MisliInstance::next_nf() //changes the current note file only to a non-system nf
 {
     for(unsigned int i=0;i<(note_file.size()-1);i++){ //for every notefile without the last one
-        if(current_note_file==note_file[i].id){//if it's the current one
-            set_current_notes(note_file[i+1].id);
-            gl_w->updateGL();
-            return 0;
+        if(current_note_file>=0){//if we're not on a system nf
+            if( (current_note_file==note_file[i].id) && (note_file[i+1].id>=0) ){//if it's the current one and the next is not a system one
+                set_current_notes(note_file[i+1].id);
+                return 0;
+            }
+
+        }else{//if we're on a system nf
+            if(note_file[i+1].id>=0){ //we switch to a random normal nf
+                set_current_notes(note_file[i+1].id);
+            }
         }
     }
 
@@ -188,16 +145,22 @@ int MisliInstance::next_nf()
 }
 int MisliInstance::previous_nf()
 {
-    for(unsigned int i=1;i<(note_file.size());i++){ //for every notefile without the firs one
-        if(current_note_file==note_file[i].id){//if it's the current one
-            set_current_notes(note_file[i-1].id);
-            gl_w->updateGL();
-            return 0;
+    for(unsigned int i=1;i<note_file.size();i++){ //for every notefile without the last one
+        if(current_note_file>=0){//if we're not on a system nf
+            if( (current_note_file==note_file[i].id) && (note_file[i-1].id>=0) ){//if it's the current one and the next is not a system one
+                set_current_notes(note_file[i-1].id);
+                return 0;
+            }
+        }else{//if we're on a system nf
+            if(note_file[i-1].id>=0){ //we switch to a random normal nf
+                set_current_notes(note_file[i-1].id);
+            }
         }
     }
 
     return 1;
 }
+
 
 int MisliInstance::undo()
 {
@@ -208,22 +171,20 @@ int MisliInstance::undo()
 
     if(curr_nf()->nf_z->size()>=2){
 
-        ntf.open(curr_nf()->full_file_addr,std::ios_base::out); //open file
+        ntf.open(curr_nf()->full_file_addr.toStdString().c_str(),std::ios_base::out); //open file
         curr_nf()->nf_z->pop_back(); //pop the current version
         ntf<<curr_nf()->nf_z->back(); //flush the first backup in
 
         ntf.close();
 
-
-        //note_file.push_back(null_note_file);
-        //new_nf=&note_file.back();
-
         set_current_notes(curr_nf()->init(this,curr_nf()->name,curr_nf()->full_file_addr)); //load the backup
         curr_nf()->nf_z=nfz;
 
-        gl_w->updateGL();
+        emit_current_nf_updated();
         return 0;
-    }else{return 1;}
+    }else{
+        return 1;
+    }
 
 }
 int MisliInstance::copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf) //dumm copy :same places same id-s
@@ -252,134 +213,41 @@ int MisliInstance::copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf) 
     }
     return 0;
 }
-int MisliInstance::copy()
-{
-    int err=0;
-    int x=gl_w->mapFromGlobal( QCursor::pos() ).x();
-    int y=gl_w->mapFromGlobal( QCursor::pos() ).y();
 
-    while(clipboard_nf()->get_lowest_id_note()!=NULL){ //delete all notes in clipboard_nf()
-        clipboard_nf()->delete_note(clipboard_nf()->get_lowest_id_note());
-    }
-
-    err+=copy_selected_notes(curr_nf(),clipboard_nf() ); //dumm copy the selected notes
-
-    //make coordinates relative
-    if(gl_w->get_note_under_mouse(x,y)!=NULL){ //to the note under the mouse if there's one
-        clipboard_nf()->make_coords_relative_to(gl_w->get_note_under_mouse(x,y)->x,gl_w->get_note_under_mouse(x,y)->y);
-    }else {
-        clipboard_nf()->make_coords_relative_to(clipboard_nf()->get_lowest_id_note()->x,clipboard_nf()->get_lowest_id_note()->y);
-    }
-
-    return err;
-}
-int MisliInstance::cut()
-{
-    int err=0;
-
-    err+=copy();
-    err+=delete_selected();
-
-    return err;
-}
-int MisliInstance::paste()
-{
-    NoteFile *nf=clipboard_nf();
-    Note *nt;
-    Link *ln;
-    double x,y;
-    int old_id;
-
-    //Make all the id-s negative (and select all notes)
-    for(unsigned int n=0;n<nf->note->size();n++){ //for every note
-        nt=&(*nf->note)[n];
-        nt->id = -nt->id;
-        nt->selected=1;//for the copy later
-
-        for(unsigned int l=0;l<nt->outlink.size();l++){
-            ln=&nt->outlink[l];
-            ln->id= -ln->id;
-        }
-        for(unsigned int in=0;in<nt->inlink.size();in++){ //for every inlink
-            nt->inlink[in]= -nt->inlink[in]; //if it has the old id - set it up with the new one
-        }
-    }
-
-    //Make coordinates relative to the mouse
-    x=gl_w->mapFromGlobal( QCursor::pos() ).x(); //get mouse coords
-    y=gl_w->mapFromGlobal( QCursor::pos() ).y();
-    gl_w->unproject_to_plane(0,x,y,x,y); //translate them to real GL coords
-    nf->make_coords_relative_to(-x,-y);
-
-    //Copy the notes over to the target
-    copy_selected_notes(clipboard_nf(),curr_nf());
-
-    //return clipboard notes' coordinates to 0
-    nf->make_coords_relative_to(x,y);
-
-    nf=curr_nf();
-
-    //Replace the negative id-s with real ones
-    for(unsigned int n=0;n<nf->note->size();n++){ //for every note
-        nt=&(*nf->note)[n];
-        old_id = nt->id;
-        nt->id = nf->get_new_id();
-
-        //Fix the id-s in the links
-        for(unsigned int i=0;i<nf->note->size();i++){ //for every note
-            for(unsigned int l=0;l<(*nf->note)[i].outlink.size();l++){ //for every outlink
-                ln=&(*nf->note)[i].outlink[l];
-                if(ln->id==old_id){ ln->id=nt->id ; } //if it has the old id - set it up with the new one
-            }
-            for(unsigned int in=0;in<(*nf->note)[i].inlink.size();in++){ //for every inlink
-                if((*nf->note)[i].inlink[in]==old_id){ (*nf->note)[i].inlink[in]=nt->id ; } //if it has the old id - set it up with the new one
-            }
-        }
-        nt->init();
-        nt->init_links();
-    }
-
-    nf->save();
-    gl_w->updateGL();
-    return 0;
-}
 int MisliInstance::init_notes_files()
 {
     QDir dir(notes_dir);
     NoteFile *nf;
 
-    QStringList strl = dir.entryList();
-    std::vector<QString> entry_list = strl.toVector().toStdVector(); //I know vectors ,so why not
+    QStringList entry_list = dir.entryList();
     QString entry,file_addr;
 
-    int n=-1;
-    for(unsigned int i=0;i<entry_list.size();i++){
+    int file_found=false;
+
+    for(int i=0;i<entry_list.size();i++){
 
         entry=entry_list[i];
 
-        if(entry.size()==0) break;
+        if(entry.isEmpty()) break;
 
         if( entry.endsWith(QString(".misl")) ){ //only for .misl files
 
-            n++;
-
-            file_addr=dir.absoluteFilePath(entry);
-            entry=q_get_text_between(entry.toUtf8().data(),0,'.',200);
+            file_addr = dir.absoluteFilePath(entry);
+            entry.chop(5); // ".misl".size()==5
             entry=entry.trimmed();
 
-            note_file.push_back(null_note_file);  //new object . It's important to make it first , because when the
-                                                //notes get added they get a pointer to their parent note file and if
-                                                //that's nf it gets destructed on function end..then Seg.F.
+            note_file.push_back(NoteFile());
             nf=&note_file.back();
 
-            nf->init(this,entry.toUtf8().data(),file_addr.toUtf8().data());
-            nf->save(); //should be only virtual save for ctrl-z
+            nf->init(this,entry,file_addr);
+            nf->virtual_save(); //should be only a virtual save for ctrl-z
 
+            file_found=true;
         }
 
     }
 
-    if(n==-1){ //if n=-1 directory empty , make default notes file
+    if(!file_found){ //if n=-1 directory empty , make default notes file
 
         make_notes_file("notes");
 
@@ -387,15 +255,20 @@ int MisliInstance::init_notes_files()
         file_addr+="/";
         file_addr+="notes.misl";
 
-        note_file.push_back(null_note_file); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
+        note_file.push_back(NoteFile()); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
         nf=&note_file.back();
 
         nf->init(this,"notes",file_addr.toUtf8().data());
     }
 
-    if(default_nf_on_startup()!=NULL){current_note_file=default_nf_on_startup()->id;} //if a default is set - use it
+    if(default_nf_on_startup()!=NULL) current_note_file=default_nf_on_startup()->id;
+    else current_note_file=find_first_normal_nf();
+
+    nf_before_help=current_note_file;
+
     set_current_notes(current_note_file);
-    emit notes_ready();
+
+    reinit_redirect_notes();
 
     return 0;
 }
@@ -418,13 +291,13 @@ void MisliInstance::set_curr_nf_as_default_on_startup()
 {
     for(unsigned int i=0;i<note_file.size();i++){ //we make sure that there's no second nf marked as default for display
         if (note_file[i].id!=curr_nf()->id) {
-            if(note_file[i].is_displayed_first_on_startup!=false){
+            if(note_file[i].is_displayed_first_on_startup==true){
                 note_file[i].is_displayed_first_on_startup=false;
                 note_file[i].save();
             }
         }
         else{
-            if(note_file[i].is_displayed_first_on_startup!=true){
+            if(note_file[i].is_displayed_first_on_startup==false){
                 note_file[i].is_displayed_first_on_startup=true;
                 note_file[i].save();
             }
@@ -432,19 +305,18 @@ void MisliInstance::set_curr_nf_as_default_on_startup()
     }
 }
 
-void MisliInstance::make_this_the_default_viewpoint()
-{
-    curr_nf()->make_coords_relative_to(eye.x,eye.y);
-    curr_nf()->init_notes();
-    curr_nf()->init_links();
-    curr_nf()->save();
-    eye.x=0;
-    eye.y=0;
-    eye.scenex=0;
-    eye.sceney=0;
-}
-
 int MisliInstance::delete_selected()
 {
     return curr_nf()->delete_selected();
+}
+int MisliInstance::find_first_normal_nf()
+{
+    for(unsigned int i=0;i<note_file.size();i++){
+        if(note_file[i].id>=0){
+            return note_file[i].id;
+        }
+    }
+
+    d("Only system notefiles present. Terminating.");
+    exit(66);
 }

@@ -5,6 +5,7 @@
 #define LINK_H
 
 #include <GL/gl.h>
+#include <QString>
 
 class Link
 {
@@ -13,7 +14,7 @@ public:
     Link();
 
     //Hard variables
-    char *text;
+    QString text;
     int id;
 
     //Program variables

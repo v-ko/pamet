@@ -16,9 +16,9 @@ class Note{
     public:
 //------Koito se zapisvat/4etat v/ot file-a------------
 int id;
-double x,y,z;//poziciq
-double a, b; //6irinata na kutiqta i viso4inata
-char *text;
+float x,y,z;//poziciq
+float a, b; //6irinata na kutiqta i viso4inata
+QString text;
 double font_size;
 bool selected;
 QDate dt_made,dt_mod;
@@ -26,10 +26,9 @@ std::vector<Link> outlink;
 std::vector<int> inlink;
 
 //------Koito sa samo za programata----------------
-char *short_text;
+QString short_text;
 double move_orig_x;
 double move_orig_y;
-//double resize_orig_x,resize_orig_y;
 double rx1,ry1,rx2,ry2;
 int nf_id;
 MisliInstance *misl_i;
@@ -37,6 +36,7 @@ GLuint texture;
 int type; //1=redirecting , 0=normal
 
 //-----Funkcii-------------
+Note();
 int init();
 int init_links();
 int correct_links();

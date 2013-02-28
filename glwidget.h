@@ -5,10 +5,16 @@
 #define GLWIDGET_H
 
 #include <QGLWidget>
+
+#include "common.h"
+#include "../../petko10.h"
+
+#include "editnotedialogue.h"
 #include "note.h"
 #include "notefile.h"
 #include "link.h"
 
+class MisliWindow;
 
 class GLWidget : public QGLWidget
 {
@@ -17,7 +23,7 @@ class GLWidget : public QGLWidget
 public:
 
     //Functions
-    GLWidget(MisliInstance *m_i);
+    GLWidget(MisliWindow *msl_w_);
     ~GLWidget();
 
     QSize sizeHint() const;
@@ -34,9 +40,14 @@ public:
     void initGLenv();
     void setupGLenv();
     void resetGLenv();
-
     void startGLState();
     void endGLState();
+
+    MisliInstance *misl_i();
+    NotesVector *curr_note();
+
+    void set_eye_coords_from_curr_nf();
+    void save_eye_coords_to_nf();
 
     //Variables
     QGLContext *context;
@@ -45,14 +56,24 @@ public:
     GLint viewport[4];
     QFont font;
 
-    MisliInstance *misl_i;
-    NotesVector *curr_note;
-    double move_x, move_y, resize_x, resize_y;
+    MisliWindow *msl_w;
+
+    Eye eye;
+    Note *mouse_note;
+
+    float move_x, move_y, resize_x, resize_y;
+    int XonPush,YonPush,PushLeft,current_mouse_x,current_mouse_y;
+    float EyeXOnPush,EyeYOnPush;
+    bool ctrl_is_pressed,shift_is_pressed;
+    bool timed_out_move,move_on,resize_on;
 
 public slots:
     void move_func();
     void set_linking_on();
     void set_linking_off();
+    int copy();
+    int paste();
+    int cut();
 
 protected:
     void initializeGL();

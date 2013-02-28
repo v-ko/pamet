@@ -1,9 +1,12 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #ifndef GETDIRDIALOGUE_H
 #define GETDIRDIALOGUE_H
 
 #include <QtGui>
 #include <QFileDialog>
-#include "misliinstance.h"
+#include "misliwindow.h"
 
 namespace Ui {
 class GetDirDialogue;
@@ -15,19 +18,20 @@ class GetDirDialogue : public QWidget
     
 public:
     //Functions
-    GetDirDialogue(MisliInstance *misl_inst,QWidget *parent = 0);
+    GetDirDialogue(MisliWindow *msl_w);
     ~GetDirDialogue();
 
+
     //Variables
-    MisliInstance *misl_i;
-    QShortcut *shEnter,*shEscape;
+    MisliWindow *msl_w;
     QFileDialog fileDialogue;
 
 public slots:
     void input_done();
     void get_dir_dialogue();
-    
+
 private:
+    void showEvent(QShowEvent *);
     Ui::GetDirDialogue *ui;
 };
 
