@@ -44,7 +44,11 @@ HEADERS  += \
 OTHER_FILES += \
     help/text.txt \
     license.txt \
-    README
+    README \
+    help/help_en.misl \
+    help/help_bg.misl \
+    translations/misli_bg.ts \
+    translations/misli_bg.qm
 
 win32{
     CONFIG += static
