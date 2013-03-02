@@ -273,7 +273,7 @@
 //windows build --done
 
 //sourceforge
-//>setup git
+//>setup git --done
 //>setup binary download
 
 //gledai za promeni v papkata i reload-vai
