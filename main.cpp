@@ -270,7 +270,8 @@
 //remove current folder; --done
 //ezici v settings + translator-a --done
 
-//windows build
+//windows build --done
+
 //sourceforge
 //>setup git
 //>setup binary download
@@ -327,7 +328,7 @@
 //minimum resize da e kolkto 3 bukvi za x i kolkoto viso4inata na reda + spacing za y
 
 //Belejki:
-//pokazvaneto na message box predi splash screen-a go opravq mai
+//trqbva da se puska RCC pri promqna na nqkoi ot resursnite failove (moje izkustveno da promenq ne6to v .qrc file-a i toi sam vika rcc pri build)
 //pri nf->save texta bi sledvalo da se obry6ta ne vyv std::string , a v utf8 , no tova dava gre6en output po nqkakva pri4ina
 //pri promeni v petko10.h/.cpp trqbva da update-vam ry4no win/linux
 //ideq : backlight (kato neonovite svetlini pod kolite) za note-ovete ,za da se razgrani4at nqkolko oblasti ot note-file-a vizualno (vsqka sys svoi cvqt)
@@ -351,19 +352,22 @@ int main(int argc, char *argv[])
 {
 
     QApplication a(argc, argv);
-    QFont default_font("Halvetica"); //Arial
-    a.setFont(default_font);// tva mai ni6to ne promenq6e
 
-    QCoreApplication::setApplicationName("misli");
+    a.setOrganizationName("p10");
+    a.setApplicationName("misli");
+
     QTextCodec::setCodecForCStrings(QTextCodec::codecForName("utf8"));
     QTextCodec::setCodecForTr(QTextCodec::codecForName("utf8"));
 
     QTranslator translator;
     QSettings settings;
+
     if(settings.contains("language")){
-        QString qstr="misli_"+settings.value("language").toString();
-        translator.load(qstr,QString(":/translations/"));
-        a.installTranslator(&translator);
+        if(settings.value("language").toString()!=QString("en")){
+            QString qstr="misli_"+settings.value("language").toString();
+            translator.load(qstr,QString(":/translations/"));
+            a.installTranslator(&translator);
+        }
     }
 
     QPixmap pixmap(":/img/icon.png");

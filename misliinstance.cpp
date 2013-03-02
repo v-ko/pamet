@@ -104,7 +104,7 @@ int MisliInstance::make_notes_file(QString name)
      ntFile.open(name.toStdString().c_str(),std::ios_base::out);
     if(ntFile.fail()){err++;}
 
-    ntFile<<"#Notes database for Misli"<<std::endl;
+    ntFile<<"#Notes database for Misli"<<'\n';
 
     ntFile.close();
 

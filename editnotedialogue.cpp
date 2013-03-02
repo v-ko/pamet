@@ -62,6 +62,7 @@ int EditNoteDialogue::edit_note(){ //false for new note , true for edit
 void EditNoteDialogue::input_done(){
 
     QString text = ui->textEdit->toPlainText().trimmed();
+    text = text.replace("\r\n","\n"); //for the f-n windows standart
 
     Note null_note;
 

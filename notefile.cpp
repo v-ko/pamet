@@ -42,7 +42,7 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
 
     //-------------Note properties---------------------
     int nt_id=0;
-    QString txt;
+    QString txt,qstr;
     float x,y,z,a,b,font_size;
     QDate dt_made,dt_mod;
 
@@ -54,6 +54,10 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
     name=ime;
     full_file_addr=path;
 
+    if(name==QString("HelpNoteFile")){
+
+    }
+
     note = new NotesVector;
     nf_z = new std::vector<std::string>;
 
@@ -62,7 +66,9 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
     qbytear = ntFile.readAll();
     ntFile.close();
     file=file.fromUtf8(qbytear.data());
-    lines = file.split("\n",QString::SkipEmptyParts);
+
+    file = file.replace("\r",""); //clear the windows standart debree
+    lines = file.split(QString("\n"),QString::SkipEmptyParts);
 
 
     //=================The parser========================== da e funkciq
@@ -104,7 +110,7 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
 
     }
 
-    for(int i=0;i<groups.size();i++){ //get the notes
+    for(int i=0;i<groups.size();i++){ //get the links
 
         nt_id = group_names[i].toInt();
         nt=get_note_by_id(nt_id);
@@ -159,36 +165,36 @@ std::stringstream sstr;
 
 for(unsigned int c=0;c<comment.size();c++){ //adding the comments
 
-    sstr<<comment[c].toUtf8().data()<<std::endl;
+    sstr<<comment[c].toUtf8().data()<<'\n';
 
 }
 
 if(is_displayed_first_on_startup){
-    sstr<<"is_displayed_first_on_startup"<<std::endl;
+    sstr<<"is_displayed_first_on_startup"<<'\n';
 }
 
 for(unsigned int i=0;i<note->size();i++){
 
     nt=&(*note)[i];
 
-    sstr<<"["<<nt->id<<"]"<<std::endl;
+    sstr<<"["<<nt->id<<"]"<<'\n';
     txt=nt->text;
     txt.replace(QString("\n"),QString("\\n"));
-    sstr<<"txt="<<nt->text.toStdString()<<std::endl;//
-    sstr<<"x="<<nt->x<<std::endl;
-    sstr<<"y="<<nt->y<<std::endl;
-    sstr<<"z="<<nt->z<<std::endl;
-    sstr<<"a="<<nt->a<<std::endl;
-    sstr<<"b="<<nt->b<<std::endl;
-    sstr<<"font_size="<<nt->font_size<<std::endl;
-    sstr<<"dt_made="<<nt->dt_made.toString("d.M.yyyy").toStdString()<<std::endl;
-    sstr<<"dt_mod="<<nt->dt_mod.toString("d.M.yyyy").toStdString()<<std::endl;
+    sstr<<"txt="<<txt.toStdString()<<'\n';//
+    sstr<<"x="<<nt->x<<'\n';
+    sstr<<"y="<<nt->y<<'\n';
+    sstr<<"z="<<nt->z<<'\n';
+    sstr<<"a="<<nt->a<<'\n';
+    sstr<<"b="<<nt->b<<'\n';
+    sstr<<"font_size="<<nt->font_size<<'\n';
+    sstr<<"dt_made="<<nt->dt_made.toString("d.M.yyyy").toStdString()<<'\n';
+    sstr<<"dt_mod="<<nt->dt_mod.toString("d.M.yyyy").toStdString()<<'\n';
 
     sstr<<"l_id=";
     for(unsigned int l=0;l<nt->outlink.size();l++){
         sstr<<nt->outlink[l].id<<";";
     }
-    sstr<<std::endl;
+    sstr<<'\n';
 
     sstr<<"l_txt=";
     for(unsigned int l=0;l<nt->outlink.size();l++){
@@ -198,7 +204,7 @@ for(unsigned int i=0;i<note->size();i++){
         //Save the text
         sstr<<nt->outlink[l].text.toStdString()<<";";
     }
-    sstr<<std::endl;
+    sstr<<'\n';
 
 }
 
@@ -218,7 +224,7 @@ int NoteFile::save(){ //save the notes to their file
     virtual_save();
 
     if(id>=0){ //for example for the copyPasteCut nf
-        ntFile.open(full_file_addr.toStdString().c_str(),std::ios_base::out);
+        ntFile.open(full_file_addr.toStdString().c_str(),std::ios_base::out|std::ios::binary);
         ntFile<<nf_z->back();
         ntFile.close();
     }

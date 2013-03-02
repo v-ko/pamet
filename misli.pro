@@ -12,8 +12,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 TARGET = misli
 TEMPLATE = app
 
-CONFIG += console
-
 SOURCES += main.cpp\
     misliinstance.cpp \
     notefile.cpp \
@@ -44,15 +42,12 @@ HEADERS  += \
     emitmynameaction.h
 
 OTHER_FILES += \
-    program_logic.txt \
     help/text.txt \
     license.txt \
     README
 
-
-#CONFIG += static
-
 win32{
+    CONFIG += static
     QMAKE_LFLAGS += -static-libgcc
 }
 
