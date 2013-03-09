@@ -303,6 +303,8 @@
 //problemyt - ne trqbva da se slaga CONFIGURE+=static v .pro --done
 //build na Windows --done
 
+//BUG anialising ne ba4ka na 50% ot kompovete...
+
 //video za predstavqne na angl i bg
 //razprostranenie
 

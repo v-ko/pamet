@@ -151,9 +151,11 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){  //retu
             ln.id=l_id[l].toInt(); //vkarvame id
             nt->outlink.push_back(ln); //dobavqme linka
 
-            target_nt=get_note_by_id(ln.id); //namirame target note-a na tozi link
+            if(get_note_by_id(ln.id)!=NULL){
+                target_nt=get_note_by_id(ln.id); //namirame target note-a na tozi link
 
-            target_nt->inlink.push_back(nt->id); //vkarvame v inlist-a mu syotvetnoto id
+                target_nt->inlink.push_back(nt->id); //vkarvame v inlist-a mu syotvetnoto id
+            }
         }
     }
 

@@ -150,12 +150,12 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         //    if (!pixm.save("/home/Pepi/C++/misli/note.jpg")){d("bad save");}
         //}
         //Loading it as a texture in GL
-        glEnable( GL_TEXTURE_2D );
+        //glEnable( GL_TEXTURE_2D );
             texture=misl_i->gl_w->bindTexture(pixm,GL_TEXTURE_2D,GL_RGBA,QGLContext::DefaultBindOption);
             //glBindTexture(GL_TEXTURE_2D,texture); //the manual way pixelates for some reason
             //pixm=QGLWidget::convertToGLFormat(pixm);
             //gluBuild2DMipmaps(GL_TEXTURE_2D, 4, pixm.width(), pixm.height(),GL_RGBA, GL_UNSIGNED_BYTE, pixm.bits());
-        glDisable( GL_TEXTURE_2D );
+        //glDisable( GL_TEXTURE_2D );
     }
 
     return 0;

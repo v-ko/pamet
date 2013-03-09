@@ -91,33 +91,6 @@ void GLWidget::save_eye_coords_to_nf()
     misl_i()->curr_nf()->eye_z=eye.z;
 }
 
-void GLWidget::startGLState()//not in use
-{
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-
-    glClearColor(1,1,1,1);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);//for proper transparency
-    glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST ); //not sure if that has any effect
-    glTexParameteri( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST );
-
-    glEnable( GL_MULTISAMPLE );
-    glEnable( GL_BLEND );
-    glEnable( GL_DEPTH_TEST );
-}
-void GLWidget::endGLState()//not in use
-{
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-    glPopAttrib();
-}
-
 void GLWidget::initGLenv() //set environment variables
 {
     glClearColor(1,1,1,1);
@@ -129,17 +102,16 @@ void GLWidget::initGLenv() //set environment variables
 }
 void GLWidget::setupGLenv() //start the blend and multisampling
 {
-    glPushAttrib(GL_ALL_ATTRIB_BITS);
-    //glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE );
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);//opravq transparency problema . Sig e ne6to s paintera
     glEnable( GL_MULTISAMPLE );
     glEnable( GL_BLEND );
+    glEnable( GL_TEXTURE_2D );
     //glEnable(GL_DEPTH_TEST);
 }
 void GLWidget::resetGLenv() //stop the ones from setup - not used
 {
     glDisable( GL_MULTISAMPLE );
     glDisable( GL_BLEND );
+    glDisable( GL_TEXTURE_2D );
     //glDisable( GL_DEPTH_TEST );
 }
 
