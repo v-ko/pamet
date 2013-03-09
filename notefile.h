@@ -24,6 +24,7 @@ public:
     float eye_x,eye_y,eye_z;
     std::vector<std::string> *nf_z; //history of the notefile
     bool is_displayed_first_on_startup;
+    bool deleted;
 
     //Functions
     NoteFile();

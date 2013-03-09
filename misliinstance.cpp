@@ -8,7 +8,6 @@ MisliInstance::MisliInstance(QString nts_dir, MisliWindow *msl_w_ = NULL)
 {
     //Init
     notes_dir=nts_dir;
-    fs_watch = new FileSystemWatcher(this);
     changes_accounted_for=0;
     current_note_file=0;
     last_nf_id=0;
@@ -19,6 +18,11 @@ MisliInstance::MisliInstance(QString nts_dir, MisliWindow *msl_w_ = NULL)
         using_external_classes=true;
         gl_w=msl_w->gl_w;
     }
+
+    //FS-watch stuff
+    fs_watch = new FileSystemWatcher(this);
+    hanging_nf_check = new QTimer;
+    connect(hanging_nf_check,SIGNAL(timeout()),this,SLOT(check_for_hanging_nfs() ));
 
     error=0;
 
@@ -41,6 +45,27 @@ MisliInstance::MisliInstance(QString nts_dir, MisliWindow *msl_w_ = NULL)
     }
 
     init_notes_files();
+}
+
+void MisliInstance::check_for_hanging_nfs()
+{
+    NoteFile * nf;
+    int count=0;
+
+    for(unsigned int i=0;i<note_file.size();i++){
+        nf = &note_file[i];
+        if(nf->deleted){
+            //Try to init
+            if( nf->init(this,nf->name,nf->full_file_addr,nf->id) == 0 ){
+                nf->deleted = false;
+                fs_watch->addPath(nf->full_file_addr); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
+                emit_current_nf_updated();
+            }else{
+                count++;
+            }
+        }
+    }
+    if(count<=0) hanging_nf_check->stop();
 }
 
 void MisliInstance::emit_current_nf_switched()
@@ -202,7 +227,9 @@ int MisliInstance::undo()
 
         ntf.close();
 
-        set_current_notes(curr_nf()->init(this,curr_nf()->name,curr_nf()->full_file_addr,curr_nf()->id)); //load the backup
+        curr_nf()->init(this,curr_nf()->name,curr_nf()->full_file_addr,curr_nf()->id);
+
+        set_current_notes(curr_nf()->id); //load the backup
         //curr_nf()->nf_z=nfz;
 
         emit_current_nf_updated();
@@ -348,11 +375,18 @@ NoteFile *MisliInstance::find_first_normal_nf()
 void MisliInstance::file_changed(QString file)
 {
     NoteFile *nf;
+    int err=0;
+
     for(unsigned int f=0;f<note_file.size();f++){
         nf=&note_file[f];
         if(nf->full_file_addr==file){
-            nf->init(this,nf->name,nf->full_file_addr,nf->id);
-            emit_current_nf_updated();
+            err = nf->init(this,nf->name,nf->full_file_addr,nf->id);
+            if( err == 0 ){
+                emit_current_nf_updated();
+            }else if(err ==-2){
+                nf->deleted=true;
+                hanging_nf_check->start(700);
+            }
             return;
         }
     }

@@ -9,6 +9,7 @@
 #include <QWidget>
 #include <QString>
 #include <QDir>
+#include <QTimer>
 
 #include "../../petko10.h"
 #include "../../petko10q.h"
@@ -45,6 +46,7 @@ public:
 
     //Variables
     FileSystemWatcher *fs_watch;
+    QTimer * hanging_nf_check;
     int changes_accounted_for;
     int error,using_external_classes;
     QString notes_dir;
@@ -58,6 +60,8 @@ public:
 
 
 public slots:
+    void check_for_hanging_nfs();
+
     void emit_current_nf_switched();
     void emit_current_nf_updated();
 

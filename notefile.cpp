@@ -18,21 +18,22 @@ NoteFile::NoteFile()
     eye_x=0;
     eye_y=0;
     eye_z=100;
+    deleted=0;
 
     note = new NotesVector;
     nf_z = new std::vector<std::string>;
 }
-int NoteFile::init(MisliInstance *m_i,QString ime,QString path){
+int NoteFile::init(MisliInstance *m_i,QString ime,QString path){ //returns the id of the nf
 
     m_i->last_nf_id++;
     id=m_i->last_nf_id;
 
     m_i->fs_watch->addPath(path);//if it's a real nf
-
-    return init(m_i,ime,path,id);
+    init(m_i,ime,path,id);
+    return id;
 }
 
-int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
+int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){  //returns errors
 
     //Tmp , function stuff
     Link ln;
@@ -52,7 +53,17 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
     QDateTime t_made,t_mod;
     float txt_col[4],bg_col[4]; //text and background colors
 
+    //----Open file------
+    if(!ntFile.open(QIODevice::ReadOnly)){d("error opening ntFile");return -2;}
+    qbytear = ntFile.readAll();
+    ntFile.close();
+    file=file.fromUtf8(qbytear.data());
+
+    file = file.replace("\r",""); //clear the windows standart debree
+    lines = file.split(QString("\n"),QString::SkipEmptyParts);
+
     //------------Class initialisations---------------
+
     id=id_;
     last_note_id=0;
     misl_i=m_i; //eto tuk se preebava predniq notefile (comment,last note id i ime i note), po-to4no pointer-a na note-ovete v nego (nf) so4i kym preeban obekt ,na koito samo full_file_addr ba4ka
@@ -65,16 +76,6 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
     if(name==QString("HelpNoteFile")){
 
     }
-
-    //----Open file------
-    if(!ntFile.open(QIODevice::ReadOnly)){d("error opening ntFile");exit(434);}
-    qbytear = ntFile.readAll();
-    ntFile.close();
-    file=file.fromUtf8(qbytear.data());
-
-    file = file.replace("\r",""); //clear the windows standart debree
-    lines = file.split(QString("\n"),QString::SkipEmptyParts);
-
 
     //=================The parser========================== da e funkciq
 
@@ -160,7 +161,7 @@ find_free_ids();
 
 init_links();
 
-return id;
+return 0;
 }
 int NoteFile::init_links(){ //init all the links in the note_file notes
 

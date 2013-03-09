@@ -53,7 +53,6 @@ OTHER_FILES += \
     translations/misli_bg.qm
 
 win32{
-    CONFIG += static
     QMAKE_LFLAGS += -static-libgcc
 }
 

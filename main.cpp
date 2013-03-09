@@ -297,10 +297,11 @@
 
 //update na help-ovete --done
 //update translations --done
-//commit
+//commit --done
 
-//BUG:font-a e preeban na windows vij dali kato build-ne na dynamic bibliotekata ostava problemyt
-//build na Windows
+//BUG:font-a e preeban na windows vij dali kato build-ne na dynamic bibliotekata ostava --done
+//problemyt - ne trqbva da se slaga CONFIGURE+=static v .pro --done
+//build na Windows --done
 
 //video za predstavqne na angl i bg
 //razprostranenie
