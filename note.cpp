@@ -27,11 +27,19 @@ Note::Note()
     selected=false;
     nf_id=0;
     type=0;
+    txt_col[0]=0;//r
+    txt_col[1]=0;//g
+    txt_col[2]=1;//b
+    txt_col[3]=1;//a
+    bg_col[0]=0;
+    bg_col[1]=0;
+    bg_col[2]=1;
+    bg_col[3]=0.5;
 }
 
 int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie nakraq + vkarva koordinatite na kutiqta
 
-    int resized=0;
+    int base_it,max_it,probe_it; //iterators for the shortening algorythm
 
     //---------Random-----------
 
@@ -55,14 +63,13 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
 
     QRectF rect(0,0,A,B),rect2;
     QImage pixm(A,B,QImage::Format_ARGB32);
+    QString txt = text;
 
     QPainter p(&pixm);
     QFont font("Halvetica");font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
     font.setStyleStrategy(QFont::PreferAntialias); //QFont::StyleStrategy(0x0080)); //style aliasing
     p.setFont(font);
 
-    //=========Shortening the text in the box=============
-    QString txt = text;
 
     //Check if we have a link to a file
     if (txt.startsWith(QString("this_note_points_to:"))){
@@ -76,9 +83,43 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         goto after_shortening;
     }else type=0;
 
-    //Start shortening algorithm
-    again:
+    //=========Shortening the text in the box=============
+    txt=text;
+    base_it=0;
+    max_it=text.size();
+    probe_it=base_it + ceil(float(max_it-base_it)/2);
 
+    //if there's no resizing needed (common case , that's why it's in front)
+    rect2=p.boundingRect(rect, Qt::TextWordWrap | Qt::AlignCenter ,txt);
+    if( !( ( mod( rect2.height() ) > mod(B) ) | ( mod( rect2.width() ) > mod(A) ) ) ){
+        goto after_shortening;
+    }
+    if(max_it<=3){//for the shorter than "..." texts (they won't get any shorter)
+        goto after_shortening;
+    }
+
+    //Start shortening algorithm
+    while((max_it-base_it)!=1) { //until we pin-point the needed length with accuracy 1
+
+        txt.resize(probe_it); //we resize to the probe iterator
+        rect2=p.boundingRect(rect, Qt::TextWordWrap | Qt::AlignCenter ,txt); //get the bounding box for the text (with probe length
+
+        if( ( mod( rect2.height() ) > mod(B) ) | ( mod( rect2.width() ) > mod(A) ) ){//if the needed box is bigger than the size of the note
+            max_it=probe_it;
+        }else{
+            base_it=probe_it;
+        }
+
+        probe_it=base_it + ceil(float(max_it-base_it)/2); //POSSIBLE BREAKPOINT| will always be >0
+        txt=text;
+    }
+
+    txt.resize(max_it-3);
+    txt+="...";
+    after_shortening:
+    short_text=txt;
+/*
+        again:
     rect2=p.boundingRect(rect, Qt::TextWordWrap | Qt::AlignCenter ,txt);
 
     if( ( mod( rect2.height() ) > mod(B) ) | ( mod( rect2.width() ) > mod(A) ) ) {
@@ -90,15 +131,15 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         txt.resize(txt.size()-3);
         txt+="...";
     }
-    after_shortening:
-    short_text=txt;
 
+    short_text=txt;
+*/
 
 
     if(misl_i->using_external_classes){
         //Drawing the text into the pixmap
 
-        p.setPen(QColor(0,0,255,255)); //set color
+        p.setPen(QColor(txt_col[0]*255,txt_col[1]*255,txt_col[2]*255,txt_col[3]*255)); //set color
         p.setBrush(Qt::SolidPattern); // set fill style
         pixm.fill(QColor(0,0,0,0)); //clear color to 0
         p.drawText(rect,Qt::TextWordWrap | Qt::AlignCenter,short_text);

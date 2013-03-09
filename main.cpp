@@ -266,42 +266,55 @@
 //quit s Q --done
 //debugging (ebasi kolko zor be6e) --done
 
+//wave select s ctrl+shift ili ne6to takova (selectirane na vs dy6terni zapiski pri click)--done
+
 //nqkolko direktorii da mogat da se vkarvat (s menu za smqna?)--done
 //remove current folder; --done
 //ezici v settings + translator-a --done
 
 //windows build --done
 
-//sourceforge
+//sourceforge --done
 //>setup git --done
-//>setup binary download
+//>setup binary download --done
 
-//gledai za promeni v papkata i reload-vai
+//BUG:pri orazmerqvane na neselektirana zapiska se orazmerqva selektiranata --done
+//BUG:opravqne na algoritma za orazmerqvane na teksta --done
+
+//rename nf--done
+//delete nf--done
+
+//BUG:delete prompt --done
+//BUG:vkarvane na 4as na modifikaciq --done
+//BUG:TextEdit-a formatira HTML --done
+//BUG:otvarq prozoreca predi da e zaredil notes mai --done
+
+//gledai za promeni v papkata i reload-vai --done
+//keyboard navigation (sys centrirane na mi6kata ako se polzva za da izlizat zapiskite v centyra)--done
+
+//>cvetove: sinio,zeleno 08.03.13--done
+//,4erveno,4erno --done
+
+//update na help-ovete --done
+//update translations --done
+//commit
+
+//BUG:font-a e preeban na windows vij dali kato build-ne na dynamic bibliotekata ostava problemyt
+//build na Windows
 
 //video za predstavqne na angl i bg
-
-//----release ver1+build na Win------------------------------------------
 //razprostranenie
-
-//BUG:opravqne na algoritma za orazmerqvane na teksta
-//BUG:pri orazmerqvane na neselektirana zapiska se orazmerqva selektiranata
-
-//za dolnite vij shemata v misli/misli
-//>vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
-//>cvetove: sinio,zeleno,4erveno,sivo,4erno,prazno
-//>link file-ove s tekst razli4en ot imeto na file (text: atribut na nov red)
-
 
 
 //-------------Late features--------------------:
+//merge-vai conflicted copies
+//>vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
 //command line reset - ako se preebe kato pri kosio + kato udari nqkyde critical - da wipe-va settings
 //Search + tags
 //>avtoorazmerqvane na nova zapiska
 //kontekstovi menu-ta s edit/delete...
 //>config window i vkarvane na raznite #definirani ne6ta v settings
-//wave select s ctrl+shift ili ne6to takova (selectirane na vs dy6terni zapiski pri click)
 //alignment na text-a v zapiskite
-//rename nf
 //>preview na notefile-a pri markirane na prenaso4va6ta zapiska
 //>izpisvane na datite (made/mod)
 //>dialog za edit na link
@@ -310,15 +323,10 @@
 //>link position set (auto,left,right,top,bottom)+ izvivane
 //>zapiski po4ervenqva6ti s datata
 //ako nqma zapiski na ekrana - naso4vane kym nai-blizkite
-//keyboard navigation (sys centrirane na mi6kata ako se polzva za da izlizat zapiskite v centyra)
-
-//da pomislq za max line lenght
 //>da opravq render funkciqta 4e e mn skalypena
-//>>BUG:pusni depth bufera za da ne sa strelkite pod senkite
+//BUG:pusni depth bufera za da ne sa strelkite pod senkite
 //BUG: strelkite ne si update-vat posokata (na vyrhovete samo) pri mestene
 
-//>semi-kanonizirane na koda
-//>translations
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -326,17 +334,13 @@
 //BUG:na golemiq komp nqma multisampling
 //>~font change
 //minimum resize da e kolkto 3 bukvi za x i kolkoto viso4inata na reda + spacing za y
+//ideq : backlight (kato neonovite svetlini pod kolite) za note-ovete ,za da se razgrani4at nqkolko oblasti ot note-file-a vizualno (vsqka sys svoi cvqt)
 
 //Belejki:
 //trqbva da se puska RCC pri promqna na nqkoi ot resursnite failove (moje izkustveno da promenq ne6to v .qrc file-a i toi sam vika rcc pri build)
-//pri nf->save texta bi sledvalo da se obry6ta ne vyv std::string , a v utf8 , no tova dava gre6en output po nqkakva pri4ina
-//pri promeni v petko10.h/.cpp trqbva da update-vam ry4no win/linux
-//ideq : backlight (kato neonovite svetlini pod kolite) za note-ovete ,za da se razgrani4at nqkolko oblasti ot note-file-a vizualno (vsqka sys svoi cvqt)
-//pri dobavqneto na novi promenlivi (izmqna na strukturata na notes file-ovete) da slagam if(!has_key()){set default;skip get_key()}
 //pri dyljina okolo 81 (v realni koordinati) texturata se precakva -- trqbva o6te testvane na teq granici
 //pri promqna na vectora pointeri kym obekti v nego so4at kym s4upeni obekti
 //politikata za semicolon-i (to4ki zapetai) e ,4e v teksta na linkovete ne sa pozvoleni (obry6tat se na ":"), a v teksta na note ne pre4at
-
 
 #include <QApplication>
 #include <QSplashScreen>
@@ -345,8 +349,6 @@
 
 #include "common.h"
 #include "misliwindow.h"
-#include "note.h"
-#include "notefile.h"
 
 int main(int argc, char *argv[])
 {

@@ -26,11 +26,21 @@ MisliWindow::MisliWindow(QApplication* app):
     setWindowIcon(QIcon(":/img/icon.png"));
 
     import_settings_and_folders();
+    showMaximized();
 }
 
 MisliWindow::~MisliWindow()
 {
     delete ui;
+}
+
+void MisliWindow::update_notes_rdy()
+{
+    if(curr_misli()!=NULL){
+        if(curr_misli()->note_file.size()!=0){
+            notes_rdy=true;
+        }else notes_rdy=false;
+    }else notes_rdy=false;
 }
 
 void MisliWindow::import_settings_and_folders() //loads the settings . Returns 0 on success.
@@ -52,7 +62,8 @@ void MisliWindow::import_settings_and_folders() //loads the settings . Returns 0
 
     for(int i=0;i<notes_dir.size();i++){
         add_dir(notes_dir[i]);
-    }
+    }               // not sure if its working
+
     if(!notes_rdy) {
         add_new_folder();
         first_program_start=true;
@@ -83,7 +94,6 @@ void MisliWindow::add_dir(QString path)
     }
     if(notes_rdy==false){
         notes_rdy=true;
-        showMaximized();
     }
 
     set_current_misli(path);
@@ -145,9 +155,40 @@ void MisliWindow::new_note()
 {
     edit_w->new_note();
 }
+
 void MisliWindow::new_nf()
 {
     newnf_w->new_nf();
+}
+void MisliWindow::rename_nf()
+{
+    newnf_w->rename_nf(curr_misli()->curr_nf());
+}
+void MisliWindow::delete_nf()
+{
+    QDir dir(curr_misli()->notes_dir);
+    QString qstr=curr_misli()->curr_nf()->full_file_addr;
+    QMessageBox msg,msg2;
+
+    msg.setText(tr("This will delete the note file permanetly!"));
+    msg.setStandardButtons(QMessageBox::Ok|QMessageBox::Cancel);
+    msg.setDefaultButton(QMessageBox::Ok);
+    msg.setIcon(QMessageBox::Warning);
+
+    if(curr_misli()->curr_nf()->id >= 0){
+        int ret=msg.exec();
+        if(ret==QMessageBox::Ok){//if the user confirms
+            if(!dir.remove(qstr)){
+
+                msg.setText(tr("Could not delete the file.Check your permissions."));
+            }
+
+            curr_misli()->delete_nf(curr_misli()->curr_nf()->id);
+        }
+    }else{
+        msg2.setText(tr("Cannot delete a system note file."));
+        msg2.exec();
+    }
 }
 void MisliWindow::make_link()
 {
@@ -167,12 +208,12 @@ void MisliWindow::delete_selected()
 }
 void MisliWindow::zoom_out()
 {
-    gl_w->eye.z+=misli_speed;
+    gl_w->eye.z+=MOVE_SPEED;
     gl_w->updateGL();
 }
 void MisliWindow::zoom_in()
 {
-    gl_w->eye.z-=misli_speed;
+    gl_w->eye.z-=MOVE_SPEED;
     gl_w->updateGL();
 }
 
@@ -190,12 +231,11 @@ void MisliWindow::make_viewpoint_default()
     curr_misli()->curr_nf()->make_coords_relative_to(gl_w->eye.x,gl_w->eye.y);
     curr_misli()->curr_nf()->init_notes();
     curr_misli()->curr_nf()->init_links();
-    curr_misli()->curr_nf()->save();
-    gl_w->eye.x=0;
+    gl_w->eye.x=0; //(before the updateGL invoked by save() )
     gl_w->eye.y=0;
     gl_w->eye.scenex=0;
     gl_w->eye.sceney=0;
-
+    curr_misli()->curr_nf()->save();
 }
 void MisliWindow::make_nf_default()
 {
@@ -275,4 +315,122 @@ void MisliWindow::clear_settings_and_exit()
     settings->clear();
     settings->sync();
     exit(0);
+}
+
+void MisliWindow::col_blue()
+{
+    NoteFile *nf=curr_misli()->curr_nf();
+    Note *nt;
+    while(nf->get_first_selected_note()!=NULL){
+        nt=nf->get_first_selected_note();
+
+        nt->txt_col[0] = 0;
+        nt->txt_col[1] = 0;
+        nt->txt_col[2] = 1;
+        nt->txt_col[3] = 1;
+
+        nt->bg_col[0] = 0;
+        nt->bg_col[1] = 0;
+        nt->bg_col[2] = 1;
+        nt->bg_col[3] = 0.1;
+
+        nt->selected=false;
+        nt->init();
+    }
+    nf->save();
+}
+void MisliWindow::col_green()
+{
+    NoteFile *nf=curr_misli()->curr_nf();
+    Note *nt;
+    while(nf->get_first_selected_note()!=NULL){
+        nt=nf->get_first_selected_note();
+
+        nt->txt_col[0] = 0;
+        nt->txt_col[1] = 1;
+        nt->txt_col[2] = 0;
+        nt->txt_col[3] = 1;
+
+        nt->bg_col[0] = 0;
+        nt->bg_col[1] = 1;
+        nt->bg_col[2] = 0;
+        nt->bg_col[3] = 0.1;
+
+        nt->selected=false;
+        nt->init();
+    }
+    nf->save();
+}
+void MisliWindow::col_red()
+{
+    NoteFile *nf=curr_misli()->curr_nf();
+    Note *nt;
+    while(nf->get_first_selected_note()!=NULL){
+        nt=nf->get_first_selected_note();
+
+        nt->txt_col[0] = 1;
+        nt->txt_col[1] = 0;
+        nt->txt_col[2] = 0;
+        nt->txt_col[3] = 1;
+
+        nt->bg_col[0] = 1;
+        nt->bg_col[1] = 0;
+        nt->bg_col[2] = 0;
+        nt->bg_col[3] = 0.1;
+
+        nt->selected=false;
+        nt->init();
+    }
+    nf->save();
+}
+void MisliWindow::col_black()
+{
+    NoteFile *nf=curr_misli()->curr_nf();
+    Note *nt;
+    while(nf->get_first_selected_note()!=NULL){
+        nt=nf->get_first_selected_note();
+
+        nt->txt_col[0] = 0;
+        nt->txt_col[1] = 0;
+        nt->txt_col[2] = 0;
+        nt->txt_col[3] = 1;
+
+        nt->bg_col[0] = 0;
+        nt->bg_col[1] = 0;
+        nt->bg_col[2] = 0;
+        nt->bg_col[3] = 0.1;
+
+        nt->selected=false;
+        nt->init();
+    }
+    nf->save();
+}
+
+void MisliWindow::move_down()
+{
+    gl_w->eye.y-=MOVE_SPEED;
+    gl_w->eye.sceney-=MOVE_SPEED;
+    QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
+    gl_w->updateGL();
+}
+void MisliWindow::move_up()
+{
+    gl_w->eye.y+=MOVE_SPEED;
+    gl_w->eye.sceney+=MOVE_SPEED;
+    QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
+    gl_w->updateGL();
+}
+void MisliWindow::move_left()
+{
+    gl_w->eye.x-=MOVE_SPEED;
+    gl_w->eye.scenex-=MOVE_SPEED;
+    QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
+    gl_w->updateGL();
+}
+void MisliWindow::move_right()
+{
+    gl_w->eye.x+=MOVE_SPEED;
+    gl_w->eye.scenex+=MOVE_SPEED;
+    QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
+    gl_w->updateGL();
 }

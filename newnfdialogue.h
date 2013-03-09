@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "misliwindow.h"
+//#include "notefile.h"
 
 namespace Ui {
 class NewNFDialogue;
@@ -19,9 +20,11 @@ public:
 
     //Variables
     MisliWindow *msl_w;
+    NoteFile * nf_for_rename;
 
 public slots:
     void new_nf();
+    void rename_nf(NoteFile * nf);
     int input_done();
 
 private:

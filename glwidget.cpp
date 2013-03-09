@@ -212,7 +212,7 @@ void GLWidget::paintGL()
             glRectf(rx1,ry1,rx2,ry2);
         }
 
-        glColor4f(0,0,1,0.1);
+        glColor4f(nt->bg_col[0],nt->bg_col[1],nt->bg_col[2],nt->bg_col[3]);
         glPushMatrix();
             glTranslatef(0,0,z);
             glRectf(rx1,ry1,rx2,ry2);
@@ -231,7 +231,7 @@ void GLWidget::paintGL()
         glPopMatrix();
 
         if(nt->type==1){ //if the note is redirecting
-            glColor4f(0,0,1,0.5);
+            glColor4f(nt->txt_col[0],nt->txt_col[1],nt->txt_col[2],0.5);
             glBegin(GL_LINES);
                 glVertex3f(nt->rx1,nt->ry1,z);
                 glVertex3f(nt->rx2,nt->ry1,z);
@@ -247,7 +247,7 @@ void GLWidget::paintGL()
             glEnd();
         }
 
-        glColor4f(0,0,1,0.5);
+        //glColor4f(0,0,1,0.5);
 
         //Draw the textures with the text
         //glDisable( GL_DEPTH_TEST );
@@ -276,7 +276,7 @@ void GLWidget::paintGL()
 
             Link *ln=&nt->outlink[n];
 
-            glColor4f(0,0,1,0.5);
+            glColor4f(nt->txt_col[0],nt->txt_col[1],nt->txt_col[2],0.5);
 
             //Begin drawing
             glBegin(GL_LINES);
@@ -295,7 +295,7 @@ void GLWidget::paintGL()
                 glTranslatef(ln->x2,ln->y2,ln->z2); //translate and rotate that put the arrow where it needs to be
                 glRotatef(GetAng(ln->x2,ln->y2+10,ln->x2,ln->y2,ln->x1,ln->y1),0,0,1);
 
-                glColor4f(0,0,1,0.5);
+                glColor4f(nt->txt_col[0],nt->txt_col[1],nt->txt_col[2],0.5);
                 //Draw the arrow (head of the link)
                 glBegin(GL_LINES);
                     glVertex3f(0,0,0);
@@ -474,6 +474,7 @@ void GLWidget::mouseDoubleClickEvent(QMouseEvent *event)
 
         if(nt!=NULL){ //if we've clicked on a note
             if(nt->type==1){ //if it's a valid redirecting note
+                if(msl_w->curr_misli()->nf_by_name(nt->short_text)!=NULL)
                 msl_w->curr_misli()->set_current_notes(msl_w->curr_misli()->nf_by_name(nt->short_text)->id); //change notefile
             }
         }
@@ -491,7 +492,7 @@ void GLWidget::wheelEvent(QWheelEvent *event)
     int numDegrees = event->delta() / 8;
     int numSteps = numDegrees / 15;
 
-    eye.z-=misli_speed*numSteps;
+    eye.z-=MOVE_SPEED*numSteps;
 
     updateGL();
 
@@ -671,9 +672,11 @@ void GLWidget::set_linking_on()
     int x = current_mouse_x;
     int y = current_mouse_y;
     double t_x,t_y;
+    float txt_col[] = {0,0,1,1};
+    float bg_col[] = {0,0,1,0.1};
 
     if(misl_i()->curr_nf()->get_first_selected_note()!=NULL && mouse_note==NULL){
-        mouse_note=misl_i()->curr_nf()->add_note(misl_i(),"L",t_x,t_y,0,1,1,1,QDate(1,1,1),QDate(1,1,1));
+        mouse_note=misl_i()->curr_nf()->add_note(misl_i(),"L",t_x,t_y,0,1,1,1,QDateTime(QDate(1,1,1)),QDateTime(QDate(1,1,1)),txt_col,bg_col);
         unproject_to_plane(0,x,y,t_x,t_y);
         mouse_note->x=t_x;
         mouse_note->y=t_y;

@@ -18,11 +18,16 @@ NoteFile::NoteFile()
     eye_x=0;
     eye_y=0;
     eye_z=100;
+
+    note = new NotesVector;
+    nf_z = new std::vector<std::string>;
 }
 int NoteFile::init(MisliInstance *m_i,QString ime,QString path){
 
     m_i->last_nf_id++;
     id=m_i->last_nf_id;
+
+    m_i->fs_watch->addPath(path);//if it's a real nf
 
     return init(m_i,ime,path,id);
 }
@@ -36,15 +41,16 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
     QFile ntFile(path);
     QString file,tmpqstr;
     QByteArray qbytear;
-    QStringList lines,groups,group_names,l_id;
+    QStringList lines,groups,group_names,l_id,qtxt_col,qbg_col;
 
-    int err;
+    int err=0;
 
     //-------------Note properties---------------------
     int nt_id=0;
-    QString txt,qstr;
+    QString txt;
     float x,y,z,a,b,font_size;
-    QDate dt_made,dt_mod;
+    QDateTime t_made,t_mod;
+    float txt_col[4],bg_col[4]; //text and background colors
 
     //------------Class initialisations---------------
     id=id_;
@@ -53,13 +59,12 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
 
     name=ime;
     full_file_addr=path;
+    note->clear();
+    comment.clear();
 
     if(name==QString("HelpNoteFile")){
 
     }
-
-    note = new NotesVector;
-    nf_z = new std::vector<std::string>;
 
     //----Open file------
     if(!ntFile.open(QIODevice::ReadOnly)){d("error opening ntFile");exit(434);}
@@ -101,12 +106,35 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){
         err += q_get_value_for_key(groups[i],"a",a);
         err += q_get_value_for_key(groups[i],"b",b);
         err += q_get_value_for_key(groups[i],"font_size",font_size);
-        err += q_get_value_for_key(groups[i],"dt_made",tmpqstr);
-            dt_made=dt_made.fromString(tmpqstr,"d.M.yyyy");
-        err += q_get_value_for_key(groups[i],"dt_mod",tmpqstr);
-            dt_mod=dt_mod.fromString(tmpqstr,"d.M.yyyy");
+        err += q_get_value_for_key(groups[i],"t_made",tmpqstr);
+            t_made=t_made.fromString(tmpqstr,"d.M.yyyy H:m:s");
+        err += q_get_value_for_key(groups[i],"t_mod",tmpqstr);
+            t_mod=t_mod.fromString(tmpqstr,"d.M.yyyy H:m:s");
+        if(q_get_value_for_key(groups[i],"txt_col",qtxt_col)==-1){
+            qtxt_col.clear();
+            qtxt_col.push_back("0");
+            qtxt_col.push_back("0");
+            qtxt_col.push_back("1");
+            qtxt_col.push_back("1");
+        }
+        txt_col[0]=qtxt_col[0].toFloat();
+        txt_col[1]=qtxt_col[1].toFloat();
+        txt_col[2]=qtxt_col[2].toFloat();
+        txt_col[3]=qtxt_col[3].toFloat();
 
-        add_note(misl_i,nt_id,txt,x,y,z,a,b,font_size,dt_made,dt_mod);
+        if(q_get_value_for_key(groups[i],"bg_col",qbg_col)==-1){
+            qbg_col.clear();
+            qbg_col.push_back("0");
+            qbg_col.push_back("0");
+            qbg_col.push_back("1");
+            qbg_col.push_back("0.1");
+        }
+        bg_col[0]=qbg_col[0].toFloat();
+        bg_col[1]=qbg_col[1].toFloat();
+        bg_col[2]=qbg_col[2].toFloat();
+        bg_col[3]=qbg_col[3].toFloat();
+
+        if(err==0) add_note(misl_i,nt_id,txt,x,y,z,a,b,font_size,t_made,t_mod,txt_col,bg_col);
 
     }
 
@@ -187,8 +215,10 @@ for(unsigned int i=0;i<note->size();i++){
     sstr<<"a="<<nt->a<<'\n';
     sstr<<"b="<<nt->b<<'\n';
     sstr<<"font_size="<<nt->font_size<<'\n';
-    sstr<<"dt_made="<<nt->dt_made.toString("d.M.yyyy").toStdString()<<'\n';
-    sstr<<"dt_mod="<<nt->dt_mod.toString("d.M.yyyy").toStdString()<<'\n';
+    sstr<<"t_made="<<nt->t_made.toString("d.M.yyyy H:m:s").toStdString()<<'\n';
+    sstr<<"t_mod="<<nt->t_mod.toString("d.M.yyyy H:m:s").toStdString()<<'\n';
+    sstr<<"txt_col="<<nt->txt_col[0]<<";"<<nt->txt_col[1]<<";"<<nt->txt_col[2]<<";"<<nt->txt_col[3]<<'\n';
+    sstr<<"bg_col="<<nt->bg_col[0]<<";"<<nt->bg_col[1]<<";"<<nt->bg_col[2]<<";"<<nt->bg_col[3]<<'\n';
 
     sstr<<"l_id=";
     for(unsigned int l=0;l<nt->outlink.size();l++){
@@ -224,9 +254,11 @@ int NoteFile::save(){ //save the notes to their file
     virtual_save();
 
     if(id>=0){ //for example for the copyPasteCut nf
+        misl_i->fs_watch->removePath(full_file_addr);
         ntFile.open(full_file_addr.toStdString().c_str(),std::ios_base::out|std::ios::binary);
         ntFile<<nf_z->back();
         ntFile.close();
+        misl_i->fs_watch->addPath(full_file_addr);
     }
 
 return 0;
@@ -240,13 +272,13 @@ void NoteFile::find_free_ids()
     }
 }
 
-Note *NoteFile::add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //common parameters for all addnote functions
+Note *NoteFile::add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]){ //common parameters for all addnote functions
 
 Note nt;
-QDate dt_default(2013,2,23);//date on which I fixed the property ... (I introduced it ~18.11.2012)
+QDateTime t_default(QDate(2013,3,8),QTime(0,0,0));//date on which I fixed the property ... (I introduced it ~18.11.2012)
 
-if(!dt_made.isValid()){dt_made=dt_default;}
-if(!dt_mod.isValid()){dt_mod=dt_default;}
+if(!t_made.isValid()){t_made=t_default;}
+if(!t_mod.isValid()){t_mod=t_default;}
 
 //Hard written stuff
 nt.text = text;
@@ -256,8 +288,16 @@ nt.z = z;
 nt.a = a;
 nt.b = b;
 nt.font_size = font_size;
-nt.dt_made=dt_made;
-nt.dt_mod=dt_mod;
+nt.t_made=t_made;
+nt.t_mod=t_mod;
+nt.txt_col[0]=txt_col[0];
+nt.txt_col[1]=txt_col[1];
+nt.txt_col[2]=txt_col[2];
+nt.txt_col[3]=txt_col[3];
+nt.bg_col[0]=bg_col[0];
+nt.bg_col[1]=bg_col[1];
+nt.bg_col[2]=bg_col[2];
+nt.bg_col[3]=bg_col[3];
 
 //Program stuff
 nt.selected=false;
@@ -270,11 +310,11 @@ note->push_back(nt);
 return &(*note)[note->size()-1];
 
 }
-Note *NoteFile::add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //import a note (one that has an id)
+Note *NoteFile::add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]){ //import a note (one that has an id)
 
 //=======Dobavqne v programata=========
 
-Note *nt=add_note_base(m_i,text,x,y,z,a,b,font_size,dt_made,dt_mod);
+Note *nt=add_note_base(m_i,text,x,y,z,a,b,font_size,t_made,t_mod,txt_col,bg_col);
 
 nt->id=id;
 if(id>last_note_id){last_note_id=id;}
@@ -283,11 +323,11 @@ nt->init();
 
 return nt;
 }
-Note *NoteFile::add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod){ //completely new note (assign new id)
+Note *NoteFile::add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]){ //completely new note (assign new id)
 
 //=======Dobavqne v programata=========
 
-Note *nt=add_note_base(m_i,text,x,y,z,a,b,font_size,dt_made,dt_mod);
+Note *nt=add_note_base(m_i,text,x,y,z,a,b,font_size,t_made,t_mod,txt_col,bg_col);
 
 nt->id=get_new_id();
 
@@ -297,7 +337,7 @@ return nt;
 }
 Note *NoteFile::add_note(Note *nt)
 {
-    return add_note(nt->misl_i,nt->id,nt->text,nt->x,nt->y,nt->z,nt->a,nt->b,nt->font_size,nt->dt_made,nt->dt_mod);
+    return add_note(nt->misl_i,nt->id,nt->text,nt->x,nt->y,nt->z,nt->a,nt->b,nt->font_size,nt->t_made,nt->t_mod,nt->txt_col,nt->bg_col);
 }
 
 int NoteFile::delete_note(unsigned int position){ //delete note at the given vector position

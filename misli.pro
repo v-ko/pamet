@@ -24,7 +24,8 @@ SOURCES += main.cpp\
     editnotedialogue.cpp \
     newnfdialogue.cpp \
     misliwindow.cpp \
-    emitmynameaction.cpp
+    emitmynameaction.cpp \
+    filesystemwatcher.cpp
 
 HEADERS  += \
     misliinstance.h \
@@ -39,7 +40,8 @@ HEADERS  += \
     editnotedialogue.h \
     newnfdialogue.h \
     misliwindow.h \
-    emitmynameaction.h
+    emitmynameaction.h \
+    filesystemwatcher.h
 
 OTHER_FILES += \
     help/text.txt \

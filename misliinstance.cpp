@@ -8,6 +8,8 @@ MisliInstance::MisliInstance(QString nts_dir, MisliWindow *msl_w_ = NULL)
 {
     //Init
     notes_dir=nts_dir;
+    fs_watch = new FileSystemWatcher(this);
+    changes_accounted_for=0;
     current_note_file=0;
     last_nf_id=0;
     msl_w=msl_w_;
@@ -160,14 +162,37 @@ int MisliInstance::previous_nf()
 
     return 1;
 }
+int MisliInstance::delete_nf(int id) //soft delete
+{
+    NoteFile * nf;
 
+    //Find and delete the notefile
+    for(unsigned int i=0;i<note_file.size();i++){
+        nf = &note_file[i];
+        if(nf->id==id){
+            note_file.erase(note_file.begin()+i);
+            break;
+        }
+    }
+
+    //Switch the current notefile to something valid
+    if(find_first_normal_nf()==NULL){
+        init_notes_files();
+    }else{
+        set_current_notes(find_first_normal_nf()->id);
+    }
+
+    reinit_redirect_notes(); //update a probable link to the deleted nf
+
+    return 0;
+}
 
 int MisliInstance::undo()
 {
     std::fstream ntf;
     std::string str;
 
-    std::vector<std::string> *nfz=curr_nf()->nf_z;
+    //std::vector<std::string> *nfz=curr_nf()->nf_z;
 
     if(curr_nf()->nf_z->size()>=2){
 
@@ -177,8 +202,8 @@ int MisliInstance::undo()
 
         ntf.close();
 
-        set_current_notes(curr_nf()->init(this,curr_nf()->name,curr_nf()->full_file_addr)); //load the backup
-        curr_nf()->nf_z=nfz;
+        set_current_notes(curr_nf()->init(this,curr_nf()->name,curr_nf()->full_file_addr,curr_nf()->id)); //load the backup
+        //curr_nf()->nf_z=nfz;
 
         emit_current_nf_updated();
         return 0;
@@ -262,7 +287,7 @@ int MisliInstance::init_notes_files()
     }
 
     if(default_nf_on_startup()!=NULL) current_note_file=default_nf_on_startup()->id;
-    else current_note_file=find_first_normal_nf();
+    else current_note_file=find_first_normal_nf()->id;
 
     nf_before_help=current_note_file;
 
@@ -309,14 +334,26 @@ int MisliInstance::delete_selected()
 {
     return curr_nf()->delete_selected();
 }
-int MisliInstance::find_first_normal_nf()
+NoteFile *MisliInstance::find_first_normal_nf()
 {
     for(unsigned int i=0;i<note_file.size();i++){
         if(note_file[i].id>=0){
-            return note_file[i].id;
+            return &note_file[i];
         }
     }
 
-    d("Only system notefiles present. Terminating.");
-    exit(66);
+    return 0;
+}
+
+void MisliInstance::file_changed(QString file)
+{
+    NoteFile *nf;
+    for(unsigned int f=0;f<note_file.size();f++){
+        nf=&note_file[f];
+        if(nf->full_file_addr==file){
+            nf->init(this,nf->name,nf->full_file_addr,nf->id);
+            emit_current_nf_updated();
+            return;
+        }
+    }
 }

@@ -13,6 +13,7 @@
 #include "../../petko10.h"
 #include "../../petko10q.h"
 
+#include "filesystemwatcher.h"
 #include "glwidget.h"
 #include "notefile.h"
 #include "common.h"
@@ -35,7 +36,7 @@ public:
     NoteFile * clipboard_nf();
     NoteFile * default_nf_on_startup();
     void save_eye_coords_to_nf();
-    int find_first_normal_nf();
+    NoteFile * find_first_normal_nf();
     int copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf);
 
     //Window classes
@@ -43,6 +44,8 @@ public:
     GLWidget * gl_w;
 
     //Variables
+    FileSystemWatcher *fs_watch;
+    int changes_accounted_for;
     int error,using_external_classes;
     QString notes_dir;
     NotesVector *curr_note;
@@ -60,6 +63,7 @@ public slots:
 
     int next_nf();
     int previous_nf();
+    int delete_nf(int id);
 
     int undo();
 
@@ -69,6 +73,7 @@ public slots:
     void set_curr_nf_as_default_on_startup();
     int delete_selected();
 
+    void file_changed(QString file);
 };
 
 #endif // MISLIINSTANCE_H

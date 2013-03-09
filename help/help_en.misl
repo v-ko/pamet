@@ -1,530 +1,744 @@
 #Notes database for Misli
 #Notes database for Misli
-[32]
+[14]
 txt=this_note_points_to:notes
-x=-5.05341
-y=0.496954
+x=-2.73381
+y=4.39056
 z=0
 a=6.95879
 b=2.23675
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[33]
+[17]
 txt=Help
-x=-4.72209
-y=-4.80488
+x=-2.40249
+y=-0.911273
 z=0
 a=6.46173
 b=2.56812
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=34;35;36;32;8;19;15;51;
-l_txt=;;;;;;;;
-[34]
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=18;21;22;14;70;76;74;82;92;91;
+l_txt=;;;;;;;;;;
+[18]
 txt=Navigation
-x=15.9888
-y=16.7342
+x=18.3084
+y=20.6278
 z=0
 a=8.62885
 b=2.43881
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=38;39;54;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=25;26;83;
 l_txt=;;;
-[35]
+[21]
 txt=Notes
-x=15.3754
-y=2.24003
+x=17.695
+y=6.13364
 z=0
 a=8.00927
 b=2.64766
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=40;43;0;4;28;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=27;37;66;68;80;
 l_txt=;;;;;
-[36]
+[22]
 txt=Notefiles
-x=14.7195
-y=-13.974
+x=17.0391
+y=-10.0804
 z=0
 a=8.15505
 b=2.67414
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=45;47;49;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=56;59;62;
 l_txt=;;;
-[38]
+[25]
 txt=Scroll with the mouse to zoom in/out
-x=31.2979
-y=22.1688
+x=33.6175
+y=26.0624
 z=0
 a=19.6437
 b=2.70398
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[39]
+[26]
 txt=If you don't have a mouse wheel use PageUp and PageDown
-x=31.2979
-y=17.9537
+x=33.6175
+y=21.8473
 z=0
 a=19.6437
 b=2.70398
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[40]
+[27]
 txt=Making notes
-x=29.3662
-y=10.7331
+x=31.6858
+y=14.6267
 z=0
 a=9.30489
 b=1.9087
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=41;42;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=29;31;
 l_txt=;;
-[41]
+[29]
 txt=Double-click on the canvas
-x=45.1128
-y=11.8465
+x=47.4324
+y=15.7401
 z=0
 a=15.7467
 b=1.74964
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[42]
+[31]
 txt=Press M
-x=45.0334
-y=9.22205
+x=47.353
+y=13.1157
 z=0
 a=9.94113
 b=1.82917
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[43]
+[37]
 txt=Editing notes
-x=29.2865
-y=5.48405
+x=31.6061
+y=9.37766
 z=0
 a=9.46407
 b=2.06775
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=44;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=52;
 l_txt=;
-[44]
+[52]
 txt=Select a note and press E
-x=43.204
-y=5.32505
+x=45.5236
+y=9.21866
 z=0
 a=15.5082
 b=2.06775
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[45]
+[56]
 txt=Making new notefiles
-x=26.9307
-y=-12.7512
+x=29.2503
+y=-8.85759
 z=0
 a=11.4256
 b=2.2434
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=46;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=58;
 l_txt=;
-[46]
+[58]
 txt=Press N
-x=43.7907
-y=-12.9898
+x=46.1103
+y=-9.09619
 z=0
 a=8.35054
 b=1.98822
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[47]
+[59]
 txt=Switching notefiles
-x=27.1691
-y=-16.4094
+x=29.4887
+y=-12.5158
 z=0
 a=10.4183
 b=2.30634
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=48;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=61;
 l_txt=;
-[48]
+[61]
 txt=press PLUS or MINUS to browse all notefiles in the directory
-x=42.3359
-y=-16.4062
+x=44.6555
+y=-12.5126
 z=0
 a=17.0193
 b=3.10163
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[49]
+[62]
 txt=Linking to notefiles
-x=27.8848
-y=-22.2947
+x=30.2044
+y=-18.4011
 z=0
 a=9.94113
 b=2.4654
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=53;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=64;
 l_txt=;
-[50]
+[63]
 txt=this_note_points_to:notes
-x=66.6154
-y=-21.4993
+x=68.935
+y=-17.6057
 z=0
 a=6.95879
 b=2.23675
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[53]
+[64]
 txt=Link notes ,on double-click, lead you to another (specified by you) notefile . They have a dark border for recognition.
-x=41.3253
-y=-21.2607
+x=43.6449
+y=-17.3671
 z=0
 a=21.0752
 b=4.29457
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=50;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=63;
 l_txt=;
-[55]
+[65]
 txt=Edit this one to see what it looks like
-x=79.1015
-y=-20.4655
+x=81.4211
+y=-16.5719
 z=0
 a=10
 b=4
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=50;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=63;
 l_txt=;
-[0]
+[66]
 txt=Moving notes
-x=28.8293
-y=1.82255
+x=31.1489
+y=5.71616
 z=0
 a=9.77544
 b=2.15391
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=1;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=67;
 l_txt=;
-[1]
+[67]
 txt=Click and hold on the note to "pick it up" . Holding shift or control will pick up all selected notes as well.
-x=42.0841
-y=1.90538
+x=44.4037
+y=5.79899
 z=0
 a=34.2969
 b=2.81665
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[4]
+[68]
 txt=Resizing notes
-x=28.995
-y=-2.56814
+x=31.3146
+y=1.32547
 z=0
 a=9.52691
 b=1.82254
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=6;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=69;
 l_txt=;
-[6]
+[69]
 txt=There's a pale circle in the down-right corner of each note . Drag it to resize the note . You can batch-resize selected notes too .
-x=41.7527
-y=-1.90548
+x=44.0723
+y=1.98813
 z=0
 a=35.3738
 b=3.23087
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[8]
+[70]
 txt=Selecting notes
-x=-20.0479
-y=-4.30783
+x=-17.7283
+y=-0.414222
 z=0
 a=9.94112
 b=2.56812
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=10;11;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=72;73;
 l_txt=;;
-[9]
+[71]
 txt=This is a Help page !!! \nIf you make changes here they won't be saved ! (you can try everything you want out though ;) )\nPRESS F1 to get out.\n(or try the other means explained to switch to a normal notefile)
-x=-29.7406
-y=30.9832
+x=-27.0897
+y=35.0425
 z=0
 a=54.6763
 b=13.0892
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=1;0;0;1
+bg_col=1;0;0;0.1
 l_id=
 l_txt=
-[10]
+[72]
 txt=Control selection : works as you would expect it (toggle select for a single note)
-x=-48.0487
-y=-1.98823
+x=-45.8949
+y=2.23666
 z=0
 a=21.6219
 b=3.47939
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[11]
+[73]
 txt=Shift selection : Selects the note and all the notes that it links to
-x=-48.7115
-y=-7.20735
+x=-46.3919
+y=-3.31374
 z=0
 a=22.3675
 b=2.98234
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[15]
+[74]
 txt=Copy , paste , cut
-x=-20.7935
-y=8.94705
+x=-18.4739
+y=12.8407
 z=0
 a=10.2725
 b=2.48528
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=16;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=75;
 l_txt=;
-[16]
+[75]
 txt=Work as you would expect.\nCTRL+C or V or X
-x=-43.9066
-y=9.36125
+x=-41.587
+y=13.2549
 z=0
 a=15.3259
 b=3.06518
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[19]
+[76]
 txt=Undo - yes ; Redo - no
-x=-22.2847
-y=4.72205
+x=-19.9651
+y=8.61566
 z=0
 a=11.9294
 b=2.81665
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=20;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=77;
 l_txt=;
-[20]
+[77]
 txt=CTRL+Z for Undo
-x=-39.5988
-y=4.72205
+x=-37.2792
+y=8.61566
 z=0
 a=10.4382
 b=2.15391
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[23]
+[78]
 txt=PS :
-x=-29.0778
-y=-38.1904
+x=-27.0895
+y=-45.7292
 z=0
 a=10
 b=4
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=24;60;3;
-l_txt=;;;
-[24]
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=79;87;
+l_txt=;;
+[79]
 txt=Every note has a timestamp, but I haven't got to using/showing them yet (date created + date modified)
-x=-14.3318
-y=-35.0424
+x=-12.1779
+y=-43.8239
 z=0
 a=30.0719
 b=2.98234
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[28]
+[80]
 txt=Linking notes
-x=28.6635
-y=-6.04753
+x=30.9831
+y=-2.15392
 z=0
 a=9.52696
 b=2.23672
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=30;
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=81;
 l_txt=;
-[30]
+[81]
 txt=Select a note (or more notes) and press L . Then place the links on the target .
-x=41.587
-y=-5.71617
+x=43.9066
+y=-1.82256
 z=0
 a=25.267
 b=3.23088
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[51]
+[82]
 txt=delete ofcourse
-x=-19.6337
-y=1.24264
+x=-17.3141
+y=5.13625
 z=0
 a=8.94701
 b=1.3
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[54]
+[83]
 txt=Moving around
-x=-20.6278
-y=15.1602
+x=-18.3082
+y=19.0538
 z=0
 a=10
 b=4
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=57;
-l_txt=;
-[57]
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=84;90;
+l_txt=;;
+[84]
 txt=Click on .. everywhere.. and drag the "canvas" around ( like on Google maps )
-x=-46.4748
-y=15.1603
+x=-44.6522
+y=20.2966
 z=0
 a=20.7107
 b=3.56231
 font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
+t_made=23.2.2013 0:0:0
+t_mod=23.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[60]
-txt=This Help notefile was made in less than an hour , while I did some debugging on the side . So when you get used to using the program everything's very fast.
-x=-14.4974
-y=-40.3444
-z=0
-a=30.4033
-b=3.72792
-font_size=1
-dt_made=23.2.2013
-dt_mod=23.2.2013
-l_id=
-l_txt=
-[2]
+[86]
 txt=If you hover the mouse over a note while copying - the same note would be under the mouse when pasting (otherwise it's random)
-x=-73.0672
-y=10.3554
+x=-70.7476
+y=14.249
 z=0
 a=18.971
 b=5.6333
 font_size=1
-dt_made=24.2.2013
-dt_mod=24.2.2013
-l_id=16;
+t_made=24.2.2013 0:0:0
+t_mod=24.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=75;
 l_txt=;
-[3]
+[87]
 txt=You can use the codebase as a library to implement reading notes in your program . For example in my AI project I define some elements in notes . Then in the program I recognize (by a "define element:" in the beginning of the note) and use them to configure the program.
-x=-14.4146
-y=-46.889
+x=-12.4264
+y=-48.2973
 z=0
 a=35.2082
 b=5.6333
 font_size=1
-dt_made=24.2.2013
-dt_mod=24.2.2013
-l_id=5;
+t_made=24.2.2013 0:0:0
+t_mod=24.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=88;
 l_txt=;
-[5]
+[88]
 txt=If anyone is interested in implementing it that way - contact me and I can help.
-x=24.3558
-y=-47.8002
+x=25.7641
+y=-48.8772
 z=0
 a=14.5803
 b=4.72204
 font_size=1
-dt_made=24.2.2013
-dt_mod=24.2.2013
+t_made=24.2.2013 0:0:0
+t_mod=24.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
 l_id=
 l_txt=
-[7]
+[89]
 txt=That's the default notefile that's made if there's no other notefiles in the directory.
-x=62.2347
-y=-14.4577
+x=64.5543
+y=-10.5641
 z=0
 a=15.7766
 b=3.96319
 font_size=1
-dt_made=27.2.2013
-dt_mod=27.2.2013
-l_id=50;
+t_made=27.2.2013 0:0:0
+t_mod=27.2.2013 0:0:0
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=63;
 l_txt=;
+[90]
+txt=The arrow keys  also work
+x=-41.09
+y=16.2372
+z=0
+a=14.4146
+b=1.73972
+font_size=1
+t_made=9.3.2013 18:58:25
+t_mod=9.3.2013 18:58:25
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=
+l_txt=
+[91]
+txt=Folders
+x=11.7637
+y=-21.2905
+z=0
+a=8.95695
+b=3.04198
+font_size=1
+t_made=9.3.2013 19:0:31
+t_mod=9.3.2013 19:11:9
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=93;94;
+l_txt=;;
+[92]
+txt=Colors
+x=-15.1634
+y=-9.29009
+z=0
+a=7.85846
+b=2.45049
+font_size=1
+t_made=9.3.2013 19:2:37
+t_mod=9.3.2013 19:9:44
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=95;
+l_txt=;
+[93]
+txt=These are the working directories in which the notefiles are kept.
+x=30.1001
+y=-22.7271
+z=0
+a=23.7444
+b=2.61949
+font_size=1
+t_made=9.3.2013 19:4:16
+t_mod=9.3.2013 19:11:41
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=
+l_txt=
+[94]
+txt=The program watches the directories , therefore if you include a DropBox folder , you can do real time collective editing .
+x=30.1001
+y=-26.783
+z=0
+a=33.3574
+b=3.12319
+font_size=1
+t_made=9.3.2013 19:5:22
+t_mod=9.3.2013 19:12:42
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=
+l_txt=
+[95]
+txt=Select one or more notes and press "1" to "4" to change the color.
+x=-40.8052
+y=-10.5112
+z=0
+a=19.4318
+b=3.24065
+font_size=1
+t_made=9.3.2013 19:7:15
+t_mod=9.3.2013 19:10:36
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=96;97;98;99;
+l_txt=;;;;
+[96]
+txt=1
+x=-59.2259
+y=-7.13109
+z=0
+a=10
+b=4
+font_size=1
+t_made=9.3.2013 19:7:31
+t_mod=9.3.2013 19:7:31
+txt_col=0;0;1;1
+bg_col=0;0;1;0.1
+l_id=
+l_txt=
+[97]
+txt=2
+x=-59.1415
+y=-11.7788
+z=0
+a=10
+b=4
+font_size=1
+t_made=9.3.2013 19:7:34
+t_mod=9.3.2013 19:7:34
+txt_col=0;1;0;1
+bg_col=0;1;0;0.1
+l_id=
+l_txt=
+[98]
+txt=3
+x=-58.9724
+y=-16.5105
+z=0
+a=10
+b=4
+font_size=1
+t_made=9.3.2013 19:7:38
+t_mod=9.3.2013 19:7:38
+txt_col=1;0;0;1
+bg_col=1;0;0;0.1
+l_id=
+l_txt=
+[99]
+txt=4
+x=-58.8034
+y=-21.9186
+z=0
+a=10
+b=4
+font_size=1
+t_made=9.3.2013 19:7:42
+t_mod=9.3.2013 19:7:42
+txt_col=0;0;0;1
+bg_col=0;0;0;0.1
+l_id=
+l_txt=

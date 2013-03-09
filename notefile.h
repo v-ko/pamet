@@ -36,17 +36,17 @@ public:
     void make_coords_relative_to(double x,double y);
     int get_new_id();
 
-    Note *add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
-    Note *add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
-    Note *add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDate dt_made,QDate dt_mod);
+    Note *add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
+    Note *add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
+    Note *add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
     Note *add_note(Note* nt);
 
     int delete_note(Note *);
     int delete_note(unsigned int);
     int delete_selected();
 
-    int init(MisliInstance*, QString, QString);
-    int init(MisliInstance*, QString, QString, int id);
+    int init(MisliInstance *m_i,QString ime,QString path);
+    int init(MisliInstance *m_i,QString ime,QString path, int id);
     int init(NoteFile* nf);
     int init_links();
     int init_notes();

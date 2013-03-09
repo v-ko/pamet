@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>408</width>
-    <height>121</height>
+    <height>126</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -19,51 +19,45 @@
   <property name="windowTitle">
    <string>New notefile</string>
   </property>
-  <widget class="QWidget" name="verticalLayoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>10</y>
-     <width>391</width>
-     <height>108</height>
-    </rect>
-   </property>
-   <layout class="QVBoxLayout" name="verticalLayout">
-    <property name="sizeConstraint">
-     <enum>QLayout::SetDefaultConstraint</enum>
-    </property>
-    <item>
-     <widget class="QLabel" name="label">
-      <property name="frameShape">
-       <enum>QFrame::NoFrame</enum>
-      </property>
-      <property name="text">
-       <string>Name for the new notefile:</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QLineEdit" name="lineEdit"/>
-    </item>
-    <item>
-     <widget class="QLabel" name="helpLabel">
-      <property name="text">
-       <string>Just a name (no file extentions)</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPushButton" name="okButton">
-      <property name="text">
-       <string>Ok</string>
-      </property>
-      <property name="shortcut">
-       <string>Return</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
+  <layout class="QVBoxLayout" name="verticalLayout_2">
+   <item>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="sizeConstraint">
+      <enum>QLayout::SetDefaultConstraint</enum>
+     </property>
+     <item>
+      <widget class="QLabel" name="label">
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="text">
+        <string>Name for the notefile:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="lineEdit"/>
+     </item>
+     <item>
+      <widget class="QLabel" name="helpLabel">
+       <property name="text">
+        <string>Just a name (no file extentions)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="okButton">
+       <property name="text">
+        <string>Ok</string>
+       </property>
+       <property name="shortcut">
+        <string>Return</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
   <action name="actionEscape">
    <property name="text">
     <string>escape</string>
@@ -98,12 +92,28 @@
    <slot>input_done()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>82</x>
-     <y>84</y>
+     <x>83</x>
+     <y>116</y>
     </hint>
     <hint type="destinationlabel">
      <x>62</x>
      <y>76</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>lineEdit</sender>
+   <signal>returnPressed()</signal>
+   <receiver>okButton</receiver>
+   <slot>click()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>306</x>
+     <y>44</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>309</x>
+     <y>110</y>
     </hint>
    </hints>
   </connection>

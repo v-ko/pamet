@@ -49,7 +49,7 @@ int EditNoteDialogue::edit_note(){ //false for new note , true for edit
     move(QCursor::pos());
 
     text=edited_note->text;
-    ui->textEdit->setText(text);
+    ui->textEdit->setPlainText(text);
 
     show();
     raise();
@@ -66,25 +66,27 @@ void EditNoteDialogue::input_done(){
 
     Note null_note;
 
-    if(text.size()>600){
+    /*if(text.size()>600){
         QMessageBox mb(QMessageBox::Warning,"Too much text","This note is more than 600 characters . This would slow down the program . This limitation won't be in the next release",QMessageBox::Ok);
         mb.exec();
         return;
-    }
+    }*/
 
     float x,y;
     Note *nt;
+    float txt_col[] = {0,0,1,1};
+    float bg_col[] = {0,0,1,0.1};
 
     if( edited_note==NULL){//If we're making a new note
         msl_w->gl_w->unproject_to_plane(0,x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
-        nt=msl_w->curr_misli()->curr_nf()->add_note(msl_w->curr_misli(),text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDate::currentDate(),QDate::currentDate());
+        nt=msl_w->curr_misli()->curr_nf()->add_note(msl_w->curr_misli(),text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDateTime::currentDateTime(),QDateTime::currentDateTime(),txt_col,bg_col);
         nt->link_to_selected();
     }else {//else we're in edit mode
         x=edited_note->x;
         y=edited_note->y;
         if(edited_note->text!=text){
             edited_note->text=text;
-            edited_note->dt_mod=QDate::currentDate();
+            edited_note->t_mod=QDateTime::currentDateTime();
         }
 
         //font,cvqt,etc

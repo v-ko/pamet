@@ -27,6 +27,7 @@ public:
     ~MisliWindow();
 
     void add_dir(QString path);
+    void update_notes_rdy();
     MisliInstance * curr_misli();
     MisliInstance * misli_by_name(QString path);
 
@@ -43,10 +44,13 @@ public:
     std::vector<MisliInstance*> misli;
     QString current_misli_name;
     MisliInstance * curr_msl;
-    int notes_rdy;
+    bool notes_rdy,past_initial_load;
     bool first_program_start;
 
 public slots:
+    //void set_notes_rdy();
+    //void set_notes_not_rdy();
+
     void undo();
     void copy();
     void paste();
@@ -54,13 +58,16 @@ public slots:
 
     void edit_note();
     void new_note();
+
     void new_nf();
+    void rename_nf();
+    void delete_nf();
+
     void make_link();
     void next_nf();
     void prev_nf();
     void delete_selected();
-    void zoom_out();
-    void zoom_in();
+
     void toggle_help();
     void make_viewpoint_default();
     void make_nf_default();
@@ -74,6 +81,18 @@ public slots:
 
     void switch_current_nf();
     void update_current_nf();
+
+    void col_blue();
+    void col_green();
+    void col_red();
+    void col_black();
+
+    void zoom_out();
+    void zoom_in();
+    void move_up();
+    void move_down();
+    void move_right();
+    void move_left();
 private:
     //Functions
     void import_settings_and_folders();

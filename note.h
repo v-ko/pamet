@@ -21,7 +21,8 @@ float a, b; //6irinata na kutiqta i viso4inata
 QString text;
 double font_size;
 bool selected;
-QDate dt_made,dt_mod;
+QDateTime t_made,t_mod;
+float txt_col[4],bg_col[4]; //text and background colors
 std::vector<Link> outlink;
 std::vector<int> inlink;
 
