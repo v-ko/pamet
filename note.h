@@ -7,6 +7,7 @@
 #include<QDate>
 #include <vector>
 #include <GL/gl.h>
+#include <QGLPixelBuffer>
 #include "link.h"
 
 class NoteFile;

@@ -66,10 +66,11 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
     QString txt = text;
 
     QPainter p(&pixm);
-    QFont font("Halvetica");font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
+    QFont font("Halvetica");
+    font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
     font.setStyleStrategy(QFont::PreferAntialias); //QFont::StyleStrategy(0x0080)); //style aliasing
     p.setFont(font);
-
+    p.setRenderHint(QPainter::TextAntialiasing);
 
     //Check if we have a link to a file
     if (txt.startsWith(QString("this_note_points_to:"))){
@@ -138,7 +139,6 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
 
     if(misl_i->using_external_classes){
         //Drawing the text into the pixmap
-
         p.setPen(QColor(txt_col[0]*255,txt_col[1]*255,txt_col[2]*255,txt_col[3]*255)); //set color
         p.setBrush(Qt::SolidPattern); // set fill style
         pixm.fill(QColor(0,0,0,0)); //clear color to 0
@@ -147,7 +147,7 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
 
         if(id==2){//sample for testing
             d("saving texture");
-            if (!pixm.save("./note.jpg",NULL,100)){d("bad save");}
+            if (!pixm.save("./note","png",100)){d("bad save");}
         }
         //Loading it as a texture in GL
         //glEnable( GL_TEXTURE_2D );
