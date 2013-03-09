@@ -145,10 +145,10 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         p.drawText(rect,Qt::TextWordWrap | Qt::AlignCenter,short_text);
         p.end();
 
-        //if(id==1){//sample for testing
-        //    d("saving texture");
-        //    if (!pixm.save("/home/Pepi/C++/misli/note.jpg")){d("bad save");}
-        //}
+        if(id==2){//sample for testing
+            d("saving texture");
+            if (!pixm.save("./note.jpg",NULL,100)){d("bad save");}
+        }
         //Loading it as a texture in GL
         //glEnable( GL_TEXTURE_2D );
             texture=misl_i->gl_w->bindTexture(pixm,GL_TEXTURE_2D,GL_RGBA,QGLContext::DefaultBindOption);
