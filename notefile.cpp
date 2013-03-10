@@ -268,6 +268,7 @@ return 0;
 }
 void NoteFile::find_free_ids()
 {
+    free_id.clear();
     for(int i=0;i<last_note_id;i++){ //for all ids to the last
         if(get_note_by_id(i)==NULL){ //if there's no note on it
             free_id.push_back(i); //add the id to the list

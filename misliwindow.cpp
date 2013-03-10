@@ -13,10 +13,11 @@ MisliWindow::MisliWindow(QApplication* app):
     ui->setupUi(this);
     notes_rdy=false;
     first_program_start=false;
+    past_initial_load=false;
 
     gl_w = new GLWidget(this);
     setCentralWidget(gl_w);
-    //gl_w->updateGL(); //if the first paint isn't called before the texture init for the texts there's a bug with the textures
+    gl_w->updateGL();//if the first paint isn't called before the texture init for the texts there's a bug with the textures
 
     dir_w = new GetDirDialogue(this);
     edit_w = new EditNoteDialogue(this);
@@ -26,7 +27,8 @@ MisliWindow::MisliWindow(QApplication* app):
     setWindowIcon(QIcon(":/img/icon.png"));
 
     import_settings_and_folders();
-    showMaximized();
+    if(notes_rdy) showMaximized();
+    past_initial_load=true;
 }
 
 MisliWindow::~MisliWindow()
@@ -94,6 +96,8 @@ void MisliWindow::add_dir(QString path)
     }
     if(notes_rdy==false){
         notes_rdy=true;
+        if( past_initial_load && isHidden() )
+            showMaximized();
     }
 
     set_current_misli(path);

@@ -16,7 +16,6 @@
 #endif
 
 GLWidget::GLWidget(MisliWindow *msl_w_)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers))
 {
 
     //Random
@@ -105,10 +104,22 @@ void GLWidget::initGLenv() //set environment variables
 void GLWidget::setupGLenv() //start the blend and multisampling
 {
     glEnable( GL_MULTISAMPLE ); //needed (some times enabled by default)
-    GLint bufs;
-    GLint samples;
+    GLint bufs=0;
+    GLint samples=0;
     glGetIntegerv(GL_SAMPLE_BUFFERS, &bufs);
     glGetIntegerv(GL_SAMPLES, &samples);
+
+    QMessageBox msg;
+
+    QString qstr;
+    qstr+="We have " ;
+    qstr+=QVariant(bufs).toString();
+    qstr+=" buffers and ";
+    qstr+=QVariant(samples).toString();
+    qstr+=" samples";
+    msg.setText(qstr);
+    msg.exec();
+
     qDebug("We have %d buffers and %d samples", bufs, samples);
 
     glEnable( GL_BLEND );

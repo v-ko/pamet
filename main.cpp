@@ -304,8 +304,9 @@
 //build na Windows --done
 
 //BUG:resize da ne selektira vsi4ko i da ne povdiga
-//BUG anialising ne ba4ka na 50% ot kompovete...
-
+//QPainter: konceptualno (mestene s world transform)
+//BUG anialising ne ba4ka na 50% ot kompovete... -> rewrite to qpainter..
+//premesti clear settings v other
 
 //video za predstavqne na angl i bg
 //razprostranenie
