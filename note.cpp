@@ -145,13 +145,13 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         p.drawText(rect,Qt::TextWordWrap | Qt::AlignCenter,short_text);
         p.end();
 
-        if(id==2){//sample for testing
-            d("saving texture");
-            if (!pixm.save("./note","png",100)){d("bad save");}
-        }
+        //if(id==2){//sample for testing
+        //    d("saving texture");
+        //    if (!pixm.save("./note.png",NULL,100)){d("bad save");}
+        //}
         //Loading it as a texture in GL
         //glEnable( GL_TEXTURE_2D );
-            texture=misl_i->gl_w->bindTexture(pixm,GL_TEXTURE_2D,GL_RGBA,QGLContext::DefaultBindOption);
+            texture=misl_i->gl_w->bindTexture(pixm,GL_TEXTURE_2D,GL_RGBA,QGLContext::InvertedYBindOption|QGLContext::LinearFilteringBindOption);
             //glBindTexture(GL_TEXTURE_2D,texture); //the manual way pixelates for some reason
             //pixm=QGLWidget::convertToGLFormat(pixm);
             //gluBuild2DMipmaps(GL_TEXTURE_2D, 4, pixm.width(), pixm.height(),GL_RGBA, GL_UNSIGNED_BYTE, pixm.bits());

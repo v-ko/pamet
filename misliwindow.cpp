@@ -16,7 +16,7 @@ MisliWindow::MisliWindow(QApplication* app):
 
     gl_w = new GLWidget(this);
     setCentralWidget(gl_w);
-    gl_w->updateGL(); //if the first paint isn't called before the texture init for the texts there's a bug with the textures
+    //gl_w->updateGL(); //if the first paint isn't called before the texture init for the texts there's a bug with the textures
 
     dir_w = new GetDirDialogue(this);
     edit_w = new EditNoteDialogue(this);

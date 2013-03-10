@@ -303,7 +303,9 @@
 //problemyt - ne trqbva da se slaga CONFIGURE+=static v .pro --done
 //build na Windows --done
 
+//BUG:resize da ne selektira vsi4ko i da ne povdiga
 //BUG anialising ne ba4ka na 50% ot kompovete...
+
 
 //video za predstavqne na angl i bg
 //razprostranenie
@@ -357,6 +359,11 @@ int main(int argc, char *argv[])
 {
 
     QApplication a(argc, argv);
+
+    QGLFormat glf = QGLFormat::defaultFormat();
+    glf.setSampleBuffers(true);
+    glf.setSamples(4);
+    QGLFormat::setDefaultFormat(glf);
 
     a.setOrganizationName("p10");
     a.setApplicationName("misli");

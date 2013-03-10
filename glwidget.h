@@ -39,9 +39,6 @@ public:
 
     void initGLenv();
     void setupGLenv();
-    void resetGLenv();
-    void startGLState();
-    void endGLState();
 
     MisliInstance *misl_i();
     NotesVector *curr_note();
@@ -50,7 +47,6 @@ public:
     void save_eye_coords_to_nf();
 
     //Variables
-    QGLContext *context;
     GLdouble modelview[16];
     GLdouble projection[16];
     GLint viewport[4];

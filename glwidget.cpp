@@ -16,8 +16,9 @@
 #endif
 
 GLWidget::GLWidget(MisliWindow *msl_w_)
-    : QGLWidget(QGLFormat(QGL::SampleBuffers|QGL::AlphaChannel|QGL::DepthBuffer))
+    : QGLWidget(QGLFormat(QGL::SampleBuffers))
 {
+
     //Random
     msl_w=msl_w_;
     mouse_note=NULL;
@@ -42,6 +43,7 @@ GLWidget::GLWidget(MisliWindow *msl_w_)
     connect(move_func_timeout, SIGNAL(timeout()), this, SLOT(move_func()));
 
     setMouseTracking(1);
+
 }
 
 GLWidget::~GLWidget()
@@ -102,17 +104,15 @@ void GLWidget::initGLenv() //set environment variables
 }
 void GLWidget::setupGLenv() //start the blend and multisampling
 {
-    glEnable( GL_MULTISAMPLE );
+    glEnable( GL_MULTISAMPLE ); //needed (some times enabled by default)
+    GLint bufs;
+    GLint samples;
+    glGetIntegerv(GL_SAMPLE_BUFFERS, &bufs);
+    glGetIntegerv(GL_SAMPLES, &samples);
+    qDebug("We have %d buffers and %d samples", bufs, samples);
+
     glEnable( GL_BLEND );
-    glEnable( GL_TEXTURE_2D );
     //glEnable(GL_DEPTH_TEST);
-}
-void GLWidget::resetGLenv() //stop the ones from setup - not used
-{
-    glDisable( GL_MULTISAMPLE );
-    glDisable( GL_BLEND );
-    glDisable( GL_TEXTURE_2D );
-    //glDisable( GL_DEPTH_TEST );
 }
 
 void GLWidget::initializeGL() //the init is distributed so that function is ommited
@@ -224,6 +224,7 @@ void GLWidget::paintGL()
         //Draw the textures with the text
         //glDisable( GL_DEPTH_TEST );
         glEnable( GL_TEXTURE_2D );
+
 
         glBindTexture(GL_TEXTURE_2D,nt->texture);
         glPushMatrix();
