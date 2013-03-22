@@ -4,7 +4,6 @@
 #ifndef LINK_H
 #define LINK_H
 
-#include <GL/gl.h>
 #include <QString>
 
 class Link
@@ -21,7 +20,6 @@ public:
     float x1,y1,z1,x2,y2,z2;
     char *short_text;
     bool selected;
-    GLuint texture;
 };
 
 #endif // LINK_H

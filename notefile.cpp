@@ -5,7 +5,6 @@
 #include <QString>
 #include <QApplication>
 #include <QDesktopWidget>
-#include <GL/gl.h>
 
 #include "../../petko10.h"
 #include "note.h"

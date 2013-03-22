@@ -5,7 +5,6 @@
 #-------------------------------------------------
 
 QT += core gui
-QT += opengl
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -54,11 +53,6 @@ OTHER_FILES += \
 
 win32{
     QMAKE_LFLAGS += -static-libgcc
-}
-
-unix{
-    LIBS += -lGLU
-    LIBS += -lGL
 }
 
 RESOURCES +=   misli.qrc

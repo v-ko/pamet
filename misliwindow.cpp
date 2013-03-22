@@ -421,13 +421,13 @@ void MisliWindow::col_black()
 
 void MisliWindow::move_down()
 {
-    canvas->eye_y-=MOVE_SPEED;
+    canvas->eye_y+=MOVE_SPEED;
     QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
     canvas->update();
 }
 void MisliWindow::move_up()
 {
-    canvas->eye_y+=MOVE_SPEED;
+    canvas->eye_y-=MOVE_SPEED;
     QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
     canvas->update();
 }

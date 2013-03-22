@@ -334,11 +334,11 @@
 
 //successful start promenliva v settings , koqto se nulira pri start i se dava true pri 2 sek idle v programata--done
 
-//check translations
-//commit
-//build windows
+//check translations --done
+//commit --done
+//build windows --done
 
-//release ver.1------------------------------
+//release ver.1------------------------------done
 //prati na blizkite
 
 //video za predstavqne na angl i bg
