@@ -2,8 +2,9 @@
 #define NEWNFDIALOGUE_H
 
 #include <QWidget>
+#include <QMessageBox>
+
 #include "misliwindow.h"
-//#include "notefile.h"
 
 namespace Ui {
 class NewNFDialogue;

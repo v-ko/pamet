@@ -11,7 +11,7 @@
 class NewNFDialogue;
 class EditNoteDialogue;
 class GetDirDialogue;
-class GLWidget;
+//class Canvas;
 
 namespace Ui {
 class MisliWindow;
@@ -30,9 +30,10 @@ public:
     void update_notes_rdy();
     MisliInstance * curr_misli();
     MisliInstance * misli_by_name(QString path);
+    QAction *get_action_for_name(QString name);
 
     //Windows
-    GLWidget *gl_w;
+    Canvas *canvas;
     GetDirDialogue *dir_w;
     NewNFDialogue *newnf_w;
     EditNoteDialogue *edit_w;
@@ -95,6 +96,7 @@ public slots:
     void move_left();
 private:
     //Functions
+    void closeEvent(QCloseEvent *);
     void import_settings_and_folders();
     void export_settings();
 

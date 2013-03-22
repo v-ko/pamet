@@ -4,7 +4,7 @@
 #include "newnfdialogue.h"
 #include "editnotedialogue.h"
 #include "getdirdialogue.h"
-#include "glwidget.h"
+#include "canvas.h"
 
 MisliWindow::MisliWindow(QApplication* app):
     ui(new Ui::MisliWindow)
@@ -15,9 +15,9 @@ MisliWindow::MisliWindow(QApplication* app):
     first_program_start=false;
     past_initial_load=false;
 
-    gl_w = new GLWidget(this);
-    setCentralWidget(gl_w);
-    gl_w->updateGL();//if the first paint isn't called before the texture init for the texts there's a bug with the textures
+    canvas = new Canvas(this);
+    setCentralWidget(canvas);
+    canvas->update();//if the first paint isn't called before the texture init for the texts there's a bug with the textures
 
     dir_w = new GetDirDialogue(this);
     edit_w = new EditNoteDialogue(this);
@@ -34,6 +34,11 @@ MisliWindow::MisliWindow(QApplication* app):
 MisliWindow::~MisliWindow()
 {
     delete ui;
+}
+
+void MisliWindow::closeEvent(QCloseEvent *){
+    settings->setValue("successful_start",QVariant(0));
+    settings->sync();
 }
 
 void MisliWindow::update_notes_rdy()
@@ -129,6 +134,19 @@ MisliInstance * MisliWindow::misli_by_name(QString path)
     }
     return NULL;
 }
+
+QAction * MisliWindow::get_action_for_name(QString name)
+{
+
+    for(int a=0;a<ui->menuFolders->actions().size();a++){ //remove the appropriate action
+        if(ui->menuFolders->actions().at(a)->text()==name){
+            return ui->menuFolders->actions().at(a);
+        }
+    }
+
+    return NULL;
+}
+
 void MisliWindow::set_current_misli(QString path)
 {
     current_misli_name=path;
@@ -141,15 +159,15 @@ void MisliWindow::undo()
 }
 void MisliWindow::copy()
 {
-    gl_w->copy();
+    canvas->copy();
 }
 void MisliWindow::paste()
 {
-    gl_w->paste();
+    canvas->paste();
 }
 void MisliWindow::cut()
 {
-    gl_w->cut();
+    canvas->cut();
 }
 void MisliWindow::edit_note()
 {
@@ -196,7 +214,7 @@ void MisliWindow::delete_nf()
 }
 void MisliWindow::make_link()
 {
-    gl_w->set_linking_on();
+    canvas->set_linking_on();
 }
 void MisliWindow::next_nf()
 {
@@ -212,13 +230,13 @@ void MisliWindow::delete_selected()
 }
 void MisliWindow::zoom_out()
 {
-    gl_w->eye.z+=MOVE_SPEED;
-    gl_w->updateGL();
+    canvas->eye_z+=MOVE_SPEED;
+    canvas->update();
 }
 void MisliWindow::zoom_in()
 {
-    gl_w->eye.z-=MOVE_SPEED;
-    gl_w->updateGL();
+    canvas->eye_z-=MOVE_SPEED;
+    canvas->update();
 }
 
 void MisliWindow::toggle_help()
@@ -232,13 +250,11 @@ void MisliWindow::toggle_help()
 }
 void MisliWindow::make_viewpoint_default()
 {
-    curr_misli()->curr_nf()->make_coords_relative_to(gl_w->eye.x,gl_w->eye.y);
+    curr_misli()->curr_nf()->make_coords_relative_to(canvas->eye_x,canvas->eye_y);
     curr_misli()->curr_nf()->init_notes();
     curr_misli()->curr_nf()->init_links();
-    gl_w->eye.x=0; //(before the updateGL invoked by save() )
-    gl_w->eye.y=0;
-    gl_w->eye.scenex=0;
-    gl_w->eye.sceney=0;
+    canvas->eye_x=0; //(before the update invoked by save() )
+    canvas->eye_y=0;
     curr_misli()->curr_nf()->save();
 }
 void MisliWindow::make_nf_default()
@@ -253,14 +269,7 @@ void MisliWindow::remove_current_folder()
 {
     for(unsigned int i=0;i<misli.size();i++){
         if(misli[i]->notes_dir==curr_misli()->notes_dir){
-
-            for(int a=0;a<ui->menuFolders->actions().size();a++){ //remove the appropriate action
-                if(ui->menuFolders->actions().at(a)->text()==curr_misli()->notes_dir){
-                    ui->menuFolders->removeAction(ui->menuFolders->actions().at(a));
-                    break;
-                }
-            }
-
+            ui->menuFolders->removeAction(get_action_for_name(curr_misli()->notes_dir));
             misli.erase(misli.begin()+i);
             break;
         }
@@ -269,7 +278,7 @@ void MisliWindow::remove_current_folder()
         notes_rdy=0;
         add_new_folder();
     }else{ //if there are other dirs
-        set_current_misli(misli[0]->notes_dir);
+        get_action_for_name(misli[0]->notes_dir)->trigger();
     }
     export_settings();
 }
@@ -281,14 +290,14 @@ void MisliWindow::switch_current_nf()
         s=tr("Misli - ");
         s+=curr_misli()->curr_nf()->name;
         setWindowTitle(s);
-        gl_w->set_eye_coords_from_curr_nf();
+        canvas->set_eye_coords_from_curr_nf();
     }
     update_current_nf();
 }
 void MisliWindow::update_current_nf()
 {
     if(notes_rdy){
-        gl_w->updateGL();
+        canvas->update();
     }
 }
 
@@ -412,29 +421,25 @@ void MisliWindow::col_black()
 
 void MisliWindow::move_down()
 {
-    gl_w->eye.y-=MOVE_SPEED;
-    gl_w->eye.sceney-=MOVE_SPEED;
+    canvas->eye_y-=MOVE_SPEED;
     QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-    gl_w->updateGL();
+    canvas->update();
 }
 void MisliWindow::move_up()
 {
-    gl_w->eye.y+=MOVE_SPEED;
-    gl_w->eye.sceney+=MOVE_SPEED;
+    canvas->eye_y+=MOVE_SPEED;
     QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-    gl_w->updateGL();
+    canvas->update();
 }
 void MisliWindow::move_left()
 {
-    gl_w->eye.x-=MOVE_SPEED;
-    gl_w->eye.scenex-=MOVE_SPEED;
+    canvas->eye_x-=MOVE_SPEED;
     QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-    gl_w->updateGL();
+    canvas->update();
 }
 void MisliWindow::move_right()
 {
-    gl_w->eye.x+=MOVE_SPEED;
-    gl_w->eye.scenex+=MOVE_SPEED;
+    canvas->eye_x+=MOVE_SPEED;
     QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-    gl_w->updateGL();
+    canvas->update();
 }

@@ -20,7 +20,7 @@ int id;
 float x,y,z;//poziciq
 float a, b; //6irinata na kutiqta i viso4inata
 QString text;
-double font_size;
+float font_size;
 bool selected;
 QDateTime t_made,t_mod;
 float txt_col[4],bg_col[4]; //text and background colors
@@ -29,13 +29,12 @@ std::vector<int> inlink;
 
 //------Koito sa samo za programata----------------
 QString short_text;
-double move_orig_x;
-double move_orig_y;
-double rx1,ry1,rx2,ry2;
+float move_orig_x,move_orig_y,rx,ry;
 int nf_id;
 MisliInstance *misl_i;
-GLuint texture;
+QPixmap *pixm;
 int type; //1=redirecting , 0=normal
+bool has_more_than_one_row;
 
 //-----Funkcii-------------
 Note();

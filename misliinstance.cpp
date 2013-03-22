@@ -16,7 +16,7 @@ MisliInstance::MisliInstance(QString nts_dir, MisliWindow *msl_w_ = NULL)
         using_external_classes=false;
     }else{
         using_external_classes=true;
-        gl_w=msl_w->gl_w;
+        canvas=msl_w->canvas;
     }
 
     //FS-watch stuff
@@ -335,6 +335,7 @@ int MisliInstance::reinit_redirect_notes()
             nt=&((*nf->note)[n]);
             if(nt->type!=0){nt->init();}
         }
+        //nf->save();// - za convertiraneto kym noviq format
     }
 return 0;
 }

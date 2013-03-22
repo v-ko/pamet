@@ -16,7 +16,6 @@ SOURCES += main.cpp\
     misliinstance.cpp \
     notefile.cpp \
     note.cpp \
-    glwidget.cpp \
     ../../petko10.cpp \
     link.cpp \
     ../../petko10q.cpp \
@@ -25,13 +24,13 @@ SOURCES += main.cpp\
     newnfdialogue.cpp \
     misliwindow.cpp \
     emitmynameaction.cpp \
-    filesystemwatcher.cpp
+    filesystemwatcher.cpp \
+    canvas.cpp
 
 HEADERS  += \
     misliinstance.h \
     notefile.h \
     note.h \
-    glwidget.h \
     ../../petko10.h \
     link.h \
     common.h \
@@ -41,7 +40,8 @@ HEADERS  += \
     newnfdialogue.h \
     misliwindow.h \
     emitmynameaction.h \
-    filesystemwatcher.h
+    filesystemwatcher.h \
+    canvas.h
 
 OTHER_FILES += \
     help/text.txt \

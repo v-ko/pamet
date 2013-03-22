@@ -10,5 +10,7 @@
 #define MOVE_SPEED 2 //stypka pri dvijenie napred-nazad
 #define MOVE_FUNC_TIMEOUT 300 //milisecs to hold the mouse on a note to move it
 #define MAX_UNDO_STEPS 30 //should be memory consumption based
+#define INITIAL_EYE_Z 100
+#define NOTE_SPACING 0.006
 
 #endif // COMMON_H

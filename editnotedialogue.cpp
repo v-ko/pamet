@@ -5,6 +5,7 @@
 #include "ui_editnotedialogue.h"
 
 #include "misliwindow.h"
+#include "canvas.h"
 
 EditNoteDialogue::EditNoteDialogue(MisliWindow *msl_w_) :
     ui(new Ui::EditNoteDialogue)
@@ -22,8 +23,8 @@ void EditNoteDialogue::new_note()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note=msl_w->gl_w->mapFromGlobal( QCursor::pos() ).x(); //cursor position relative to the gl widget
-    y_on_new_note=msl_w->gl_w->mapFromGlobal( QCursor::pos() ).y();
+    x_on_new_note=msl_w->canvas->mapFromGlobal( QCursor::pos() ).x(); //cursor position relative to the gl widget
+    y_on_new_note=msl_w->canvas->mapFromGlobal( QCursor::pos() ).y();
 
     move(QCursor::pos());
 
@@ -78,7 +79,7 @@ void EditNoteDialogue::input_done(){
     float bg_col[] = {0,0,1,0.1};
 
     if( edited_note==NULL){//If we're making a new note
-        msl_w->gl_w->unproject_to_plane(0,x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
+        msl_w->canvas->unproject(x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
         nt=msl_w->curr_misli()->curr_nf()->add_note(msl_w->curr_misli(),text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDateTime::currentDateTime(),QDateTime::currentDateTime(),txt_col,bg_col);
         nt->link_to_selected();
     }else {//else we're in edit mode

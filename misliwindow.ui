@@ -47,16 +47,8 @@
      <addaction name="actionBulgarian"/>
      <addaction name="actionEnglish"/>
     </widget>
-    <widget class="QMenu" name="menuOther_stuff">
-     <property name="title">
-      <string>Other stuff</string>
-     </property>
-     <addaction name="actionClear_settings_and_exit"/>
-    </widget>
     <addaction name="actionHelp"/>
     <addaction name="menuLanguage_2"/>
-    <addaction name="separator"/>
-    <addaction name="menuOther_stuff"/>
    </widget>
    <widget class="QMenu" name="menuFolders">
     <property name="title">
@@ -114,6 +106,7 @@
      <addaction name="actionMove_right"/>
     </widget>
     <addaction name="menuNavigation"/>
+    <addaction name="actionClear_settings_and_exit"/>
    </widget>
    <addaction name="menuFolders"/>
    <addaction name="menuNoteFile"/>

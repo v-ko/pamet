@@ -3,6 +3,8 @@
 
 #include <fstream>
 #include <QString>
+#include <QApplication>
+#include <QDesktopWidget>
 #include <GL/gl.h>
 
 #include "../../petko10.h"
@@ -10,6 +12,7 @@
 #include "notefile.h"
 #include "common.h"
 #include "misliinstance.h"
+#include "misliwindow.h"
 
 NoteFile::NoteFile()
 {
@@ -17,7 +20,7 @@ NoteFile::NoteFile()
     is_displayed_first_on_startup=0;
     eye_x=0;
     eye_y=0;
-    eye_z=100;
+    eye_z=INITIAL_EYE_Z;
     deleted=0;
 
     note = new NotesVector;
@@ -73,6 +76,10 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){  //retu
     note->clear();
     comment.clear();
 
+    if(misl_i->using_external_classes){
+        eye_z = 0.22 * misl_i->msl_w->a->desktop()->widthMM();
+    }
+
     if(name==QString("HelpNoteFile")){
 
     }
@@ -107,10 +114,12 @@ int NoteFile::init(MisliInstance *m_i,QString ime,QString path,int id_){  //retu
         err += q_get_value_for_key(groups[i],"a",a);
         err += q_get_value_for_key(groups[i],"b",b);
         err += q_get_value_for_key(groups[i],"font_size",font_size);
-        err += q_get_value_for_key(groups[i],"t_made",tmpqstr);
+        if(q_get_value_for_key(groups[i],"t_made",tmpqstr)==0){
             t_made=t_made.fromString(tmpqstr,"d.M.yyyy H:m:s");
-        err += q_get_value_for_key(groups[i],"t_mod",tmpqstr);
+        }else t_made = t_made.currentDateTime();
+        if(q_get_value_for_key(groups[i],"t_mod",tmpqstr)==0){
             t_mod=t_mod.fromString(tmpqstr,"d.M.yyyy H:m:s");
+        }else t_mod = t_made.currentDateTime();
         if(q_get_value_for_key(groups[i],"txt_col",qtxt_col)==-1){
             qtxt_col.clear();
             qtxt_col.push_back("0");
@@ -213,7 +222,7 @@ for(unsigned int i=0;i<note->size();i++){
     txt.replace(QString("\n"),QString("\\n"));
     sstr<<"txt="<<txt.toStdString()<<'\n';//
     sstr<<"x="<<nt->x<<'\n';
-    sstr<<"y="<<nt->y<<'\n';
+    sstr<<"y="<<nt->y<<'\n'; //tuk slaga6 miuns za convertiraneto
     sstr<<"z="<<nt->z<<'\n';
     sstr<<"a="<<nt->a<<'\n';
     sstr<<"b="<<nt->b<<'\n';
@@ -307,7 +316,6 @@ nt.bg_col[3]=bg_col[3];
 nt.selected=false;
 nt.misl_i=m_i; //that's a static object we can point to , the nf in the the vector is apparently not
 nt.nf_id=id;
-glGenTextures(1,&nt.texture);
 
 note->push_back(nt);
 
@@ -448,8 +456,6 @@ int NoteFile::delete_selected() //deletes all marked selected and returns their 
     }
 
     save();
-
-    misl_i->gl_w->updateGL();
 
 return deleted_items;
 }

@@ -15,11 +15,11 @@
 #include "../../petko10q.h"
 
 #include "filesystemwatcher.h"
-#include "glwidget.h"
 #include "notefile.h"
 #include "common.h"
 
 class MisliWindow;
+class Canvas;
 
 class MisliInstance : public QObject
 
@@ -42,7 +42,7 @@ public:
 
     //Window classes
     MisliWindow * msl_w;
-    GLWidget * gl_w;
+    Canvas * canvas;
 
     //Variables
     FileSystemWatcher *fs_watch;

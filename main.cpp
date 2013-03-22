@@ -302,78 +302,104 @@
 //BUG:font-a e preeban na windows vij dali kato build-ne na dynamic bibliotekata ostava --done
 //problemyt - ne trqbva da se slaga CONFIGURE+=static v .pro --done
 //build na Windows --done
+//premesti clear settings v other --done
 
-//BUG:resize da ne selektira vsi4ko i da ne povdiga
-//QPainter: konceptualno (mestene s world transform)
-//BUG anialising ne ba4ka na 50% ot kompovete... -> rewrite to qpainter..
-//premesti clear settings v other
+//----rewrite to qpainter..-----------------------------10.03.13
+
+//o6te doosta pisane po canvas cpp --21.03.13--done
+//o6te problemi s koordinatnata sistema navigaciqta i dr - napravi testovi to4ki (0,0)(10,10).. --done
+//zoom in/out --done
+//move left/right/up/down --done
+
+//da risuva samo tezi koito se vijdat --done
+//link note ograjdenieto da otide v paint --done
+//avtomati4no naglasqne na na4alnata viso4ina --done
+
+//BUG : resize ne ba4ka vertikalno --done
+//mahni texture test-a --done
+
+//safety-ta na vs-q input --done
+//siguren li sym che align center e po-dobro - samo za ednoredovi --done
+//BUG: ima bug v shortening algorityma --done
+//strelki --done
+//vj napisanoto v zapiskite --done
+//v help: for English press ... na bg i en helpf --done
+//BUG:pri mahane na papka ne se slaga tik na nastoq6tata --done
+
+//povdigane pri move --done
+//BUG:resize da ne selektira vsi4ko i da ne povdiga --done
+
+//BUG: strelkite ne si update-vat posokata (na vyrhovete samo) pri mestene --done
+//BUG:na golemiq komp nqma multisampling--!!!!!!--21.03.13--done
+
+//successful start promenliva v settings , koqto se nulira pri start i se dava true pri 2 sek idle v programata--done
+
+//check translations
+//commit
+//build windows
+
+//release ver.1------------------------------
+//prati na blizkite
 
 //video za predstavqne na angl i bg
-//razprostranenie
 
+//First launch dialogue : do you want to see a short clip (***) or display help(that's actually organized and useful)(***)
+//merge-vai conflicted copies
+
+//update help
+//update translations
+//commit
+//build on Windows
+
+//release version 1.1-------------------------
+
+//opravi si FB profila
+//razprostranenie - vj zapiskite
 
 //-------------Late features--------------------:
-//merge-vai conflicted copies
+//>link position set (auto,left,right,top,bottom)+ izvivane
 //>vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
-//command line reset - ako se preebe kato pri kosio + kato udari nqkyde critical - da wipe-va settings
 //Search + tags
 //>avtoorazmerqvane na nova zapiska
-//kontekstovi menu-ta s edit/delete...
-//>config window i vkarvane na raznite #definirani ne6ta v settings
-//alignment na text-a v zapiskite
 //>preview na notefile-a pri markirane na prenaso4va6ta zapiska
 //>izpisvane na datite (made/mod)
-//>dialog za edit na link
-//>opravqne skysqvaneto na teksta v linkovete
-//>risuvane text-a na linkovete
-//>link position set (auto,left,right,top,bottom)+ izvivane
-//>zapiski po4ervenqva6ti s datata
-//ako nqma zapiski na ekrana - naso4vane kym nai-blizkite
-//>da opravq render funkciqta 4e e mn skalypena
-//BUG:pusni depth bufera za da ne sa strelkite pod senkite
-//BUG: strelkite ne si update-vat posokata (na vyrhovete samo) pri mestene
 
+//ako nqma zapiski na ekrana - naso4vane kym nai-blizkite - "no notes present" i "go to nearest note ctrl-g"
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 //Maybe:
-//BUG:na golemiq komp nqma multisampling
-//>~font change
-//minimum resize da e kolkto 3 bukvi za x i kolkoto viso4inata na reda + spacing za y
+//>~font change (+minimum resize da e kolkto 3 bukvi za x i kolkoto viso4inata na reda + spacing za y)
 //ideq : backlight (kato neonovite svetlini pod kolite) za note-ovete ,za da se razgrani4at nqkolko oblasti ot note-file-a vizualno (vsqka sys svoi cvqt)
 
 //Belejki:
-//trqbva da se puska RCC pri promqna na nqkoi ot resursnite failove (moje izkustveno da promenq ne6to v .qrc file-a i toi sam vika rcc pri build)
-//pri dyljina okolo 81 (v realni koordinati) texturata se precakva -- trqbva o6te testvane na teq granici
 //pri promqna na vectora pointeri kym obekti v nego so4at kym s4upeni obekti
 //politikata za semicolon-i (to4ki zapetai) e ,4e v teksta na linkovete ne sa pozvoleni (obry6tat se na ":"), a v teksta na note ne pre4at
 
 #include <QApplication>
 #include <QSplashScreen>
-#include <QFont>
 #include <QTextCodec>
+#include <QTranslator>
+#include <QMessageBox>
+
 
 #include "common.h"
 #include "misliwindow.h"
 
 int main(int argc, char *argv[])
 {
-
-    QApplication a(argc, argv);
-
-    QGLFormat glf = QGLFormat::defaultFormat();
-    glf.setSampleBuffers(true);
-    glf.setSamples(4);
-    QGLFormat::setDefaultFormat(glf);
-
-    a.setOrganizationName("p10");
-    a.setApplicationName("misli");
-
     QTextCodec::setCodecForCStrings(QTextCodec::codecForName("utf8"));
     QTextCodec::setCodecForTr(QTextCodec::codecForName("utf8"));
 
+    QApplication a(argc, argv);
+        a.setOrganizationName("p10");
+        a.setApplicationName("misli");
     QTranslator translator;
     QSettings settings;
+    QPixmap pixmap(":/img/icon.png");
+    QSplashScreen *splash;
+    QMessageBox msg;
+    int successful_start=0,ret;
 
     if(settings.contains("language")){
         if(settings.value("language").toString()!=QString("en")){
@@ -382,9 +408,26 @@ int main(int argc, char *argv[])
             a.installTranslator(&translator);
         }
     }
+    if(settings.contains("successful_start")){
+        successful_start=settings.value("successful_start").toInt();
+        if(successful_start<=-2){
+            msg.setText(QObject::tr("There have been two unsuccessful starts of the program. Clearing the program settings will probably solve the issue . Persistent program crashes are mostly caused by corrupted notefiles , so you can try to manually narrow out the problematic notefile (remove the notefiles from the work directories one by one). The last one edited is probably the problem (you can try to correct it manually with a text editor to avoid loss of data).\n To clear the settings press OK . To continue with starting up the program press Cancel."));
+            msg.setStandardButtons(QMessageBox::Ok|QMessageBox::Cancel);
+            msg.setDefaultButton(QMessageBox::Ok);
+            msg.setIcon(QMessageBox::Warning);
+            ret=msg.exec();
+            if(ret==QMessageBox::Ok){ //if the user pressed Ok
+                settings.clear();
+                settings.sync();
+                exit(0);
+            }
+        }
+    }
+    successful_start--; //assume we won't start successfully , if we do - the value gets +1-ed on close
+    settings.setValue("successful_start",QVariant(successful_start));
+    settings.sync();
 
-    QPixmap pixmap(":/img/icon.png");
-    QSplashScreen *splash = new QSplashScreen(pixmap);
+    splash = new QSplashScreen(pixmap);
     splash->show();
     a.processEvents();
 

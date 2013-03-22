@@ -58,12 +58,12 @@ p, li { white-space: pre-wrap; }
         <translation>Esc</translation>
     </message>
     <message>
-        <location filename="../editnotedialogue.cpp" line="23"/>
+        <location filename="../editnotedialogue.cpp" line="24"/>
         <source>Make new note</source>
         <translation>Нова записка</translation>
     </message>
     <message>
-        <location filename="../editnotedialogue.cpp" line="44"/>
+        <location filename="../editnotedialogue.cpp" line="45"/>
         <source>Edit note</source>
         <translation>Редактиране на записка</translation>
     </message>
@@ -147,7 +147,7 @@ p, li { white-space: pre-wrap; }
     </message>
     <message>
         <location filename="../misliwindow.ui" line="41"/>
-        <location filename="../misliwindow.ui" line="159"/>
+        <location filename="../misliwindow.ui" line="152"/>
         <source>Help</source>
         <translation>Помощ</translation>
     </message>
@@ -157,327 +157,326 @@ p, li { white-space: pre-wrap; }
         <translation></translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="52"/>
         <source>Other stuff</source>
-        <translation>Други</translation>
+        <translation type="obsolete">Други</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="63"/>
+        <location filename="../misliwindow.ui" line="55"/>
         <source>Folders</source>
         <translation>Папки</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="71"/>
+        <location filename="../misliwindow.ui" line="63"/>
         <source>NoteFile</source>
         <translation>Файл със записки</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="85"/>
+        <location filename="../misliwindow.ui" line="77"/>
         <source>Note</source>
         <translation>Записка</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="89"/>
+        <location filename="../misliwindow.ui" line="81"/>
         <source>Color</source>
         <translation>Цвят</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="103"/>
+        <location filename="../misliwindow.ui" line="95"/>
         <source>Other</source>
         <translation>Други</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="107"/>
+        <location filename="../misliwindow.ui" line="99"/>
         <source>Navigation</source>
         <translation>Навигация</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="127"/>
+        <location filename="../misliwindow.ui" line="120"/>
         <source>Copy</source>
         <translation>Копирай</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="130"/>
+        <location filename="../misliwindow.ui" line="123"/>
         <source>Ctrl+C</source>
         <translation>Ctrl+C</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="135"/>
+        <location filename="../misliwindow.ui" line="128"/>
         <source>Paste</source>
         <translation>Paste</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="138"/>
+        <location filename="../misliwindow.ui" line="131"/>
         <source>Ctrl+V</source>
         <translation>Ctrl+V</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="143"/>
+        <location filename="../misliwindow.ui" line="136"/>
         <source>Cut</source>
         <translation>Сut</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="146"/>
+        <location filename="../misliwindow.ui" line="139"/>
         <source>Ctrl+X</source>
         <translation>Ctrl+X</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="151"/>
+        <location filename="../misliwindow.ui" line="144"/>
         <source>Undo</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="154"/>
+        <location filename="../misliwindow.ui" line="147"/>
         <source>Ctrl+Z</source>
         <translation>Ctrl+Z</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="162"/>
+        <location filename="../misliwindow.ui" line="155"/>
         <source>F1</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="167"/>
+        <location filename="../misliwindow.ui" line="160"/>
         <source>Add another folder</source>
         <translation>Добави папка</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="172"/>
+        <location filename="../misliwindow.ui" line="165"/>
         <source>Remove current</source>
         <translation>Махни тази папка</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="177"/>
+        <location filename="../misliwindow.ui" line="170"/>
         <source>Edit note</source>
         <translation>Редактиране на записка</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="180"/>
+        <location filename="../misliwindow.ui" line="173"/>
         <source>E</source>
         <translation>E</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="185"/>
+        <location filename="../misliwindow.ui" line="178"/>
         <source>New note</source>
         <translation>Нова записка</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="188"/>
+        <location filename="../misliwindow.ui" line="181"/>
         <source>M</source>
         <translation>M</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="199"/>
+        <location filename="../misliwindow.ui" line="192"/>
         <source>New notefile</source>
         <translation>Нов файл със записки</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="202"/>
+        <location filename="../misliwindow.ui" line="195"/>
         <source>N</source>
         <translation>N</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="207"/>
+        <location filename="../misliwindow.ui" line="200"/>
         <source>Make link</source>
         <translation>Свържи записки</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="210"/>
+        <location filename="../misliwindow.ui" line="203"/>
         <source>L</source>
         <translation>L</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="215"/>
+        <location filename="../misliwindow.ui" line="208"/>
         <source>Next notefile</source>
         <translation>Следващ файл със записки</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="218"/>
+        <location filename="../misliwindow.ui" line="211"/>
         <source>+</source>
         <translation>+</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="223"/>
+        <location filename="../misliwindow.ui" line="216"/>
         <source>Previous notefile</source>
         <translation>Предишен файл със записки</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="226"/>
+        <location filename="../misliwindow.ui" line="219"/>
         <source>-</source>
         <translation>-</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="231"/>
+        <location filename="../misliwindow.ui" line="224"/>
         <source>Delete selected</source>
         <translation>Изтрий избраните</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="234"/>
+        <location filename="../misliwindow.ui" line="227"/>
         <source>Del</source>
         <translation>Del</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="239"/>
+        <location filename="../misliwindow.ui" line="232"/>
         <source>Zoom in</source>
         <translation>Приближи се до полето</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="242"/>
+        <location filename="../misliwindow.ui" line="235"/>
         <source>PgDown</source>
         <translation>PgDown</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="247"/>
+        <location filename="../misliwindow.ui" line="240"/>
         <source>Zoom out</source>
         <translation>Отдалечи се от полето</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="250"/>
+        <location filename="../misliwindow.ui" line="243"/>
         <source>PgUp</source>
         <translation>PgUp</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="255"/>
+        <location filename="../misliwindow.ui" line="248"/>
         <source>Make this view point default for the notefile</source>
         <translation>Направи тази гледна точка начална за файла</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="260"/>
+        <location filename="../misliwindow.ui" line="253"/>
         <source>Make this notefile appear first on program start</source>
         <translation>Показвай този файл при старт на програмата</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="265"/>
+        <location filename="../misliwindow.ui" line="258"/>
         <source>Close</source>
         <translation>Затвори</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="268"/>
+        <location filename="../misliwindow.ui" line="261"/>
         <source>Q</source>
         <translation>Q</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="273"/>
+        <location filename="../misliwindow.ui" line="266"/>
         <source>Български</source>
         <translation>Bulgarian</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="278"/>
+        <location filename="../misliwindow.ui" line="271"/>
         <source>English</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="283"/>
+        <location filename="../misliwindow.ui" line="276"/>
         <source>Clear settings and exit</source>
         <translation>Изчисти настройките и излез</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="288"/>
+        <location filename="../misliwindow.ui" line="281"/>
         <source>Rename notefile</source>
         <translation>Преименувай файла</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="293"/>
+        <location filename="../misliwindow.ui" line="286"/>
         <source>Delete notefile</source>
         <translation>Изтрий файла</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="298"/>
+        <location filename="../misliwindow.ui" line="291"/>
         <source>Color blue</source>
         <translation>Оцвети в синьо</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="301"/>
+        <location filename="../misliwindow.ui" line="294"/>
         <source>1</source>
         <translation>1</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="306"/>
+        <location filename="../misliwindow.ui" line="299"/>
         <source>Color green</source>
         <translation>Оцвети в зелено</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="309"/>
+        <location filename="../misliwindow.ui" line="302"/>
         <source>2</source>
         <translation>2</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="314"/>
+        <location filename="../misliwindow.ui" line="307"/>
         <source>Color red</source>
         <translation>Оцвети в червено</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="317"/>
+        <location filename="../misliwindow.ui" line="310"/>
         <source>3</source>
         <translation>3</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="322"/>
+        <location filename="../misliwindow.ui" line="315"/>
         <source>Color black</source>
         <translation>Оцвети в черно</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="325"/>
+        <location filename="../misliwindow.ui" line="318"/>
         <source>4</source>
         <translation>4</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="330"/>
+        <location filename="../misliwindow.ui" line="323"/>
         <source>Move down</source>
         <translation>Премести надолу</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="333"/>
+        <location filename="../misliwindow.ui" line="326"/>
         <source>Down</source>
         <translation>Down</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="338"/>
+        <location filename="../misliwindow.ui" line="331"/>
         <source>Move up</source>
         <translation>Премести нагоре</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="341"/>
+        <location filename="../misliwindow.ui" line="334"/>
         <source>Up</source>
         <translation>Up</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="346"/>
+        <location filename="../misliwindow.ui" line="339"/>
         <source>Move left</source>
         <translation>Премести наляво</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="349"/>
+        <location filename="../misliwindow.ui" line="342"/>
         <source>Left</source>
         <translation>Left</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="354"/>
+        <location filename="../misliwindow.ui" line="347"/>
         <source>Move right</source>
         <translation>Премести надясно</translation>
     </message>
     <message>
-        <location filename="../misliwindow.ui" line="357"/>
+        <location filename="../misliwindow.ui" line="350"/>
         <source>Right</source>
         <translation>Right</translation>
     </message>
     <message>
-        <location filename="../misliwindow.cpp" line="173"/>
+        <location filename="../misliwindow.cpp" line="195"/>
         <source>This will delete the note file permanetly!</source>
         <translation>Така ще изтриете перманентно този файл!</translation>
     </message>
     <message>
-        <location filename="../misliwindow.cpp" line="183"/>
+        <location filename="../misliwindow.cpp" line="205"/>
         <source>Could not delete the file.Check your permissions.</source>
         <translation>Изтриването беше неуспешно . Проверете правата си в/у папката.</translation>
     </message>
     <message>
-        <location filename="../misliwindow.cpp" line="189"/>
+        <location filename="../misliwindow.cpp" line="211"/>
         <source>Cannot delete a system note file.</source>
         <translation>Не може да изтривате системен файл.</translation>
     </message>
     <message>
-        <location filename="../misliwindow.cpp" line="278"/>
+        <location filename="../misliwindow.cpp" line="290"/>
         <source>Misli - </source>
         <translation>Мисли -</translation>
     </message>
@@ -624,6 +623,15 @@ p, li { white-space: pre-wrap; }
     <message>
         <source>Misli</source>
         <translation type="obsolete">Мисли</translation>
+    </message>
+</context>
+<context>
+    <name>QObject</name>
+    <message>
+        <location filename="../main.cpp" line="414"/>
+        <source>There have been two unsuccessful starts of the program. Clearing the program settings will probably solve the issue . Persistent program crashes are mostly caused by corrupted notefiles , so you can try to manually narrow out the problematic notefile (remove the notefiles from the work directories one by one). The last one edited is probably the problem (you can try to correct it manually with a text editor to avoid loss of data).
+ To clear the settings press OK . To continue with starting up the program press Cancel.</source>
+        <translation>Имало е два неуспешни опита за зареждане на програмата. Изчистването на настройките най-вероятно ще отстрани проблема . Персистиращите забивания на програмата обикновено са причинени от грешка в някой файл със записки, така че може да опитате да откриете проблемния файл (като махате от работните директории един по един файлове (обикновено последният редактиран е проблемен)). Ако случаят е такъв, за да загубите минимално информация, може да махнете последните промени ръчно в текстови редактор . За да изчистите настройките натиснете ОК . За да оставите програмата да стартира натиснете Cancel.</translation>
     </message>
 </context>
 </TS>
