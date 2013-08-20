@@ -398,17 +398,20 @@
 //Release routine:
 //update translations --done
 //commit --done
-//build on Windows
+//build on Windows--done
 
 //release version 1.1-------------------------
 
+//QtLib bugs:
+//BUG: next i prev nf ne ba4kat s + i -
+//BUG: menu-tata ne se zatvarqt kato cykne6 2 pyt
+
+//Android UI s mestene na vsi4ko ob6to v canvas i MisliInstance
 //po-dobyr help
 //video za predstavqne na angl i bg
 //First launch dialogue : do you want to see a short clip or display help
-//opravi si FB profila
-//razprostranenie - vj zapiskite
+//razprostranenie
 
-//BUG: next i prev nf ne ba4kat s + i -
 
 #include <QFileSystemWatcher>
 #include <QMessageBox>
@@ -426,6 +429,6 @@ int main(int argc, char *argv[])
                                                                 //-->Start loading notes asynchronosly
 
     //3.Present GUI
-    misli->exec();
+    return misli->exec();
 }
 

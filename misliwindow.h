@@ -43,7 +43,7 @@ public:
 
     //Variables
     //---Child objects(to delete later)---
-    QSettings *settings;
+    //QSettings *settings;
     MisliDir * clipboard_dir;
     NoteFile * clipboard_nf;
 

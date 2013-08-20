@@ -39,13 +39,12 @@ public:
     QSplashScreen *splash;
     NotesSearch *notes_search;
 
+    QSettings *settings;
+    QTranslator translator;
+
     QThread workerThread;
     QString language;
     bool first_program_start;
-
-private:
-    QSettings settings;
-    QTranslator translator;
 
 public slots:
     void start_GUI();

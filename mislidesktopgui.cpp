@@ -13,8 +13,10 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     QPixmap pixmap(":/img/icon.png");
     int successful_start=0,user_reply;
 
+    setOrganizationName("p10"); //this is needed for windows settings access
     setApplicationName("misli");
 
+    settings = new QSettings(this);
     //-----------Construct the splash screen--------------------------
     splash = new QSplashScreen(pixmap);
     splash->show();
@@ -22,11 +24,11 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
 
 
     //========Load the language from settings and setup the translator=======
-    if(settings.contains("language")){
-        language=settings.value("language").toString();
+    if(settings->contains("language")){
+        language=settings->value("language").toString();
         if(language.size()!=0){
             if(language!=QString("en")){
-                QString qstr="misli_"+settings.value("language").toString();
+                QString qstr="misli_"+settings->value("language").toString();
                 translator.load(qstr,QString(":/translations/"));
                 installTranslator(&translator);
             }
@@ -36,16 +38,17 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     }else{
         setup_language:
         first_program_start=true;
-        settings.setValue("language",QVariant("en"));
-        settings.sync();
+        settings->setValue("language",QVariant("en"));
+        settings->sync();
+        qDebug()<<"Settings SYNC status: "<<settings->status();
         language="en";
     }
 
-    qDebug()<<"MisliDesktopGui:Retrieved the language from settings"<<settings.value("language").toString();
+    qDebug()<<"MisliDesktopGui:Retrieved the language from settings"<<settings->value("language").toString();
     
     //=========Check if there's a series of failed starts and suggest clearing the settings=========
-    if(settings.contains("successful_start")){
-        successful_start=settings.value("successful_start").toInt();
+    if(settings->contains("successful_start")){
+        successful_start=settings->value("successful_start").toInt();
         qDebug()<<"MisliDesktopGui:Retrieved successful_start from settings: "<<successful_start;
         if(successful_start<=-2){ //if there's been more than two closes that are not accounted for
             msg.setText(QObject::tr("There have been two unsuccessful starts of the program. Clearing the program settings will probably solve the issue . Persistent program crashes are mostly caused by corrupted notefiles , so you can try to manually narrow out the problematic notefile (remove the notefiles from the work directories one by one). The last one edited is probably the problem (you can try to correct it manually with a text editor to avoid loss of data).\n To clear the settings press OK . To continue with starting up the program press Cancel."));
@@ -55,17 +58,19 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
             user_reply=msg.exec();
             if(user_reply==QMessageBox::Ok){ //if the user pressed Ok
                 qDebug()<<"MisliDesktopGui:User chose to clear settings and exit upon prompt.";
-                settings.clear();
-                settings.sync();
+                settings->clear();
+                settings->sync();
+                qDebug()<<"Settings SYNC status: "<<settings->status();
                 exit(0);
             }
         }
     }
     //-----------Prep the successful_start variable-------------------
     successful_start--; //assume we won't start successfully , if we do - the value gets +1-ed on close
-    settings.setValue("successful_start",QVariant(successful_start));
-    settings.sync();
-    qDebug()<<"MisliDesktopGui:successful_start lowered to: "<<settings.value("successful_start").toInt();
+    settings->setValue("successful_start",QVariant(successful_start));
+    settings->sync();
+    qDebug()<<"Settings SYNC status: "<<settings->status();
+    qDebug()<<"MisliDesktopGui:successful_start lowered to: "<<settings->value("successful_start").toInt();
 
     //==================Construct the misli instance class and search class===============================
     notes_search = new NotesSearch;

@@ -29,7 +29,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     setWindowTitle("Loading notefiles...");
     setWindowIcon(QIcon(":/img/icon.png"));
 
-    settings = new QSettings;
+    //settings = new QSettings;
 
     //Connect signals/slots
     connect(misli_i,SIGNAL(notes_dir_changed()),this,SLOT(recheck_for_dirs()));
@@ -55,14 +55,15 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 MisliWindow::~MisliWindow()
 {
     delete ui;
-    delete settings;
+    //delete settings;
     delete clipboard_dir;
     delete clipboard_nf;
 }
 
 void MisliWindow::closeEvent(QCloseEvent *){
-    settings->setValue("successful_start",QVariant(0));
-    settings->sync();
+    misli_dg->settings->setValue("successful_start",QVariant(0));
+    misli_dg->settings->sync();
+    qDebug()<<"Settings SYNC status: "<<misli_dg->settings->status();
 }
 
 void MisliWindow::export_settings()
@@ -71,10 +72,10 @@ void MisliWindow::export_settings()
     for(unsigned int i=0;i<misli_i->misli_dir.size();i++){
         notes_dir.push_back(misli_i->misli_dir[i]->notes_dir);
     }
-    settings->setValue("notes_dir",QVariant(notes_dir));
-
-    settings->setValue("language",QVariant(language));
-    settings->sync();
+    misli_dg->settings->setValue("notes_dir",QVariant(notes_dir));
+    misli_dg->settings->setValue("language",QVariant(language));
+    misli_dg->settings->sync();
+    qDebug()<<"Settings SYNC status: "<<misli_dg->settings->status();
 }
 
 QAction * MisliWindow::get_action_for_name(QString name)
@@ -272,8 +273,9 @@ void MisliWindow::update_current_nf()
 
 void MisliWindow::set_lang_bg()
 {
-    settings->setValue("language",QVariant("bg"));
-    settings->sync();
+    misli_dg->settings->setValue("language",QVariant("bg"));
+    misli_dg->settings->sync();
+    qDebug()<<"Settings SYNC status: "<<misli_dg->settings->status();
 
     QMessageBox msg;
     msg.setText("Програмата ще се изключи. При следващото пускане езикът ще е сменен.");
@@ -283,8 +285,9 @@ void MisliWindow::set_lang_bg()
 }
 void MisliWindow::set_lang_en()
 {
-    settings->setValue("language",QVariant("en"));
-    settings->sync();
+    misli_dg->settings->setValue("language",QVariant("en"));
+    misli_dg->settings->sync();
+    qDebug()<<"Settings SYNC status: "<<misli_dg->settings->status();
 
     QMessageBox msg;
     msg.setText("The application will close . On the next start the language will be changed .");
@@ -294,8 +297,9 @@ void MisliWindow::set_lang_en()
 }
 void MisliWindow::clear_settings_and_exit()
 {
-    settings->clear();
-    settings->sync();
+    misli_dg->settings->clear();
+    misli_dg->settings->sync();
+    qDebug()<<"Settings SYNC status: "<<misli_dg->settings->status();
     exit(0);
 }
 
