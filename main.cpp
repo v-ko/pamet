@@ -397,7 +397,7 @@
 
 //Release routine:
 //update translations --done
-//commit
+//commit --done
 //build on Windows
 
 //release version 1.1-------------------------
