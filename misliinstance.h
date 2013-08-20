@@ -4,80 +4,50 @@
 #ifndef MISLIINSTANCE_H
 #define MISLIINSTANCE_H
 
-#include <unistd.h>
+#include <QMainWindow>
+#include <QSettings>
+#include <QtDebug>
 
-#include <QWidget>
-#include <QString>
-#include <QDir>
-#include <QTimer>
+#include "mislidir.h"
 
-#include "../../petko10.h"
-#include "../../petko10q.h"
-
-#include "filesystemwatcher.h"
-#include "notefile.h"
-#include "common.h"
-
+class MisliDesktopGui;
 class MisliWindow;
-class Canvas;
 
 class MisliInstance : public QObject
-
 {
     Q_OBJECT
 
 public:
     //Functions
-    MisliInstance(QString nts_dir,MisliWindow* msl_w_); //0 = no visualisation ; 1 = normal
-    int make_notes_file(QString);
-    void set_current_notes(int);
-    NoteFile * nf_by_id(int);
-    NoteFile * nf_by_name(QString name);
-    NoteFile * curr_nf();
-    NoteFile * clipboard_nf();
-    NoteFile * default_nf_on_startup();
-    void save_eye_coords_to_nf();
-    NoteFile * find_first_normal_nf();
-    int copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf);
+    MisliInstance(MisliDesktopGui *misli_dg_);
+    ~MisliInstance();
+    int load_settings();
+    void add_dir(QString path);
+    bool notes_rdy(); //true if there's a notes dir present (if it was empty - a default note file was created
+    MisliDir * curr_misli_dir(); //returns the current directory
 
-    //Window classes
-    MisliWindow * msl_w;
-    Canvas * canvas;
+    int load_results_in_search_nf();
 
     //Variables
-    FileSystemWatcher *fs_watch;
-    QTimer * hanging_nf_check;
-    int changes_accounted_for;
-    int error,using_external_classes;
-    QString notes_dir;
-    NotesVector *curr_note;
-    std::vector<NoteFile> note_file;
-    int current_note_file;
-    int last_nf_id;
-    //bool notes_rdy;
-    int mode;
-    int nf_before_help;
+    std::vector<MisliDir*> misli_dir; //contains all the directories
+    MisliDir *search_notes_dir;
+    NoteFile *search_nf;
+    QSettings *settings;
 
+    MisliDesktopGui *misli_dg;
+    MisliWindow *misli_w;
 
+    bool using_gui;
+
+signals:
+    void notes_dir_changed();
+    void notes_dir_added(QString path);
+    void load_all_dirs_finished();
 public slots:
-    void check_for_hanging_nfs();
+    void set_current_misli_dir(QString path);
+    int load_all_dirs();
+    void move_back_to_main_thread();
 
-    void emit_current_nf_switched();
-    void emit_current_nf_updated();
-
-    int next_nf();
-    int previous_nf();
-    int delete_nf(int id);
-
-    int undo();
-
-    int init_notes_files();
-    int reinit_redirect_notes();
-
-    void set_curr_nf_as_default_on_startup();
-    int delete_selected();
-
-    void file_changed(QString file);
 };
 
 #endif // MISLIINSTANCE_H

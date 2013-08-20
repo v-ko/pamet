@@ -11,14 +11,14 @@ class Link
 public:
     //Functions
     Link();
+    ~Link();
 
     //Hard variables
-    QString text;
     int id;
+    QString text;
 
     //Program variables
     float x1,y1,z1,x2,y2,z2;
-    char *short_text;
     bool selected;
 };
 

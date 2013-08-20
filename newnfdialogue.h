@@ -1,3 +1,6 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #ifndef NEWNFDIALOGUE_H
 #define NEWNFDIALOGUE_H
 
@@ -5,6 +8,7 @@
 #include <QMessageBox>
 
 #include "misliwindow.h"
+#include "misliinstance.h"
 
 namespace Ui {
 class NewNFDialogue;
@@ -16,11 +20,12 @@ class NewNFDialogue : public QWidget
     
 public:
     //Functions
-    NewNFDialogue(MisliWindow *msl_w_);
+    NewNFDialogue(MisliWindow *misli_w_);
     ~NewNFDialogue();
 
     //Variables
-    MisliWindow *msl_w;
+    MisliWindow *misli_w;
+    MisliInstance *misli_i;
     NoteFile * nf_for_rename;
 
 public slots:

@@ -23,8 +23,8 @@ Note::Note()
     b=4;
     font_size=1;
     selected=false;
-    nf_id=0;
-    type=0;
+    nf_name="";
+    type=NOTE_TYPE_NORMAL_NOTE;
     txt_col[0]=0;//r
     txt_col[1]=0;//g
     txt_col[2]=1;//b
@@ -33,49 +33,50 @@ Note::Note()
     bg_col[1]=0;
     bg_col[2]=1;
     bg_col[3]=0.5;
-    pixm=NULL;
+    pixm=new QPixmap(1,1);
+    text_is_shortened=false;
+    auto_sizing_now=false;
+
+    pixm = new QPixmap(1,1); //so we have a dummy pixmap for the first init
+}
+Note::~Note()
+{
+    delete pixm;
 }
 
-int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie nakraq + vkarva koordinatite na kutiqta
-
-    int base_it,max_it,probe_it; //iterators for the shortening algorythm
-    float pixm_real_size_x; //pixmap real size
-    float pixm_real_size_y;
-    Qt::AlignmentFlag alignment;
-
-    //---------Random-----------
-
+int Note::calculate_coordinates()
+{
     //Coordinates for the note rectangle
-    rx=x+a+NOTE_SPACING*2;
-    ry=y+b+NOTE_SPACING*2;
-    pixm_real_size_x = (rx-x)*FONT_TRANSFORM_FACTOR; //pixmap real size
-    pixm_real_size_y = (ry-y)*FONT_TRANSFORM_FACTOR;
+    rx=x+a;
+    ry=y+b;
+    pixm_real_size_x = a*FONT_TRANSFORM_FACTOR; //pixmap real size (bloated to have better quality on zoom)
+    pixm_real_size_y = b*FONT_TRANSFORM_FACTOR;
 
-    if(misl_i->using_external_classes){
-        if(misl_i->canvas->move_on){return 0;}
-    }
-
-    move_orig_x=x;
+    return 0;
+}
+int Note::store_coordinates_before_move()
+{
+    move_orig_x=x; //store the coordinates before a move command
     move_orig_y=y;
 
+    return 0;
+}
+int Note::adjust_text_size()
+{
+    int base_it,max_it,probe_it; //iterators for the shortening algorythm
 
     //-------Init painter for the text shortening----------
     QRectF text_field(0,0,a*FONT_TRANSFORM_FACTOR,b*FONT_TRANSFORM_FACTOR),text_field_needed;
+    QString txt = text_for_shortening;
 
-    delete pixm;
-    pixm = new QPixmap(pixm_real_size_x,pixm_real_size_y);
-    pixm->fill(Qt::transparent);
-
-    QString txt = text;
-
-    QPainter p(pixm);
     QFont font("Halvetica");
+    font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
 
+    QPainter p(pixm);//just a dummy painter
+    p.setFont(font);
 
-
-
-    //------Adjust alignment---------------
-    if(text.contains("\n")){//if there's more than one row
+    //------Determine alignment---------------
+    if(text_for_shortening.contains("\n")){//if there's more than one row
         has_more_than_one_row=true;
         alignment = Qt::AlignLeft;
     }else{
@@ -83,25 +84,14 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         alignment = Qt::AlignCenter;
     }
 
-    //-------Check if we have a link to a file-----------
-    if (txt.startsWith(QString("this_note_points_to:"))){
-        txt=q_get_text_between(txt,':',0,200); //get text between ":" and the end
-        txt=txt.trimmed(); //remove white spaces from both sides
-        type=1;
-        if(misl_i->nf_by_name(txt)==NULL){//if we have a wrong/missing name
-            type=-1;
-            txt="missing note file";
-        }
-        goto after_shortening;
-    }else type=0;
-
     //=========Shortening the text in the box=============
-    font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
+    text_is_shortened=false; //assume we don't need shortening
+
     p.setFont(font);
 
-    txt=text;
+    txt=text_for_shortening;
     base_it=0;
-    max_it=text.size();
+    max_it=text_for_shortening.size();
     probe_it=base_it + ceil(float(max_it-base_it)/2);
 
     //-----If there's no resizing needed (common case , that's why it's in front)--------
@@ -131,45 +121,168 @@ int Note::init(){ //skysqva teksta dokato se vkara v kutiqta i slaga mnogoto4ie 
         txt=text;
     }
 
+    text_is_shortened=true;
     txt.resize(max_it-3);
     txt+="...";
+
     after_shortening:
-    short_text=txt;
+    text_for_display=txt;
 
-    //=============Drawing the note===============================
-    if(misl_i->using_external_classes){
-
-        font.setStyleStrategy(QFont::PreferAntialias); //style aliasing
-        p.setRenderHint(QPainter::TextAntialiasing);
-
-        //Clear color
-
-
-        //Draw the note field
-        p.fillRect(0,0,pixm_real_size_x,pixm_real_size_y,QBrush(QColor(bg_col[0]*255,bg_col[1]*255,bg_col[2]*255,bg_col[3]*255)));
-
-        //Draw the text
-        p.setPen(QColor(txt_col[0]*255,txt_col[1]*255,txt_col[2]*255,txt_col[3]*255)); //set color
-        p.setBrush(Qt::SolidPattern); //set fill style
-        font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
-        p.setFont(font);
-        p.drawText(QRectF(NOTE_SPACING*FONT_TRANSFORM_FACTOR,NOTE_SPACING*FONT_TRANSFORM_FACTOR,a*FONT_TRANSFORM_FACTOR,b*FONT_TRANSFORM_FACTOR),Qt::TextWordWrap | alignment,short_text);
-
-        //if(id==1){//sample for testing
-        // d("saving texture");
-        // if (!pixm->save("./note.png",NULL,100)){d("bad save");}
-        //}
+    return 0;
+}
+int Note::check_text_for_links(MisliDir *md) //there's an argument , because search inits the notes out of their dir and still needs that function (the actual linking functionality is not needed then)
+{
+    //-------Check if we have a link to a file-----------
+    if (text.startsWith(QString("this_note_points_to:"))){
+        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
+        address_string=address_string.trimmed(); //remove white spaces from both sides
+        text_for_shortening = address_string; //set the note file name as text for displaying
+        type=NOTE_TYPE_REDIRECTING_NOTE;
+        if(md->nf_by_name(address_string)==NULL){//if we have a wrong/missing name
+            text_for_shortening="missing note file";
+        }
     }
+    return 0;
+}
+int Note::check_for_file_definitions()
+{
+    //QString string;
+    QFile file;
+
+    if (text.startsWith(QString("define_text_file_note:"))){
+        //if(type==NOTE_TYPE_TEXT_FILE_NOTE){return 0;} //if we've defined the file already - we don't need to read it a thousand times
+        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
+        address_string=address_string.trimmed(); //remove white spaces from both sides
+        file.setFileName(address_string);
+        if(file.open(QIODevice::ReadOnly)){
+            text_for_shortening = file.read(10000); //10 kb max
+        }else{
+            text_for_shortening = "Failed to open file.";
+        }
+        type=NOTE_TYPE_TEXT_FILE_NOTE;
+        return 0;
+    }
+
+    if (text.startsWith(QString("define_picture_note:"))){
+        //if(type==NOTE_TYPE_PICTURE_NOTE){return 1;}
+        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
+        address_string=address_string.trimmed(); //remove white spaces from both sides
+        text_for_shortening = "";
+        type=NOTE_TYPE_PICTURE_NOTE;
+        //draw_pixmap();//inits the image only here , so we don't open the file a thousand times
+    }
+
+    return 0;
+}
+int Note::check_text_for_system_call_definition()
+{
+    if (text.startsWith(QString("define_system_call_note:"))){
+        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
+        address_string=address_string.trimmed(); //remove white spaces from both sides
+        text_for_shortening = address_string;
+        type=NOTE_TYPE_SYSTEM_CALL_NOTE;
+        return 1;
+    }
+    return 0;
+}
+int Note::draw_pixmap()
+{
+    if(type==NOTE_TYPE_PICTURE_NOTE){
+        delete pixm;
+        pixm = new QPixmap(address_string);
+        if( !pixm->isNull() ) {
+            return 0;
+        }
+        else {
+            text_for_shortening="Not a valid picture.";
+            text_for_display="Not a valid picture.";}
+    }
+
+    delete pixm;
+    pixm = new QPixmap(pixm_real_size_x,pixm_real_size_y);
+    pixm->fill(Qt::transparent);
+
+    QFont font("Halvetica");
+    font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
+    font.setStyleStrategy(QFont::PreferAntialias); //style aliasing
+
+    QPainter p(pixm);
+    p.setFont(font);
+    p.setRenderHint(QPainter::TextAntialiasing);
+
+    //Draw the note field
+    p.fillRect(0,0,pixm_real_size_x,pixm_real_size_y,QBrush(QColor(bg_col[0]*255,bg_col[1]*255,bg_col[2]*255,bg_col[3]*255)));
+
+    //Draw the text
+    p.setPen(QColor(txt_col[0]*255,txt_col[1]*255,txt_col[2]*255,txt_col[3]*255)); //set color
+    p.setBrush(Qt::SolidPattern); //set fill style
+    p.drawText(QRectF(NOTE_SPACING*FONT_TRANSFORM_FACTOR,NOTE_SPACING*FONT_TRANSFORM_FACTOR,a*FONT_TRANSFORM_FACTOR,b*FONT_TRANSFORM_FACTOR),Qt::TextWordWrap | alignment,text_for_display);
+
+    return 0;
+}
+
+
+int Note::init() //calculate the coords of the box around the note , shortens the text and draw them in a pixmap
+{
+    if(!misli_dir->using_gui){return 0;} //if there's no gui we don't need init()
+    calculate_coordinates();
+
+    //if(misli_dir->misli_i->misli_w->canvas->move_on){return 0;} //if we're moving the note there's no need to redraw it
+    store_coordinates_before_move();
+
+    if(text.size()>MAX_NOTE_TEXT_SIZE) text_for_shortening = text.left(MAX_NOTE_TEXT_SIZE);
+    else text_for_shortening=text;
+
+    type=NOTE_TYPE_NORMAL_NOTE; //assuming the note isn't special
+
+    check_text_for_links(misli_dir);
+    check_for_file_definitions();
+    check_text_for_system_call_definition();
+
+    adjust_text_size();
+
+    //if(auto_sizing_now){return 0;} //in auto_size we need only the above routine to calculate when the size is right
+    //if( (type==NOTE_TYPE_PICTURE_NOTE) && (text_for_display.size()==0) ){ return 0;} //we don't need to load the file again, since the resizing is done in the rendering function
+    draw_pixmap();
 
     return 0;
 
 }
+void Note::auto_size() //practically a cut down version of init that only changes a and b if there's not enough space for the text and calls init() afterwards
+{
+    auto_sizing_now=true;
+    while(text_is_shortened){
+        a+=2;
+        b+=1;
+        adjust_text_size();
+    }
+    while(!text_is_shortened){
+        if(b<=MIN_NOTE_B){break;}
+        b--;
+        adjust_text_size();
+    }
+    b++;init();
+
+    while(!text_is_shortened){
+        if(a<=MIN_NOTE_A){break;}
+        a--;
+        adjust_text_size();
+    }
+    auto_sizing_now=false; //to make a full init()
+    a++;
+    a=stop(a,MIN_NOTE_A,MAX_NOTE_A);
+    b=stop(b,MIN_NOTE_B,MAX_NOTE_B);
+    calculate_coordinates();
+    store_coordinates_before_move();
+    adjust_text_size();
+    draw_pixmap();
+}
+
 int Note::init_links(){ //smqta koordinatite i skysqva teksta (ako trqbva) na vs outlinkove
 
 float lx1,ly1,lx2,ly2;
 float a2,b2,x2,y2,z2,r2x1,r2x2,r2y1,r2y2;
 Link *ln;
-//NoteFile *nf;
 
 lx1=rx-(rx-x)/2; //koordinati na sredata na poleto (izpolzvam gi za linkovete)
 ly1=ry-(ry-y)/2;
@@ -178,7 +291,7 @@ for(unsigned int n=0;n<outlink.size();n++){
 
 //---------Smqtane na koordinatite za link-a---------------
 ln = &outlink[n];
-Note *target_note=misl_i->nf_by_id(nf_id)->get_note_by_id(ln->id);
+Note *target_note=misli_dir->nf_by_name(nf_name)->get_note_by_id(ln->id);
 x2=target_note->x;//koordinati na teksta
 y2=target_note->y;
 z2=target_note->z;
@@ -235,52 +348,52 @@ ly2=r2y2-(r2y2-r2y1)/2;
 
 return 0;
 }
-int Note::correct_links(){
+int Note::correct_links()
+{
+    Note *ntt;
+    //korigirame izhodq6tite linkove
+    init_links();
 
-Note *ntt;
-//korigirame izhodq6tite linkove
-init_links();
-
-//korigirame vhodq6tite linkove
-for(unsigned int l=0;l<inlink.size();l++){
-    int inl=inlink[l];
-    ntt=misl_i->nf_by_id(nf_id)->get_note_by_id(inl);
-    ntt->init_links();
-}
-
-return 0;
-}
-int Note::link_to_selected(){
-
-if(nf_id!=misl_i->current_note_file){d("bad call for link_to_selected");exit(1);} //if the function is called for a note that's not displayed
-
-Link ln;
-
-for(unsigned int i=0;i<misl_i->curr_note->size();i++){ //za vseki note ot current
-    if((*misl_i->curr_note)[i].selected && ( (*misl_i->curr_note)[i].id != id ) ){ //ako e selectiran
-        inlink.push_back((*misl_i->curr_note)[i].id); //dobavi na noviq link edin inlink s id-to na selectiraniq
-        ln.id=id; //dobavi na selectiraniq edin outlink s id-to na noviq
-        (*misl_i->curr_note)[i].outlink.push_back(ln);
-        (*misl_i->curr_note)[i].init_links();
+    //korigirame vhodq6tite linkove
+    for(unsigned int l=0;l<inlink.size();l++){
+        int inl=inlink[l];
+        ntt=misli_dir->nf_by_name(nf_name)->get_note_by_id(inl);
+        ntt->init_links();
     }
 
+    return 0;
 }
+int Note::link_to_selected()
+{
+    if(nf_name!=misli_dir->curr_nf()->name){d("bad call for link_to_selected");exit(1);} //if the function is called for a note that's not displayed
+
+    Link ln;
+
+    for(unsigned int i=0;i<misli_dir->curr_nf()->note.size();i++){ //za vseki note ot current
+        if( misli_dir->curr_nf()->note[i]->selected && ( misli_dir->curr_nf()->note[i]->id != id ) ){ //ako e selectiran
+            inlink.push_back( misli_dir->curr_nf()->note[i]->id ); //dobavi na noviq link edin inlink s id-to na selectiraniq
+            ln.id=id; //dobavi na selectiraniq edin outlink s id-to na noviq
+            misli_dir->curr_nf()->note[i]->outlink.push_back(ln);
+            misli_dir->curr_nf()->note[i]->init_links();
+        }
+
+    }
 
 
-return 0;
+    return 0;
 }
 
 int Note::add_link(Link *ln) //adds the link (+inlink), doesn't init it
 {
     Link lnk;
 
-    if(misl_i->nf_by_id(nf_id)->get_note_by_id(ln->id)!=NULL){ //if the note at the given id exists - create the link
+    if(misli_dir->nf_by_name(nf_name)->get_note_by_id(ln->id)!=NULL){ //if the note at the given id exists - create the link
 
         lnk.id=ln->id;
         lnk.text=ln->text;
         outlink.push_back(lnk); //in the note
 
-        misl_i->nf_by_id(nf_id)->get_note_by_id(ln->id)->inlink.push_back(id); //in the target note
+        misli_dir->nf_by_name(nf_name)->get_note_by_id(ln->id)->inlink.push_back(id); //in the target note
     }
 
     return 0;
@@ -298,10 +411,22 @@ return 1;
 }
 int Note::delete_link(int position){
 
-    Note *nt=misl_i->nf_by_id(nf_id)->get_note_by_id(outlink[position].id); //delete the target's inlink first
+    Note *nt=misli_dir->nf_by_name(nf_name)->get_note_by_id(outlink[position].id); //delete the target's inlink first
     nt->delete_inlink_for_id(id);
 
     outlink.erase(outlink.begin()+position); //delete the outlink
 
     return 0;
+}
+void Note::center_eye_on_me()
+{
+    if(misli_dir->using_gui){
+
+
+        misli_dir->nf_by_name(nf_name)->eye_x = x+a/2;
+        misli_dir->nf_by_name(nf_name)->eye_y = y+b/2;
+        misli_dir->set_current_note_file(nf_name); //set the parent note file as current
+        misli_dir->misli_i->set_current_misli_dir(misli_dir->notes_dir); //set this notes dir as current
+        //misli_dir->misli_i->misli_dg->misli_w->canvas->update();
+    }
 }

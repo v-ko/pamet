@@ -1,3 +1,6 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #include "emitmynameaction.h"
 
 EmitMyNameAction::EmitMyNameAction(QString name_,QMenu *qmenu_):
@@ -8,6 +11,9 @@ EmitMyNameAction::EmitMyNameAction(QString name_,QMenu *qmenu_):
     name=name_;
     setText(name);
     connect(this,SIGNAL(triggered()),this,SLOT(emit_triggered_with_name()));
+}
+EmitMyNameAction::~EmitMyNameAction()
+{
 }
 
 void EmitMyNameAction::emit_triggered_with_name()

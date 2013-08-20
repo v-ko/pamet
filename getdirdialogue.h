@@ -18,12 +18,12 @@ class GetDirDialogue : public QWidget
     
 public:
     //Functions
-    GetDirDialogue(MisliWindow *msl_w);
+    GetDirDialogue(MisliInstance *misli_i);
     ~GetDirDialogue();
 
 
     //Variables
-    MisliWindow *msl_w;
+    MisliInstance *misli_i;
     QFileDialog fileDialogue;
 
 public slots:

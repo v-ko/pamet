@@ -7,55 +7,59 @@
 #include "note.h"
 #include <string>
 
-class MisliInstance;
+class MisliDir;
 
 class NoteFile { // all notes and supporting elements (info) for a note file
 
 public:
-    //Variables
-    int id; //reserved ids: -1=clipboard nf
-    QString name;
-    NotesVector *note;
-    int last_note_id;
-    std::vector<QString> comment; //komentarite vyv file-a
-    std::vector<int> free_id; //komentarite vyv file-a
-    QString full_file_addr;
-    MisliInstance *misl_i;
-    float eye_x,eye_y,eye_z;
-    std::vector<std::string> *nf_z; //history of the notefile
-    bool is_displayed_first_on_startup;
-    bool deleted;
-
     //Functions
-    NoteFile();
-    //NoteFile(MisliInstance *m_i,const char *ime, int idd);
+    NoteFile(MisliDir * misli_dir_);
+    ~NoteFile();
+
     Note *get_first_selected_note();
     Note *get_lowest_id_note();
     Note *get_note_by_id(int id);
+    void select_all_notes();
     void clear_note_selection();
     void clear_link_selection();
     void make_coords_relative_to(double x,double y);
     int get_new_id();
 
-    Note *add_note_base(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
-    Note *add_note(MisliInstance *m_i,int id,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
-    Note *add_note(MisliInstance *m_i,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
+    Note *add_note_base(QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
+    Note *add_note(int id,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
+    Note *add_note(QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);
     Note *add_note(Note* nt);
 
     int delete_note(Note *);
     int delete_note(unsigned int);
     int delete_selected();
 
-    int init(MisliInstance *m_i,QString ime,QString path);
-    int init(MisliInstance *m_i,QString ime,QString path, int id);
+    QString init(QString path);
+    int init(QString ime, QString path);
     int init(NoteFile* nf);
     int init_links();
     int init_notes();
     int virtual_save();
+    int hard_save();
     int save();
-    void set_to_current();
+    int undo();
     void find_free_ids();
+    bool is_not_system();
+    bool isEmpty();
 
+    //Variables
+    QString name;
+    NotesVector note; //all the notes are stored here
+    int last_note_id;
+    std::vector<QString> comment; //the comments in the file
+    std::vector<int> free_id; //free note id-s
+    QString full_file_addr; //note file path
+    MisliDir *misli_dir; //pointer to the parent
+    float eye_x,eye_y,eye_z; //camera position for the GUI cases
+    std::vector<std::string> nf_z; //history of the notefile (for undo)
+    bool is_displayed_first_on_startup;
+    bool is_deleted_externally;
+    bool is_current;
 };
 
 #endif // NOTEFILE_H

@@ -1,22 +1,22 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #ifndef FILESYSTEMWATCHER_H
 #define FILESYSTEMWATCHER_H
 
 #include <QFileSystemWatcher>
 
-class MisliInstance;
+class MisliDir;
 
 class FileSystemWatcher : public QFileSystemWatcher
 {
     Q_OBJECT
 public:
-    FileSystemWatcher(MisliInstance * misl_i_);
+    FileSystemWatcher(MisliDir * misli_dir_);
+    ~FileSystemWatcher();
     
     //Variables
-    MisliInstance * misl_i;
-signals:
-    
-public slots:
-    void call_misl_file_changed(QString qstr);
+    MisliDir * misli_dir;
 };
 
 #endif // FILESYSTEMWATCHER_H

@@ -23,7 +23,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>25</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -71,6 +71,8 @@
     <addaction name="separator"/>
     <addaction name="actionMake_this_view_point_default_for_the_notefile"/>
     <addaction name="actionMake_this_notefile_appear_first_on_program_start"/>
+    <addaction name="separator"/>
+    <addaction name="actionSelect_all_notes"/>
    </widget>
    <widget class="QMenu" name="menuNote">
     <property name="title">
@@ -89,6 +91,7 @@
     <addaction name="actionEdit_note"/>
     <addaction name="actionMake_link"/>
     <addaction name="menuColor"/>
+    <addaction name="actionDetails"/>
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
@@ -107,6 +110,8 @@
     </widget>
     <addaction name="menuNavigation"/>
     <addaction name="actionClear_settings_and_exit"/>
+    <addaction name="actionSearch"/>
+    <addaction name="actionJump_to_nearest_note"/>
    </widget>
    <addaction name="menuFolders"/>
    <addaction name="menuNoteFile"/>
@@ -208,7 +213,7 @@
     <string>Next notefile</string>
    </property>
    <property name="shortcut">
-    <string>+</string>
+    <string>Ctrl++</string>
    </property>
   </action>
   <action name="actionPrevious_notefile">
@@ -216,7 +221,7 @@
     <string>Previous notefile</string>
    </property>
    <property name="shortcut">
-    <string>-</string>
+    <string>Ctrl+-</string>
    </property>
   </action>
   <action name="actionDelete_selected">
@@ -348,6 +353,38 @@
    </property>
    <property name="shortcut">
     <string>Right</string>
+   </property>
+  </action>
+  <action name="actionSearch">
+   <property name="text">
+    <string>Search</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+  </action>
+  <action name="actionSelect_all_notes">
+   <property name="text">
+    <string>Select all notes</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="actionJump_to_nearest_note">
+   <property name="text">
+    <string>Jump to nearest note</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+J</string>
+   </property>
+  </action>
+  <action name="actionDetails">
+   <property name="text">
+    <string>Details</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
  </widget>
@@ -865,6 +902,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionSelect_all_notes</sender>
+   <signal>triggered()</signal>
+   <receiver>MisliWindow</receiver>
+   <slot>select_all_notes()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>edit_note()</slot>
@@ -898,5 +951,6 @@
   <slot>move_up()</slot>
   <slot>move_left()</slot>
   <slot>move_right()</slot>
+  <slot>select_all_notes()</slot>
  </slots>
 </ui>

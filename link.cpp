@@ -13,3 +13,6 @@ Link::Link()
     z2=0;
     selected=0;
 }
+Link::~Link()
+{
+}

@@ -1,14 +1,22 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #include "filesystemwatcher.h"
+#include "mislidir.h"
+#include <QDebug>
+
 #include "misliinstance.h"
+#include "mislidesktopgui.h"
 
-FileSystemWatcher::FileSystemWatcher(MisliInstance * misl_i_)
+FileSystemWatcher::FileSystemWatcher(MisliDir * misli_dir_)
 {
-    misl_i=misl_i_;
+    //addPath("/home/p10/Desktop/notes.misl");
 
-    connect(this,SIGNAL(fileChanged(QString)),this,SLOT(call_misl_file_changed(QString)));
+    misli_dir=misli_dir_;
+
+    qDebug()<<"Connect returns:"<<connect(this,SIGNAL(fileChanged(QString)),misli_dir,SLOT(handle_changed_file(QString)) );//,Qt::QueuedConnection) ;
+
 }
-
-void FileSystemWatcher::call_misl_file_changed(QString qstr)
+FileSystemWatcher::~FileSystemWatcher()
 {
-    misl_i->file_changed(qstr);
 }

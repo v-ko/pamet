@@ -5,9 +5,10 @@
 #define EDITNOTEDIALOGUE_H
 
 #include <QtGui>
+#include <QWidget>
 
 class Note;
-class MisliWindow;
+class MisliInstance;
 
 namespace Ui {
 class EditNoteDialogue;
@@ -19,11 +20,11 @@ class EditNoteDialogue : public QWidget
     
 public:
     //Functions
-    EditNoteDialogue(MisliWindow *msl_w_);
+    EditNoteDialogue(MisliInstance * misli_i_);
     ~EditNoteDialogue();
     
     //Variables
-    MisliWindow *msl_w;
+    MisliInstance *misli_i;
     Note * edited_note;
     double x_on_new_note,y_on_new_note;
 

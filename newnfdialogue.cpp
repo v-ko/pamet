@@ -1,11 +1,16 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #include "newnfdialogue.h"
 #include "ui_newnfdialogue.h"
 
-NewNFDialogue::NewNFDialogue(MisliWindow * msl_w_) :
+NewNFDialogue::NewNFDialogue(MisliWindow * misli_w_) :
     ui(new Ui::NewNFDialogue)
 {
     ui->setupUi(this);
-    msl_w=msl_w_;
+    addAction(ui->actionEscape);//the action is defined in the .ui file and is not used . QActions must be added to a widget to work
+    misli_w=misli_w_;
+    misli_i=misli_w->misli_i;
     nf_for_rename=NULL;
 }
 
@@ -19,7 +24,10 @@ void NewNFDialogue::new_nf()
     nf_for_rename=NULL;
     setWindowTitle(tr("New notefile"));
     ui->lineEdit->setText("");
+    move(misli_w->x()+misli_w->width()/2-width()/2,misli_w->y()+misli_w->height()/2-height()/2); //center the window in the misliWindow
     show();
+    raise();
+    activateWindow();
 }
 void NewNFDialogue::rename_nf(NoteFile * nf)
 {
@@ -27,6 +35,8 @@ void NewNFDialogue::rename_nf(NoteFile * nf)
     setWindowTitle(tr("Rename notefile"));
     ui->lineEdit->setText("");
     show();
+    raise();
+    activateWindow();
 }
 
 int NewNFDialogue::input_done()
@@ -36,25 +46,26 @@ int NewNFDialogue::input_done()
     NoteFile * nf;
     Note *nt;
 
-    if(msl_w->curr_misli()->nf_by_name(name)!=NULL){
+    if(misli_i->curr_misli_dir()->nf_by_name(name)!=NULL){
         ui->helpLabel->setText(tr("A notefile with this name exists."));
         return -1;
     }
 
-    file_addr=msl_w->curr_misli()->notes_dir;
+    file_addr=misli_i->curr_misli_dir()->notes_dir;
     file_addr+="/";
     file_addr+=name;
     file_addr+=".misl";
 
     if(nf_for_rename==NULL){
 
-        if( msl_w->curr_misli()->make_notes_file( name ) != true ) {
+        if( misli_i->curr_misli_dir()->make_notes_file( name ) != true ) {
             ui->helpLabel->setText(tr("Error making notefile , exclude bad symbols from the name (; < >  ... )"));
             return -1;
         }else {
-            msl_w->curr_misli()->note_file.push_back(NoteFile()); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
-            msl_w->curr_misli()->note_file.back().init(msl_w->curr_misli(),name,file_addr);
-            msl_w->curr_misli()->note_file.back().set_to_current();
+
+            misli_i->curr_misli_dir()->note_file.push_back(new NoteFile(misli_i->curr_misli_dir())); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
+            misli_i->curr_misli_dir()->note_file.back()->init(name,file_addr);
+            misli_i->curr_misli_dir()->set_current_note_file( misli_i->curr_misli_dir()->note_file.back()->name );
         }
 
     }else{ //If we're renaming
@@ -69,16 +80,16 @@ int NewNFDialogue::input_done()
             nf_for_rename->full_file_addr=file_addr;
             nf_for_rename->name=name;
             nf_for_rename->save();
-            msl_w->switch_current_nf();
+            misli_w->switch_current_nf();
             nf_for_rename=NULL;
 
             //Now change all the notes that point to this one too
-            for(unsigned int i=0;i<msl_w->curr_misli()->note_file.size();i++){
-                nf = &msl_w->curr_misli()->note_file[i];
-                for(unsigned int n=0;n<nf->note->size();n++){
-                    nt=&((*nf->note)[n]);
-                    if(nt->type==1){
-                        if(nt->short_text==old_name){
+            for(unsigned int i=0;i<misli_i->curr_misli_dir()->note_file.size();i++){
+                nf = misli_i->curr_misli_dir()->note_file[i];
+                for(unsigned int n=0;n<nf->note.size();n++){
+                    nt=nf->note[n];
+                    if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){
+                        if(nt->text_for_display==old_name){
                             nt->text="this_note_points_to:"+name;
                             nt->init();
                         }

@@ -1,9 +1,17 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #ifndef CANVAS_H
 #define CANVAS_H
 
 #include <QWidget>
 #include <QMouseEvent>
+#include <QLineEdit>
+#include <QMenu>
+#include <QLabel>
+
 #include "misliwindow.h"
+#include "mislidesktopgui.h"
 #include "editnotedialogue.h"
 
 class Canvas : public QWidget
@@ -12,6 +20,7 @@ class Canvas : public QWidget
 public:
     //Functions
     Canvas(MisliWindow *msl_w_);
+    ~Canvas();
 
     QSize sizeHint() const;
 
@@ -19,8 +28,8 @@ public:
     Note *get_note_clicked_for_resize(int x , int y);
     Link *get_link_under_mouse(int x,int y); //returns one link (not necesserily the top one) under the mouse
 
-    MisliInstance *misl_i();
-    NotesVector *curr_note();
+    MisliDir *misli_dir();
+    NoteFile *curr_nf();
 
     void set_eye_coords_from_curr_nf();
     void save_eye_coords_to_nf();
@@ -30,9 +39,15 @@ public:
 
     //Variables
     QFont font;
-    MisliWindow *msl_w;
+    MisliWindow *misli_w;
     float eye_x,eye_y,eye_z;
     Note *mouse_note;
+
+    //--Child objects (for destruction)---
+    QLineEdit *searchField;
+    QMenu *contextMenu;
+    QLabel *infoLabel;
+    QTimer *move_func_timeout;
 
     float move_x, move_y, resize_x, resize_y;
     int XonPush,YonPush,PushLeft,current_mouse_x,current_mouse_y;
@@ -44,9 +59,8 @@ public slots:
     void move_func();
     void set_linking_on();
     void set_linking_off();
-    int copy();
     int paste();
-    int cut();
+    void jump_to_nearest_note();
 
 protected:
     void paintEvent(QPaintEvent * event);
@@ -56,10 +70,6 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
-
-private:
-    QTimer *move_func_timeout;
-    
 };
 
 #endif // CANVAS_H

@@ -1,3 +1,6 @@
+/* This program is licensed under GNU GPL . For the full notice see the
+ * license.txt file or google the full text of the GPL*/
+
 #ifndef MISLIWINDOW_H
 #define MISLIWINDOW_H
 
@@ -5,13 +8,18 @@
 #include <QSettings>
 #include <QAction>
 
-#include "misliinstance.h"
+
 #include "emitmynameaction.h"
+#include "misliinstance.h"
+#include "notefile.h"
 
 class NewNFDialogue;
 class EditNoteDialogue;
 class GetDirDialogue;
-//class Canvas;
+class Canvas;
+class MisliDesktopGui;
+//class MisliInstance;
+class MisliDir;
 
 namespace Ui {
 class MisliWindow;
@@ -23,39 +31,39 @@ class MisliWindow : public QMainWindow
     
 public:
     //Functions
-    MisliWindow(QApplication *app);
+    MisliWindow(MisliDesktopGui * misli_dg_);
     ~MisliWindow();
 
-    void add_dir(QString path);
-    void update_notes_rdy();
-    MisliInstance * curr_misli();
-    MisliInstance * misli_by_name(QString path);
+    void export_settings();
+    int copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf);
     QAction *get_action_for_name(QString name);
 
     //Windows
     Canvas *canvas;
-    GetDirDialogue *dir_w;
-    NewNFDialogue *newnf_w;
-    EditNoteDialogue *edit_w;
 
     //Variables
-    QApplication *a;
+    //---Child objects(to delete later)---
     QSettings *settings;
-        QString language;
-    std::vector<MisliInstance*> misli;
-    QString current_misli_name;
-    MisliInstance * curr_msl;
-    bool notes_rdy,past_initial_load;
-    bool first_program_start;
+    MisliDir * clipboard_dir;
+    NoteFile * clipboard_nf;
 
+    MisliDesktopGui * misli_dg;
+    MisliInstance *misli_i;
+
+    QString language;
+    QString nf_before_help;
+
+
+    bool past_initial_load;
+    bool doing_cut_paste; //suspends undo image collection , because a cut/paste is one action
+    bool display_search_results;
+    
 public slots:
-    //void set_notes_rdy();
-    //void set_notes_not_rdy();
 
     void undo();
-    void copy();
+    int copy();
     void paste();
-    void cut();
+    int cut();
 
     void edit_note();
     void new_note();
@@ -73,8 +81,9 @@ public slots:
     void make_viewpoint_default();
     void make_nf_default();
     void add_new_folder();
+    void add_menu_entry_for_dir(QString path);
     void remove_current_folder();
-    void set_current_misli(QString name);
+    void set_current_misli_dir(QString name);
     void clear_settings_and_exit();
 
     void set_lang_bg();
@@ -94,14 +103,20 @@ public slots:
     void move_down();
     void move_right();
     void move_left();
+
+    void recheck_for_dirs();
+    void display_results(QString string);
+    void hide_search_stuff();
+    void select_all_notes();
+    void find_by_text(QString string);
+    void show_note_details_window();
+public:
+    Ui::MisliWindow *ui;
 private:
     //Functions
     void closeEvent(QCloseEvent *);
     void import_settings_and_folders();
-    void export_settings();
 
-    //Variables
-    Ui::MisliWindow *ui;
 };
 
 #endif // MISLIWINDOW_H

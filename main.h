@@ -27,7 +27,6 @@ extern float note_x,note_y;
 extern Eye eye;
 //,*edited_note
 extern Note null_note,*mouse_note,*help_note;
-extern NoteFile null_note_file;
 extern Link null_link;
 
 char * q_get_text_between(char *source_string, char A, char B, int length);

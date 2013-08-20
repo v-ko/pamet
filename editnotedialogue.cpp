@@ -6,12 +6,14 @@
 
 #include "misliwindow.h"
 #include "canvas.h"
+#include "mislidesktopgui.h"
 
-EditNoteDialogue::EditNoteDialogue(MisliWindow *msl_w_) :
+EditNoteDialogue::EditNoteDialogue(MisliInstance * misli_i_) :
     ui(new Ui::EditNoteDialogue)
 {
     ui->setupUi(this);
-    msl_w=msl_w_;
+    misli_i=misli_i_;
+    addAction(ui->actionEscape);
 }
 
 EditNoteDialogue::~EditNoteDialogue()
@@ -23,8 +25,8 @@ void EditNoteDialogue::new_note()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note=msl_w->canvas->mapFromGlobal( QCursor::pos() ).x(); //cursor position relative to the gl widget
-    y_on_new_note=msl_w->canvas->mapFromGlobal( QCursor::pos() ).y();
+    x_on_new_note=misli_i->misli_w->canvas->mapFromGlobal( QCursor::pos() ).x(); //cursor position relative to the gl widget
+    y_on_new_note=misli_i->misli_w->canvas->mapFromGlobal( QCursor::pos() ).y();
 
     move(QCursor::pos());
 
@@ -44,7 +46,7 @@ int EditNoteDialogue::edit_note(){ //false for new note , true for edit
 
     setWindowTitle(tr("Edit note"));
 
-    edited_note=msl_w->curr_misli()->curr_nf()->get_first_selected_note();
+    edited_note=misli_i->curr_misli_dir()->curr_nf()->get_first_selected_note();
     if(edited_note==NULL){return 1;}
 
     move(QCursor::pos());
@@ -60,18 +62,12 @@ int EditNoteDialogue::edit_note(){ //false for new note , true for edit
     return 0;
 }
 
-void EditNoteDialogue::input_done(){
-
+void EditNoteDialogue::input_done()
+{
     QString text = ui->textEdit->toPlainText().trimmed();
     text = text.replace("\r\n","\n"); //for the f-n windows standart
 
     Note null_note;
-
-    /*if(text.size()>600){
-        QMessageBox mb(QMessageBox::Warning,"Too much text","This note is more than 600 characters . This would slow down the program . This limitation won't be in the next release",QMessageBox::Ok);
-        mb.exec();
-        return;
-    }*/
 
     float x,y;
     Note *nt;
@@ -79,9 +75,10 @@ void EditNoteDialogue::input_done(){
     float bg_col[] = {0,0,1,0.1};
 
     if( edited_note==NULL){//If we're making a new note
-        msl_w->canvas->unproject(x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
-        nt=msl_w->curr_misli()->curr_nf()->add_note(msl_w->curr_misli(),text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDateTime::currentDateTime(),QDateTime::currentDateTime(),txt_col,bg_col);
+        misli_i->misli_w->canvas->unproject(x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
+        nt=misli_i->curr_misli_dir()->curr_nf()->add_note(text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDateTime::currentDateTime(),QDateTime::currentDateTime(),txt_col,bg_col);
         nt->link_to_selected();
+        nt->auto_size();
     }else {//else we're in edit mode
         x=edited_note->x;
         y=edited_note->y;
@@ -90,11 +87,12 @@ void EditNoteDialogue::input_done(){
             edited_note->t_mod=QDateTime::currentDateTime();
         }
 
-        //font,cvqt,etc
+        //font,color,etc
         edited_note->init();
     }
-    msl_w->curr_misli()->curr_nf()->save();
-    msl_w->edit_w->close();
+    misli_i->curr_misli_dir()->curr_nf()->save();
+    misli_i->misli_w->update_current_nf();
+    misli_i->misli_w->misli_dg->edit_w->close();
 
     edited_note=NULL;
     }
@@ -105,3 +103,4 @@ void EditNoteDialogue::make_link()
     ui->textEdit->setFocus();
     ui->textEdit->moveCursor (QTextCursor::End);
 }
+

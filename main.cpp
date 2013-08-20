@@ -245,7 +245,7 @@
 //mahai prazni prostranstva ot kraq na zapiskata --done
 //pri nov file s enter da se dava ok --done
 //shortcut za make link --done
-//v class Note promeni nf na nf_id --done
+//v class Note promeni nf na name --done
 
 //>iz4istvane na licencing-a --done
 //version control --done
@@ -339,102 +339,93 @@
 //build windows --done
 
 //release ver.1------------------------------done
-//prati na blizkite
+//prati na blizkite --done
 
-//video za predstavqne na angl i bg
+//============Zapo4vam dolnite bug-ove i dr 01.08.13=====================
 
-//First launch dialogue : do you want to see a short clip (***) or display help(that's actually organized and useful)(***)
-//merge-vai conflicted copies
+//razpredeli zada4ite
 
-//update help
-//update translations
+//da sloja desktop file-a v proekta --done
+//BUG: nqma updateGL pri cykvane na L(bez da se myrda mi6kata)--done
+//При нов файл не е селектирано полето за писане по default--done
+//BUG: v nqkoi slu4ai undo izob6to ne ba4ka (pokrai golemi paste-ove ?)--done
+//BUG: copirane pri ni6to selektirano (ili dr usloviq) dava SEGFAULT--done
+//opravqne na selektiraneto na linkove (vij za gotova funk v Qt) --done
+//BUG: pri promqna na viso4inata se vijda 4e ne6to ne e floating point--done
+//BUG: pri ctrl-z vry6ta na izhodna eye poziciq --done
+//BUG opravi koordinatite na paste-vaneto (na samata zapiska i ima promqna vyv viso4inata)--done
+//+ima nqkakva dopylnitelna stypka (probvai da iztrie6 ne6to i da vyrne6 --done
+//+da ne pravi undo snap-ove dokato se paste-va --done
+//BUG: s Esc da se skrivat vtori4nite prozorci --done
+//==========gornite sa zavyrsheni v sy6tiq den=====================
+
+//=========Reorganizirane na klasovete (zapo4va 11.08.13)=============
+
+//Sega sym na MisliInstance::add_dir() i karam po red na izpylnenie na programata (ne zabravqi qDebug)--done
+//Pri promqna na direktoriite v MisliInstance trqbva da se vika signal notes_dir_changed , koito da vika funkciq v--done
+//MisliWindow , noqkto da gleda dali ima materql za pokazvane i ako ne - da skriva prozoreca (i obratno) --done
+//Debugging do pobyrkvane (dokato trygne)--done
+
+//========Krai na reorganiziraneto na klasovete 13.08.13===============
+
+//BUG:kato dam ok na dir window pri prazno pole pravi ne6to stranno--done
+//bool USING_GUI - abstrakciq na MisliInstance ot gornite --done
+//>avtoorazmerqvane na nova zapiska - prosto polzvai bounding box - da ama ne , vkl typiqt metod ne baca  --semi--done
+//Opravqne na thread problema (QtConcurrent ne stava za vryzvane na slot signal)-13.08.13--done
+//opravi licensing--done
+//BUG: pri kirilica ne ba4kat shortcut-ite--done
+//>fs_watch pak ne ba4ka --done
+//>da trqbva da e natisnat ctrl za da se resize-vat pove4e ot edna zapiski --done
+//>opravqnena cvetovete : na linkovete (pri selektirane) , na zelenoto--done
+//Always show the resizing circle ? and/or bigger--done
+//Ctrl+A --done
+//SEARCH --done
+//vkarvane na kartinka --done
+//logikata za resize-vane e greshna--done
+//>vkarvane na tekstovi fail --done
+//vkarvane na system(); --done
+//max note size --done
+//>kontekstovi menu-ta --done
+//double click to edit note--done
+//ako nqma zapiski na ekrana "go to nearest note ctrl-j" --done
+//nadpis "click on a note to link it"--done
+//tolerans za potrepvane na mi6kata pri mestene--done
+//Details dialogue--done
+//Destructors--done
+//Vector pointer safety (mai osnovno s Note , za6toto dr-te sa vektori ot pointeri)--done
+//analizirai i opravi polzvaneto na Note::init() --20.08.13--done
+
+//Release routine:
+//update translations --done
 //commit
 //build on Windows
 
 //release version 1.1-------------------------
 
+//po-dobyr help
+//video za predstavqne na angl i bg
+//First launch dialogue : do you want to see a short clip or display help
 //opravi si FB profila
 //razprostranenie - vj zapiskite
 
-//-------------Late features--------------------:
-//>link position set (auto,left,right,top,bottom)+ izvivane
-//>vkarvane na tekstovi fail , vkarvane na kartinka (s include_text_file:...)- otnositelno lesni (osobeno 1to)
-//Search + tags
-//>avtoorazmerqvane na nova zapiska
-//>preview na notefile-a pri markirane na prenaso4va6ta zapiska
-//>izpisvane na datite (made/mod)
+//BUG: next i prev nf ne ba4kat s + i -
 
-//ako nqma zapiski na ekrana - naso4vane kym nai-blizkite - "no notes present" i "go to nearest note ctrl-g"
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//Maybe:
-//>~font change (+minimum resize da e kolkto 3 bukvi za x i kolkoto viso4inata na reda + spacing za y)
-//ideq : backlight (kato neonovite svetlini pod kolite) za note-ovete ,za da se razgrani4at nqkolko oblasti ot note-file-a vizualno (vsqka sys svoi cvqt)
-
-//Belejki:
-//pri promqna na vectora pointeri kym obekti v nego so4at kym s4upeni obekti
-//politikata za semicolon-i (to4ki zapetai) e ,4e v teksta na linkovete ne sa pozvoleni (obry6tat se na ":"), a v teksta na note ne pre4at
-
-#include <QApplication>
-#include <QSplashScreen>
-#include <QTextCodec>
-#include <QTranslator>
+#include <QFileSystemWatcher>
 #include <QMessageBox>
 
+#include <QThread>
 
-#include "common.h"
-#include "misliwindow.h"
+#include "mislidesktopgui.h"
+#include "misliinstance.h"
 
 int main(int argc, char *argv[])
 {
-    QTextCodec::setCodecForCStrings(QTextCodec::codecForName("utf8"));
-    QTextCodec::setCodecForTr(QTextCodec::codecForName("utf8"));
+    //1.Load the language and fail-safe settings and construct the windows
 
-    QApplication a(argc, argv);
-        a.setOrganizationName("p10");
-        a.setApplicationName("misli");
-    QTranslator translator;
-    QSettings settings;
-    QPixmap pixmap(":/img/icon.png");
-    QSplashScreen *splash;
-    QMessageBox msg;
-    int successful_start=0,ret;
+    MisliDesktopGui *misli = new MisliDesktopGui(argc, argv);    //-->present splash screen
+                                                                //-->Start loading notes asynchronosly
 
-    if(settings.contains("language")){
-        if(settings.value("language").toString()!=QString("en")){
-            QString qstr="misli_"+settings.value("language").toString();
-            translator.load(qstr,QString(":/translations/"));
-            a.installTranslator(&translator);
-        }
-    }
-    if(settings.contains("successful_start")){
-        successful_start=settings.value("successful_start").toInt();
-        if(successful_start<=-2){
-            msg.setText(QObject::tr("There have been two unsuccessful starts of the program. Clearing the program settings will probably solve the issue . Persistent program crashes are mostly caused by corrupted notefiles , so you can try to manually narrow out the problematic notefile (remove the notefiles from the work directories one by one). The last one edited is probably the problem (you can try to correct it manually with a text editor to avoid loss of data).\n To clear the settings press OK . To continue with starting up the program press Cancel."));
-            msg.setStandardButtons(QMessageBox::Ok|QMessageBox::Cancel);
-            msg.setDefaultButton(QMessageBox::Ok);
-            msg.setIcon(QMessageBox::Warning);
-            ret=msg.exec();
-            if(ret==QMessageBox::Ok){ //if the user pressed Ok
-                settings.clear();
-                settings.sync();
-                exit(0);
-            }
-        }
-    }
-    successful_start--; //assume we won't start successfully , if we do - the value gets +1-ed on close
-    settings.setValue("successful_start",QVariant(successful_start));
-    settings.sync();
-
-    splash = new QSplashScreen(pixmap);
-    splash->show();
-    a.processEvents();
-
-    MisliWindow msl_w(&a);
-
-    splash->finish(&msl_w);
-
-    return a.exec();
+    //3.Present GUI
+    misli->exec();
 }
 
