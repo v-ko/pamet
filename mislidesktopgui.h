@@ -41,13 +41,14 @@ public:
 
     QSettings *settings;
     QTranslator translator;
+    QMessageBox msg; //general purpose
 
     QThread workerThread;
     QString language;
     bool first_program_start;
 
 public slots:
-    void start_GUI();
+    void show_warning_message(QString message);
 };
 
 #endif // MISLIDESKTOPGUI_H

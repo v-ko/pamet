@@ -10,7 +10,7 @@
 MisliInstance::MisliInstance(MisliDesktopGui *misli_dg_)
 {
     misli_dg = misli_dg_;
-    misli_w=NULL; //It gets constructed afterwards
+    //misli_w=NULL; //It gets constructed afterwards
 
     if(misli_dg==NULL){
         using_gui=false;
@@ -55,8 +55,8 @@ void MisliInstance::add_dir(QString path)
     }*/
 
     if(using_gui){
-        connect(md,SIGNAL(current_nf_switched()),misli_w,SLOT(switch_current_nf()));
-        connect(md,SIGNAL(current_nf_updated()),misli_w,SLOT(update_current_nf()));
+        connect(md,SIGNAL(current_nf_switched()),misli_dg->misli_w,SLOT(switch_current_nf()));
+        connect(md,SIGNAL(current_nf_updated()),misli_dg->misli_w,SLOT(update_current_nf()));
     }
 
     set_current_misli_dir(path);
@@ -72,6 +72,7 @@ int MisliInstance::load_all_dirs()
     //------Extract the directory paths from the settings----------
     if(settings->contains("notes_dir")){
         notes_dirs = settings->value("notes_dir").toStringList();
+        qDebug()<<"Extracted notes dirs from settings:"<<notes_dirs;
     }
 
     //-------Load the directories------------------------
@@ -84,6 +85,8 @@ int MisliInstance::load_all_dirs()
 
     emit notes_dir_changed();
     emit load_all_dirs_finished();
+    moveToThread(misli_dg->thread());//move back so there's no problems with the paint() accessing data while something else is editing the NFs
+
     return loaded_dirs;
 }
 
@@ -125,7 +128,7 @@ int MisliInstance::load_results_in_search_nf()
 
     for(unsigned int i=0;i<misli_dg->notes_search->search_results.size();i++){
         nt = search_nf->add_note(misli_dg->notes_search->search_results[i].nt);
-        nt->a=misli_w->canvas->searchField->width()/FONT_TRANSFORM_FACTOR;
+        nt->a=misli_dg->misli_w->canvas->searchField->width()/FONT_TRANSFORM_FACTOR;
         nt->b=SEARCH_RESULT_HEIGHT/FONT_TRANSFORM_FACTOR;
         nt->calculate_coordinates(); //circumvent the "!using GUI" skipping on init()
         nt->check_text_for_links(curr_misli_dir());

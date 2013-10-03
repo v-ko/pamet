@@ -1,6 +1,8 @@
 /* This program is licensed under GNU GPL . For the full notice see the
  * license.txt file or google the full text of the GPL*/
 
+#include <QDebug>
+
 #include "misliinstance.h"
 #include "mislidir.h"
 #include "misliwindow.h"
@@ -31,7 +33,7 @@ MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_g
     if(!is_virtual) connect(hanging_nf_check,SIGNAL(timeout()),this,SLOT(check_for_hanging_nfs() ));
 
     //------Creating the help NF---------------
-    if(!is_virtual){
+    if( (!is_virtual) && using_gui ){
         QString qstr;
         qstr=":/help/help_"+ misli_i->misli_dg->language;
         qstr+=".misl";
@@ -46,6 +48,9 @@ MisliDir::~MisliDir()
 {
     delete fs_watch;
     delete hanging_nf_check;
+    for(unsigned int i=0;i<note_file.size();i++){
+        delete note_file[i];
+    }
 }
 
 void MisliDir::check_for_hanging_nfs()
@@ -78,7 +83,7 @@ NoteFile * MisliDir::nf_by_name(QString name)
             return note_file[i];
         }
     }
-    qDebug()<<"NoteFile with name "<<name<<" was not found in dir: "<<notes_dir<<" .";
+    //qDebug()<<"NoteFile with name "<<name<<" was not found in dir: "<<notes_dir<<" .";
     return NULL;
 }
 NoteFile * MisliDir::curr_nf()
@@ -101,25 +106,30 @@ NoteFile * MisliDir::default_nf_on_startup()
 
 int MisliDir::make_notes_file(QString name)
 {
-    int err=0;
-    std::fstream ntFile;
+    QFile ntFile;
+    QString file_name_sstr;
 
     if(nf_by_name(name)!=NULL){
         return -1;
     }
-    err-=chdir(notes_dir.toUtf8().data());
 
-    name+=".misl";
+    file_name_sstr+=name+".misl";
+    file_name_sstr=QDir(notes_dir).filePath(file_name_sstr);
 
-     ntFile.open(name.toUtf8().data(),std::ios_base::out);
-    if(ntFile.fail()){err--;}
+    ntFile.setFileName(file_name_sstr);
 
-    ntFile<<"#Notes database for Misli"<<'\n';
+    if(!ntFile.open(QIODevice::WriteOnly)){
+        qDebug()<<"Error making new notes file";
+        return -1;
+    }
 
+    ntFile.write(QByteArray("#Notes database for Misli\n[1]\ntxt=Your first note\nx=-5\ny=-1.5\nz=0\na=10\nb=3.25\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt="));
     ntFile.close();
 
-    if(err!=0){d("error making new notes file");}
-    return err;
+    note_file.push_back(new NoteFile(this)); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
+    note_file.back()->init(file_name_sstr);
+
+    return 0;
 }
 
 void MisliDir::set_current_note_file(QString name)
@@ -205,6 +215,12 @@ int MisliDir::load_notes_files()
     if(is_virtual) return 0;
 
     QDir dir(notes_dir);
+
+    if(!dir.exists()){
+        qDebug()<<"The notes directory "<<notes_dir<<" given to MisliDir does not exist. Exiting!";
+        exit(-2);
+    }
+
     NoteFile *nf;
 
     QStringList entry_list = dir.entryList();
@@ -237,21 +253,13 @@ int MisliDir::load_notes_files()
 
         make_notes_file("notes");
 
-        file_addr=notes_dir;
-        file_addr+="/";
-        file_addr+="notes.misl";
-
-        note_file.push_back(new NoteFile(this)); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
-        nf=note_file.back();
-
-        nf->init("notes",file_addr.toUtf8().data());
     }
 
     if(default_nf_on_startup()!=NULL) set_current_note_file(default_nf_on_startup()->name);
     else set_current_note_file(find_first_normal_nf()->name);
 
     if(using_gui){//else segment
-        misli_i->misli_w->nf_before_help=curr_nf()->name;
+        misli_i->misli_dg->misli_w->nf_before_help=curr_nf()->name;
     }
 
     reinit_notes_pointing_to_notefiles();
@@ -327,9 +335,12 @@ void MisliDir::handle_changed_file(QString file)
     err = nf->init(nf->name,nf->full_file_addr);
 
     if( err == 0 ){
-        emit current_nf_updated();
+        emit current_nf_switched();//Updates the title too (compared to .._updated)
     }else if(err ==-2){ //most times the file is deleted and then replaced on sync , so we need to check back for it later
         nf->is_deleted_externally=true;
+        if(curr_nf()==nf){
+            emit current_nf_switched(); //to change the title if we're looking at the changed nf
+        }
         hanging_nf_check->start(700);
     }
 }

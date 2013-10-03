@@ -60,6 +60,7 @@ public:
     bool is_displayed_first_on_startup;
     bool is_deleted_externally;
     bool is_current;
+    bool is_locked;
 };
 
 #endif // NOTEFILE_H

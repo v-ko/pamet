@@ -10,6 +10,7 @@
 class Note;
 class MisliInstance;
 
+class MisliDesktopGui;
 namespace Ui {
 class EditNoteDialogue;
 }
@@ -20,11 +21,13 @@ class EditNoteDialogue : public QWidget
     
 public:
     //Functions
-    EditNoteDialogue(MisliInstance * misli_i_);
+    EditNoteDialogue(MisliDesktopGui * misli_dg_);
     ~EditNoteDialogue();
+
+    MisliInstance * misli_i();
     
     //Variables
-    MisliInstance *misli_i;
+    MisliDesktopGui *misli_dg;
     Note * edited_note;
     double x_on_new_note,y_on_new_note;
 

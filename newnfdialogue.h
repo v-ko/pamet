@@ -20,12 +20,14 @@ class NewNFDialogue : public QWidget
     
 public:
     //Functions
-    NewNFDialogue(MisliWindow *misli_w_);
+    NewNFDialogue(MisliDesktopGui *misli_dg_);
     ~NewNFDialogue();
 
+    MisliInstance *misli_i();
+    MisliWindow *misli_w();
+
     //Variables
-    MisliWindow *misli_w;
-    MisliInstance *misli_i;
+    MisliDesktopGui *misli_dg;
     NoteFile * nf_for_rename;
 
 public slots:

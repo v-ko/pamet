@@ -3,13 +3,13 @@
 
 #include "getdirdialogue.h"
 #include "ui_getdirdialogue.h"
-#include "misliinstance.h"
+#include "mislidesktopgui.h"
 
-GetDirDialogue::GetDirDialogue(MisliInstance* misli_i_):
+GetDirDialogue::GetDirDialogue(MisliDesktopGui *misli_dg_):
     ui(new Ui::GetDirDialogue)
 {
     ui->setupUi(this);
-    misli_i=misli_i_;
+    misli_dg=misli_dg_;
     addAction(ui->actionEscape);//the action is defined in the .ui file and is not used . QActions must be added to a widget to work
 }
 
@@ -37,8 +37,8 @@ void GetDirDialogue::input_done()
         ui->explainLabel->setText(tr("Directory doesn't exist"));
         return;
     }else {
-        misli_i->add_dir(dir.absolutePath());
-        misli_i->misli_w->export_settings();
+        misli_i()->add_dir(dir.absolutePath());
+        misli_dg->misli_w->export_settings();
         close();
     }
 }
@@ -46,4 +46,9 @@ void GetDirDialogue::input_done()
 void GetDirDialogue::get_dir_dialogue()
 {
     ui->lineEdit->setText(fileDialogue.getExistingDirectory(this,tr("Choose directory")));
+}
+
+MisliInstance *GetDirDialogue::misli_i()
+{
+    return misli_dg->misli_i;
 }

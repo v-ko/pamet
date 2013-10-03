@@ -53,8 +53,8 @@ QSize Canvas::sizeHint() const
 }
 MisliDir * Canvas::misli_dir()
 {
-    if(misli_w->misli_i->notes_rdy()){
-        return misli_w->misli_i->curr_misli_dir();
+    if(misli_w->misli_i()->notes_rdy()){
+        return misli_w->misli_i()->curr_misli_dir();
     }
     else {
         d("The program searches for a current note while !notes_rdy()");
@@ -64,7 +64,7 @@ MisliDir * Canvas::misli_dir()
 
 NoteFile * Canvas::curr_nf()
 {
-    return misli_w->misli_i->curr_misli_dir()->curr_nf();
+    return misli_w->misli_i()->curr_misli_dir()->curr_nf();
 }
 
 void Canvas::set_eye_coords_from_curr_nf()
@@ -116,7 +116,7 @@ void Canvas::paintEvent(QPaintEvent *event)
 {
     if(event->isAccepted()){} //remove the "unused variable" warning..
 
-    if(!misli_w->misli_i->notes_rdy()){
+    if(!misli_w->misli_i()->notes_rdy()){
         return;
     }
 
@@ -170,16 +170,16 @@ void Canvas::paintEvent(QPaintEvent *event)
             displayed_notes++;
             if( (nt->type==NOTE_TYPE_PICTURE_NOTE) && (nt->text_for_display.size()==0) ){
                 frame_ratio = nt->a/nt->b;
-                pixmap_ratio = nt->pixm->width()/nt->pixm->height();
+                pixmap_ratio = nt->img->width()/nt->img->height();
                 if( frame_ratio > pixmap_ratio ){ //if the width for the note frame is proportionally bigger than the pictures width
-                    p.drawPixmap(QPointF(x_projected+(nt_size_x-nt_size_y*pixmap_ratio)/2,y_projected),nt->pixm->scaled(QSize(nt_size_y*pixmap_ratio,nt_size_y),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));//we resize the note using the height of the frame and a calculated width
+                    p.drawImage(QPointF(x_projected+(nt_size_x-nt_size_y*pixmap_ratio)/2,y_projected),nt->img->scaled(QSize(nt_size_y*pixmap_ratio,nt_size_y),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));//we resize the note using the height of the frame and a calculated width
                 }else if( frame_ratio < pixmap_ratio ){
-                    p.drawPixmap(QPointF(x_projected,y_projected+(nt_size_y-nt_size_x*pixmap_ratio)/2),nt->pixm->scaled(QSize(nt_size_x,nt_size_x/pixmap_ratio),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));//we resize the note using the width of the frame and a calculated height
+                    p.drawImage(QPointF(x_projected,y_projected+(nt_size_y-nt_size_x*pixmap_ratio)/2),nt->img->scaled(QSize(nt_size_x,nt_size_x/pixmap_ratio),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));//we resize the note using the width of the frame and a calculated height
                 }else{
-                    p.drawPixmap(QPointF(x_projected,y_projected),nt->pixm->scaled(QSize(nt_size_x,nt_size_y),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                    p.drawImage(QPointF(x_projected,y_projected),nt->img->scaled(QSize(nt_size_x,nt_size_y),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
                 }
             }else{
-                p.drawPixmap(QPointF(x_projected,y_projected),nt->pixm->scaled(QSize(nt_size_x,nt_size_y),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
+                p.drawImage(QPointF(x_projected,y_projected),nt->img->scaled(QSize(nt_size_x,nt_size_y),Qt::IgnoreAspectRatio,Qt::SmoothTransformation));
             }
 
             //If the note is redirecting draw a border to differentiate it
@@ -253,12 +253,12 @@ void Canvas::paintEvent(QPaintEvent *event)
     //============Display search results==================
     if(!misli_w->display_search_results) {return;}
 
-    for(unsigned int i=0;i<misli_w->misli_i->search_nf->note.size();i++){
-        nt = misli_w->misli_i->search_nf->note[i];
+    for(unsigned int i=0;i<misli_w->misli_i()->search_nf->note.size();i++){
+        nt = misli_w->misli_i()->search_nf->note[i];
         if(int(i*SEARCH_RESULT_HEIGHT) < height()){
-            p.drawPixmap(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,*nt->pixm);
+            p.drawImage(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,*nt->img);
             if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){
-                p.drawRect(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,nt->pixm->width(),nt->pixm->height());
+                p.drawRect(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,nt->img->width(),nt->img->height());
             }
         }
     }
@@ -267,7 +267,7 @@ void Canvas::paintEvent(QPaintEvent *event)
 
 void Canvas::mousePressEvent(QMouseEvent *event)
 {
-    if(!misli_w->misli_i->notes_rdy()){return;}
+    if(!misli_w->misli_i()->notes_rdy()){return;}
 
     Note *nt_under_mouse;
     Note *nt_for_resize;
@@ -294,9 +294,9 @@ void Canvas::mousePressEvent(QMouseEvent *event)
         timed_out_move=0;
 
         if(misli_w->display_search_results){
-            for(unsigned int i=0;i<misli_w->misli_i->search_nf->note.size();i++){
-                search_note = misli_w->misli_i->search_nf->note[i];
-                if( point_intersects_with_rectangle(x,y,0,searchField->height() + i*SEARCH_RESULT_HEIGHT,search_note->pixm->width(),searchField->height() + i*SEARCH_RESULT_HEIGHT+search_note->pixm->height()) ){
+            for(unsigned int i=0;i<misli_w->misli_i()->search_nf->note.size();i++){
+                search_note = misli_w->misli_i()->search_nf->note[i];
+                if( point_intersects_with_rectangle(x,y,0,searchField->height() + i*SEARCH_RESULT_HEIGHT,search_note->img->width(),searchField->height() + i*SEARCH_RESULT_HEIGHT+search_note->img->height()) ){
                     search_note->center_eye_on_me();
                     break;
                 }
@@ -397,7 +397,7 @@ void Canvas::mousePressEvent(QMouseEvent *event)
 }
 void Canvas::mouseReleaseEvent(QMouseEvent *event)
 {
-    if(!misli_w->misli_i->notes_rdy()){return;}
+    if(!misli_w->misli_i()->notes_rdy()){return;}
 
     Note * nt;
 
@@ -441,7 +441,7 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
 }
 void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if(!misli_w->misli_i->notes_rdy()){return;}
+    if(!misli_w->misli_i()->notes_rdy()){return;}
 
     Note *nt;
 
@@ -472,7 +472,7 @@ update();
 
 void Canvas::wheelEvent(QWheelEvent *event)
 {
-    if(!misli_w->misli_i->notes_rdy()){return;}
+    if(!misli_w->misli_i()->notes_rdy()){return;}
 
     int numDegrees = event->delta() / 8;
     int numSteps = numDegrees / 15;
@@ -488,7 +488,7 @@ void Canvas::wheelEvent(QWheelEvent *event)
 }
 void Canvas::mouseMoveEvent(QMouseEvent *event)
 {
-    if(!misli_w->misli_i->notes_rdy()){return;}
+    if(!misli_w->misli_i()->notes_rdy()){return;}
 
     float scr_x,scr_y,scr2_x,scr2_y,nt_x,nt_y,m_x,m_y,d_x,d_y,t_x,t_y;
 
@@ -577,7 +577,8 @@ Note *Canvas::get_note_under_mouse(int mx , int my)
 
 
         if( point_intersects_with_rectangle(float(mx),float(my),x,y,rx,ry)) {
-            return nt;
+            //qDebug()<<"Note under mouse is "<<nt->text;
+            if(nt!=mouse_note) return nt; //sloppy way to do it ,but works and it simple
         }
 
     }
@@ -665,18 +666,15 @@ update();
 }
 void Canvas::set_linking_on()
 {
-    int x = current_mouse_x;
-    int y = current_mouse_y;
-    float t_x,t_y;
+    float x = current_mouse_x;
+    float y = current_mouse_y;
     float txt_col[] = {0,0,1,1};
     float bg_col[] = {0,0,1,0.1};
 
     //Create a dummy note called a mouse note that will be attached to the mouse and hopefully not noticed
     if(curr_nf()->get_first_selected_note()!=NULL && mouse_note==NULL){
-        mouse_note=curr_nf()->add_note("L",t_x,t_y,0,1,1,1,QDateTime(QDate(1,1,1)),QDateTime(QDate(1,1,1)),txt_col,bg_col);
-        unproject(x,y,t_x,t_y);
-        mouse_note->x=t_x;
-        mouse_note->y=t_y;
+        unproject(x,y,x,y);
+        mouse_note=curr_nf()->add_note("L",x,y,0,1,1,1,QDateTime(QDate(1,1,1)),QDateTime(QDate(1,1,1)),txt_col,bg_col);
         mouse_note->link_to_selected();
     }
 }
@@ -691,7 +689,7 @@ void Canvas::set_linking_off()
 
 int Canvas::paste()
 {
-    NoteFile *nf=misli_w->clipboard_nf;//misli_dir()->clipboard_nf();
+    NoteFile *clipboard_nf=misli_w->clipboard_nf,*target_nf;//misli_dir()->clipboard_nf();
     Note *nt;
     Link *ln;
     float x,y;
@@ -700,8 +698,8 @@ int Canvas::paste()
     misli_w->doing_cut_paste=true;
 
     //Make all the id-s negative (and select all notes)
-    for(unsigned int n=0;n<nf->note.size();n++){ //for every note
-        nt=nf->note[n];
+    for(unsigned int n=0;n<clipboard_nf->note.size();n++){ //for every note
+        nt=clipboard_nf->note[n];
         nt->id = -nt->id;
         nt->selected=1;//for the copy later
 
@@ -718,37 +716,41 @@ int Canvas::paste()
     x=current_mouse_x; //get mouse coords
     y=current_mouse_y;
     unproject(x,y,x,y); //translate them to real GL coords
-    nf->make_coords_relative_to(-x,-y);
+    clipboard_nf->make_coords_relative_to(-x,-y);
 
     //Copy the notes over to the target
-    misli_w->copy_selected_notes(nf,curr_nf());
+    misli_w->copy_selected_notes(clipboard_nf,curr_nf());
 
     //return clipboard notes' coordinates to 0
-    nf->make_coords_relative_to(x,y);
+    clipboard_nf->make_coords_relative_to(x,y);
 
-    nf=curr_nf();
+    target_nf=curr_nf();
 
     //Replace the negative id-s with real ones
-    for(unsigned int n=0;n<nf->note.size();n++){ //for every note
-        nt=nf->note[n];
-        old_id = nt->id;
-        nt->id = nf->get_new_id();
+    for(unsigned int n=0;n<target_nf->note.size();n++){ //for every note
 
-        //Fix the id-s in the links
-        for(unsigned int i=0;i<nf->note.size();i++){ //for every note
-            for(unsigned int l=0;l<nf->note[i]->outlink.size();l++){ //for every outlink
-                ln=&nf->note[i]->outlink[l];
-                if(ln->id==old_id){ ln->id=nt->id ; } //if it has the old id - set it up with the new one
+        nt=target_nf->note[n];
+
+        if(nt->id<=0){ //only for the pasted notes (with negative id-s)
+            old_id = nt->id;
+            nt->id = target_nf->get_new_id();
+
+            //Fix the id-s in the links
+            for(unsigned int i=0;i<target_nf->note.size();i++){ //for every note
+                for(unsigned int l=0;l<target_nf->note[i]->outlink.size();l++){ //for every outlink
+                    ln=&target_nf->note[i]->outlink[l];
+                    if(ln->id==old_id){ ln->id=nt->id ; } //if it has the old id - set it up with the new one
+                }
+                for(unsigned int in=0;in<target_nf->note[i]->inlink.size();in++){ //for every inlink
+                    if(target_nf->note[i]->inlink[in]==old_id){ target_nf->note[i]->inlink[in]=nt->id ; } //if it has the old id - set it up with the new one
+                }
             }
-            for(unsigned int in=0;in<nf->note[i]->inlink.size();in++){ //for every inlink
-                if(nf->note[i]->inlink[in]==old_id){ nf->note[i]->inlink[in]=nt->id ; } //if it has the old id - set it up with the new one
-            }
+            nt->init();
+            nt->init_links();
         }
-        nt->init();
-        nt->init_links();
     }
 
-    nf->save();
+    target_nf->save();
     misli_w->update_current_nf();
     return 0;
 }

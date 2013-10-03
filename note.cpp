@@ -33,15 +33,13 @@ Note::Note()
     bg_col[1]=0;
     bg_col[2]=1;
     bg_col[3]=0.5;
-    pixm=new QPixmap(1,1);
+    img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
     text_is_shortened=false;
     auto_sizing_now=false;
-
-    pixm = new QPixmap(1,1); //so we have a dummy pixmap for the first init
 }
 Note::~Note()
 {
-    delete pixm;
+    delete img;
 }
 
 int Note::calculate_coordinates()
@@ -72,7 +70,7 @@ int Note::adjust_text_size()
     QFont font("Halvetica");
     font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
 
-    QPainter p(pixm);//just a dummy painter
+    QPainter p(img);//just a dummy painter
     p.setFont(font);
 
     //------Determine alignment---------------
@@ -188,25 +186,27 @@ int Note::check_text_for_system_call_definition()
 int Note::draw_pixmap()
 {
     if(type==NOTE_TYPE_PICTURE_NOTE){
-        delete pixm;
-        pixm = new QPixmap(address_string);
-        if( !pixm->isNull() ) {
+        delete img;
+        img = new QImage(address_string);
+        if( !img->isNull() ) {
             return 0;
         }
         else {
             text_for_shortening="Not a valid picture.";
-            text_for_display="Not a valid picture.";}
+            text_for_display="Not a valid picture.";
+            type=NOTE_TYPE_NORMAL_NOTE;
+        }
     }
 
-    delete pixm;
-    pixm = new QPixmap(pixm_real_size_x,pixm_real_size_y);
-    pixm->fill(Qt::transparent);
+    delete img;
+    img = new QImage(pixm_real_size_x,pixm_real_size_y,QImage::Format_ARGB32_Premultiplied);
+    img->fill(Qt::transparent);
 
     QFont font("Halvetica");
     font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
     font.setStyleStrategy(QFont::PreferAntialias); //style aliasing
 
-    QPainter p(pixm);
+    QPainter p(img);
     p.setFont(font);
     p.setRenderHint(QPainter::TextAntialiasing);
 

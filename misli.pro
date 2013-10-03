@@ -58,6 +58,7 @@ OTHER_FILES += \
     translations/misli_bg.ts \
     translations/misli_bg.qm \
     other/misli.desktop \
+    LOG.txt
 
 #win32{
 #    QMAKE_LFLAGS += -static-libgcc

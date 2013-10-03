@@ -8,12 +8,17 @@
 #include "canvas.h"
 #include "mislidesktopgui.h"
 
-EditNoteDialogue::EditNoteDialogue(MisliInstance * misli_i_) :
+EditNoteDialogue::EditNoteDialogue(MisliDesktopGui * misli_dg_) :
     ui(new Ui::EditNoteDialogue)
 {
     ui->setupUi(this);
-    misli_i=misli_i_;
+    misli_dg=misli_dg_;
     addAction(ui->actionEscape);
+}
+
+MisliInstance * EditNoteDialogue::misli_i()
+{
+    return misli_dg->misli_i;
 }
 
 EditNoteDialogue::~EditNoteDialogue()
@@ -25,8 +30,8 @@ void EditNoteDialogue::new_note()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note=misli_i->misli_w->canvas->mapFromGlobal( QCursor::pos() ).x(); //cursor position relative to the gl widget
-    y_on_new_note=misli_i->misli_w->canvas->mapFromGlobal( QCursor::pos() ).y();
+    x_on_new_note=misli_dg->misli_w->canvas->mapFromGlobal( QCursor::pos() ).x(); //cursor position relative to the gl widget
+    y_on_new_note=misli_dg->misli_w->canvas->mapFromGlobal( QCursor::pos() ).y();
 
     move(QCursor::pos());
 
@@ -46,7 +51,7 @@ int EditNoteDialogue::edit_note(){ //false for new note , true for edit
 
     setWindowTitle(tr("Edit note"));
 
-    edited_note=misli_i->curr_misli_dir()->curr_nf()->get_first_selected_note();
+    edited_note=misli_i()->curr_misli_dir()->curr_nf()->get_first_selected_note();
     if(edited_note==NULL){return 1;}
 
     move(QCursor::pos());
@@ -75,8 +80,8 @@ void EditNoteDialogue::input_done()
     float bg_col[] = {0,0,1,0.1};
 
     if( edited_note==NULL){//If we're making a new note
-        misli_i->misli_w->canvas->unproject(x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
-        nt=misli_i->curr_misli_dir()->curr_nf()->add_note(text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDateTime::currentDateTime(),QDateTime::currentDateTime(),txt_col,bg_col);
+        misli_dg->misli_w->canvas->unproject(x_on_new_note,y_on_new_note,x,y); //get mouse pos in real coordinates
+        nt=misli_i()->curr_misli_dir()->curr_nf()->add_note(text,x,y,null_note.z,null_note.a,null_note.b,null_note.font_size,QDateTime::currentDateTime(),QDateTime::currentDateTime(),txt_col,bg_col);
         nt->link_to_selected();
         nt->auto_size();
     }else {//else we're in edit mode
@@ -90,9 +95,9 @@ void EditNoteDialogue::input_done()
         //font,color,etc
         edited_note->init();
     }
-    misli_i->curr_misli_dir()->curr_nf()->save();
-    misli_i->misli_w->update_current_nf();
-    misli_i->misli_w->misli_dg->edit_w->close();
+    misli_i()->curr_misli_dir()->curr_nf()->save();
+    misli_dg->misli_w->update_current_nf();
+    misli_dg->edit_w->close();
 
     edited_note=NULL;
     }

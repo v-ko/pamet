@@ -29,4 +29,16 @@ void NoteDetailsWindow::updateInfo(Note &nt)
     ui->selectedLabel->setText(QVariant(nt.selected).toString());
     ui->text_is_shortenedLabel->setText(QVariant(nt.text_is_shortened).toString());
 
+    QString inlinks_txt,outlinks_txt;
+
+    for(unsigned int i=0;i<nt.inlink.size();i++){
+        inlinks_txt+=QVariant(nt.inlink[i]).toString();
+        inlinks_txt+=";";
+    }
+    for(unsigned int i=0;i<nt.outlink.size();i++){
+        outlinks_txt+=QVariant(nt.outlink[i].id).toString();
+        outlinks_txt+=";";
+    }
+    ui->outlinksLabel->setText(outlinks_txt);
+    ui->inlinksLabel->setText(inlinks_txt);
 }

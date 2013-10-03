@@ -13,6 +13,16 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     QPixmap pixmap(":/img/icon.png");
     int successful_start=0,user_reply;
 
+    //---Some pointer safeties---
+    misli_i=NULL;
+    misli_w=NULL;
+    dir_w=NULL;
+    newnf_w=NULL;
+    edit_w=NULL;
+    note_w=NULL;
+    splash=NULL;
+    notes_search=NULL;
+
     setOrganizationName("p10"); //this is needed for windows settings access
     setApplicationName("misli");
 
@@ -26,6 +36,9 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     //========Load the language from settings and setup the translator=======
     if(settings->contains("language")){
         language=settings->value("language").toString();
+        qDebug()<<"MisliDesktopGui:Retrieved the language from settings"<<language;
+        first_program_start=false;//the language is set therefore it's not the first start
+
         if(language.size()!=0){
             if(language!=QString("en")){
                 QString qstr="misli_"+settings->value("language").toString();
@@ -33,18 +46,28 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
                 installTranslator(&translator);
             }
         }else{
-            goto setup_language;
+            qDebug()<<"The 'language' key is empty.";
+            qDebug()<<"Setting 'language' to 'en'.";
+            settings->setValue("language",QVariant("en"));
+            settings->sync();
+
+            language=settings->value("language").toString();
+            qDebug()<<"Test pulling language from settings . Result: "<<language;
         }
     }else{
-        setup_language:
+        qDebug()<<"No key 'language' found - assuming it's the first program start";
         first_program_start=true;
+
+        qDebug()<<"Setting 'language' to 'en'.";
         settings->setValue("language",QVariant("en"));
         settings->sync();
-        qDebug()<<"Settings SYNC status: "<<settings->status();
-        language="en";
+
+        language=settings->value("language").toString();
+        qDebug()<<"Test pulling language from settings . Result: "<<language;
     }
 
-    qDebug()<<"MisliDesktopGui:Retrieved the language from settings"<<settings->value("language").toString();
+    //qDebug()<<"Settings SYNC status: "<<settings->status();
+
     
     //=========Check if there's a series of failed starts and suggest clearing the settings=========
     if(settings->contains("successful_start")){
@@ -60,7 +83,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
                 qDebug()<<"MisliDesktopGui:User chose to clear settings and exit upon prompt.";
                 settings->clear();
                 settings->sync();
-                qDebug()<<"Settings SYNC status: "<<settings->status();
+                //qDebug()<<"Settings SYNC status: "<<settings->status();
                 exit(0);
             }
         }
@@ -69,8 +92,16 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     successful_start--; //assume we won't start successfully , if we do - the value gets +1-ed on close
     settings->setValue("successful_start",QVariant(successful_start));
     settings->sync();
-    qDebug()<<"Settings SYNC status: "<<settings->status();
+    //qDebug()<<"Settings SYNC status: "<<settings->status();
     qDebug()<<"MisliDesktopGui:successful_start lowered to: "<<settings->value("successful_start").toInt();
+
+    //==================Construct the windows for the application==============================
+    misli_w = new MisliWindow(this);
+    dir_w = new GetDirDialogue(this);
+    edit_w = new EditNoteDialogue(this);
+    newnf_w = new NewNFDialogue(this);
+    note_w = new NoteDetailsWindow();
+    qDebug()<<"Constructed all window objects.";
 
     //==================Construct the misli instance class and search class===============================
     notes_search = new NotesSearch;
@@ -79,16 +110,13 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     misli_i->moveToThread(&workerThread);
 
     connect(&workerThread,SIGNAL(started()), misli_i,SLOT(load_all_dirs()));
-    QObject::connect(misli_i,SIGNAL(load_all_dirs_finished()),this,SLOT(start_GUI()));
 
-    //==================Construct the windows for the application==============================
-    misli_w = new MisliWindow(this);
-    dir_w = new GetDirDialogue(misli_i);
-    edit_w = new EditNoteDialogue(misli_i);
-    newnf_w = new NewNFDialogue(misli_w);
-    note_w = new NoteDetailsWindow();
-    qDebug()<<"Constructed all window objects.Starting worker thread.";
+    connect(misli_i,SIGNAL(notes_dir_changed()),misli_w,SLOT(recheck_for_dirs()));
+    connect(misli_i,SIGNAL(notes_dir_added(QString)),misli_w,SLOT(add_menu_entry_for_dir(QString)));
+    connect(notes_search,SIGNAL(search_complete(QString)),misli_w,SLOT(display_results(QString)));
+
     workerThread.start();
+    qDebug()<<"Started worker thread.";
 }
 MisliDesktopGui::~MisliDesktopGui()
 {\
@@ -105,15 +133,9 @@ MisliDesktopGui::~MisliDesktopGui()
     workerThread.wait();
 }
 
-void MisliDesktopGui::start_GUI()
+void MisliDesktopGui::show_warning_message(QString message)
 {
-    qDebug()<<"starting GUI";
-    if( misli_i->notes_rdy() ){
-        if(first_program_start){ //if it's the first dir we're making go to the help file
-            misli_i->curr_misli_dir()->set_current_note_file("HelpNoteFile");
-            first_program_start=false;
-        }
-        misli_w->showMaximized();
-        splash->hide(); //end the splash screen
-    }
+    QMessageBox msg;
+    msg.setText(message);
+    msg.exec();
 }

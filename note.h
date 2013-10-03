@@ -4,8 +4,11 @@
 #ifndef NOTE_H
 #define NOTE_H
 
-#include<QDate>
 #include <vector>
+
+#include <QDate>
+#include <QImage>
+
 #include "link.h"
 
 class NoteFile;
@@ -39,7 +42,7 @@ float pixm_real_size_y;
 QString nf_name;
 MisliDir *misli_dir;
 
-QPixmap *pixm;
+QImage *img;
 Qt::AlignmentFlag alignment;
 
 int type; //1=redirecting , 0=normal

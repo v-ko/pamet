@@ -4,6 +4,7 @@
 #include <fstream>
 #include <QString>
 #include <QDesktopWidget>
+#include <QDebug>
 
 #include "../../petko10.h"
 #include "note.h"
@@ -38,11 +39,11 @@ QString NoteFile::init(QString path) //returns the id of the nf
     qDebug()<<"Initializing nf: "<<path;
 
     if(misli_dir->using_gui){ //adjusting the height based on display size
-        eye_z = 0.22 * misli_dir->misli_i->misli_w->misli_dg->desktop()->widthMM();
+        eye_z = 0.22 * misli_dir->misli_i->misli_dg->desktop()->widthMM();
     }
 
     if(!misli_dir->is_virtual) {
-        qDebug()<<"Adding path to fs_watch: "<<path;
+        //qDebug()<<"Adding path to fs_watch: "<<path;
         misli_dir->fs_watch->addPath(path); //if it's a real nf
     }
 
@@ -59,8 +60,8 @@ QString NoteFile::init(QString path) //returns the id of the nf
     return fname;
 }
 
-int NoteFile::init(QString ime, QString path){  //returns errors
-
+int NoteFile::init(QString ime, QString path)   //returns negative on errors
+{
     //Tmp , function stuff
     Link ln;
     Note *nt,*target_nt;
@@ -84,11 +85,20 @@ int NoteFile::init(QString ime, QString path){  //returns errors
         qDebug()<<"Error opening notefile: "<<path;
         return -2;
     }
+    //----Check for abnormally large files------
+    if(ntFile.size()>10000000){
+        qDebug()<<"Note file "<<ime<<" is more than 10MB.Skipping.";
+        return -3;
+    }
     qbytear = ntFile.readAll();
+    //qDebug()<<qbytear;
     ntFile.close();
     file=file.fromUtf8(qbytear.data());
 
+
+
     file = file.replace("\r",""); //clear the windows standart debree
+    //qDebug()<<file;
     lines = file.split(QString("\n"),QString::SkipEmptyParts);
 
     //------------Class initialisations---------------
@@ -106,6 +116,7 @@ int NoteFile::init(QString ime, QString path){  //returns errors
 
     //-------Get the comments and tags--------
     for(int i=0;i<lines.size();i++){ //for every line of text
+        //qDebug()<<lines[i];
         if(lines[i].startsWith("#")){//if it's a comment
             comment.push_back(lines[i]);
         }
@@ -125,7 +136,9 @@ int NoteFile::init(QString ime, QString path){  //returns errors
         nt_id = group_names[i].toInt();
 
         err += q_get_value_for_key(groups[i],"txt",txt);
+        //qDebug()<<groups[i];
             txt.replace(QString("\\n"),QString("\n"));
+            //qDebug()<<txt;
         err += q_get_value_for_key(groups[i],"x",x);
         err += q_get_value_for_key(groups[i],"y",y);
         err += q_get_value_for_key(groups[i],"z",z);
@@ -285,7 +298,7 @@ int NoteFile::hard_save()
         ntFile<<nf_z.back();
         ntFile.close();
         if(!misli_dir->is_virtual) {
-            qDebug()<<"Adding path to fs_watch: "<<full_file_addr;
+            //qDebug()<<"Adding path to fs_watch: "<<full_file_addr;
             misli_dir->fs_watch->addPath(full_file_addr);
         }
         //qDebug()<<misli_dir->fs_watch->files();
@@ -368,7 +381,7 @@ Note *NoteFile::add_note_base(QString text,double x,double y,double z,double a,d
 Note *NoteFile::add_note(int id,QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]){ //import a note (one that has an id)
 
     //=======Dobavqne v programata=========
-
+    //qDebug()<<text;
     Note *nt=add_note_base(text,x,y,z,a,b,font_size,t_made,t_mod,txt_col,bg_col);
 
     nt->id=id;
@@ -407,10 +420,12 @@ int NoteFile::delete_note(unsigned int position) //delete note at the given vect
     for(unsigned int i=0;i<nt->inlink.size();i++){ //remove the out-links from the note
 
         source_nt=get_note_by_id(nt->inlink[i]); //find the note that the link comes from
-        for(unsigned int l=0;l<source_nt->outlink.size();l++){ //find the link to remove from that note
+        if(source_nt!=NULL){
+            for(unsigned int l=0;l<source_nt->outlink.size();l++){ //find the link to remove from that note
 
-            if(source_nt->outlink[l].id==nt->id){ source_nt->outlink.erase(source_nt->outlink.begin()+l); } //remove the link if it has the id of the link we're deleting
+                if(source_nt->outlink[l].id==nt->id){ source_nt->outlink.erase(source_nt->outlink.begin()+l); } //remove the link if it has the id of the link we're deleting
 
+            }
         }
 
     }
@@ -418,12 +433,13 @@ int NoteFile::delete_note(unsigned int position) //delete note at the given vect
     for(unsigned int i=0;i<nt->outlink.size();i++){ //removing the in-links on the remote notes that the outlinks correspond to
 
         source_nt=get_note_by_id(nt->outlink[i].id); //find the note the outlink points to
-        for(unsigned int l=0;l<source_nt->inlink.size();l++){ //there we find the inlink we want to remove
+        if(source_nt!=NULL){
+            for(unsigned int l=0;l<source_nt->inlink.size();l++){ //there we find the inlink we want to remove
 
-            if(source_nt->inlink[l]==nt->id){ source_nt->inlink.erase(source_nt->inlink.begin()+l); } //remove the inlink if it has the id of the outlink we're deleting
+                if(source_nt->inlink[l]==nt->id){ source_nt->inlink.erase(source_nt->inlink.begin()+l); } //remove the inlink if it has the id of the outlink we're deleting
 
+            }
         }
-
     }
 
     delete nt;

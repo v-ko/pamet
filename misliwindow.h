@@ -37,6 +37,7 @@ public:
     void export_settings();
     int copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf);
     QAction *get_action_for_name(QString name);
+    MisliInstance *misli_i();
 
     //Windows
     Canvas *canvas;
@@ -48,7 +49,6 @@ public:
     NoteFile * clipboard_nf;
 
     MisliDesktopGui * misli_dg;
-    MisliInstance *misli_i;
 
     QString language;
     QString nf_before_help;

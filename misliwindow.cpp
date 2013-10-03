@@ -15,8 +15,6 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     ui(new Ui::MisliWindow)
 {
     misli_dg = misli_dg_;
-    misli_i=misli_dg->misli_i;
-    misli_i->misli_w = this;
     
     ui->setupUi(this);
     past_initial_load=false;
@@ -29,18 +27,18 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     setWindowTitle("Loading notefiles...");
     setWindowIcon(QIcon(":/img/icon.png"));
 
-    //settings = new QSettings;
-
+    /*QKeySequence sq1(Qt::Key_Plus);
+     QAction *newAct = new QAction(tr("&Nextnff"), this);
+     newAct->setShortcut(sq1);
+     newAct->setStatusTip(tr("Create a new file"));
+     connect(newAct, SIGNAL(triggered()), this, SLOT(next_nf()));
+*/
     //Connect signals/slots
-    connect(misli_i,SIGNAL(notes_dir_changed()),this,SLOT(recheck_for_dirs()));
-    connect(misli_i,SIGNAL(notes_dir_added(QString)),this,SLOT(add_menu_entry_for_dir(QString)));
-
     connect(ui->actionSearch,SIGNAL(triggered()),canvas->searchField,SLOT(show()));
     connect(ui->actionSearch,SIGNAL(triggered()),canvas->searchField,SLOT(setFocus()));
     connect(canvas->searchField,SIGNAL(editingFinished()),canvas->searchField,SLOT(hide()));
     connect(canvas->searchField,SIGNAL(editingFinished()),this,SLOT(hide_search_stuff()));
     connect(canvas->searchField,SIGNAL(textChanged(QString)),this,SLOT(find_by_text(QString)));
-    connect(misli_dg->notes_search,SIGNAL(search_complete(QString)),this,SLOT(display_results(QString)));
 
     connect(ui->actionJump_to_nearest_note,SIGNAL(triggered()),canvas,SLOT(jump_to_nearest_note()));
     connect(ui->actionDetails,SIGNAL(triggered()),this,SLOT(show_note_details_window()));
@@ -52,10 +50,14 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     clipboard_nf->name="ClipboardNf";
 }
 
+MisliInstance * MisliWindow::misli_i()
+{
+    return misli_dg->misli_i;
+}
+
 MisliWindow::~MisliWindow()
 {
     delete ui;
-    //delete settings;
     delete clipboard_dir;
     delete clipboard_nf;
 }
@@ -69,8 +71,8 @@ void MisliWindow::closeEvent(QCloseEvent *){
 void MisliWindow::export_settings()
 {
     QStringList notes_dir;
-    for(unsigned int i=0;i<misli_i->misli_dir.size();i++){
-        notes_dir.push_back(misli_i->misli_dir[i]->notes_dir);
+    for(unsigned int i=0;i<misli_i()->misli_dir.size();i++){
+        notes_dir.push_back(misli_i()->misli_dir[i]->notes_dir);
     }
     misli_dg->settings->setValue("notes_dir",QVariant(notes_dir));
     misli_dg->settings->setValue("language",QVariant(language));
@@ -92,17 +94,16 @@ QAction * MisliWindow::get_action_for_name(QString name)
 
 void MisliWindow::set_current_misli_dir(QString path)
 {
-    misli_i->set_current_misli_dir(path);
+    misli_i()->set_current_misli_dir(path);
 }
 
 void MisliWindow::undo()
 {
-    misli_i->curr_misli_dir()->curr_nf()->undo();
+    misli_i()->curr_misli_dir()->curr_nf()->undo();
     update_current_nf();
 }
 int MisliWindow::copy()
 {
-    //NoteFile *clipboard_nf;
     int copied_notes=0;
     int x=canvas->current_mouse_x;
     int y=canvas->current_mouse_y;
@@ -111,14 +112,14 @@ int MisliWindow::copy()
         clipboard_nf->delete_note(clipboard_nf->get_lowest_id_note());
     }
 
-    copied_notes=copy_selected_notes(misli_i->curr_misli_dir()->curr_nf(),clipboard_nf ); //dumm copy the selected notes
+    copied_notes=copy_selected_notes(misli_i()->curr_misli_dir()->curr_nf(),clipboard_nf ); //dumb copy the selected notes
 
     if(copied_notes==0){return -1;} //if nothing is copied - end
 
     //make coordinates relative
     if(canvas->get_note_under_mouse(x,y)!=NULL){ //to the note under the mouse if there's one
         clipboard_nf->make_coords_relative_to(canvas->get_note_under_mouse(x,y)->x,canvas->get_note_under_mouse(x,y)->y);
-    }else {
+    }else {//else make relative to one of the copied notes
         clipboard_nf->make_coords_relative_to(clipboard_nf->get_lowest_id_note()->x,clipboard_nf->get_lowest_id_note()->y);
     }
 
@@ -133,9 +134,9 @@ int MisliWindow::cut()
     int notes_affected=0;
 
     notes_affected+=copy();
-    notes_affected+=misli_i->curr_misli_dir()->delete_selected();
+    notes_affected+=misli_i()->curr_misli_dir()->delete_selected();
 
-    if(notes_affected!=0){misli_i->curr_misli_dir()->curr_nf()->save();update_current_nf();}
+    if(notes_affected!=0){misli_i()->curr_misli_dir()->curr_nf()->save();update_current_nf();}
 
     return notes_affected;
 }
@@ -154,12 +155,12 @@ void MisliWindow::new_nf()
 }
 void MisliWindow::rename_nf()
 {
-    misli_dg->newnf_w->rename_nf(misli_i->curr_misli_dir()->curr_nf());
+    misli_dg->newnf_w->rename_nf(misli_i()->curr_misli_dir()->curr_nf());
 }
 void MisliWindow::delete_nf()
 {
-    QDir dir(misli_i->curr_misli_dir()->notes_dir);
-    QString qstr=misli_i->curr_misli_dir()->curr_nf()->full_file_addr;
+    QDir dir(misli_i()->curr_misli_dir()->notes_dir);
+    QString qstr=misli_i()->curr_misli_dir()->curr_nf()->full_file_addr;
     QMessageBox msg,msg2;
 
     msg.setText(tr("This will delete the note file permanetly!"));
@@ -167,7 +168,7 @@ void MisliWindow::delete_nf()
     msg.setDefaultButton(QMessageBox::Ok);
     msg.setIcon(QMessageBox::Warning);
 
-    if( (misli_i->curr_misli_dir()->curr_nf()->name != "ClipboardNf") && (misli_i->curr_misli_dir()->curr_nf()->name != "HelpNoteFile") ){
+    if( (misli_i()->curr_misli_dir()->curr_nf()->name != "ClipboardNf") && (misli_i()->curr_misli_dir()->curr_nf()->name != "HelpNoteFile") ){
         int ret=msg.exec();
         if(ret==QMessageBox::Ok){//if the user confirms
             if(!dir.remove(qstr)){
@@ -175,7 +176,7 @@ void MisliWindow::delete_nf()
                 msg.setText(tr("Could not delete the file.Check your permissions."));
             }
 
-            misli_i->curr_misli_dir()->delete_nf(misli_i->curr_misli_dir()->curr_nf()->name);
+            misli_i()->curr_misli_dir()->delete_nf(misli_i()->curr_misli_dir()->curr_nf()->name);
         }
     }else{
         msg2.setText(tr("Cannot delete a system note file."));
@@ -189,15 +190,15 @@ void MisliWindow::make_link()
 }
 void MisliWindow::next_nf()
 {
-    misli_i->curr_misli_dir()->next_nf();
+    misli_i()->curr_misli_dir()->next_nf();
 }
 void MisliWindow::prev_nf()
 {
-    misli_i->curr_misli_dir()->previous_nf();
+    misli_i()->curr_misli_dir()->previous_nf();
 }
 void MisliWindow::delete_selected()
 {
-    misli_i->curr_misli_dir()->delete_selected();
+    misli_i()->curr_misli_dir()->delete_selected();
     canvas->update();
 }
 void MisliWindow::zoom_out()
@@ -215,40 +216,40 @@ void MisliWindow::zoom_in()
 
 void MisliWindow::toggle_help()
 {
-    if(misli_i->curr_misli_dir()->curr_nf()->name!=QString("HelpNoteFile")){
-        nf_before_help=misli_i->curr_misli_dir()->curr_nf()->name;
-        misli_i->curr_misli_dir()->set_current_note_file("HelpNoteFile");
+    if(misli_i()->curr_misli_dir()->curr_nf()->name!=QString("HelpNoteFile")){
+        nf_before_help=misli_i()->curr_misli_dir()->curr_nf()->name;
+        misli_i()->curr_misli_dir()->set_current_note_file("HelpNoteFile");
     }else{
-        misli_i->curr_misli_dir()->set_current_note_file(nf_before_help);
+        misli_i()->curr_misli_dir()->set_current_note_file(nf_before_help);
     }
 }
 void MisliWindow::make_viewpoint_default()
 {
-    misli_i->curr_misli_dir()->curr_nf()->make_coords_relative_to(canvas->eye_x,canvas->eye_y);
-    misli_i->curr_misli_dir()->curr_nf()->init_notes();
-    misli_i->curr_misli_dir()->curr_nf()->init_links();
+    misli_i()->curr_misli_dir()->curr_nf()->make_coords_relative_to(canvas->eye_x,canvas->eye_y);
+    misli_i()->curr_misli_dir()->curr_nf()->init_notes();
+    misli_i()->curr_misli_dir()->curr_nf()->init_links();
     canvas->eye_x=0; //(before the update invoked by save() )
     canvas->eye_y=0;
-    misli_i->curr_misli_dir()->curr_nf()->save();
+    misli_i()->curr_misli_dir()->curr_nf()->save();
     update_current_nf();
 }
 void MisliWindow::make_nf_default()
 {
-    misli_i->curr_misli_dir()->set_curr_nf_as_default_on_startup();
+    misli_i()->curr_misli_dir()->set_curr_nf_as_default_on_startup();
 }
 void MisliWindow::remove_current_folder()
 {
-    for(unsigned int i=0;i<misli_i->misli_dir.size();i++){
-        if(misli_i->misli_dir[i]->notes_dir==misli_i->curr_misli_dir()->notes_dir){
-            ui->menuFolders->removeAction(get_action_for_name(misli_i->curr_misli_dir()->notes_dir));
-            misli_i->misli_dir.erase(misli_i->misli_dir.begin()+i);
+    for(unsigned int i=0;i<misli_i()->misli_dir.size();i++){
+        if(misli_i()->misli_dir[i]->notes_dir==misli_i()->curr_misli_dir()->notes_dir){
+            ui->menuFolders->removeAction(get_action_for_name(misli_i()->curr_misli_dir()->notes_dir));
+            misli_i()->misli_dir.erase(misli_i()->misli_dir.begin()+i);
             break;
         }
     }
-    if(misli_i->misli_dir.size()==0){ //if it was the last dir
+    if(misli_i()->misli_dir.size()==0){ //if it was the last dir
         recheck_for_dirs();
     }else{ //if there are other dirs
-        get_action_for_name(misli_i->misli_dir[0]->notes_dir)->trigger();
+        get_action_for_name(misli_i()->misli_dir[0]->notes_dir)->trigger();
     }
     export_settings();
 }
@@ -256,9 +257,12 @@ void MisliWindow::switch_current_nf()
 {
     QString s;
 
-    if(misli_i->notes_rdy()){
+    if(misli_i()->notes_rdy()){
         s=tr("Misli - ");
-        s+=misli_i->curr_misli_dir()->curr_nf()->name;
+        s+=misli_i()->curr_misli_dir()->curr_nf()->name;
+        if(misli_i()->curr_misli_dir()->curr_nf()->is_deleted_externally){
+            s+=tr("(file is deleted externally)");
+        }
         setWindowTitle(s);
         canvas->set_eye_coords_from_curr_nf();
     }
@@ -266,7 +270,7 @@ void MisliWindow::switch_current_nf()
 }
 void MisliWindow::update_current_nf()
 {
-    if(misli_i->notes_rdy()){
+    if(misli_i()->notes_rdy()){
         canvas->update();
     }
 }
@@ -305,7 +309,7 @@ void MisliWindow::clear_settings_and_exit()
 
 void MisliWindow::col_blue()
 {
-    NoteFile *nf=misli_i->curr_misli_dir()->curr_nf();
+    NoteFile *nf=misli_i()->curr_misli_dir()->curr_nf();
     Note *nt;
     while(nf->get_first_selected_note()!=NULL){
         nt=nf->get_first_selected_note();
@@ -328,7 +332,7 @@ void MisliWindow::col_blue()
 }
 void MisliWindow::col_green()
 {
-    NoteFile *nf=misli_i->curr_misli_dir()->curr_nf();
+    NoteFile *nf=misli_i()->curr_misli_dir()->curr_nf();
     Note *nt;
     while(nf->get_first_selected_note()!=NULL){
         nt=nf->get_first_selected_note();
@@ -351,7 +355,7 @@ void MisliWindow::col_green()
 }
 void MisliWindow::col_red()
 {
-    NoteFile *nf=misli_i->curr_misli_dir()->curr_nf();
+    NoteFile *nf=misli_i()->curr_misli_dir()->curr_nf();
     Note *nt;
     while(nf->get_first_selected_note()!=NULL){
         nt=nf->get_first_selected_note();
@@ -374,7 +378,7 @@ void MisliWindow::col_red()
 }
 void MisliWindow::col_black()
 {
-    NoteFile *nf=misli_i->curr_misli_dir()->curr_nf();
+    NoteFile *nf=misli_i()->curr_misli_dir()->curr_nf();
     Note *nt;
     while(nf->get_first_selected_note()!=NULL){
         nt=nf->get_first_selected_note();
@@ -427,11 +431,28 @@ void MisliWindow::move_right()
 
 void MisliWindow::recheck_for_dirs()
 {
-    if(misli_i->misli_dir.size()<=0){
+    qDebug()<<"Rechecking for dirs.";
+    if(misli_i()->misli_dir.size()<=0){
+        qDebug()<<"Notes were not present in recheck_for_dirs.";
         hide();
         misli_dg->dir_w->show();
     }else{
-        showMaximized();
+        qDebug()<<"Notes are present.";
+        if(misli_dg->first_program_start){ //if it's the first dir we're making go to the help file
+            qDebug()<<"first_program_start is set to true.";
+            misli_dg->misli_i->curr_misli_dir()->set_current_note_file("HelpNoteFile");
+            misli_dg->first_program_start=false;
+        }
+
+        if(!misli_dg->splash->isHidden()){
+            qDebug()<<"Hiding splash screen";
+            misli_dg->splash->hide(); //end the splash screen
+        }
+
+        if(isHidden()){
+            qDebug()<<"Showing main window.";
+            showMaximized();
+        }
     }
 
     switch_current_nf();
@@ -457,7 +478,7 @@ int MisliWindow::copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf) //
     for(unsigned int i=0;i<source_nf->note.size();i++){ //add all the links
         nt_in_source=source_nf->note[i];
         if(nt_in_source->selected){
-            nt_in_target = target_nf->get_note_by_id(nt_in_source->id); //get the coplementary note
+            nt_in_target = target_nf->get_note_by_id(nt_in_source->id); //get the note pointed to
 
             //for every link in the source note add a link in the target note
             for(unsigned int l=0;l<nt_in_source->outlink.size();l++){
@@ -481,14 +502,14 @@ void MisliWindow::add_menu_entry_for_dir(QString path)
 {
     EmitMyNameAction *act = new EmitMyNameAction(path,ui->menuFolders);
     ui->menuFolders->addAction(act);
-    connect(act,SIGNAL(triggered_with_name(QString)),misli_i,SLOT(set_current_misli_dir(QString)));
+    connect(act,SIGNAL(triggered_with_name(QString)),misli_i(),SLOT(set_current_misli_dir(QString)));
     act->check_only_me();
 }
 void MisliWindow::display_results(QString string)
 {
     if(string.isEmpty()){display_search_results=true;} //mostly to get rid of the warning unused var
 
-    misli_i->load_results_in_search_nf();
+    misli_i()->load_results_in_search_nf();
     display_search_results=true;
     canvas->update();
 }
@@ -498,16 +519,16 @@ void MisliWindow::hide_search_stuff()
 }
 void MisliWindow::select_all_notes()
 {
-    misli_i->curr_misli_dir()->curr_nf()->select_all_notes();
+    misli_i()->curr_misli_dir()->curr_nf()->select_all_notes();
 }
 void MisliWindow::find_by_text(QString string)
 {
-    misli_dg->notes_search->load_notes(misli_i,1);
+    misli_dg->notes_search->load_notes(misli_i(),1);
     misli_dg->notes_search->find_by_text(string);
 }
 void MisliWindow::show_note_details_window()
 {
-    Note * nt = misli_i->curr_misli_dir()->curr_nf()->get_first_selected_note();
+    Note * nt = misli_i()->curr_misli_dir()->curr_nf()->get_first_selected_note();
     if(nt!=NULL){
         misli_dg->note_w->updateInfo(*nt);
         misli_dg->note_w->show();

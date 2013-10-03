@@ -21,6 +21,7 @@ public:
     //Functions
     MisliInstance(MisliDesktopGui *misli_dg_);
     ~MisliInstance();
+
     int load_settings();
     void add_dir(QString path);
     bool notes_rdy(); //true if there's a notes dir present (if it was empty - a default note file was created
@@ -35,7 +36,6 @@ public:
     QSettings *settings;
 
     MisliDesktopGui *misli_dg;
-    MisliWindow *misli_w;
 
     bool using_gui;
 

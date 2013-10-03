@@ -3,15 +3,25 @@
 
 #include "newnfdialogue.h"
 #include "ui_newnfdialogue.h"
+#include "mislidesktopgui.h"
 
-NewNFDialogue::NewNFDialogue(MisliWindow * misli_w_) :
+NewNFDialogue::NewNFDialogue(MisliDesktopGui * misli_dg_) :
     ui(new Ui::NewNFDialogue)
 {
     ui->setupUi(this);
     addAction(ui->actionEscape);//the action is defined in the .ui file and is not used . QActions must be added to a widget to work
-    misli_w=misli_w_;
-    misli_i=misli_w->misli_i;
+    misli_dg=misli_dg_;
+
     nf_for_rename=NULL;
+}
+
+MisliInstance * NewNFDialogue::misli_i()
+{
+    return misli_dg->misli_i;
+}
+MisliWindow * NewNFDialogue::misli_w()
+{
+    return misli_dg->misli_w;
 }
 
 NewNFDialogue::~NewNFDialogue()
@@ -24,7 +34,7 @@ void NewNFDialogue::new_nf()
     nf_for_rename=NULL;
     setWindowTitle(tr("New notefile"));
     ui->lineEdit->setText("");
-    move(misli_w->x()+misli_w->width()/2-width()/2,misli_w->y()+misli_w->height()/2-height()/2); //center the window in the misliWindow
+    move(misli_w()->x()+misli_w()->width()/2-width()/2,misli_w()->y()+misli_w()->height()/2-height()/2); //center the window in the misliWindow
     show();
     raise();
     activateWindow();
@@ -46,26 +56,24 @@ int NewNFDialogue::input_done()
     NoteFile * nf;
     Note *nt;
 
-    if(misli_i->curr_misli_dir()->nf_by_name(name)!=NULL){
+    if(misli_i()->curr_misli_dir()->nf_by_name(name)!=NULL){
         ui->helpLabel->setText(tr("A notefile with this name exists."));
         return -1;
     }
 
-    file_addr=misli_i->curr_misli_dir()->notes_dir;
+    file_addr=misli_i()->curr_misli_dir()->notes_dir;
     file_addr+="/";
     file_addr+=name;
     file_addr+=".misl";
 
     if(nf_for_rename==NULL){
 
-        if( misli_i->curr_misli_dir()->make_notes_file( name ) != true ) {
+        if( misli_i()->curr_misli_dir()->make_notes_file( name ) != 0 ) {
             ui->helpLabel->setText(tr("Error making notefile , exclude bad symbols from the name (; < >  ... )"));
             return -1;
-        }else {
-
-            misli_i->curr_misli_dir()->note_file.push_back(new NoteFile(misli_i->curr_misli_dir())); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
-            misli_i->curr_misli_dir()->note_file.back()->init(name,file_addr);
-            misli_i->curr_misli_dir()->set_current_note_file( misli_i->curr_misli_dir()->note_file.back()->name );
+        }else{
+            misli_i()->curr_misli_dir()->reinit_notes_pointing_to_notefiles();
+            misli_i()->curr_misli_dir()->set_current_note_file( misli_i()->curr_misli_dir()->note_file.back()->name );
         }
 
     }else{ //If we're renaming
@@ -76,16 +84,17 @@ int NewNFDialogue::input_done()
 
         QFile file(nf_for_rename->full_file_addr);
 
-        if(file.copy(file_addr)){
-            nf_for_rename->full_file_addr=file_addr;
+
+        if( file.copy(QDir(misli_i()->curr_misli_dir()->notes_dir).filePath(qstr2)) ){
+            nf_for_rename->full_file_addr = QDir(misli_i()->curr_misli_dir()->notes_dir).filePath(qstr2);
             nf_for_rename->name=name;
             nf_for_rename->save();
-            misli_w->switch_current_nf();
+            misli_w()->switch_current_nf();
             nf_for_rename=NULL;
 
             //Now change all the notes that point to this one too
-            for(unsigned int i=0;i<misli_i->curr_misli_dir()->note_file.size();i++){
-                nf = misli_i->curr_misli_dir()->note_file[i];
+            for(unsigned int i=0;i<misli_i()->curr_misli_dir()->note_file.size();i++){
+                nf = misli_i()->curr_misli_dir()->note_file[i];
                 for(unsigned int n=0;n<nf->note.size();n++){
                     nt=nf->note[n];
                     if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){

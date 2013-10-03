@@ -130,6 +130,20 @@
          </property>
         </widget>
        </item>
+       <item>
+        <widget class="QLabel" name="label_7">
+         <property name="text">
+          <string>Inlinks</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="label_14">
+         <property name="text">
+          <string>Outlinks</string>
+         </property>
+        </widget>
+       </item>
       </layout>
      </item>
      <item>
@@ -243,6 +257,20 @@
         <widget class="QLabel" name="text_is_shortenedLabel">
          <property name="text">
           <string>isSh</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="inlinksLabel">
+         <property name="text">
+          <string>Inlinks label</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="outlinksLabel">
+         <property name="text">
+          <string>Outlinks label</string>
          </property>
         </widget>
        </item>
