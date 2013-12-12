@@ -123,7 +123,7 @@ int MisliDir::make_notes_file(QString name)
         return -1;
     }
 
-    ntFile.write(QByteArray("#Notes database for Misli\n[1]\ntxt=Your first note\nx=-5\ny=-1.5\nz=0\na=10\nb=3.25\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt="));
+    ntFile.write(QByteArray(tr("#Notes database for Misli\n[1]\ntxt=Double-click to edit or make a new note.F1 for help.\nx=-5\ny=-2\nz=0\na=10\nb=4\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
     ntFile.close();
 
     note_file.push_back(new NoteFile(this)); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora

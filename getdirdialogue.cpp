@@ -29,18 +29,16 @@ void GetDirDialogue::input_done()
     QString path = ui->lineEdit->text();
     QDir dir;
 
-    if(path.size()!=0){ //if path is empty the current dir is used and we don't want that
-        dir.cd(path);
-    }
+    if( !dir.cd(path) ){ //if the dir is non existent or inaccessible cd returns false
 
-    if( !dir.exists() ){
-        ui->explainLabel->setText(tr("Directory doesn't exist"));
+        ui->explainLabel->setText(tr("Directory doesn't exist or is inaccessible"));
         return;
-    }else {
+    }else{
         misli_i()->add_dir(dir.absolutePath());
         misli_dg->misli_w->export_settings();
         close();
     }
+
 }
 
 void GetDirDialogue::get_dir_dialogue()

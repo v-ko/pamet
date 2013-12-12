@@ -1,27 +1,54 @@
 /* This program is licensed under GNU GPL . For the full notice see the
  * license.txt file or google the full text of the GPL*/
 
-//---------------------------------------------------------------------
-//QtLib bugs:
-//BUG: next i prev nf ne ba4kat s + i -
-//BUG: menu-tata ne se zatvarqt kato cykne6 2 pyt
+//----------Second major release-------------
+//about dialog
+//link to bug tracking
 
-//Android UI s mestene na vsi4ko ob6to v canvas i MisliInstance
-//po-dobyr help
-//video za predstavqne na angl i bg
-//First launch dialogue : do you want to see a short clip or display help
+//da ne se povdiga zapiskata a da se poqvqva nadpis "move" s podravnitelni linii ot rybovete
+
+//BUG : segfault pri pravene na link sled kopirane
+//БЪГ: като преименувам нф и нф-тата които имат линк записки към първия не се сейват за да се запази
+//преименуването на линк нф-тата
+//BUG: pri skysqvane na teksta na link note file
+//BUG: "external deleted" ne se maha dori kato se nameri file-a
+//BUG:ne6to ne pomni kakto trqbva poziciqta na NF (kato se smenqt)
+//mahane ili opravqne na auto adjust height
+//list of notefiles
+//windows build
+
+//arch package
+//LSB Build ?
+
+//Video za predstavqne na angl i bg
+//Release
+//razprostranenie
+
+//===========Additional features========
+//>Nova help sistema
+//>First start window s izbirane na ezika
+//"use home folder" kop4e pri pyrvo puskane na programata (za direktoriq)
+//ctrl+shift+V za paste ot clipboard-a
+
+//*Automated test with some tool for automation (make note , choose dir , make link , etc.)
 
 //Release routine:
 //update translations
 //commit
 //build on Windows
 
-//razprostranenie
+//====Android port=========
+//Android UI s mestene na vsi4ko ob6to v canvas i MisliInstance
+//Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
-
-//---------Good practice changes----------
+//=========Good practice changes=========
+//ogledai mural.ly za idei
 //polzvai enum za note type
 //opravi for loop-ovete na c++11
+//premesti petko10.h funkciite da sa v git
+
+//=========Test cases===========
+//Input inaccessible/non-existent dir when adding a dir
 
 #include "mislidesktopgui.h"
 
