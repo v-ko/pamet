@@ -42,6 +42,7 @@
 //Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
 //=========Good practice changes=========
+
 //ogledai mural.ly za idei
 //polzvai enum za note type
 //opravi for loop-ovete na c++11
