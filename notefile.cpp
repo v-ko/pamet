@@ -6,7 +6,7 @@
 #include <QDesktopWidget>
 #include <QDebug>
 
-#include "../../petko10.h"
+#include "petko10.h"
 #include "note.h"
 #include "notefile.h"
 #include "common.h"
@@ -38,9 +38,9 @@ QString NoteFile::init(QString path) //returns the id of the nf
 {
     qDebug()<<"Initializing nf: "<<path;
 
-    if(misli_dir->using_gui){ //adjusting the height based on display size
-        eye_z = 0.22 * misli_dir->misli_i->misli_dg->desktop()->widthMM();
-    }
+    //if(misli_dir->using_gui){ //adjusting the height based on display size
+    //    eye_z = 0.22 * misli_dir->misli_i->misli_dg->desktop()->widthMM();
+    //} //this was a try at auto-adjusting height according to screen size - fail
 
     if(!misli_dir->is_virtual) {
         //qDebug()<<"Adding path to fs_watch: "<<path;
@@ -407,7 +407,7 @@ Note *NoteFile::add_note(Note *nt)
 {
     Note * nt2 = add_note(nt->id,nt->text,nt->x,nt->y,nt->z,nt->a,nt->b,nt->font_size,nt->t_made,nt->t_mod,nt->txt_col,nt->bg_col);
     nt2->misli_dir=nt->misli_dir; //presesrve that , this function is used for copying , not adding
-    nt2->nf_name=nt->nf_name;
+    nt2->nf_name=name;
     return nt2;
 }
 
@@ -550,6 +550,26 @@ void NoteFile::make_coords_relative_to(double x,double y)
 
         nte->x-=x;
         nte->y-=y;
+    }
+}
+
+void NoteFile::make_all_ids_negative()
+{
+    Note *nt;
+    Link *ln;
+
+    for(unsigned int n=0;n<note.size();n++){ //for every note
+        nt=note[n];
+        nt->id = -nt->id;
+        nt->selected=1;//for the copy later
+
+        for(unsigned int l=0;l<nt->outlink.size();l++){
+            ln=&nt->outlink[l];
+            ln->id= -ln->id;
+        }
+        for(unsigned int in=0;in<nt->inlink.size();in++){ //for every inlink
+            nt->inlink[in]= -nt->inlink[in]; //if it has the old id - set it up with the new one
+        }
     }
 }
 

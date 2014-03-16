@@ -42,6 +42,7 @@ public:
     MisliWindow *misli_w;
     float eye_x,eye_y,eye_z;
     Note *mouse_note;
+    QTime last_release_event;
 
     //--Child objects (for destruction)---
     QLineEdit *searchField;
@@ -61,6 +62,7 @@ public slots:
     void set_linking_off();
     int paste();
     void jump_to_nearest_note();
+    bool doubleClick();
 
 protected:
     void paintEvent(QPaintEvent * event);

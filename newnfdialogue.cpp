@@ -101,6 +101,7 @@ int NewNFDialogue::input_done()
                         if(nt->text_for_display==old_name){
                             nt->text="this_note_points_to:"+name;
                             nt->init();
+                            nf->save();
                         }
                     }
                 }

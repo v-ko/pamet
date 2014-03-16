@@ -22,7 +22,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>27</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -39,15 +39,8 @@
     <property name="title">
      <string>Help</string>
     </property>
-    <widget class="QMenu" name="menuLanguage_2">
-     <property name="title">
-      <string>Language</string>
-     </property>
-     <addaction name="actionBulgarian"/>
-     <addaction name="actionEnglish"/>
-    </widget>
     <addaction name="actionHelp"/>
-    <addaction name="menuLanguage_2"/>
+    <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuFolders">
     <property name="title">
@@ -112,12 +105,20 @@
     <addaction name="actionSearch"/>
     <addaction name="actionJump_to_nearest_note"/>
    </widget>
+   <widget class="QMenu" name="menuLanguage">
+    <property name="title">
+     <string>Language</string>
+    </property>
+    <addaction name="actionBulgarian"/>
+    <addaction name="actionEnglish"/>
+   </widget>
    <addaction name="menuFolders"/>
    <addaction name="menuNoteFile"/>
    <addaction name="menuNote"/>
    <addaction name="menuEdit"/>
    <addaction name="menuHelp"/>
    <addaction name="menuOther"/>
+   <addaction name="menuLanguage"/>
   </widget>
   <action name="actionCopy">
    <property name="text">
@@ -384,6 +385,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+D</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>

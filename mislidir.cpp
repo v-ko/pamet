@@ -66,7 +66,7 @@ void MisliDir::check_for_hanging_nfs()
                 nf->is_deleted_externally = false;
                 qDebug()<<"Adding path to fs_watch: "<<nf->full_file_addr;
                 fs_watch->addPath(nf->full_file_addr); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
-                emit current_nf_updated();
+                emit current_nf_switched();
 
             }else{
                 missing_nf_count++;
@@ -78,6 +78,9 @@ void MisliDir::check_for_hanging_nfs()
 
 NoteFile * MisliDir::nf_by_name(QString name)
 {
+    if(name=="ClipboardNf"){
+        return misli_i->misli_dg->misli_w->clipboard_nf;
+    }
     for(unsigned int i=0; i<note_file.size() ; i++){
         if(note_file[i]->name==name){
             return note_file[i];
@@ -271,7 +274,7 @@ int MisliDir::reinit_notes_pointing_to_notefiles()
     NoteFile * nf;
     Note *nt;
 
-    for(unsigned int i=0;i<note_file.size();i++){
+    for(unsigned int i=0;i<note_file.size();i++){ //for every notefile
         nf = note_file[i];
         for(unsigned int n=0;n<nf->note.size();n++){
             nt=nf->note[n];

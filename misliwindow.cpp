@@ -48,6 +48,35 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
     clipboard_nf = new NoteFile(clipboard_dir);
     clipboard_nf->name="ClipboardNf";
+
+    grabGesture(Qt::PinchGesture);
+}
+
+bool MisliWindow::event(QEvent *event)
+{
+    if (event->type() == QEvent::Gesture) {
+        return gestureEvent(static_cast<QGestureEvent*>(event));
+    }
+
+    return QWidget::event(event);
+}
+
+bool MisliWindow::gestureEvent(QGestureEvent *event)
+{
+    /*if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
+        swipeTriggered(static_cast<QSwipeGesture *>(swipe));
+    else if (QGesture *pan = event->gesture(Qt::PanGesture))
+        panTriggered(static_cast<QPanGesture *>(pan));*/
+    if (QGesture *pinch = event->gesture(Qt::PinchGesture))
+        pinchTriggered(static_cast<QPinchGesture *>(pinch));
+    return true;
+}
+
+bool MisliWindow::pinchTriggered(QPinchGesture *gesture)
+{
+
+    canvas->eye_z =  canvas->eye_z/gesture->scaleFactor();
+    canvas->update();
 }
 
 MisliInstance * MisliWindow::misli_i()
@@ -65,7 +94,7 @@ MisliWindow::~MisliWindow()
 void MisliWindow::closeEvent(QCloseEvent *){
     misli_dg->settings->setValue("successful_start",QVariant(0));
     misli_dg->settings->sync();
-    qDebug()<<"Settings SYNC status: "<<misli_dg->settings->status();
+    qDebug()<<"Settings SYNC status(in closeEvent): "<<misli_dg->settings->status();
 }
 
 void MisliWindow::export_settings()
@@ -520,6 +549,7 @@ void MisliWindow::hide_search_stuff()
 void MisliWindow::select_all_notes()
 {
     misli_i()->curr_misli_dir()->curr_nf()->select_all_notes();
+    canvas->update();
 }
 void MisliWindow::find_by_text(QString string)
 {

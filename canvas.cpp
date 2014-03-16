@@ -61,7 +61,6 @@ MisliDir * Canvas::misli_dir()
         exit (6666);
     }
 }
-
 NoteFile * Canvas::curr_nf()
 {
     return misli_w->misli_i()->curr_misli_dir()->curr_nf();
@@ -73,7 +72,6 @@ void Canvas::set_eye_coords_from_curr_nf()
     eye_y=curr_nf()->eye_y;
     eye_z=curr_nf()->eye_z;
 }
-
 void Canvas::save_eye_coords_to_nf()
 {
     curr_nf()->eye_x=eye_x;
@@ -96,7 +94,6 @@ void Canvas::project(float realX, float realY, float &screenX, float &screenY)
     screenX = realX + float(width())/2;
     screenY = realY + float(height())/2;
 }
-
 void Canvas::unproject(float screenX, float screenY, float &realX, float &realY)
 {
     screenX -= float(width())/2;
@@ -122,8 +119,8 @@ void Canvas::paintEvent(QPaintEvent *event)
 
     QPainter p(this);
     Note *nt;
-    float x,y,rx,ry,nt_size_x,nt_size_y,x_projected,y_projected,ry_projected,rx_projected,r_tmp_x,r_tmp_y,resize_r_projected;
-    float shadow_x,shadow_y,shadow_size_x,shadow_size_y,shadow_rx,shadow_ry;
+    float x,y,rx,ry,nt_size_x,nt_size_y,x_projected,y_projected,ry_projected,rx_projected,resize_r_projected;
+    float r_tmp_x,r_tmp_y,r_tmp_x2,r_tmp_y2;
     float ln_x1,ln_y1,ln_x2,ln_y2;
     float frame_ratio,pixmap_ratio;
     int displayed_notes=0;
@@ -140,26 +137,33 @@ void Canvas::paintEvent(QPaintEvent *event)
         rx=nt->rx; //coordinates of the rectangle encapsulating the note
         ry=nt->ry;
 
-        if(move_on && nt->selected){ //"pick the note up" by making it larger
-            project(rx,ry,shadow_rx,shadow_ry);
-            project(x,y,shadow_x,shadow_y);
-            project(rx+0.3,ry,r_tmp_x,r_tmp_y);
-            shadow_size_x = shadow_rx - shadow_x;
-            shadow_size_y = shadow_ry - shadow_y;
-
-            x-=0.3;
-            y-=0.3;
-            rx-=0.3;
-            ry-=0.3;
-
-            //Draw the shadow
-            p.setPen(QColor(0,0,0,0));
-            p.setBrush(QBrush(QColor(200,200,200,255))); //gray
-            p.drawRect(QRectF(shadow_x,shadow_y,shadow_size_x,shadow_size_y));
-        }
-
         project(rx,ry,rx_projected,ry_projected);
         project(x,y,x_projected,y_projected);
+
+        if( (move_on | resize_on) && nt->selected){ //Draw additional lines to help alignment
+
+            //Set the color
+            p.setPen(QColor(nt->txt_col[0]*255,nt->txt_col[1]*255,nt->txt_col[2]*255,nt->txt_col[3]*255));
+
+            //Draw the lines
+            project(x,y-ALIGNMENT_LINE_LENGTH,r_tmp_x,r_tmp_y);
+            project(x,ry+ALIGNMENT_LINE_LENGTH,r_tmp_x2,r_tmp_y2);
+            p.drawLine(QPointF(r_tmp_x2,r_tmp_y2),QPointF(r_tmp_x,r_tmp_y));
+
+            project(x-ALIGNMENT_LINE_LENGTH,y,r_tmp_x,r_tmp_y);
+            project(rx+ALIGNMENT_LINE_LENGTH,y,r_tmp_x2,r_tmp_y2);
+            p.drawLine(QPointF(r_tmp_x2,r_tmp_y2),QPointF(r_tmp_x,r_tmp_y));
+
+            project(rx,y-ALIGNMENT_LINE_LENGTH,r_tmp_x,r_tmp_y);
+            project(rx,ry+ALIGNMENT_LINE_LENGTH,r_tmp_x2,r_tmp_y2);
+            p.drawLine(QPointF(r_tmp_x2,r_tmp_y2),QPointF(r_tmp_x,r_tmp_y));
+
+            project(x-ALIGNMENT_LINE_LENGTH,ry,r_tmp_x,r_tmp_y);
+            project(rx+ALIGNMENT_LINE_LENGTH,ry,r_tmp_x2,r_tmp_y2);
+            p.drawLine(QPointF(r_tmp_x2,r_tmp_y2),QPointF(r_tmp_x,r_tmp_y));
+        }
+
+
         project(rx+RESIZE_CIRCLE_RADIUS,ry,r_tmp_x,r_tmp_y);
         nt_size_x = rx_projected - x_projected;
         nt_size_y = ry_projected - y_projected;
@@ -245,6 +249,9 @@ void Canvas::paintEvent(QPaintEvent *event)
     }else if(curr_nf()->name=="HelpNoteFile"){
         infoLabel->setText(tr("This is the help note file."));
         infoLabel->show();
+    }else if(move_on){
+        infoLabel->setText(tr("Moving note"));
+        infoLabel->show();
     }else{
         infoLabel->hide();
     }
@@ -282,10 +289,9 @@ void Canvas::mousePressEvent(QMouseEvent *event)
     if(event->modifiers()==Qt::ControlModifier){ctrl_is_pressed=1;}else ctrl_is_pressed=0;
     if(event->modifiers()==Qt::ShiftModifier){shift_is_pressed=1;}else shift_is_pressed=0;
 
-
     if (event->button()==Qt::LeftButton) { //on left button
 
-        //----Save na globalni promenlivi za dr funkcii-----
+        //----Save of global variables for other functions-----
         XonPush = x;
         YonPush = y;
         PushLeft=1;
@@ -349,6 +355,10 @@ void Canvas::mousePressEvent(QMouseEvent *event)
 
         if (nt_under_mouse!=NULL){ //Za notes
 
+            //if( last_release_event.elapsed()<350 ){//it's a doubleclick
+            //    doubleClick();
+            //}
+
             if(nt_under_mouse->selected){
                 nt_under_mouse->selected=0;
             }else {
@@ -398,6 +408,7 @@ void Canvas::mousePressEvent(QMouseEvent *event)
 void Canvas::mouseReleaseEvent(QMouseEvent *event)
 {
     if(!misli_w->misli_i()->notes_rdy()){return;}
+    //last_release_event.restart();
 
     Note * nt;
 
@@ -443,33 +454,12 @@ void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if(!misli_w->misli_i()->notes_rdy()){return;}
 
-    Note *nt;
-
     if (event->button()==Qt::LeftButton) { //on left button doubleclick
-
-        nt = get_note_under_mouse(event->x(),event->y());
-
-        if(nt!=NULL){ //if we've clicked on a note
-            if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){ //if it's a valid redirecting note
-                if(misli_dir()->nf_by_name(nt->address_string)!=NULL)
-                misli_dir()->set_current_note_file(nt->address_string); //change notefile
-            }else if(nt->type==NOTE_TYPE_TEXT_FILE_NOTE){
-                QDesktopServices::openUrl(QUrl(nt->address_string));
-            }else if(nt->type==NOTE_TYPE_SYSTEM_CALL_NOTE){
-                system(nt->address_string.toStdString().c_str());
-            }else{ //edit that note
-                curr_nf()->clear_note_selection();
-                nt->selected=true;
-                misli_w->misli_dg->edit_w->edit_note();
-            }
-        }
-        else {//if not on note
-            misli_w->misli_dg->edit_w->new_note();
-        }
+        doubleClick();
     }
-update();
-}
 
+    update();
+}
 void Canvas::wheelEvent(QWheelEvent *event)
 {
     if(!misli_w->misli_i()->notes_rdy()){return;}
@@ -532,6 +522,9 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
                     nt->b=stop(d_y,MIN_NOTE_B,MAX_NOTE_B);
                     nt->calculate_coordinates();
                     nt->store_coordinates_before_move();
+                    nt->check_for_file_definitions();
+                    nt->check_text_for_system_call_definition();
+                    nt->check_text_for_links(misli_dir());
                     nt->adjust_text_size();
                     if(nt->type!=NOTE_TYPE_PICTURE_NOTE) nt->draw_pixmap();
                     nt->correct_links();
@@ -557,6 +550,30 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
             }
     } update();
 //return;
+}
+
+bool Canvas::doubleClick()
+{
+    Note *nt;
+    nt = get_note_under_mouse(current_mouse_x,current_mouse_y);
+
+    if(nt!=NULL){ //if we've clicked on a note
+        if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){ //if it's a valid redirecting note
+            if(misli_dir()->nf_by_name(nt->address_string)!=NULL)
+            misli_dir()->set_current_note_file(nt->address_string); //change notefile
+        }else if(nt->type==NOTE_TYPE_TEXT_FILE_NOTE){
+            QDesktopServices::openUrl(QUrl(nt->address_string));
+        }else if(nt->type==NOTE_TYPE_SYSTEM_CALL_NOTE){
+            system(nt->address_string.toStdString().c_str());
+        }else{ //edit that note
+            curr_nf()->clear_note_selection();
+            nt->selected=true;
+            misli_w->misli_dg->edit_w->edit_note();
+        }
+    }
+    else {//if not on note
+        misli_w->misli_dg->edit_w->new_note();
+    }
 }
 
 Note *Canvas::get_note_under_mouse(int mx , int my)
@@ -689,7 +706,7 @@ void Canvas::set_linking_off()
 
 int Canvas::paste()
 {
-    NoteFile *clipboard_nf=misli_w->clipboard_nf,*target_nf;//misli_dir()->clipboard_nf();
+    NoteFile *clipboard_nf=misli_w->clipboard_nf,*target_nf;
     Note *nt;
     Link *ln;
     float x,y;
@@ -697,25 +714,12 @@ int Canvas::paste()
 
     misli_w->doing_cut_paste=true;
 
-    //Make all the id-s negative (and select all notes)
-    for(unsigned int n=0;n<clipboard_nf->note.size();n++){ //for every note
-        nt=clipboard_nf->note[n];
-        nt->id = -nt->id;
-        nt->selected=1;//for the copy later
-
-        for(unsigned int l=0;l<nt->outlink.size();l++){
-            ln=&nt->outlink[l];
-            ln->id= -ln->id;
-        }
-        for(unsigned int in=0;in<nt->inlink.size();in++){ //for every inlink
-            nt->inlink[in]= -nt->inlink[in]; //if it has the old id - set it up with the new one
-        }
-    }
+    clipboard_nf->make_all_ids_negative();
 
     //Make coordinates relative to the mouse
-    x=current_mouse_x; //get mouse coords
+    x=current_mouse_x; //get mouse screen coords
     y=current_mouse_y;
-    unproject(x,y,x,y); //translate them to real GL coords
+    unproject(x,y,x,y); //translate them to canvas coords
     clipboard_nf->make_coords_relative_to(-x,-y);
 
     //Copy the notes over to the target
@@ -731,7 +735,7 @@ int Canvas::paste()
 
         nt=target_nf->note[n];
 
-        if(nt->id<=0){ //only for the pasted notes (with negative id-s)
+        if(nt->id<0){ //only for the pasted notes (with negative id-s)
             old_id = nt->id;
             nt->id = target_nf->get_new_id();
 
@@ -750,6 +754,7 @@ int Canvas::paste()
         }
     }
 
+    clipboard_nf->make_all_ids_negative(); //restore ids to positive in the clipboard
     target_nf->save();
     misli_w->update_current_nf();
     return 0;

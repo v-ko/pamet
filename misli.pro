@@ -15,9 +15,7 @@ SOURCES += main.cpp\
     misliinstance.cpp \
     notefile.cpp \
     note.cpp \
-    ../../petko10.cpp \
     link.cpp \
-    ../../petko10q.cpp \
     getdirdialogue.cpp \
     editnotedialogue.cpp \
     newnfdialogue.cpp \
@@ -28,16 +26,16 @@ SOURCES += main.cpp\
     mislidir.cpp \
     mislidesktopgui.cpp \
     notessearch.cpp \
-    notedetailswindow.cpp
+    notedetailswindow.cpp \
+    petko10.cpp \
+    petko10q.cpp
 
 HEADERS  += \
     misliinstance.h \
     notefile.h \
     note.h \
-    ../../petko10.h \
     link.h \
     common.h \
-    ../../petko10q.h \
     getdirdialogue.h \
     editnotedialogue.h \
     newnfdialogue.h \
@@ -48,7 +46,9 @@ HEADERS  += \
     mislidir.h \
     mislidesktopgui.h \
     notessearch.h \
-    notedetailswindow.h
+    notedetailswindow.h \
+    petko10.h \
+    petko10q.h
 
 OTHER_FILES += \
     license.txt \

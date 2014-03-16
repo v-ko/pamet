@@ -23,6 +23,7 @@ public:
     void clear_note_selection();
     void clear_link_selection();
     void make_coords_relative_to(double x,double y);
+    void make_all_ids_negative();
     int get_new_id();
 
     Note *add_note_base(QString text,double x,double y,double z,double a,double b,double font_size,QDateTime t_made,QDateTime t_mod,float txt_col[],float bg_col[]);

@@ -10,8 +10,8 @@
 #include <QTimer>
 #include <QClipboard>
 
-#include "../../petko10.h"
-#include "../../petko10q.h"
+#include "petko10.h"
+#include "petko10q.h"
 
 #include "filesystemwatcher.h"
 #include "notefile.h"

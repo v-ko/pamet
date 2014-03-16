@@ -7,7 +7,7 @@
 #include <QMainWindow>
 #include <QSettings>
 #include <QAction>
-
+#include <QGesture>
 
 #include "emitmynameaction.h"
 #include "misliinstance.h"
@@ -114,6 +114,9 @@ public:
     Ui::MisliWindow *ui;
 private:
     //Functions
+    bool event(QEvent *event);
+    bool gestureEvent(QGestureEvent *event);
+    bool pinchTriggered(QPinchGesture *gesture);
     void closeEvent(QCloseEvent *);
     void import_settings_and_folders();
 

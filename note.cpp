@@ -12,15 +12,15 @@
 #include "misliinstance.h"
 #include "canvas.h"
 
-#include "../../petko10.h"
+#include "petko10.h"
 
 Note::Note()
 {
     x=0;
     y=0;
     z=0;
-    a=10;
-    b=4;
+    a=12;
+    b=a/A_TO_B_NOTE_SIZE_RATIO;
     font_size=1;
     selected=false;
     nf_name="";
@@ -116,7 +116,7 @@ int Note::adjust_text_size()
         }
 
         probe_it=base_it + ceil(float(max_it-base_it)/2); //new position for the probe_iterator - optimally in the middle of the dead space
-        txt=text;
+        txt=text_for_shortening;
     }
 
     text_is_shortened=true;
@@ -137,7 +137,7 @@ int Note::check_text_for_links(MisliDir *md) //there's an argument , because sea
         text_for_shortening = address_string; //set the note file name as text for displaying
         type=NOTE_TYPE_REDIRECTING_NOTE;
         if(md->nf_by_name(address_string)==NULL){//if we have a wrong/missing name
-            text_for_shortening="missing note file";
+            text_for_shortening=QObject::tr("missing note file");
         }
     }
     return 0;
@@ -253,7 +253,8 @@ void Note::auto_size() //practically a cut down version of init that only change
     auto_sizing_now=true;
     while(text_is_shortened){
         a+=2;
-        b+=1;
+        b=a/A_TO_B_NOTE_SIZE_RATIO;
+
         adjust_text_size();
     }
     while(!text_is_shortened){
@@ -268,8 +269,9 @@ void Note::auto_size() //practically a cut down version of init that only change
         a--;
         adjust_text_size();
     }
-    auto_sizing_now=false; //to make a full init()
     a++;
+
+    auto_sizing_now=false;
     a=stop(a,MIN_NOTE_A,MAX_NOTE_A);
     b=stop(b,MIN_NOTE_B,MAX_NOTE_B);
     calculate_coordinates();
@@ -278,75 +280,79 @@ void Note::auto_size() //practically a cut down version of init that only change
     draw_pixmap();
 }
 
-int Note::init_links(){ //smqta koordinatite i skysqva teksta (ako trqbva) na vs outlinkove
+int Note::init_links(){ //smqta koordinatite
 
-float lx1,ly1,lx2,ly2;
-float a2,b2,x2,y2,z2,r2x1,r2x2,r2y1,r2y2;
-Link *ln;
+    float lx1,ly1,lx2,ly2;
+    float a2,b2,x2,y2,z2,r2x1,r2x2,r2y1,r2y2;
+    Link *ln;
 
-lx1=rx-(rx-x)/2; //koordinati na sredata na poleto (izpolzvam gi za linkovete)
-ly1=ry-(ry-y)/2;
+    lx1=rx-(rx-x)/2; //koordinati na sredata na poleto (izpolzvam gi za linkovete)
+    ly1=ry-(ry-y)/2;
 
-for(unsigned int n=0;n<outlink.size();n++){
+    for(unsigned int n=0;n<outlink.size();n++){
 
-//---------Smqtane na koordinatite za link-a---------------
-ln = &outlink[n];
-Note *target_note=misli_dir->nf_by_name(nf_name)->get_note_by_id(ln->id);
-x2=target_note->x;//koordinati na teksta
-y2=target_note->y;
-z2=target_note->z;
-a2=target_note->a;//razmeri na kutiqta na teksta
-b2=target_note->b;
-r2x1=x2; //koordinati na poleto
-r2y1=y2;
-r2x2=x2+a2+NOTE_SPACING*2;
-r2y2=y2+b2+NOTE_SPACING*2;
-lx2=r2x2-(r2x2-r2x1)/2; //koordinati na sredata na poleto (izpolzvam gi za linkovete)
-ly2=r2y2-(r2y2-r2y1)/2;
-
-    if( ( ( (rx>=r2x1)&&(x<=r2x1) ) || ( (rx>=r2x2)&&(x<=r2x2) ) ) || ( (x>=r2x1)&&(rx<=r2x2) ) ) { //ako nqkoi ot 2ta ryba na pole 2 zastypwa pole 1 ili ako ednoto pole napravo obhva6ta dr-to (t.e. poletata sa g/d edno nad drugo)
-
-        if(ly1>ly2){ //ako pole 2 e otdolo (tuka ima6e popravka na proba-gre6ka pri prenapisvaneto v qpainter)
-            ln->x1=lx1;
-            ln->y1=y;
-            ln->z1=z;
-            ln->x2=lx2;
-            ln->y2=r2y2;
-            ln->z2=z2;
-        }
-        else { //ako pole 2 e otgore
-            ln->x1=lx1;
-            ln->y1=ry;
-            ln->z1=z;
-            ln->x2=lx2;
-            ln->y2=r2y1;
-            ln->z2=z2;
-        }
+    //---------Smqtane na koordinatite za link-a---------------
+    ln = &outlink[n];
+    Note *target_note=misli_dir->nf_by_name(nf_name)->get_note_by_id(ln->id);
+    if(target_note==NULL){ //if there's no note with the specified link id
+        qDebug()<<"In notefile '"<<nf_name<<"' , note '"<<text<<"' (id:"<<id<<") has an invalid outlink, id:"<<ln->id;
+        continue;
     }
-    else { //ako pole 2 ne e nad pole 1 slagame ot strani4nite povyrhnosti linkovete
+    x2=target_note->x;//koordinati na teksta
+    y2=target_note->y;
+    z2=target_note->z;
+    a2=target_note->a;//razmeri na kutiqta na teksta
+    b2=target_note->b;
+    r2x1=x2; //koordinati na poleto
+    r2y1=y2;
+    r2x2=x2+a2+NOTE_SPACING*2;
+    r2y2=y2+b2+NOTE_SPACING*2;
+    lx2=r2x2-(r2x2-r2x1)/2; //koordinati na sredata na poleto (izpolzvam gi za linkovete)
+    ly2=r2y2-(r2y2-r2y1)/2;
 
-        if(rx<=r2x1){ //ako pole 2 e otdqsno na pole 1
-            ln->x1=rx;
-            ln->y1=ly1;
-            ln->z1=z;
-            ln->x2=r2x1;
-            ln->y2=ly2;
-            ln->z2=z2;
+        if( ( ( (rx>=r2x1)&&(x<=r2x1) ) || ( (rx>=r2x2)&&(x<=r2x2) ) ) || ( (x>=r2x1)&&(rx<=r2x2) ) ) { //ako nqkoi ot 2ta ryba na pole 2 zastypwa pole 1 ili ako ednoto pole napravo obhva6ta dr-to (t.e. poletata sa g/d edno nad drugo)
+
+            if(ly1>ly2){ //ako pole 2 e otdolo (tuka ima6e popravka na proba-gre6ka pri prenapisvaneto v qpainter)
+                ln->x1=lx1;
+                ln->y1=y;
+                ln->z1=z;
+                ln->x2=lx2;
+                ln->y2=r2y2;
+                ln->z2=z2;
+            }
+            else { //ako pole 2 e otgore
+                ln->x1=lx1;
+                ln->y1=ry;
+                ln->z1=z;
+                ln->x2=lx2;
+                ln->y2=r2y1;
+                ln->z2=z2;
+            }
+        }
+        else { //ako pole 2 ne e nad pole 1 slagame ot strani4nite povyrhnosti linkovete
+
+            if(rx<=r2x1){ //ako pole 2 e otdqsno na pole 1
+                ln->x1=rx;
+                ln->y1=ly1;
+                ln->z1=z;
+                ln->x2=r2x1;
+                ln->y2=ly2;
+                ln->z2=z2;
+            }
+
+            if(x>=r2x2){ //ako pole 2 e otlqvo na pole 1
+                ln->x1=x;
+                ln->y1=ly1;
+                ln->z1=z;
+                ln->x2=r2x2;
+                ln->y2=ly2;
+                ln->z2=z2;
+            }
         }
 
-        if(x>=r2x2){ //ako pole 2 e otlqvo na pole 1
-            ln->x1=x;
-            ln->y1=ly1;
-            ln->z1=z;
-            ln->x2=r2x2;
-            ln->y2=ly2;
-            ln->z2=z2;
-        }
     }
 
-}
-
-return 0;
+    return 0;
 }
 int Note::correct_links()
 {

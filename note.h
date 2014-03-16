@@ -15,66 +15,67 @@ class NoteFile;
 class MisliDir;
 
 class Note{
-    public:
-//------Variables that are read/written on the file------------
-int id;
 
-float x,y,z;//coordinates
-float a, b; //width and height of the box
+public:
+    //------Variables that are read/written on the file------------
+    int id;
 
-QString text;
+    float x,y,z;//coordinates
+    float a, b; //width and height of the box
 
-float font_size;
-QDateTime t_made,t_mod;
-float txt_col[4],bg_col[4]; //text and background colors
-std::vector<Link> outlink;
-std::vector<int> inlink;
+    QString text;
 
-//------Variables needed only for the program----------------
-QString text_for_shortening;
-QString text_for_display; //this gets drawn in the note
-QString address_string;
+    float font_size;
+    QDateTime t_made,t_mod;
+    float txt_col[4],bg_col[4]; //text and background colors
+    std::vector<Link> outlink;
+    std::vector<int> inlink;
 
-float move_orig_x,move_orig_y,rx,ry;
-float pixm_real_size_x; //pixmap real size
-float pixm_real_size_y;
+    //------Variables needed only for the program----------------
+    QString text_for_shortening;
+    QString text_for_display; //this gets drawn in the note
+    QString address_string;
 
-QString nf_name;
-MisliDir *misli_dir;
+    float move_orig_x,move_orig_y,rx,ry;
+    float pixm_real_size_x; //pixmap real size
+    float pixm_real_size_y;
 
-QImage *img;
-Qt::AlignmentFlag alignment;
+    QString nf_name;
+    MisliDir *misli_dir;
 
-int type; //1=redirecting , 0=normal
+    QImage *img;
+    Qt::AlignmentFlag alignment;
 
-bool selected;
-bool has_more_than_one_row;
-bool text_is_shortened;
-bool auto_sizing_now;
+    int type; //1=redirecting , 0=normal
 
-//-----Functions-------------
-Note();
-~Note();
+    bool selected;
+    bool has_more_than_one_row;
+    bool text_is_shortened;
+    bool auto_sizing_now;
 
-int calculate_coordinates();
-int store_coordinates_before_move();
-int adjust_text_size();
-int check_text_for_links(MisliDir *md);
-int check_for_file_definitions();
-int check_text_for_system_call_definition();
-int draw_pixmap();
-int init();
-void auto_size();
-void center_eye_on_me();
+    //-----Functions-------------
+    Note();
+    ~Note();
 
-int init_links();
-int correct_links();
-int link_to_selected();
+    int calculate_coordinates();
+    int store_coordinates_before_move();
+    int adjust_text_size();
+    int check_text_for_links(MisliDir *md);
+    int check_for_file_definitions();
+    int check_text_for_system_call_definition();
+    int draw_pixmap();
+    int init();
+    void auto_size();
+    void center_eye_on_me();
 
-int add_link(Link *ln);
+    int init_links();
+    int correct_links();
+    int link_to_selected();
 
-int delete_inlink_for_id(int);
-int delete_link(int); //no need for one that accepts Link* !
+    int add_link(Link *ln);
+
+    int delete_inlink_for_id(int);
+    int delete_link(int); //no need for one that accepts Link* !
 
 };
 typedef std::vector<Note*> NotesVector;

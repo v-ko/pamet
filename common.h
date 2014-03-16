@@ -10,9 +10,11 @@
 #define MOVE_SPEED 2 //stypka pri dvijenie napred-nazad
 #define MOVE_FUNC_TIMEOUT 300 //milisecs to hold the mouse on a note to move it
 #define MAX_UNDO_STEPS 30 //should be memory consumption based
-#define INITIAL_EYE_Z 100
+#define INITIAL_EYE_Z 90
 #define NOTE_SPACING 0.006
 #define RESIZE_CIRCLE_RADIUS 1
+#define ALIGNMENT_LINE_LENGTH 6
+#define A_TO_B_NOTE_SIZE_RATIO 5
 #define SEARCH_RESULT_HEIGHT 50 //in pixels
 #define MAX_NOTE_TEXT_SIZE 7000
 #define MAX_NOTE_A 150
