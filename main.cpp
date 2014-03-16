@@ -14,7 +14,7 @@
 //BUG: pri skysqvane na teksta na link note file --done
 //mahane ili opravqne na auto adjust height --done
 //BUG: "external deleted" ne se maha dori kato se nameri file-a --done
-//premesti petko10.h funkciite da sa v git --done
+//premesti petko10.h funkciite da sa v git --donedsa
 
 //list of notefiles
 //windows build
