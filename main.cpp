@@ -14,10 +14,17 @@
 //BUG: pri skysqvane na teksta na link note file --done
 //mahane ili opravqne na auto adjust height --done
 //BUG: "external deleted" ne se maha dori kato se nameri file-a --done
-//premesti petko10.h funkciite da sa v git --donedsa
+//premesti petko10.h funkciite da sa v git --done 15.03.2014
 
-//list of notefiles
-//windows build
+//===========Additional features========
+//about dialog - v nego da pi6e i versiqta
+//               link to bug tracking
+//update prompt sled 6-12 meseca (primerno)?
+//>Nova help sistema?
+//>First start window s izbirane na ezika
+//"use home folder" kop4e pri pyrvo puskane na programata (za direktoriq)
+//ctrl+shift+V za paste ot clipboard-a
+//pri linkvaneto da dava spisyk s nfiles (moje s inducirane na kontekstovo menu prosto
 
 //arch package
 //LSB Build ?
@@ -25,21 +32,6 @@
 //Video za predstavqne na angl i bg
 //Release
 //razprostranenie
-
-//===========Additional features========
-//about dialog - v nego da pi6e i versiqta
-//               link to bug tracking
-//update prompt sled 6-12 meseca (primerno)
-//>Nova help sistema
-//>First start window s izbirane na ezika
-//"use home folder" kop4e pri pyrvo puskane na programata (za direktoriq)
-//ctrl+shift+V za paste ot clipboard-a
-//BUG: novite notefile-ove ne se zasi4at kato promqna v direktoriqta
-//(kato syzdade6 link kym nf syzdaden ot dr mqsto dava missing)
-
-//*Automated test with some tool for automation (make note , choose dir , make link , etc.)
-
-
 
 //====Android port=========
 //BUG: pinch out-a da ne mesti nalqvo nadqsno
@@ -50,6 +42,7 @@
 //ogledai mural.ly za idei
 //polzvai enum za note type
 //opravi for loop-ovete na c++11
+//*Automated test with some tool for automation (make note , choose dir , make link , etc.)
 
 //====Release routine====
 //update translations
