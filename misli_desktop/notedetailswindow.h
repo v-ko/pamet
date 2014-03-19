@@ -3,7 +3,7 @@
 
 #include <QWidget>
 
-#include "note.h"
+#include "../note.h"
 
 class MisliDesktopGui;
 

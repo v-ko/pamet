@@ -9,9 +9,9 @@
 #include <QAction>
 #include <QGesture>
 
-#include "emitmynameaction.h"
-#include "misliinstance.h"
-#include "notefile.h"
+#include "../emitmynameaction.h"
+#include "../misliinstance.h"
+#include "../notefile.h"
 
 class NewNFDialogue;
 class EditNoteDialogue;

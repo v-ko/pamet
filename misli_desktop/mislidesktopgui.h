@@ -11,13 +11,13 @@
 #include <QFutureWatcher>
 #include <QThread>
 
-#include "notefile.h"
+#include "../notefile.h"
 #include "misliwindow.h"
 #include "getdirdialogue.h"
 #include "newnfdialogue.h"
 #include "editnotedialogue.h"
 #include "notedetailswindow.h"
-#include "notessearch.h"
+#include "../notessearch.h"
 
 class MisliDesktopGui : public QApplication
 {

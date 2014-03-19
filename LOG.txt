@@ -412,3 +412,16 @@
 //pri syzdavane na nova zapiska da pravi centralno link note kym zapiskata ot koqto e napravena novata--done
 //BUG: pri kopiraneto ima problem s inlinkovete/outlinkovete --done
 //BUG: kato kopiram i paste-na ne6to originalnata zapiska si promenq id-to ?! (i to ne samo virtualno)--done
+
+//updategl pri select all --done
+//езикът да е в отделно меню --done
+//da ne se povdiga zapiskata a da se poqvqva nadpis "move" s podravnitelni linii ot rybovete --done
+//промени дефулта за големината на записката - да са по-широки и по-ниски --done
+//BUG : double-click-a da iska edno i sy6to mqsto --done
+//BUG : segfault pri pravene na link sled kopirane (dava ednakvi id-ta ponqkoga pri kopirane)--done
+//БЪГ: като преименувам нф и нф-тата които имат линк записки към първия не се сейват за да се запази--done
+//преименуването на линк нф-тата--done
+//BUG: pri skysqvane na teksta na link note file --done
+//mahane ili opravqne na auto adjust height --done
+//BUG: "external deleted" ne se maha dori kato se nameri file-a --done
+//premesti petko10.h funkciite da sa v git --done 15.03.2014

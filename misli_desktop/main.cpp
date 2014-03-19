@@ -17,6 +17,7 @@
 //premesti petko10.h funkciite da sa v git --done 15.03.2014
 
 //===========Additional features========
+//smeni shortcutite , teq N i M ne sa dobre
 //about dialog - v nego da pi6e i versiqta
 //               link to bug tracking
 //update prompt sled 6-12 meseca (primerno)?

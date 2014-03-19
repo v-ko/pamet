@@ -5,6 +5,7 @@
 #include <QFileSystemWatcher>
 
 #include "mislidesktopgui.h"
+#include "../common.h"
 
 MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     QApplication(argc,argv)
@@ -26,6 +27,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     //Set some creditentials
     setOrganizationName("p10"); //this is needed for proper settings access in windows
     setApplicationName("misli");
+    setApplicationVersion(MISLI_DESKTOP_VERSION);
 
     //Init the settings
     settings = new QSettings(this);

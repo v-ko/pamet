@@ -2,13 +2,13 @@
  * license.txt file or google the full text of the GPL*/
 
 #include "misliwindow.h"
-#include "misliinstance.h"
+#include "../misliinstance.h"
 #include "ui_misliwindow.h"
 
 #include "newnfdialogue.h"
 #include "editnotedialogue.h"
 #include "getdirdialogue.h"
-#include "canvas.h"
+#include "../canvas.h"
 #include "mislidesktopgui.h"
 
 MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):

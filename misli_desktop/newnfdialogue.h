@@ -8,7 +8,7 @@
 #include <QMessageBox>
 
 #include "misliwindow.h"
-#include "misliinstance.h"
+#include "../misliinstance.h"
 
 namespace Ui {
 class NewNFDialogue;

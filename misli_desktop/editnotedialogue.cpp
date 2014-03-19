@@ -5,7 +5,7 @@
 #include "ui_editnotedialogue.h"
 
 #include "misliwindow.h"
-#include "canvas.h"
+#include "../canvas.h"
 #include "mislidesktopgui.h"
 
 EditNoteDialogue::EditNoteDialogue(MisliDesktopGui * misli_dg_) :
