@@ -2,7 +2,7 @@
  * license.txt file or google the full text of the GPL*/
 
 #include "canvas.h"
-#include "misliwindow.h"
+#include "misli_desktop/misliwindow.h"
 #include "notessearch.h"
 #include "ui_misliwindow.h"
 

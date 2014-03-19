@@ -5,8 +5,8 @@
 
 #include "misliinstance.h"
 #include "mislidir.h"
-#include "misliwindow.h"
-#include "mislidesktopgui.h"
+#include "misli_desktop/misliwindow.h"
+#include "misli_desktop/mislidesktopgui.h"
 
 MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_gui_ = true)
 {

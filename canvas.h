@@ -10,9 +10,9 @@
 #include <QMenu>
 #include <QLabel>
 
-#include "misliwindow.h"
-#include "mislidesktopgui.h"
-#include "editnotedialogue.h"
+#include "misli_desktop/misliwindow.h"
+#include "misli_desktop/mislidesktopgui.h"
+#include "misli_desktop/editnotedialogue.h"
 
 class Canvas : public QWidget
 {

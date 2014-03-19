@@ -11,8 +11,8 @@
 #include "notefile.h"
 #include "common.h"
 #include "misliinstance.h"
-#include "misliwindow.h"
-#include "mislidesktopgui.h"
+#include "misli_desktop/misliwindow.h"
+#include "misli_desktop/mislidesktopgui.h"
 
 NoteFile::NoteFile(MisliDir *misli_dir_)
 {

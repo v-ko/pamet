@@ -6,7 +6,7 @@
 #include <QDebug>
 
 #include "misliinstance.h"
-#include "mislidesktopgui.h"
+#include "misli_desktop/mislidesktopgui.h"
 
 FileSystemWatcher::FileSystemWatcher(MisliDir * misli_dir_)
 {
