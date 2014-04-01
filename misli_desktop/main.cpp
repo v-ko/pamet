@@ -2,7 +2,7 @@
  * license.txt file or google the full text of the GPL*/
 
 //tooltips --done
-//dovyrshi bg help-a
+//dovyrshi bg help-a --done
 //pri syzdavane na initial note-a da q slaga ot qrc
 
 //donations
