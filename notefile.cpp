@@ -23,7 +23,15 @@ NoteFile::NoteFile(MisliDir *misli_dir_)
     is_displayed_first_on_startup=0;
     eye_x=0;
     eye_y=0;
+
     eye_z=INITIAL_EYE_Z;
+
+    if(misli_dir!=NULL){
+        if(misli_dir->misli_i!=NULL){
+            eye_z=misli_dir->misli_i->misli_dg->settings->value("eye_z").toFloat();
+        }
+    }
+
     is_deleted_externally=0;
     is_current=false;
 }
@@ -86,7 +94,7 @@ int NoteFile::init(QString ime, QString path)   //returns negative on errors
         return -2;
     }
     //----Check for abnormally large files------
-    if(ntFile.size()>10000000){
+    if(ntFile.size()>100000){
         qDebug()<<"Note file "<<ime<<" is more than 10MB.Skipping.";
         return -3;
     }
@@ -335,7 +343,7 @@ int NoteFile::undo()
 void NoteFile::find_free_ids()
 {
     free_id.clear();
-    for(int i=0;i<last_note_id;i++){ //for all ids to the last
+    for(int i=1;i<last_note_id;i++){ //for all ids to the last (exclude zero! when copying negative ids are used)
         if(get_note_by_id(i)==NULL){ //if there's no note on it
             free_id.push_back(i); //add the id to the list
         }

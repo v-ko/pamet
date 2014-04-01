@@ -128,6 +128,8 @@ int MisliInstance::load_results_in_search_nf()
 
     for(unsigned int i=0;i<misli_dg->notes_search->search_results.size();i++){
         nt = search_nf->add_note(misli_dg->notes_search->search_results[i].nt);
+        //preserve the original nf name in order to track it
+        nt->nf_name = misli_dg->notes_search->search_results[i].nt->nf_name;
         nt->a=misli_dg->misli_w->canvas->searchField->width()/FONT_TRANSFORM_FACTOR;
         nt->b=SEARCH_RESULT_HEIGHT/FONT_TRANSFORM_FACTOR;
         nt->calculate_coordinates(); //circumvent the "!using GUI" skipping on init()

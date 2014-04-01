@@ -19,7 +19,7 @@ Canvas::Canvas(MisliWindow *msl_w_)
 
     eye_x=0;
     eye_y=0;
-    eye_z=INITIAL_EYE_Z;
+    eye_z=misli_w->misli_dg->settings->value("eye_z").toFloat();
 
     contextMenu = new QMenu(this);
 
@@ -187,7 +187,7 @@ void Canvas::paintEvent(QPaintEvent *event)
             }
 
             //If the note is redirecting draw a border to differentiate it
-            if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){
+            if( (nt->type==NOTE_TYPE_REDIRECTING_NOTE) | (nt->type==NOTE_TYPE_SYSTEM_CALL_NOTE) ){
                 p.setPen(QColor(nt->txt_col[0]*255,nt->txt_col[1]*255,nt->txt_col[2]*255,nt->txt_col[3]*255));
                 p.setBrush(QBrush(Qt::NoBrush));
                 p.drawRect(QRectF(x_projected,y_projected,nt_size_x,nt_size_y));
@@ -263,8 +263,15 @@ void Canvas::paintEvent(QPaintEvent *event)
     for(unsigned int i=0;i<misli_w->misli_i()->search_nf->note.size();i++){
         nt = misli_w->misli_i()->search_nf->note[i];
         if(int(i*SEARCH_RESULT_HEIGHT) < height()){
+            p.setBrush(QBrush(QColor(255,255,255,255))); //set a clear color
+            p.setPen(Qt::NoPen);
+            // and clear the area behind the result
+            p.drawRect(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,nt->img->width(),nt->img->height());
+
             p.drawImage(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,*nt->img);
             if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){
+                p.setBrush(QBrush(Qt::NoBrush));
+                p.setPen(QColor(nt->txt_col[0]*255,nt->txt_col[1]*255,nt->txt_col[2]*255,nt->txt_col[3]*255));
                 p.drawRect(0,searchField->height() + i*SEARCH_RESULT_HEIGHT,nt->img->width(),nt->img->height());
             }
         }
@@ -394,12 +401,13 @@ void Canvas::mousePressEvent(QMouseEvent *event)
 
             contextMenu->addAction(misli_w->ui->actionEdit_note);
             contextMenu->addAction(misli_w->ui->actionDelete_selected);
+            contextMenu->addAction(misli_w->ui->actionMake_link);
             contextMenu->addSeparator();
             contextMenu->addAction(misli_w->ui->actionDetails);
-            contextMenu->popup(QWidget::mapToGlobal(QPoint(x,y)));
+            contextMenu->popup(cursor().pos());
         }else{
             contextMenu->addAction(misli_w->ui->actionNew_note);
-            contextMenu->popup(QWidget::mapToGlobal(QPoint(x,y)));
+            contextMenu->popup(cursor().pos());
         }
 
     }
@@ -552,7 +560,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
 //return;
 }
 
-bool Canvas::doubleClick()
+void Canvas::doubleClick()
 {
     Note *nt;
     nt = get_note_under_mouse(current_mouse_x,current_mouse_y);
@@ -562,9 +570,24 @@ bool Canvas::doubleClick()
             if(misli_dir()->nf_by_name(nt->address_string)!=NULL)
             misli_dir()->set_current_note_file(nt->address_string); //change notefile
         }else if(nt->type==NOTE_TYPE_TEXT_FILE_NOTE){
-            QDesktopServices::openUrl(QUrl(nt->address_string));
+            QDesktopServices::openUrl(QUrl("file://"+nt->address_string, QUrl::TolerantMode));
         }else if(nt->type==NOTE_TYPE_SYSTEM_CALL_NOTE){
-            system(nt->address_string.toStdString().c_str());
+            QProcess process;
+            float mouse_x,mouse_y;
+
+            //Run the command and get the output
+            process.start(nt->address_string);
+            process.waitForFinished(-1);
+            QByteArray out = process.readAllStandardOutput();
+
+            //Put the feedback in a note below the command via the paste from clipboard mechanism
+            project(nt->x,nt->ry+1,mouse_x,mouse_y);
+            cursor().setPos(QPoint(mouse_x,mouse_y));
+            current_mouse_x=mouse_x;
+            current_mouse_y=mouse_y;
+            misli_w->misli_dg->clipboard()->setText(QString(out));
+            misli_w->new_note_from_clipboard();
+
         }else{ //edit that note
             curr_nf()->clear_note_selection();
             nt->selected=true;

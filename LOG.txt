@@ -425,3 +425,13 @@
 //mahane ili opravqne na auto adjust height --done
 //BUG: "external deleted" ne se maha dori kato se nameri file-a --done
 //premesti petko10.h funkciite da sa v git --done 15.03.2014
+//smeni shortcutite , teq N i M ne sa dobre --done
+//about dialog - v nego da pi6e i versiqta--done
+//               link to bug tracking --done
+//ctrl+shift+V za paste ot clipboard-a --done
+//pri linkvaneto da dava spisyk s nfiles (moje s inducirane na kontekstovo menu prosto) --done
+//BUG:pri preimenuvane na nf ne6to se preebava filesystemwatcher-a --done
+//prozra4en cvqt da ima --done
+//dobavi link v menuto --done
+//changeable height --done
+//initial nf tutorial (small) --done

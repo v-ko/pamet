@@ -31,7 +31,12 @@ void GetDirDialogue::input_done()
 
     if( !dir.cd(path) ){ //if the dir is non existent or inaccessible cd returns false
 
-        ui->explainLabel->setText(tr("Directory doesn't exist or is inaccessible"));
+        QMessageBox msg;
+
+        msg.setText(tr("Directory doesn't exist or is inaccessible"));
+        msg.setStandardButtons(QMessageBox::Ok);
+        msg.setIcon(QMessageBox::Warning);
+        msg.exec();
         return;
     }else{
         misli_i()->add_dir(dir.absolutePath());

@@ -13,41 +13,37 @@
   <property name="windowTitle">
    <string>New note</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QPushButton" name="makeLinkButton">
-         <property name="text">
-          <string>Link to notefile</string>
-         </property>
-         <property name="shortcut">
-          <string>Ctrl+L</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QLabel" name="noteTextLabel">
-       <property name="text">
-        <string>Note text:</string>
-       </property>
-      </widget>
-     </item>
-     <item>
-      <widget class="QTextEdit" name="textEdit">
-       <property name="html">
-        <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
+    <widget class="QLabel" name="noteTextLabel">
+     <property name="text">
+      <string>Note text:</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QTextEdit" name="textEdit">
+     <property name="html">
+      <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Sans Serif'; font-size:9pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Ubuntu'; font-size:11pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'Ubuntu';&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+     </property>
+     <property name="acceptRichText">
+      <bool>false</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QPushButton" name="makeLinkButton">
+       <property name="text">
+        <string>Link to...</string>
        </property>
-       <property name="acceptRichText">
-        <bool>false</bool>
+       <property name="shortcut">
+        <string>Ctrl+L</string>
        </property>
       </widget>
      </item>
@@ -76,38 +72,6 @@ p, li { white-space: pre-wrap; }
  <resources/>
  <connections>
   <connection>
-   <sender>okButton</sender>
-   <signal>clicked()</signal>
-   <receiver>EditNoteDialogue</receiver>
-   <slot>input_done()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>203</x>
-     <y>199</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>226</x>
-     <y>213</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>makeLinkButton</sender>
-   <signal>clicked()</signal>
-   <receiver>EditNoteDialogue</receiver>
-   <slot>make_link()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>185</x>
-     <y>29</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>314</x>
-     <y>42</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
    <sender>actionEscape</sender>
    <signal>triggered()</signal>
    <receiver>EditNoteDialogue</receiver>
@@ -120,6 +84,22 @@ p, li { white-space: pre-wrap; }
     <hint type="destinationlabel">
      <x>159</x>
      <y>109</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>okButton</sender>
+   <signal>clicked()</signal>
+   <receiver>EditNoteDialogue</receiver>
+   <slot>input_done()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>203</x>
+     <y>199</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>226</x>
+     <y>213</y>
     </hint>
    </hints>
   </connection>

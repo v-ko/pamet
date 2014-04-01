@@ -27,12 +27,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     setWindowTitle("Loading notefiles...");
     setWindowIcon(QIcon(":/img/icon.png"));
 
-    /*QKeySequence sq1(Qt::Key_Plus);
-     QAction *newAct = new QAction(tr("&Nextnff"), this);
-     newAct->setShortcut(sq1);
-     newAct->setStatusTip(tr("Create a new file"));
-     connect(newAct, SIGNAL(triggered()), this, SLOT(next_nf()));
-*/
+    addAction(ui->actionSelect_note_under_mouse);
+
     //Connect signals/slots
     connect(ui->actionSearch,SIGNAL(triggered()),canvas->searchField,SLOT(show()));
     connect(ui->actionSearch,SIGNAL(triggered()),canvas->searchField,SLOT(setFocus()));
@@ -42,6 +38,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
     connect(ui->actionJump_to_nearest_note,SIGNAL(triggered()),canvas,SLOT(jump_to_nearest_note()));
     connect(ui->actionDetails,SIGNAL(triggered()),this,SLOT(show_note_details_window()));
+    connect(ui->actionAbout,SIGNAL(triggered()),this,SLOT(show_about_dialog()));
+    connect(ui->actionSelect_note_under_mouse, SIGNAL(triggered()),this,SLOT(select_note_under_mouse()));
 
     //Creating the clipboard_nf (id=-1) which holds the notes on copy operations
     clipboard_dir = new MisliDir("",NULL,0); //create a virtual dir
@@ -52,7 +50,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     grabGesture(Qt::PinchGesture);
 }
 
-bool MisliWindow::event(QEvent *event)
+/*bool MisliWindow::event(QEvent *event)
 {
     if (event->type() == QEvent::Gesture) {
         return gestureEvent(static_cast<QGestureEvent*>(event));
@@ -63,10 +61,10 @@ bool MisliWindow::event(QEvent *event)
 
 bool MisliWindow::gestureEvent(QGestureEvent *event)
 {
-    /*if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
-        swipeTriggered(static_cast<QSwipeGesture *>(swipe));
-    else if (QGesture *pan = event->gesture(Qt::PanGesture))
-        panTriggered(static_cast<QPanGesture *>(pan));*/
+    //if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
+    //    swipeTriggered(static_cast<QSwipeGesture *>(swipe));
+    //else if (QGesture *pan = event->gesture(Qt::PanGesture))
+    //    panTriggered(static_cast<QPanGesture *>(pan));
     if (QGesture *pinch = event->gesture(Qt::PinchGesture))
         pinchTriggered(static_cast<QPinchGesture *>(pinch));
     return true;
@@ -77,7 +75,7 @@ bool MisliWindow::pinchTriggered(QPinchGesture *gesture)
 
     canvas->eye_z =  canvas->eye_z/gesture->scaleFactor();
     canvas->update();
-}
+}*/
 
 MisliInstance * MisliWindow::misli_i()
 {
@@ -177,6 +175,14 @@ void MisliWindow::new_note()
 {
     misli_dg->edit_w->new_note();
 }
+void MisliWindow::new_note_from_clipboard()
+{
+    misli_dg->edit_w->x_on_new_note=misli_dg->misli_w->canvas->current_mouse_x; //cursor position relative to the gl widget
+    misli_dg->edit_w->y_on_new_note=misli_dg->misli_w->canvas->current_mouse_y;
+    misli_dg->edit_w->edited_note=NULL;
+    misli_dg->edit_w->set_textEdit_text( QApplication::clipboard()->text() );
+    misli_dg->edit_w->input_done();
+}
 
 void MisliWindow::new_nf()
 {
@@ -262,6 +268,11 @@ void MisliWindow::make_viewpoint_default()
     misli_i()->curr_misli_dir()->curr_nf()->save();
     update_current_nf();
 }
+void MisliWindow::make_current_viewpoint_height_default()
+{
+    misli_dg->settings->setValue("eye_z",QVariant(canvas->eye_z));
+    misli_dg->settings->sync();
+}
 void MisliWindow::make_nf_default()
 {
     misli_i()->curr_misli_dir()->set_curr_nf_as_default_on_startup();
@@ -270,7 +281,9 @@ void MisliWindow::remove_current_folder()
 {
     for(unsigned int i=0;i<misli_i()->misli_dir.size();i++){
         if(misli_i()->misli_dir[i]->notes_dir==misli_i()->curr_misli_dir()->notes_dir){
+            QAction * tmp_act=get_action_for_name(misli_i()->curr_misli_dir()->notes_dir);
             ui->menuFolders->removeAction(get_action_for_name(misli_i()->curr_misli_dir()->notes_dir));
+            delete tmp_act;
             misli_i()->misli_dir.erase(misli_i()->misli_dir.begin()+i);
             break;
         }
@@ -429,6 +442,25 @@ void MisliWindow::col_black()
     update_current_nf();
 }
 
+void MisliWindow::col_transparent_background()
+{
+    NoteFile *nf=misli_i()->curr_misli_dir()->curr_nf();
+    Note *nt;
+    while(nf->get_first_selected_note()!=NULL){
+        nt=nf->get_first_selected_note();
+
+        nt->bg_col[0] = 0;
+        nt->bg_col[1] = 0;
+        nt->bg_col[2] = 0;
+        nt->bg_col[3] = 0;
+
+        nt->selected=false;
+        nt->draw_pixmap();
+    }
+    nf->save();
+    update_current_nf();
+}
+
 void MisliWindow::move_down()
 {
     canvas->eye_y+=MOVE_SPEED;
@@ -565,4 +597,18 @@ void MisliWindow::show_note_details_window()
         misli_dg->note_w->raise();
         misli_dg->note_w->activateWindow();
     }
+}
+void MisliWindow::select_note_under_mouse()
+{
+    Note *nt = canvas->get_note_under_mouse(canvas->current_mouse_x,canvas->current_mouse_y);
+
+    if(nt!=NULL){
+        misli_i()->curr_misli_dir()->curr_nf()->clear_note_selection();
+        nt->selected=true;
+        canvas->update();
+    }
+}
+void MisliWindow::show_about_dialog()
+{
+    QMessageBox::about(this,tr("Misli"),tr("Misli - an application for organizing thoughts and notes\n\nBugs, suggestions and everything else at:\nhttps://github.com/petko10/misli\nAuthor: Petko Ditchev\nContact: pditchev@gmail.com\nVersion: ")+misli_dg->applicationVersion());
 }

@@ -153,7 +153,7 @@ int Note::check_for_file_definitions()
         address_string=address_string.trimmed(); //remove white spaces from both sides
         file.setFileName(address_string);
         if(file.open(QIODevice::ReadOnly)){
-            text_for_shortening = file.read(10000); //10 kb max
+            text_for_shortening = file.read(MAX_NOTE_TEXT_SIZE);
         }else{
             text_for_shortening = "Failed to open file.";
         }
@@ -188,10 +188,10 @@ int Note::draw_pixmap()
     if(type==NOTE_TYPE_PICTURE_NOTE){
         delete img;
         img = new QImage(address_string);
+
         if( !img->isNull() ) {
             return 0;
-        }
-        else {
+        }else {
             text_for_shortening="Not a valid picture.";
             text_for_display="Not a valid picture.";
             type=NOTE_TYPE_NORMAL_NOTE;

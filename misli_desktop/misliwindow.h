@@ -8,6 +8,7 @@
 #include <QSettings>
 #include <QAction>
 #include <QGesture>
+#include <QClipboard>
 
 #include "../emitmynameaction.h"
 #include "../misliinstance.h"
@@ -67,6 +68,7 @@ public slots:
 
     void edit_note();
     void new_note();
+    void new_note_from_clipboard();
 
     void new_nf();
     void rename_nf();
@@ -79,6 +81,7 @@ public slots:
 
     void toggle_help();
     void make_viewpoint_default();
+    void make_current_viewpoint_height_default();
     void make_nf_default();
     void add_new_folder();
     void add_menu_entry_for_dir(QString path);
@@ -96,6 +99,7 @@ public slots:
     void col_green();
     void col_red();
     void col_black();
+    void col_transparent_background();
 
     void zoom_out();
     void zoom_in();
@@ -110,13 +114,15 @@ public slots:
     void select_all_notes();
     void find_by_text(QString string);
     void show_note_details_window();
+    void select_note_under_mouse();
+    void show_about_dialog();
 public:
     Ui::MisliWindow *ui;
 private:
     //Functions
-    bool event(QEvent *event);
-    bool gestureEvent(QGestureEvent *event);
-    bool pinchTriggered(QPinchGesture *gesture);
+    //bool event(QEvent *event);
+    //bool gestureEvent(QGestureEvent *event);
+    //bool pinchTriggered(QPinchGesture *gesture);
     void closeEvent(QCloseEvent *);
     void import_settings_and_folders();
 

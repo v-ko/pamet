@@ -1,49 +1,44 @@
 /* This program is licensed under GNU GPL . For the full notice see the
  * license.txt file or google the full text of the GPL*/
 
-//----------Second major release-------------
+//tooltips --done
+//dovyrshi bg help-a
+//pri syzdavane na initial note-a da q slaga ot qrc
 
-//updategl pri select all --done
-//езикът да е в отделно меню --done
-//da ne se povdiga zapiskata a da se poqvqva nadpis "move" s podravnitelni linii ot rybovete --done
-//промени дефулта за големината на записката - да са по-широки и по-ниски --done
-//BUG : double-click-a da iska edno i sy6to mqsto --done
-//BUG : segfault pri pravene na link sled kopirane (dava ednakvi id-ta ponqkoga pri kopirane)--done
-//БЪГ: като преименувам нф и нф-тата които имат линк записки към първия не се сейват за да се запази--done
-//преименуването на линк нф-тата--done
-//BUG: pri skysqvane na teksta na link note file --done
-//mahane ili opravqne na auto adjust height --done
-//BUG: "external deleted" ne se maha dori kato se nameri file-a --done
-//premesti petko10.h funkciite da sa v git --done 15.03.2014
+//donations
 
-//===========Additional features========
-//smeni shortcutite , teq N i M ne sa dobre
-//about dialog - v nego da pi6e i versiqta
-//               link to bug tracking
-//update prompt sled 6-12 meseca (primerno)?
-//>Nova help sistema?
-//>First start window s izbirane na ezika
-//"use home folder" kop4e pri pyrvo puskane na programata (za direktoriq)
-//ctrl+shift+V za paste ot clipboard-a
-//pri linkvaneto da dava spisyk s nfiles (moje s inducirane na kontekstovo menu prosto
-
-//arch package
 //LSB Build ?
+//licensing
+
+//final code review
+//update translations
+//commit
+
+//Build windows
+//Static build windows
 
 //Video za predstavqne na angl i bg
+//Nqkolko tester-a za durakoustoi4ivost
+
 //Release
 //razprostranenie
 
+//Static build Linux
+//Packages
+//>arch package
+
 //====Android port=========
-//BUG: pinch out-a da ne mesti nalqvo nadqsno
-//Android UI s mestene na vsi4ko ob6to v canvas i MisliInstance
 //Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
-//=========Good practice changes=========
+//=========Future changes=========
 //ogledai mural.ly za idei
 //polzvai enum za note type
 //opravi for loop-ovete na c++11
 //*Automated test with some tool for automation (make note , choose dir , make link , etc.)
+//Progress bars
+//Proper logging
+//Redo
+//Memory based undo/redo limitation
 
 //====Release routine====
 //update translations

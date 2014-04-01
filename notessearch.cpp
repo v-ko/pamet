@@ -24,7 +24,9 @@ int NotesSearch::load_notes(MisliDir *misli_dir_, float initial_probability)
     
     //search_results.clear();
     for(unsigned int i=0;i<misli_dir->note_file.size();i++){
-        notes_loaded += load_notes(misli_dir->note_file[i],initial_probability);
+        if(misli_dir->note_file[i]->name != "HelpNoteFile"){
+            notes_loaded += load_notes(misli_dir->note_file[i],initial_probability);
+        }
     }
     return notes_loaded;
 }

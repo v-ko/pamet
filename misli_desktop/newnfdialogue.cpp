@@ -86,9 +86,11 @@ int NewNFDialogue::input_done()
 
 
         if( file.copy(QDir(misli_i()->curr_misli_dir()->notes_dir).filePath(qstr2)) ){
+            misli_i()->curr_misli_dir()->fs_watch->removePath(nf_for_rename->full_file_addr);//deal with fs_watch
             nf_for_rename->full_file_addr = QDir(misli_i()->curr_misli_dir()->notes_dir).filePath(qstr2);
             nf_for_rename->name=name;
             nf_for_rename->save();
+            nf_for_rename->init(nf_for_rename->name,nf_for_rename->full_file_addr);
             misli_w()->switch_current_nf();
             nf_for_rename=NULL;
 

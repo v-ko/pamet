@@ -29,8 +29,12 @@
     <property name="title">
      <string>Edit</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionCopy"/>
     <addaction name="actionPaste"/>
+    <addaction name="actionCreate_note_from_the_clipboard_text"/>
     <addaction name="actionCut"/>
     <addaction name="actionUndo"/>
     <addaction name="actionDelete_selected"/>
@@ -39,12 +43,18 @@
     <property name="title">
      <string>Help</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionHelp"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuFolders">
     <property name="title">
      <string>Folders</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionAdd_new"/>
     <addaction name="actionRemove_current"/>
@@ -54,6 +64,9 @@
     <property name="title">
      <string>NoteFile</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionNew_notefile"/>
     <addaction name="actionRename_notefile"/>
     <addaction name="actionDelete_notefile"/>
@@ -62,6 +75,7 @@
     <addaction name="actionPrevious_notefile"/>
     <addaction name="separator"/>
     <addaction name="actionMake_this_view_point_default_for_the_notefile"/>
+    <addaction name="actionSet_this_height_as_default"/>
     <addaction name="actionMake_this_notefile_appear_first_on_program_start"/>
     <addaction name="separator"/>
     <addaction name="actionSelect_all_notes"/>
@@ -70,14 +84,21 @@
     <property name="title">
      <string>Note</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <widget class="QMenu" name="menuColor">
      <property name="title">
       <string>Color</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
      </property>
      <addaction name="actionColor_blue"/>
      <addaction name="actionColor_green"/>
      <addaction name="actionColor_red"/>
      <addaction name="actionColor_black"/>
+     <addaction name="actionTransparent_background"/>
     </widget>
     <addaction name="actionNew_note"/>
     <addaction name="actionEdit_note"/>
@@ -89,9 +110,15 @@
     <property name="title">
      <string>Other</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <widget class="QMenu" name="menuNavigation">
      <property name="title">
       <string>Navigation</string>
+     </property>
+     <property name="toolTipsVisible">
+      <bool>true</bool>
      </property>
      <addaction name="actionZoom_in"/>
      <addaction name="actionZoom_out"/>
@@ -109,6 +136,9 @@
     <property name="title">
      <string>Language</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionBulgarian"/>
     <addaction name="actionEnglish"/>
    </widget>
@@ -116,13 +146,16 @@
    <addaction name="menuNoteFile"/>
    <addaction name="menuNote"/>
    <addaction name="menuEdit"/>
+   <addaction name="menuLanguage"/>
    <addaction name="menuHelp"/>
    <addaction name="menuOther"/>
-   <addaction name="menuLanguage"/>
   </widget>
   <action name="actionCopy">
    <property name="text">
     <string>Copy</string>
+   </property>
+   <property name="toolTip">
+    <string>Copies notes to the internal clipboard, and copies their text to the regular clipboard.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -132,6 +165,9 @@
    <property name="text">
     <string>Paste</string>
    </property>
+   <property name="toolTip">
+    <string>Pastes the notes from the internal clipboard.</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
    </property>
@@ -139,6 +175,9 @@
   <action name="actionCut">
    <property name="text">
     <string>Cut</string>
+   </property>
+   <property name="toolTip">
+    <string>See the tooltip of &quot;Copy&quot;</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
@@ -148,6 +187,9 @@
    <property name="text">
     <string>Undo</string>
    </property>
+   <property name="toolTip">
+    <string>Reverts the last action. The max is 30 undo steps. (note there is no Redo for now)</string>
+   </property>
    <property name="shortcut">
     <string>Ctrl+Z</string>
    </property>
@@ -155,6 +197,9 @@
   <action name="actionHelp">
    <property name="text">
     <string>Help</string>
+   </property>
+   <property name="toolTip">
+    <string>Shows the help notefile.</string>
    </property>
    <property name="shortcut">
     <string>F1</string>
@@ -169,6 +214,9 @@
    <property name="text">
     <string>Remove current</string>
    </property>
+   <property name="toolTip">
+    <string>Remove the current folder (does not delete the notefiles from the disk)</string>
+   </property>
   </action>
   <action name="actionEdit_note">
    <property name="text">
@@ -182,8 +230,11 @@
    <property name="text">
     <string>New note</string>
    </property>
+   <property name="toolTip">
+    <string>Create a new note</string>
+   </property>
    <property name="shortcut">
-    <string>M</string>
+    <string>N</string>
    </property>
   </action>
   <action name="actionNew_notefile">
@@ -196,13 +247,19 @@
    <property name="text">
     <string>New notefile</string>
    </property>
+   <property name="toolTip">
+    <string>Create a new notefile on the disk and open it to add notes.</string>
+   </property>
    <property name="shortcut">
-    <string>N</string>
+    <string>Ctrl+N</string>
    </property>
   </action>
   <action name="actionMake_link">
    <property name="text">
     <string>Make link</string>
+   </property>
+   <property name="toolTip">
+    <string>Link notes with arrows to visualize their connections.</string>
    </property>
    <property name="shortcut">
     <string>L</string>
@@ -212,21 +269,30 @@
    <property name="text">
     <string>Next notefile</string>
    </property>
+   <property name="toolTip">
+    <string>Switch to the next notefile in the alphabetical order.</string>
+   </property>
    <property name="shortcut">
-    <string>Ctrl++</string>
+    <string>Ctrl+PgUp</string>
    </property>
   </action>
   <action name="actionPrevious_notefile">
    <property name="text">
     <string>Previous notefile</string>
    </property>
+   <property name="toolTip">
+    <string>Switch to the previous notefile in thealphabetical order.</string>
+   </property>
    <property name="shortcut">
-    <string>Ctrl+-</string>
+    <string>Ctrl+PgDown</string>
    </property>
   </action>
   <action name="actionDelete_selected">
    <property name="text">
     <string>Delete selected</string>
+   </property>
+   <property name="toolTip">
+    <string>Delete selected notes.</string>
    </property>
    <property name="shortcut">
     <string>Del</string>
@@ -236,6 +302,9 @@
    <property name="text">
     <string>Zoom in</string>
    </property>
+   <property name="toolTip">
+    <string>Change the height of the viewpoint over the canvas.</string>
+   </property>
    <property name="shortcut">
     <string>PgDown</string>
    </property>
@@ -243,6 +312,9 @@
   <action name="actionZoom_out">
    <property name="text">
     <string>Zoom out</string>
+   </property>
+   <property name="toolTip">
+    <string>Change the height of the viewpoint over the canvas.</string>
    </property>
    <property name="shortcut">
     <string>PgUp</string>
@@ -252,10 +324,16 @@
    <property name="text">
     <string>Make this view point default for the notefile</string>
    </property>
+   <property name="toolTip">
+    <string>Fix the current viewpoint (height excluded) in the notefile as default on program start.</string>
+   </property>
   </action>
   <action name="actionMake_this_notefile_appear_first_on_program_start">
    <property name="text">
     <string>Make this notefile appear first on program start</string>
+   </property>
+   <property name="toolTip">
+    <string>Marks the notefile as default on program start for its folder.</string>
    </property>
   </action>
   <action name="actionClose">
@@ -275,20 +353,32 @@
    <property name="text">
     <string>English</string>
    </property>
+   <property name="toolTip">
+    <string>Change the language to english.</string>
+   </property>
   </action>
   <action name="actionClear_settings_and_exit">
    <property name="text">
     <string>Clear settings and exit</string>
+   </property>
+   <property name="toolTip">
+    <string>Clear program settings and kill this instance.</string>
    </property>
   </action>
   <action name="actionRename_notefile">
    <property name="text">
     <string>Rename notefile</string>
    </property>
+   <property name="toolTip">
+    <string>Also changes all of the notes that link to it to the new name.</string>
+   </property>
   </action>
   <action name="actionDelete_notefile">
    <property name="text">
     <string>Delete notefile</string>
+   </property>
+   <property name="toolTip">
+    <string>Delete the notefile permanetly (on the disk too).</string>
    </property>
   </action>
   <action name="actionColor_blue">
@@ -357,7 +447,10 @@
   </action>
   <action name="actionSearch">
    <property name="text">
-    <string>Search</string>
+    <string>Search (beta)</string>
+   </property>
+   <property name="toolTip">
+    <string>Search in all notes. Click in the results shown under the search field to go to the note.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F</string>
@@ -390,6 +483,50 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionSelect_note_under_mouse">
+   <property name="text">
+    <string>Select note under mouse</string>
+   </property>
+   <property name="shortcut">
+    <string>Return</string>
+   </property>
+  </action>
+  <action name="actionCreate_note_from_the_clipboard_text">
+   <property name="text">
+    <string>Create note from the clipboard text</string>
+   </property>
+   <property name="toolTip">
+    <string>Create note from the text in the regular clipboard.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+V</string>
+   </property>
+  </action>
+  <action name="actionTransparent_background">
+   <property name="text">
+    <string>Transparent background</string>
+   </property>
+   <property name="toolTip">
+    <string>Changes only the background color of the note to be transparent.</string>
+   </property>
+   <property name="shortcut">
+    <string>5</string>
+   </property>
+  </action>
+  <action name="actionSet_this_height_as_default">
+   <property name="text">
+    <string>Set this height as default</string>
+   </property>
+   <property name="toolTip">
+    <string>Set the current height as default for all files on startup.</string>
+   </property>
+   <property name="statusTip">
+    <string>Set the current height as default for all files on startup.</string>
+   </property>
+   <property name="whatsThis">
+    <string>Set the current height as default for all files on startup.</string>
    </property>
   </action>
  </widget>
@@ -923,6 +1060,54 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionCreate_note_from_the_clipboard_text</sender>
+   <signal>triggered()</signal>
+   <receiver>MisliWindow</receiver>
+   <slot>new_note_from_clipboard()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionTransparent_background</sender>
+   <signal>triggered()</signal>
+   <receiver>MisliWindow</receiver>
+   <slot>col_transparent_background()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSet_this_height_as_default</sender>
+   <signal>triggered()</signal>
+   <receiver>MisliWindow</receiver>
+   <slot>make_current_viewpoint_height_default()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>edit_note()</slot>
@@ -957,5 +1142,8 @@
   <slot>move_left()</slot>
   <slot>move_right()</slot>
   <slot>select_all_notes()</slot>
+  <slot>new_note_from_clipboard()</slot>
+  <slot>col_transparent_background()</slot>
+  <slot>make_current_viewpoint_height_default()</slot>
  </slots>
 </ui>

@@ -62,7 +62,7 @@ public slots:
     void set_linking_off();
     int paste();
     void jump_to_nearest_note();
-    bool doubleClick();
+    void doubleClick();
 
 protected:
     void paintEvent(QPaintEvent * event);

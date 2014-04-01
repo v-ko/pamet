@@ -27,7 +27,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     //Set some creditentials
     setOrganizationName("p10"); //this is needed for proper settings access in windows
     setApplicationName("misli");
-    setApplicationVersion(MISLI_DESKTOP_VERSION);
+    setApplicationVersion("1.2.0");
 
     //Init the settings
     settings = new QSettings(this);
@@ -39,10 +39,11 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
 
     //Check for the first_start flag
     if(!settings->contains("first_start")){
-        qDebug()<<"No key 'language' found - assuming it's the first program start";
+        qDebug()<<"No key 'first_start' found - assuming it's the first program start";
         first_program_start=true;
         settings->setValue("first_start",QVariant(true));
         settings->sync();
+
     }else{
         first_program_start=false;
     }
@@ -90,11 +91,21 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
             qDebug()<<"Setting 'language' to 'en'.";
             settings->setValue("language",QVariant("en"));
             settings->sync();
+            language = "en";
         }
     }else{
         qDebug()<<"No key 'language' found";
         qDebug()<<"Setting 'language' to 'en'.";
         settings->setValue("language",QVariant("en"));
+        settings->sync();
+        language = "en";
+    }
+
+    float default_eye_z = settings->value("eye_z",QVariant(0)).toFloat();
+    qDebug()<<"[MisliDesktopGUI]From settings: eye_z = "<<default_eye_z;
+
+    if( default_eye_z<=0 ){
+        settings->setValue("eye_z",QVariant(INITIAL_EYE_Z));
         settings->sync();
     }
     
@@ -130,7 +141,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     qDebug()<<"Started worker thread.";
 }
 MisliDesktopGui::~MisliDesktopGui()
-{\
+{
     delete misli_i;
     delete misli_w;
     delete dir_w;
