@@ -1,5 +1,18 @@
-/* This program is licensed under GNU GPL . For the full notice see the
- * license.txt file or google the full text of the GPL*/
+/*  This file is part of Misli.
+
+    Misli is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Misli is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Misli.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <QMessageBox>
 #include <QFileSystemWatcher>
@@ -20,7 +33,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     dir_w=NULL;
     newnf_w=NULL;
     edit_w=NULL;
-    note_w=NULL;
+    note_details_w=NULL;
     splash=NULL;
     notes_search=NULL;
 
@@ -74,6 +87,8 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
         successful_start = 0;
     }
 
+
+
     //Load the language from settings and setup the translator
     if( settings->contains("language") ){
 
@@ -120,7 +135,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     dir_w = new GetDirDialogue(this);
     edit_w = new EditNoteDialogue(this);
     newnf_w = new NewNFDialogue(this);
-    note_w = new NoteDetailsWindow();
+    note_details_w = new NoteDetailsWindow();
     qDebug()<<"Constructed all window objects.";
 
     //Construct the misli instance class and search class
@@ -133,6 +148,8 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     connect(&workerThread,SIGNAL(started()), misli_i,SLOT(load_all_dirs()));
 
     connect(misli_i,SIGNAL(notes_dir_changed()),misli_w,SLOT(recheck_for_dirs()));
+    connect(misli_i,SIGNAL(load_all_dirs_finished()),misli_w,SLOT(recheck_for_dirs()));
+
     connect(misli_i,SIGNAL(notes_dir_added(QString)),misli_w,SLOT(add_menu_entry_for_dir(QString)));
     connect(notes_search,SIGNAL(search_complete(QString)),misli_w,SLOT(display_results(QString)));
 
@@ -147,7 +164,7 @@ MisliDesktopGui::~MisliDesktopGui()
     delete dir_w;
     delete newnf_w;
     delete edit_w;
-    delete note_w;
+    delete note_details_w;
     delete splash;
     delete notes_search;
 

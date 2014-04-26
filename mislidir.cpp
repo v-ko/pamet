@@ -1,5 +1,18 @@
-/* This program is licensed under GNU GPL . For the full notice see the
- * license.txt file or google the full text of the GPL*/
+/*  This file is part of Misli.
+
+    Misli is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Misli is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Misli.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include <QDebug>
 
@@ -121,12 +134,17 @@ int MisliDir::make_notes_file(QString name)
 
     ntFile.setFileName(file_name_sstr);
 
-    if(!ntFile.open(QIODevice::WriteOnly)){
-        qDebug()<<"Error making new notes file";
-        return -1;
+    if(misli_i->misli_dg->first_program_start){ //at some point language will be chosen on initial start and the line below will make sense
+        QFile::copy(":/other/initial_start_nf_"+misli_i->misli_dg->language+".misl",file_name_sstr);
+        ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
+    }else{
+        if(!ntFile.open(QIODevice::WriteOnly)){
+            qDebug()<<"Error making new notes file";
+            return -1;
+        }
+        ntFile.write(QByteArray( QString("#Notes database for Misli\n[1]\ntxt="+tr("Double-click to edit or make a new note.F1 for help.")+"\nx=-5\ny=-2\nz=0\na=10\nb=4\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
     }
 
-    ntFile.write(QByteArray(tr("#Notes database for Misli\n[1]\ntxt=Double-click to edit or make a new note.F1 for help.\nx=-5\ny=-2\nz=0\na=10\nb=4\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
     ntFile.close();
 
     note_file.push_back(new NoteFile(this)); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora

@@ -22,7 +22,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>29</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -127,10 +127,17 @@
      <addaction name="actionMove_left"/>
      <addaction name="actionMove_right"/>
     </widget>
+    <widget class="QMenu" name="menuDonate_Bitcoin">
+     <property name="title">
+      <string>Donate Bitcoin</string>
+     </property>
+     <addaction name="actionCopy_donation_address"/>
+    </widget>
     <addaction name="menuNavigation"/>
     <addaction name="actionClear_settings_and_exit"/>
     <addaction name="actionSearch"/>
     <addaction name="actionJump_to_nearest_note"/>
+    <addaction name="menuDonate_Bitcoin"/>
    </widget>
    <widget class="QMenu" name="menuLanguage">
     <property name="title">
@@ -527,6 +534,11 @@
    </property>
    <property name="whatsThis">
     <string>Set the current height as default for all files on startup.</string>
+   </property>
+  </action>
+  <action name="actionCopy_donation_address">
+   <property name="text">
+    <string>Copy donation address</string>
    </property>
   </action>
  </widget>
@@ -1108,6 +1120,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>actionCopy_donation_address</sender>
+   <signal>triggered()</signal>
+   <receiver>MisliWindow</receiver>
+   <slot>copy_BTC_address()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>299</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>edit_note()</slot>
@@ -1145,5 +1173,6 @@
   <slot>new_note_from_clipboard()</slot>
   <slot>col_transparent_background()</slot>
   <slot>make_current_viewpoint_height_default()</slot>
+  <slot>copy_BTC_address()</slot>
  </slots>
 </ui>

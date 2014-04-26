@@ -1,5 +1,18 @@
-/* This program is licensed under GNU GPL . For the full notice see the
- * license.txt file or google the full text of the GPL*/
+/*  This file is part of Misli.
+
+    Misli is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Misli is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Misli.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 #include "misliwindow.h"
 #include "../misliinstance.h"
@@ -305,6 +318,9 @@ void MisliWindow::switch_current_nf()
         if(misli_i()->curr_misli_dir()->curr_nf()->is_deleted_externally){
             s+=tr("(file is deleted externally)");
         }
+        if( QDate::currentDate()>QDate(2015,2,15)){
+            s+=tr("| Your version of Misli is outdated. Please download the new one (it wont bother you with updating notices ever)");
+        }
         setWindowTitle(s);
         canvas->set_eye_coords_from_curr_nf();
     }
@@ -505,12 +521,12 @@ void MisliWindow::recheck_for_dirs()
             misli_dg->first_program_start=false;
         }
 
-        if(!misli_dg->splash->isHidden()){
+        if(!misli_dg->splash->isHidden() && misli_i()->initial_load_complete){
             qDebug()<<"Hiding splash screen";
             misli_dg->splash->hide(); //end the splash screen
         }
 
-        if(isHidden()){
+        if(isHidden() && misli_i()->initial_load_complete){
             qDebug()<<"Showing main window.";
             showMaximized();
         }
@@ -592,10 +608,10 @@ void MisliWindow::show_note_details_window()
 {
     Note * nt = misli_i()->curr_misli_dir()->curr_nf()->get_first_selected_note();
     if(nt!=NULL){
-        misli_dg->note_w->updateInfo(*nt);
-        misli_dg->note_w->show();
-        misli_dg->note_w->raise();
-        misli_dg->note_w->activateWindow();
+        misli_dg->note_details_w->updateInfo(*nt);
+        misli_dg->note_details_w->show();
+        misli_dg->note_details_w->raise();
+        misli_dg->note_details_w->activateWindow();
     }
 }
 void MisliWindow::select_note_under_mouse()
@@ -611,4 +627,9 @@ void MisliWindow::select_note_under_mouse()
 void MisliWindow::show_about_dialog()
 {
     QMessageBox::about(this,tr("Misli"),tr("Misli - an application for organizing thoughts and notes\n\nBugs, suggestions and everything else at:\nhttps://github.com/petko10/misli\nAuthor: Petko Ditchev\nContact: pditchev@gmail.com\nVersion: ")+misli_dg->applicationVersion());
+}
+
+void MisliWindow::copy_BTC_address()
+{
+    misli_dg->clipboard()->setText("16tdJ6SmbBcYk1aoQSDNSbdDb79CvEpgeU"); //should be more dynamic
 }

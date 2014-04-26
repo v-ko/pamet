@@ -20,7 +20,9 @@ OTHER_FILES += \
     ../translations/misli_bg.qm \
     ../other/misli.desktop \
     ../LOG.txt \
-    ../README.md
+    ../README.md \
+    ../other/initial_start_nf_bg.misl \
+    ../other/initial_start_nf_en.misl
 
 #win32{
 #    QMAKE_LFLAGS += -static-libgcc
