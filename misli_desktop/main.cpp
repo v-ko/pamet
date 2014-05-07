@@ -25,7 +25,17 @@
 //update plan --done
 
 //update translations --done
-//commit
+//commit --done
+
+//Build windows --done
+//Static build windows --done
+
+//BUG: ne6to s destroy na event-ite ne e v dobyr red i dava FC na windows (vj link-a v tmp)--done
+//BUG mai pravi nenujen save pri puskane --done
+//BUG: syzdai zapiska ot teksta v klipborda na programata// e gre6en prevod i/ili si e gre6no i na angl--done
+
+//update translations --done
+//commit --done
 
 //Build windows
 //Static build windows
