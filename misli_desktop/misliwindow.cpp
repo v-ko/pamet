@@ -30,6 +30,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     misli_dg = misli_dg_;
     
     ui->setupUi(this);
+    ui->menuNoteFile->addMenu(&misli_dg->edit_w->chooseNFMenu);
+
     past_initial_load=false;
     doing_cut_paste=false;
 
@@ -318,7 +320,7 @@ void MisliWindow::switch_current_nf()
         if(misli_i()->curr_misli_dir()->curr_nf()->is_deleted_externally){
             s+=tr("(file is deleted externally)");
         }
-        if( QDate::currentDate()>QDate(2015,2,15)){
+        if( QDate::currentDate()>QDate(2015,9,15)){ //update text
             s+=tr("| Your version of Misli is outdated. Please download the new one (it wont bother you with updating notices ever)");
         }
         setWindowTitle(s);

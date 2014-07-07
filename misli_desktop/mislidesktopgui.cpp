@@ -131,9 +131,10 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     qDebug()<<"MisliDesktopGui:successful_start lowered to: "<<settings->value("successful_start").toInt();
 
     //Construct the windows for the application
+    edit_w = new EditNoteDialogue(this);
     misli_w = new MisliWindow(this);
     dir_w = new GetDirDialogue(this);
-    edit_w = new EditNoteDialogue(this);
+
     newnf_w = new NewNFDialogue(this);
     note_details_w = new NoteDetailsWindow();
     qDebug()<<"Constructed all window objects.";

@@ -417,11 +417,11 @@ void Canvas::mousePressEvent(QMouseEvent *event)
             contextMenu->addAction(misli_w->ui->actionMake_link);
             contextMenu->addSeparator();
             contextMenu->addAction(misli_w->ui->actionDetails);
-            contextMenu->popup(cursor().pos());
         }else{
             contextMenu->addAction(misli_w->ui->actionNew_note);
-            contextMenu->popup(cursor().pos());
         }
+        contextMenu->addMenu(&misli_w->misli_dg->edit_w->chooseNFMenu);
+        contextMenu->popup(cursor().pos());
 
     }
 

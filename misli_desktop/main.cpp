@@ -14,47 +14,28 @@
     along with Misli.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//tooltips --done
-//dovyrshi bg help-a --done
-//pri syzdavane na initial note-a da q slaga ot qrc --done
-
-//da pokazva sled kato vs e zaredilo --done
-//licensing --done
-
-//donations - BTC --done
-//update plan --done
-
-//update translations --done
-//commit --done
-
-//Build windows --done
-//Static build windows --done
-
-//BUG: ne6to s destroy na event-ite ne e v dobyr red i dava FC na windows (vj link-a v tmp)--done
-//BUG mai pravi nenujen save pri puskane --done
-//BUG: syzdai zapiska ot teksta v klipborda na programata// e gre6en prevod i/ili si e gre6no i na angl--done
-
-//update translations --done
-//commit --done
-
-//Build windows
-//Static build windows
-
+//opravi za dr-to lqto da e update prompta --done
+//go to notefile v contextovoto menu
 //Video za predstavqne na angl i bg
-//Nqkolko tester-a za durakoustoi4ivost
+//Оправи биткойн ситуацията - po vyzmojnost bez smqna na wallet nomera
+//GitHub README
 
+//Nqkolko tester-a za durakoustoi4ivost
 //Get my shit together (FB,blog,etc)
+
+//Static build Linux
 //Release
 //razprostranenie
 
-//Static build Linux
-//Packages
 //>arch package
 
 //====Android port=========
 //Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
 //=========Future changes=========
+//imenata na elementite da sa na obratno buttonEdikakvo si i menuEdiKakvoSI , za da gi namiram lesno
+//BUG: da ne trie klipborda ako ne e successful copy
+//QStandardPaths::DataLocation default
 //ogledai mural.ly za idei
 //polzvai enum za note type
 //opravi for loop-ovete na c++11
@@ -64,7 +45,7 @@
 //Redo
 //Memory based undo/redo limitation
 //CLI
-//Do 15 fevruari 2015 da sym izkaral autoupdate-va6ta versiq
+//Do 15 septemvri 2015 da sym izkaral autoupdate-va6ta versiq
 
 //====Release routine====
 //update translations

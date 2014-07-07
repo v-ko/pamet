@@ -70,6 +70,8 @@ signals:
     void current_nf_switched();
     void current_nf_updated();
 
+    void noteFilesListChanged(); //FIXME
+
 public slots:
     int load_notes_files();
     int reinit_notes_pointing_to_notefiles();

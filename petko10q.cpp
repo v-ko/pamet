@@ -100,7 +100,7 @@ int q_get_value_for_key(QString string, QString key, QString& result) //string s
         }
     }
 
-    qDebug()<<"Key not found: "<<key;
+    qDebug()<<"[q_get_value_for_key]Key not found: "<<key;
     return -1;
 }
 

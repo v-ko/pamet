@@ -57,6 +57,7 @@ signals:
     void notes_dir_changed();
     void notes_dir_added(QString path);
     void load_all_dirs_finished();
+    void noteFilesListChanged(); //FIXME
 public slots:
     void set_current_misli_dir(QString path);
     int load_all_dirs();

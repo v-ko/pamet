@@ -22,7 +22,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>27</height>
+     <height>29</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -71,8 +71,6 @@
     <addaction name="actionRename_notefile"/>
     <addaction name="actionDelete_notefile"/>
     <addaction name="separator"/>
-    <addaction name="actionNext_notefile"/>
-    <addaction name="actionPrevious_notefile"/>
     <addaction name="separator"/>
     <addaction name="actionMake_this_view_point_default_for_the_notefile"/>
     <addaction name="actionSet_this_height_as_default"/>

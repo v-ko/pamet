@@ -43,6 +43,8 @@ EditNoteDialogue::EditNoteDialogue(MisliDesktopGui * misli_dg_) :
     connect(&actionChoosePicture,SIGNAL(triggered()),this,SLOT(choose_picture()));
     connect(&actionChooseTextFile,SIGNAL(triggered()),this,SLOT(choose_text_file()));
     connect(&actionSystemCallNote,SIGNAL(triggered()),this,SLOT(set_system_call_prefix()));
+
+    connect(&chooseNFMenu,SIGNAL(aboutToShow()),this,SLOT(updateLinkMenu()));
 }
 
 MisliInstance * EditNoteDialogue::misli_i()
@@ -141,14 +143,18 @@ void EditNoteDialogue::set_textEdit_text(QString text)
 {
     ui->textEdit->setPlainText(text);
 }
-void EditNoteDialogue::show_link_menu()
+
+void EditNoteDialogue::updateLinkMenu()
 {
     chooseNFMenu.clear();
 
     for(unsigned int i=0;i<misli_i()->curr_misli_dir()->note_file.size();i++){
         chooseNFMenu.addAction(misli_i()->curr_misli_dir()->note_file[i]->name);
     }
+}
 
+void EditNoteDialogue::show_link_menu()
+{
     linkMenu.popup(cursor().pos());
 }
 
