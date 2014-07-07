@@ -15,15 +15,17 @@
 */
 
 //opravi za dr-to lqto da e update prompta --done
-//go to notefile v contextovoto menu
+//go to notefile v contextovoto menu --done
+//static windows build --done
+//upload --done
 //Video za predstavqne na angl i bg
+//Nqkolko tester-a za durakoustoi4ivost
 //Оправи биткойн ситуацията - po vyzmojnost bez smqna na wallet nomera
 //GitHub README
-
-//Nqkolko tester-a za durakoustoi4ivost
 //Get my shit together (FB,blog,etc)
 
-//Static build Linux
+//Static build Windows
+//Static build Linux (docker?)
 //Release
 //razprostranenie
 

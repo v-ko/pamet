@@ -46,6 +46,7 @@ public:
     MisliDesktopGui *misli_dg;
     Note * edited_note;
     double x_on_new_note,y_on_new_note;
+    bool chooseNFMenuIsOpenedFromEditNoteDialogue;
 
 public slots:
     void new_note();

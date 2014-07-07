@@ -135,9 +135,14 @@ void EditNoteDialogue::input_done()
 
 void EditNoteDialogue::make_link_note(QAction *act)
 {
-    ui->textEdit->setText("this_note_points_to:"+act->text());
-    ui->textEdit->setFocus();
-    ui->textEdit->moveCursor (QTextCursor::End);
+    //FIXME tova e hack around
+    if(chooseNFMenuIsOpenedFromEditNoteDialogue){
+        ui->textEdit->setText("this_note_points_to:"+act->text());
+        ui->textEdit->setFocus();
+        ui->textEdit->moveCursor (QTextCursor::End);
+    }else{
+        misli_i()->curr_misli_dir()->set_current_note_file(act->text());
+    }
 }
 void EditNoteDialogue::set_textEdit_text(QString text)
 {
@@ -146,6 +151,7 @@ void EditNoteDialogue::set_textEdit_text(QString text)
 
 void EditNoteDialogue::updateLinkMenu()
 {
+    chooseNFMenuIsOpenedFromEditNoteDialogue = false;
     chooseNFMenu.clear();
 
     for(unsigned int i=0;i<misli_i()->curr_misli_dir()->note_file.size();i++){
@@ -156,6 +162,7 @@ void EditNoteDialogue::updateLinkMenu()
 void EditNoteDialogue::show_link_menu()
 {
     linkMenu.popup(cursor().pos());
+    chooseNFMenuIsOpenedFromEditNoteDialogue = true;
 }
 
 void EditNoteDialogue::choose_picture()
