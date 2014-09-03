@@ -24,6 +24,15 @@ GetDirDialogue::GetDirDialogue(MisliDesktopGui *misli_dg_):
     ui->setupUi(this);
     misli_dg=misli_dg_;
     addAction(ui->actionEscape);//the action is defined in the .ui file and is not used . QActions must be added to a widget to work
+
+    if(misli_dg->first_program_start){
+        //Setup the language combo box
+        ui->comboBoxChooseLanguage->addItem(QString("English"));
+        ui->comboBoxChooseLanguage->addItem(QString("Български"));
+    }else{
+        ui->comboBoxChooseLanguage->hide();
+    }
+
 }
 
 GetDirDialogue::~GetDirDialogue()
@@ -52,9 +61,33 @@ void GetDirDialogue::input_done()
         msg.exec();
         return;
     }else{
-        misli_i()->add_dir(dir.absolutePath());
-        misli_dg->misli_w->export_settings();
-        close();
+
+        //Then handle the language (very hacky..)
+        if(ui->comboBoxChooseLanguage->currentText()=="English"){
+            if(misli_dg->language!="en"){
+                misli_dg->misli_w->language="en";
+                misli_dg->language="en";
+                misli_i()->add_dir(dir.absolutePath());
+                misli_dg->misli_w->export_settings();
+                //Restart
+                QProcess::startDetached(misli_dg->applicationFilePath());
+                misli_dg->exit(0);
+            }
+        }else if(ui->comboBoxChooseLanguage->currentText()=="Български"){
+            if(misli_dg->language!="bg"){
+                misli_dg->misli_w->language="bg";
+                misli_dg->language="bg";
+                misli_i()->add_dir(dir.absolutePath());
+                misli_dg->misli_w->export_settings();
+                //Restart
+                QProcess::startDetached(misli_dg->applicationFilePath());
+                misli_dg->exit(0);
+            }
+        }else{
+            misli_i()->add_dir(dir.absolutePath());
+            misli_dg->misli_w->export_settings();
+            close();
+        }
     }
 
 }

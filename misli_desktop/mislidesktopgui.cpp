@@ -92,8 +92,8 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     //Load the language from settings and setup the translator
     if( settings->contains("language") ){
 
-        qDebug()<<"MisliDesktopGui:Retrieved the language from settings"<<language;
         language = settings->value("language").toString();
+        qDebug()<<"MisliDesktopGui:Retrieved the language from settings"<<language;
 
         if( !language.isEmpty() ){
             if(language!=QString("en")){

@@ -14,10 +14,13 @@
     along with Misli.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+
 //opravi za dr-to lqto da e update prompta --done
 //go to notefile v contextovoto menu --done
-//static windows build --done
-//upload --done
+//BUG: pri "Svyrji sys" smenq notefile-a --done
+//izbirane na ezik v na4aloto --done
+//static windows build
+//upload
 //Video za predstavqne na angl i bg
 //Nqkolko tester-a za durakoustoi4ivost
 //Оправи биткойн ситуацията - po vyzmojnost bez smqna na wallet nomera
@@ -35,13 +38,15 @@
 //Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
 //=========Future changes=========
+//dva pyti cykvane na desen buton da e link
+//izvitite linii da sa vektorno obusloveni (az da si gi 4ertaq)
 //imenata na elementite da sa na obratno buttonEdikakvo si i menuEdiKakvoSI , za da gi namiram lesno
 //BUG: da ne trie klipborda ako ne e successful copy
 //QStandardPaths::DataLocation default
 //ogledai mural.ly za idei
 //polzvai enum za note type
 //opravi for loop-ovete na c++11
-//*Automated test with some tool for automation (make note , choose dir , make link , etc.)
+//Automated test with some tool for automation (make note , choose dir , make link , etc.)
 //Progress bars
 //Proper logging
 //Redo

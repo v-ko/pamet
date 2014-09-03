@@ -38,6 +38,9 @@
       </layout>
      </item>
      <item>
+      <widget class="QComboBox" name="comboBoxChooseLanguage"/>
+     </item>
+     <item>
       <widget class="QPushButton" name="okButton">
        <property name="text">
         <string>Ok</string>

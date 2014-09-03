@@ -38,13 +38,15 @@ EditNoteDialogue::EditNoteDialogue(MisliDesktopGui * misli_dg_) :
     linkMenu.addAction(&actionChooseTextFile);
     linkMenu.addAction(&actionSystemCallNote);
 
+    chooseNFMenuIsOpenedFromEditNoteDialogue = false;
+
+    connect(&chooseNFMenu,SIGNAL(aboutToShow()),this,SLOT(updateChooseNFMenu()));
     connect(ui->makeLinkButton,SIGNAL(clicked()),this,SLOT(show_link_menu()));
     connect(&chooseNFMenu,SIGNAL(triggered(QAction*)),this,SLOT(make_link_note(QAction*)));
+    //connect(&linkMenu,SIGNAL(aboutToHide()),this,SLOT(resetChooseNFMenuFlag()));
     connect(&actionChoosePicture,SIGNAL(triggered()),this,SLOT(choose_picture()));
     connect(&actionChooseTextFile,SIGNAL(triggered()),this,SLOT(choose_text_file()));
     connect(&actionSystemCallNote,SIGNAL(triggered()),this,SLOT(set_system_call_prefix()));
-
-    connect(&chooseNFMenu,SIGNAL(aboutToShow()),this,SLOT(updateLinkMenu()));
 }
 
 MisliInstance * EditNoteDialogue::misli_i()
@@ -73,7 +75,6 @@ void EditNoteDialogue::new_note()
     raise();
     activateWindow();
     ui->textEdit->setFocus(Qt::ActiveWindowFocusReason);
-
 }
 
 int EditNoteDialogue::edit_note(){ //false for new note , true for edit
@@ -136,10 +137,12 @@ void EditNoteDialogue::input_done()
 void EditNoteDialogue::make_link_note(QAction *act)
 {
     //FIXME tova e hack around
-    if(chooseNFMenuIsOpenedFromEditNoteDialogue){
+    if(this->isVisible()){
         ui->textEdit->setText("this_note_points_to:"+act->text());
         ui->textEdit->setFocus();
         ui->textEdit->moveCursor (QTextCursor::End);
+        this->hide();//hacks all the way
+        this->show();
     }else{
         misli_i()->curr_misli_dir()->set_current_note_file(act->text());
     }
@@ -149,9 +152,8 @@ void EditNoteDialogue::set_textEdit_text(QString text)
     ui->textEdit->setPlainText(text);
 }
 
-void EditNoteDialogue::updateLinkMenu()
+void EditNoteDialogue::updateChooseNFMenu()
 {
-    chooseNFMenuIsOpenedFromEditNoteDialogue = false;
     chooseNFMenu.clear();
 
     for(unsigned int i=0;i<misli_i()->curr_misli_dir()->note_file.size();i++){
@@ -162,7 +164,6 @@ void EditNoteDialogue::updateLinkMenu()
 void EditNoteDialogue::show_link_menu()
 {
     linkMenu.popup(cursor().pos());
-    chooseNFMenuIsOpenedFromEditNoteDialogue = true;
 }
 
 void EditNoteDialogue::choose_picture()

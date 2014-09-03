@@ -134,7 +134,7 @@ int MisliDir::make_notes_file(QString name)
 
     ntFile.setFileName(file_name_sstr);
 
-    if(misli_i->misli_dg->first_program_start){ //at some point language will be chosen on initial start and the line below will make sense
+    if(misli_i->misli_dg->first_program_start){
         QFile::copy(":/other/initial_start_nf_"+misli_i->misli_dg->language+".misl",file_name_sstr);
         ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
     }else{
@@ -142,7 +142,7 @@ int MisliDir::make_notes_file(QString name)
             qDebug()<<"Error making new notes file";
             return -1;
         }
-        ntFile.write(QByteArray( QString("#Notes database for Misli\n[1]\ntxt="+tr("Double-click to edit or make a new note.F1 for help.")+"\nx=-5\ny=-2\nz=0\na=10\nb=4\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
+        ntFile.write(QByteArray( QString("#Notes database for Misli\n[1]\ntxt="+tr("Double-click to edit or make a new note.F1 for help.")+"\nx=-5\ny=-2\nz=0\na=12\nb=6\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
     }
 
     ntFile.close();

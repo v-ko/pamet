@@ -633,5 +633,5 @@ void MisliWindow::show_about_dialog()
 
 void MisliWindow::copy_BTC_address()
 {
-    misli_dg->clipboard()->setText("16tdJ6SmbBcYk1aoQSDNSbdDb79CvEpgeU"); //should be more dynamic
+    misli_dg->clipboard()->setText("185FzaDimiAXJXsGtwHKF8ArTwPjQt8zoi"); //should be more dynamic
 }

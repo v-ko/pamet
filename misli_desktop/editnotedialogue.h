@@ -54,7 +54,7 @@ public slots:
     void input_done();
     void set_textEdit_text(QString text); //expose that publically
 
-    void updateLinkMenu();
+    void updateChooseNFMenu();
     void show_link_menu();
     void make_link_note(QAction *act);
     void choose_picture();
