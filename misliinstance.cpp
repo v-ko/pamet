@@ -148,8 +148,8 @@ int MisliInstance::load_results_in_search_nf()
         nt->a=misli_dg->misli_w->canvas->searchField->width()/FONT_TRANSFORM_FACTOR;
         nt->b=SEARCH_RESULT_HEIGHT/FONT_TRANSFORM_FACTOR;
         nt->calculate_coordinates(); //circumvent the "!using GUI" skipping on init()
-        nt->check_text_for_links(curr_misli_dir());
-        nt->adjust_text_size();
+        nt->checkTextForLinks(curr_misli_dir());
+        nt->adjustTextSize();
         nt->draw_pixmap();
     }
     return 0;

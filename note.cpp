@@ -27,9 +27,21 @@
 
 #include "petko10.h"
 
-Note::Note()
+Note::Note() :
+    setA(12),
+    setB(a()/A_TO_B_NOTE_SIZE_RATIO),
+    setFontSize(1),
+    setSelected(false),
+    setType(NoteType::normal),
+    setTextColor(QColor(0,0,255,255)),
+    setTextColor(QColor(0,0,255,128)),
+    setTextIsShortened(false),
+    setAutoSizingNow(false)
 {
-    x=0;
+    img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
+
+    //Old code:
+    /*x=0;
     y=0;
     z=0;
     a=12;
@@ -46,69 +58,76 @@ Note::Note()
     bg_col[1]=0;
     bg_col[2]=1;
     bg_col[3]=0.5;
-    img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
+
     text_is_shortened=false;
     auto_sizing_now=false;
+    */
 }
 Note::~Note()
 {
     delete img;
 }
 
-int Note::calculate_coordinates()
+//Old code
+/*int Note::calculate_coordinates()
 {
     //Coordinates for the note rectangle
+
     rx=x+a;
     ry=y+b;
     pixm_real_size_x = a*FONT_TRANSFORM_FACTOR; //pixmap real size (bloated to have better quality on zoom)
     pixm_real_size_y = b*FONT_TRANSFORM_FACTOR;
 
     return 0;
-}
-int Note::store_coordinates_before_move()
+}*/
+void Note::storeCoordinatesBeforeMove()
 {
+    setXBeforeMove(x_m);
+    setYBeforeMove(y_m);
+
+    /*/Old code
     move_orig_x=x; //store the coordinates before a move command
     move_orig_y=y;
-
+    */
     return 0;
 }
-int Note::adjust_text_size()
+
+int Note::adjustTextSize()
 {
     int base_it,max_it,probe_it; //iterators for the shortening algorythm
 
     //-------Init painter for the text shortening----------
-    QRectF text_field(0,0,a*FONT_TRANSFORM_FACTOR,b*FONT_TRANSFORM_FACTOR),text_field_needed;
-    QString txt = text_for_shortening;
+    QRectF textField(0,0,a*FONT_TRANSFORM_FACTOR,b*FONT_TRANSFORM_FACTOR),textFieldNeeded;
+    QString txt = textForShortening_m;
 
     QFont font("Halvetica");
-    font.setPixelSize(font_size*FONT_TRANSFORM_FACTOR);
+    font.setPixelSize(fontSize_m*FONT_TRANSFORM_FACTOR);
 
-    QPainter p(img);//just a dummy painter
+    QPainter p(image_m);//just a dummy painter
     p.setFont(font);
 
     //------Determine alignment---------------
-    if(text_for_shortening.contains("\n")){//if there's more than one row
-        has_more_than_one_row=true;
-        alignment = Qt::AlignLeft;
+    if(txt.contains("\n")){//if there's more than one row
+        setHasMoreThanOneRow(true);
+        setAlignment(Qt::AlignLeft);
     }else{
-        has_more_than_one_row=false;
-        alignment = Qt::AlignCenter;
+        setHasMoreThanOneRow(false);
+        setAlignment(Qt::AlignCenter);
     }
 
     //=========Shortening the text in the box=============
-    text_is_shortened=false; //assume we don't need shortening
+    setTextIsShortened(false); //assume we don't need shortening
 
     p.setFont(font);
 
-    txt=text_for_shortening;
-    base_it=0;
-    max_it=text_for_shortening.size();
+    base_it = 0;
+    max_it = txt.size();
     probe_it=base_it + ceil(float(max_it-base_it)/2);
 
     //-----If there's no resizing needed (common case , that's why it's in front)--------
 
-    text_field_needed=p.boundingRect(text_field, Qt::TextWordWrap | alignment ,txt);
-    if( (  text_field_needed.height() <= text_field.height() ) && ( text_field_needed.width() <= text_field.width() ) ){
+    textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment_m ,txt);
+    if( (  textFieldNeeded.height() <= textField.height() ) && ( textFieldNeeded.width() <= textField.width() ) ){
         goto after_shortening;
     }
     //-----For the shorter than "..." texts (they won't get any shorter)--------------
@@ -120,71 +139,68 @@ int Note::adjust_text_size()
     while((max_it-base_it)!=1) { //until we pin-point the needed length with accuracy 1
 
         txt.resize(probe_it); //we resize to the probe iterator
-        text_field_needed=p.boundingRect(text_field, Qt::TextWordWrap | alignment ,txt); //get the bounding box for the text (with probe length)
+        textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment ,txt); //get the bounding box for the text (with probe length)
 
-        if( ( text_field_needed.height() > text_field.height() ) | ( text_field_needed.width() > text_field.width() ) ){//if the needed box is bigger than the size of the note
+        if( ( textFieldNeeded.height() > textField.height() ) | ( textFieldNeeded.width() > textField.width() ) ){//if the needed box is bigger than the size of the note
             max_it=probe_it; //if the text doesnt fit - move max_iterator to the current position
         }else{
             base_it=probe_it; //if it does - bring the base iterator to the current pos
         }
 
         probe_it=base_it + ceil(float(max_it-base_it)/2); //new position for the probe_iterator - optimally in the middle of the dead space
-        txt=text_for_shortening;
+        txt = textForShortening_m;
     }
 
-    text_is_shortened=true;
+    setTextIsShortened(true);
     txt.resize(max_it-3);
     txt+="...";
 
     after_shortening:
-    text_for_display=txt;
+    setTextForDisplay(txt);
 
     return 0;
 }
-int Note::check_text_for_links(MisliDir *md) //there's an argument , because search inits the notes out of their dir and still needs that function (the actual linking functionality is not needed then)
+void Note::checkTextForLinks(MisliDir *md) //there's an argument , because search inits the notes out of their dir and still needs that function (the actual linking functionality is not needed then)
 {
     //-------Check if we have a link to a file-----------
-    if (text.startsWith(QString("this_note_points_to:"))){
-        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
-        address_string=address_string.trimmed(); //remove white spaces from both sides
-        text_for_shortening = address_string; //set the note file name as text for displaying
-        type=NOTE_TYPE_REDIRECTING_NOTE;
+    if (text_m.startsWith(QString("this_note_points_to:"))){
+        QString address_string = q_get_text_between(text_m,':',0,200); //get text between ":" and the end
+        address_string = address_string.trimmed(); //remove white spaces from both sides
+
         if(md->nf_by_name(address_string)==NULL){//if we have a wrong/missing name
-            text_for_shortening=QObject::tr("missing note file");
+            address_string = QObject::tr("missing note file");
         }
+
+        setTextForShortening(address_string); //set the note file name as text for displaying
+        setType(NoteType::redirecting);
     }
-    return 0;
 }
-int Note::check_for_file_definitions()
+int Note::checkForFileDefinitions()
 {
     //QString string;
     QFile file;
+    QString address_string;
 
-    if (text.startsWith(QString("define_text_file_note:"))){
-        //if(type==NOTE_TYPE_TEXT_FILE_NOTE){return 0;} //if we've defined the file already - we don't need to read it a thousand times
-        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
-        address_string=address_string.trimmed(); //remove white spaces from both sides
+    if (text_m.startsWith(QString("define_text_file_note:"))){
+        address_string = q_get_text_between(text_m,':',0,200); //get text between ":" and the end
+        setAddressString(address_string.trimmed()); //remove white spaces from both sides
         file.setFileName(address_string);
         if(file.open(QIODevice::ReadOnly)){
-            text_for_shortening = file.read(MAX_NOTE_TEXT_SIZE);
+            setTextForShortening(file.read(MAX_NOTE_TEXT_SIZE));
         }else{
-            text_for_shortening = "Failed to open file.";
+            setTextForShortening( tr("Failed to open file."));
         }
-        type=NOTE_TYPE_TEXT_FILE_NOTE;
-        return 0;
-    }
+        setType(NoteType::textFile);
+        return;
+    }else if (text_m.startsWith(QString("define_picture_note:"))){
 
-    if (text.startsWith(QString("define_picture_note:"))){
-        //if(type==NOTE_TYPE_PICTURE_NOTE){return 1;}
-        address_string=q_get_text_between(text,':',0,200); //get text between ":" and the end
-        address_string=address_string.trimmed(); //remove white spaces from both sides
-        text_for_shortening = "";
-        type=NOTE_TYPE_PICTURE_NOTE;
-        //draw_pixmap();//inits the image only here , so we don't open the file a thousand times
+        address_string = q_get_text_between(text_m,':',0,200); //get text between ":" and the end
+        setAddressString(address_string.trimmed()); //remove white spaces from both sides
+        setTextForShortening("");
+        setType(NoteType::picture);
     }
-
-    return 0;
 }
+//DO TUK SYMmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm
 int Note::check_text_for_system_call_definition()
 {
     if (text.startsWith(QString("define_system_call_note:"))){
@@ -241,18 +257,18 @@ int Note::init() //calculate the coords of the box around the note , shortens th
     calculate_coordinates();
 
     //if(misli_dir->misli_i->misli_w->canvas->move_on){return 0;} //if we're moving the note there's no need to redraw it
-    store_coordinates_before_move();
+    storeCoordinatesBeforeMove();
 
     if(text.size()>MAX_NOTE_TEXT_SIZE) text_for_shortening = text.left(MAX_NOTE_TEXT_SIZE);
     else text_for_shortening=text;
 
     type=NOTE_TYPE_NORMAL_NOTE; //assuming the note isn't special
 
-    check_text_for_links(misli_dir);
-    check_for_file_definitions();
+    checkTextForLinks(misli_dir);
+    checkForFileDefinitions();
     check_text_for_system_call_definition();
 
-    adjust_text_size();
+    adjustTextSize();
 
     //if(auto_sizing_now){return 0;} //in auto_size we need only the above routine to calculate when the size is right
     //if( (type==NOTE_TYPE_PICTURE_NOTE) && (text_for_display.size()==0) ){ return 0;} //we don't need to load the file again, since the resizing is done in the rendering function
@@ -268,19 +284,19 @@ void Note::auto_size() //practically a cut down version of init that only change
         a+=2;
         b=a/A_TO_B_NOTE_SIZE_RATIO;
 
-        adjust_text_size();
+        adjustTextSize();
     }
     while(!text_is_shortened){
         if(b<=MIN_NOTE_B){break;}
         b--;
-        adjust_text_size();
+        adjustTextSize();
     }
     b++;init();
 
     while(!text_is_shortened){
         if(a<=MIN_NOTE_A){break;}
         a--;
-        adjust_text_size();
+        adjustTextSize();
     }
     a++;
 
@@ -288,8 +304,8 @@ void Note::auto_size() //practically a cut down version of init that only change
     a=stop(a,MIN_NOTE_A,MAX_NOTE_A);
     b=stop(b,MIN_NOTE_B,MAX_NOTE_B);
     calculate_coordinates();
-    store_coordinates_before_move();
-    adjust_text_size();
+    storeCoordinatesBeforeMove();
+    adjustTextSize();
     draw_pixmap();
 }
 

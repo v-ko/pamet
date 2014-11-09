@@ -445,7 +445,7 @@ void Canvas::mouseReleaseEvent(QMouseEvent *event)
                 if(nt->selected){
                     nt->z=0;
                     nt->calculate_coordinates();
-                    nt->store_coordinates_before_move();
+                    nt->storeCoordinatesBeforeMove();
                     nt->correct_links(); //correcting the links
                 }
             }
@@ -542,11 +542,11 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
 
                     nt->b=stop(d_y,MIN_NOTE_B,MAX_NOTE_B);
                     nt->calculate_coordinates();
-                    nt->store_coordinates_before_move();
-                    nt->check_for_file_definitions();
+                    nt->storeCoordinatesBeforeMove();
+                    nt->checkForFileDefinitions();
                     nt->check_text_for_system_call_definition();
-                    nt->check_text_for_links(misli_dir());
-                    nt->adjust_text_size();
+                    nt->checkTextForLinks(misli_dir());
+                    nt->adjustTextSize();
                     if(nt->type!=NOTE_TYPE_PICTURE_NOTE) nt->draw_pixmap();
                     nt->correct_links();
                 }
@@ -566,7 +566,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
                 mouse_note->x=t_x+0.02;
                 mouse_note->y=t_y-0.02;
                 mouse_note->calculate_coordinates();
-                mouse_note->store_coordinates_before_move();
+                mouse_note->storeCoordinatesBeforeMove();
                 mouse_note->correct_links();
             }
     } update();

@@ -15,29 +15,22 @@
 */
 
 
-//opravi za dr-to lqto da e update prompta --done
-//go to notefile v contextovoto menu --done
-//BUG: pri "Svyrji sys" smenq notefile-a --done
-//izbirane na ezik v na4aloto --done
-//static windows build
-//upload
-//Video za predstavqne na angl i bg
-//Nqkolko tester-a za durakoustoi4ivost
-//Оправи биткойн ситуацията - po vyzmojnost bez smqna na wallet nomera
+
+//Na note.h sym (pi6e do kyde) s prenapisvaneto
+
 //GitHub README
-//Get my shit together (FB,blog,etc)
-
-//Static build Windows
-//Static build Linux (docker?)
-//Release
-//razprostranenie
-
 //>arch package
 
-//====Android port=========
-//Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
-
 //=========Future changes=========
+//BUG: text poleto (pri pravene na zapiska) nqama copy/paste - za6toto nqma fokus za shorcutite?
+//BUG:При добавяне на текст не auto-size-ва текста
+//Feature:backspace - за връщане на предната записка
+//Tagove
+//Common .user file settings Qt
+//Ima nqkyde integer smqtane pri koordinatite na strelkite (eventualno i zapiskite)
+//picture compatability (nqkoi kartinki ne se zarejdat)
+//install target through the .pro file (and INSTALLS clouses)
+//Pri enter da selectva i linkove ako ima
 //dva pyti cykvane na desen buton da e link
 //izvitite linii da sa vektorno obusloveni (az da si gi 4ertaq)
 //imenata na elementite da sa na obratno buttonEdikakvo si i menuEdiKakvoSI , za da gi namiram lesno
@@ -53,6 +46,10 @@
 //Memory based undo/redo limitation
 //CLI
 //Do 15 septemvri 2015 da sym izkaral autoupdate-va6ta versiq
+//Video za predstavqne na angl i bg
+
+//====Android port=========
+//Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
 //====Release routine====
 //update translations

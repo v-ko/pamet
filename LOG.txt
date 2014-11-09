@@ -462,3 +462,16 @@
 //Build windows --done
 //Static build windows --done
 //07.05.14
+
+//opravi za dr-to lqto da e update prompta --done
+//go to notefile v contextovoto menu --done
+//BUG: pri "Svyrji sys" smenq notefile-a --done
+//izbirane na ezik v na4aloto --done
+//static windows build --done
+//upload --done
+//Оправи биткойн ситуацията - po vyzmojnost bez smqna na wallet nomera --done
+//Release --done
+
+//Static build Linux --done
+//razprostranenie --done
+//-------------------------------------------
