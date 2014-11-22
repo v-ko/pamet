@@ -22,6 +22,9 @@
 //>arch package
 
 //=========Future changes=========
+//ctrl-R за rename file
+//ctrl-Del за delete file
+//Frame-oве в които да се дропват записки (и да си имат идентификатори, които после да могат да се ползват за widget-и)
 //BUG: text poleto (pri pravene na zapiska) nqama copy/paste - za6toto nqma fokus za shorcutite?
 //BUG:При добавяне на текст не auto-size-ва текста
 //Feature:backspace - за връщане на предната записка
