@@ -14,14 +14,13 @@
     along with Misli.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
-
 //Na note.h sym (pi6e do kyde) s prenapisvaneto
 
 //GitHub README
 //>arch package
 
 //=========Future changes=========
+//селектирането с клавиатура не бачка
 //ctrl-R за rename file
 //ctrl-Del за delete file
 //Frame-oве в които да се дропват записки (и да си имат идентификатори, които после да могат да се ползват за widget-и)
