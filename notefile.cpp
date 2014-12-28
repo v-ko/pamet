@@ -107,8 +107,8 @@ int NoteFile::init(QString ime, QString path)   //returns negative on errors
         return -2;
     }
     //----Check for abnormally large files------
-    if(ntFile.size()>100000){
-        qDebug()<<"Note file "<<ime<<" is more than 10MB.Skipping.";
+    if(ntFile.size()>1000000){
+        qDebug()<<"Note file "<<ime<<" is more than 1MB.Skipping.";
         return -3;
     }
     qbytear = ntFile.readAll();
