@@ -38,6 +38,8 @@
 //Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
 
 //=========Future changes=========
+//Not a avalid picture надписа го преебава
+//картинките също да ги отваря за редакция
 //dva pyti cykvane na desen buton da e link
 //izvitite linii da sa vektorno obusloveni (az da si gi 4ertaq)
 //imenata na elementite da sa na obratno buttonEdikakvo si i menuEdiKakvoSI , za da gi namiram lesno
