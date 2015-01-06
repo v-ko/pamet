@@ -130,6 +130,7 @@ public slots:
     void select_note_under_mouse();
     void show_about_dialog();
     void copy_BTC_address();
+    void select_all_red_notes();
 
 public:
     Ui::MisliWindow *ui;

@@ -635,3 +635,19 @@ void MisliWindow::copy_BTC_address()
 {
     misli_dg->clipboard()->setText("185FzaDimiAXJXsGtwHKF8ArTwPjQt8zoi"); //should be more dynamic
 }
+void MisliWindow::select_all_red_notes()
+{
+    NoteFile *nf = misli_i()->curr_misli_dir()->curr_nf();
+
+    for(unsigned int i=0;i<nf->note.size();i++)
+    {
+        if(nf->note[i]->txt_col[0]==1 && //red
+                nf->note[i]->txt_col[1]==0 && //green
+                nf->note[i]->txt_col[2]==0 && //blue
+                nf->note[i]->txt_col[3]==1) //alfa
+        { //then
+            nf->note[i]->selected=true;
+        }
+    }
+    canvas->update();
+}
