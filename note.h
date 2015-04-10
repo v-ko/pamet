@@ -90,6 +90,9 @@ public:
     int delete_inlink_for_id(int);
     int delete_link(int); //no need for one that accepts Link* !
 
+    void beRed();
+    void beGreen();
+
 };
 typedef std::vector<Note*> NotesVector;
 

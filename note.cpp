@@ -445,7 +445,32 @@ void Note::center_eye_on_me()
         misli_dir->nf_by_name(nf_name)->eye_x = x+a/2;
         misli_dir->nf_by_name(nf_name)->eye_y = y+b/2;
         misli_dir->set_current_note_file(nf_name); //set the parent note file as current
-        misli_dir->misli_i->set_current_misli_dir(misli_dir->notes_dir); //set this notes dir as current
+        //misli_dir->misli_i->set_current_misli_dir(misli_dir->notes_dir); //set this notes dir as current
         //misli_dir->misli_i->misli_dg->misli_w->canvas->update();
     }
+}
+
+void Note::beRed()
+{
+    txt_col[0] = 1;
+    txt_col[1] = 0;
+    txt_col[2] = 0;
+    txt_col[3] = 1;
+
+    bg_col[0] = 1;
+    bg_col[1] = 0;
+    bg_col[2] = 0;
+    bg_col[3] = 0.1;
+}
+void Note::beGreen()
+{
+    txt_col[0] = 0;
+    txt_col[1] = 0.64;
+    txt_col[2] = 0.235;
+    txt_col[3] = 1;
+
+    bg_col[0] = 0;
+    bg_col[1] = 1;
+    bg_col[2] = 0;
+    bg_col[3] = 0.1;
 }

@@ -21,20 +21,14 @@
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 
-MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_gui_ = true)
+MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_gui_ = true, bool debug_ = false)
 {
     misli_i=misli_i_;
-    notes_dir=nts_dir;
     using_gui = using_gui_;
+    debug = debug_;
 
     if(misli_i==NULL){ //if there's no instance above there's no GUI for sure , but if there is there still may be no GUI
         using_gui=false;
-    }
-
-    if(nts_dir.isEmpty()){
-        is_virtual=true;
-    }else{
-        is_virtual=false;
     }
 
     is_current=0;
@@ -43,10 +37,10 @@ MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_g
     fs_watch = new FileSystemWatcher(this);
 
     hanging_nf_check = new QTimer;
-    if(!is_virtual) connect(hanging_nf_check,SIGNAL(timeout()),this,SLOT(check_for_hanging_nfs() ));
+    connect(hanging_nf_check,SIGNAL(timeout()),this,SLOT(check_for_hanging_nfs() ));
 
     //------Creating the help NF---------------
-    if( (!is_virtual) && using_gui ){
+    if( using_gui ){
         QString qstr;
         qstr=":/help/help_"+ misli_i->misli_dg->language;
         qstr+=".misl";
@@ -54,8 +48,11 @@ MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_g
         note_file.back()->init("HelpNoteFile",qstr);
     }
 
-    //-----------------
-    if(!is_virtual) load_notes_files();
+    //Connect propery changes
+    connect(this,SIGNAL(notesDirChanged(QString)),this,SLOT(load_notes_files()));
+
+    //Setup
+    setNotesDir(nts_dir);
 }
 MisliDir::~MisliDir()
 {
@@ -64,6 +61,23 @@ MisliDir::~MisliDir()
     for(unsigned int i=0;i<note_file.size();i++){
         delete note_file[i];
     }
+}
+QString MisliDir::notesDir()
+{
+    return notes_dir;
+}
+void MisliDir::setNotesDir(QString newDirPath)
+{
+    QDir newDir(newDirPath);
+    if(!newDir.exists()){
+        qDebug()<<"[MisliDir::setNotesDir]Directory missing, creating it.";
+        if(!newDir.mkdir(newDirPath)){
+            qDebug()<<"[MisliDir::setNotesDir]Failed making directory:"<<newDirPath;
+            return;
+        }
+    }
+    notes_dir=newDirPath;
+    emit notesDirChanged(newDirPath);
 }
 
 void MisliDir::check_for_hanging_nfs()
@@ -134,17 +148,23 @@ int MisliDir::make_notes_file(QString name)
 
     ntFile.setFileName(file_name_sstr);
 
-    if(misli_i->misli_dg->first_program_start){
-        QFile::copy(":/other/initial_start_nf_"+misli_i->misli_dg->language+".misl",file_name_sstr);
-        ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
+    if(using_gui){
+        if(misli_i->misli_dg->first_program_start){
+            QFile::copy(":/other/initial_start_nf_"+misli_i->misli_dg->language+".misl",file_name_sstr);
+            ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
+        }else{
+            if(!ntFile.open(QIODevice::WriteOnly)){
+                qDebug()<<"Error making new notes file";
+                return -1;
+            }
+            ntFile.write(QByteArray( QString("#Notes database for Misli\n[1]\ntxt="+tr("Double-click to edit or make a new note.F1 for help.")+"\nx=-5\ny=-2\nz=0\na=12\nb=6\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
+        }
     }else{
         if(!ntFile.open(QIODevice::WriteOnly)){
             qDebug()<<"Error making new notes file";
             return -1;
         }
-        ntFile.write(QByteArray( QString("#Notes database for Misli\n[1]\ntxt="+tr("Double-click to edit or make a new note.F1 for help.")+"\nx=-5\ny=-2\nz=0\na=12\nb=6\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
     }
-
     ntFile.close();
 
     note_file.push_back(new NoteFile(this)); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
@@ -233,7 +253,7 @@ int MisliDir::delete_nf(QString nfname) //soft delete
 
 int MisliDir::load_notes_files()
 {
-    if(is_virtual) return 0;
+    softDeleteAllNoteFiles();
 
     QDir dir(notes_dir);
 
@@ -270,16 +290,14 @@ int MisliDir::load_notes_files()
 
     }
 
-    if(!file_found){ //if n=-1 directory empty , make default notes file
-
+    if(!file_found && using_gui){ //if n=-1 directory empty , make default notes file
         make_notes_file("notes");
-
     }
 
     if(default_nf_on_startup()!=NULL) set_current_note_file(default_nf_on_startup()->name);
-    else set_current_note_file(find_first_normal_nf()->name);
+    else if(find_first_normal_nf()!=NULL) set_current_note_file(find_first_normal_nf()->name);
 
-    if(using_gui){//else segment
+    if(using_gui && (curr_nf()!=NULL) ){//else segment
         misli_i->misli_dg->misli_w->nf_before_help=curr_nf()->name;
     }
 
@@ -339,7 +357,7 @@ NoteFile *MisliDir::find_first_normal_nf()
 void MisliDir::handle_changed_file(QString file)
 {
     int err=0;
-    qDebug()<<"INTO HANDLE CHANGED FILE";
+    if(debug) qDebug()<<"INTO HANDLE CHANGED FILE";
 
     NoteFile *nf;
 
@@ -366,3 +384,22 @@ void MisliDir::handle_changed_file(QString file)
     }
 }
 
+void MisliDir::softDeleteAllNoteFiles()
+{
+    for(NoteFile *nf: note_file){
+        delete_nf(nf->name);
+    }
+}
+
+void MisliDir::deleteAllNoteFiles() //HACKY STUFF LIES HERE
+{
+    QDir dir(notes_dir);
+
+    for(NoteFile *nf: note_file){
+        if(!dir.remove(nf->name+".misl")){
+            qDebug()<<"[MisliDir::deleteAllNoteFiles]Could not remove notefile"<<nf->name;
+            return;
+        }
+    }
+    softDeleteAllNoteFiles();
+}

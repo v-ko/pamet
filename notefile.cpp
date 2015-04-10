@@ -57,16 +57,14 @@ NoteFile::~NoteFile()
 
 QString NoteFile::init(QString path) //returns the id of the nf
 {
-    qDebug()<<"Initializing nf: "<<path;
+    if(misli_dir->debug) qDebug()<<"Initializing nf: "<<path;
 
     //if(misli_dir->using_gui){ //adjusting the height based on display size
     //    eye_z = 0.22 * misli_dir->misli_i->misli_dg->desktop()->widthMM();
     //} //this was a try at auto-adjusting height according to screen size - fail
 
-    if(!misli_dir->is_virtual) {
-        //qDebug()<<"Adding path to fs_watch: "<<path;
-        misli_dir->fs_watch->addPath(path); //if it's a real nf
-    }
+    //qDebug()<<"Adding path to fs_watch: "<<path;
+    misli_dir->fs_watch->addPath(path); //if it's a real nf
 
     //----extract file name--------
     QFileInfo f(path);
@@ -226,7 +224,7 @@ int NoteFile::init(QString ime, QString path)   //returns negative on errors
 
     init_links();
 
-    qDebug()<<"Init done.";
+    if(misli_dir->debug) qDebug()<<"Init done.";
     return 0;
 }
 int NoteFile::init_links(){ //init all the links in the note_file notes
@@ -314,14 +312,12 @@ int NoteFile::hard_save()
     std::fstream ntFile;
 
     if( is_not_system() ){ //for example for the copyPasteCut note file
-        if(!misli_dir->is_virtual) misli_dir->fs_watch->removePath(full_file_addr);
+        misli_dir->fs_watch->removePath(full_file_addr);
         ntFile.open(full_file_addr.toUtf8().data(),std::ios_base::out|std::ios::binary);
         ntFile<<nf_z.back();
         ntFile.close();
-        if(!misli_dir->is_virtual) {
-            //qDebug()<<"Adding path to fs_watch: "<<full_file_addr;
-            misli_dir->fs_watch->addPath(full_file_addr);
-        }
+        //qDebug()<<"Adding path to fs_watch: "<<full_file_addr;
+        misli_dir->fs_watch->addPath(full_file_addr);
         //qDebug()<<misli_dir->fs_watch->files();
     }
 

@@ -21,7 +21,6 @@
 
 #include <QDir>
 #include <QTimer>
-#include <QClipboard>
 
 #include "petko10.h"
 #include "petko10q.h"
@@ -38,18 +37,25 @@ class MisliDir : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(QString notesDir READ notesDir WRITE setNotesDir NOTIFY notesDirChanged)
+
 public:
     //Functions
-    MisliDir(QString nts_dir, MisliInstance* msl_i_, bool using_gui_); //Can work without a MisliInstance
+    MisliDir(QString nts_dir, MisliInstance* msl_i_, bool using_gui_, bool debug_); //Can work without a MisliInstance
     ~MisliDir();
 
     int make_notes_file(QString);
     void set_current_note_file(QString name);
+    void softDeleteAllNoteFiles();
+    void deleteAllNoteFiles();
 
     NoteFile * nf_by_name(QString name);
     NoteFile * curr_nf(); //returns the current note file
     NoteFile * default_nf_on_startup();
     NoteFile * find_first_normal_nf();
+
+    //Properties
+    QString notesDir();
 
     //Variables
     MisliInstance * misli_i;
@@ -62,17 +68,24 @@ public:
 
     //---Other---
     int mode;
-    bool is_current;
-    bool is_virtual;
+    bool is_current,debug;
     int using_gui;
 
 signals:
+    //Property chabges
+    void notesDirChanged(QString);
+
+    //Other
     void current_nf_switched();
     void current_nf_updated();
 
     void noteFilesListChanged(); //FIXME
 
 public slots:
+    //Set properties
+    void setNotesDir(QString newDirPath);
+
+    //Other
     int load_notes_files();
     int reinit_notes_pointing_to_notefiles();
 

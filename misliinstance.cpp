@@ -74,7 +74,6 @@ void MisliInstance::add_dir(QString path)
     }
 
     set_current_misli_dir(path);
-
     emit notes_dir_added(path);//to add a menu entry
 }
 
@@ -108,7 +107,7 @@ int MisliInstance::load_all_dirs()
 void MisliInstance::set_current_misli_dir(QString path)
 {
     for(unsigned int i=0;i<misli_dir.size();i++){
-        if(misli_dir[i]->notes_dir==path){ //find the dir with path and set it as current
+        if( misli_dir[i]->notes_dir==path ){ //find the dir with path and set it as current
             misli_dir[i]->is_current=true;
         }else{
             misli_dir[i]->is_current=false; //all others are not current

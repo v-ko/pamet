@@ -27,7 +27,7 @@ FileSystemWatcher::FileSystemWatcher(MisliDir * misli_dir_)
 
     misli_dir=misli_dir_;
 
-    qDebug()<<"Connect returns:"<<connect(this,SIGNAL(fileChanged(QString)),misli_dir,SLOT(handle_changed_file(QString)) );//,Qt::QueuedConnection) ;
+    if(misli_dir->debug) qDebug()<<"Connect returns:"<<connect(this,SIGNAL(fileChanged(QString)),misli_dir,SLOT(handle_changed_file(QString)) );//,Qt::QueuedConnection) ;
 
 }
 FileSystemWatcher::~FileSystemWatcher()

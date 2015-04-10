@@ -57,7 +57,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionSelect_note_under_mouse, SIGNAL(triggered()),this,SLOT(select_note_under_mouse()));
 
     //Creating the clipboard_nf (id=-1) which holds the notes on copy operations
-    clipboard_dir = new MisliDir("",NULL,0); //create a virtual dir
+    clipboard_dir = new MisliDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation),NULL,false);
 
     clipboard_nf = new NoteFile(clipboard_dir);
     clipboard_nf->name="ClipboardNf";
