@@ -17,7 +17,6 @@
 #ifndef MISLIINSTANCE_H
 #define MISLIINSTANCE_H
 
-#include <QMainWindow>
 #include <QSettings>
 #include <QtDebug>
 
@@ -30,39 +29,38 @@ class MisliInstance : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(QList<MisliDir*> misliDirs READ misliDirs NOTIFY misliDirsChanged)
+
 public:
     //Functions
-    MisliInstance(MisliDesktopGui *misli_dg_);
+    MisliInstance(bool bufferImages_);
     ~MisliInstance();
 
-    int load_settings();
-    void add_dir(QString path);
-    bool notes_rdy(); //true if there's a notes dir present (if it was empty - a default note file was created
-    MisliDir * curr_misli_dir(); //returns the current directory
+    MisliDir *addDir(QString path);
+    MisliDir *loadDir(QString path);
+    void removeDir(MisliDir *dir);
+    void unloadDir(MisliDir *dir);
 
-    int load_results_in_search_nf();
+    //Properties
+    QList<MisliDir*> misliDirs();
 
     //Variables
-    std::vector<MisliDir*> misli_dir; //contains all the directories
-    MisliDir *search_notes_dir;
-    NoteFile *search_nf;
-    QSettings *settings;
-
-    MisliDesktopGui *misli_dg;
-
-    bool using_gui;
-    bool initial_load_complete;
+    QSettings settings;
+    bool bufferImages;
 
 signals:
-    void notes_dir_changed();
-    void notes_dir_added(QString path);
-    void load_all_dirs_finished();
+    //Property changes
+    void misliDirsChanged();
+
+    //Other
+    void storedDirsLoaded();
     void noteFilesListChanged(); //FIXME
 public slots:
-    void set_current_misli_dir(QString path);
-    int load_all_dirs();
-    void move_back_to_main_thread();
+    void loadStoredDirs();
+    void saveDirsToSettings();
 
+private:
+    QList<MisliDir*> misliDirs_m;
 };
 
 #endif // MISLIINSTANCE_H

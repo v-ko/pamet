@@ -14,7 +14,57 @@
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout_2"/>
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <item>
+       <widget class="QLineEdit" name="searchLineEdit">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QListView" name="searchListView">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Expanding">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="mainLayout">
+      <item>
+       <widget class="QPushButton" name="jumpToNearestNotePushButton">
+        <property name="text">
+         <string>Jump to the nearest note</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="addMisliDirPushButton">
+        <property name="text">
+         <string>Add a directory for note files</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="makeNoteFilePushButton">
+        <property name="text">
+         <string>Make a new note file</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
@@ -22,7 +72,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>29</height>
+     <height>27</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -67,6 +117,11 @@
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <widget class="QMenu" name="menuSwitch_to_another_note_file">
+     <property name="title">
+      <string>Switch to another note file</string>
+     </property>
+    </widget>
     <addaction name="actionNew_notefile"/>
     <addaction name="actionRename_notefile"/>
     <addaction name="actionDelete_notefile"/>
@@ -77,6 +132,9 @@
     <addaction name="actionMake_this_notefile_appear_first_on_program_start"/>
     <addaction name="separator"/>
     <addaction name="actionSelect_all_notes"/>
+    <addaction name="actionSelect_all_red_notes"/>
+    <addaction name="separator"/>
+    <addaction name="menuSwitch_to_another_note_file"/>
    </widget>
    <widget class="QMenu" name="menuNote">
     <property name="title">
@@ -102,7 +160,6 @@
     <addaction name="actionEdit_note"/>
     <addaction name="actionMake_link"/>
     <addaction name="menuColor"/>
-    <addaction name="actionDetails"/>
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
@@ -211,6 +268,9 @@
    </property>
   </action>
   <action name="actionAdd_new">
+   <property name="checkable">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Add another folder</string>
    </property>
@@ -451,6 +511,9 @@
    </property>
   </action>
   <action name="actionSearch">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Search (beta)</string>
    </property>
@@ -539,265 +602,17 @@
     <string>Copy donation address</string>
    </property>
   </action>
+  <action name="actionSelect_all_red_notes">
+   <property name="text">
+    <string>Select all red notes</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
-  <connection>
-   <sender>actionEdit_note</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>edit_note()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionHelp</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>toggle_help()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionCopy</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>copy()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionCut</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>cut()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionDelete_selected</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>delete_selected()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMake_link</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>make_link()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionNew_note</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>new_note()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionNew_notefile</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>new_nf()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionNext_notefile</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>next_nf()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionPaste</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>paste()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionPrevious_notefile</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>prev_nf()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionUndo</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>undo()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionZoom_in</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>zoom_in()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionZoom_out</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>zoom_out()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMake_this_notefile_appear_first_on_program_start</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>make_nf_default()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMake_this_view_point_default_for_the_notefile</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>make_viewpoint_default()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
   <connection>
    <sender>actionClose</sender>
    <signal>triggered()</signal>
@@ -815,10 +630,10 @@
    </hints>
   </connection>
   <connection>
-   <sender>actionAdd_new</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>add_new_folder()</slot>
+   <sender>actionSearch</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>searchLineEdit</receiver>
+   <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -826,15 +641,15 @@
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
-     <y>299</y>
+     <y>53</y>
     </hint>
    </hints>
   </connection>
   <connection>
-   <sender>actionRemove_current</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>remove_current_folder()</slot>
+   <sender>actionSearch</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>searchListView</receiver>
+   <slot>setVisible(bool)</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
@@ -842,295 +657,7 @@
     </hint>
     <hint type="destinationlabel">
      <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionBulgarian</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>set_lang_bg()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionEnglish</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>set_lang_en()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionClear_settings_and_exit</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>clear_settings_and_exit()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionRename_notefile</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>rename_nf()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionDelete_notefile</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>delete_nf()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionColor_blue</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>col_blue()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionColor_green</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>col_green()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionColor_red</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>col_red()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionColor_black</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>col_black()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMove_down</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>move_down()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMove_up</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>move_up()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMove_left</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>move_left()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionMove_right</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>move_right()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionSelect_all_notes</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>select_all_notes()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionCreate_note_from_the_clipboard_text</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>new_note_from_clipboard()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionTransparent_background</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>col_transparent_background()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionSet_this_height_as_default</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>make_current_viewpoint_height_default()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
-    </hint>
-   </hints>
-  </connection>
-  <connection>
-   <sender>actionCopy_donation_address</sender>
-   <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>copy_BTC_address()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
+     <y>332</y>
     </hint>
    </hints>
   </connection>

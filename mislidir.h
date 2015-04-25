@@ -17,16 +17,13 @@
 #ifndef MISLIDIR_H
 #define MISLIDIR_H
 
-#include <unistd.h>
-
-#include <QDir>
 #include <QTimer>
-#include <QClipboard>
+#include <QSettings>
+#include <QFileSystemWatcher>
 
 #include "petko10.h"
 #include "petko10q.h"
 
-#include "filesystemwatcher.h"
 #include "notefile.h"
 #include "common.h"
 
@@ -38,54 +35,58 @@ class MisliDir : public QObject
 {
     Q_OBJECT
 
+    Q_PROPERTY(float defaultEyeZ READ defaultEyeZ WRITE setDefaultEyeZ)
+    Q_PROPERTY(QString directoryPath READ directoryPath WRITE setDirectoryPath NOTIFY directoryPathChanged)
+    Q_PROPERTY(QList<NoteFile*> noteFiles READ noteFiles NOTIFY noteFilesChanged)
+
 public:
     //Functions
-    MisliDir(QString nts_dir, MisliInstance* msl_i_, bool using_gui_); //Can work without a MisliInstance
+    MisliDir(QString nts_dir, bool bufferImages_ = false, bool enableFSWatch = true, bool debug_ = false);
     ~MisliDir();
 
-    int make_notes_file(QString);
-    void set_current_note_file(QString name);
+    int makeNotesFile(QString);
+    void softDeleteAllNoteFiles();
+    void deleteAllNoteFiles();
 
-    NoteFile * nf_by_name(QString name);
-    NoteFile * curr_nf(); //returns the current note file
-    NoteFile * default_nf_on_startup();
-    NoteFile * find_first_normal_nf();
+    NoteFile * noteFileByName(QString name);
+    NoteFile * defaultNfOnStartup();
+
+    //Properties
+    float defaultEyeZ();
+    QString directoryPath();
+    QList<NoteFile*> noteFiles();
 
     //Variables
-    MisliInstance * misli_i;
-    QString notes_dir;
-    std::vector<NoteFile*> note_file; //all the notefiles
+    QList<NoteFile*> noteFiles_m; //all the notefiles
+    NoteFile *currentNoteFile;
+    QFileSystemWatcher *fs_watch; //to watch the dir for changes
+    QTimer * hangingNfCheck; //periodical check for unaccounted for note files
+    QString directoryPath_m;
+    QSettings settings;
 
-    //----Children(for destruct)----
-    FileSystemWatcher *fs_watch; //to watch the dir for changes
-    QTimer * hanging_nf_check; //periodical check for unaccounted for note files
-
-    //---Other---
-    int mode;
-    bool is_current;
-    bool is_virtual;
-    int using_gui;
+    bool debug,fsWatchEnabled,bufferImages;
 
 signals:
-    void current_nf_switched();
-    void current_nf_updated();
-
-    void noteFilesListChanged(); //FIXME
+    //Property chabges
+    void defaultEyeZChanged(float);
+    void directoryPathChanged(QString);
+    void noteFilesChanged();
 
 public slots:
-    int load_notes_files();
-    int reinit_notes_pointing_to_notefiles();
+    //Set properties
+    void setDefaultEyeZ(float);
+    void setDirectoryPath(QString newDirPath);
 
-    void check_for_hanging_nfs();
+    //Other
+    void addNoteFile(QString pathToNoteFile);
+    void loadNotesFiles();
+    void reinitNotesPointingToNotefiles();
 
-    int next_nf();
-    int previous_nf();
-    int delete_nf(QString nfname);
+    void checkForHangingNFs();
+    void handleChangedFile(QString filePath);
 
-    void set_curr_nf_as_default_on_startup();
-    int delete_selected();
-
-    void handle_changed_file(QString file);
+    void handleSaveRequest(NoteFile *nf);
+    void softDeleteNF(NoteFile *nf);
 };
 
 #endif // MISLIDIR_H

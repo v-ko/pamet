@@ -22,6 +22,7 @@
 #include <QLineEdit>
 #include <QMenu>
 #include <QLabel>
+#include <QPushButton>
 
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
@@ -30,61 +31,78 @@
 class Canvas : public QWidget
 {
     Q_OBJECT
+
+    Q_PROPERTY(NoteFile* noteFile READ noteFile WRITE setNoteFile NOTIFY noteFileChanged)
+    Q_PROPERTY(bool linkingIsOn READ linkingIsOn WRITE setLinkingState NOTIFY linkingStateToggled)
+
 public:
     //Functions
-    Canvas(MisliWindow *msl_w_);
+    Canvas(MisliWindow *misliWindow_);
     ~Canvas();
 
-    QSize sizeHint() const;
-
-    Note *get_note_under_mouse(int x , int y);
-    Note *get_note_clicked_for_resize(int x , int y);
-    Link *get_link_under_mouse(int x,int y); //returns one link (not necesserily the top one) under the mouse
-
-    MisliDir *misli_dir();
-    NoteFile *curr_nf();
-
-    void set_eye_coords_from_curr_nf();
-    void save_eye_coords_to_nf();
+    Note *getNoteUnderMouse(int mouseX , int mouseY);
+    Note *getNoteClickedForResize(int mouseX , int mouseY);
+    Link *getLinkUnderMouse(int x,int y); //returns one link (not necesserily the top one) under the mouse
 
     void unproject(float screenX, float screenY, float &realX, float &realY);
     void project(float realX, float realY, float &screenX, float &screenY);
+    QLineF project(QLineF);
+    QRectF project(QRectF);
+    QPointF project(QPointF);
+    float projectX(float realX);
+    float projectY(float realY);
+    float unprojectX(float screenX);
+    float unprojectY(float screenY);
+
+    void centerEyeOnNote(Note * nt);
+
+    //Properties
+    NoteFile* noteFile();
+    bool linkingIsOn();
 
     //Variables
-    QFont font;
-    MisliWindow *misli_w;
-    float eye_x,eye_y,eye_z;
-    Note *mouse_note;
-    QTime last_release_event;
+    MisliWindow *misliWindow;
+    Note *linkingNote;
 
-    //--Child objects (for destruction)---
     QLineEdit *searchField;
     QMenu *contextMenu;
     QLabel *infoLabel;
     QTimer *move_func_timeout;
+    QFont font;
+    QTime lastReleaseEvent;
 
-    float move_x, move_y, resize_x, resize_y;
+    float moveX, moveY, resizeX, resizeY;
     int XonPush,YonPush,PushLeft,current_mouse_x,current_mouse_y;
     float EyeXOnPush,EyeYOnPush;
-    bool ctrl_is_pressed,shift_is_pressed;
-    bool timed_out_move,move_on,resize_on;
+    bool timedOutMove,moveOn,resizeOn;
+
+signals:
+    void noteFileChanged(NoteFile* nf); //Pretty much unused. Everyone who cares is visible to one another
+    void linkingStateToggled(bool);
 
 public slots:
-    void move_func();
-    void set_linking_on();
-    void set_linking_off();
-    int paste();
-    void jump_to_nearest_note();
+    //Properties
+    void setNoteFile(NoteFile* newNoteFile);
+    void setLinkingState(bool setLinkingOn);
+
+    //Other
+    void startMove();
+    QString copySelectedNotes(NoteFile *sourceNotefile, NoteFile *targetNoteFile);
+    void paste();
+    void jumpToNearestNote();
     void doubleClick();
+    void recheckYourNoteFile();
 
 protected:
-    void paintEvent(QPaintEvent * event);
-    void resize(int width, int height);
+    void paintEvent(QPaintEvent *);
     void mousePressEvent(QMouseEvent *event);
     void mouseReleaseEvent(QMouseEvent *event);
     void mouseDoubleClickEvent(QMouseEvent *);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+
+private:
+    QMetaObject::Connection visualChangeConnection, noteTextChangedConnection;
 };
 
 #endif // CANVAS_H

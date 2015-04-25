@@ -18,12 +18,13 @@
 #define LINK_H
 
 #include <QString>
+#include <QLineF>
 
 class Link
 {
 public:
     //Functions
-    Link();
+    Link(int id_);
     ~Link();
 
     //Hard variables
@@ -31,7 +32,7 @@ public:
     QString text;
 
     //Program variables
-    float x1,y1,z1,x2,y2,z2;
+    QLineF line;
     bool selected;
 };
 

@@ -14,12 +14,27 @@
     along with Misli.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-//Na note.h sym (pi6e do kyde) s prenapisvaneto
+//23.04.15 - подкарах всичко най-накрая и андроидската даже без видими бъгове
 
-//GitHub README
-//>arch package
+//opravqm search-a
+
 
 //=========Future changes=========
+//GitHub README
+//>arch package
+//MIME type and CLI open file
+//display dates in status bar/on hover
+//display search results i hidesearchstuff da sa lambdas
+//ako ima update prosto da se poqvqva menu-to update
+//FIXME -tata
+//debug option in CLI
+//loading cursor when loadin an added misli_dir
+//макс символи на записка да са поне двойно, а ограничението при ауто сайз-а да е на размер
+//git versioning
+//да dump-ва лог-а на файл
+//да деселектва при ентер ако не е в/у записка
+//Дублира линковете (повече от 1 на записка)
+//Да премества мишката в центъра на resize circle-a, а не него да го мести директно
 //селектирането с клавиатура не бачка
 //ctrl-R за rename file
 //ctrl-Del за delete file
@@ -66,12 +81,6 @@
 int main(int argc, char *argv[])
 {
     MisliDesktopGui misli(argc, argv);
-    //In the constructor:
-    //1.Load the language and fail-safe settings and construct the windows
-    //2.present splash screen
-    //3.Start loading notes asynchronosly
-    //4.Present GUI
-
     return misli.exec();
 }
 

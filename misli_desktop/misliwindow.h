@@ -23,16 +23,13 @@
 #include <QGesture>
 #include <QClipboard>
 
-#include "../emitmynameaction.h"
+#include "editnotedialogue.h"
 #include "../misliinstance.h"
 #include "../notefile.h"
+#include "../notessearch.h"
 
-class NewNFDialogue;
-class EditNoteDialogue;
-class GetDirDialogue;
 class Canvas;
 class MisliDesktopGui;
-//class MisliInstance;
 class MisliDir;
 
 namespace Ui {
@@ -42,6 +39,8 @@ class MisliWindow;
 class MisliWindow : public QMainWindow
 {
     Q_OBJECT
+
+    Q_PROPERTY(MisliDir* currentDir READ currentDir WRITE setCurrentDir NOTIFY currentDirChanged)
     
 public:
     //Functions
@@ -49,98 +48,77 @@ public:
     ~MisliWindow();
 
     void export_settings();
-    int copy_selected_notes(NoteFile *source_nf,NoteFile *target_nf);
-    QAction *get_action_for_name(QString name);
-    MisliInstance *misli_i();
+    MisliInstance *misliInstance();
+
+    //Properties
+    MisliDir* currentDir();
 
     //Windows
+    Ui::MisliWindow *ui;
     Canvas *canvas;
+    EditNoteDialogue *edit_w;
+    NotesSearch *notes_search;
 
     //Variables
-    //---Child objects(to delete later)---
-    //QSettings *settings;
-    MisliDir * clipboard_dir;
-    NoteFile * clipboard_nf;
+    QSettings settings;
+    NoteFile *clipboardNoteFile,*helpNoteFile;
+    QMetaObject::Connection nfChangedConnecton;
 
     MisliDesktopGui * misli_dg;
 
     QString language;
-    QString nf_before_help;
-
-
-    bool past_initial_load;
-    bool doing_cut_paste; //suspends undo image collection , because a cut/paste is one action
-    bool display_search_results;
+    NoteFile *nfBeforeHelp;
     
+signals:
+    void currentDirChanged(MisliDir*);
+
 public slots:
+    //Properties
+    void setCurrentDir(MisliDir*newDir);
 
-    void undo();
-    int copy();
-    void paste();
-    int cut();
+    //Other
+    void newNoteFromClipboard();
+    void newNoteFile();
+    void renameNoteFile();
+    void deleteNoteFileFromFS();
 
-    void edit_note();
-    void new_note();
-    void new_note_from_clipboard();
+    void nextNoteFile();
+    void previousNoteFile();
 
-    void new_nf();
-    void rename_nf();
-    void delete_nf();
+    void toggleHelp();
+    void makeViewpointDefault();
+    void makeNoteFileDefault();
+    void addNewFolder();
+    void removeCurrentFolder();
+    void clearSettingsAndExit();
 
-    void make_link();
-    void next_nf();
-    void prev_nf();
-    void delete_selected();
+    void updateTitle();
 
-    void toggle_help();
-    void make_viewpoint_default();
-    void make_current_viewpoint_height_default();
-    void make_nf_default();
-    void add_new_folder();
-    void add_menu_entry_for_dir(QString path);
-    void remove_current_folder();
-    void set_current_misli_dir(QString name);
-    void clear_settings_and_exit();
+    void copySelectedNotesToClipboard();
+    void colorSelectedNotes(float txtR,float txtG,float txtB,float txtA,float backgroundR,float backgroundG,float backgroundB,float backgroundA);
+    void colorTransparentBackground();
 
-    void set_lang_bg();
-    void set_lang_en();
+    void zoomOut();
+    void zoomIn();
 
-    void switch_current_nf();
-    void update_current_nf();
+    void updateNoteFilesListMenu();
+    void updateDirListMenu();
 
-    void col_blue();
-    void col_green();
-    void col_red();
-    void col_black();
-    void col_transparent_background();
+    void handleNoteFilesChange();
 
-    void zoom_out();
-    void zoom_in();
-    void move_up();
-    void move_down();
-    void move_right();
-    void move_left();
+    void handleFoldersMenuClick(QAction *action);
+    void handleNoteFilesMenuClick(QAction *action);
 
-    void recheck_for_dirs();
-    void display_results(QString string);
-    void hide_search_stuff();
-    void select_all_notes();
-    void find_by_text(QString string);
-    void show_note_details_window();
-    void select_note_under_mouse();
-    void show_about_dialog();
-    void copy_BTC_address();
-
-public:
-    Ui::MisliWindow *ui;
 private:
     //Functions
-    //bool event(QEvent *event);
-    //bool gestureEvent(QGestureEvent *event);
-    //bool pinchTriggered(QPinchGesture *gesture);
-    void closeEvent(QCloseEvent *);
-    void import_settings_and_folders();
+    bool event(QEvent *event);
+    bool gestureEvent(QGestureEvent *event);
+    void pinchTriggered(QPinchGesture *gesture);
 
+    //void closeEvent(QCloseEvent *);
+
+    //Propertie variables
+    MisliDir* currentDir_m;
 };
 
 #endif // MISLIWINDOW_H

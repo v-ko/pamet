@@ -21,348 +21,231 @@
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 
-MisliDir::MisliDir(QString nts_dir, MisliInstance* misli_i_ = NULL, bool using_gui_ = true)
+MisliDir::MisliDir(QString nts_dir, bool bufferImages_, bool enableFSWatch, bool debug_)
 {
-    misli_i=misli_i_;
-    notes_dir=nts_dir;
-    using_gui = using_gui_;
+    bufferImages = bufferImages_;
+    debug = debug_;
+    fsWatchEnabled = enableFSWatch;
+    currentNoteFile = NULL;
 
-    if(misli_i==NULL){ //if there's no instance above there's no GUI for sure , but if there is there still may be no GUI
-        using_gui=false;
-    }
-
-    if(nts_dir.isEmpty()){
-        is_virtual=true;
+    //FS-watch stuff
+    if(fsWatchEnabled){
+        fs_watch = new QFileSystemWatcher(this);
+        connect(fs_watch,SIGNAL(fileChanged(QString)),this,SLOT(handleChangedFile(QString)) );
+        hangingNfCheck = new QTimer;
+        connect(hangingNfCheck,SIGNAL(timeout()),this,SLOT(checkForHangingNFs() ));
     }else{
-        is_virtual=false;
+        fs_watch = NULL;
+        hangingNfCheck = NULL;
     }
 
-    is_current=0;
+    //Connect propery changes
+    connect(this,SIGNAL(directoryPathChanged(QString)),this,SLOT(loadNotesFiles()));
+    connect(this,SIGNAL(noteFilesChanged()),this,SLOT(reinitNotesPointingToNotefiles()));
 
-    //----------FS-watch stuff----------------
-    fs_watch = new FileSystemWatcher(this);
-
-    hanging_nf_check = new QTimer;
-    if(!is_virtual) connect(hanging_nf_check,SIGNAL(timeout()),this,SLOT(check_for_hanging_nfs() ));
-
-    //------Creating the help NF---------------
-    if( (!is_virtual) && using_gui ){
-        QString qstr;
-        qstr=":/help/help_"+ misli_i->misli_dg->language;
-        qstr+=".misl";
-        note_file.push_back(new NoteFile(this));
-        note_file.back()->init("HelpNoteFile",qstr);
-    }
-
-    //-----------------
-    if(!is_virtual) load_notes_files();
+    //Setup
+    setDirectoryPath(nts_dir);
 }
 MisliDir::~MisliDir()
 {
+    softDeleteAllNoteFiles();
     delete fs_watch;
-    delete hanging_nf_check;
-    for(unsigned int i=0;i<note_file.size();i++){
-        delete note_file[i];
+    delete hangingNfCheck;
+}
+QString MisliDir::directoryPath()
+{
+    return directoryPath_m;
+}
+void MisliDir::setDirectoryPath(QString newDirPath)
+{
+    QDir newDir(newDirPath);
+    if(!newDir.exists()){
+        qDebug()<<"[MisliDir::setDirectoryPath]Directory missing, creating it.";
+        if(!newDir.mkdir(newDirPath)){
+            qDebug()<<"[MisliDir::setDirectoryPath]Failed making directory:"<<newDirPath;
+            return;
+        }
     }
+    directoryPath_m=newDirPath;
+    emit directoryPathChanged(newDirPath);
+}
+QList<NoteFile*> MisliDir::noteFiles()
+{
+    return noteFiles_m;
 }
 
-void MisliDir::check_for_hanging_nfs()
+void MisliDir::checkForHangingNFs()
 {
-    NoteFile * nf;
-    int missing_nf_count=0; //
+    int missingNfCount=0;
 
-    for(unsigned int i=0;i<note_file.size();i++){
-        nf = note_file[i];
-        if(nf->is_deleted_externally){
+    for(NoteFile * nf: noteFiles_m){
+        if(!nf->isReadable){
             //Try to init
-            if( nf->init(nf->name,nf->full_file_addr) == 0 ){
-                nf->is_deleted_externally = false;
-                qDebug()<<"Adding path to fs_watch: "<<nf->full_file_addr;
-                fs_watch->addPath(nf->full_file_addr); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
-                emit current_nf_switched();
-
+            if( nf->init() == 0 ){ //File is found and initialized properly
+                nf->isReadable = true;
+                qDebug()<<"Adding path to fs_watch: "<<nf->filePath_m;
+                fs_watch->addPath(nf->filePath_m); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
             }else{
-                missing_nf_count++;
+                missingNfCount++;
             }
         }
     }
-    if(missing_nf_count==0) hanging_nf_check->stop(); //if none are missing - stop checking
+    if(missingNfCount==0) hangingNfCheck->stop(); //if none are missing - stop checking
 }
 
-NoteFile * MisliDir::nf_by_name(QString name)
+NoteFile * MisliDir::noteFileByName(QString name)
 {
-    if(name=="ClipboardNf"){
-        return misli_i->misli_dg->misli_w->clipboard_nf;
-    }
-    for(unsigned int i=0; i<note_file.size() ; i++){
-        if(note_file[i]->name==name){
-            return note_file[i];
-        }
-    }
-    //qDebug()<<"NoteFile with name "<<name<<" was not found in dir: "<<notes_dir<<" .";
-    return NULL;
-}
-NoteFile * MisliDir::curr_nf()
-{
-    for(unsigned int n=0;n<note_file.size();n++){
-        if(note_file[n]->is_current){
-            return note_file[n];
+    for(NoteFile *nf: noteFiles_m){
+        if(nf->name()==name){
+            return nf;
         }
     }
     return NULL;
 }
 
-NoteFile * MisliDir::default_nf_on_startup()
+NoteFile * MisliDir::defaultNfOnStartup()
 {
-    for(unsigned int i=0;i<note_file.size();i++){
-        if(note_file[i]->is_displayed_first_on_startup){return note_file[i];}
+    for(NoteFile *nf: noteFiles_m){
+        if(nf->isDisplayedFirstOnStartup) return nf;
     }
     return NULL;
 }
 
-int MisliDir::make_notes_file(QString name)
+int MisliDir::makeNotesFile(QString name)
 {
     QFile ntFile;
-    QString file_name_sstr;
+    QString filePath;
 
-    if(nf_by_name(name)!=NULL){
+    if(noteFileByName(name)!=NULL){ //Check if such a NF doesn't exist already
         return -1;
     }
 
-    file_name_sstr+=name+".misl";
-    file_name_sstr=QDir(notes_dir).filePath(file_name_sstr);
+    filePath=QDir(directoryPath_m).filePath(name+".misl");
 
-    ntFile.setFileName(file_name_sstr);
+    ntFile.setFileName(filePath);
 
-    if(misli_i->misli_dg->first_program_start){
-        QFile::copy(":/other/initial_start_nf_"+misli_i->misli_dg->language+".misl",file_name_sstr);
-        ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
-    }else{
-        if(!ntFile.open(QIODevice::WriteOnly)){
-            qDebug()<<"Error making new notes file";
-            return -1;
-        }
-        ntFile.write(QByteArray( QString("#Notes database for Misli\n[1]\ntxt="+tr("Double-click to edit or make a new note.F1 for help.")+"\nx=-5\ny=-2\nz=0\na=12\nb=6\nfont_size=1\nt_made=2.10.2013 19:10:16\nt_mod=2.10.2013 19:10:16\ntxt_col=0;0;1;1\nbg_col=0;0;1;0.1\nl_id=\nl_txt=").toUtf8()));
+    if(!ntFile.open(QIODevice::WriteOnly)){ //Creates the NF
+        qDebug()<<"Error making new notes file";
+        return -1;
     }
 
     ntFile.close();
 
-    note_file.push_back(new NoteFile(this)); //nov obekt (vajno e pyrvo da go napravim ,za6toto pri dobavqneto na notes se zadava pointer kym note-file-a i toi trqbva da e kym realniq nf vyv vectora
-    note_file.back()->init(file_name_sstr);
+    addNoteFile(filePath);
 
     return 0;
 }
 
-void MisliDir::set_current_note_file(QString name)
+void MisliDir::softDeleteNF(NoteFile* nf)
 {
+    if(nf==currentNoteFile) currentNoteFile=NULL;
 
-    if(nf_by_name(name)==NULL){ //check if the note file with that name is present
+    fs_watch->removePath(nf->filePath_m);
+    noteFiles_m.removeOne(nf);
+    delete nf;
+    emit noteFilesChanged();
+}
+
+void MisliDir::loadNotesFiles()
+{
+    softDeleteAllNoteFiles();
+
+    QDir dir(directoryPath_m);
+    QStringList files = dir.entryList(QStringList()<<"*.misl",QDir::Files);
+
+    for(QString fileName: files){
+        addNoteFile(dir.absoluteFilePath(fileName));
+    }
+}
+void MisliDir::reinitNotesPointingToNotefiles()
+{
+    for(NoteFile *nf: noteFiles_m){
+        for(Note *nt: nf->notes){
+            if(nt->type==NoteType::redirecting) nt->checkTextForNoteFileLink();
+        }
+    }
+}
+
+void MisliDir::handleChangedFile(QString filePath)
+{
+    int err=0;
+
+    NoteFile *nf,dummyNF;
+
+    dummyNF.filePath_m = filePath; //A bit of a hack to get the name
+    nf = noteFileByName(dummyNF.name());
+
+    if(nf==NULL) return;//avoid segfaults on wrong name
+
+    if( nf->init()==0 ){
+        nf->isReadable = true;
+    }else if(err ==-2){ //most times the file is deleted and then replaced on sync , so we need to check back for it later
+        nf->isReadable=false;
+        hangingNfCheck->start(700);
+    }
+    emit noteFilesChanged();
+}
+
+void MisliDir::softDeleteAllNoteFiles()
+{
+    for(NoteFile *nf: noteFiles_m){
+        softDeleteNF(nf);
+    }
+}
+
+void MisliDir::deleteAllNoteFiles()
+{
+    QDir dir(directoryPath_m);
+
+    for(NoteFile *nf: noteFiles_m){
+        if(!dir.remove(nf->filePath())){
+            qDebug()<<"[MisliDir::deleteAllNoteFiles]Could not remove notefile"<<nf->name();
+            return;
+        }
+    }
+    softDeleteAllNoteFiles();
+}
+
+float MisliDir::defaultEyeZ()
+{
+    return settings.value("eye_z",QVariant(90)).toFloat();
+}
+void MisliDir::setDefaultEyeZ(float value)
+{
+    settings.setValue("eye_z",QVariant(value));
+    settings.sync();
+}
+
+void MisliDir::addNoteFile(QString pathToNoteFile)
+{
+    NoteFile *nf = new NoteFile;
+
+    nf->saveWithRequest = true;
+    nf->bufferImages = bufferImages;
+    nf->eyeZ = defaultEyeZ();
+    nf->setFilePath(pathToNoteFile);
+
+    //If the file didn't init correctly - don't add it
+    if(!nf->isReadable | nf->name().isEmpty() ){
+        qDebug()<<"[MisliDir::addNoteFile]Not adding NF:"<<pathToNoteFile;
+        delete nf;
         return;
     }
 
-    for(unsigned int n=0;n<note_file.size();n++){
-        if(note_file[n]->name==name){
-            note_file[n]->is_current=true;
-        }else{
-            note_file[n]->is_current=false;
-        }
-    }
+    noteFiles_m.push_back(nf);
+    nf->virtualSave(); //should be only a virtual save for ctrl-z
 
-    emit current_nf_switched();
+    if(fsWatchEnabled) fs_watch->addPath(nf->filePath());
+    connect(nf,SIGNAL(requestingSave(NoteFile*)),this,SLOT(handleSaveRequest(NoteFile*)));
+
+    emit noteFilesChanged();
 }
 
-int MisliDir::next_nf() //changes the current note file only to a non-system nf
+void MisliDir::handleSaveRequest(NoteFile *nf)
 {
-    for(unsigned int i=0;i<(note_file.size()-1);i++){ //for every notefile without the last one
-        if( curr_nf()->is_not_system() ){//if we're not on a system nf
-            if( (curr_nf()->name==note_file[i]->name) && note_file[i+1]->is_not_system() ){//if it's the current one and the next is not a system one
-                set_current_note_file(note_file[i+1]->name);
-                return 0;
-            }
-
-        }else{//if we're on a system nf
-            if( note_file[i+1]->is_not_system() ){ //we switch to a random normal nf
-                set_current_note_file(note_file[i+1]->name);
-            }
-        }
-    }
-
-    return 1;
+    nf->saveWithRequest = false;
+    if(fsWatchEnabled) fs_watch->removePath(nf->filePath_m);
+    nf->hardSave();
+    if(fsWatchEnabled) fs_watch->addPath(nf->filePath_m);
+    nf->saveWithRequest = true;
 }
-int MisliDir::previous_nf()
-{
-    for(unsigned int i=1;i<note_file.size();i++){ //for every notefile without the last one
-        if( curr_nf()->is_not_system() ){//if we're not on a system nf
-            if( (curr_nf()->name==note_file[i]->name) && note_file[i-1]->is_not_system() ){//if it's the current one and the next is not a system one
-                set_current_note_file(note_file[i-1]->name);
-                return 0;
-            }
-        }else{//if we're on a system nf
-            if( note_file[i-1]->is_not_system() ){ //we switch to a random normal nf
-                set_current_note_file(note_file[i-1]->name);
-            }
-        }
-    }
-
-    return 1;
-}
-int MisliDir::delete_nf(QString nfname) //soft delete
-{
-    NoteFile * nf;
-
-    //Find and delete the notefile
-    for(unsigned int i=0;i<note_file.size();i++){
-        nf = note_file[i];
-        if(nf->name==nfname){
-            note_file.erase(note_file.begin()+i);
-            break;
-        }
-    }
-
-    //Switch the current notefile to something valid
-    if(find_first_normal_nf()==NULL){
-        load_notes_files();
-    }else{
-        set_current_note_file(find_first_normal_nf()->name);
-    }
-
-    reinit_notes_pointing_to_notefiles(); //update a probable link to the deleted nf
-
-    return 0;
-}
-
-int MisliDir::load_notes_files()
-{
-    if(is_virtual) return 0;
-
-    QDir dir(notes_dir);
-
-    if(!dir.exists()){
-        qDebug()<<"The notes directory "<<notes_dir<<" given to MisliDir does not exist. Exiting!";
-        exit(-2);
-    }
-
-    NoteFile *nf;
-
-    QStringList entry_list = dir.entryList();
-    QString entry,file_addr;
-
-    int file_found=false;
-
-    for(int i=0;i<entry_list.size();i++){
-
-        entry=entry_list[i]; //get the file list
-
-        if(entry.isEmpty()) break;
-
-        if( entry.endsWith(QString(".misl")) ){ //only for .misl files
-
-            file_addr = dir.absoluteFilePath(entry);
-
-            note_file.push_back(new NoteFile(this));
-            nf=note_file.back();
-
-            nf->init(file_addr);
-            nf->virtual_save(); //should be only a virtual save for ctrl-z
-
-            file_found=true; //mark that the dir is not empty (of .misl files)
-        }
-
-    }
-
-    if(!file_found){ //if n=-1 directory empty , make default notes file
-
-        make_notes_file("notes");
-
-    }
-
-    if(default_nf_on_startup()!=NULL) set_current_note_file(default_nf_on_startup()->name);
-    else set_current_note_file(find_first_normal_nf()->name);
-
-    if(using_gui){//else segment
-        misli_i->misli_dg->misli_w->nf_before_help=curr_nf()->name;
-    }
-
-    reinit_notes_pointing_to_notefiles();
-
-    return 0;
-}
-int MisliDir::reinit_notes_pointing_to_notefiles()
-{
-    NoteFile * nf;
-    Note *nt;
-
-    for(unsigned int i=0;i<note_file.size();i++){ //for every notefile
-        nf = note_file[i];
-        for(unsigned int n=0;n<nf->note.size();n++){
-            nt=nf->note[n];
-            if(nt->type==NOTE_TYPE_REDIRECTING_NOTE){nt->init();}
-        }
-    }
-return 0;
-}
-
-void MisliDir::set_curr_nf_as_default_on_startup()
-{
-    for(unsigned int i=0;i<note_file.size();i++){ //we make sure that there's no second nf marked as default for display
-        if (note_file[i]->name!=curr_nf()->name) {
-            if(note_file[i]->is_displayed_first_on_startup==true){
-                note_file[i]->is_displayed_first_on_startup=false;
-                note_file[i]->save();
-            }
-        }else{
-            if(note_file[i]->is_displayed_first_on_startup==false){
-                note_file[i]->is_displayed_first_on_startup=true;
-                note_file[i]->save();
-            }
-        }
-    }
-}
-
-int MisliDir::delete_selected()
-{
-    int deleted_notes=curr_nf()->delete_selected();
-    if(deleted_notes!=0){curr_nf()->save();emit current_nf_updated();}
-    return deleted_notes;
-}
-NoteFile *MisliDir::find_first_normal_nf()
-{
-    for(unsigned int i=0;i<note_file.size();i++){
-        if( note_file[i]->is_not_system() ){
-            return note_file[i];
-        }
-    }
-
-    return 0;
-}
-
-void MisliDir::handle_changed_file(QString file)
-{
-    int err=0;
-    qDebug()<<"INTO HANDLE CHANGED FILE";
-
-    NoteFile *nf;
-
-    QFileInfo f(file);
-    QString fname;
-    fname = f.fileName();
-    fname.chop(5); // ".misl".size()==5
-    fname=fname.trimmed();
-
-    nf = nf_by_name(fname);
-
-    if(nf==NULL){return;}//avoid segfaults on wrong name
-
-    err = nf->init(nf->name,nf->full_file_addr);
-
-    if( err == 0 ){
-        emit current_nf_switched();//Updates the title too (compared to .._updated)
-    }else if(err ==-2){ //most times the file is deleted and then replaced on sync , so we need to check back for it later
-        nf->is_deleted_externally=true;
-        if(curr_nf()==nf){
-            emit current_nf_switched(); //to change the title if we're looking at the changed nf
-        }
-        hanging_nf_check->start(700);
-    }
-}
-

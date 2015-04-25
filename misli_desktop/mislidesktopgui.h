@@ -24,44 +24,48 @@
 #include <QFutureWatcher>
 #include <QThread>
 
-#include "../notefile.h"
 #include "misliwindow.h"
-#include "getdirdialogue.h"
-#include "newnfdialogue.h"
-#include "editnotedialogue.h"
-#include "notedetailswindow.h"
-#include "../notessearch.h"
 
 class MisliDesktopGui : public QApplication
 {
     Q_OBJECT
+
+    Q_PROPERTY(bool firstProgramStart READ firstProgramStart WRITE setFirstProgramStart)
+    Q_PROPERTY(int failedStarts READ failedStarts WRITE setFailedStarts)
+    Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
 
 public:
     //Functions
     MisliDesktopGui(int argc, char *argv[]);
     ~MisliDesktopGui();
 
+    //Properties
+    bool firstProgramStart();
+    int failedStarts();
+    QString language();
+
     //Variables
-    //---Children(for destruct)
-    MisliInstance *misli_i;
-    MisliWindow *misli_w;
-    GetDirDialogue *dir_w;
-    NewNFDialogue *newnf_w;
-    EditNoteDialogue *edit_w;
-    NoteDetailsWindow *note_details_w;
-    QSplashScreen *splash;
-    NotesSearch *notes_search;
-
+    MisliWindow *misliWindow;
+    MisliInstance *misliInstance;
     QSettings *settings;
-    QTranslator translator;
-    QMessageBox msg; //general purpose
-
+    QSplashScreen *splash;
     QThread workerThread;
-    QString language;
-    bool first_program_start;
+
+signals:
+    void languageChanged(QString newLanguage);
+
+private:
+    QTranslator translator;
 
 public slots:
-    void show_warning_message(QString message);
+    //Properties
+    void setFirstProgramStart(bool);
+    void setFailedStarts(int);
+    void setLanguage(QString);
+
+    //Other
+    void showWarningMessage(QString message);
+    void stuffToDoBeforeQuitting();
 };
 
 #endif // MISLIDESKTOPGUI_H

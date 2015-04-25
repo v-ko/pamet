@@ -87,22 +87,6 @@ p, li { white-space: pre-wrap; }
     </hint>
    </hints>
   </connection>
-  <connection>
-   <sender>okButton</sender>
-   <signal>clicked()</signal>
-   <receiver>EditNoteDialogue</receiver>
-   <slot>input_done()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>203</x>
-     <y>199</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>226</x>
-     <y>213</y>
-    </hint>
-   </hints>
-  </connection>
  </connections>
  <slots>
   <slot>input_done()</slot>

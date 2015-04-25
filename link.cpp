@@ -16,15 +16,10 @@
 
 #include "link.h"
 
-Link::Link()
+Link::Link(int id_)
 {
-    x1=0;
-    y1=0;
-    z1=0;
-    x2=0;
-    y2=0;
-    z2=0;
-    selected=0;
+    id=id_;
+    selected=false;
 }
 Link::~Link()
 {

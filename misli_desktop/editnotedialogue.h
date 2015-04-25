@@ -24,7 +24,7 @@
 class Note;
 class MisliInstance;
 
-class MisliDesktopGui;
+class MisliWindow;
 namespace Ui {
 class EditNoteDialogue;
 }
@@ -35,7 +35,7 @@ class EditNoteDialogue : public QWidget
     
 public:
     //Functions
-    EditNoteDialogue(MisliDesktopGui * misli_dg_);
+    EditNoteDialogue(MisliWindow * misliWindow_);
     ~EditNoteDialogue();
 
     MisliInstance * misli_i();
@@ -43,23 +43,22 @@ public:
     //Variables
     QMenu linkMenu,chooseNFMenu;
     QAction actionChooseTextFile,actionChoosePicture,actionSystemCallNote;
-    MisliDesktopGui *misli_dg;
+    MisliWindow *misliWindow;
     Note * edited_note;
     double x_on_new_note,y_on_new_note;
-    bool chooseNFMenuIsOpenedFromEditNoteDialogue;
 
 public slots:
-    void new_note();
-    int edit_note();
-    void input_done();
-    void set_textEdit_text(QString text); //expose that publically
+    void newNote();
+    int editNote();
+    void inputDone();
+    void setTextEditText(QString text); //expose that publically
 
     void updateChooseNFMenu();
-    void show_link_menu();
-    void make_link_note(QAction *act);
-    void choose_picture();
-    void choose_text_file();
-    void set_system_call_prefix();
+    void showLinkMenu();
+    void makeLinkNote(QAction *act);
+    void choosePicture();
+    void chooseTextFile();
+    void setSystemCallPrefix();
 private:
     Ui::EditNoteDialogue *ui;
 };

@@ -4,9 +4,11 @@
 #
 #-------------------------------------------------
 
-QT += core gui
+QT += core gui widgets
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
+CONFIG += C++11
+
+INCLUDEPATH += /home/p10/Dropbox/Pepi/C++
 
 TARGET = misli
 TEMPLATE = app
@@ -24,9 +26,9 @@ OTHER_FILES += \
     ../other/initial_start_nf_bg.misl \
     ../other/initial_start_nf_en.misl
 
-#win32{
-#    QMAKE_LFLAGS += -static-libgcc
-#}
+win32{
+    QMAKE_LFLAGS += -static-libgcc
+}
 
 RESOURCES +=   ../misli.qrc
 
@@ -36,47 +38,33 @@ TRANSLATIONS += ../translations/misli_bg.ts
 HEADERS += \
     ../canvas.h \
     ../common.h \
-    ../emitmynameaction.h \
-    ../filesystemwatcher.h \
     ../link.h \
     ../mislidir.h \
     ../misliinstance.h \
     ../note.h \
     ../notefile.h \
     ../notessearch.h \
-    ../petko10.h \
-    ../petko10q.h \
     editnotedialogue.h \
-    getdirdialogue.h \
-    main.h \
     mislidesktopgui.h \
     misliwindow.h \
-    newnfdialogue.h \
-    notedetailswindow.h
+    ../../../petko10.h \
+    ../../../petko10q.h
 
 SOURCES += \
     ../canvas.cpp \
-    ../emitmynameaction.cpp \
-    ../filesystemwatcher.cpp \
     ../link.cpp \
     ../mislidir.cpp \
     ../misliinstance.cpp \
     ../note.cpp \
     ../notefile.cpp \
     ../notessearch.cpp \
-    ../petko10.cpp \
-    ../petko10q.cpp \
     editnotedialogue.cpp \
-    getdirdialogue.cpp \
     main.cpp \
     mislidesktopgui.cpp \
     misliwindow.cpp \
-    newnfdialogue.cpp \
-    notedetailswindow.cpp
+    ../../../petko10.cpp \
+    ../../../petko10q.cpp
 
 FORMS += \
     editnotedialogue.ui \
-    getdirdialogue.ui \
-    misliwindow.ui \
-    newnfdialogue.ui \
-    notedetailswindow.ui
+    misliwindow.ui
