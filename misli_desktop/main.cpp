@@ -15,58 +15,64 @@
 */
 
 //23.04.15 - подкарах всичко най-накрая и андроидската даже без видими бъгове
+//the search is fixed ! --done
+//display dates in the context menu --done
+//FIXME -tata --done
+//ctrl-R за rename file --done
+//ctrl-Del за delete file --done
+//Дублира линковете (повече от 1 на записка) --done
+//GitHub README --done
+//в misliwindow: select the note... : pravq go da imitira click za da ne prenapisvam ne6ta --done
+//Да премества мишката в центъра на resize circle-a, а не него да го мести директно --done
+//Redo --done
+//100x undo/redo --done
+//loading cursor when loadin an added misli_dir --done
+//picture compatability (nqkoi kartinki ne se zarejdat) --done
+//da priema samo po edno URI ! canvas::pasteMimeData --done
+//accept drag/drop - v canvas da dovyr6a dropevent-a , posle v paintevent --done
+//in edit note dialog: when making syscall : don't delete existing text --done
+//web page name/display/open --done
+//архиви - не , тая програма е за активни проекти, а не за архивиране --done
+//Curved lines --done
 
-//opravqm search-a
+//check for misliVersion.xml na misli.appspot.com (za desktop only) --done
+//current_desktop_version.xml (4e da moje da se nadgrajda s dr elementi) --done
+//селектирането докато се променя контрол пойнта е прецакано --done
+//linkovete da se init-vat sprqmo kontrol pointa a ne p1 --done
 
+//BUG: autoSize pravi nqkakva gre6ka pri malki textove --done
+//BUG: lo6 import na text file/picture --done
+//Няма да е различен дабъл клика на андроид за сега --done
+//Obnovqvane na tekstovite файлове - on select --done
+//granica i nadpis sys imeto na text file --done
+//loading mouse при общите сценарии --done
 
-//=========Future changes=========
-//GitHub README
-//>arch package
-//MIME type and CLI open file
-//display dates in status bar/on hover
-//display search results i hidesearchstuff da sa lambdas
-//ako ima update prosto da se poqvqva menu-to update
-//FIXME -tata
-//debug option in CLI
-//loading cursor when loadin an added misli_dir
-//макс символи на записка да са поне двойно, а ограничението при ауто сайз-а да е на размер
-//git versioning
-//да dump-ва лог-а на файл
-//да деселектва при ентер ако не е в/у записка
-//Дублира линковете (повече от 1 на записка)
-//Да премества мишката в центъра на resize circle-a, а не него да го мести директно
-//селектирането с клавиатура не бачка
-//ctrl-R за rename file
-//ctrl-Del за delete file
-//Frame-oве в които да се дропват записки (и да си имат идентификатори, които после да могат да се ползват за widget-и)
-//BUG: text poleto (pri pravene na zapiska) nqama copy/paste - za6toto nqma fokus za shorcutite?
-//BUG:При добавяне на текст не auto-size-ва текста
-//Feature:backspace - за връщане на предната записка
-//Tagove
-//Common .user file settings Qt
-//Ima nqkyde integer smqtane pri koordinatite na strelkite (eventualno i zapiskite)
-//picture compatability (nqkoi kartinki ne se zarejdat)
-//install target through the .pro file (and INSTALLS clouses)
-//Pri enter da selectva i linkove ako ima
-//dva pyti cykvane na desen buton da e link
-//izvitite linii da sa vektorno obusloveni (az da si gi 4ertaq)
-//imenata na elementite da sa na obratno buttonEdikakvo si i menuEdiKakvoSI , za da gi namiram lesno
-//BUG: da ne trie klipborda ako ne e successful copy
-//QStandardPaths::DataLocation default
-//ogledai mural.ly za idei
-//polzvai enum za note type
-//opravi for loop-ovete na c++11
-//Automated test with some tool for automation (make note , choose dir , make link , etc.)
-//Progress bars
-//Proper logging
-//Redo
-//Memory based undo/redo limitation
-//CLI
-//Do 15 septemvri 2015 da sym izkaral autoupdate-va6ta versiq
-//Video za predstavqne na angl i bg
+//тест до лятото--done
+//ctrl+R ne ba4ka --done
+//При редакция на записка не скъсява текста като сейвна --done
+//при копи пейст на само една записка все пак да я лепва за мишката --done
+//при копи/пейст/местене не транслира контролните точки на линковете --done
+//от менюто на десния бутон за сменяне на текущия файл със записки не сменя като се цъкне --done
+//не лоадва променените на диска файлове със записки правилно (изкарва ги празни) --в момента няма проб
+//фокус on the search field --done
+//Макс сърч резултати --done
 
-//====Android port=========
-//Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
+//Крашва при смяна на езика: delete later!! --done
+//Шорткътите на кирилица не бачкат
+
+//ima nqkakyv tegav problem s id-tata pri kopirane i/ili pri polu4avane na filechange koito zatriva ili golqma 4ast ot
+//zapiskite ili vsi4ki
+//windows installer (offline) https://doc.qt.io/qtinstallerframework/ifw-tutorial.html
+//test upgrade
+//merge to master
+//upload all
+//arch package
+
+//====Future stuff====
+//Трололо мод при който записките бягат от мишката , който се активира автоматично на 1 април
+//MIME type/file association
+//http://doc.qt.io/qt-5/qmimedatabase.html = Get file type Qt
+//when Chrome->Qt text/uri-list is fixed - accept multiple URIs
 
 //====Release routine====
 //update translations

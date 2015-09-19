@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT += core gui widgets
+QT += core gui widgets network xml
 
 CONFIG += C++11
 
@@ -68,3 +68,8 @@ SOURCES += \
 FORMS += \
     editnotedialogue.ui \
     misliwindow.ui
+
+DISTFILES += \
+    ../installer/config/config.xml \
+    ../installer/packages/com.p10.misli/meta/installscript.qs \
+    ../installer/packages/com.p10.misli/meta/package.xml

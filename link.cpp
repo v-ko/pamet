@@ -15,12 +15,33 @@
 */
 
 #include "link.h"
+#include "common.h"
+#include "note.h"
 
+Link::Link(int id_,QPointF controlPoint_)
+{
+    id=id_;
+    controlPoint = controlPoint_;
+    usesControlPoint = true;
+    isSelected=false;
+    controlPointIsSet = true;
+    controlPointIsChanged = true;
+}
 Link::Link(int id_)
 {
     id=id_;
-    selected=false;
+    usesControlPoint = false;
+    isSelected=false;
+    controlPointIsSet = false;
+    controlPointIsChanged = true;
 }
-Link::~Link()
+
+QPointF Link::middleOfTheLine()
 {
+    return QPointF( line.p1()+(line.p2()-line.p1())/2 );
+}
+
+QPointF Link::realControlPoint()
+{
+    return 2*controlPoint - line.p1()/2 - line.p2()/2;
 }

@@ -21,15 +21,14 @@
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 
-MisliDir::MisliDir(QString nts_dir, bool bufferImages_, bool enableFSWatch, bool debug_)
+MisliDir::MisliDir(QString nts_dir, bool bufferImages_, bool enableFSWatch)
 {
     bufferImages = bufferImages_;
-    debug = debug_;
-    fsWatchEnabled = enableFSWatch;
+    fsWatchIsEnabled = enableFSWatch;
     currentNoteFile = NULL;
 
     //FS-watch stuff
-    if(fsWatchEnabled){
+    if(fsWatchIsEnabled){
         fs_watch = new QFileSystemWatcher(this);
         connect(fs_watch,SIGNAL(fileChanged(QString)),this,SLOT(handleChangedFile(QString)) );
         hangingNfCheck = new QTimer;
@@ -40,7 +39,6 @@ MisliDir::MisliDir(QString nts_dir, bool bufferImages_, bool enableFSWatch, bool
     }
 
     //Connect propery changes
-    connect(this,SIGNAL(directoryPathChanged(QString)),this,SLOT(loadNotesFiles()));
     connect(this,SIGNAL(noteFilesChanged()),this,SLOT(reinitNotesPointingToNotefiles()));
 
     //Setup
@@ -67,6 +65,7 @@ void MisliDir::setDirectoryPath(QString newDirPath)
         }
     }
     directoryPath_m=newDirPath;
+    loadNotesFiles();
     emit directoryPathChanged(newDirPath);
 }
 QList<NoteFile*> MisliDir::noteFiles()
@@ -83,7 +82,7 @@ void MisliDir::checkForHangingNFs()
             //Try to init
             if( nf->init() == 0 ){ //File is found and initialized properly
                 nf->isReadable = true;
-                qDebug()<<"Adding path to fs_watch: "<<nf->filePath_m;
+                //qDebug()<<"Adding path to fs_watch: "<<nf->filePath_m;
                 fs_watch->addPath(nf->filePath_m); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
             }else{
                 missingNfCount++;
@@ -140,7 +139,7 @@ void MisliDir::softDeleteNF(NoteFile* nf)
 {
     if(nf==currentNoteFile) currentNoteFile=NULL;
 
-    fs_watch->removePath(nf->filePath_m);
+    if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath_m);
     noteFiles_m.removeOne(nf);
     delete nf;
     emit noteFilesChanged();
@@ -188,8 +187,8 @@ void MisliDir::handleChangedFile(QString filePath)
 
 void MisliDir::softDeleteAllNoteFiles()
 {
-    for(NoteFile *nf: noteFiles_m){
-        softDeleteNF(nf);
+    while(!noteFiles_m.isEmpty()){
+        softDeleteNF(noteFiles_m.first());
     }
 }
 
@@ -227,7 +226,7 @@ void MisliDir::addNoteFile(QString pathToNoteFile)
 
     //If the file didn't init correctly - don't add it
     if(!nf->isReadable | nf->name().isEmpty() ){
-        qDebug()<<"[MisliDir::addNoteFile]Not adding NF:"<<pathToNoteFile;
+        qDebug()<<"[MisliDir::addNoteFile]Note file is not readable, skipping:"<<pathToNoteFile;
         delete nf;
         return;
     }
@@ -235,7 +234,7 @@ void MisliDir::addNoteFile(QString pathToNoteFile)
     noteFiles_m.push_back(nf);
     nf->virtualSave(); //should be only a virtual save for ctrl-z
 
-    if(fsWatchEnabled) fs_watch->addPath(nf->filePath());
+    if(fsWatchIsEnabled) fs_watch->addPath(nf->filePath());
     connect(nf,SIGNAL(requestingSave(NoteFile*)),this,SLOT(handleSaveRequest(NoteFile*)));
 
     emit noteFilesChanged();
@@ -244,8 +243,8 @@ void MisliDir::addNoteFile(QString pathToNoteFile)
 void MisliDir::handleSaveRequest(NoteFile *nf)
 {
     nf->saveWithRequest = false;
-    if(fsWatchEnabled) fs_watch->removePath(nf->filePath_m);
+    if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath_m);
     nf->hardSave();
-    if(fsWatchEnabled) fs_watch->addPath(nf->filePath_m);
+    if(fsWatchIsEnabled) fs_watch->addPath(nf->filePath_m);
     nf->saveWithRequest = true;
 }

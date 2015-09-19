@@ -39,7 +39,7 @@ MisliDir *MisliInstance::addDir(QString path)
 }
 MisliDir *MisliInstance::loadDir(QString path)
 {
-    MisliDir * md= new MisliDir(path,bufferImages);
+    MisliDir * md = new MisliDir(path,bufferImages);
     misliDirs_m.push_back(md);
     return md;
 }
@@ -55,6 +55,18 @@ void MisliInstance::unloadDir(MisliDir *dir)
     misliDirs_m.removeOne(dir);
 }
 
+void MisliInstance::clearBuffers()
+{
+    for(MisliDir *md: misliDirs_m){
+        for(NoteFile *nf: md->noteFiles()){
+            if(nf->bufferImages==true){
+                nf->bufferImages = false;
+                nf->clearBuffers();
+            }
+        }
+    }
+}
+
 void MisliInstance::loadStoredDirs()
 {
     //Clear first
@@ -66,7 +78,7 @@ void MisliInstance::loadStoredDirs()
     //------Extract the directory paths from the settings----------
     if(settings.contains("notes_dir")){
         notesDirs = settings.value("notes_dir").toStringList();
-        qDebug()<<"Extracted notes dirs from settings:"<<notesDirs;
+        qDebug()<<"Loading notes dirs:"<<notesDirs;
     }
 
     //-------Load the directories------------------------

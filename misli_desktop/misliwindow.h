@@ -22,6 +22,7 @@
 #include <QAction>
 #include <QGesture>
 #include <QClipboard>
+#include <QNetworkAccessManager>
 
 #include "editnotedialogue.h"
 #include "../misliinstance.h"
@@ -47,24 +48,26 @@ public:
     MisliWindow(MisliDesktopGui * misli_dg_);
     ~MisliWindow();
 
-    void export_settings();
     MisliInstance *misliInstance();
 
     //Properties
     MisliDir* currentDir();
 
-    //Windows
+    //GUI
     Ui::MisliWindow *ui;
     Canvas *canvas;
     EditNoteDialogue *edit_w;
     NotesSearch *notes_search;
+    QMenu updateMenu;
 
     //Variables
     QSettings settings;
     NoteFile *clipboardNoteFile,*helpNoteFile;
     QMetaObject::Connection nfChangedConnecton;
+    QNetworkAccessManager network;
+    bool updateCheckDone;
 
-    MisliDesktopGui * misli_dg;
+    MisliDesktopGui * misliDesktopGUI;
 
     QString language;
     NoteFile *nfBeforeHelp;
@@ -90,7 +93,6 @@ public slots:
     void makeNoteFileDefault();
     void addNewFolder();
     void removeCurrentFolder();
-    void clearSettingsAndExit();
 
     void updateTitle();
 
@@ -109,14 +111,16 @@ public slots:
     void handleFoldersMenuClick(QAction *action);
     void handleNoteFilesMenuClick(QAction *action);
 
-private:
     //Functions
+    void closeEvent(QCloseEvent*);
     bool event(QEvent *event);
     bool gestureEvent(QGestureEvent *event);
     void pinchTriggered(QPinchGesture *gesture);
 
-    //void closeEvent(QCloseEvent *);
+    void startUpdateCheck();
+    void handleVersionInfoReply(QNetworkReply *reply);
 
+private:
     //Propertie variables
     MisliDir* currentDir_m;
 };

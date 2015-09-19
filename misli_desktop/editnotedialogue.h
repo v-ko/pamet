@@ -42,7 +42,7 @@ public:
     
     //Variables
     QMenu linkMenu,chooseNFMenu;
-    QAction actionChooseTextFile,actionChoosePicture,actionSystemCallNote;
+    QAction actionChooseTextFile,actionChoosePicture,actionSystemCallNote,actionWebPageNote;
     MisliWindow *misliWindow;
     Note * edited_note;
     double x_on_new_note,y_on_new_note;

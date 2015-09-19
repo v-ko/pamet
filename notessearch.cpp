@@ -76,47 +76,83 @@ int NotesSearch::loadNotes(NoteFile *noteFile, MisliDir* misliDir, float initial
 
 int NotesSearch::rowCount(const QModelIndex &) const
 {
-    return searchResults.size();
+    if(searchResults.size()<200){
+        return searchResults.size();
+    }else return 200;
+
 }
 QVariant NotesSearch::data(const QModelIndex & index, int role) const
 {
-    if(role==Qt::DisplayRole) return searchResults.at(index.row()).nt->text();
+    if(role==Qt::DisplayRole) return searchResults.at(index.row()).text;
     return QVariant();
 }
 void NotesSearch::findByText(QString searchString)
 {
+    int oldSearchResultsSize = searchResults.size();
     searchResults.clear();
-    if(searchString.isEmpty()){
-        emit searchComplete("");
-        return;
+
+    //Skip everything if there's no search string
+    if(!searchString.isEmpty()){
+        searchResults = searchItems;
     }
 
-    QString tmp_search_string,tmp_note_string;
-    
-    searchResults = searchItems;
+    bool addPrecedingDots, addTrailingDots; //when shortening the text - where shortened add dots
+
     QMutableListIterator<SearchItem> searchResultsIterator(searchResults);
     while(searchResultsIterator.hasNext()){
-        SearchItem currentItem = searchResultsIterator.next();
+        SearchItem &currentItem = searchResultsIterator.next();
 
         //Full match in the beginning (no capitals)
-        tmp_search_string = searchString.toLower();
-        tmp_note_string = currentItem.nt->text().toLower();
-
-        //Full match somewhere else (no capitals)
-        if(tmp_note_string.startsWith(tmp_search_string)){
+        if(currentItem.nt->text().startsWith(searchString, Qt::CaseInsensitive)){
             currentItem.probability = currentItem.probability*1; //100% (just for readability)
-        }else if(tmp_note_string.contains(tmp_search_string)){
+            //Get only the first 100 characters
+            currentItem.text = currentItem.nt->text_m.left(100);
+            if(currentItem.text.size()==100){
+                addTrailingDots = true;
+            }else{
+                addTrailingDots = false;
+            }
+            addPrecedingDots = false;
+
+        }else if(currentItem.nt->text().contains(searchString, Qt::CaseInsensitive)){
+            //Full match somewhere else (no capitals)
             currentItem.probability = currentItem.probability*0.9; //90%
-            continue;
-        }else{
-            searchResultsIterator.remove();
-            //Partial matches
+            //Get the string with 50 preceding characters and 50 after
+            int index = currentItem.nt->text().indexOf(searchString, Qt::CaseInsensitive);
+            if( index<50 ){
+                index = 0;
+                addPrecedingDots = false;
+            }else{
+                index -= 50;
+                addPrecedingDots = true;
+            }
+
+            currentItem.text = currentItem.nt->text_m.mid(index,index+searchString.size()+100);
+
+            if(currentItem.text.size()>=(index+searchString.size()+100)){
+                addTrailingDots = true;
+            }else{
+                addTrailingDots = false;
+            }
+        }else//Other types of matches
             //if(){}
+        {
+            searchResultsIterator.remove();
+            addPrecedingDots = false;
+            addTrailingDots = false;
+        }
+
+        if(addPrecedingDots){
+            currentItem.text.prepend("...");
+        }
+        if(addTrailingDots){
+            currentItem.text.append("...");
         }
     }
+
     std::sort(searchResults.begin(),searchResults.end(),compareItems); //order by probability
 
-    emit dataChanged(index(0,0),index(searchResults.size()-1,0)); //all of the data has changed
+    emit dataChanged(index(0,0),index(oldSearchResultsSize-1,0)); //all of the data has changed
 }
 
 bool NotesSearch::compareItems(SearchItem first, SearchItem second)

@@ -33,7 +33,8 @@ enum class NoteType {
     redirecting,
     textFile,
     picture,
-    systemCall
+    systemCall,
+    webPage
 };
 
 class Note : public QObject
@@ -51,16 +52,17 @@ Q_OBJECT
 
 public:
     //Functions
-    Note(int id_, QString iniString);
-    Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_);
+    Note(int id_, QString iniString, bool bufferImage_);
+    Note(int id_, QString text_, QRectF rect_, float font_size_, QDateTime t_made_, QDateTime t_mod_, QColor txt_col_, QColor bg_col_, bool bufferImage_);
     void commonInitFunction();
     ~Note();
 
     void storeCoordinatesBeforeMove();
 
     void checkTextForNoteFileLink(); //gets called from MisliDir only
-    void checkForFileDefinitions();
+    void checkTextForFileDefinition();
     void checkTextForSystemCallDefinition();
+    void checkTextForWebPageDefinition();
 
     void autoSize();
     QString propertiesInIniString();
@@ -101,8 +103,8 @@ public:
 
     bool isSelected_m;
     bool textIsShortened;
-    bool autoSizingNow;
     bool bufferImage;
+    bool autoSizing;
 
 signals:
     //Property changes
@@ -133,7 +135,7 @@ public slots:
     void adjustTextSize();
     void drawPixmap();
 
-    void addLink(int linkId);
+    bool addLink(Link newLink);
     void removeLink(int linkId);
 };
 

@@ -41,7 +41,7 @@ public:
     void selectAllNotes();
     void clearNoteSelection();
     void clearLinkSelection();
-    void linkSelectedNotesTo(Note *nt);
+    int linkSelectedNotesTo(Note *nt);
     void initNoteLinks(Note *nt);
     void checkForInvalidLinks(Note *nt);
 
@@ -57,8 +57,12 @@ public:
     int init();
     void virtualSave();
     void hardSave();
-    bool undo();
+    void undo();
+    void redo();
     void findFreeIds();
+
+    void clearBuffers();
+    void drawEverything();
 
     //Properties
     QString filePath();
@@ -70,7 +74,7 @@ public:
     std::vector<int> freeId; //free note id-s
     QString filePath_m; //note file path
     float eyeX,eyeY,eyeZ; //camera position for the GUI cases (can't be QPointF, it has z)
-    QList<QString> history; //history of the notefile (for undo)
+    QStringList undoHistory, redoHistory; //The current state is on the back of undoHistory
     bool isDisplayedFirstOnStartup;
     bool isReadable;
     bool saveWithRequest;

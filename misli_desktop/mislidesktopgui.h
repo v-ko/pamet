@@ -50,18 +50,20 @@ public:
     QSettings *settings;
     QSplashScreen *splash;
     QThread workerThread;
+    bool clearSettingsOnExit;
 
 signals:
     void languageChanged(QString newLanguage);
 
 private:
-    QTranslator translator;
+    QTranslator *translator;
 
 public slots:
     //Properties
     void setFirstProgramStart(bool);
     void setFailedStarts(int);
     void setLanguage(QString);
+    void updateTranslator();
 
     //Other
     void showWarningMessage(QString message);

@@ -19,21 +19,30 @@
 
 #include <QString>
 #include <QLineF>
+#include <QPointF>
+#include <QPainterPath>
+
+class Note;
 
 class Link
 {
 public:
     //Functions
+    Link(int id_, QPointF controlPoint_);
     Link(int id_);
-    ~Link();
+
+    QPointF middleOfTheLine();
+    QPointF realControlPoint();
 
     //Hard variables
     int id;
     QString text;
 
     //Program variables
-    QLineF line;
-    bool selected;
+    QLineF line, autoLine;
+    QPointF controlPoint;
+    QPainterPath path;
+    bool isSelected, usesControlPoint, controlPointIsSet, controlPointIsChanged;
 };
 
 #endif // LINK_H

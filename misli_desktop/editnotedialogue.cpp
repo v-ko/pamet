@@ -25,9 +25,10 @@
 EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     linkMenu(this),
     chooseNFMenu(tr("NoteFile"),&linkMenu),
-    actionChooseTextFile(tr("Text file (in beta)"),&linkMenu),
-    actionChoosePicture(tr("Picure (in beta)"),&linkMenu),
-    actionSystemCallNote(tr("System call note (very beta)"),&linkMenu),
+    actionChooseTextFile(tr("Text file"),&linkMenu),
+    actionChoosePicture(tr("Picure"),&linkMenu),
+    actionSystemCallNote(tr("System call note (beta)"),&linkMenu),
+    actionWebPageNote(tr("Web page note"),&linkMenu),
     ui(new Ui::EditNoteDialogue)
 {
     ui->setupUi(this);
@@ -38,6 +39,7 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     linkMenu.addAction(&actionChoosePicture);
     linkMenu.addAction(&actionChooseTextFile);
     linkMenu.addAction(&actionSystemCallNote);
+    linkMenu.addAction(&actionWebPageNote);
 
     connect(ui->okButton,SIGNAL(clicked()),this,SLOT(inputDone()));
     connect(&chooseNFMenu,SIGNAL(aboutToShow()),this,SLOT(updateChooseNFMenu()));
@@ -46,6 +48,12 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     connect(&actionChoosePicture,SIGNAL(triggered()),this,SLOT(choosePicture()));
     connect(&actionChooseTextFile,SIGNAL(triggered()),this,SLOT(chooseTextFile()));
     connect(&actionSystemCallNote,SIGNAL(triggered()),this,SLOT(setSystemCallPrefix()));
+    //Set the web page note template
+    connect(&actionWebPageNote,&QAction::triggered,[&](){
+        ui->textEdit->setText("define_web_page_note:\nurl=\nname="+ui->textEdit->toPlainText());
+        ui->textEdit->setFocus();
+        ui->textEdit->moveCursor (QTextCursor::End);
+    });
 }
 
 MisliInstance * EditNoteDialogue::misli_i()
@@ -100,6 +108,8 @@ int EditNoteDialogue::editNote(){ //false for new note , true for edit
 
 void EditNoteDialogue::inputDone()
 {
+    misliWindow->misliDesktopGUI->setOverrideCursor(Qt::WaitCursor);
+
     QString text = ui->textEdit->toPlainText().trimmed();
     text = text.replace("\r\n","\n"); //for the f-in windows standart
 
@@ -118,7 +128,8 @@ void EditNoteDialogue::inputDone()
                     QDateTime::currentDateTime(),
                     QDateTime::currentDateTime(),
                     txt_col,
-                    bg_col);
+                    bg_col,
+                    true);
         nt->autoSize();
         misliWindow->canvas->noteFile()->linkSelectedNotesTo(nt);
         misliWindow->canvas->noteFile()->addNote(nt); //invokes save
@@ -131,6 +142,8 @@ void EditNoteDialogue::inputDone()
     }
     close();
     edited_note=NULL;
+
+    misliWindow->misliDesktopGUI->restoreOverrideCursor();
 }
 
 void EditNoteDialogue::makeLinkNote(QAction *act)
@@ -138,8 +151,6 @@ void EditNoteDialogue::makeLinkNote(QAction *act)
     ui->textEdit->setText("this_note_points_to:"+act->text());
     ui->textEdit->setFocus();
     ui->textEdit->moveCursor (QTextCursor::End);
-    this->hide();//FIXME
-    this->show();
 
 }
 void EditNoteDialogue::setTextEditText(QString text)
@@ -181,7 +192,7 @@ void EditNoteDialogue::chooseTextFile()
 }
 void EditNoteDialogue::setSystemCallPrefix()
 {
-    ui->textEdit->setText("define_system_call_note:");
+    ui->textEdit->setText("define_system_call_note:"+ui->textEdit->toPlainText());
     ui->textEdit->setFocus();
     ui->textEdit->moveCursor (QTextCursor::End);
 }

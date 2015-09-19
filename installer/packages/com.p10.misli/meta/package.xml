@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package>
+    <DisplayName>Misli</DisplayName>
+    <Version>1.2.9</Version>
+    <ReleaseDate>2015-09-19</ReleaseDate>
+    <Licenses>
+        <License name="General Public License v2" file="license.txt" />
+    </Licenses>
+    <Default>true</Default>
+    <Script>installscript.qs</Script>
+</Package>

@@ -41,7 +41,7 @@ class MisliDir : public QObject
 
 public:
     //Functions
-    MisliDir(QString nts_dir, bool bufferImages_ = false, bool enableFSWatch = true, bool debug_ = false);
+    MisliDir(QString nts_dir, bool bufferImages_ = false, bool enableFSWatch = true);
     ~MisliDir();
 
     int makeNotesFile(QString);
@@ -64,7 +64,7 @@ public:
     QString directoryPath_m;
     QSettings settings;
 
-    bool debug,fsWatchEnabled,bufferImages;
+    bool debug,fsWatchIsEnabled,bufferImages;
 
 signals:
     //Property chabges

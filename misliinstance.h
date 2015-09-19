@@ -41,6 +41,8 @@ public:
     void removeDir(MisliDir *dir);
     void unloadDir(MisliDir *dir);
 
+    void clearBuffers();
+
     //Properties
     QList<MisliDir*> misliDirs();
 
@@ -54,7 +56,6 @@ signals:
 
     //Other
     void storedDirsLoaded();
-    void noteFilesListChanged(); //FIXME
 public slots:
     void loadStoredDirs();
     void saveDirsToSettings();

@@ -26,18 +26,20 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
 {
     QWidget dummyWidget; //so I can use the static functions below
     misliWindow = NULL;
+    translator = NULL;
+    clearSettingsOnExit = false;
 
     int user_reply;
 
     //Set some creditentials
+    setQuitOnLastWindowClosed(false);
     setOrganizationName("p10"); //this is needed for proper settings access in windows
     setApplicationName("misli");
-    setApplicationVersion("1.2.0");
+    setApplicationVersion("2.0.0");
 
     //Construct the splash screen
     splash = new QSplashScreen(QPixmap(":/img/icon.png"));
     splash->show();
-    qDebug()<<"[MisliDesktopGui::MisliDesktopGui]Constructed the splash screen.";
 
     //Init the settings
     settings = new QSettings;
@@ -47,7 +49,6 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
         user_reply = QMessageBox::question(&dummyWidget,tr("Warning"),tr("There have been two unsuccessful starts of the program. Clearing the program settings will probably solve the issue . Persistent program crashes are mostly caused by corrupted notefiles , so you can try to manually narrow out the problematic notefile (remove the notefiles from the work directories one by one). The last one edited is probably the problem (you can try to correct it manually with a text editor to avoid loss of data).\n Do you want to clear the settings?"));
 
         if(user_reply==QMessageBox::Ok){ //if the user pressed Ok
-            qDebug()<<"[MisliDesktopGui::MisliDesktopGui]User chose to clear settings and exit upon prompt.";
             settings->clear();
             settings->sync();
             exit(0);
@@ -62,13 +63,13 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
         if(newLanguage=="Български") setLanguage("bg");
     }
 
-    setLanguage(language()); //it takes it from the settings and in the set() appies it with a translator
+    updateTranslator();
 
     //Construct the misli instance class
-    misliInstance = new MisliInstance(this);
-    //misliInstance->moveToThread(&workerThread); //FIXME
+    misliInstance = new MisliInstance(false);
 
     //Connections
+    connect(this,SIGNAL(languageChanged(QString)),this,SLOT(updateTranslator()));
     connect(this,SIGNAL(aboutToQuit()),this,SLOT(stuffToDoBeforeQuitting()));
 
     //Start worker thread as soon as the main loop starts (so that we first show the splash screen and then start work)
@@ -82,9 +83,35 @@ MisliDesktopGui::~MisliDesktopGui()
 {
     delete misliWindow;
     delete settings;
+    delete translator;
 
     workerThread.quit();
     workerThread.wait();
+}
+
+void MisliDesktopGui::updateTranslator()
+{
+    //processEvents();
+    removeTranslator(translator);
+    delete translator;
+
+    translator = new QTranslator;
+
+    if(language()!=QString("en")){
+        //Generate filename and install translator
+        QString file_name = "misli_"+language();
+        if( !translator->load(file_name,QString(":/translations/")) ){
+            qDebug()<<"[MisliDesktopGui::updateTranslator]Error loading the translations file.";
+        }else{
+            installTranslator(translator);
+        }
+    }
+
+    if(misliWindow!=NULL){
+        misliWindow->deleteLater();
+        misliWindow = new MisliWindow(this);
+        misliWindow->showMaximized();
+    }
 }
 
 bool MisliDesktopGui::firstProgramStart()
@@ -115,22 +142,8 @@ void MisliDesktopGui::setFailedStarts(int value)
 void MisliDesktopGui::setLanguage(QString newLanguage)
 {
     if(newLanguage!=language()){
-        settings->setValue("language",QVariant(newLanguage));
+        settings->setValue("language",newLanguage);
         settings->sync();
-
-        //Load the language from settings and setup the translator
-        if(language()!=QString("en")){
-            //Generate filename and install translator
-            QString file_name = "misli_"+language();
-            translator.load(file_name,QString(":/translations/"));
-            installTranslator(&translator);
-        }else{
-            removeTranslator(&translator);
-        }
-
-        delete misliWindow;
-        misliWindow = new MisliWindow(this);
-        misliWindow->showMaximized();
 
         emit languageChanged(newLanguage);
     }
@@ -144,6 +157,11 @@ void MisliDesktopGui::showWarningMessage(QString message)
 }
 void MisliDesktopGui::stuffToDoBeforeQuitting()
 {
-    setFailedStarts(0);
-    setFirstProgramStart(false);
+    if(clearSettingsOnExit){
+        settings->clear();
+        settings->sync();
+    }else{
+        setFailedStarts(0);
+        setFirstProgramStart(false);
+    }
 }

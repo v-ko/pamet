@@ -43,9 +43,11 @@ public:
     Note *getNoteUnderMouse(int mouseX , int mouseY);
     Note *getNoteClickedForResize(int mouseX , int mouseY);
     Link *getLinkUnderMouse(int x,int y); //returns one link (not necesserily the top one) under the mouse
+    Link *getControlPointUnderMouse(int x, int y);
 
     void unproject(float screenX, float screenY, float &realX, float &realY);
     void project(float realX, float realY, float &screenX, float &screenY);
+    QPointF unproject(QPointF);
     QLineF project(QLineF);
     QRectF project(QRectF);
     QPointF project(QPointF);
@@ -53,8 +55,13 @@ public:
     float projectY(float realY);
     float unprojectX(float screenX);
     float unprojectY(float screenY);
+    float heightScaleFactor();
 
     void centerEyeOnNote(Note * nt);
+    void updateCursorPosition();
+
+    bool mimeDataIsCompatible(const QMimeData *mimeData);
+    void pasteMimeData(const QMimeData *mimeData);
 
     //Properties
     NoteFile* noteFile();
@@ -62,19 +69,19 @@ public:
 
     //Variables
     MisliWindow *misliWindow;
-    Note *linkingNote;
+    Note *linkingNote, *cpChangeNote;
+    Link *linkOnControlPointDrag;
 
     QLineEdit *searchField;
-    QMenu *contextMenu;
+    QMenu *contextMenu, detailsMenu;
     QLabel *infoLabel;
     QTimer *move_func_timeout;
-    QFont font;
     QTime lastReleaseEvent;
 
-    float moveX, moveY, resizeX, resizeY;
+    float distanceToPrimeNoteX, distanceToPrimeNoteY, resizeX, resizeY;
     int XonPush,YonPush,PushLeft,current_mouse_x,current_mouse_y;
     float EyeXOnPush,EyeYOnPush;
-    bool timedOutMove,moveOn,resizeOn;
+    bool timedOutMove,moveOn,noteResizeOn, userIsDraggingStuff, draggedStuffIsValid, linkControlPointDragOn;
 
 signals:
     void noteFileChanged(NoteFile* nf); //Pretty much unused. Everyone who cares is visible to one another
@@ -91,7 +98,8 @@ public slots:
     void paste();
     void jumpToNearestNote();
     void doubleClick();
-    void recheckYourNoteFile();
+    void handleMousePress(Qt::MouseButton button);
+    void handleMouseRelease(Qt::MouseButton button);
 
 protected:
     void paintEvent(QPaintEvent *);
@@ -100,6 +108,10 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
+    void dragEnterEvent(QDragEnterEvent *event);
+    void dragMoveEvent(QDragMoveEvent*);
+    void dragLeaveEvent(QDragLeaveEvent *);
+    void dropEvent(QDropEvent *event);
 
 private:
     QMetaObject::Connection visualChangeConnection, noteTextChangedConnection;

@@ -20,6 +20,8 @@
 #include <QImage>
 #include <QFile>
 #include <QDebug>
+#include <QUrl>
+#include <QFileInfo>
 
 #include "petko10.h"
 #include "petko10q.h"
@@ -27,14 +29,15 @@
 #include "common.h"
 #include "note.h"
 
-Note::Note(int id_, QString iniString)
+Note::Note(int id_, QString iniString, bool bufferImage_)
 {
     QString tmpString;
-    QStringList linkStrings,txt_colString,bg_colString;
+    QStringList linkIDStrings,linkCPxStrings, linkCPyStrings, txt_colString,bg_colString;
     int err=0;
     float x,y,a,b;
 
     id = id_;
+    bufferImage = bufferImage_;
 
     err += q_get_value_for_key(iniString,"txt",text_m);
         text_m.replace(QString("\\n"),QString("\n"));
@@ -83,16 +86,27 @@ Note::Note(int id_, QString iniString)
     setTextForShortening(text_m); //if I call setText there is some complication with the empty strings
     checkForDefinitions();
 
-    err += q_get_value_for_key(iniString,"l_id",linkStrings);
-    for(QString linkString: linkStrings){ //getting the links in the notes
-        addLink(linkString.toInt());
+    err += q_get_value_for_key(iniString,"l_id",linkIDStrings);
+    q_get_value_for_key(iniString,"l_CP_x",linkCPxStrings); //Those two are optional
+    q_get_value_for_key(iniString,"l_CP_y",linkCPyStrings);
+    int iter = 0;
+    for(QString linkString: linkIDStrings){ //getting the links in the notes
+        if( linkIDStrings.size()==linkCPxStrings.size() &&
+                linkIDStrings.size()==linkCPyStrings.size())
+        {//There are control points saved
+            addLink( Link( linkString.toInt(), QPointF(linkCPxStrings[iter].toFloat(),linkCPyStrings[iter].toFloat()) ) );
+        }else{ //There are no (or corrupted) control points saved
+            addLink( Link(linkString.toInt()) );
+        }
+        iter++;
     }
 
     if(err!=0) qDebug()<<"[Note::Note]Some of the note properties were not read correctly.Number of errors:"<<-err;
 }
-Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_)
+Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_, bool bufferImage_)
 {
     id = id_;
+    bufferImage = bufferImage_;
     text_m = text_;
     rect_m = rect_;
     timeMade = t_made_;
@@ -116,7 +130,7 @@ void Note::commonInitFunction()
     isSelected_m=false;
     img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
     textIsShortened=false;
-    bufferImage = true;
+    autoSizing = false;
     type = NoteType::normal;
 }
 
@@ -133,10 +147,14 @@ void Note::storeCoordinatesBeforeMove()
 
 void Note::adjustTextSize()
 {
+    if( !bufferImage ) return;
+
     int base_it,max_it,probe_it; //iterators for the shortening algorythm
 
     //-------Init painter for the text shortening----------
-    QRectF textField(0,0,rect().width()*FONT_TRANSFORM_FACTOR,rect().height()*FONT_TRANSFORM_FACTOR),textFieldNeeded;
+    QRectF textField(0,0,rect().width()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR,
+                     rect().height()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR);
+    QRectF textFieldNeeded;
     QString textCopy = textForShortening_m;
 
     QFont font("Halvetica");
@@ -209,24 +227,24 @@ void Note::checkTextForNoteFileLink() //there's an argument , because search ini
         setTextForShortening(addressString);
     }
 }
-void Note::checkForFileDefinitions()
+void Note::checkTextForFileDefinition()
 {
     QFile file;
 
     if (text_m.startsWith(QString("define_text_file_note:"))){
-        addressString = q_get_text_between(text_m,':',0,200); //get text between ":" and the end
+        addressString = q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
         addressString = addressString.trimmed(); //remove white spaces from both sides
         file.setFileName(addressString);
         type = NoteType::textFile;
         if(file.open(QIODevice::ReadOnly)){
-            setTextForShortening(file.read(MAX_TEXT_FOR_DISPLAY_SIZE));
+            setTextForShortening(QFileInfo(file).fileName()+":\n"+file.read(MAX_TEXT_FOR_DISPLAY_SIZE));
         }else{
             setTextForShortening( tr("Failed to open file."));
         }
         file.close();
         return;
     }else if (text_m.startsWith(QString("define_picture_note:"))){
-        addressString = q_get_text_between(text_m,':',0,200); //get text between ":" and the end
+        addressString = q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
         addressString=addressString.trimmed(); //remove white spaces from both sides
         type = NoteType::picture;
         setTextForShortening("");
@@ -235,26 +253,46 @@ void Note::checkForFileDefinitions()
 void Note::checkTextForSystemCallDefinition()
 {
     if (text_m.startsWith(QString("define_system_call_note:"))){
-        addressString=q_get_text_between(text_m,':',0,200); //get text between ":" and the end
+        addressString=q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
         addressString=addressString.trimmed(); //remove white spaces from both sides
         type=NoteType::systemCall;
         setTextForShortening(addressString);
     }
 }
+void Note::checkTextForWebPageDefinition()
+{
+    if (text_m.startsWith(QString("define_web_page_note:"))){
+        QString iniString = q_get_text_between(text_m,':',0,2*MAX_URI_LENGTH+20); //URL+name+some identifiers ~= 4100 chars
+        int err = q_get_value_for_key(iniString,"url",addressString);
+        addressString=addressString.trimmed(); //remove white spaces from both sides
+        QString name;
+        err+=q_get_value_for_key(iniString,"name",name);
+
+        if(err==0 && QUrl(addressString).isValid()){
+            type = NoteType::webPage;
+            setTextForShortening(name);
+        }else{
+            if(err==0){
+                setTextForShortening(tr("URL is invalid"));
+            }
+        }
+    }
+}
+
 void Note::drawPixmap()
 {
-    if(!bufferImage) return;
+    if( !bufferImage | autoSizing ) return;
 
     float pixm_real_size_x = rect().width()*FONT_TRANSFORM_FACTOR; //pixmap real size (inflated to have better quality on zoom)
     float pixm_real_size_y = rect().height()*FONT_TRANSFORM_FACTOR;
 
     if(type==NoteType::picture){
         delete img;
-        img = new QImage(addressString);
+        img = new QImage;
 
-        if( !img->isNull() ) {
+        if( img->load(addressString) ) {
             return;
-        }else {
+        }else{
             type=NoteType::normal;
             setTextForShortening("Not a valid picture.");
         }
@@ -281,9 +319,12 @@ void Note::drawPixmap()
     //Draw the text
     p.setPen(textColor_m); //set color
     p.setBrush(Qt::SolidPattern); //set fill style
-    p.drawText(QRectF(NOTE_SPACING*FONT_TRANSFORM_FACTOR,NOTE_SPACING*FONT_TRANSFORM_FACTOR,rect().width()*FONT_TRANSFORM_FACTOR,rect().height()*FONT_TRANSFORM_FACTOR),Qt::TextWordWrap | alignment,textForDisplay_m);
+    p.drawText(QRectF(NOTE_SPACING*FONT_TRANSFORM_FACTOR,
+                      NOTE_SPACING*FONT_TRANSFORM_FACTOR,
+                      rect().width()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR,
+                      rect().height()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR),
+               Qt::TextWordWrap | alignment,textForDisplay_m);
 
-    p.end();
     emit visualChange();
 }
 
@@ -338,7 +379,7 @@ void Note::setText(QString newText)
 void Note::setFontSize(float newFontSize)
 {
     if( 0>newFontSize && newFontSize>MAX_FONT_SIZE){
-        qDebug()<<"[Note::setFontSize]Font size out of range.";
+        qDebug()<<"[Note::setFontSize]Font size out of range. Note text:"<<text_m;
     }else{
         fontSize_m = newFontSize;
         drawPixmap();
@@ -353,7 +394,7 @@ void Note::setRect(QRectF newRect)
 void Note::setColors(QColor newTextColor, QColor newBackgroundColor)
 {
     if(!newTextColor.isValid() | !newBackgroundColor.isValid()){
-        qDebug()<<"[Note::setColors]Invalid color.";
+        qDebug()<<"[Note::setColors]Invalid color. Note text:"<<text_m;
     }else{
         textColor_m = newTextColor;
         backgroundColor_m = newBackgroundColor;
@@ -383,29 +424,56 @@ void Note::setSelected(bool value)
 }
 void Note::autoSize()
 {
-    while(textIsShortened){ //Expand until the text fits or we hit max size
+    if(type==NoteType::picture){
+        rect_m.setWidth(10);
+        rect_m.setHeight(10);
+        drawPixmap();
+        return;
+    }
+
+    autoSizing = true;
+
+    //Expand until the text fits or we hit max size
+    while(textIsShortened){
+        if(rect().width()>=MAX_NOTE_A && rect().height()>=MAX_NOTE_B) break;
         if(rect().width()<=MAX_NOTE_A) rect().setWidth(rect().width()+2);
         if(rect().height()<=MAX_NOTE_B) rect().setHeight(rect().height()+float(2)/A_TO_B_NOTE_SIZE_RATIO);
-
         adjustTextSize();
-        if(rect().width()>=MAX_NOTE_A && rect().height()>=MAX_NOTE_B) break;
     }
-    while(!textIsShortened){ //Reduce height if there's empty space (a few really long lines)
+
+    //Reduce height until we overdo it
+    while(true){
+        int oldSize = textForDisplay_m.size();
+        bool shortageBeforeResize = textIsShortened;
         if(rect().height()<=MIN_NOTE_B){break;}
         rect().setHeight(rect().height()-1);
         adjustTextSize();
+        //Check if we've ran out of white space to reduce (<= the text size has shrinked)
+        if( (oldSize>textForDisplay_m.size()) | (shortageBeforeResize!=textIsShortened) ){
+            break;
+        }
     }
     rect().setHeight(rect().height()+1);
     adjustTextSize(); //Back to fitting in the box (textIsShortened->true)
 
-    while(!textIsShortened){ //Reduce width to fit (many short lines)
+    while(true){
+        int oldSize = textForDisplay_m.size();
+        bool shortageBeforeResize = textIsShortened;
         if(rect().width()<=MIN_NOTE_A){break;}
         rect().setWidth(rect().width()-1);
         adjustTextSize();
+        //Check if we've ran out of white space to reduce (<= the text size has shrinked)
+        //There was a bug where for ex.: 'aaaa' shortens to 'a...' (size==4) , so a check on shorting is needed
+        if( (oldSize>textForDisplay_m.size()) | (shortageBeforeResize!=textIsShortened) ){
+            break;
+        }
     }
+
     rect().setWidth(rect().width()+1);
 
     adjustTextSize();
+
+    autoSizing = false;
     drawPixmap();
 }
 
@@ -413,14 +481,22 @@ void Note::checkForDefinitions()
 {
     type=NoteType::normal; //assuming the note isn't special
     checkTextForNoteFileLink();
-    checkForFileDefinitions();
+    checkTextForFileDefinition();
     checkTextForSystemCallDefinition();
+    checkTextForWebPageDefinition();
 }
 
-void Note::addLink(int linkId)
+bool Note::addLink(Link newLink)
 {
-    outlinks.push_back(Link(linkId));
+    //Check if a link with that ID already exists
+    for(Link &ln: outlinks){
+        if(ln.id==newLink.id){
+            return false;
+        }
+    }
+    outlinks.push_back(newLink);
     emit linksChanged();
+    return true;
 }
 void Note::removeLink(int linkId)
 {
@@ -437,7 +513,7 @@ QString Note::propertiesInIniString()
 
     iniStringStream<<"["<<id<<"]"<<'\n';
     QString txt=text_m;
-    txt.replace("\n","\\n");//(QString("\n"),QString("\\n")); FIXME
+    txt.replace("\n","\\n");
     iniStringStream<<"txt="<<txt<<'\n';
     iniStringStream<<"x="<<rect_m.x()<<'\n';
     iniStringStream<<"y="<<rect_m.y()<<'\n';
@@ -459,10 +535,28 @@ QString Note::propertiesInIniString()
     iniStringStream<<"l_txt=";
     for(Link ln: outlinks){
         //Remove ";"s from the text to avoid breaking the ini standard
-        ln.text.replace(";",":"); //(QString(";"),QString(":")) FIXME
+        ln.text.replace(";",":");
 
         //Save the text
         iniStringStream<<ln.text<<";";
+    }
+    iniStringStream<<'\n';
+    iniStringStream<<"l_CP_x=";
+    for(Link ln: outlinks){
+        if(ln.usesControlPoint){
+            iniStringStream<<ln.controlPoint.x()<<";";
+        }else{//Safest thing to do - even if the links are not initialized the p1 is always on the line
+            iniStringStream<<ln.line.p1().x()<<";";
+        }
+    }
+    iniStringStream<<'\n';
+    iniStringStream<<"l_CP_y=";
+    for(Link ln: outlinks){
+        if(ln.usesControlPoint){
+            iniStringStream<<ln.controlPoint.y()<<";";
+        }else{
+            iniStringStream<<ln.line.p1().y()<<";";
+        }
     }
     iniStringStream<<'\n';
 

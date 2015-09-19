@@ -35,6 +35,15 @@
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
+        <property name="isWrapping" stdset="0">
+         <bool>false</bool>
+        </property>
+        <property name="resizeMode">
+         <enum>QListView::Adjust</enum>
+        </property>
+        <property name="wordWrap">
+         <bool>true</bool>
+        </property>
        </widget>
       </item>
      </layout>
@@ -86,7 +95,9 @@
     <addaction name="actionPaste"/>
     <addaction name="actionCreate_note_from_the_clipboard_text"/>
     <addaction name="actionCut"/>
+    <addaction name="separator"/>
     <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
     <addaction name="actionDelete_selected"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -445,6 +456,9 @@
    <property name="toolTip">
     <string>Delete the notefile permanetly (on the disk too).</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+Del</string>
+   </property>
   </action>
   <action name="actionColor_blue">
    <property name="text">
@@ -515,7 +529,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Search (beta)</string>
+    <string>Search </string>
    </property>
    <property name="toolTip">
     <string>Search in all notes. Click in the results shown under the search field to go to the note.</string>
@@ -610,6 +624,30 @@
     <string>Ctrl+R</string>
    </property>
   </action>
+  <action name="actionRedo">
+   <property name="text">
+    <string>Redo</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Z</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_updates">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Check for updates</string>
+   </property>
+  </action>
+  <action name="actionDownload_it">
+   <property name="text">
+    <string>Download it</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
@@ -658,6 +696,22 @@
     <hint type="destinationlabel">
      <x>399</x>
      <y>332</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSearch</sender>
+   <signal>triggered()</signal>
+   <receiver>searchLineEdit</receiver>
+   <slot>setFocus()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>202</x>
+     <y>53</y>
     </hint>
    </hints>
   </connection>

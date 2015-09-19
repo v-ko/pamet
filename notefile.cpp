@@ -71,12 +71,12 @@ int NoteFile::init()   //returns negative on errors
 
     //Open the file
     if(!ntFile.open(QIODevice::ReadOnly)){
-        qDebug()<<"Error opening notefile: "<<filePath_m;
+        qDebug()<<"[NoteFile::init]Error opening notefile: "<<filePath_m;
         return -2;
     }
     //Check for abnormally large files
     if(ntFile.size()>10000000){
-        qDebug()<<"Note file "<<name()<<" is more than 10MB.Skipping.";
+        qDebug()<<"[NoteFile::init]Note file "<<name()<<" is more than 10MB.Skipping.";
         return -3;
     }
     //Get the data into a string
@@ -102,7 +102,7 @@ int NoteFile::init()   //returns negative on errors
 
     //Create the notes
     for(int i=0;i<noteIniStrings.size();i++){ //get the notes
-        loadNote(new Note(note_ids[i].toInt(),noteIniStrings[i]));
+        loadNote(new Note(note_ids[i].toInt(),noteIniStrings[i], bufferImages));
     }
 
     findFreeIds();
@@ -117,7 +117,6 @@ void NoteFile::initLinks()  //init all the links in the note_file notes
 
 void NoteFile::virtualSave()
 {
-    qDebug()<<"NF("<<name()<<") Virtual save.";
     QString iniString;
     QTextStream iniStringStream(&iniString,QIODevice::ReadWrite);
 
@@ -130,9 +129,11 @@ void NoteFile::virtualSave()
     //Adding the notes
     for(Note *nt: notes) iniStringStream<<nt->propertiesInIniString();
 
-    history.push_back(iniString);
-    if(history.size()>MAX_UNDO_STEPS){ //Avoid a memory leak by having max undo steps
-        history.pop_front();
+    undoHistory.push_back(iniString);
+    redoHistory.clear();
+
+    if(undoHistory.size()>MAX_UNDO_STEPS){ //Avoid a memory leak by having max undo steps
+        undoHistory.pop_front();
     }
 }
 void NoteFile::hardSave()
@@ -142,29 +143,40 @@ void NoteFile::hardSave()
         return;
     }else{
         QFile ntFile(filePath_m);
-        ntFile.open(QIODevice::WriteOnly);
-        ntFile.write(history.back().toUtf8());
+        if( !ntFile.open(QIODevice::WriteOnly) ){
+            qDebug()<<"[NoteFile::hardSave]Faled opening the file.";
+        }
+        ntFile.write(undoHistory.back().toUtf8());
         ntFile.close();
     }
-    qDebug()<<"NF("<<name()<<") Hard save.";
+    qDebug()<<"Note file:"<<name()<<" saved.";
 }
 void NoteFile::save()
 {
     virtualSave();
     hardSave();
 }
-bool NoteFile::undo()
+void NoteFile::undo()
 {
-    if(history.size()>=2){
-        history.pop_back(); //pop the current version
+    if(undoHistory.size()>=2){
+        redoHistory.push_front(undoHistory.back());
+        undoHistory.pop_back(); //pop the current version
         hardSave();
 
         init();
-        return true;
-    }else{
-        return false;
     }
 }
+void NoteFile::redo()
+{
+    if(redoHistory.size()>=1){
+        undoHistory.push_back(redoHistory.front());
+        redoHistory.pop_back(); //pop the current version
+        hardSave();
+
+        init();
+    }
+}
+
 void NoteFile::findFreeIds()
 {
     freeId.clear();
@@ -187,9 +199,6 @@ Note* NoteFile::loadNote(Note *nt)
     //A check for the free ids system
     if(nt->id>lastNoteId){lastNoteId=nt->id;}
 
-    if(!bufferImages) nt->bufferImage=false;
-    else nt->bufferImage=true;
-
     notes.push_back(nt);
 
     //Connections
@@ -203,7 +212,7 @@ Note* NoteFile::loadNote(Note *nt)
 }
 Note *NoteFile::cloneNote(Note *nt)
 {
-    Note * nt2 = new Note(nt->id,nt->text_m,nt->rect(),nt->fontSize(),nt->timeMade,nt->timeModified,nt->textColor(),nt->backgroundColor());
+    Note * nt2 = new Note(nt->id,nt->text_m,nt->rect(),nt->fontSize(),nt->timeMade,nt->timeModified,nt->textColor(),nt->backgroundColor(),bufferImages);
     loadNote(nt2);
     return nt2;
 }
@@ -220,7 +229,7 @@ void NoteFile::deleteSelected() //deletes all marked selected and returns their 
     for(Note *nt: notes){
         QMutableListIterator<Link> linkIter(nt->outlinks);
         while(linkIter.hasNext()){
-            if(linkIter.next().selected){
+            if(linkIter.next().isSelected){
                 deletedItemsCount++;
                 linkIter.remove();
             }
@@ -272,7 +281,7 @@ void NoteFile::clearNoteSelection()
 void NoteFile::clearLinkSelection()
 {
     for(Note *nt: notes){
-        for(Link &ln:nt->outlinks) ln.selected = false;
+        for(Link &ln:nt->outlinks) ln.isSelected = false;
     }
 }
 void NoteFile::makeCoordsRelativeTo(double x,double y)
@@ -280,6 +289,11 @@ void NoteFile::makeCoordsRelativeTo(double x,double y)
     for(Note *nt: notes){
         nt->rect().moveLeft(nt->rect().x()-x);
         nt->rect().moveTop(nt->rect().y()-y);
+
+        for(Link &ln: nt->outlinks){
+            ln.controlPoint.setX(ln.controlPoint.x()-x);
+            ln.controlPoint.setY(ln.controlPoint.y()-y);
+        }
     }
 }
 
@@ -306,13 +320,15 @@ int NoteFile::getNewId()
     }
     return idd;
 }
-void NoteFile::linkSelectedNotesTo(Note *nt)
+int NoteFile::linkSelectedNotesTo(Note *nt)
 {
+    int linksAdded=0;
     for(Note *nt2: notes){ //za vseki note ot current
-        if( nt2->isSelected_m && ( nt2->id != nt->id ) ){ //ako e selectiran
-            nt2->addLink(nt->id);
+        if( nt2->isSelected_m ){ //ako e selectiran
+            linksAdded += nt2->addLink(nt->id);
         }
     }
+    return linksAdded;
 }
 void NoteFile::initNoteLinks(Note *nt) //smqta koordinatite
 {
@@ -320,40 +336,116 @@ void NoteFile::initNoteLinks(Note *nt) //smqta koordinatite
 
     for(Link &ln: nt->outlinks){
         //---------Smqtane na koordinatite za link-a---------------
-        Note *target_note=getNoteById(ln.id);
-        QRectF note1 = nt->rect(),note2 = target_note->rect();
+        Note *target_note = getNoteById(ln.id);
 
         //Setup the rectangles to check if they intersect
+        QRectF note1 = nt->rect(), note2 = target_note->rect();
         note1.moveTop(0);
         note2.moveTop(0);
         note1.setHeight(1);
         note2.setHeight(1);
 
+        //Construct the line as it would be without a control point (stored as autoLine)
         if(note1.intersects(note2)){ //If the notes are one above another
             //Check which one is above the other
             if(nt->rect().center().y() > target_note->rect().center().y()){ //Note1 is below
-                ln.line.setLine(nt->rect().center().x(),
+                ln.autoLine.setLine(nt->rect().center().x(),
                                 nt->rect().y(),
                                 target_note->rect().center().x(),
                                 target_note->rect().bottom());
             }else{//Note1 is above
-                ln.line.setLine(nt->rect().center().x(),
+                ln.autoLine.setLine(nt->rect().center().x(),
                                 nt->rect().bottom(),
                                 target_note->rect().center().x(),
                                 target_note->rect().y());
             }
         }else if(note1.right()<note2.x()){ //If the second note is on the right
-            ln.line.setLine(nt->rect().right(),
+            ln.autoLine.setLine(nt->rect().right(),
                             nt->rect().center().y(),
                             target_note->rect().left(),
                             target_note->rect().center().y());
         }else{ //If the second note is on the left
-            ln.line.setLine(nt->rect().left(),
+            ln.autoLine.setLine(nt->rect().left(),
                             nt->rect().center().y(),
                             target_note->rect().right(),
                             target_note->rect().center().y());
         }
+
+        //Set the control point if it hasn't been
+        if(!ln.controlPointIsSet){
+            ln.line = ln.autoLine;
+            ln.controlPoint = ln.middleOfTheLine();
+            ln.controlPointIsSet = true;
+        }
+
+        if(ln.controlPointIsChanged){
+            //Check if a control point is needed
+            QPainterPath linePath(ln.autoLine.p1());
+            linePath.lineTo(ln.autoLine.p2());
+            QRectF controlPointRect(0,0,CLICK_RADIUS,CLICK_RADIUS);
+            controlPointRect.moveCenter(ln.controlPoint);
+
+            //If the path is almost identicle with the straight line or the control point is in the note
+            if( linePath.intersects(controlPointRect) | nt->rect().intersects(controlPointRect) ){
+                ln.usesControlPoint = false;
+                ln.path = QPainterPath(); //to redraw
+            }else{
+                ln.usesControlPoint = true;
+            }
+            ln.controlPointIsChanged = false;
+        }
+
+        if(ln.usesControlPoint){
+            QPointF controlP = ln.controlPoint;
+            QRectF controlRect(0,0,1,1);
+            controlRect.moveCenter(controlP);
+            controlRect.moveTop(0);
+
+            //Set P1 of the line
+            if(note1.intersects(controlRect)){ //If the notes are one above another
+                //Check which one is above the other
+                if(nt->rect().center().y() > controlP.y()){ //controlRect is above
+                    ln.line.setP1(QPointF(nt->rect().center().x(),
+                                          nt->rect().y()));
+                }else{//controlRect is below
+                    ln.line.setP1(QPointF(nt->rect().center().x(),
+                                          nt->rect().bottom()));
+                }
+            }else if(note1.right()<controlRect.x()){ //If the controlRect is on the right
+                ln.line.setP1(QPointF(nt->rect().right(),
+                                      nt->rect().center().y()));
+            }else{ //If the second note is on the left
+                ln.line.setP1(QPointF(nt->rect().left(),
+                                      nt->rect().center().y()));
+            }
+
+            //Set P2 of the line
+            if(note2.intersects(controlRect)){ //If the notes are one above another
+                //Check which one is above the other
+                if(controlP.y() > target_note->rect().center().y()){ //The control point is below note2
+                    ln.line.setP2(QPointF(target_note->rect().center().x(),
+                                          target_note->rect().bottom()));
+                }else{//The control point is above
+                    ln.line.setP2(QPointF(target_note->rect().center().x(),
+                                          target_note->rect().y()));
+                }
+            }else if(controlP.x()<note2.x()){ //If the control point is on the left
+                ln.line.setP2(QPointF(target_note->rect().left(),
+                                target_note->rect().center().y()));
+            }else{ //If the control point is on the right
+                ln.line.setP2(QPointF(target_note->rect().right(),
+                                      target_note->rect().center().y()));
+            }
+        }else{
+            ln.line = ln.autoLine;
+        }
+
+        ln.path = QPainterPath(); //clear the path so it's redrawn in canvas::paintEvent
+
     }//next link
+
+
+
     emit visualChange();
 }
 
@@ -383,4 +475,20 @@ void NoteFile::checkForInvalidLinks(Note *nt)
         }
     }
     if(linksChangedHere) save();
+}
+
+void NoteFile::clearBuffers()
+{
+    for(Note *nt: notes){
+        nt->bufferImage = false;
+        delete nt->img;
+        nt->img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);
+    }
+}
+void NoteFile::drawEverything()
+{
+    for(Note *nt: notes){
+        nt->bufferImage = true;
+        nt->adjustTextSize();
+    }
 }

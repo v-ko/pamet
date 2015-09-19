@@ -26,10 +26,11 @@ class NotesSearch : public QAbstractListModel
     Q_OBJECT
 public:
     struct SearchItem{
-        Note *nt;
-        float probability;
         MisliDir *md;
         NoteFile *nf;
+        Note *nt;
+        float probability;
+        QString text;
     };
 
     //Functions
