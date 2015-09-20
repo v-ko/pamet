@@ -4,8 +4,8 @@ Misli
 
 List of features
 ---------------------
--Real-time detection of file changes (if you're using some type of file synchronization)
--Hyperlinks between note files
--Adding pictures
--Displaying text files on the file system as notes
--System call notes: executing a shell command by double clicking on the note and receiving the output as a new note below
+--Real-time detection of file changes (if you're using some type of file synchronization)
+--Hyperlinks between note files
+--Adding pictures
+--Displaying text files on the file system as notes
+--System call notes: executing a shell command by double clicking on the note and receiving the output as a new note below
