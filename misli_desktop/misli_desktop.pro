@@ -47,8 +47,8 @@ HEADERS += \
     editnotedialogue.h \
     mislidesktopgui.h \
     misliwindow.h \
-    ../../../petko10.h \
-    ../../../petko10q.h
+    ../petko10.h \
+    ../petko10q.h
 
 SOURCES += \
     ../canvas.cpp \
@@ -62,8 +62,8 @@ SOURCES += \
     main.cpp \
     mislidesktopgui.cpp \
     misliwindow.cpp \
-    ../../../petko10.cpp \
-    ../../../petko10q.cpp
+    ../petko10.cpp \
+    ../petko10q.cpp
 
 FORMS += \
     editnotedialogue.ui \
@@ -73,3 +73,5 @@ DISTFILES += \
     ../installer/config/config.xml \
     ../installer/packages/com.p10.misli/meta/installscript.qs \
     ../installer/packages/com.p10.misli/meta/package.xml
+
+RC_FILE = ../misli_icon.rc

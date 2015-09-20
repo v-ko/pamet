@@ -300,7 +300,7 @@ void MisliWindow::setCurrentDir(MisliDir* newDir)
     }else{
         if(misliInstance()->misliDirs().isEmpty()){//If there are no dirs
             if(misliDesktopGUI->firstProgramStart()){
-                misliInstance()->addDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation));
+                misliInstance()->addDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation));
                 return;
             }else{ //We just leave currentDir and noteFile NULL
                 ui->addMisliDirPushButton->show();

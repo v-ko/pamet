@@ -58,14 +58,12 @@
 //Макс сърч резултати --done
 
 //Крашва при смяна на езика: delete later!! --done
-//Шорткътите на кирилица не бачкат
+//Шорткътите на кирилица не бачкат -ba4kat v 5.5 --done
 
-//ima nqkakyv tegav problem s id-tata pri kopirane i/ili pri polu4avane na filechange koito zatriva ili golqma 4ast ot
-//zapiskite ili vsi4ki
-//windows installer (offline) https://doc.qt.io/qtinstallerframework/ifw-tutorial.html
-//test upgrade
-//merge to master
-//upload all
+//windows installer (offline) https://doc.qt.io/qtinstallerframework/ifw-tutorial.html --done
+//test upgrade --done
+//merge to master --done
+//upload all --done
 //arch package
 
 //====Future stuff====
