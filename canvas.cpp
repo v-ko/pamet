@@ -131,9 +131,13 @@ void Canvas::paintEvent(QPaintEvent*)
 
     //Init the painter
     QPainter painter;
+    QPen pen;
+    pen.setCosmetic(true);
+
     if(!painter.begin((this))){
         qDebug()<<"[Canvas::Canvas]Failed to initialize painter.";
     }
+    painter.setPen(pen);
     painter.setRenderHint(QPainter::Antialiasing); //better antialiasing
     painter.setRenderHint(QPainter::TextAntialiasing);
     painter.fillRect(0,0,width(),height(),QColor(255,255,255,255)); //clear background
@@ -159,15 +163,11 @@ void Canvas::paintEvent(QPaintEvent*)
         infoLabel->hide();
     }
 
-    QPen pen;
-    pen.setWidth(1/heightScaleFactor());
-
     QTransform viewpointTransform;
     viewpointTransform.scale(heightScaleFactor(),heightScaleFactor());
     viewpointTransform.translate(width()/heightScaleFactor()/2 - noteFile()->eyeX,
                 height()/heightScaleFactor()/2 - noteFile()->eyeY);
     painter.setTransform(viewpointTransform);
-
     QRectF windowFrame;
     windowFrame.setSize( QSizeF(width()/heightScaleFactor(), height()/heightScaleFactor()) );
     windowFrame.moveCenter(QPointF(noteFile()->eyeX,noteFile()->eyeY));
@@ -180,150 +180,111 @@ void Canvas::paintEvent(QPaintEvent*)
         QColor circleColor = nt->backgroundColor();
         circleColor.setAlpha(60);//same as BG but transparent
 
-        if( (moveOn | noteResizeOn) && nt->isSelected_m){ //Draw additional lines to help alignment
-
-            float x = nt->rect().x();
-            float y = nt->rect().y();
-            float rectX = nt->rect().right(); //coordinates of the rectangle encapsulating the note
-            float rectY = nt->rect().bottom();
-
-            QLineF leftLine(x,y-ALIGNMENT_LINE_LENGTH,x,rectY+ALIGNMENT_LINE_LENGTH);
-            QLineF rightLine(rectX,y-ALIGNMENT_LINE_LENGTH,rectX,rectY+ALIGNMENT_LINE_LENGTH);
-            QLineF bottomLine(x-ALIGNMENT_LINE_LENGTH,rectY,rectX+ALIGNMENT_LINE_LENGTH,rectY);
-            QLineF topLine(x-ALIGNMENT_LINE_LENGTH,y,rectX+ALIGNMENT_LINE_LENGTH,y);
-
-            //Set the color
-            pen.setColor(nt->textColor());
-            painter.setPen(pen);
-            painter.drawLine(leftLine);
-            painter.drawLine(rightLine);
-            painter.drawLine(bottomLine);
-            painter.drawLine(topLine);
-        }
-
-        //Check the validity of the address string
-        if(nt->type==NoteType::redirecting){
-            if(misliWindow->currentDir()->noteFileByName(nt->addressString)==NULL &&
-                    nt->textForShortening()!=tr("Missing note file"))
-            {
-                nt->setTextForShortening(tr("Missing note file"));
-            }
-        }
-
         //Draw the note (only if it's on screen (to avoid lag) )
-        QRectF imageRect = nt->rect();
-
         if(nt->rect().intersects(windowFrame)){
             displayed_notes++;
-            //If it's a picture note - resize appropriately to fit in the note boundaries
-            if( (nt->type==NoteType::picture) && nt->textForDisplay_m.isEmpty() ){
-                float frame_ratio,pixmap_ratio;
-                frame_ratio = nt->rect().width()/nt->rect().height();
-                pixmap_ratio = float(nt->img->width())/float(nt->img->height());
 
-                if( frame_ratio > pixmap_ratio ){
-                    //if the width for the note frame is proportionally bigger than the pictures width
-                    //we resize the note using the height of the frame and a calculated width
-                    imageRect.setWidth(imageRect.height()*pixmap_ratio);
-                    imageRect.moveCenter(nt->rect().center());
-                }else if( frame_ratio < pixmap_ratio ){
-                    //we resize the note using the width of the frame and a calculated height
-                    imageRect.setHeight(imageRect.width()/pixmap_ratio);
-                    imageRect.moveCenter(nt->rect().center());
+            //Check the validity of the address string
+            if(nt->type==NoteType::redirecting){
+                if(misliWindow->currentDir()->noteFileByName(nt->addressString)==NULL &&
+                   nt->textForShortening()!=tr("Missing note file") )
+                {
+                    nt->setTextForShortening(tr("Missing note file"));
                 }
             }
 
-            //Drawing the image
-            //(the QImage::scale is better quality than the scale done with QPainter::drawImage)
-            painter.resetTransform();
-            painter.drawImage(project(imageRect.topLeft()),nt->img->scaled(QSize(imageRect.size().width()*heightScaleFactor(),
-                                                                           imageRect.size().height()*heightScaleFactor()),
-                                                            Qt::IgnoreAspectRatio,
-                                                            Qt::SmoothTransformation));
-            painter.setTransform(viewpointTransform);
+            //Draw the actual note
+            nt->drawNote(&painter);
 
-            //Draw a border around the appropriate notes
-            if( (nt->type==NoteType::redirecting) |
-                (nt->type==NoteType::systemCall) |
-                (nt->type==NoteType::webPage) |
-                (nt->type==NoteType::textFile) )
-            {
+            //Draw additional lines to help alignment
+            if( (moveOn | noteResizeOn) && nt->isSelected_m){
+
+                float x = nt->rect().x();
+                float y = nt->rect().y();
+                float rectX = nt->rect().right(); //coordinates of the rectangle encapsulating the note
+                float rectY = nt->rect().bottom();
+
+                QLineF leftLine(x,y-ALIGNMENT_LINE_LENGTH,x,rectY+ALIGNMENT_LINE_LENGTH);
+                QLineF rightLine(rectX,y-ALIGNMENT_LINE_LENGTH,rectX,rectY+ALIGNMENT_LINE_LENGTH);
+                QLineF bottomLine(x-ALIGNMENT_LINE_LENGTH,rectY,rectX+ALIGNMENT_LINE_LENGTH,rectY);
+                QLineF topLine(x-ALIGNMENT_LINE_LENGTH,y,rectX+ALIGNMENT_LINE_LENGTH,y);
+
+                //Set the color
                 pen.setColor(nt->textColor());
-                painter.setPen(pen);
-                painter.setBrush(Qt::NoBrush);
-                painter.drawRect(nt->rect());
+                painter.setPen( pen );
+                painter.drawLine(leftLine);
+                painter.drawLine(rightLine);
+                painter.drawLine(bottomLine);
+                painter.drawLine(topLine);
             }
 
-            //If it's selected - overpaint with yellow
+            //If it's selected - draw the resize circle
             if(nt->isSelected_m){
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(QColor(255,255,0,127)); //half-transparent yellow
-                painter.drawRect(nt->rect()); //the yellow marking box
-
-                //The circle for resize
                 painter.setBrush(circleColor);
                 painter.drawEllipse(nt->rect().bottomRight(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
             }
+
+            //Draw links
+            for(Link &ln: nt->outlinks){
+
+                //Make the path if it's not present
+                if(ln.path.isEmpty()){
+                    ln.path.moveTo(ln.line.p1());
+                    if(ln.usesControlPoint){
+                        ln.path.quadTo(ln.realControlPoint(),ln.line.p2());
+                    }else{
+                        ln.path.lineTo(ln.line.p2());
+                    }
+                    ln.path.translate(-ln.line.p1());
+                }
+
+                painter.setBrush(Qt::NoBrush);
+                painter.save(); //pushMatrix() (not quite but ~)
+                    painter.translate( ln.line.p1() );
+                    //Draw the base line
+                    if(ln.isSelected){ //overpaint with yellow if it's selected
+                        pen.setColor( selectedPenColor );
+                        painter.setPen( pen );
+                        painter.drawPath(ln.path);
+                    }else{
+                        pen.setColor( nt->textColor() );
+                        painter.setPen( pen );
+                        painter.drawPath(ln.path);
+                    }
+                painter.restore();//pop matrix
+
+                QLineF lastLineFromPath(ln.path.pointAtPercent(0.90),ln.path.pointAtPercent(1));
+                //Draw the arrow head
+                painter.save(); //pushMatrix() (not quite but ~)
+                    painter.translate( ln.line.p2() );
+                    painter.rotate(90-lastLineFromPath.angle());
+
+                    if(ln.isSelected){ //overpaint when selected
+                        pen.setColor( selectedPenColor );
+                        painter.setPen( pen );
+                        painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
+                        painter.drawLine(QLineF(0,0,0.45,0.9));
+                    }else{
+                        pen.setColor( nt->textColor() );
+                        painter.setPen( pen );
+                        painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
+                        painter.drawLine(QLineF(0,0,0.45,0.9));
+                    }
+                painter.restore();//pop matrix
+
+                //Paint the control point if the link is selected
+                if(ln.isSelected){
+                    painter.setPen(Qt::NoPen);
+                    painter.setBrush(circleColor);
+                    if(ln.usesControlPoint){
+                        painter.drawEllipse(ln.controlPoint,RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
+                    }else{
+                        painter.drawEllipse(ln.middleOfTheLine(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
+                    }
+                    painter.setPen(pen);//restore pen (because of the 'cosmetic' property that enables the matrix width transform
+                }
+            } //next link
         }
-
-        for(Link &ln: nt->outlinks){
-
-            //Make the path if it's not present
-            if(ln.path.isEmpty()){
-                ln.path.moveTo(ln.line.p1());
-                if(ln.usesControlPoint){
-                    ln.path.quadTo(ln.realControlPoint(),ln.line.p2());
-                }else{
-                    ln.path.lineTo(ln.line.p2());
-                }
-                ln.path.translate(-ln.line.p1());
-            }
-
-            painter.setBrush(Qt::NoBrush);
-            painter.save(); //pushMatrix() (not quite but ~)
-                painter.translate( ln.line.p1() );
-                //Draw the base line
-                if(ln.isSelected){ //overpaint with yellow if it's selected
-                    pen.setColor(selectedPenColor); //set color
-                    painter.setPen(pen);
-                    painter.drawPath(ln.path);
-                }else{
-                    pen.setColor(nt->textColor());
-                    painter.setPen(pen);
-                    painter.drawPath(ln.path);
-                }
-            painter.restore();//pop matrix
-
-            QLineF lastLineFromPath(ln.path.pointAtPercent(0.90),ln.path.pointAtPercent(1));
-            //Draw the arrow head
-            painter.save(); //pushMatrix() (not quite but ~)
-                painter.translate( ln.line.p2() );
-                painter.rotate(90-lastLineFromPath.angle());
-
-                if(ln.isSelected){ //overpaint when selected
-                    pen.setColor(selectedPenColor);
-                    painter.setPen(pen);
-                    painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
-                    painter.drawLine(QLineF(0,0,0.45,0.9));
-                }else{
-                    pen.setColor(nt->textColor());
-                    painter.setPen(pen);
-                    painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
-                    painter.drawLine(QLineF(0,0,0.45,0.9));
-                }
-            painter.restore();//pop matrix
-
-            //Paint the control point if the link is selected
-            if(ln.isSelected){
-                painter.setPen(Qt::NoPen);
-                painter.setBrush(circleColor);
-                if(ln.usesControlPoint){
-                    painter.drawEllipse(ln.controlPoint,RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
-                }else{
-                    painter.drawEllipse(ln.middleOfTheLine(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
-                }
-            }
-        } //next link
     } //next note
 
     //If there's no note on the screen - show the JumpToNearestNoteButton
@@ -669,7 +630,7 @@ void Canvas::handleMouseRelease(Qt::MouseButton button)
 Note *Canvas::getNoteUnderMouse(int mouseX, int mouseY)
 {
     for(Note *nt: noteFile()->notes){
-        if( project(nt->rect()).intersects(QRectF(mouseX,mouseY,1,1))){
+        if( project(nt->rect()).contains(QPointF(mouseX,mouseY))){
             return nt;
         }
     }

@@ -32,11 +32,12 @@ NoteFile::NoteFile()
     saveWithRequest=false;
 
     //Clear the variables
-    lastNoteId=0;
-    isDisplayedFirstOnStartup=0;
-    eyeX=0;
-    eyeY=0;
-    eyeZ=INITIAL_EYE_Z;
+    lastNoteId = 0;
+    isDisplayedFirstOnStartup = 0;
+    bufferImages = false;
+    eyeX = 0;
+    eyeY = 0;
+    eyeZ = INITIAL_EYE_Z;
 
     isReadable=true;
 }
@@ -65,7 +66,7 @@ int NoteFile::init()   //returns negative on errors
 
     //Clear stuff
     lastNoteId=0;
-    for(Note *nt:notes) delete nt;
+    for(Note *nt: notes) delete nt;
     notes.clear();
     comment.clear();
 
@@ -92,7 +93,11 @@ int NoteFile::init()   //returns negative on errors
     for(QString line: lines){ //for every line of text
         if(line.startsWith("#")) comment.push_back(line);
         if(line.startsWith("is_displayed_first_on_startup")){
-            isDisplayedFirstOnStartup=true;
+            isDisplayedFirstOnStartup = true;
+            continue;
+        }
+        if(line.startsWith("is_a_timeline_note_file")){
+            isTimelineNoteFile = true;
             continue;
         }
     }

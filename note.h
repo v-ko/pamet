@@ -69,7 +69,6 @@ public:
 
     //Accessing properties
     QString text();
-    float fontSize();
     QRectF &rect();
     QString textForShortening();
     QString textForDisplay();
@@ -77,6 +76,10 @@ public:
 
     QColor textColor();
     QColor backgroundColor();
+
+    //Calculated properties
+    float fontSize();
+    Qt::AlignmentFlag alignment();
 
     //------Variables that are read/written on the file------------
     int id;
@@ -97,7 +100,7 @@ public:
     float xBeforeMove,yBeforeMove;
 
     QImage *img;
-    Qt::AlignmentFlag alignment;
+
 
     NoteType type;
 
@@ -133,7 +136,7 @@ public slots:
     //Other
     void checkForDefinitions();
     void adjustTextSize();
-    void drawPixmap();
+    void drawNote(QPainter* painter);
 
     bool addLink(Link newLink);
     void removeLink(int linkId);

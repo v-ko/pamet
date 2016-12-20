@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>319</width>
+    <width>358</width>
     <height>220</height>
    </rect>
   </property>
@@ -15,11 +15,42 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QLabel" name="noteTextLabel">
-     <property name="text">
-      <string>Note text:</string>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <property name="bottomMargin">
+      <number>0</number>
      </property>
-    </widget>
+     <item>
+      <widget class="QPushButton" name="yearButton">
+       <property name="text">
+        <string>Year</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="monthButton">
+       <property name="text">
+        <string>Month</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="weekButton">
+       <property name="text">
+        <string>Week</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="dayButton">
+       <property name="text">
+        <string>Day</string>
+       </property>
+       <property name="shortcut">
+        <string>Ctrl+D</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <widget class="QTextEdit" name="textEdit">

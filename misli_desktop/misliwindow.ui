@@ -81,7 +81,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>27</height>
+     <height>25</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -123,14 +123,14 @@
    </widget>
    <widget class="QMenu" name="menuNoteFile">
     <property name="title">
-     <string>NoteFile</string>
+     <string>&amp;NoteFile</string>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
     <widget class="QMenu" name="menuSwitch_to_another_note_file">
      <property name="title">
-      <string>Switch to another note file</string>
+      <string>Switch to another note &amp;file</string>
      </property>
     </widget>
     <addaction name="actionNew_notefile"/>
@@ -156,7 +156,7 @@
     </property>
     <widget class="QMenu" name="menuColor">
      <property name="title">
-      <string>Color</string>
+      <string>&amp;Color</string>
      </property>
      <property name="toolTipsVisible">
       <bool>true</bool>
@@ -174,14 +174,14 @@
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
-     <string>Other</string>
+     <string>Othe&amp;r</string>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
     <widget class="QMenu" name="menuNavigation">
      <property name="title">
-      <string>Navigation</string>
+      <string>&amp;Navigation</string>
      </property>
      <property name="toolTipsVisible">
       <bool>true</bool>
@@ -195,7 +195,7 @@
     </widget>
     <widget class="QMenu" name="menuDonate_Bitcoin">
      <property name="title">
-      <string>Donate Bitcoin</string>
+      <string>&amp;Donate Bitcoin</string>
      </property>
      <addaction name="actionCopy_donation_address"/>
     </widget>
@@ -207,7 +207,7 @@
    </widget>
    <widget class="QMenu" name="menuLanguage">
     <property name="title">
-     <string>Language</string>
+     <string>&amp;Language</string>
     </property>
     <property name="toolTipsVisible">
      <bool>true</bool>
@@ -225,7 +225,7 @@
   </widget>
   <action name="actionCopy">
    <property name="text">
-    <string>Copy</string>
+    <string>&amp;Copy</string>
    </property>
    <property name="toolTip">
     <string>Copies notes to the internal clipboard, and copies their text to the regular clipboard.</string>
@@ -236,7 +236,7 @@
   </action>
   <action name="actionPaste">
    <property name="text">
-    <string>Paste</string>
+    <string>&amp;Paste</string>
    </property>
    <property name="toolTip">
     <string>Pastes the notes from the internal clipboard.</string>
@@ -258,7 +258,7 @@
   </action>
   <action name="actionUndo">
    <property name="text">
-    <string>Undo</string>
+    <string>&amp;Undo</string>
    </property>
    <property name="toolTip">
     <string>Reverts the last action. The max is 30 undo steps. (note there is no Redo for now)</string>
@@ -269,7 +269,7 @@
   </action>
   <action name="actionHelp">
    <property name="text">
-    <string>Help</string>
+    <string>&amp;Help</string>
    </property>
    <property name="toolTip">
     <string>Shows the help notefile.</string>
@@ -283,12 +283,12 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Add another folder</string>
+    <string>&amp;Add another folder</string>
    </property>
   </action>
   <action name="actionRemove_current">
    <property name="text">
-    <string>Remove current</string>
+    <string>&amp;Remove current</string>
    </property>
    <property name="toolTip">
     <string>Remove the current folder (does not delete the notefiles from the disk)</string>
@@ -296,7 +296,7 @@
   </action>
   <action name="actionEdit_note">
    <property name="text">
-    <string>Edit note</string>
+    <string>&amp;Edit note</string>
    </property>
    <property name="shortcut">
     <string>E</string>
@@ -304,7 +304,7 @@
   </action>
   <action name="actionNew_note">
    <property name="text">
-    <string>New note</string>
+    <string>&amp;New note</string>
    </property>
    <property name="toolTip">
     <string>Create a new note</string>
@@ -321,7 +321,7 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>New notefile</string>
+    <string>&amp;New notefile</string>
    </property>
    <property name="toolTip">
     <string>Create a new notefile on the disk and open it to add notes.</string>
@@ -332,7 +332,7 @@
   </action>
   <action name="actionMake_link">
    <property name="text">
-    <string>Make link</string>
+    <string>&amp;Make link</string>
    </property>
    <property name="toolTip">
     <string>Link notes with arrows to visualize their connections.</string>
@@ -365,7 +365,7 @@
   </action>
   <action name="actionDelete_selected">
    <property name="text">
-    <string>Delete selected</string>
+    <string>&amp;Delete selected</string>
    </property>
    <property name="toolTip">
     <string>Delete selected notes.</string>
@@ -376,7 +376,7 @@
   </action>
   <action name="actionZoom_in">
    <property name="text">
-    <string>Zoom in</string>
+    <string>&amp;Zoom in</string>
    </property>
    <property name="toolTip">
     <string>Change the height of the viewpoint over the canvas.</string>
@@ -387,7 +387,7 @@
   </action>
   <action name="actionZoom_out">
    <property name="text">
-    <string>Zoom out</string>
+    <string>Zoom &amp;out</string>
    </property>
    <property name="toolTip">
     <string>Change the height of the viewpoint over the canvas.</string>
@@ -398,7 +398,7 @@
   </action>
   <action name="actionMake_this_view_point_default_for_the_notefile">
    <property name="text">
-    <string>Make this view point default for the notefile</string>
+    <string>&amp;Make this view point default for the notefile</string>
    </property>
    <property name="toolTip">
     <string>Fix the current viewpoint (height excluded) in the notefile as default on program start.</string>
@@ -406,7 +406,7 @@
   </action>
   <action name="actionMake_this_notefile_appear_first_on_program_start">
    <property name="text">
-    <string>Make this notefile appear first on program start</string>
+    <string>Make this notefile appear first &amp;on program start</string>
    </property>
    <property name="toolTip">
     <string>Marks the notefile as default on program start for its folder.</string>
@@ -427,7 +427,7 @@
   </action>
   <action name="actionEnglish">
    <property name="text">
-    <string>English</string>
+    <string>&amp;English</string>
    </property>
    <property name="toolTip">
     <string>Change the language to english.</string>
@@ -435,7 +435,7 @@
   </action>
   <action name="actionClear_settings_and_exit">
    <property name="text">
-    <string>Clear settings and exit</string>
+    <string>&amp;Clear settings and exit</string>
    </property>
    <property name="toolTip">
     <string>Clear program settings and kill this instance.</string>
@@ -443,7 +443,7 @@
   </action>
   <action name="actionRename_notefile">
    <property name="text">
-    <string>Rename notefile</string>
+    <string>&amp;Rename notefile</string>
    </property>
    <property name="toolTip">
     <string>Also changes all of the notes that link to it to the new name.</string>
@@ -451,7 +451,7 @@
   </action>
   <action name="actionDelete_notefile">
    <property name="text">
-    <string>Delete notefile</string>
+    <string>&amp;Delete notefile</string>
    </property>
    <property name="toolTip">
     <string>Delete the notefile permanetly (on the disk too).</string>
@@ -462,7 +462,7 @@
   </action>
   <action name="actionColor_blue">
    <property name="text">
-    <string>Color blue</string>
+    <string>&amp;Color blue</string>
    </property>
    <property name="shortcut">
     <string>1</string>
@@ -470,7 +470,7 @@
   </action>
   <action name="actionColor_green">
    <property name="text">
-    <string>Color green</string>
+    <string>Color &amp;green</string>
    </property>
    <property name="shortcut">
     <string>2</string>
@@ -478,7 +478,7 @@
   </action>
   <action name="actionColor_red">
    <property name="text">
-    <string>Color red</string>
+    <string>Color &amp;red</string>
    </property>
    <property name="shortcut">
     <string>3</string>
@@ -486,7 +486,7 @@
   </action>
   <action name="actionColor_black">
    <property name="text">
-    <string>Color black</string>
+    <string>Color &amp;black</string>
    </property>
    <property name="shortcut">
     <string>4</string>
@@ -494,7 +494,7 @@
   </action>
   <action name="actionMove_down">
    <property name="text">
-    <string>Move down</string>
+    <string>&amp;Move down</string>
    </property>
    <property name="shortcut">
     <string>Down</string>
@@ -502,7 +502,7 @@
   </action>
   <action name="actionMove_up">
    <property name="text">
-    <string>Move up</string>
+    <string>Move &amp;up</string>
    </property>
    <property name="shortcut">
     <string>Up</string>
@@ -510,7 +510,7 @@
   </action>
   <action name="actionMove_left">
    <property name="text">
-    <string>Move left</string>
+    <string>Move &amp;left</string>
    </property>
    <property name="shortcut">
     <string>Left</string>
@@ -518,7 +518,7 @@
   </action>
   <action name="actionMove_right">
    <property name="text">
-    <string>Move right</string>
+    <string>Move &amp;right</string>
    </property>
    <property name="shortcut">
     <string>Right</string>
@@ -529,7 +529,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Search </string>
+    <string>&amp;Search </string>
    </property>
    <property name="toolTip">
     <string>Search in all notes. Click in the results shown under the search field to go to the note.</string>
@@ -540,7 +540,7 @@
   </action>
   <action name="actionSelect_all_notes">
    <property name="text">
-    <string>Select all notes</string>
+    <string>S&amp;elect all notes</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+A</string>
@@ -548,7 +548,7 @@
   </action>
   <action name="actionJump_to_nearest_note">
    <property name="text">
-    <string>Jump to nearest note</string>
+    <string>&amp;Jump to nearest note</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+J</string>
@@ -564,7 +564,7 @@
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About</string>
+    <string>&amp;About</string>
    </property>
   </action>
   <action name="actionSelect_note_under_mouse">
@@ -577,7 +577,7 @@
   </action>
   <action name="actionCreate_note_from_the_clipboard_text">
    <property name="text">
-    <string>Create note from the clipboard text</string>
+    <string>Create &amp;note from the clipboard text</string>
    </property>
    <property name="toolTip">
     <string>Create note from the text in the regular clipboard.</string>
@@ -588,7 +588,7 @@
   </action>
   <action name="actionTransparent_background">
    <property name="text">
-    <string>Transparent background</string>
+    <string>&amp;Transparent background</string>
    </property>
    <property name="toolTip">
     <string>Changes only the background color of the note to be transparent.</string>
@@ -599,7 +599,7 @@
   </action>
   <action name="actionSet_this_height_as_default">
    <property name="text">
-    <string>Set this height as default</string>
+    <string>&amp;Set this height as default</string>
    </property>
    <property name="toolTip">
     <string>Set the current height as default for all files on startup.</string>
@@ -613,12 +613,12 @@
   </action>
   <action name="actionCopy_donation_address">
    <property name="text">
-    <string>Copy donation address</string>
+    <string>&amp;Copy donation address</string>
    </property>
   </action>
   <action name="actionSelect_all_red_notes">
    <property name="text">
-    <string>Select all red notes</string>
+    <string>Se&amp;lect all red notes</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
@@ -626,7 +626,7 @@
   </action>
   <action name="actionRedo">
    <property name="text">
-    <string>Redo</string>
+    <string>&amp;Redo</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Z</string>
@@ -646,6 +646,22 @@
   <action name="actionDownload_it">
    <property name="text">
     <string>Download it</string>
+   </property>
+  </action>
+  <action name="actionGotoTab1">
+   <property name="text">
+    <string>gotoTab1</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+  </action>
+  <action name="actionGotoTab2">
+   <property name="text">
+    <string>gotoTab2</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
    </property>
   </action>
  </widget>

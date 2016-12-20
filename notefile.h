@@ -76,6 +76,7 @@ public:
     float eyeX,eyeY,eyeZ; //camera position for the GUI cases (can't be QPointF, it has z)
     QStringList undoHistory, redoHistory; //The current state is on the back of undoHistory
     bool isDisplayedFirstOnStartup;
+    bool isTimelineNoteFile;
     bool isReadable;
     bool saveWithRequest;
     bool bufferImages;

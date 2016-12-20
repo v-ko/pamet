@@ -166,13 +166,6 @@ void Note::adjustTextSize()
     }
     p.setFont(font);
 
-    //------Determine alignment---------------
-    if(textCopy.contains("\n")){//if there's more than one row
-        alignment = Qt::AlignLeft;
-    }else{
-        alignment = Qt::AlignCenter;
-    }
-
     //=========Shortening the text in the box=============
     textIsShortened = false; //assume we don't need shortening
 
@@ -184,7 +177,7 @@ void Note::adjustTextSize()
 
     //-----If there's no resizing needed (common case , that's why it's in front)--------
 
-    textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment ,textCopy);
+    textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() ,textCopy);
     if( (  textFieldNeeded.height() <= textField.height() ) && ( textFieldNeeded.width() <= textField.width() ) ){
         goto after_shortening;
     }
@@ -197,7 +190,7 @@ void Note::adjustTextSize()
     while((max_it-base_it)!=1) { //until we pin-point the needed length with accuracy 1
 
         textCopy.resize(probe_it); //we resize to the probe iterator
-        textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment ,textCopy); //get the bounding box for the text (with probe length)
+        textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() ,textCopy); //get the bounding box for the text (with probe length)
 
         if( ( textFieldNeeded.height() > textField.height() ) | ( textFieldNeeded.width() > textField.width() ) ){//if the needed box is bigger than the size of the note
             max_it=probe_it; //if the text doesnt fit - move max_iterator to the current position
@@ -278,54 +271,70 @@ void Note::checkTextForWebPageDefinition()
         }
     }
 }
-
-void Note::drawPixmap()
+void Note::drawNote(QPainter *painter)
 {
-    if( !bufferImage | autoSizing ) return;
+    QFont font = painter->font();
+    //font.set;
+    QPen pen = painter->pen();
+    font.setFamily("Sans");
 
-    float pixm_real_size_x = rect().width()*FONT_TRANSFORM_FACTOR; //pixmap real size (inflated to have better quality on zoom)
-    float pixm_real_size_y = rect().height()*FONT_TRANSFORM_FACTOR;
+    QRectF imageRect = rect();
 
-    if(type==NoteType::picture){
-        delete img;
-        img = new QImage;
+    //If it's a picture note - resize appropriately to fit in the note boundaries
+    if( (type==NoteType::picture) && textForDisplay_m.isEmpty() ){
+        float frame_ratio,pixmap_ratio;
+        frame_ratio = rect().width()/rect().height();
+        pixmap_ratio = float(img->width())/float(img->height());
 
-        if( img->load(addressString) ) {
-            return;
-        }else{
-            type=NoteType::normal;
-            setTextForShortening("Not a valid picture.");
+        if( frame_ratio > pixmap_ratio ){
+            //if the width for the note frame is proportionally bigger than the pictures width
+            //we resize the note using the height of the frame and a calculated width
+            imageRect.setWidth(imageRect.height()*pixmap_ratio);
+            imageRect.moveCenter(rect().center());
+        }else if( frame_ratio < pixmap_ratio ){
+            //we resize the note using the width of the frame and a calculated height
+            imageRect.setHeight(imageRect.width()/pixmap_ratio);
+            imageRect.moveCenter(rect().center());
         }
+
+
+        //Draw image if there is one FIXME
     }
-
-    delete img;
-    img = new QImage(pixm_real_size_x,pixm_real_size_y,QImage::Format_ARGB32_Premultiplied);
-    img->fill(Qt::transparent);
-
-    QFont font("Halvetica");
-    font.setPixelSize(fontSize_m*FONT_TRANSFORM_FACTOR);
-    font.setStyleStrategy(QFont::PreferAntialias); //style aliasing
-
-    QPainter p;
-    if(!p.begin(img)){
-        qDebug()<<"[Note::drawPixmap]Failed to initialize painter.";
-    }
-    p.setFont(font);
-    p.setRenderHint(QPainter::TextAntialiasing);
-
-    //Draw the note field
-    p.fillRect(0,0,pixm_real_size_x,pixm_real_size_y,QBrush(backgroundColor_m));
 
     //Draw the text
-    p.setPen(textColor_m); //set color
-    p.setBrush(Qt::SolidPattern); //set fill style
-    p.drawText(QRectF(NOTE_SPACING*FONT_TRANSFORM_FACTOR,
-                      NOTE_SPACING*FONT_TRANSFORM_FACTOR,
-                      rect().width()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR,
-                      rect().height()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR),
-               Qt::TextWordWrap | alignment,textForDisplay_m);
+    font.setPointSizeF( fontSize_m );
+    painter->setFont(font);
 
-    emit visualChange();
+    pen.setColor( textColor_m );
+    painter->setPen( pen );
+    painter->setBrush(Qt::SolidPattern);
+    QRectF textRect = rect();
+    textRect.moveTop(textRect.top() - fontSize_m*0.2); // Adjust text so it is properly centered
+    painter->drawText( textRect, Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m);
+
+    //For testing
+    //QRectF boundingRect = painter->boundingRect( rect_m, Qt::TextWordWrap | alignment(), textForDisplay_m );
+    //painter->fillRect( boundingRect, QBrush( QColor(255,0,0,60)));
+
+    //Draw a border around the appropriate notes
+    if( (type==NoteType::redirecting) |
+        (type==NoteType::systemCall) |
+        (type==NoteType::webPage) |
+        (type==NoteType::textFile) )
+    {
+        pen.setColor(textColor_m);
+        painter->setPen(pen);
+        painter->setBrush(Qt::NoBrush);
+        painter->drawRect(rect());
+    }
+
+    //Draw the note field
+    painter->fillRect(rect(),QBrush(backgroundColor_m));
+
+    //If it's selected - overpaint with yellow
+    if(isSelected_m){
+        painter->fillRect(rect(), QBrush(QColor(255,255,0,127)) ); //the yellow marking box
+    }
 }
 
 QString Note::text()
@@ -382,7 +391,8 @@ void Note::setFontSize(float newFontSize)
         qDebug()<<"[Note::setFontSize]Font size out of range. Note text:"<<text_m;
     }else{
         fontSize_m = newFontSize;
-        drawPixmap();
+
+        emit visualChange();
         emit fontSizeChanged(newFontSize);
         emit propertiesChanged();
     }
@@ -398,7 +408,8 @@ void Note::setColors(QColor newTextColor, QColor newBackgroundColor)
     }else{
         textColor_m = newTextColor;
         backgroundColor_m = newBackgroundColor;
-        drawPixmap();
+
+        emit visualChange();
         emit propertiesChanged();
     }
 }
@@ -413,21 +424,21 @@ void Note::setTextForShortening(QString text_)
 void Note::setTextForDisplay(QString text_)
 {
     textForDisplay_m = text_;
-    drawPixmap();
+    emit visualChange();
 }
 void Note::setSelected(bool value)
 {
     if(value==isSelected_m) return;
 
     isSelected_m = value;
-    drawPixmap();
+    emit visualChange();
 }
 void Note::autoSize()
 {
     if(type==NoteType::picture){
         rect_m.setWidth(10);
         rect_m.setHeight(10);
-        drawPixmap();
+        emit visualChange();
         return;
     }
 
@@ -474,7 +485,7 @@ void Note::autoSize()
     adjustTextSize();
 
     autoSizing = false;
-    drawPixmap();
+    emit visualChange();
 }
 
 void Note::checkForDefinitions()
@@ -561,4 +572,13 @@ QString Note::propertiesInIniString()
     iniStringStream<<'\n';
 
     return iniString;
+}
+
+Qt::AlignmentFlag Note::alignment()
+{
+    if(text_m.contains("\n")){//if there's more than one row
+        return Qt::AlignLeft;
+    }else{
+        return Qt::AlignCenter;
+    }
 }

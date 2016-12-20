@@ -6,6 +6,8 @@
 
 QT += core gui widgets network xml
 
+QT -= webkit
+
 CONFIG += C++11
 
 INCLUDEPATH += /home/p10/Dropbox/Pepi/C++
@@ -48,7 +50,10 @@ HEADERS += \
     mislidesktopgui.h \
     misliwindow.h \
     ../petko10.h \
-    ../petko10q.h
+    ../petko10q.h \
+    timelinewidget.h \
+    timeline.h \
+    timelinemodule.h
 
 SOURCES += \
     ../canvas.cpp \
@@ -63,11 +68,15 @@ SOURCES += \
     mislidesktopgui.cpp \
     misliwindow.cpp \
     ../petko10.cpp \
-    ../petko10q.cpp
+    ../petko10q.cpp \
+    timelinewidget.cpp \
+    timeline.cpp \
+    timelinemodule.cpp
 
 FORMS += \
     editnotedialogue.ui \
-    misliwindow.ui
+    misliwindow.ui \
+    timelinewidget.ui
 
 DISTFILES += \
     ../installer/config/config.xml \

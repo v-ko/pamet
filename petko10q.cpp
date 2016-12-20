@@ -169,6 +169,10 @@ float q_version_string_to_number(QString version)
 {//Implies 3 version numbers and max 999 on each
     float result;
     QStringList numbers = version.split(".");
+    if(numbers.size()<3){
+        qDebug()<<"[q_version_string_to_number]Bad version number. Returning 0.";
+        return 0;
+    }
     result = numbers[0].toFloat()*1000000;
     result += numbers[1].toFloat()*1000;
     result += numbers[2].toFloat();

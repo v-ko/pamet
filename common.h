@@ -17,6 +17,8 @@
 #ifndef COMMON_H
 #define COMMON_H
 
+#include <qglobal.h>
+
 #define FONT_TRANSFORM_FACTOR 15 //quality of the font textures (really only matters for close distance) interval [10;40] or smth like that
 #define CLICK_RADIUS 0.3
 #define MOVE_SPEED 2 //stypka pri dvijenie napred-nazad
@@ -36,5 +38,9 @@
 #define MOVE_FUNC_TOLERANCE 12 //in pixels
 #define MAX_FONT_SIZE 100
 #define MAX_URI_LENGTH 2048
+
+const qint64 days = 24*60*60*1000;
+const qint64 months = 30*days;
+const qint64 years = 12*months;
 
 #endif // COMMON_H

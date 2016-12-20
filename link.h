@@ -36,7 +36,7 @@ public:
 
     //Hard variables
     int id;
-    QString text;
+    QString text; //include a check for semicolons when saving the text!
 
     //Program variables
     QLineF line, autoLine;

@@ -49,7 +49,7 @@ public:
 
 public slots:
     void newNote();
-    int editNote();
+    void editNote();
     void inputDone();
     void setTextEditText(QString text); //expose that publically
 
@@ -59,6 +59,7 @@ public slots:
     void choosePicture();
     void chooseTextFile();
     void setSystemCallPrefix();
+    void closeEvent(QCloseEvent *);
 private:
     Ui::EditNoteDialogue *ui;
 };

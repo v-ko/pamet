@@ -28,6 +28,7 @@
 #include "../misliinstance.h"
 #include "../notefile.h"
 #include "../notessearch.h"
+#include "timelinewidget.h"
 
 class Canvas;
 class MisliDesktopGui;
@@ -48,6 +49,8 @@ public:
     MisliWindow(MisliDesktopGui * misli_dg_);
     ~MisliWindow();
 
+    bool timelineTabIsActive();
+
     MisliInstance *misliInstance();
 
     //Properties
@@ -58,6 +61,8 @@ public:
     Canvas *canvas;
     EditNoteDialogue *edit_w;
     NotesSearch *notes_search;
+    QTabWidget tabWidget;
+    TimelineWidget timelineWidget;
     QMenu updateMenu;
 
     //Variables

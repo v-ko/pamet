@@ -20,6 +20,7 @@
 #include <QtGlobal>
 #include <QNetworkReply>
 #include <QDomDocument>
+#include <QLayout>
 
 #include "misliwindow.h"
 #include "../misliinstance.h"
@@ -31,6 +32,8 @@
 
 MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     ui(new Ui::MisliWindow),
+    tabWidget(this),
+    timelineWidget(this),
     updateMenu(tr("Update available"))
 {
     ui->setupUi(this);
@@ -59,9 +62,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
 
     //Init widgets and widnows
+    ui->mainLayout->addWidget(&tabWidget);
     edit_w = new EditNoteDialogue(this);
+    tabWidget.addTab(&timelineWidget,"/timeline");
     canvas = new Canvas(this);
-    ui->mainLayout->addWidget(canvas);
+    tabWidget.addTab(canvas,"");
     ui->searchLineEdit->hide();
     ui->searchListView->hide();
     ui->jumpToNearestNotePushButton->hide();
@@ -70,6 +75,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     addAction(ui->actionSelect_note_under_mouse);
     addAction(ui->actionNext_notefile);
     addAction(ui->actionPrevious_notefile);
+    addAction(ui->actionGotoTab1);
+    addAction(ui->actionGotoTab2);
 
     //============Update check stuff=======================
     //If it's the android build - just hide the action. No network connectivity will solve the rest
@@ -127,7 +134,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
     //Delete selected (lambda)
     connect(ui->actionDelete_selected,&QAction::triggered,canvas,[&](){
-        canvas->noteFile()->deleteSelected();
+        if(timelineTabIsActive()){
+            timelineWidget.timeline->archiveModule.noteFile.deleteSelected();
+        }else{
+            canvas->noteFile()->deleteSelected();
+        }
     });
     //Undo (lambda)
     connect(ui->actionUndo,&QAction::triggered,[&](){
@@ -197,15 +208,26 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Move left (lambda)
     connect(ui->actionMove_left,&QAction::triggered,[&](){
-        canvas->noteFile()->eyeX-=MOVE_SPEED;
-        QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-        canvas->update();
+        if(tabWidget.currentWidget()==canvas){
+            canvas->noteFile()->eyeX-=MOVE_SPEED;
+            QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
+            canvas->update();
+        }else if(tabWidget.currentWidget()==&timelineWidget){
+            timelineWidget.timeline->positionInMSecs -= timelineWidget.timeline->viewportSizeInMSecs/60;
+            timelineWidget.timeline->update();
+        }
+
     });
     //Move right (lambda)
     connect(ui->actionMove_right,&QAction::triggered,[&](){
-        canvas->noteFile()->eyeX+=MOVE_SPEED;
-        QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-        canvas->update();
+        if(tabWidget.currentWidget()==canvas){
+            canvas->noteFile()->eyeX+=MOVE_SPEED;
+            QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
+            canvas->update();
+        }else if(tabWidget.currentWidget()==&timelineWidget){
+            timelineWidget.timeline->positionInMSecs += timelineWidget.timeline->viewportSizeInMSecs/60;
+            timelineWidget.timeline->update();
+        }
     });
     //Select all notes (lambda)
     connect(ui->actionSelect_all_notes,&QAction::triggered,[&](){
@@ -254,7 +276,16 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
         misliDesktopGUI->exit(0);
     });
 
-    //Creating the virtual note files
+    //Switch to tab 1
+    connect(ui->actionGotoTab1, &QAction::triggered, this, [&](){
+        tabWidget.setCurrentIndex(0);
+    });
+    //Switch to tab 2
+    connect(ui->actionGotoTab2, &QAction::triggered, this, [&](){
+        tabWidget.setCurrentIndex(1);
+    });
+
+    //---------------------Creating the virtual note files----------------------
     clipboardNoteFile = new NoteFile;
     helpNoteFile = new NoteFile;
     helpNoteFile->setFilePath(":/help/help_"+misliDesktopGUI->language()+".misl");
@@ -263,6 +294,10 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     setCurrentDir(NULL);
 
     grabGesture(Qt::PinchGesture);
+
+    //BRUTE FORCE BUG SQUASHING (graphics glitch in ui.tabWidget)
+    tabWidget.setCurrentIndex(1);
+    tabWidget.setCurrentIndex(0);
 }
 
 MisliWindow::~MisliWindow()
@@ -275,6 +310,14 @@ MisliWindow::~MisliWindow()
     delete notes_search;
 }
 
+bool MisliWindow::timelineTabIsActive()
+{
+    if(tabWidget.currentWidget()==&timelineWidget){
+        return true;
+    }else{
+        return false;
+    }
+}
 void MisliWindow::closeEvent(QCloseEvent *)
 {
     misliDesktopGUI->setQuitOnLastWindowClosed(true);
@@ -501,7 +544,7 @@ void MisliWindow::updateTitle()
 {
     QString title;
 
-    title=tr("Misli - ");
+    //title=tr("Misli - ");
     if(canvas->noteFile()==NULL){
         title+=tr("No note files present");
     }else{
@@ -511,7 +554,7 @@ void MisliWindow::updateTitle()
         }
     }
 
-    setWindowTitle(title);
+    tabWidget.setTabText(tabWidget.indexOf(canvas), title);
 }
 
 void MisliWindow::colorSelectedNotes(float txtR, float txtG, float txtB, float txtA, float backgroundR, float backgroundG, float backgroundB, float backgroundA)
