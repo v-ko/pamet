@@ -79,7 +79,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     edit_w = new EditNoteDialogue(this);
     canvas = new Canvas(this);
     tabWidget.addTab(canvas,"");
-    tabWidget.addTab(&timelineWidget,"/timeline");
+    tabWidget.addTab(&timelineWidget,"/timeline(beta)");
     ui->searchLineEdit->hide();
     ui->searchListView->hide();
     ui->searchScopeComboBox->hide();

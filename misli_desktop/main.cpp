@@ -17,7 +17,7 @@
 //release routine
 //arch package
 //crash log
-//windows buld за маги
+//windows build за маги
 
 //FIXME-tata
 
