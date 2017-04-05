@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT += core gui widgets network xml
+QT += core gui widgets network xml multimedia sql
 
 QT -= webkit
 
@@ -53,7 +53,12 @@ HEADERS += \
     ../petko10q.h \
     timelinewidget.h \
     timeline.h \
-    timelinemodule.h
+    timelinemodule.h \
+    communicationsmodule.h \
+    notesmodule.h \
+    photomodule.h \
+    archivemodule.h \
+    statisticsmodule.h
 
 SOURCES += \
     ../canvas.cpp \
@@ -71,7 +76,12 @@ SOURCES += \
     ../petko10q.cpp \
     timelinewidget.cpp \
     timeline.cpp \
-    timelinemodule.cpp
+    timelinemodule.cpp \
+    communicationsmodule.cpp \
+    notesmodule.cpp \
+    photomodule.cpp \
+    archivemodule.cpp \
+    statisticsmodule.cpp
 
 FORMS += \
     editnotedialogue.ui \

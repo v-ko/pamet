@@ -18,4 +18,5 @@ TimelineWidget::TimelineWidget(MisliWindow *misliWindow_) :
 TimelineWidget::~TimelineWidget()
 {
     delete ui;
+    delete timeline;
 }

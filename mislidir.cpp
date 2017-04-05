@@ -21,11 +21,12 @@
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 
-MisliDir::MisliDir(QString nts_dir, bool bufferImages_, bool enableFSWatch)
+MisliDir::MisliDir(QString nts_dir, bool enableFSWatch)
 {
-    bufferImages = bufferImages_;
     fsWatchIsEnabled = enableFSWatch;
     currentNoteFile = NULL;
+    lastNoteFile = NULL;
+    keepHistoryViaGit = false;
 
     //FS-watch stuff
     if(fsWatchIsEnabled){
@@ -64,8 +65,31 @@ void MisliDir::setDirectoryPath(QString newDirPath)
             return;
         }
     }
-    directoryPath_m=newDirPath;
+    directoryPath_m = newDirPath;
+
+    QFileInfo gitOptionFile(newDir.filePath(".keep_history_via_git"));
+    if(gitOptionFile.exists()) keepHistoryViaGit = true;
+
+    //Upon leading at least the current dir is set to this one in order to correct relative paths in the Note class
+    //which has no access to the MisliDir class and its info
+    QDir::setCurrent(directoryPath_m);
+
     loadNotesFiles();
+
+    if(keepHistoryViaGit){
+        //Do a profilactic or innitial commit
+        QProcess p;
+        p.start("git",QStringList()<<"init");
+        p.waitForFinished();
+        qDebug()<<p.readAll();
+        p.start("git",QStringList()<<"add"<<"-A");
+        p.waitForFinished();
+        qDebug()<<p.readAll();
+        p.start("git",QStringList()<<"commit"<<"-m"<<"'Dir init commit'");
+        p.waitForFinished();
+        qDebug()<<p.readAll();
+    }
+
     emit directoryPathChanged(newDirPath);
 }
 QList<NoteFile*> MisliDir::noteFiles()
@@ -171,10 +195,10 @@ void MisliDir::handleChangedFile(QString filePath)
 
     NoteFile *nf,dummyNF;
 
-    dummyNF.filePath_m = filePath; //A bit of a hack to get the name
-    nf = noteFileByName(dummyNF.name());
+    dummyNF.filePath_m = filePath; //Get the name
+    nf = noteFileByName(dummyNF.name()); //Locate the nf whith that name
 
-    if(nf==NULL) return;//avoid segfaults on wrong name
+    if(nf==NULL) return;//avoid segfaults on a wrong name
 
     if( nf->init()==0 ){
         nf->isReadable = true;
@@ -220,7 +244,7 @@ void MisliDir::addNoteFile(QString pathToNoteFile)
     NoteFile *nf = new NoteFile;
 
     nf->saveWithRequest = true;
-    nf->bufferImages = bufferImages;
+    nf->keepHistoryViaGit = keepHistoryViaGit;
     nf->eyeZ = defaultEyeZ();
     nf->setFilePath(pathToNoteFile);
 

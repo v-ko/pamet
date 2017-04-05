@@ -119,6 +119,8 @@ public slots:
     //Functions
     void closeEvent(QCloseEvent*);
     bool event(QEvent *event);
+    void keyPressEvent(QKeyEvent *event);
+    void keyReleaseEvent(QKeyEvent *event);
     bool gestureEvent(QGestureEvent *event);
     void pinchTriggered(QPinchGesture *gesture);
 

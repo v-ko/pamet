@@ -15,6 +15,7 @@
 */
 
 #include <QFont>
+#include <QFontMetrics>
 #include <QRect>
 #include <QPainter>
 #include <QImage>
@@ -22,6 +23,7 @@
 #include <QDebug>
 #include <QUrl>
 #include <QFileInfo>
+#include <QDir>
 
 #include "petko10.h"
 #include "petko10q.h"
@@ -29,7 +31,7 @@
 #include "common.h"
 #include "note.h"
 
-Note::Note(int id_, QString iniString, bool bufferImage_)
+Note::Note(int id_, QString iniString)
 {
     QString tmpString;
     QStringList linkIDStrings,linkCPxStrings, linkCPyStrings, txt_colString,bg_colString;
@@ -37,7 +39,6 @@ Note::Note(int id_, QString iniString, bool bufferImage_)
     float x,y,a,b;
 
     id = id_;
-    bufferImage = bufferImage_;
 
     err += q_get_value_for_key(iniString,"txt",text_m);
         text_m.replace(QString("\\n"),QString("\n"));
@@ -103,10 +104,25 @@ Note::Note(int id_, QString iniString, bool bufferImage_)
 
     if(err!=0) qDebug()<<"[Note::Note]Some of the note properties were not read correctly.Number of errors:"<<-err;
 }
-Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_, bool bufferImage_)
+Note::Note(Note *nt)
+{
+    id = nt->id;
+    text_m = nt->text_m;
+    rect_m = nt->rect_m;
+    timeMade = nt->timeMade;
+    timeModified = nt->timeModified;
+    fontSize_m = nt->fontSize_m;
+    textColor_m = nt->textColor_m;
+    backgroundColor_m = nt->backgroundColor_m;
+
+    commonInitFunction();
+
+    setTextForShortening(nt->text_m); //if I call setText there is some complication with the empty strings
+    checkForDefinitions();
+}
+Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_)
 {
     id = id_;
-    bufferImage = bufferImage_;
     text_m = text_;
     rect_m = rect_;
     timeMade = t_made_;
@@ -130,8 +146,8 @@ void Note::commonInitFunction()
     isSelected_m=false;
     img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
     textIsShortened=false;
-    autoSizing = false;
     type = NoteType::normal;
+    requestAutoSize = false;
 }
 
 Note::~Note()
@@ -139,76 +155,63 @@ Note::~Note()
     delete img;
 }
 
-void Note::storeCoordinatesBeforeMove()
+QRectF Note::adjustTextSize(QPainter &p)
 {
-    xBeforeMove=rect_m.x();
-    yBeforeMove=rect_m.y();
-}
-
-void Note::adjustTextSize()
-{
-    if( !bufferImage ) return;
-
-    int base_it,max_it,probe_it; //iterators for the shortening algorythm
+    int leftMargin, rightMargin, testPosition;
 
     //-------Init painter for the text shortening----------
-    QRectF textField(0,0,rect().width()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR,
-                     rect().height()*FONT_TRANSFORM_FACTOR - 2*NOTE_SPACING*FONT_TRANSFORM_FACTOR);
+    QRectF textField = textRect();
     QRectF textFieldNeeded;
     QString textCopy = textForShortening_m;
-
-    QFont font("Halvetica");
-    font.setPixelSize(fontSize_m*FONT_TRANSFORM_FACTOR);
-
-    QPainter p;
-    if(!p.begin(img)){
-        qDebug()<<"[Note::adjustTextSize]Failed to initialize painter.";
-    }
-    p.setFont(font);
 
     //=========Shortening the text in the box=============
     textIsShortened = false; //assume we don't need shortening
 
-    p.setFont(font);
+    leftMargin = 0;
+    rightMargin = textCopy.size();
+    testPosition = leftMargin + ceil(float(rightMargin-leftMargin)/2);
 
-    base_it = 0;
-    max_it = textCopy.size();
-    probe_it=base_it + ceil(float(max_it-base_it)/2);
-
-    //-----If there's no resizing needed (common case , that's why it's in front)--------
-
-    textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() ,textCopy);
+    //-----If there's no resizing needed (common case , that's why it's on the top)--------
+    textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() | Qt::AlignVCenter ,textCopy);
     if( (  textFieldNeeded.height() <= textField.height() ) && ( textFieldNeeded.width() <= textField.width() ) ){
         goto after_shortening;
     }
     //-----For the shorter than "..." texts (they won't get any shorter)--------------
-    if(max_it<=3){
+    if(rightMargin<=3){
         goto after_shortening;
     }
 
     //------------Start shortening algorithm---------------------
-    while((max_it-base_it)!=1) { //until we pin-point the needed length with accuracy 1
+    //Here lie 4 too many hours of debugging
+    while( (rightMargin-leftMargin)!=1 ) { //until we converge the margins (the left is the length at which the text fits, the right - at which it doesn't fit)
 
-        textCopy.resize(probe_it); //we resize to the probe iterator
-        textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() ,textCopy); //get the bounding box for the text (with probe length)
+        textCopy.resize(testPosition-3); //We know the text will be shortened, so we test with the ellipsis
+        textCopy+="...";
 
-        if( ( textFieldNeeded.height() > textField.height() ) | ( textFieldNeeded.width() > textField.width() ) ){//if the needed box is bigger than the size of the note
-            max_it=probe_it; //if the text doesnt fit - move max_iterator to the current position
+        textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() | Qt::AlignVCenter ,textCopy);
+
+        if( ( textFieldNeeded.height() > textField.height() ) | ( textFieldNeeded.width() > textField.width() ) ){
+            rightMargin=testPosition; //if the text doesnt fit - move max_iterator to the current position
         }else{
-            base_it=probe_it; //if it does - bring the base iterator to the current pos
+            leftMargin=testPosition; //if it does - bring the base iterator to the current pos
         }
 
-        probe_it=base_it + ceil(float(max_it-base_it)/2); //new position for the probe_iterator - optimally in the middle of the dead space
+        testPosition=leftMargin + ceil(float(rightMargin-leftMargin)/2); //new position for the probe_iterator - optimally in the middle of the interval
+        if(testPosition<=3){
+            textIsShortened = true;
+            textCopy="...";
+            goto after_shortening;
+        }
         textCopy = textForShortening_m;
     }
 
     textIsShortened = true;
-    textCopy.resize(max_it-3);
+    textCopy.resize(leftMargin-3);
     textCopy+="...";
 
     after_shortening:
-    p.end();
     setTextForDisplay(textCopy);
+    return textFieldNeeded;
 }
 
 void Note::checkTextForNoteFileLink() //there's an argument , because search inits the notes out of their dir and still needs that function (the actual linking functionality is not needed then)
@@ -227,20 +230,29 @@ void Note::checkTextForFileDefinition()
     if (text_m.startsWith(QString("define_text_file_note:"))){
         addressString = q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
         addressString = addressString.trimmed(); //remove white spaces from both sides
+        if(addressString.startsWith(".")) addressString.remove(0,1).prepend(QDir::currentPath());
         file.setFileName(addressString);
         type = NoteType::textFile;
         if(file.open(QIODevice::ReadOnly)){
             setTextForShortening(QFileInfo(file).fileName()+":\n"+file.read(MAX_TEXT_FOR_DISPLAY_SIZE));
         }else{
-            setTextForShortening( tr("Failed to open file."));
+            setTextForShortening( tr("Failed to open file:")+addressString);
         }
         file.close();
         return;
     }else if (text_m.startsWith(QString("define_picture_note:"))){
         addressString = q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
-        addressString=addressString.trimmed(); //remove white spaces from both sides
-        type = NoteType::picture;
+        addressString = addressString.trimmed(); //remove white spaces from both sides
+        if(addressString.startsWith(".")) addressString.remove(0,1).prepend(QDir::currentPath());
         setTextForShortening("");
+        delete img;
+        img = new QImage(addressString);
+        if(img->isNull()){
+            setTextForShortening( tr("Failed to open file:")+addressString);
+            type = NoteType::normal;
+        }else{
+            type = NoteType::picture;
+        }
     }
 }
 void Note::checkTextForSystemCallDefinition()
@@ -271,11 +283,11 @@ void Note::checkTextForWebPageDefinition()
         }
     }
 }
-void Note::drawNote(QPainter *painter)
+void Note::drawNote(QPainter &painter)
 {
-    QFont font = painter->font();
+    QFont font = painter.font();
     //font.set;
-    QPen pen = painter->pen();
+    QPen pen = painter.pen();
     font.setFamily("Sans");
 
     QRectF imageRect = rect();
@@ -297,24 +309,34 @@ void Note::drawNote(QPainter *painter)
             imageRect.moveCenter(rect().center());
         }
 
+        QRectF projectedRect; //We use the scaled() f-n because it's configurable to a smooth transform
+        projectedRect.setWidth(painter.transform().m22()*imageRect.width()); //Use the painter scaling factor
+        projectedRect.setHeight(painter.transform().m22()*imageRect.height());
+        painter.drawImage(imageRect, img->scaled(projectedRect.width(),projectedRect.height(),Qt::KeepAspectRatio,Qt::SmoothTransformation));
 
-        //Draw image if there is one FIXME
     }
 
     //Draw the text
-    font.setPointSizeF( fontSize_m );
-    painter->setFont(font);
+
+    //Point size uses transformations, pixel size is the same on all devices
+    //So this is kind of a hack to use pointSize without the text being different size on different (by DPI) displays
+    font.setPointSizeF(10000);
+    QFontMetrics fm(font);
+    font.setPointSizeF( ( fontSize_m *10000/float(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
+    painter.setFont(font);
 
     pen.setColor( textColor_m );
-    painter->setPen( pen );
-    painter->setBrush(Qt::SolidPattern);
-    QRectF textRect = rect();
-    textRect.moveTop(textRect.top() - fontSize_m*0.2); // Adjust text so it is properly centered
-    painter->drawText( textRect, Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m);
+    painter.setPen( pen );
+    painter.setBrush( Qt::SolidPattern );
+    //QRectF adjustedRect =
+    adjustTextSize(painter);
+    painter.drawText( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m);
 
     //For testing
-    //QRectF boundingRect = painter->boundingRect( rect_m, Qt::TextWordWrap | alignment(), textForDisplay_m );
-    //painter->fillRect( boundingRect, QBrush( QColor(255,0,0,60)));
+    //painter.drawText(rect().topLeft(),QString::number(fm.height())+"'"+QString::number(fontSize_m *10000/float(fm.height())));
+    //QRectF boundingRect = painter.boundingRect( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m );
+    //painter.fillRect( boundingRect, QBrush( QColor(255,0,0,60)));
+    //painter.fillRect( adjustedRect , QBrush( QColor(0,255,0,60))); //shows the probe iterator which may be for the right margin so it's normal if it's a wrong bounding box
 
     //Draw a border around the appropriate notes
     if( (type==NoteType::redirecting) |
@@ -323,17 +345,83 @@ void Note::drawNote(QPainter *painter)
         (type==NoteType::textFile) )
     {
         pen.setColor(textColor_m);
-        painter->setPen(pen);
-        painter->setBrush(Qt::NoBrush);
-        painter->drawRect(rect());
+        painter.setPen(pen);
+        painter.setBrush(Qt::NoBrush);
+        painter.drawRect(rect());
     }
 
     //Draw the note field
-    painter->fillRect(rect(),QBrush(backgroundColor_m));
+    if(type!=NoteType::picture){
+        painter.fillRect(rect(),QBrush(backgroundColor_m));
+    }
 
     //If it's selected - overpaint with yellow
     if(isSelected_m){
-        painter->fillRect(rect(), QBrush(QColor(255,255,0,127)) ); //the yellow marking box
+        painter.fillRect(rect(), QBrush(QColor(255,255,0,127)) ); //the yellow marking box
+    }
+}
+void Note::drawLink(QPainter &painter, Link &ln)
+{
+    QPen pen = painter.pen();
+    QColor selectedPenColor(150,150,0,255);
+    QColor circleColor = backgroundColor();
+    circleColor.setAlpha(60);//same as BG but transparent
+
+    //Make the path if it's not present
+    if(ln.path.isEmpty()){
+        ln.path.moveTo(ln.line.p1());
+        if(ln.usesControlPoint){
+            ln.path.quadTo(ln.realControlPoint(),ln.line.p2());
+        }else{
+            ln.path.lineTo(ln.line.p2());
+        }
+        ln.path.translate(-ln.line.p1());
+    }
+
+    painter.setBrush(Qt::NoBrush);
+    painter.save(); //pushMatrix() (not quite but ~)
+        painter.translate( ln.line.p1() );
+        //Draw the base line
+        if(ln.isSelected){ //overpaint with yellow if it's selected
+            pen.setColor( selectedPenColor );
+            painter.setPen( pen );
+            painter.drawPath(ln.path);
+        }else{
+            pen.setColor( textColor() );
+            painter.setPen( pen );
+            painter.drawPath(ln.path);
+        }
+    painter.restore();//pop matrix
+
+    QLineF lastLineFromPath(ln.path.pointAtPercent(0.90),ln.path.pointAtPercent(1));
+    //Draw the arrow head
+    painter.save(); //pushMatrix() (not quite but ~)
+        painter.translate( ln.line.p2() );
+        painter.rotate(90-lastLineFromPath.angle());
+
+        if(ln.isSelected){ //overpaint when selected
+            pen.setColor( selectedPenColor );
+            painter.setPen( pen );
+            painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
+            painter.drawLine(QLineF(0,0,0.45,0.9));
+        }else{
+            pen.setColor( textColor() );
+            painter.setPen( pen );
+            painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
+            painter.drawLine(QLineF(0,0,0.45,0.9));
+        }
+    painter.restore();//pop matrix
+
+    //Paint the control point if the link is selected
+    if(ln.isSelected){
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(circleColor);
+        if(ln.usesControlPoint){
+            painter.drawEllipse(ln.controlPoint,RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
+        }else{
+            painter.drawEllipse(ln.middleOfTheLine(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
+        }
+        painter.setPen(pen);//restore pen (because of the 'cosmetic' property that enables the matrix width transform
     }
 }
 
@@ -399,7 +487,11 @@ void Note::setFontSize(float newFontSize)
 }
 void Note::setRect(QRectF newRect)
 {
-    rect_m = newRect;
+    rect_m.setX( round(float(newRect.x())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
+    rect_m.setY( round(float(newRect.y())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
+    rect_m.setWidth( stop( round(float(newRect.width())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE ,MIN_NOTE_A,MAX_NOTE_A) );
+    rect_m.setHeight( stop(round(float(newRect.height())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE ,MIN_NOTE_B,MAX_NOTE_B) );
+
 }
 void Note::setColors(QColor newTextColor, QColor newBackgroundColor)
 {
@@ -418,13 +510,10 @@ void Note::setTextForShortening(QString text_)
     //Be within the size limit
     if(text_.size()>MAX_TEXT_FOR_DISPLAY_SIZE) textForShortening_m = text_.left(MAX_TEXT_FOR_DISPLAY_SIZE);
     else textForShortening_m=text_;
-
-    adjustTextSize();
 }
 void Note::setTextForDisplay(QString text_)
 {
     textForDisplay_m = text_;
-    emit visualChange();
 }
 void Note::setSelected(bool value)
 {
@@ -433,23 +522,22 @@ void Note::setSelected(bool value)
     isSelected_m = value;
     emit visualChange();
 }
-void Note::autoSize()
+void Note::autoSize(QPainter &painter)
 {
     if(type==NoteType::picture){
         rect_m.setWidth(10);
         rect_m.setHeight(10);
-        emit visualChange();
         return;
     }
 
-    autoSizing = true;
+    adjustTextSize(painter);
 
     //Expand until the text fits or we hit max size
     while(textIsShortened){
         if(rect().width()>=MAX_NOTE_A && rect().height()>=MAX_NOTE_B) break;
         if(rect().width()<=MAX_NOTE_A) rect().setWidth(rect().width()+2);
         if(rect().height()<=MAX_NOTE_B) rect().setHeight(rect().height()+float(2)/A_TO_B_NOTE_SIZE_RATIO);
-        adjustTextSize();
+        adjustTextSize(painter);
     }
 
     //Reduce height until we overdo it
@@ -458,21 +546,22 @@ void Note::autoSize()
         bool shortageBeforeResize = textIsShortened;
         if(rect().height()<=MIN_NOTE_B){break;}
         rect().setHeight(rect().height()-1);
-        adjustTextSize();
+        adjustTextSize(painter);
         //Check if we've ran out of white space to reduce (<= the text size has shrinked)
         if( (oldSize>textForDisplay_m.size()) | (shortageBeforeResize!=textIsShortened) ){
             break;
         }
     }
     rect().setHeight(rect().height()+1);
-    adjustTextSize(); //Back to fitting in the box (textIsShortened->true)
+    adjustTextSize(painter); //Back to fitting in the box (textIsShortened->true)
 
+    //Reduce width until we overdo it
     while(true){
         int oldSize = textForDisplay_m.size();
         bool shortageBeforeResize = textIsShortened;
         if(rect().width()<=MIN_NOTE_A){break;}
         rect().setWidth(rect().width()-1);
-        adjustTextSize();
+        adjustTextSize(painter);
         //Check if we've ran out of white space to reduce (<= the text size has shrinked)
         //There was a bug where for ex.: 'aaaa' shortens to 'a...' (size==4) , so a check on shorting is needed
         if( (oldSize>textForDisplay_m.size()) | (shortageBeforeResize!=textIsShortened) ){
@@ -482,10 +571,7 @@ void Note::autoSize()
 
     rect().setWidth(rect().width()+1);
 
-    adjustTextSize();
-
-    autoSizing = false;
-    emit visualChange();
+    adjustTextSize(painter);
 }
 
 void Note::checkForDefinitions()
@@ -581,4 +667,16 @@ Qt::AlignmentFlag Note::alignment()
     }else{
         return Qt::AlignCenter;
     }
+}
+
+QRectF Note::textRect()
+{
+    QRectF txtRect = rect();
+    txtRect.setLeft(rect().left() + NOTE_SPACING);
+    txtRect.setTop(rect().top() + NOTE_SPACING);
+    txtRect.setHeight(rect().height() - 2*NOTE_SPACING);
+    txtRect.setWidth(rect().width() - 2*NOTE_SPACING);
+    txtRect.moveTop(txtRect.top() - fontSize_m*0.2); // FIXME use fontMetrics to make this correction exact
+
+    return txtRect;
 }

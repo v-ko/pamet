@@ -20,6 +20,7 @@
 
 #include "mislidesktopgui.h"
 #include "../common.h"
+#include "../canvas.h"
 
 MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     QApplication(argc,argv)
@@ -66,7 +67,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     updateTranslator();
 
     //Construct the misli instance class
-    misliInstance = new MisliInstance(false);
+    misliInstance = new MisliInstance();
 
     //Connections
     connect(this,SIGNAL(languageChanged(QString)),this,SLOT(updateTranslator()));
@@ -108,9 +109,17 @@ void MisliDesktopGui::updateTranslator()
     }
 
     if(misliWindow!=NULL){
+        bool showHelp = false;
+        if(misliWindow->canvas->noteFile()==misliWindow->helpNoteFile){
+            showHelp = true;
+        }
         misliWindow->deleteLater();
         misliWindow = new MisliWindow(this);
         misliWindow->showMaximized();
+
+        if(showHelp==true){
+            misliWindow->canvas->setNoteFile(misliWindow->helpNoteFile);
+        }
     }
 }
 

@@ -33,7 +33,7 @@ class MisliInstance : public QObject
 
 public:
     //Functions
-    MisliInstance(bool bufferImages_);
+    MisliInstance();
     ~MisliInstance();
 
     MisliDir *addDir(QString path);
@@ -41,14 +41,11 @@ public:
     void removeDir(MisliDir *dir);
     void unloadDir(MisliDir *dir);
 
-    void clearBuffers();
-
     //Properties
     QList<MisliDir*> misliDirs();
 
     //Variables
     QSettings settings;
-    bool bufferImages;
 
 signals:
     //Property changes

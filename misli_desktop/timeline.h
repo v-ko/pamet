@@ -7,6 +7,7 @@
 #include <QSlider>
 
 #include "timelinemodule.h"
+#include "archivemodule.h"
 #include "../notefile.h"
 #include "../petko10.h"
 
@@ -19,8 +20,10 @@ class Timeline : public QWidget
 public:
     //Functions
     explicit Timeline(TimelineWidget *timelineWidget_);
+    ~Timeline();
     float scaleToPixels(qint64 miliseconds);
     float scaleToSeconds(qint64 pixels);
+    qint64 toPixelsFromMSecs(qint64 miliseconds);
     void drawDelimiter(QPainter* painter, qint64 delimiterInMSecs, float lineHeight);
     void addModule(TimelineModule *module);
     qint64 leftEdgeInMSecs();
@@ -30,7 +33,7 @@ public:
 
     //Variables
     QList<TimelineModule*> modules;
-    QList<Note*> notes, usedNotes;
+    QList<Note*> usedNotes;
     TimelineWidget *timelineWidget;
     qint64 viewportSizeInMSecs;
     qint64 positionInMSecs; //miliseconds since (or before for negative values) 1970.1.1 00:00:00 (the posix standard)

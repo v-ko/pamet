@@ -14,7 +14,8 @@
 
 Timeline::Timeline(TimelineWidget *timelineWidget_) :
     QWidget(timelineWidget_),
-    slider(Qt::Horizontal, this)
+    slider(Qt::Horizontal, this),
+    archiveModule(this)
 {
     //UI stuff
     setMouseTracking(true);
@@ -27,10 +28,14 @@ Timeline::Timeline(TimelineWidget *timelineWidget_) :
     //Other
     timelineWidget = timelineWidget_;
     viewportSizeInMSecs = 3*days;
-    positionInMSecs = QDateTime::currentDateTime().toMSecsSinceEpoch();
+    positionInMSecs =  QDateTime::currentDateTime().toMSecsSinceEpoch(); //QDateTime(QDate(2009,2,19)).toMSecsSinceEpoch();
 
     //Visual change on new notes
     connect(&archiveModule.noteFile, SIGNAL(visualChange()), this, SLOT(update()));
+}
+Timeline::~Timeline()
+{
+    for (TimelineModule *module: modules) delete module;
 }
 
 float Timeline::scaleToPixels(qint64 miliseconds)
@@ -43,11 +48,16 @@ float Timeline::scaleToSeconds(qint64 pixels)
     return pixels*( double(viewportSizeInMSecs)/double(rect().width()) );
 }
 
-void Timeline::drawDelimiter(QPainter *painter, qint64 delimiterInMSecs, float lineHeight)
+qint64 Timeline::toPixelsFromMSecs(qint64 miliseconds)
 {
     qint64 leftViewportEdge = positionInMSecs - viewportSizeInMSecs/2;
-    qint64 offsetInMSecs = delimiterInMSecs - leftViewportEdge;
-    float offset = scaleToPixels(offsetInMSecs);
+    qint64 offsetInMSecs = miliseconds - leftViewportEdge;
+    return scaleToPixels(offsetInMSecs);
+}
+
+void Timeline::drawDelimiter(QPainter *painter, qint64 delimiterInMSecs, float lineHeight)
+{
+    float offset = toPixelsFromMSecs(delimiterInMSecs);
     float y1 = baselineY() - lineHeight/2;
     float y2 = baselineY() + lineHeight/2;
 
@@ -221,26 +231,39 @@ void Timeline::paintEvent(QPaintEvent *)
         }
     }
 
-    //Draw all notes
-    for(Note *nt: notes){
-        if( abs(positionInMSecs - nt->timeMade.toMSecsSinceEpoch())<(viewportSizeInMSecs/2) ){
-            painter.drawImage( QPointF(scaleToPixels(nt->timeMade.toMSecsSinceEpoch()-leftEdgeInMSecs()),baselineY()),
-                              nt->img->scaled( scaleToPixels(nt->rect().width()*days/30),
-                                               scaleToPixels(nt->rect().height()*days/30),
-                                              Qt::IgnoreAspectRatio,
-                                              Qt::SmoothTransformation));
+    painter.setOpacity(1);
+
+    //Draw all modules except the archive module
+    QList<Note*> nts;
+    for(TimelineModule *module: modules){
+        nts.append(module->notesForDisplay);
+    }
+    //Remove notes that are not onscreen
+    for(int i=0; i<nts.size(); i++){
+        Note *nt = nts[i];
+        float x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
+        nt->rect_m.moveCenter( QPointF(x, 0) );
+        nt->rect_m.moveBottom( baselineY()-5 );
+
+        if( !nt->rect().intersects(rect()) ){
+            nts.removeOne(nt);
+            i--;
+            continue;
         }
+    }
+    //Draw
+    for(Note *nt: nts){
+        painter.drawImage(nt->rect().topLeft(), *nt->img);
     }
 
     //Draw archive notes
-    painter.setOpacity(1);
-
-    QList<Note*> nts;
+    nts.clear();
     usedNotes.clear();
     nts.append( archiveModule.noteFile.notes );
 
     //Remove notes that are not onscreen, too small or too large
-    for(Note *nt: nts){
+    for(int i=0; i<nts.size(); i++){
+        Note *nt = nts[i];
         nt->fontSize_m = fontSizeForNote(nt);
         float x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
         float w = scaleToPixels( nt->timeMade.msecsTo(nt->timeModified) );
@@ -250,6 +273,7 @@ void Timeline::paintEvent(QPaintEvent *)
             ( nt->fontSize_m<1) |
             ( nt->rect().width()>rect().width() ) ){
             nts.removeOne(nt);
+            i--;
             continue;
         }
     }
@@ -288,10 +312,15 @@ void Timeline::paintEvent(QPaintEvent *)
         }
 
         nt->textForDisplay_m = nt->text();
-        nt->drawNote(&painter);
+        nt->drawNote(painter);
 
         usedNotes.append(nt);
         nts.removeOne( nt );
+    }
+
+    //Call modules' paint events
+    for(TimelineModule *module: modules){
+        module->paintRoutine(painter);
     }
 }
 
@@ -312,14 +341,12 @@ void Timeline::wheelEvent(QWheelEvent *event)
 
 void Timeline::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    int x = event->pos().x();
     Note *nt = getNoteUnderMouse( event->pos() );
 
-    slider.setGeometry(x, baselineY(), rect().width(), 10);
+    slider.setGeometry(event->x(), baselineY(), rect().width(), 10);
     slider.setMaximum( rect().width() );
 
     if( nt==NULL){
-
         slider.setValue( scaleToPixels(viewportSizeInMSecs/4));
         timelineWidget->misliWindow->edit_w->newNote();
     }else{
@@ -338,7 +365,7 @@ void Timeline::mouseMoveEvent(QMouseEvent *event)
 }
 void Timeline::mouseReleaseEvent(QMouseEvent *event)
 {
-    for(Note *nt: usedNotes){
+    for(Note *nt: archiveModule.noteFile.notes){
         nt->setSelected(false);
         if( nt->rect().contains( event->pos() ) ){
             nt->setSelected(true);
@@ -348,10 +375,8 @@ void Timeline::mouseReleaseEvent(QMouseEvent *event)
 
 void Timeline::addModule(TimelineModule *module)
 {
-    timelineWidget->ui->sidebar->addWidget(module->widget);
+    timelineWidget->ui->sidebar->addWidget(module->controlWidget);
     modules.append(module);
-    QList<Note*> nts = module->loadNotes();
-    notes.append(nts);
 }
 
 qint64 Timeline::leftEdgeInMSecs()

@@ -18,6 +18,9 @@
     <item>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
+       <widget class="QComboBox" name="searchScopeComboBox"/>
+      </item>
+      <item>
        <widget class="QLineEdit" name="searchLineEdit">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -146,6 +149,7 @@
     <addaction name="actionSelect_all_red_notes"/>
     <addaction name="separator"/>
     <addaction name="menuSwitch_to_another_note_file"/>
+    <addaction name="actionSwitch_to_the_last_note_file"/>
    </widget>
    <widget class="QMenu" name="menuNote">
     <property name="title">
@@ -664,6 +668,14 @@
     <string>Ctrl+2</string>
    </property>
   </action>
+  <action name="actionSwitch_to_the_last_note_file">
+   <property name="text">
+    <string>S&amp;witch to the last note file</string>
+   </property>
+   <property name="shortcut">
+    <string>Backspace</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
@@ -728,6 +740,22 @@
     <hint type="destinationlabel">
      <x>202</x>
      <y>53</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionSearch</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>searchScopeComboBox</receiver>
+   <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>202</x>
+     <y>48</y>
     </hint>
    </hints>
   </connection>

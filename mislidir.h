@@ -41,7 +41,7 @@ class MisliDir : public QObject
 
 public:
     //Functions
-    MisliDir(QString nts_dir, bool bufferImages_ = false, bool enableFSWatch = true);
+    MisliDir(QString nts_dir, bool enableFSWatch = true);
     ~MisliDir();
 
     int makeNotesFile(QString);
@@ -58,13 +58,14 @@ public:
 
     //Variables
     QList<NoteFile*> noteFiles_m; //all the notefiles
-    NoteFile *currentNoteFile;
+    NoteFile *currentNoteFile, *lastNoteFile;
     QFileSystemWatcher *fs_watch; //to watch the dir for changes
     QTimer * hangingNfCheck; //periodical check for unaccounted for note files
     QString directoryPath_m;
     QSettings settings;
+    bool keepHistoryViaGit;
 
-    bool debug,fsWatchIsEnabled,bufferImages;
+    bool debug,fsWatchIsEnabled;
 
 signals:
     //Property chabges
@@ -87,6 +88,7 @@ public slots:
 
     void handleSaveRequest(NoteFile *nf);
     void softDeleteNF(NoteFile *nf);
+
 };
 
 #endif // MISLIDIR_H

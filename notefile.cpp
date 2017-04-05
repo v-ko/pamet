@@ -29,17 +29,22 @@
 
 NoteFile::NoteFile()
 {
-    saveWithRequest=false;
+    saveWithRequest = false;
+    keepHistoryViaGit = false;
+    indexedForSearch = false;
 
     //Clear the variables
     lastNoteId = 0;
     isDisplayedFirstOnStartup = 0;
-    bufferImages = false;
     eyeX = 0;
     eyeY = 0;
     eyeZ = INITIAL_EYE_Z;
 
     isReadable=true;
+
+    connect(this, &NoteFile::noteTextChanged, [=](){
+       indexedForSearch = false;
+    });
 }
 NoteFile::~NoteFile()
 {
@@ -107,10 +112,9 @@ int NoteFile::init()   //returns negative on errors
 
     //Create the notes
     for(int i=0;i<noteIniStrings.size();i++){ //get the notes
-        loadNote(new Note(note_ids[i].toInt(),noteIniStrings[i], bufferImages));
+        loadNote(new Note(note_ids[i].toInt(),noteIniStrings[i]));
     }
 
-    findFreeIds();
     initLinks();
 
     return 0;
@@ -149,7 +153,7 @@ void NoteFile::hardSave()
     }else{
         QFile ntFile(filePath_m);
         if( !ntFile.open(QIODevice::WriteOnly) ){
-            qDebug()<<"[NoteFile::hardSave]Faled opening the file.";
+            qDebug()<<"[NoteFile::hardSave]Failed opening the file.";
         }
         ntFile.write(undoHistory.back().toUtf8());
         ntFile.close();
@@ -158,8 +162,23 @@ void NoteFile::hardSave()
 }
 void NoteFile::save()
 {
+    if(filePath_m=="clipboardNoteFile") return;
+
     virtualSave();
     hardSave();
+    //Git commit
+    QProcess p;
+    if(keepHistoryViaGit){
+        p.setWorkingDirectory(QFileInfo(filePath_m).dir().path());
+        p.start("git",QStringList()<<"add"<<"-A");
+        p.waitForFinished();
+        qDebug()<<p.readAll();
+        p.start("git",QStringList()<<"commit"<<"-m"<<"'"+QDateTime::currentDateTime().toString("yyyy.MM.dd HH:mm:ss")+"'");
+        p.waitForFinished();
+        qDebug()<<p.readAll();
+        //FIXME handle stuff that might happen, check if git is available in order to avoid littering the log, etc
+        //the other stuff is in MisliDir::setDirectoryPath
+    }
 }
 void NoteFile::undo()
 {
@@ -179,16 +198,6 @@ void NoteFile::redo()
         hardSave();
 
         init();
-    }
-}
-
-void NoteFile::findFreeIds()
-{
-    freeId.clear();
-    for(int i=1;i<lastNoteId;i++){ //for all ids to the last (exclude zero to avoid problems when negative ids are used)
-        if(getNoteById(i)==NULL){ //if there's no note on it
-            freeId.push_back(i); //add the id to the list
-        }
     }
 }
 
@@ -217,7 +226,7 @@ Note* NoteFile::loadNote(Note *nt)
 }
 Note *NoteFile::cloneNote(Note *nt)
 {
-    Note * nt2 = new Note(nt->id,nt->text_m,nt->rect(),nt->fontSize(),nt->timeMade,nt->timeModified,nt->textColor(),nt->backgroundColor(),bufferImages);
+    Note * nt2 = new Note(nt->id,nt->text_m,nt->rect(),nt->fontSize(),nt->timeMade,nt->timeModified,nt->textColor(),nt->backgroundColor());
     loadNote(nt2);
     return nt2;
 }
@@ -314,22 +323,19 @@ void NoteFile::makeAllIDsNegative()
 
 int NoteFile::getNewId()
 {
-    int idd;
-
-    if(freeId.size()!=0){
-        idd =freeId.front();
-        freeId.erase(freeId.begin());
-    }else {
-        lastNoteId++;
-        idd=lastNoteId;
+    for(int i=1;i<65535;i++){
+        if(getNoteById(i)==NULL){
+            return i;
+        }
     }
-    return idd;
+    qDebug()<<"No free note id up to 65535. Either there's a bug or someone's been busy.";
+    return 0;
 }
 int NoteFile::linkSelectedNotesTo(Note *nt)
 {
     int linksAdded=0;
     for(Note *nt2: notes){ //za vseki note ot current
-        if( nt2->isSelected_m ){ //ako e selectiran
+        if( nt2->isSelected() ){ //ako e selectiran
             linksAdded += nt2->addLink(nt->id);
         }
     }
@@ -480,20 +486,4 @@ void NoteFile::checkForInvalidLinks(Note *nt)
         }
     }
     if(linksChangedHere) save();
-}
-
-void NoteFile::clearBuffers()
-{
-    for(Note *nt: notes){
-        nt->bufferImage = false;
-        delete nt->img;
-        nt->img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);
-    }
-}
-void NoteFile::drawEverything()
-{
-    for(Note *nt: notes){
-        nt->bufferImage = true;
-        nt->adjustTextSize();
-    }
 }

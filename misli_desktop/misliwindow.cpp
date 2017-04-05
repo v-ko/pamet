@@ -21,6 +21,8 @@
 #include <QNetworkReply>
 #include <QDomDocument>
 #include <QLayout>
+#include <QComboBox>
+#include <QListView>
 
 #include "misliwindow.h"
 #include "../misliinstance.h"
@@ -45,30 +47,42 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     updateCheckDone = false;
 
     //Init notes search stuff
-    notes_search = new NotesSearch;
+    notes_search = new NotesSearch(this, 1);
     notes_search->moveToThread(&misliDesktopGUI->workerThread);
-    notes_search->loadNotes(misliInstance(),1);
+    notes_search->loadNotes();
     ui->searchListView->setModel(notes_search);
     QItemSelectionModel *selectionModel = ui->searchListView->selectionModel();
     //Handle search result selection (lambda)
     connect(selectionModel, &QItemSelectionModel::selectionChanged, this,
             [&](const QItemSelection &, const QItemSelection &){
-
         const QModelIndex index = ui->searchListView->selectionModel()->currentIndex();
         NotesSearch::SearchItem searchItem = notes_search->searchResults.at(index.row());
         setCurrentDir(searchItem.md);
         canvas->setNoteFile(searchItem.nf);
-        canvas->centerEyeOnNote(searchItem.nt);
+        if(searchItem.nf->notes.contains(searchItem.nt)){
+            canvas->centerEyeOnNote(searchItem.nt);
+            ui->searchListView->clearSelection();
+        }else{//If the note was deleted
+            notes_search->findByText(ui->searchLineEdit->text());
+        }
+    });
+    //Add combobox items for the search scopes
+    ui->searchScopeComboBox->addItem(tr("all notes"));
+    ui->searchScopeComboBox->addItem(tr("the current dir"));
+    ui->searchScopeComboBox->addItem(tr("the current note file"));
+    connect(ui->searchScopeComboBox,static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [&](){
+        notes_search->findByText(ui->searchLineEdit->text());
     });
 
     //Init widgets and widnows
     ui->mainLayout->addWidget(&tabWidget);
     edit_w = new EditNoteDialogue(this);
-    tabWidget.addTab(&timelineWidget,"/timeline");
     canvas = new Canvas(this);
     tabWidget.addTab(canvas,"");
+    tabWidget.addTab(&timelineWidget,"/timeline");
     ui->searchLineEdit->hide();
     ui->searchListView->hide();
+    ui->searchScopeComboBox->hide();
     ui->jumpToNearestNotePushButton->hide();
     updateMenu.addAction(ui->actionDownload_it);
 
@@ -163,7 +177,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Make link (lambda)
     connect(ui->actionMake_link,&QAction::triggered,[&](){
-        canvas->setLinkingState(true);
+        canvas->linkingIsOn = true;
+        canvas->update();
     });
     //Make current view point height default (lambda)
     connect(ui->actionSet_this_height_as_default,&QAction::triggered,[&](){
@@ -284,9 +299,14 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionGotoTab2, &QAction::triggered, this, [&](){
         tabWidget.setCurrentIndex(1);
     });
+    //Switch to the last note file
+    connect(ui->actionSwitch_to_the_last_note_file, &QAction::triggered, [&](){
+        if(currentDir()->lastNoteFile!=NULL) canvas->setNoteFile(currentDir()->lastNoteFile);
+    });
 
     //---------------------Creating the virtual note files----------------------
     clipboardNoteFile = new NoteFile;
+    clipboardNoteFile->filePath_m = "clipboardNoteFile";
     helpNoteFile = new NoteFile;
     helpNoteFile->setFilePath(":/help/help_"+misliDesktopGUI->language()+".misl");
 
@@ -340,6 +360,7 @@ void MisliWindow::setCurrentDir(MisliDir* newDir)
         ui->makeNoteFilePushButton->setEnabled(true);
 
         canvas->setNoteFile(currentDir_m->currentNoteFile);
+        notes_search->findByText(ui->searchLineEdit->text());
     }else{
         if(misliInstance()->misliDirs().isEmpty()){//If there are no dirs
             if(misliDesktopGUI->firstProgramStart()){
@@ -369,6 +390,19 @@ bool MisliWindow::event(QEvent *event)
     return QWidget::event(event);
 }
 
+void MisliWindow::keyPressEvent(QKeyEvent *event)
+{
+    QWidget::keyPressEvent(event);
+    canvas->ctrlUpdateHack=true;
+    update();
+}
+void MisliWindow::keyReleaseEvent(QKeyEvent *event)
+{
+    QWidget::keyReleaseEvent(event);
+    canvas->ctrlUpdateHack=false;
+    update();
+}
+
 bool MisliWindow::gestureEvent(QGestureEvent *event)
 {
     //if (QGesture *swipe = event->gesture(Qt::SwipeGesture))
@@ -393,8 +427,8 @@ MisliInstance * MisliWindow::misliInstance()
 
 void MisliWindow::newNoteFromClipboard()
 {
-    edit_w->x_on_new_note=canvas->current_mouse_x; //cursor position relative to the gl widget
-    edit_w->y_on_new_note=canvas->current_mouse_y;
+    edit_w->x_on_new_note=canvas->mousePos().x(); //cursor position relative to the gl widget
+    edit_w->y_on_new_note=canvas->mousePos().y();
     edit_w->edited_note=NULL;
     edit_w->setTextEditText( QApplication::clipboard()->text() );
     edit_w->inputDone();
@@ -447,6 +481,7 @@ void MisliWindow::renameNoteFile()
             }
         }
 
+        canvas->setNoteFile(nf);
     }else{
         misliDesktopGUI->showWarningMessage(tr("Error while renaming file."));
     }
@@ -631,7 +666,7 @@ void MisliWindow::copySelectedNotesToClipboard() //It's not a lambda because it'
     if(selectedNotesCount==1){
         clipboardNoteFile->makeCoordsRelativeTo(canvas->noteFile()->getFirstSelectedNote()->rect().x(), canvas->noteFile()->getFirstSelectedNote()->rect().y());
     }else{//If there are more - keep the coordinates relative to the mouse
-        clipboardNoteFile->makeCoordsRelativeTo(canvas->unprojectX(canvas->current_mouse_x), canvas->unprojectY(canvas->current_mouse_y));
+        clipboardNoteFile->makeCoordsRelativeTo(canvas->unprojectX(canvas->mousePos().x()), canvas->unprojectY(canvas->mousePos().y()));
     }
 
     //Copy all the notes' text to the OS clipboard
@@ -685,6 +720,7 @@ void MisliWindow::startUpdateCheck()
 }
 void MisliWindow::handleVersionInfoReply(QNetworkReply *reply)
 {
+    //FIXME handle failed connections
     QString replyData = reply->readAll();
     QDomDocument info;
     info.setContent(replyData);

@@ -4,54 +4,30 @@
 #include <QObject>
 #include <QWidget>
 #include <QCheckBox>
+#include <QPushButton>
+#include <QProcess>
+#include <QThread>
+#include <QtConcurrent/QtConcurrent>
+//FIXME those are needed in the individual modules
 
 #include <../misliinstance.h>
+
+class Timeline;
 
 class TimelineModule : public QObject
 {
     Q_OBJECT
 public:
-    TimelineModule();
+    TimelineModule(Timeline *timeline_);
 
     //Variables
-    QWidget *widget;
-signals:
+    Timeline *timeline;
+    QWidget *controlWidget;
+    QList<Note*> notesForDisplay;
 
+    //Virtual functions
 public slots:
-    virtual QList<Note*> loadNotes(){
-        QList<Note*> dummy;
-        return dummy;
-    }
-};
-
-class NotesModule : public TimelineModule
-{
-    Q_OBJECT
-public:
-    NotesModule();
-
-    //Variables
-    QCheckBox checkbox;
-    MisliDir *misliDir;
-signals:
-
-public slots:
-    QList<Note*> loadNotes();
-};
-
-class ArchiveModule : public TimelineModule
-{
-    Q_OBJECT
-public:
-    ArchiveModule();
-
-    //Variables
-    QCheckBox checkbox;
-    NoteFile noteFile;
-signals:
-
-public slots:
-    QList<Note*> loadNotes();
+    virtual void paintRoutine(QPainter &) {}
 };
 
 #endif // TIMELINEMODULE_H

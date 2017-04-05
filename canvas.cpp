@@ -28,7 +28,6 @@ Canvas::Canvas(MisliWindow *misliWindow_) :
 
     //Random
     misliWindow = misliWindow_;
-    linkingNote = NULL;
     linkOnControlPointDrag = NULL;
     cpChangeNote = NULL;
     PushLeft = false;
@@ -36,8 +35,6 @@ Canvas::Canvas(MisliWindow *misliWindow_) :
     moveOn = false;
     noteResizeOn = false;
     userIsDraggingStuff = false;
-
-    updateCursorPosition();
 
     contextMenu = new QMenu(this);
 
@@ -143,12 +140,12 @@ void Canvas::paintEvent(QPaintEvent*)
     painter.fillRect(0,0,width(),height(),QColor(255,255,255,255)); //clear background
 
     //==========Check for some special conditions================
-    if(linkingNote!=NULL){ //If we're making a link
+    if(linkingIsOn){ //If we're making a link
         infoLabel->setText(tr("Click on a note to link to it."));
         infoLabel->show();
     }else if(noteFile()==misliWindow->helpNoteFile){
         infoLabel->setText(tr("This is the help note file."));
-        infoLabel->show();\
+        infoLabel->show();
         painter.fillRect(0,0,width(),height(),QColor(255,255,240,255)); //clear background
     }else if(moveOn){
         infoLabel->setText(tr("Moving note"));
@@ -163,6 +160,7 @@ void Canvas::paintEvent(QPaintEvent*)
         infoLabel->hide();
     }
 
+    //Setup the transformation matrix
     QTransform viewpointTransform;
     viewpointTransform.scale(heightScaleFactor(),heightScaleFactor());
     viewpointTransform.translate(width()/heightScaleFactor()/2 - noteFile()->eyeX,
@@ -171,7 +169,6 @@ void Canvas::paintEvent(QPaintEvent*)
     QRectF windowFrame;
     windowFrame.setSize( QSizeF(width()/heightScaleFactor(), height()/heightScaleFactor()) );
     windowFrame.moveCenter(QPointF(noteFile()->eyeX,noteFile()->eyeY));
-    QColor selectedPenColor(150,150,0,255);
 
     //=============Start painting===========================
     int displayed_notes = 0;
@@ -194,7 +191,11 @@ void Canvas::paintEvent(QPaintEvent*)
             }
 
             //Draw the actual note
-            nt->drawNote(&painter);
+            if(nt->requestAutoSize){
+                nt->requestAutoSize = false;
+                nt->autoSize(painter);
+            }
+            nt->drawNote(painter);
 
             //Draw additional lines to help alignment
             if( (moveOn | noteResizeOn) && nt->isSelected_m){
@@ -222,70 +223,42 @@ void Canvas::paintEvent(QPaintEvent*)
             if(nt->isSelected_m){
                 painter.setBrush(circleColor);
                 painter.drawEllipse(nt->rect().bottomRight(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
+
+                if(linkingIsOn){
+                    Link ln(0);
+                    ln.line.setPoints(nt->rect().center(), unproject(mousePos()));
+                    nt->drawLink(painter, ln);
+                }
             }
-
-            //Draw links
-            for(Link &ln: nt->outlinks){
-
-                //Make the path if it's not present
-                if(ln.path.isEmpty()){
-                    ln.path.moveTo(ln.line.p1());
-                    if(ln.usesControlPoint){
-                        ln.path.quadTo(ln.realControlPoint(),ln.line.p2());
-                    }else{
-                        ln.path.lineTo(ln.line.p2());
-                    }
-                    ln.path.translate(-ln.line.p1());
-                }
-
-                painter.setBrush(Qt::NoBrush);
-                painter.save(); //pushMatrix() (not quite but ~)
-                    painter.translate( ln.line.p1() );
-                    //Draw the base line
-                    if(ln.isSelected){ //overpaint with yellow if it's selected
-                        pen.setColor( selectedPenColor );
-                        painter.setPen( pen );
-                        painter.drawPath(ln.path);
-                    }else{
-                        pen.setColor( nt->textColor() );
-                        painter.setPen( pen );
-                        painter.drawPath(ln.path);
-                    }
-                painter.restore();//pop matrix
-
-                QLineF lastLineFromPath(ln.path.pointAtPercent(0.90),ln.path.pointAtPercent(1));
-                //Draw the arrow head
-                painter.save(); //pushMatrix() (not quite but ~)
-                    painter.translate( ln.line.p2() );
-                    painter.rotate(90-lastLineFromPath.angle());
-
-                    if(ln.isSelected){ //overpaint when selected
-                        pen.setColor( selectedPenColor );
-                        painter.setPen( pen );
-                        painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
-                        painter.drawLine(QLineF(0,0,0.45,0.9));
-                    }else{
-                        pen.setColor( nt->textColor() );
-                        painter.setPen( pen );
-                        painter.drawLine(QLineF(0,0,-0.45,0.9)); //both lines for the arrow
-                        painter.drawLine(QLineF(0,0,0.45,0.9));
-                    }
-                painter.restore();//pop matrix
-
-                //Paint the control point if the link is selected
-                if(ln.isSelected){
-                    painter.setPen(Qt::NoPen);
-                    painter.setBrush(circleColor);
-                    if(ln.usesControlPoint){
-                        painter.drawEllipse(ln.controlPoint,RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
-                    }else{
-                        painter.drawEllipse(ln.middleOfTheLine(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
-                    }
-                    painter.setPen(pen);//restore pen (because of the 'cosmetic' property that enables the matrix width transform
-                }
-            } //next link
         }
     } //next note
+
+    //Draw all the links. It's not much compute time and when a note goes offscreen its links should still be visible
+    for(Note* nt: noteFile()->notes){
+        //Draw links
+        for(Link &ln: nt->outlinks){
+            nt->drawLink(painter, ln);
+        } //next link
+    }
+
+    //Show the shadows of stuff that's about to be pasted when ctrl is pressed
+    if( ctrlUpdateHack ){
+        ctrlUpdateHack = false;
+        NoteFile *clipboardNF = misliWindow->clipboardNoteFile;
+        float x,y;
+        x = mapFromGlobal(cursor().pos()).x(); //get mouse screen coords
+        y = mapFromGlobal(cursor().pos()).y();
+        unproject(x,y,x,y); //translate them to canvas coords
+
+        clipboardNF->makeCoordsRelativeTo(-x,-y);
+        for(Note *nt: clipboardNF->notes){
+            pen.setColor(nt->textColor());
+            painter.setPen(pen);
+            painter.setBrush(Qt::NoBrush);
+            painter.drawRect(nt->rect());
+        }
+        clipboardNF->makeCoordsRelativeTo(x,y);
+    }
 
     //If there's no note on the screen - show the JumpToNearestNoteButton
     if( (displayed_notes==0) && !noteFile()->notes.isEmpty() ) {
@@ -307,7 +280,10 @@ void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if(noteFile()==NULL) return;
 
-    if (event->button()==Qt::LeftButton) { //on left button doubleclick
+    //Don't accept doubleClick on modifiers, because it ruin a selection
+    if( (event->button()==Qt::LeftButton) &&
+            !(misliWindow->misliDesktopGUI->keyboardModifiers()==Qt::ControlModifier) &&
+            !(misliWindow->misliDesktopGUI->keyboardModifiers()==Qt::ShiftModifier) ){
         doubleClick();
     }
 }
@@ -328,22 +304,21 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
 {
     if(noteFile()==NULL) return;
 
-    float m_x,m_y,d_x,d_y,t_x,t_y;
-
-    int x = event->x();
-    int y = event->y();
-
-    updateCursorPosition();
-
     if(PushLeft){
         if(moveOn){
+            QPointF realPos( unproject(event->pos()) ), realPosOnPush( unproject(QPointF(XonPush, YonPush))), deltaRealPos, newPos;
+            deltaRealPos = realPos - realPosOnPush;
 
-            QPointF deltaRealCoords( (x - XonPush )*noteFile()->eyeZ/1000, (y - YonPush )*noteFile()->eyeZ/1000 );
-            for(Note *nt:noteFile()->notes){
+            for(Note *nt: noteFile()->notes){
                 if(nt->isSelected()){
-                    nt->rect().moveTopLeft(QPointF(nt->xBeforeMove,nt->yBeforeMove) + deltaRealCoords);
+                    newPos = nt->posBeforeMove + deltaRealPos;
+                    QRectF newRect(nt->rect());
+                    newRect.moveTopLeft(newPos);
+                    nt->setRect( newRect );
+
                     for(Link &ln: nt->outlinks){
-                        ln.controlPoint = ln.middleOfTheLine();
+                        ln.usesControlPoint = false;
+                        ln.controlPointIsSet = false;
                     }
                     noteFile()->initLinks();
                 }
@@ -354,38 +329,39 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
             for(Note *nt:noteFile()->notes){
                 if(nt->isSelected_m){
 
-                    unproject(x,y,m_x,m_y);
-                    d_x = m_x - resizeX;
-                    d_y = m_y - resizeY;
+                    float d_x, d_y, realX, realY;
+                    unproject(event->x(),event->y(),realX,realY);
+                    d_x = realX - resizeX;
+                    d_y = realY - resizeY;
 
-                    nt->rect().setWidth( stop(d_x,MIN_NOTE_A,MAX_NOTE_A) );
-                    nt->rect().setHeight( stop(d_y,MIN_NOTE_B,MAX_NOTE_B) );
+                    QRectF newRect( nt->rect());
+                    newRect.setSize( QSizeF(d_x, d_y) );
+                    nt->setRect( newRect );
 
-                    if(nt->type!=NoteType::picture) nt->adjustTextSize();
                     noteFile()->initLinks();
                 }
             }
 
         }else if(linkOnControlPointDrag!=NULL){ //We're changing a control point
-            linkOnControlPointDrag->controlPoint = unproject(QPointF(current_mouse_x,current_mouse_y));
+            linkOnControlPointDrag->controlPoint = unproject(mousePos());
             linkOnControlPointDrag->isSelected = true;
             linkOnControlPointDrag->controlPointIsChanged = true;
             noteFile()->initNoteLinks(cpChangeNote);
             update();
         }else{ //Else we're moving about the canvas (respectively - changing the camera position)
 
-            float xrel=x-XonPush,yrel=y-YonPush;
+            float xrel=event->x()-XonPush,yrel=event->y()-YonPush;
             noteFile()->eyeX = EyeXOnPush - xrel*noteFile()->eyeZ/1000; // eyez/1000 is the transform factor practically
             noteFile()->eyeY = EyeYOnPush - yrel*noteFile()->eyeZ/1000;
             update();
         }
-    }else{ // left button is not pushed
-        if(linkingNote!=NULL){
-            unproject(x,y,t_x,t_y);
-            linkingNote->rect().moveLeft(t_x+0.02);//+0.02 so it's not under the mouse apex
-            linkingNote->rect().moveTop(t_y-0.02);
-            noteFile()->initLinks();
-        }
+    }else if(linkingIsOn){
+        update();
+    }
+
+    if(misliWindow->misliDesktopGUI->keyboardModifiers()==Qt::ControlModifier){
+        ctrlUpdateHack = true;
+        update(); //while showing the shadows of the notes for pasting
     }
 }
 void Canvas::dragEnterEvent(QDragEnterEvent *event)
@@ -404,10 +380,6 @@ void Canvas::dragEnterEvent(QDragEnterEvent *event)
         update();
     }
 }
-void Canvas::dragMoveEvent(QDragMoveEvent *)
-{
-    updateCursorPosition();
-}
 void Canvas::dragLeaveEvent(QDragLeaveEvent *)
 {
     userIsDraggingStuff = false;
@@ -422,7 +394,7 @@ void Canvas::dropEvent(QDropEvent *event)
 
 void Canvas::doubleClick()
 {
-    Note *nt = getNoteUnderMouse(current_mouse_x,current_mouse_y);
+    Note *nt = getNoteUnderMouse(mousePos().x(),mousePos().y());
 
     if(nt!=NULL){ //if we've clicked on a note
         if(nt->type==NoteType::redirecting){ //if it's a valid redirecting note
@@ -451,9 +423,8 @@ void Canvas::doubleClick()
                                          QDateTime::currentDateTime(),
                                          QDateTime::currentDateTime(),
                                          nt->textColor(),
-                                         nt->backgroundColor(),
-                                         true));
-            newNote->autoSize();
+                                         nt->backgroundColor()));
+            newNote->requestAutoSize = true;
 
         }else if(nt->type==NoteType::webPage){
             QDesktopServices::openUrl(QUrl(nt->addressString, QUrl::TolerantMode));
@@ -475,8 +446,8 @@ void Canvas::handleMousePress(Qt::MouseButton button)
     Link *linkUnderMouse;
     bool ctrl_is_pressed,shift_is_pressed;
 
-    int x = current_mouse_x;
-    int y = current_mouse_y;
+    int x = mousePos().x();
+    int y = mousePos().y();
 
     update();//don't put at the end , return get's called earlier in some cases
 
@@ -497,10 +468,10 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         EyeYOnPush = noteFile()->eyeY;
         timedOutMove=false;
 
-        if (linkingIsOn()) { // ------------LINKING ON KEY----------
+        if (linkingIsOn) { // ------------LINKING ON KEY----------
 
-            noteUnderMouse=getNoteUnderMouse(x,y);
-            setLinkingState(false);
+            noteUnderMouse = getNoteUnderMouse(x,y);
+            linkingIsOn = false;
             if(noteUnderMouse!=NULL){
                 if( noteFile()->linkSelectedNotesTo(noteUnderMouse)>0 ){
                     noteFile()->save();
@@ -525,11 +496,11 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         }
 
         //---------DRAG LINK CONTROL POINT---------------
-        linkOnControlPointDrag = getControlPointUnderMouse(current_mouse_x,current_mouse_y);
+        linkOnControlPointDrag = getControlPointUnderMouse(mousePos().x(),mousePos().y());
         if(linkOnControlPointDrag!=NULL){
             linkOnControlPointDrag->isSelected = true;
             if(!linkOnControlPointDrag->usesControlPoint){
-                linkOnControlPointDrag->controlPoint = unproject(QPointF(current_mouse_x,current_mouse_y));
+                linkOnControlPointDrag->controlPoint = unproject(mousePos());
             }
         }
         update();
@@ -584,7 +555,6 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         contextMenu->clear();
 
         if(noteUnderMouse!=NULL){
-            noteFile()->clearNoteSelection();
             noteUnderMouse->setSelected(true);
 
             contextMenu->addAction(misliWindow->ui->actionEdit_note);
@@ -600,6 +570,9 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         }
         contextMenu->addMenu(misliWindow->ui->menuSwitch_to_another_note_file);
         contextMenu->addSeparator();
+        contextMenu->addAction(misliWindow->ui->actionCopy);
+        contextMenu->addAction(misliWindow->ui->actionPaste);
+        contextMenu->addAction(misliWindow->ui->actionCreate_note_from_the_clipboard_text);
 
         contextMenu->popup(cursor().pos());
     }
@@ -684,8 +657,8 @@ Link *Canvas::getControlPointUnderMouse(int x, int y)
 
 void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not off the move flag is set to true
 
-    int x=current_mouse_x;
-    int y=current_mouse_y;
+    int x=mousePos().x();
+    int y=mousePos().y();
 
     float dist = dottodot(XonPush,YonPush,x,y);
 
@@ -695,53 +668,13 @@ void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not o
 
         //Store all the coordinates before the move
         for(Note *nt: misliWindow->currentDir()->currentNoteFile->notes){
-            if(nt->isSelected()) nt->storeCoordinatesBeforeMove();
+            if(nt->isSelected()) nt->posBeforeMove = nt->rect_m.topLeft();
         }
         moveOn = true;
         update();
     }
 
     timedOutMove = false;
-}
-bool Canvas::linkingIsOn()
-{
-    if(linkingNote==NULL){
-        return false;
-    }else{
-        return true;
-    }
-}
-
-void Canvas::setLinkingState(bool setLinkingOn)
-{
-    if(setLinkingOn){
-        float x = unprojectX(current_mouse_x);
-        float y = unprojectY(current_mouse_y);
-
-        //Create a dummy note that will be attached to the mouse
-        if(noteFile()->getFirstSelectedNote()!=NULL && linkingNote==NULL){
-            linkingNote = noteFile()->loadNote(new Note(noteFile()->getNewId(),
-                                                      "linkingNote",
-                                                      QRectF(x,y,0.1,0.1),
-                                                      1,
-                                                      QDateTime::currentDateTime(),
-                                                      QDateTime::currentDateTime(),
-                                                      Qt::red,
-                                                      Qt::red,
-                                                      true));
-            noteFile()->linkSelectedNotesTo(linkingNote);
-        }
-    }else{
-        //Remove the mouse note and set it to NULL , that's the signal that we're not linking anything
-        if(linkingIsOn()){
-            noteFile()->notes.removeOne(linkingNote);
-            delete linkingNote;
-            linkingNote=NULL;
-            noteFile()->initLinks();
-        }
-    }
-
-    emit linkingStateToggled(setLinkingOn);
 }
 
 QString Canvas::copySelectedNotes(NoteFile *sourceNotefile, NoteFile *targetNoteFile)
@@ -772,8 +705,8 @@ void Canvas::paste()
     clipboardNF->makeAllIDsNegative();
 
     //Make coordinates relative to the mouse
-    x=current_mouse_x; //get mouse screen coords
-    y=current_mouse_y;
+    x=mousePos().x(); //get mouse screen coords
+    y=mousePos().y();
     unproject(x,y,x,y); //translate them to canvas coords
     clipboardNF->makeCoordsRelativeTo(-x,-y);
 
@@ -810,11 +743,11 @@ void Canvas::jumpToNearestNote()
     Note *nearest_note = NULL;
     float best_result = 0, result,x_unprojected, y_unprojected;
 
-    unproject(current_mouse_x,current_mouse_y,x_unprojected,y_unprojected);
+    unproject(mousePos().x(),mousePos().y(),x_unprojected,y_unprojected);
 
     int iter=0;
     for(Note *nt: noteFile()->notes){
-        result = dottodot(x_unprojected,y_unprojected,nt->rect().x(),nt->rect().y());
+        result = QLineF(unproject(mousePos()), nt->rect().topLeft()).length();
 
         if( (result<best_result) | (iter==0) ){
             nearest_note = nt;
@@ -901,17 +834,6 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
         return;
     }else{
         visualChangeConnection = connect(newNoteFile,SIGNAL(visualChange()),this,SLOT(update()));
-        noteTextChangedConnection = connect(newNoteFile,&NoteFile::noteTextChanged,
-                                            misliWindow->notes_search,[&](NoteFile* nf){
-            misliWindow->notes_search->loadNotes(nf, misliWindow->currentDir(),1);
-        });
-
-        //If we're in no buffer mode
-        if(!misliWindow->misliInstance()->bufferImages){
-            misliWindow->misliInstance()->clearBuffers();
-            newNoteFile->bufferImages = true;
-            newNoteFile->drawEverything();
-        }
 
         misliWindow->ui->makeNoteFilePushButton->hide();
         misliWindow->ui->menuSwitch_to_another_note_file->setEnabled(true);
@@ -919,6 +841,7 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
         update();
     }
 
+    misliDir->lastNoteFile = misliDir->currentNoteFile;
     misliDir->currentNoteFile = newNoteFile;
     misliWindow->updateNoteFilesListMenu();
     misliWindow->updateTitle();
@@ -931,12 +854,6 @@ void Canvas::centerEyeOnNote(Note *nt)
     noteFile()->eyeX = nt->rect().center().x();
     noteFile()->eyeY = nt->rect().center().y();
     update();
-}
-
-void Canvas::updateCursorPosition()
-{
-    current_mouse_x = mapFromGlobal(QCursor::pos()).x();
-    current_mouse_y = mapFromGlobal(QCursor::pos()).y();
 }
 
 bool Canvas::mimeDataIsCompatible(const QMimeData *mimeData)
@@ -974,8 +891,8 @@ bool Canvas::mimeDataIsCompatible(const QMimeData *mimeData)
 void Canvas::pasteMimeData(const QMimeData *mimeData)
 {
     //We'll use the note input mechanism to make the new notes from the dropped items
-    misliWindow->edit_w->x_on_new_note=current_mouse_x; //cursor position relative to the gl widget
-    misliWindow->edit_w->y_on_new_note=current_mouse_y;
+    misliWindow->edit_w->x_on_new_note=mousePos().x(); //cursor position relative to the gl widget
+    misliWindow->edit_w->y_on_new_note=mousePos().y();
     misliWindow->edit_w->edited_note=NULL;
 
     if(mimeData->hasImage()){
@@ -1006,10 +923,10 @@ void Canvas::pasteMimeData(const QMimeData *mimeData)
                 qDebug()<<"[Canvas::dropEvent]Empty URL dropped";
             }else if(url.isLocalFile()){
                 if(url.fileName().endsWith(".txt")){
-                    misliWindow->edit_w->setTextEditText( "define_text_file_note:"+url.toLocalFile() );
+                    misliWindow->edit_w->setTextEditText( "define_text_file_note:"+misliWindow->edit_w->maybeToRelativePath(url.toLocalFile()) );
                     misliWindow->edit_w->inputDone();
                 }else if(!QImage(url.toLocalFile()).isNull()){
-                    misliWindow->edit_w->setTextEditText( "define_picture_note:"+url.toLocalFile() );
+                    misliWindow->edit_w->setTextEditText( "define_picture_note:"+misliWindow->edit_w->maybeToRelativePath(url.toLocalFile()) );
                     misliWindow->edit_w->inputDone();
                 }else{
                     misliWindow->misliDesktopGUI->showWarningMessage(tr("Unsupported file dropped:")+url.toLocalFile());
@@ -1025,4 +942,9 @@ void Canvas::pasteMimeData(const QMimeData *mimeData)
         }
 
     }
+}
+
+QPointF Canvas::mousePos()
+{
+    return mapFromGlobal(cursor().pos());
 }

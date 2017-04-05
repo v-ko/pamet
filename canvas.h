@@ -33,7 +33,6 @@ class Canvas : public QWidget
     Q_OBJECT
 
     Q_PROPERTY(NoteFile* noteFile READ noteFile WRITE setNoteFile NOTIFY noteFileChanged)
-    Q_PROPERTY(bool linkingIsOn READ linkingIsOn WRITE setLinkingState NOTIFY linkingStateToggled)
 
 public:
     //Functions
@@ -56,6 +55,7 @@ public:
     float unprojectX(float screenX);
     float unprojectY(float screenY);
     float heightScaleFactor();
+    QPointF mousePos();
 
     void centerEyeOnNote(Note * nt);
     void updateCursorPosition();
@@ -65,11 +65,10 @@ public:
 
     //Properties
     NoteFile* noteFile();
-    bool linkingIsOn();
 
     //Variables
     MisliWindow *misliWindow;
-    Note *linkingNote, *cpChangeNote;
+    Note *cpChangeNote;
     Link *linkOnControlPointDrag;
 
     QLineEdit *searchField;
@@ -79,9 +78,11 @@ public:
     QTime lastReleaseEvent;
 
     float distanceToPrimeNoteX, distanceToPrimeNoteY, resizeX, resizeY;
-    int XonPush,YonPush,PushLeft,current_mouse_x,current_mouse_y;
+    int XonPush,YonPush,PushLeft;
     float EyeXOnPush,EyeYOnPush;
     bool timedOutMove,moveOn,noteResizeOn, userIsDraggingStuff, draggedStuffIsValid, linkControlPointDragOn;
+    bool linkingIsOn;
+    bool ctrlUpdateHack;
 
 signals:
     void noteFileChanged(NoteFile* nf); //Pretty much unused. Everyone who cares is visible to one another
@@ -90,7 +91,6 @@ signals:
 public slots:
     //Properties
     void setNoteFile(NoteFile* newNoteFile);
-    void setLinkingState(bool setLinkingOn);
 
     //Other
     void startMove();
@@ -109,7 +109,6 @@ protected:
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);
     void dragEnterEvent(QDragEnterEvent *event);
-    void dragMoveEvent(QDragMoveEvent*);
     void dragLeaveEvent(QDragLeaveEvent *);
     void dropEvent(QDropEvent *event);
 

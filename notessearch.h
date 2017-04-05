@@ -34,14 +34,16 @@ public:
     };
 
     //Functions
-    NotesSearch();
-    int loadNotes(MisliInstance * misliInstance, float initial_probability);
+    NotesSearch(MisliWindow *misli_window, float initial_probability);
+    int loadNotes();
     int loadNotes(MisliDir * misliDir, float initial_probability);
     int loadNotes(NoteFile * noteFile, MisliDir *misliDir, float initial_probability);
     static bool compareItems(SearchItem first,SearchItem second);
 
     //Variables
     QList<SearchItem> searchItems,searchResults;
+    float initialProbability;
+    MisliWindow *misliWindow;
 
 signals:
     void searchComplete(QString string);

@@ -59,10 +59,6 @@ public:
     void hardSave();
     void undo();
     void redo();
-    void findFreeIds();
-
-    void clearBuffers();
-    void drawEverything();
 
     //Properties
     QString filePath();
@@ -71,7 +67,6 @@ public:
     QList<Note*> notes; //all the notes are stored here
     int lastNoteId;
     std::vector<QString> comment; //the comments in the file
-    std::vector<int> freeId; //free note id-s
     QString filePath_m; //note file path
     float eyeX,eyeY,eyeZ; //camera position for the GUI cases (can't be QPointF, it has z)
     QStringList undoHistory, redoHistory; //The current state is on the back of undoHistory
@@ -79,7 +74,8 @@ public:
     bool isTimelineNoteFile;
     bool isReadable;
     bool saveWithRequest;
-    bool bufferImages;
+    bool keepHistoryViaGit;
+    bool indexedForSearch;
 
 signals:
     //Property changes

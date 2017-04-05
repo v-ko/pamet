@@ -52,20 +52,20 @@ Q_OBJECT
 
 public:
     //Functions
-    Note(int id_, QString iniString, bool bufferImage_);
-    Note(int id_, QString text_, QRectF rect_, float font_size_, QDateTime t_made_, QDateTime t_mod_, QColor txt_col_, QColor bg_col_, bool bufferImage_);
+    Note(int id_, QString iniString);
+    Note(Note *nt);
+    Note(int id_, QString text_, QRectF rect_, float font_size_, QDateTime t_made_, QDateTime t_mod_, QColor txt_col_, QColor bg_col_);
     void commonInitFunction();
     ~Note();
-
-    void storeCoordinatesBeforeMove();
 
     void checkTextForNoteFileLink(); //gets called from MisliDir only
     void checkTextForFileDefinition();
     void checkTextForSystemCallDefinition();
     void checkTextForWebPageDefinition();
 
-    void autoSize();
+    void autoSize(QPainter &painter);
     QString propertiesInIniString();
+    QRectF textRect();
 
     //Accessing properties
     QString text();
@@ -97,7 +97,7 @@ public:
     QString textForDisplay_m; //this gets drawn in the note
     QString addressString;
 
-    float xBeforeMove,yBeforeMove;
+    QPointF posBeforeMove;
 
     QImage *img;
 
@@ -106,8 +106,7 @@ public:
 
     bool isSelected_m;
     bool textIsShortened;
-    bool bufferImage;
-    bool autoSizing;
+    bool requestAutoSize;
 
 signals:
     //Property changes
@@ -135,8 +134,9 @@ public slots:
 
     //Other
     void checkForDefinitions();
-    void adjustTextSize();
-    void drawNote(QPainter* painter);
+    QRectF adjustTextSize(QPainter &p);
+    void drawNote(QPainter &painter);
+    void drawLink(QPainter &painter, Link &ln);
 
     bool addLink(Link newLink);
     void removeLink(int linkId);

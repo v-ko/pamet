@@ -27,7 +27,7 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     linkMenu(this),
     chooseNFMenu(tr("NoteFile"),&linkMenu),
     actionChooseTextFile(tr("Text file"),&linkMenu),
-    actionChoosePicture(tr("Picure"),&linkMenu),
+    actionChoosePicture(tr("Picture"),&linkMenu),
     actionSystemCallNote(tr("System call note (beta)"),&linkMenu),
     actionWebPageNote(tr("Web page note"),&linkMenu),
     ui(new Ui::EditNoteDialogue)
@@ -170,8 +170,8 @@ void EditNoteDialogue::newNote()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note = misliWindow->canvas->current_mouse_x; //cursor position relative to the gl widget
-    y_on_new_note = misliWindow->canvas->current_mouse_y;
+    x_on_new_note = misliWindow->canvas->mousePos().x(); //cursor position relative to the gl widget
+    y_on_new_note = misliWindow->canvas->mousePos().y();
 
     move(QCursor::pos());
 
@@ -182,10 +182,12 @@ void EditNoteDialogue::newNote()
     if(misliWindow->timelineTabIsActive()){
         ui->yearButton->show();
         ui->monthButton->show();
+        ui->weekButton->show();
         ui->dayButton->show();
     }else{
         ui->yearButton->hide();
         ui->monthButton->hide();
+        ui->weekButton->hide();
         ui->dayButton->hide();
     }
     show();
@@ -202,11 +204,13 @@ void EditNoteDialogue::editNote() //false for new note , true for edit
     if(misliWindow->timelineTabIsActive()){
         ui->yearButton->show();
         ui->monthButton->show();
+        ui->weekButton->show();
         ui->dayButton->show();
         edited_note = misliWindow->timelineWidget.timeline->archiveModule.noteFile.getFirstSelectedNote();
     }else{
         ui->yearButton->hide();
         ui->monthButton->hide();
+        ui->weekButton->hide();
         ui->dayButton->hide();
         edited_note = misliWindow->canvas->noteFile()->getFirstSelectedNote();
     }
@@ -262,9 +266,8 @@ void EditNoteDialogue::inputDone()
                         QDateTime::currentDateTime(),
                         QDateTime::currentDateTime(),
                         txt_col,
-                        bg_col,
-                        true);
-            nt->autoSize();
+                        bg_col);
+            nt->requestAutoSize = true;
             misliWindow->canvas->noteFile()->linkSelectedNotesTo(nt);
             misliWindow->canvas->noteFile()->addNote(nt); //invokes save
         }else if( misliWindow->timelineTabIsActive() ){
@@ -278,8 +281,7 @@ void EditNoteDialogue::inputDone()
                           timeMade,
                           timeMod,
                           txt_col,
-                          bg_col,
-                          true);
+                          bg_col);
             timeline->archiveModule.noteFile.addNote(nt);
         }
 
@@ -287,13 +289,9 @@ void EditNoteDialogue::inputDone()
         if(misliWindow->timelineTabIsActive()){
             edited_note->timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() +
                                                                     timeline->scaleToSeconds( slider->pos().x()) );
-            edited_note->timeModified = edited_note->timeMade.addMSecs( timeline->scaleToSeconds( slider->value()) );
-            edited_note->text_m = text;
-            timeline->archiveModule.noteFile.save();
-        }else{
-            edited_note->setText(text);
+            edited_note->timeModified = edited_note->timeMade.addMSecs( timeline->scaleToSeconds( slider->value()) );    
         }
-
+        edited_note->setText(text);
     }
     close();
     edited_note=NULL;
@@ -332,7 +330,7 @@ void EditNoteDialogue::choosePicture()
     QFileDialog dialog;
     QString file = dialog.getOpenFileName(this,tr("Choose a picture"));
 
-    ui->textEdit->setText("define_picture_note:"+file);
+    ui->textEdit->setText("define_picture_note:"+maybeToRelativePath(file));
     ui->textEdit->setFocus();
     ui->textEdit->moveCursor (QTextCursor::End);
 }
@@ -341,7 +339,7 @@ void EditNoteDialogue::chooseTextFile()
     QFileDialog dialog;
     QString file = dialog.getOpenFileName(this,tr("Choose a picture"));
 
-    ui->textEdit->setText("define_text_file_note:"+file);
+    ui->textEdit->setText("define_text_file_note:"+maybeToRelativePath(file));
     ui->textEdit->setFocus();
     ui->textEdit->moveCursor (QTextCursor::End);
 }
@@ -355,4 +353,13 @@ void EditNoteDialogue::setSystemCallPrefix()
 void EditNoteDialogue::closeEvent(QCloseEvent *)
 {
     misliWindow->timelineWidget.timeline->slider.hide();
+}
+
+QString EditNoteDialogue::maybeToRelativePath(QString path)
+{
+    if(path.startsWith(misliWindow->currentDir()->directoryPath())){
+        return path.replace(misliWindow->currentDir()->directoryPath(),".");
+    }else{
+        return path;
+    }
 }

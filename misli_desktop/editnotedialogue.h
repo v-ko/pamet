@@ -39,6 +39,7 @@ public:
     ~EditNoteDialogue();
 
     MisliInstance * misli_i();
+    QString maybeToRelativePath(QString path);
     
     //Variables
     QMenu linkMenu,chooseNFMenu;

@@ -15,36 +15,37 @@
 */
 
 #include <algorithm>
+#include <QComboBox>
 
 #include "notessearch.h"
+#include "misliwindow.h"
+#include "ui_misliwindow.h"
 
-NotesSearch::NotesSearch()
+NotesSearch::NotesSearch(MisliWindow *misli_window, float initial_probability)
 {
+    misliWindow = misli_window;
+    initialProbability = initial_probability;
 }
 
-int NotesSearch::loadNotes(MisliInstance *misliInstance, float initial_probability)
+int NotesSearch::loadNotes()
 {
     int notes_loaded=0;
 
-    for(MisliDir* misliDir: misliInstance->misliDirs()  ){
-        notes_loaded += loadNotes(misliDir,initial_probability);
+    for(MisliDir* misliDir: misliWindow->misliInstance()->misliDirs()  ){
+        notes_loaded += loadNotes(misliDir,initialProbability);
     }
     return notes_loaded;
 }
 int NotesSearch::loadNotes(MisliDir *misliDir, float initial_probability)
 {
     int notes_loaded=0;
-    SearchItem searchItem;
 
-    //Clear all items from this MisliDir if there are any
-    QMutableListIterator<SearchItem> searchItemIterator(searchItems);
-    while(searchItemIterator.hasNext()){
-        searchItem = searchItemIterator.next();
-        if(searchItem.md==misliDir) searchItemIterator.remove();
-    }
-
+    //Load only the notes that are not marked as indexed
     for(auto nf: misliDir->noteFiles()){
-        notes_loaded += loadNotes(nf, misliDir, initial_probability);
+        if(!nf->indexedForSearch){
+            notes_loaded += loadNotes(nf, misliDir, initial_probability);
+            nf->indexedForSearch = true;
+        }
     }
     return notes_loaded;
 }
@@ -88,6 +89,8 @@ QVariant NotesSearch::data(const QModelIndex & index, int role) const
 }
 void NotesSearch::findByText(QString searchString)
 {
+    loadNotes();
+
     int oldSearchResultsSize = searchResults.size();
     searchResults.clear();
 
@@ -101,6 +104,26 @@ void NotesSearch::findByText(QString searchString)
     QMutableListIterator<SearchItem> searchResultsIterator(searchResults);
     while(searchResultsIterator.hasNext()){
         SearchItem &currentItem = searchResultsIterator.next();
+
+        //Match the scope
+        switch (misliWindow->ui->searchScopeComboBox->currentIndex()) {
+        case 1:
+            if(currentItem.md!=misliWindow->currentDir()){
+                searchResultsIterator.remove();
+                addPrecedingDots = false;
+                addTrailingDots = false;
+                continue;
+            }
+        case 2:
+            if(currentItem.nf!=misliWindow->currentDir()->currentNoteFile) {
+                searchResultsIterator.remove();
+                addPrecedingDots = false;
+                addTrailingDots = false;
+                continue;
+            }
+        default:
+            break;
+        }
 
         //Full match in the beginning (no capitals)
         if(currentItem.nt->text().startsWith(searchString, Qt::CaseInsensitive)){

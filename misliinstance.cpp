@@ -16,9 +16,8 @@
 
 #include "misliinstance.h"
 
-MisliInstance::MisliInstance(bool bufferImages_)
+MisliInstance::MisliInstance()
 {
-    bufferImages = bufferImages_;
 }
 MisliInstance::~MisliInstance()
 {
@@ -39,7 +38,7 @@ MisliDir *MisliInstance::addDir(QString path)
 }
 MisliDir *MisliInstance::loadDir(QString path)
 {
-    MisliDir * md = new MisliDir(path,bufferImages);
+    MisliDir * md = new MisliDir(path);
     misliDirs_m.push_back(md);
     return md;
 }
@@ -53,18 +52,6 @@ void MisliInstance::unloadDir(MisliDir *dir)
 {
     delete dir;
     misliDirs_m.removeOne(dir);
-}
-
-void MisliInstance::clearBuffers()
-{
-    for(MisliDir *md: misliDirs_m){
-        for(NoteFile *nf: md->noteFiles()){
-            if(nf->bufferImages==true){
-                nf->bufferImages = false;
-                nf->clearBuffers();
-            }
-        }
-    }
 }
 
 void MisliInstance::loadStoredDirs()

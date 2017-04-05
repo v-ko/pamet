@@ -19,13 +19,12 @@
 
 #include <qglobal.h>
 
-#define FONT_TRANSFORM_FACTOR 15 //quality of the font textures (really only matters for close distance) interval [10;40] or smth like that
 #define CLICK_RADIUS 0.3
-#define MOVE_SPEED 2 //stypka pri dvijenie napred-nazad
+#define MOVE_SPEED 3
 #define MOVE_FUNC_TIMEOUT 300 //milisecs to hold the mouse on a note to move it
 #define MAX_UNDO_STEPS 100 //should be memory consumption based
 #define INITIAL_EYE_Z 90 //default height of the viewpoint
-#define NOTE_SPACING 0.006
+#define NOTE_SPACING 0.2
 #define RESIZE_CIRCLE_RADIUS 1
 #define ALIGNMENT_LINE_LENGTH 6
 #define A_TO_B_NOTE_SIZE_RATIO 5
@@ -33,8 +32,9 @@
 #define MAX_TEXT_FOR_DISPLAY_SIZE 10000
 #define MAX_NOTE_A 80
 #define MAX_NOTE_B 80
-#define MIN_NOTE_A 1.3
-#define MIN_NOTE_B 1.3
+#define MIN_NOTE_A 1.5
+#define MIN_NOTE_B 1.5
+#define SNAP_GRID_INTERVAL_SIZE 0.5
 #define MOVE_FUNC_TOLERANCE 12 //in pixels
 #define MAX_FONT_SIZE 100
 #define MAX_URI_LENGTH 2048

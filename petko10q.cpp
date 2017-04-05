@@ -170,7 +170,7 @@ float q_version_string_to_number(QString version)
     float result;
     QStringList numbers = version.split(".");
     if(numbers.size()<3){
-        qDebug()<<"[q_version_string_to_number]Bad version number. Returning 0.";
+        qDebug()<<"[q_version_string_to_number]Bad version number. Returning 0. Number:"+version;
         return 0;
     }
     result = numbers[0].toFloat()*1000000;
