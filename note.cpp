@@ -286,9 +286,9 @@ void Note::checkTextForWebPageDefinition()
 void Note::drawNote(QPainter &painter)
 {
     QFont font = painter.font();
-    //font.set;
     QPen pen = painter.pen();
     font.setFamily("Sans");
+    font.setHintingPreference(QFont::PreferNoHinting);
 
     QRectF imageRect = rect();
 

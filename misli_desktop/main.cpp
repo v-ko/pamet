@@ -42,6 +42,8 @@
 //update translations
 //commit
 //build on Windows
+//За да се ползва FreeType и да излизат по същия начин текстовете трябва да се добави qt.conf в bin (не се е ебавам)
+//директорията (debug и release), в който да има: [Platforms] \n WindowsArguments = fontengine=freetype
 //build installer PS C:\C++\misli\misli\installer> C:\Qt\QtIFW2.0.0\bin\binarycreator.exe --offline-only -c config\config.xml -p packages MisliInstaller.exe
 
 //=========Test cases===========
