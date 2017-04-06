@@ -36,7 +36,7 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     setQuitOnLastWindowClosed(false);
     setOrganizationName("p10"); //this is needed for proper settings access in windows
     setApplicationName("misli");
-    setApplicationVersion("2.0.0");
+    setApplicationVersion("3.0.0");
 
     //Construct the splash screen
     splash = new QSplashScreen(QPixmap(":/img/icon.png"));

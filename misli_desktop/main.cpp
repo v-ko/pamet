@@ -43,7 +43,8 @@
 //commit
 //build on Windows
 //За да се ползва FreeType и да излизат по същия начин текстовете трябва да се добави qt.conf в bin (не се е ебавам)
-//директорията (debug и release), в който да има: [Platforms] \n WindowsArguments = fontengine=freetype
+//директорията, в който да има: [Platforms] \n WindowsArguments = fontengine=freetype
+//bump version: in MisliDesctopGUI and the installer
 //build installer PS C:\C++\misli\misli\installer> C:\Qt\QtIFW2.0.0\bin\binarycreator.exe --offline-only -c config\config.xml -p packages MisliInstaller.exe
 
 //=========Test cases===========
@@ -59,16 +60,16 @@
 int main(int argc, char *argv[])
 {
     MisliDesktopGui misli(argc, argv);
-    Timeline *timeline = misli.misliWindow->timelineWidget.timeline;
+    //Timeline *timeline = misli.misliWindow->timelineWidget.timeline;
     //Timeline modules
     //NotesModule *notesModule = new NotesModule(timeline);
-    PhotoModule *photoModule = new PhotoModule(timeline);
-    CommunicationsModule *communicationsModule = new CommunicationsModule(timeline);
-    StatisticsModule *statisticsModule = new StatisticsModule(timeline);
+    //PhotoModule *photoModule = new PhotoModule(timeline);
+    //CommunicationsModule *communicationsModule = new CommunicationsModule(timeline);
+    //StatisticsModule *statisticsModule = new StatisticsModule(timeline);
     //timeline->addModule(notesModule);
-    timeline->addModule(photoModule);
-    timeline->addModule(communicationsModule);
-    timeline->addModule(statisticsModule);
+    //timeline->addModule(photoModule);
+    //timeline->addModule(communicationsModule);
+    //timeline->addModule(statisticsModule);
 
     return misli.exec();
 }
