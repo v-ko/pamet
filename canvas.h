@@ -113,7 +113,7 @@ protected:
     void dropEvent(QDropEvent *event);
 
 private:
-    QMetaObject::Connection visualChangeConnection, noteTextChangedConnection;
+    QMetaObject::Connection visualChangeConnection;
 };
 
 #endif // CANVAS_H

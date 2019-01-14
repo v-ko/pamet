@@ -74,6 +74,9 @@
         </property>
        </widget>
       </item>
+      <item>
+       <widget class="QTabWidget" name="tabWidget"/>
+      </item>
      </layout>
     </item>
    </layout>
@@ -84,7 +87,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>25</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -208,6 +211,7 @@
     <addaction name="actionSearch"/>
     <addaction name="actionJump_to_nearest_note"/>
     <addaction name="menuDonate_Bitcoin"/>
+    <addaction name="actionExport_all_as_web_notes"/>
    </widget>
    <widget class="QMenu" name="menuLanguage">
     <property name="title">
@@ -674,6 +678,11 @@
    </property>
    <property name="shortcut">
     <string>Backspace</string>
+   </property>
+  </action>
+  <action name="actionExport_all_as_web_notes">
+   <property name="text">
+    <string>&amp;Export all as web notes</string>
    </property>
   </action>
  </widget>

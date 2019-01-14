@@ -190,11 +190,13 @@ void Canvas::paintEvent(QPaintEvent*)
                 }
             }
 
-            //Draw the actual note
+            //Handle autoSize requests
             if(nt->requestAutoSize){
                 nt->requestAutoSize = false;
                 nt->autoSize(painter);
+                noteFile()->save();
             }
+            //Draw the actual note
             nt->drawNote(painter);
 
             //Draw additional lines to help alignment
@@ -466,7 +468,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         PushLeft = true;
         EyeXOnPush = noteFile()->eyeX;
         EyeYOnPush = noteFile()->eyeY;
-        timedOutMove=false;
+        timedOutMove = false;
 
         if (linkingIsOn) { // ------------LINKING ON KEY----------
 
@@ -668,7 +670,7 @@ void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not o
 
         //Store all the coordinates before the move
         for(Note *nt: misliWindow->currentDir()->currentNoteFile->notes){
-            if(nt->isSelected()) nt->posBeforeMove = nt->rect_m.topLeft();
+            if(nt->isSelected()) nt->posBeforeMove = nt->rect().topLeft();
         }
         moveOn = true;
         update();
@@ -790,7 +792,6 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
     }
 
     disconnect(visualChangeConnection);
-    disconnect(noteTextChangedConnection);
 
     if(newNoteFile==NULL){
         //Check the current dir for NFs
@@ -841,7 +842,9 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
         update();
     }
 
-    misliDir->lastNoteFile = misliDir->currentNoteFile;
+    if( newNoteFile != misliDir->currentNoteFile ){
+        misliDir->lastNoteFile = misliDir->currentNoteFile;
+    }
     misliDir->currentNoteFile = newNoteFile;
     misliWindow->updateNoteFilesListMenu();
     misliWindow->updateTitle();

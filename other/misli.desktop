@@ -1,8 +1,8 @@
 [Desktop Entry]
 Name=Misli
 Comment=Organize thoughts
-Exec=/home/p10/Dropbox/Pepi/C++/misli/build-misli-Desktop_Qt_5_1_1_GCC_64bit-Debug/misli
-Icon=/home/p10/Dropbox/Pepi/C++/misli/misli/img/icon.png
+Exec=/sync/builds/misli/build-misli_desktop-Desktop-Release/misli
+Icon=/sync/C++/misli/misli/img/icon.png
 Terminal=false
 Type=Application
 StartupWMClass=misli

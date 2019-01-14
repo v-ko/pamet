@@ -175,7 +175,7 @@ void CommunicationsModule::importFBChats()
 
     QProcess process2;
     qDebug()<<"Starting to import data in the database";
-    process2.start("bash", QStringList() << "-c" << "cat /home/p10/fbchat.sql | sqlite3 /sync/arhiv/communication/common.db");
+    process2.start("bash", QStringList() << "-c" << "cat /home/p10/fbchat.sql | sqlite3 /sync/arhiv/communication/communications.db");
     if(!process2.waitForFinished(100000)){
         qDebug()<<"Process to add chats to db did not finish in 100 sec. Terminating.";
         process2.terminate();

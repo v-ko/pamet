@@ -15,9 +15,37 @@
 */
 
 //release routine...done
+//windows build...дън
+//pri save v timeline-a се преебава периода (прави го да е от текущия начален до текущото време примерно)...дън
+//2017.01.27
+//Много ще е лесно да направя меню ентри за да ми отваря гугъл таймлайна на деня на който искам (от в мисли)...дън
+//Добавяне на разделителни линии м/у модулите...остаи
+//save aнимация с едно зелено тръгче просто , което да се появява и постепенно свива и изчезва...wontfix
+//Set default search scope to current dir...done
+//BUG: при пействане и нова записка не се закръглят координатите...дън
+//BUG: auto-size-a ne save-a...done
+//Memory leak при зареждането на снимките...дън
+//оправи изобразяването на снимките
+//BUG: backspace (last dir) does not work when switching with search...дън
+//link mode samo ako ima asociirana zapiska...дън
+//BUG: при натискане на копче се появява сянката...дън
+
+//виж във файла със записки
+
+//Вграден rollback със staggered versioning:
+//Да прочета за git workflow-a основните, щото е тъпо че още не го разбирам перфектно
+//добави проверка дали гит e наличен
+//напиши проверката при пускане кога трябва да се направи сл сейв и да го прави ако е минала датата
+//а ако не е - да насрочва таймер за правенето му
+//направи скрипт за добавянето на всички досегашни записи от гит през 1 ден интервал
+//Интерфейса в таймлайна ще е прост - тогъл бутон, който да менка "Върни на маркираната/Възстанови последната версия"
+//А в самия таймлайн просто ще има някакъв маркер за всеки сейв и ще светва в жълто, когато е селектиран (=е най-близо
+//до центъра), а останалите са червени. Активният в момента се маркира в зелено
+
+//Installer stuff:
+//linux installer
 //arch package
-//crash log
-//windows build за маги
+//crash log в сетингс директорията, който обаче да може да се отваря от менюто
 
 //FIXME-tata
 
@@ -32,6 +60,8 @@
 
 //Refactoring:
 //да преместя canvas в misli_desktop
+//Да преместя модулите в отделна директория
+//да оправя в editnotewidnow мизериите
 
 //Bugs:
 //търсенето е прецакано и крашва мн редовно...тестване
@@ -52,9 +82,6 @@
 //build installer PS C:\C++\misli\misli\installer> C:\Qt\QtIFW2.0.0\bin\binarycreator.exe --offline-only -c config\config.xml -p packages MisliInstaller.exe
 //pray to Bill Gates
 
-//=========Test cases===========
-//Input inaccessible/non-existent dir when adding a dir
-
 #include "mislidesktopgui.h"
 #include "archivemodule.h"
 #include "photomodule.h"
@@ -65,16 +92,16 @@
 int main(int argc, char *argv[])
 {
     MisliDesktopGui misli(argc, argv);
-    //Timeline *timeline = misli.misliWindow->timelineWidget.timeline;
+    Timeline *timeline = misli.misliWindow->timelineWidget.timeline;
     //Timeline modules
     //NotesModule *notesModule = new NotesModule(timeline);
-    //PhotoModule *photoModule = new PhotoModule(timeline);
-    //CommunicationsModule *communicationsModule = new CommunicationsModule(timeline);
-    //StatisticsModule *statisticsModule = new StatisticsModule(timeline);
+    PhotoModule *photoModule = new PhotoModule(timeline);
+    CommunicationsModule *communicationsModule = new CommunicationsModule(timeline);
+    StatisticsModule *statisticsModule = new StatisticsModule(timeline);
     //timeline->addModule(notesModule);
-    //timeline->addModule(photoModule);
-    //timeline->addModule(communicationsModule);
-    //timeline->addModule(statisticsModule);
+    timeline->addModule(photoModule);
+    timeline->addModule(communicationsModule);
+    timeline->addModule(statisticsModule);
 
     return misli.exec();
 }

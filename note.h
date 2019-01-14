@@ -88,7 +88,7 @@ public:
     QString text_m;
 
     float fontSize_m;
-    QDateTime timeMade,timeModified;
+    QDateTime timeMade, timeModified;
     QColor textColor_m,backgroundColor_m; //text and background colors
     QList<Link> outlinks;
 
@@ -125,6 +125,7 @@ signals:
 public slots:
     //Set properties
     void setText(QString);
+    void changeTextAndTimestamp(QString);
     void setFontSize(float);
     void setRect(QRectF newRect);
     void setColors(QColor newTextColor, QColor newBackgroundColor);

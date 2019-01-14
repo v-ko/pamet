@@ -6,6 +6,10 @@
 
 QT += core gui widgets network xml multimedia sql
 
+android{
+QT += androidextras
+}
+
 QT -= webkit
 
 CONFIG += C++11
@@ -91,6 +95,9 @@ FORMS += \
 DISTFILES += \
     ../installer/config/config.xml \
     ../installer/packages/com.p10.misli/meta/installscript.qs \
-    ../installer/packages/com.p10.misli/meta/package.xml
+    ../installer/packages/com.p10.misli/meta/package.xml \
+    ../misli_web/static/style.css \
+    ../misli_web/static/style.css \
+    ../misli_web/static/misli.js
 
 RC_FILE = ../misli_icon.rc

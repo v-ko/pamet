@@ -84,9 +84,6 @@ Note::Note(int id_, QString iniString)
 
     commonInitFunction();
 
-    setTextForShortening(text_m); //if I call setText there is some complication with the empty strings
-    checkForDefinitions();
-
     err += q_get_value_for_key(iniString,"l_id",linkIDStrings);
     q_get_value_for_key(iniString,"l_CP_x",linkCPxStrings); //Those two are optional
     q_get_value_for_key(iniString,"l_CP_y",linkCPyStrings);
@@ -116,15 +113,12 @@ Note::Note(Note *nt)
     backgroundColor_m = nt->backgroundColor_m;
 
     commonInitFunction();
-
-    setTextForShortening(nt->text_m); //if I call setText there is some complication with the empty strings
-    checkForDefinitions();
 }
 Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_)
 {
     id = id_;
     text_m = text_;
-    rect_m = rect_;
+    setRect(rect_);
     timeMade = t_made_;
     timeModified = t_mod_;
     fontSize_m = font_size_;
@@ -132,9 +126,6 @@ Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_
     backgroundColor_m = bg_col_;
 
     commonInitFunction();
-
-    setTextForShortening(text_); //if I call setText there is some complication with the empty strings
-    checkForDefinitions();
 }
 void Note::commonInitFunction()
 {
@@ -144,10 +135,14 @@ void Note::commonInitFunction()
     if(!timeModified.isValid()){timeModified=t_default;}
 
     isSelected_m=false;
-    img = new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
+    img = NULL; //new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
     textIsShortened=false;
     type = NoteType::normal;
     requestAutoSize = false;
+    setTextForShortening(text_m);
+    checkForDefinitions();
+    connect(this,SIGNAL(textChanged(QString)),this, SLOT(setTextForShortening(QString)));
+    connect(this,SIGNAL(textChanged(QString)),this, SLOT(checkForDefinitions()));
 }
 
 Note::~Note()
@@ -245,14 +240,7 @@ void Note::checkTextForFileDefinition()
         addressString = addressString.trimmed(); //remove white spaces from both sides
         if(addressString.startsWith(".")) addressString.remove(0,1).prepend(QDir::currentPath());
         setTextForShortening("");
-        delete img;
-        img = new QImage(addressString);
-        if(img->isNull()){
-            setTextForShortening( tr("Failed to open file:")+addressString);
-            type = NoteType::normal;
-        }else{
-            type = NoteType::picture;
-        }
+        type = NoteType::picture;
     }
 }
 void Note::checkTextForSystemCallDefinition()
@@ -287,32 +275,46 @@ void Note::drawNote(QPainter &painter)
 {
     QFont font = painter.font();
     QPen pen = painter.pen();
-    font.setFamily("Sans");
+    font.setFamily("Halvetica");
     font.setHintingPreference(QFont::PreferNoHinting);
 
     QRectF imageRect = rect();
 
-    //If it's a picture note - resize appropriately to fit in the note boundaries
+    //If it's a picture note
+    //Resize appropriately to fit in the note boundaries
     if( (type==NoteType::picture) && textForDisplay_m.isEmpty() ){
-        float frame_ratio,pixmap_ratio;
-        frame_ratio = rect().width()/rect().height();
-        pixmap_ratio = float(img->width())/float(img->height());
 
-        if( frame_ratio > pixmap_ratio ){
-            //if the width for the note frame is proportionally bigger than the pictures width
-            //we resize the note using the height of the frame and a calculated width
-            imageRect.setWidth(imageRect.height()*pixmap_ratio);
-            imageRect.moveCenter(rect().center());
-        }else if( frame_ratio < pixmap_ratio ){
-            //we resize the note using the width of the frame and a calculated height
-            imageRect.setHeight(imageRect.width()/pixmap_ratio);
-            imageRect.moveCenter(rect().center());
+        if(img==NULL){
+            img = new QImage(addressString);
         }
 
-        QRectF projectedRect; //We use the scaled() f-n because it's configurable to a smooth transform
-        projectedRect.setWidth(painter.transform().m22()*imageRect.width()); //Use the painter scaling factor
-        projectedRect.setHeight(painter.transform().m22()*imageRect.height());
-        painter.drawImage(imageRect, img->scaled(projectedRect.width(),projectedRect.height(),Qt::KeepAspectRatio,Qt::SmoothTransformation));
+        if(img->isNull()){
+            delete img;
+            img = NULL;
+            setTextForShortening( tr("Failed to open file:") + addressString);
+            type = NoteType::normal;
+        }else{
+
+            float frame_ratio,pixmap_ratio;
+            frame_ratio = rect().width()/rect().height();
+            pixmap_ratio = float(img->width())/float(img->height());
+
+            if( frame_ratio > pixmap_ratio ){
+                //if the width for the note frame is proportionally bigger than the pictures width
+                //we resize the note using the height of the frame and a calculated width
+                imageRect.setWidth(imageRect.height()*pixmap_ratio);
+                imageRect.moveCenter(rect().center());
+            }else if( frame_ratio < pixmap_ratio ){
+                //we resize the note using the width of the frame and a calculated height
+                imageRect.setHeight(imageRect.width()/pixmap_ratio);
+                imageRect.moveCenter(rect().center());
+            }
+
+            QRectF projectedRect; //We use the scaled() f-n because it's configurable to a smooth transform
+            projectedRect.setWidth(painter.transform().m22()*imageRect.width()); //Use the painter scaling factor
+            projectedRect.setHeight(painter.transform().m22()*imageRect.height());
+            painter.drawImage(imageRect, img->scaled(projectedRect.width(),projectedRect.height(),Qt::KeepAspectRatio,Qt::SmoothTransformation));
+        }
 
     }
 
@@ -336,7 +338,7 @@ void Note::drawNote(QPainter &painter)
     //painter.drawText(rect().topLeft(),QString::number(fm.height())+"'"+QString::number(fontSize_m *10000/float(fm.height())));
     //QRectF boundingRect = painter.boundingRect( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m );
     //painter.fillRect( boundingRect, QBrush( QColor(255,0,0,60)));
-    //painter.fillRect( adjustedRect , QBrush( QColor(0,255,0,60))); //shows the probe iterator which may be for the right margin so it's normal if it's a wrong bounding box
+    //painter.fillRect( textRect() , QBrush( QColor(0,255,0,60))); //shows the probe iterator which may be for the right margin so it's normal if it's a wrong bounding box
 
     //Draw a border around the appropriate notes
     if( (type==NoteType::redirecting) |
@@ -465,14 +467,18 @@ void Note::setText(QString newText)
 {
     if(newText!=text_m){
         text_m = newText;
-        timeModified=QDateTime::currentDateTime();
         emit textChanged(text_m);
         emit propertiesChanged();
-
-        setTextForShortening(text_m);
-        checkForDefinitions();
     }
 }
+void Note::changeTextAndTimestamp(QString newText)
+{
+    if(newText!=text_m){
+        timeModified=QDateTime::currentDateTime();
+        setText(newText);
+    }
+}
+
 void Note::setFontSize(float newFontSize)
 {
     if( 0>newFontSize && newFontSize>MAX_FONT_SIZE){
@@ -491,7 +497,6 @@ void Note::setRect(QRectF newRect)
     rect_m.setY( round(float(newRect.y())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
     rect_m.setWidth( stop( round(float(newRect.width())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE ,MIN_NOTE_A,MAX_NOTE_A) );
     rect_m.setHeight( stop(round(float(newRect.height())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE ,MIN_NOTE_B,MAX_NOTE_B) );
-
 }
 void Note::setColors(QColor newTextColor, QColor newBackgroundColor)
 {
@@ -570,6 +575,7 @@ void Note::autoSize(QPainter &painter)
     }
 
     rect().setWidth(rect().width()+1);
+    setRect(rect()); //Align to grid. Should refactor the above to use a tmpRect
 
     adjustTextSize(painter);
 }
@@ -665,7 +671,7 @@ Qt::AlignmentFlag Note::alignment()
     if(text_m.contains("\n")){//if there's more than one row
         return Qt::AlignLeft;
     }else{
-        return Qt::AlignCenter;
+        return Qt::AlignHCenter;
     }
 }
 
@@ -673,10 +679,10 @@ QRectF Note::textRect()
 {
     QRectF txtRect = rect();
     txtRect.setLeft(rect().left() + NOTE_SPACING);
-    txtRect.setTop(rect().top() + NOTE_SPACING);
-    txtRect.setHeight(rect().height() - 2*NOTE_SPACING);
+    txtRect.setTop(rect().top() + NOTE_SPACING );
+    txtRect.setHeight(rect().height() - 2*NOTE_SPACING + 1);//dirty fix because boundingRect returns a bigger rect
     txtRect.setWidth(rect().width() - 2*NOTE_SPACING);
-    txtRect.moveTop(txtRect.top() - fontSize_m*0.2); // FIXME use fontMetrics to make this correction exact
+    txtRect.moveTop(txtRect.top() - fontSize_m*0.1); // FIXME use fontMetrics to make this correction exact
 
     return txtRect;
 }

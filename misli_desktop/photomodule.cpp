@@ -4,7 +4,7 @@
 
 PhotoModule::PhotoModule(Timeline *timeline_):
     TimelineModule(timeline_),
-    reloadButton("Load library")
+    reloadButton("Load photo library")
 {
     controlWidget = &reloadButton;
     connect(&reloadButton, &QPushButton::clicked, this, &PhotoModule::updateNotesForDisplay);
@@ -23,7 +23,8 @@ void PhotoModule::afterLoadingIsDone()
 
 void PhotoModule::loadToTmp(qint64 positionInMSecs, qint64 viewportSizeInMSecs)
 {
-    QDirIterator iterator("/sync/Снимки", QStringList()<<"*.jpg", QDir::Files, QDirIterator::Subdirectories);
+    // /sync/Снимки
+    QDirIterator iterator("/sync/gsm_photos", QStringList()<<"*.jpg", QDir::Files, QDirIterator::Subdirectories);
     QProcess process;
     Note *nt;
     QColor txt_col,bg_col;
@@ -41,7 +42,7 @@ void PhotoModule::loadToTmp(qint64 positionInMSecs, qint64 viewportSizeInMSecs)
             //qDebug()<<"Executing: "+execString;
             process.start(execString);
 
-            if(!process.waitForFinished(-1)){
+            if(!process.waitForFinished(10000)){
                 qDebug()<<"Process did not finish:"<<execString;
                 process.kill();
             }else{
@@ -53,7 +54,7 @@ void PhotoModule::loadToTmp(qint64 positionInMSecs, qint64 viewportSizeInMSecs)
             }
             QString error(process.readAllStandardError());
             if(!error.isEmpty()){
-                qDebug()<<"Returned error:"<<error;
+                qDebug()<<"Reading photo metadata returned error:"<<error;
             }
             QString out(process.readAllStandardOutput());
             out = out.trimmed();

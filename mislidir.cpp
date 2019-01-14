@@ -88,6 +88,9 @@ void MisliDir::setDirectoryPath(QString newDirPath)
         p.start("git",QStringList()<<"commit"<<"-m"<<"'Dir init commit'");
         p.waitForFinished();
         qDebug()<<p.readAll();
+        p.start("git",QStringList()<<"gc"<<"--auto");
+        p.waitForFinished();
+        qDebug()<<p.readAll();
     }
 
     emit directoryPathChanged(newDirPath);

@@ -301,8 +301,8 @@ void NoteFile::clearLinkSelection()
 void NoteFile::makeCoordsRelativeTo(double x,double y)
 {
     for(Note *nt: notes){
-        nt->rect().moveLeft(nt->rect().x()-x);
-        nt->rect().moveTop(nt->rect().y()-y);
+        QRectF tmpRect( QPointF(nt->rect().x() - x, nt->rect().y() - y), nt->rect().size() );
+        nt->setRect( tmpRect );
 
         for(Link &ln: nt->outlinks){
             ln.controlPoint.setX(ln.controlPoint.x()-x);

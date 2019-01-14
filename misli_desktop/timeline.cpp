@@ -43,7 +43,7 @@ float Timeline::scaleToPixels(qint64 miliseconds)
     return miliseconds*( double(rect().width())/double(viewportSizeInMSecs) );
 }
 
-float Timeline::scaleToSeconds(qint64 pixels)
+float Timeline::scaleToMSeconds(qint64 pixels)
 {
     return pixels*( double(viewportSizeInMSecs)/double(rect().width()) );
 }
@@ -242,10 +242,11 @@ void Timeline::paintEvent(QPaintEvent *)
     for(int i=0; i<nts.size(); i++){
         Note *nt = nts[i];
         float x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
-        nt->rect_m.moveCenter( QPointF(x, 0) );
-        nt->rect_m.moveBottom( baselineY()-5 );
+        QRectF tmpRect = nt->rect();
+        tmpRect.moveCenter( QPointF(x, 0) );
+        tmpRect.moveBottom( baselineY()-5 );
 
-        if( !nt->rect().intersects(rect()) ){
+        if( !tmpRect.intersects(rect()) ){
             nts.removeOne(nt);
             i--;
             continue;
@@ -272,6 +273,7 @@ void Timeline::paintEvent(QPaintEvent *)
         if( ( !nt->rect().intersects(rect()) ) |
             ( nt->fontSize_m<1) |
             ( nt->rect().width()>rect().width() ) ){
+            nt->setRect(QRectF()); //clear the position so it doesn't parttake in the selection
             nts.removeOne(nt);
             i--;
             continue;
@@ -289,7 +291,7 @@ void Timeline::paintEvent(QPaintEvent *)
             }
         }
 
-        QFont font("Sans");
+        QFont font("Helvetica");
         font.setPointSizeF( nt->fontSize_m );
         painter.setFont( font );
         QRectF boundingRect = painter.boundingRect( nt->rect_m, Qt::TextWordWrap | nt->alignment() | Qt::AlignVCenter, nt->text() );
@@ -334,7 +336,7 @@ void Timeline::wheelEvent(QWheelEvent *event)
     viewportSizeInMSecs -= viewportSizeChange;
 
     //Correct the position so the zoom center (fixed point) is the mouse
-    qint64 zoomCenter = positionInMSecs - viewportSizeInMSecs/2 + scaleToSeconds( event->pos().x() );
+    qint64 zoomCenter = positionInMSecs - viewportSizeInMSecs/2 + scaleToMSeconds( event->pos().x() );
     positionInMSecs -= double(positionInMSecs - zoomCenter)*double(viewportSizeChange)/double(viewportSizeInMSecs);
     update();
 }
@@ -358,7 +360,7 @@ void Timeline::mouseDoubleClickEvent(QMouseEvent *event)
 void Timeline::mouseMoveEvent(QMouseEvent *event)
 {
     if(event->buttons()==Qt::LeftButton){
-        positionInMSecs -= scaleToSeconds( event->x() - lastMousePos );
+        positionInMSecs -= scaleToMSeconds( event->x() - lastMousePos );
     }
     lastMousePos = event->x();
     update();

@@ -24,6 +24,10 @@
 #include <QComboBox>
 #include <QListView>
 
+#ifdef Q_OS_ANDROID
+#include <QtAndroidExtras/QtAndroid>
+#endif
+
 #include "misliwindow.h"
 #include "../misliinstance.h"
 #include "ui_misliwindow.h"
@@ -34,7 +38,6 @@
 
 MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     ui(new Ui::MisliWindow),
-    tabWidget(this),
     timelineWidget(this),
     updateMenu(tr("Update available"))
 {
@@ -46,7 +49,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     nfBeforeHelp = NULL;
     updateCheckDone = false;
 
-    //Init notes search stuff
+    //---Init notes search stuff---
     notes_search = new NotesSearch(this, 1);
     notes_search->moveToThread(&misliDesktopGUI->workerThread);
     notes_search->loadNotes();
@@ -57,6 +60,10 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
             [&](const QItemSelection &, const QItemSelection &){
         const QModelIndex index = ui->searchListView->selectionModel()->currentIndex();
         NotesSearch::SearchItem searchItem = notes_search->searchResults.at(index.row());
+        //Set the last noteFile for the Back function if appropriate
+        //if( (searchItem.md==currentDir_m) && (searchItem.nf!=canvas->noteFile()) ){
+
+        //}
         setCurrentDir(searchItem.md);
         canvas->setNoteFile(searchItem.nf);
         if(searchItem.nf->notes.contains(searchItem.nt)){
@@ -70,16 +77,17 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     ui->searchScopeComboBox->addItem(tr("all notes"));
     ui->searchScopeComboBox->addItem(tr("the current dir"));
     ui->searchScopeComboBox->addItem(tr("the current note file"));
+    ui->searchScopeComboBox->setCurrentIndex(1);
     connect(ui->searchScopeComboBox,static_cast<void(QComboBox::*)(int)>(&QComboBox::currentIndexChanged), [&](){
         notes_search->findByText(ui->searchLineEdit->text());
     });
 
-    //Init widgets and widnows
-    ui->mainLayout->addWidget(&tabWidget);
+    //---Init widgets and widnows---
+    ui->mainLayout->addWidget(ui->tabWidget);
     edit_w = new EditNoteDialogue(this);
     canvas = new Canvas(this);
-    tabWidget.addTab(canvas,"");
-    tabWidget.addTab(&timelineWidget,"/timeline(beta)");
+    ui->tabWidget->addTab(canvas,"");
+    ui->tabWidget->addTab(&timelineWidget,"/timeline(beta)");
     ui->searchLineEdit->hide();
     ui->searchListView->hide();
     ui->searchScopeComboBox->hide();
@@ -177,8 +185,10 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Make link (lambda)
     connect(ui->actionMake_link,&QAction::triggered,[&](){
-        canvas->linkingIsOn = true;
-        canvas->update();
+        if(canvas->noteFile()->getFirstSelectedNote()!=NULL){
+            canvas->linkingIsOn = true;
+            canvas->update();
+        }
     });
     //Make current view point height default (lambda)
     connect(ui->actionSet_this_height_as_default,&QAction::triggered,[&](){
@@ -223,11 +233,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Move left (lambda)
     connect(ui->actionMove_left,&QAction::triggered,[&](){
-        if(tabWidget.currentWidget()==canvas){
+        if(ui->tabWidget->currentWidget()==canvas){
             canvas->noteFile()->eyeX-=MOVE_SPEED;
             QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
             canvas->update();
-        }else if(tabWidget.currentWidget()==&timelineWidget){
+        }else if(ui->tabWidget->currentWidget()==&timelineWidget){
             timelineWidget.timeline->positionInMSecs -= timelineWidget.timeline->viewportSizeInMSecs/60;
             timelineWidget.timeline->update();
         }
@@ -235,11 +245,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Move right (lambda)
     connect(ui->actionMove_right,&QAction::triggered,[&](){
-        if(tabWidget.currentWidget()==canvas){
+        if(ui->tabWidget->currentWidget()==canvas){
             canvas->noteFile()->eyeX+=MOVE_SPEED;
             QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
             canvas->update();
-        }else if(tabWidget.currentWidget()==&timelineWidget){
+        }else if(ui->tabWidget->currentWidget()==&timelineWidget){
             timelineWidget.timeline->positionInMSecs += timelineWidget.timeline->viewportSizeInMSecs/60;
             timelineWidget.timeline->update();
         }
@@ -293,15 +303,76 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
     //Switch to tab 1
     connect(ui->actionGotoTab1, &QAction::triggered, this, [&](){
-        tabWidget.setCurrentIndex(0);
+        ui->tabWidget->setCurrentIndex(0);
     });
     //Switch to tab 2
     connect(ui->actionGotoTab2, &QAction::triggered, this, [&](){
-        tabWidget.setCurrentIndex(1);
+        ui->tabWidget->setCurrentIndex(1);
     });
     //Switch to the last note file
     connect(ui->actionSwitch_to_the_last_note_file, &QAction::triggered, [&](){
         if(currentDir()->lastNoteFile!=NULL) canvas->setNoteFile(currentDir()->lastNoteFile);
+    });
+    //Export notes as web pages (lambda)
+    connect(ui->actionExport_all_as_web_notes,&QAction::triggered,[&](){
+        QDir webDir(currentDir()->directoryPath()+"/web");
+        if(!webDir.exists()) webDir.mkpath(webDir.absolutePath());
+
+
+        QImage img(1000,1000, QImage::Format_ARGB32);//hacky workaround to get the text length adjust
+        QPainter p(&img);
+
+        for(NoteFile *nf: currentDir()->noteFiles()){
+            QFile file(webDir.absoluteFilePath(nf->name()+".html"));
+            file.open(QIODevice::WriteOnly);
+            QTextStream stream(&file);
+            stream<<"<!DOCTYPE html>\n"
+                    "<html>\n"
+                    "    <head>\n"
+                    "        <link rel='stylesheet' href='static/style.css'>\n"
+                    "    </head>\n"
+                    "<body style=\"overflow: hidden\">\n"
+                    "\t<canvas id=\"misliCanvas\">Your browser does not support the HTML5 canvas tag.</canvas>\n"
+                    "\t<!-- GENERATED -->\n";
+            for(Note *nt: nf->notes){
+
+                nt->drawNote(p); //hacky workaround to get the text length adjust
+                stream<<"\t<div class=\"note\" id=\""<<"n"<<nt->id<<"\" style=\"background-color: ";
+                //Specify background color
+                if(nt->backgroundColor()!=QColor::fromRgbF(0,0,1,0.1)){
+                    stream<<"rgba("<<nt->backgroundColor().red()<<","<<nt->backgroundColor().green()<<","<<nt->backgroundColor().blue()<<","<<nt->backgroundColor().alphaF()<<");";
+                }
+                //Specify text color
+                if(nt->backgroundColor()!=QColor::fromRgbF(0,0,1,1)){
+                    stream<<"color: rgba("<<nt->textColor().red()<<","<<nt->textColor().green()<<","<<nt->textColor().blue()<<","<<nt->textColor().alphaF()<<");";
+                }
+                //Specify border
+                if(nt->type==NoteType::redirecting){
+                    stream<<"border: 1px solid rgba("<<nt->textColor().red()<<","<<nt->textColor().green()<<","<<nt->textColor().blue()<<","<<nt->textColor().alphaF()<<");";
+                }
+                //Close off
+                stream<<"\">"<<nt->textForDisplay()<<"</div>\n";
+            }
+
+            stream<<"<script type='text/javascript' src='static/misli.js' ></script>\n"
+                    "<script>\n"
+                    "\t//GENERATED";
+            for(Note *nt: nf->notes){
+                stream<<"\tnewNote("<<"\"n"<<nt->id<<"\","<<nt->rect().left()<<","<<nt->rect().top()<<","<<nt->rect().width()<<","<<nt->rect().height()<<","<<nt->fontSize()<<");\n";
+                for(Link ln: nt->outlinks){
+                    stream<<"\tnewLink("<<ln.line.x1()<<","<<ln.line.y1()<<","<<ln.line.x2()<<","<<ln.line.y2()<<");\n";
+                }
+            }
+
+            stream<<"updateCanvas();"
+                    "</script>\n"
+                    "\n"
+                    "</body>\n"
+                    "</html>";
+
+            stream.flush();
+            file.close();
+        }
     });
 
     //---------------------Creating the virtual note files----------------------
@@ -310,14 +381,30 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     helpNoteFile = new NoteFile;
     helpNoteFile->setFilePath(":/help/help_"+misliDesktopGUI->language()+".misl");
 
+    //Add Android permission request
+    #ifdef Q_OS_ANDROID
+    qDebug()<<"Checking permission";
+    QtAndroid::PermissionResult r = QtAndroid::checkPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+    if(r == QtAndroid::PermissionResult::Denied) {
+        qDebug()<<"Permission denied, requesting from user.";
+        QtAndroid::requestPermissionsSync( QStringList() << "android.permission.WRITE_EXTERNAL_STORAGE" );
+        r = QtAndroid::checkPermission("android.permission.WRITE_EXTERNAL_STORAGE");
+        if(r == QtAndroid::PermissionResult::Denied) {
+             qDebug()<<"Permission denied for external storage";
+        }
+    }else{
+        qDebug()<<"Permission granted";
+    }
+    #endif
+
     //Auto set current dir
     setCurrentDir(NULL);
 
     grabGesture(Qt::PinchGesture);
 
     //BRUTE FORCE BUG SQUASHING (graphics glitch in ui.tabWidget)
-    tabWidget.setCurrentIndex(1);
-    tabWidget.setCurrentIndex(0);
+    ui->tabWidget->setCurrentIndex(1);
+    ui->tabWidget->setCurrentIndex(0);
 }
 
 MisliWindow::~MisliWindow()
@@ -332,7 +419,7 @@ MisliWindow::~MisliWindow()
 
 bool MisliWindow::timelineTabIsActive()
 {
-    if(tabWidget.currentWidget()==&timelineWidget){
+    if(ui->tabWidget->currentWidget()==&timelineWidget){
         return true;
     }else{
         return false;
@@ -393,7 +480,10 @@ bool MisliWindow::event(QEvent *event)
 void MisliWindow::keyPressEvent(QKeyEvent *event)
 {
     QWidget::keyPressEvent(event);
-    canvas->ctrlUpdateHack=true;
+    if(event->modifiers() & Qt::ControlModifier){
+        canvas->ctrlUpdateHack=true;
+    }
+
     update();
 }
 void MisliWindow::keyReleaseEvent(QKeyEvent *event)
@@ -589,7 +679,7 @@ void MisliWindow::updateTitle()
         }
     }
 
-    tabWidget.setTabText(tabWidget.indexOf(canvas), title);
+    ui->tabWidget->setTabText(ui->tabWidget->indexOf(canvas), title);
 }
 
 void MisliWindow::colorSelectedNotes(float txtR, float txtG, float txtB, float txtA, float backgroundR, float backgroundG, float backgroundB, float backgroundA)

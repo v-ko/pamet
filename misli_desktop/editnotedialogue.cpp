@@ -62,12 +62,12 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
             timeline->update();
         }
 
-        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
+        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToMSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
         sliderStartTime.setTime( QTime(0,0,0) );
 
         x_on_new_note = timeline->scaleToPixels( sliderStartTime.toMSecsSinceEpoch() - timeline->leftEdgeInMSecs() );
         if(x_on_new_note<0){
-            timeline->positionInMSecs += timeline->scaleToSeconds(x_on_new_note);
+            timeline->positionInMSecs += timeline->scaleToMSeconds(x_on_new_note);
             x_on_new_note = 0;
         }
         slider->move(x_on_new_note, slider->pos().y());
@@ -85,14 +85,14 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
             timeline->update();
         }
 
-        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
+        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToMSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
         sliderStartTime.setTime( QTime(0,0,0) );
         //QDateTime dt = sliderStartTime.addDays( -sliderStartTime.date().dayOfWeek() + 1); //Set to Monday
         //sliderStartTime.setDate( dt.date() );
 
         x_on_new_note = timeline->scaleToPixels( sliderStartTime.toMSecsSinceEpoch() - timeline->leftEdgeInMSecs() );
         if(x_on_new_note<0){
-            timeline->positionInMSecs += timeline->scaleToSeconds(x_on_new_note);
+            timeline->positionInMSecs += timeline->scaleToMSeconds(x_on_new_note);
             x_on_new_note = 0;
         }
         slider->move(x_on_new_note, slider->pos().y());
@@ -110,13 +110,13 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
             timeline->update();
         }
 
-        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
+        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToMSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
         sliderStartTime.setTime( QTime(0,0,0) );
         sliderStartTime.setDate( QDate( sliderStartTime.date().year(), sliderStartTime.date().month(), 1));
 
         x_on_new_note = timeline->scaleToPixels( sliderStartTime.toMSecsSinceEpoch() - timeline->leftEdgeInMSecs() );
         if(x_on_new_note<0){
-            timeline->positionInMSecs += timeline->scaleToSeconds(x_on_new_note);
+            timeline->positionInMSecs += timeline->scaleToMSeconds(x_on_new_note);
             x_on_new_note = 0;
         }
         slider->move(x_on_new_note, slider->pos().y());
@@ -134,13 +134,13 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
             timeline->update();
         }
 
-        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
+        QDateTime sliderStartTime = QDateTime::fromMSecsSinceEpoch(timeline->scaleToMSeconds(slider->pos().x())+timeline->leftEdgeInMSecs());
         sliderStartTime.setTime( QTime(0,0,0) );
         sliderStartTime.setDate( QDate( sliderStartTime.date().year(), 1, 1));
 
         x_on_new_note = timeline->scaleToPixels( sliderStartTime.toMSecsSinceEpoch() - timeline->leftEdgeInMSecs() );
         if(x_on_new_note<0){
-            timeline->positionInMSecs += timeline->scaleToSeconds(x_on_new_note);
+            timeline->positionInMSecs += timeline->scaleToMSeconds(x_on_new_note);
             x_on_new_note = 0;
         }
         slider->move(x_on_new_note, slider->pos().y());
@@ -271,8 +271,8 @@ void EditNoteDialogue::inputDone()
             misliWindow->canvas->noteFile()->linkSelectedNotesTo(nt);
             misliWindow->canvas->noteFile()->addNote(nt); //invokes save
         }else if( misliWindow->timelineTabIsActive() ){
-            QDateTime timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() + timeline->scaleToSeconds( slider->pos().x() ) );
-            QDateTime timeMod = timeMade.addMSecs( timeline->scaleToSeconds(slider->value()) );
+            QDateTime timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() + timeline->scaleToMSeconds( slider->pos().x() ) );
+            QDateTime timeMod = timeMade.addMSecs( timeline->scaleToMSeconds(slider->value()) );
 
             nt = new Note(0,
                           text,
@@ -287,11 +287,26 @@ void EditNoteDialogue::inputDone()
 
     }else { //else we're in edit mode
         if(misliWindow->timelineTabIsActive()){
-            edited_note->timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() +
-                                                                    timeline->scaleToSeconds( slider->pos().x()) );
-            edited_note->timeModified = edited_note->timeMade.addMSecs( timeline->scaleToSeconds( slider->value()) );    
+            QDateTime newStart = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() +
+                                                                    timeline->scaleToMSeconds( slider->pos().x()) );
+            QDateTime newEnd = newStart.addMSecs( timeline->scaleToMSeconds( slider->value()) );
+
+            if( (newStart!=edited_note->timeMade) | (newEnd!=edited_note->timeModified) ) {
+                edited_note->timeMade = newStart;
+                edited_note->timeModified = newEnd;
+
+                if(text!=edited_note->text()){
+                    edited_note->setText(text);
+                }else{
+                    emit edited_note->propertiesChanged();
+                }
+            }else{
+                edited_note->setText(text);
+            }
+
+        }else{
+            edited_note->changeTextAndTimestamp(text);
         }
-        edited_note->setText(text);
     }
     close();
     edited_note=NULL;

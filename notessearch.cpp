@@ -114,6 +114,7 @@ void NotesSearch::findByText(QString searchString)
                 addTrailingDots = false;
                 continue;
             }
+            break;
         case 2:
             if(currentItem.nf!=misliWindow->currentDir()->currentNoteFile) {
                 searchResultsIterator.remove();
@@ -121,6 +122,7 @@ void NotesSearch::findByText(QString searchString)
                 addTrailingDots = false;
                 continue;
             }
+            break;
         default:
             break;
         }

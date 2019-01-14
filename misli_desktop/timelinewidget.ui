@@ -15,7 +15,15 @@
   </property>
   <layout class="QHBoxLayout" name="horizontalLayout">
    <item>
-    <layout class="QVBoxLayout" name="sidebar"/>
+    <layout class="QVBoxLayout" name="sidebar">
+     <item>
+      <widget class="QPushButton" name="googleTimelinePushButton">
+       <property name="text">
+        <string>Go to Google Timeline</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
    </item>
    <item>
     <layout class="QVBoxLayout" name="verticalLayout">
