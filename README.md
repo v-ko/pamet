@@ -9,3 +9,6 @@ List of features
 - Adding pictures
 - Displaying text files on the file system as notes
 - System call notes: executing a shell command by double clicking on the note and receiving the output as a new note below
+
+![screenshot1](https://a.fsdn.com/con/app/proj/misli/screenshots/Screenshot%20from%202014-09-05%2014%3A40%3A19.png/max/max/1)
+![screenshot2](https://a.fsdn.com/con/app/proj/misli/screenshots/Screenshot%20from%202014-09-05%2014%3A30%3A01.png/max/max/1)
