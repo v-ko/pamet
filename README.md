@@ -3,7 +3,7 @@ Misli
  A program for organizing your thoughts and notes. The notes are resizeable and you can pick from several colors. To visualize semantics you can link the notes to one another. The notes are stored in note files, which are stored in one or more directories (so when there's a lot of stuff it can be well organized). Switching between note files can be done via button-like notes, much like the hyperlinks on the internet.
 
 ### Installation
-You can build the app with QtCreator, using the project file in /misli_desktop . There are way old builds on [SourceForge](https://sourceforge.net/projects/misli/) (they are compatible, so you can use them for a quick test, but are missing a lot of the features and fixes). It's mostly a project for personal use, so I've stalled packaging the updated version for the longest time now.
+You can build the app with QtCreator, using the project file in /misli_desktop . There are way old builds on [SourceForge](https://sourceforge.net/projects/misli/) (they are compatible, so you can use them for a quick test, but are missing a lot of the features and fixes). It's mostly a project for personal use, so I've stalled packaging the updated version for the longest time now. Hopefully I'll find time for that soon. Anyone's welcome to make a pull request.
 
 List of features
 ---------------------
