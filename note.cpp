@@ -85,6 +85,7 @@ Note::Note(int id_, QString iniString)
     commonInitFunction();
 
     err += q_get_value_for_key(iniString,"l_id",linkIDStrings);
+    //getting the link text should be here
     q_get_value_for_key(iniString,"l_CP_x",linkCPxStrings); //Those two are optional
     q_get_value_for_key(iniString,"l_CP_y",linkCPyStrings);
     int iter = 0;
@@ -98,6 +99,8 @@ Note::Note(int id_, QString iniString)
         }
         iter++;
     }
+    //Process tags
+    q_get_value_for_key(iniString, "tags", tags);
 
     if(err!=0) qDebug()<<"[Note::Note]Some of the note properties were not read correctly.Number of errors:"<<-err;
 }
@@ -111,38 +114,28 @@ Note::Note(Note *nt)
     fontSize_m = nt->fontSize_m;
     textColor_m = nt->textColor_m;
     backgroundColor_m = nt->backgroundColor_m;
+    tags = nt->tags;
 
     commonInitFunction();
 }
-Note::Note(int id_,QString text_,QRectF rect_,float font_size_,QDateTime t_made_,QDateTime t_mod_,QColor txt_col_,QColor bg_col_)
+Note::Note()
 {
-    id = id_;
-    text_m = text_;
-    setRect(rect_);
-    timeMade = t_made_;
-    timeModified = t_mod_;
-    fontSize_m = font_size_;
-    textColor_m = txt_col_;
-    backgroundColor_m = bg_col_;
-
+    fontSize_m = 1;
+    textColor_m.setRgbF(0,0,1,1);
+    backgroundColor_m.setRgbF(0,0,1,0.1);
+    timeMade = QDateTime::currentDateTime();
+    timeModified = QDateTime::currentDateTime();
     commonInitFunction();
 }
 void Note::commonInitFunction()
 {
     //date on which I fixed the property ... (I introduced it ~18.11.2012)
     QDateTime t_default(QDate(2013,3,8),QTime(0,0,0));
-    if(!timeMade.isValid()){timeMade=t_default;}
-    if(!timeModified.isValid()){timeModified=t_default;}
+    if(!timeMade.isValid()) timeMade=t_default;
+    if(!timeModified.isValid()) timeModified=t_default;
 
-    isSelected_m=false;
-    img = NULL; //new QImage(1,1,QImage::Format_ARGB32_Premultiplied);//so we have a dummy pixmap for the first init
-    textIsShortened=false;
-    type = NoteType::normal;
-    requestAutoSize = false;
     setTextForShortening(text_m);
     checkForDefinitions();
-    connect(this,SIGNAL(textChanged(QString)),this, SLOT(setTextForShortening(QString)));
-    connect(this,SIGNAL(textChanged(QString)),this, SLOT(checkForDefinitions()));
 }
 
 Note::~Note()
@@ -467,6 +460,8 @@ void Note::setText(QString newText)
 {
     if(newText!=text_m){
         text_m = newText;
+        setTextForShortening(text_m);
+        checkForDefinitions();
         emit textChanged(text_m);
         emit propertiesChanged();
     }
@@ -660,6 +655,16 @@ QString Note::propertiesInIniString()
         }else{
             iniStringStream<<ln.line.p1().y()<<";";
         }
+    }
+    iniStringStream<<'\n';
+
+    iniStringStream<<"tags=";
+    for(QString tag: tags){
+        //Remove ";"s from the text to avoid breaking the ini standard
+        tag.replace(";",":");
+
+        //Save the text
+        iniStringStream<<tag<<";";
     }
     iniStringStream<<'\n';
 

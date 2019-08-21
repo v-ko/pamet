@@ -35,10 +35,6 @@ class MisliDir : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(float defaultEyeZ READ defaultEyeZ WRITE setDefaultEyeZ)
-    Q_PROPERTY(QString directoryPath READ directoryPath WRITE setDirectoryPath NOTIFY directoryPathChanged)
-    Q_PROPERTY(QList<NoteFile*> noteFiles READ noteFiles NOTIFY noteFilesChanged)
-
 public:
     //Functions
     MisliDir(QString nts_dir, bool enableFSWatch = true);
@@ -58,12 +54,11 @@ public:
 
     //Variables
     QList<NoteFile*> noteFiles_m; //all the notefiles
-    NoteFile *currentNoteFile, *lastNoteFile;
     QFileSystemWatcher *fs_watch; //to watch the dir for changes
     QTimer * hangingNfCheck; //periodical check for unaccounted for note files
     QString directoryPath_m;
     QSettings settings;
-    bool keepHistoryViaGit;
+    bool keepHistoryViaGit = false;
 
     bool debug,fsWatchIsEnabled;
 

@@ -7,5 +7,7 @@
         <file>other/initial_start_nf_bg.misl</file>
         <file>other/initial_start_nf_en.misl</file>
         <file>other/notes2.misl</file>
+        <file>misli_web/static/style.css</file>
+        <file>misli_web/static/misli.js</file>
     </qresource>
 </RCC>

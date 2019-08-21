@@ -49,7 +49,7 @@ public:
     void makeAllIDsNegative();
     int getNewId();
 
-    Note *addNote(Note* nt);
+    void addNote(Note* nt);
     Note *loadNote(Note* nt);
     Note *cloneNote(Note* nt);
     void deleteSelected();

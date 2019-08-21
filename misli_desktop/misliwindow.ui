@@ -75,7 +75,14 @@
        </widget>
       </item>
       <item>
-       <widget class="QTabWidget" name="tabWidget"/>
+       <widget class="QTabWidget" name="tabWidget">
+        <property name="tabsClosable">
+         <bool>true</bool>
+        </property>
+        <property name="movable">
+         <bool>true</bool>
+        </property>
+       </widget>
       </item>
      </layout>
     </item>
@@ -87,7 +94,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>28</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -153,6 +160,8 @@
     <addaction name="separator"/>
     <addaction name="menuSwitch_to_another_note_file"/>
     <addaction name="actionSwitch_to_the_last_note_file"/>
+    <addaction name="separator"/>
+    <addaction name="actionToggle_tags_view"/>
    </widget>
    <widget class="QMenu" name="menuNote">
     <property name="title">
@@ -178,6 +187,7 @@
     <addaction name="actionEdit_note"/>
     <addaction name="actionMake_link"/>
     <addaction name="menuColor"/>
+    <addaction name="actionToggle_tag"/>
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
@@ -683,6 +693,25 @@
   <action name="actionExport_all_as_web_notes">
    <property name="text">
     <string>&amp;Export all as web notes</string>
+   </property>
+  </action>
+  <action name="actionToggle_tags_view">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle tags view</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
+  <action name="actionToggle_tag">
+   <property name="text">
+    <string>Toggle tag</string>
+   </property>
+   <property name="shortcut">
+    <string>T</string>
    </property>
   </action>
  </widget>

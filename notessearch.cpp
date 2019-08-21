@@ -19,6 +19,7 @@
 
 #include "notessearch.h"
 #include "misliwindow.h"
+#include "canvas.h"
 #include "ui_misliwindow.h"
 
 NotesSearch::NotesSearch(MisliWindow *misli_window, float initial_probability)
@@ -116,7 +117,7 @@ void NotesSearch::findByText(QString searchString)
             }
             break;
         case 2:
-            if(currentItem.nf!=misliWindow->currentDir()->currentNoteFile) {
+            if(currentItem.nf!=misliWindow->currentCanvas()->currentNoteFile) {
                 searchResultsIterator.remove();
                 addPrecedingDots = false;
                 addTrailingDots = false;

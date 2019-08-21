@@ -30,9 +30,7 @@ class MisliDesktopGui : public QApplication
 {
     Q_OBJECT
 
-    Q_PROPERTY(bool firstProgramStart READ firstProgramStart WRITE setFirstProgramStart)
     Q_PROPERTY(int failedStarts READ failedStarts WRITE setFailedStarts)
-    Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
 
 public:
     //Functions
@@ -40,34 +38,27 @@ public:
     ~MisliDesktopGui();
 
     //Properties
-    bool firstProgramStart();
     int failedStarts();
     QString language();
 
     //Variables
-    MisliWindow *misliWindow;
+    MisliWindow *misliWindow = nullptr;
     MisliInstance *misliInstance;
     QSettings *settings;
-    QSplashScreen *splash;
     QThread workerThread;
-    bool clearSettingsOnExit;
-
-signals:
-    void languageChanged(QString newLanguage);
+    bool clearSettingsOnExit = false;
 
 private:
-    QTranslator *translator;
+    QTranslator *translator = nullptr;
 
 public slots:
     //Properties
-    void setFirstProgramStart(bool);
     void setFailedStarts(int);
     void setLanguage(QString);
     void updateTranslator();
 
     //Other
     void showWarningMessage(QString message);
-    void stuffToDoBeforeQuitting();
 };
 
 #endif // MISLIDESKTOPGUI_H

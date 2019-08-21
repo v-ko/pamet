@@ -65,6 +65,13 @@ public:
 
     //Properties
     NoteFile* noteFile();
+    MisliDir * currentDir(){
+        if(currentDir_m==nullptr){
+            qDebug()<<"Current dir requested but it's Null";
+            return nullptr;
+        }
+        return currentDir_m;
+    }
 
     //Variables
     MisliWindow *misliWindow;
@@ -76,6 +83,10 @@ public:
     QLabel *infoLabel;
     QTimer *move_func_timeout;
     QTime lastReleaseEvent;
+
+    MisliDir * currentDir_m=nullptr;
+    NoteFile *currentNoteFile = nullptr, *lastNoteFile = nullptr;
+    QMetaObject::Connection nfChangedConnecton;
 
     float distanceToPrimeNoteX, distanceToPrimeNoteY, resizeX, resizeY;
     int XonPush,YonPush,PushLeft;
@@ -91,6 +102,7 @@ signals:
 public slots:
     //Properties
     void setNoteFile(NoteFile* newNoteFile);
+    void setCurrentDir(MisliDir * newDir);
 
     //Other
     void startMove();
@@ -103,8 +115,12 @@ public slots:
 
 protected:
     void paintEvent(QPaintEvent *);
-    void mousePressEvent(QMouseEvent *event);
-    void mouseReleaseEvent(QMouseEvent *event);
+    void mousePressEvent(QMouseEvent *event){
+        handleMousePress(event->button());
+    }
+    void mouseReleaseEvent(QMouseEvent *event){
+        handleMouseRelease(event->button());
+    }
     void mouseDoubleClickEvent(QMouseEvent *);
     void wheelEvent(QWheelEvent *event);
     void mouseMoveEvent(QMouseEvent *event);

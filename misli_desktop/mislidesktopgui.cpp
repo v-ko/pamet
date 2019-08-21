@@ -25,60 +25,53 @@
 MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     QApplication(argc,argv)
 {
-    QWidget dummyWidget; //so I can use the static functions below
-    misliWindow = NULL;
-    translator = NULL;
-    clearSettingsOnExit = false;
-
-    int user_reply;
+    setQuitOnLastWindowClosed(false);
 
     //Set some creditentials
-    setQuitOnLastWindowClosed(false);
     setOrganizationName("p10"); //this is needed for proper settings access in windows
     setApplicationName("misli");
     setApplicationVersion("3.0.0");
 
     //Construct the splash screen
-    splash = new QSplashScreen(QPixmap(":/img/icon.png"));
-    splash->show();
+    QSplashScreen splash(QPixmap(":/img/icon.png"));
+    splash.show();
 
     //Init the settings
     settings = new QSettings;
 
-    //Check if there's a series of failed starts and suggest clearing the settings
-    if(failedStarts()>=2){
-        user_reply = QMessageBox::question(&dummyWidget,tr("Warning"),tr("There have been two unsuccessful starts of the program. Clearing the program settings will probably solve the issue . Persistent program crashes are mostly caused by corrupted notefiles , so you can try to manually narrow out the problematic notefile (remove the notefiles from the work directories one by one). The last one edited is probably the problem (you can try to correct it manually with a text editor to avoid loss of data).\n Do you want to clear the settings?"));
-
-        if(user_reply==QMessageBox::Ok){ //if the user pressed Ok
-            settings->clear();
-            settings->sync();
-            exit(0);
-        }
-    }
     //Assume we won't start successfully , if we do - the value gets -1-ed on close
     setFailedStarts(failedStarts()+1);
 
-    if(firstProgramStart()){
+    //Ask for a language on first program start
+    if(!settings->contains("language")){
+        QWidget dummyWidget;
         QString newLanguage = QInputDialog::getItem(&dummyWidget,tr("Set the language"),tr("Language:/Език:"),QStringList()<<"English"<<"Български",0,false);
         if(newLanguage=="English") setLanguage("en");
         if(newLanguage=="Български") setLanguage("bg");
     }
-
     updateTranslator();
+
+    //Stuff to do before quitting
+    connect(this, &MisliDesktopGui::aboutToQuit, [&]{
+        if(clearSettingsOnExit){
+            settings->clear();
+            settings->sync();
+        }else{
+            setFailedStarts(0);
+        }
+    });
+
 
     //Construct the misli instance class
     misliInstance = new MisliInstance();
-
-    //Connections
-    connect(this,SIGNAL(languageChanged(QString)),this,SLOT(updateTranslator()));
-    connect(this,SIGNAL(aboutToQuit()),this,SLOT(stuffToDoBeforeQuitting()));
-
-    //Start worker thread as soon as the main loop starts (so that we first show the splash screen and then start work)
-    workerThread.start();
+    //Start worker thread as soon as the main loop starts
+    //(so that we first show the splash screen and then start work)
     misliInstance->loadStoredDirs();
     misliWindow = new MisliWindow(this);
-    splash->finish(misliWindow);
+    splash.finish(misliWindow);
     misliWindow->showMaximized();
+
+    workerThread.start(); //Used for search results finding
 }
 MisliDesktopGui::~MisliDesktopGui()
 {
@@ -108,24 +101,19 @@ void MisliDesktopGui::updateTranslator()
         }
     }
 
-    if(misliWindow!=NULL){
+    if(misliWindow != NULL){
         bool showHelp = false;
-        if(misliWindow->canvas->noteFile()==misliWindow->helpNoteFile){
+        if(misliWindow->currentCanvas_m->noteFile() == misliWindow->helpNoteFile){
             showHelp = true;
         }
         misliWindow->deleteLater();
         misliWindow = new MisliWindow(this);
         misliWindow->showMaximized();
 
-        if(showHelp==true){
-            misliWindow->canvas->setNoteFile(misliWindow->helpNoteFile);
+        if(showHelp == true){
+            misliWindow->currentCanvas_m->setNoteFile(misliWindow->helpNoteFile);
         }
     }
-}
-
-bool MisliDesktopGui::firstProgramStart()
-{
-    return settings->value("first_program_start",QVariant(true)).toBool();
 }
 
 int MisliDesktopGui::failedStarts()
@@ -136,12 +124,6 @@ int MisliDesktopGui::failedStarts()
 QString MisliDesktopGui::language()
 {
     return settings->value("language",QVariant("en")).toString();
-}
-
-void MisliDesktopGui::setFirstProgramStart(bool value)
-{
-    settings->setValue("first_program_start",QVariant(value));
-    settings->sync();
 }
 void MisliDesktopGui::setFailedStarts(int value)
 {
@@ -154,7 +136,7 @@ void MisliDesktopGui::setLanguage(QString newLanguage)
         settings->setValue("language",newLanguage);
         settings->sync();
 
-        emit languageChanged(newLanguage);
+        updateTranslator();
     }
 }
 
@@ -163,14 +145,4 @@ void MisliDesktopGui::showWarningMessage(QString message)
     QMessageBox msg;
     msg.setText(message);
     msg.exec();
-}
-void MisliDesktopGui::stuffToDoBeforeQuitting()
-{
-    if(clearSettingsOnExit){
-        settings->clear();
-        settings->sync();
-    }else{
-        setFailedStarts(0);
-        setFirstProgramStart(false);
-    }
 }

@@ -28,7 +28,7 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     chooseNFMenu(tr("NoteFile"),&linkMenu),
     actionChooseTextFile(tr("Text file"),&linkMenu),
     actionChoosePicture(tr("Picture"),&linkMenu),
-    actionSystemCallNote(tr("System call note (beta)"),&linkMenu),
+    actionPythonScriptNote(tr("Script note"),&linkMenu),
     actionWebPageNote(tr("Web page note"),&linkMenu),
     ui(new Ui::EditNoteDialogue)
 {
@@ -36,10 +36,12 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     misliWindow = misliWindow_;
     addAction(ui->actionEscape);
 
+//    actionPythonScriptNote.setCheckable(true);
+
     linkMenu.addMenu(&chooseNFMenu);
     linkMenu.addAction(&actionChoosePicture);
     linkMenu.addAction(&actionChooseTextFile);
-    linkMenu.addAction(&actionSystemCallNote);
+    linkMenu.addAction(&actionPythonScriptNote);
     linkMenu.addAction(&actionWebPageNote);
 
     connect(ui->okButton,SIGNAL(clicked()),this,SLOT(inputDone()));
@@ -48,7 +50,7 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     connect(&chooseNFMenu,SIGNAL(triggered(QAction*)),this,SLOT(makeLinkNote(QAction*)));
     connect(&actionChoosePicture,SIGNAL(triggered()),this,SLOT(choosePicture()));
     connect(&actionChooseTextFile,SIGNAL(triggered()),this,SLOT(chooseTextFile()));
-    connect(&actionSystemCallNote,SIGNAL(triggered()),this,SLOT(setSystemCallPrefix()));
+    connect(&actionPythonScriptNote,SIGNAL(triggered()),this,SLOT(setSystemCallPrefix()));
     connect(&misliWindow->timelineWidget.timeline->slider, &QSlider::valueChanged, this, &EditNoteDialogue::raise);
 
     //UI functions
@@ -170,8 +172,8 @@ void EditNoteDialogue::newNote()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note = misliWindow->canvas->mousePos().x(); //cursor position relative to the gl widget
-    y_on_new_note = misliWindow->canvas->mousePos().y();
+    x_on_new_note = misliWindow->currentCanvas_m->mousePos().x(); //cursor position relative to the gl widget
+    y_on_new_note = misliWindow->currentCanvas_m->mousePos().y();
 
     move(QCursor::pos());
 
@@ -179,6 +181,7 @@ void EditNoteDialogue::newNote()
     edited_note = NULL;
 
     //UI stuff
+    ui->openButton->hide();
     if(misliWindow->timelineTabIsActive()){
         ui->yearButton->show();
         ui->monthButton->show();
@@ -212,7 +215,7 @@ void EditNoteDialogue::editNote() //false for new note , true for edit
         ui->monthButton->hide();
         ui->weekButton->hide();
         ui->dayButton->hide();
-        edited_note = misliWindow->canvas->noteFile()->getFirstSelectedNote();
+        edited_note = misliWindow->currentCanvas_m->noteFile()->getFirstSelectedNote();
     }
     if(edited_note==NULL){return;}
 
@@ -229,6 +232,12 @@ void EditNoteDialogue::editNote() //false for new note , true for edit
     move(QCursor::pos());
 
     setTextEditText(edited_note->text_m);
+
+    if(edited_note->type==NoteType::systemCall){
+        ui->openButton->show();
+    }else{
+        ui->openButton->hide();
+    }
 
     show();
     raise();
@@ -258,30 +267,31 @@ void EditNoteDialogue::inputDone()
     if( edited_note==NULL){//If we're making a new note
 
         if( !misliWindow->timelineTabIsActive() ){
-            misliWindow->canvas->unproject(x_on_new_note,y_on_new_note, x, y); //get mouse pos in real coordinates
-            nt=new Note(misliWindow->canvas->noteFile()->getNewId(),
-                        text,
-                        QRectF(x,y,1,1),
-                        1,
-                        QDateTime::currentDateTime(),
-                        QDateTime::currentDateTime(),
-                        txt_col,
-                        bg_col);
+            misliWindow->currentCanvas_m->unproject(x_on_new_note,y_on_new_note, x, y); //get mouse pos in real coordinates
+            nt=new Note();
+            nt->id = misliWindow->currentCanvas_m->noteFile()->getNewId();
+            nt->text_m = text;
+            nt->setRect(QRectF(x,y,1,1));
+            nt->timeMade = QDateTime::currentDateTime();
+            nt->timeModified = QDateTime::currentDateTime();
+            nt->textColor_m = txt_col;
+            nt->backgroundColor_m = bg_col;
+            nt->commonInitFunction();
             nt->requestAutoSize = true;
-            misliWindow->canvas->noteFile()->linkSelectedNotesTo(nt);
-            misliWindow->canvas->noteFile()->addNote(nt); //invokes save
-        }else if( misliWindow->timelineTabIsActive() ){
-            QDateTime timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() + timeline->scaleToMSeconds( slider->pos().x() ) );
-            QDateTime timeMod = timeMade.addMSecs( timeline->scaleToMSeconds(slider->value()) );
 
-            nt = new Note(0,
-                          text,
-                          QRectF(x,y,1,1),
-                          1,
-                          timeMade,
-                          timeMod,
-                          txt_col,
-                          bg_col);
+            misliWindow->currentCanvas_m->noteFile()->linkSelectedNotesTo(nt);
+            misliWindow->currentCanvas_m->noteFile()->addNote(nt); //invokes save
+        }else if( misliWindow->timelineTabIsActive() ){
+            nt=new Note();
+            nt->id = 0;
+            nt->text_m = text;
+            nt->setRect(QRectF(x,y,1,1));
+            nt->timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() + timeline->scaleToMSeconds( slider->pos().x() ) );
+            nt->timeModified = nt->timeMade.addMSecs( timeline->scaleToMSeconds(slider->value()) );
+            nt->textColor_m = txt_col;
+            nt->backgroundColor_m = bg_col;
+            nt->commonInitFunction();
+
             timeline->archiveModule.noteFile.addNote(nt);
         }
 
@@ -309,7 +319,7 @@ void EditNoteDialogue::inputDone()
         }
     }
     close();
-    edited_note=NULL;
+    edited_note=nullptr;
 
     misliWindow->misliDesktopGUI->restoreOverrideCursor();
 }
@@ -367,6 +377,7 @@ void EditNoteDialogue::setSystemCallPrefix()
 
 void EditNoteDialogue::closeEvent(QCloseEvent *)
 {
+
     misliWindow->timelineWidget.timeline->slider.hide();
 }
 
@@ -377,4 +388,19 @@ QString EditNoteDialogue::maybeToRelativePath(QString path)
     }else{
         return path;
     }
+}
+
+void EditNoteDialogue::on_openButton_clicked()
+{
+    QString path = edited_note->addressString.split(" ")[0];
+    QFile f(path);
+    if(!f.exists()){
+        f.open(QFile::WriteOnly);
+        f.setPermissions(QFileDevice::ExeOwner | f.permissions());
+        f.write("#!/bin/bash\n");
+        f.write("#!/usr/bin/env python\n");
+        f.close();
+
+    }
+    QProcess::execute("subl3", QStringList()<<path);
 }

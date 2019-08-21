@@ -24,9 +24,6 @@
 MisliDir::MisliDir(QString nts_dir, bool enableFSWatch)
 {
     fsWatchIsEnabled = enableFSWatch;
-    currentNoteFile = NULL;
-    lastNoteFile = NULL;
-    keepHistoryViaGit = false;
 
     //FS-watch stuff
     if(fsWatchIsEnabled){
@@ -164,8 +161,6 @@ int MisliDir::makeNotesFile(QString name)
 
 void MisliDir::softDeleteNF(NoteFile* nf)
 {
-    if(nf==currentNoteFile) currentNoteFile=NULL;
-
     if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath_m);
     noteFiles_m.removeOne(nf);
     delete nf;

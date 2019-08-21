@@ -38,7 +38,7 @@ void PhotoModule::loadToTmp(qint64 positionInMSecs, qint64 viewportSizeInMSecs)
         while(iterator.hasNext()){
             QString filePath = iterator.next();
             QString execString = "exiv2 -g DateTimeOriginal -Pv \""+filePath+"\"";
-            execString.trimmed();
+            execString = execString.trimmed();
             //qDebug()<<"Executing: "+execString;
             process.start(execString);
 
@@ -68,14 +68,15 @@ void PhotoModule::loadToTmp(qint64 positionInMSecs, qint64 viewportSizeInMSecs)
 
             //qDebug()<<"Valid picture:"<<filePath<<",with DateTime:"<<out;
 
-            nt = new Note(0,
-                          text,
-                          QRectF(0,0,100,100),
-                          1,
-                          timeMade,
-                          timeMade.addMSecs(days/20),
-                          txt_col,
-                          bg_col);
+            nt=new Note();
+            nt->id = 0;
+            nt->text_m = text;
+            nt->setRect(QRectF(0,0,100,100));
+            nt->timeMade = timeMade;
+            nt->timeModified = timeMade.addMSecs(days/20);
+            nt->textColor_m = txt_col;
+            nt->backgroundColor_m = bg_col;
+
             library.append(nt);
         }
         libraryIsLoaded = true;

@@ -72,7 +72,6 @@ void MisliInstance::loadStoredDirs()
     for(QString notesDir: notesDirs){
         loadDir(notesDir);
     }
-    emit storedDirsLoaded();
 }
 void MisliInstance::saveDirsToSettings()
 {

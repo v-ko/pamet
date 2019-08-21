@@ -24,11 +24,13 @@
 #include <QClipboard>
 #include <QNetworkAccessManager>
 
+#include "ui_misliwindow.h"
 #include "editnotedialogue.h"
 #include "../misliinstance.h"
 #include "../notefile.h"
 #include "../notessearch.h"
 #include "timelinewidget.h"
+
 
 class Canvas;
 class MisliDesktopGui;
@@ -41,8 +43,6 @@ class MisliWindow;
 class MisliWindow : public QMainWindow
 {
     Q_OBJECT
-
-    Q_PROPERTY(MisliDir* currentDir READ currentDir WRITE setCurrentDir NOTIFY currentDirChanged)
     
 public:
     //Functions
@@ -55,10 +55,11 @@ public:
 
     //Properties
     MisliDir* currentDir();
+    Canvas * currentCanvas();
 
     //GUI
     Ui::MisliWindow *ui;
-    Canvas *canvas;
+    Canvas *currentCanvas_m = nullptr;
     EditNoteDialogue *edit_w;
     NotesSearch *notes_search;
     QTabWidget tabWidget;
@@ -68,7 +69,6 @@ public:
     //Variables
     QSettings settings;
     NoteFile *clipboardNoteFile,*helpNoteFile;
-    QMetaObject::Connection nfChangedConnecton;
     QNetworkAccessManager network;
     bool updateCheckDone;
 
@@ -76,13 +76,8 @@ public:
 
     QString language;
     NoteFile *nfBeforeHelp;
-    
-signals:
-    void currentDirChanged(MisliDir*);
 
 public slots:
-    //Properties
-    void setCurrentDir(MisliDir*newDir);
 
     //Other
     void newNoteFromClipboard();
@@ -126,10 +121,9 @@ public slots:
 
     void startUpdateCheck();
     void handleVersionInfoReply(QNetworkReply *reply);
-
-private:
-    //Propertie variables
-    MisliDir* currentDir_m;
+private slots:
+    void on_tabWidget_currentChanged(int index);
+    void on_tabWidget_tabBarClicked(int index);
 };
 
 #endif // MISLIWINDOW_H

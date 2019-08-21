@@ -54,7 +54,7 @@ public:
     //Functions
     Note(int id_, QString iniString);
     Note(Note *nt);
-    Note(int id_, QString text_, QRectF rect_, float font_size_, QDateTime t_made_, QDateTime t_mod_, QColor txt_col_, QColor bg_col_);
+    Note();//int id_, QString text_, QRectF rect_, float font_size_, QDateTime t_made_, QDateTime t_mod_, QColor txt_col_, QColor bg_col_);
     void commonInitFunction();
     ~Note();
 
@@ -89,8 +89,9 @@ public:
 
     float fontSize_m;
     QDateTime timeMade, timeModified;
-    QColor textColor_m,backgroundColor_m; //text and background colors
+    QColor textColor_m, backgroundColor_m; //text and background colors
     QList<Link> outlinks;
+    QStringList tags;
 
     //------Variables needed only for the program----------------
     QString textForShortening_m;
@@ -99,14 +100,14 @@ public:
 
     QPointF posBeforeMove;
 
-    QImage *img;
+    QImage *img = NULL;
 
 
-    NoteType type;
+    NoteType type = NoteType::normal;
 
-    bool isSelected_m;
-    bool textIsShortened;
-    bool requestAutoSize;
+    bool isSelected_m = false;
+    bool textIsShortened = false;
+    bool requestAutoSize = false;
 
 signals:
     //Property changes

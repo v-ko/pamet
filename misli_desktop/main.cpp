@@ -92,8 +92,9 @@
 int main(int argc, char *argv[])
 {
     MisliDesktopGui misli(argc, argv);
-    Timeline *timeline = misli.misliWindow->timelineWidget.timeline;
+
     //Timeline modules
+    Timeline *timeline = misli.misliWindow->timelineWidget.timeline;
     //NotesModule *notesModule = new NotesModule(timeline);
     PhotoModule *photoModule = new PhotoModule(timeline);
     CommunicationsModule *communicationsModule = new CommunicationsModule(timeline);

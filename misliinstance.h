@@ -29,8 +29,6 @@ class MisliInstance : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(QList<MisliDir*> misliDirs READ misliDirs NOTIFY misliDirsChanged)
-
 public:
     //Functions
     MisliInstance();
@@ -48,11 +46,8 @@ public:
     QSettings settings;
 
 signals:
-    //Property changes
     void misliDirsChanged();
 
-    //Other
-    void storedDirsLoaded();
 public slots:
     void loadStoredDirs();
     void saveDirsToSettings();

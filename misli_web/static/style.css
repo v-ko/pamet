@@ -11,6 +11,7 @@ body{
     text-align: center;
     color: blue;
     font-family: "Helvetica";
+    text-decoration: none;
 }
 #misliCanvas{
     //border: 1px solid red;

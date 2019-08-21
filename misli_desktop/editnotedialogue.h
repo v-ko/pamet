@@ -43,7 +43,7 @@ public:
     
     //Variables
     QMenu linkMenu,chooseNFMenu;
-    QAction actionChooseTextFile,actionChoosePicture,actionSystemCallNote,actionWebPageNote;
+    QAction actionChooseTextFile,actionChoosePicture,actionPythonScriptNote,actionWebPageNote;
     MisliWindow *misliWindow;
     Note * edited_note;
     double x_on_new_note,y_on_new_note;
@@ -61,6 +61,9 @@ public slots:
     void chooseTextFile();
     void setSystemCallPrefix();
     void closeEvent(QCloseEvent *);
+private slots:
+    void on_openButton_clicked();
+
 private:
     Ui::EditNoteDialogue *ui;
 };

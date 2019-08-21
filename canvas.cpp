@@ -199,6 +199,13 @@ void Canvas::paintEvent(QPaintEvent*)
             //Draw the actual note
             nt->drawNote(painter);
 
+            //Wash out some notes to visualize tags if tags view is activated
+            if(misliWindow->ui->actionToggle_tags_view->isChecked()){
+                if(!nt->tags.contains("for_export_v1")){
+                    painter.fillRect(nt->rect(), QBrush(QColor(255,255,255,128), Qt::SolidPattern));
+                }
+            }
+
             //Draw additional lines to help alignment
             if( (moveOn | noteResizeOn) && nt->isSelected_m){
 
@@ -270,14 +277,6 @@ void Canvas::paintEvent(QPaintEvent*)
     }
 }
 
-void Canvas::mousePressEvent(QMouseEvent *event)
-{
-    handleMousePress(event->button());
-}
-void Canvas::mouseReleaseEvent(QMouseEvent *event)
-{
-    handleMouseRelease(event->button());
-}
 void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if(noteFile()==NULL) return;
@@ -416,17 +415,20 @@ void Canvas::doubleClick()
             process.start(nt->addressString);
             process.waitForFinished(-1);
             QByteArray out = process.readAllStandardOutput();
-
-            //Put the feedback in a note below the command via the paste from clipboard mechanism
-            Note *newNote = noteFile()->addNote(new Note(noteFile()->getNewId(),
-                                         QString(out),
-                                         QRect(nt->rect().x(),nt->rect().bottom()+1,1,1),
-                                         1,
-                                         QDateTime::currentDateTime(),
-                                         QDateTime::currentDateTime(),
-                                         nt->textColor(),
-                                         nt->backgroundColor()));
-            newNote->requestAutoSize = true;
+            if(!out.isEmpty()){
+                //Put the feedback in a note below the command
+                Note *newNote = new Note();
+                newNote->id = noteFile()->getNewId();
+                newNote->text_m = QString(out);
+                newNote->setRect(QRect(nt->rect().x(),nt->rect().bottom()+1,1,1));
+                newNote->timeMade = QDateTime::currentDateTime();
+                newNote->timeModified = QDateTime::currentDateTime();
+                newNote->textColor_m = nt->textColor();
+                newNote->backgroundColor_m = nt->backgroundColor();
+                newNote->commonInitFunction();
+                newNote->requestAutoSize = true;
+                noteFile()->addNote(newNote);
+            }
 
         }else if(nt->type==NoteType::webPage){
             QDesktopServices::openUrl(QUrl(nt->addressString, QUrl::TolerantMode));
@@ -599,6 +601,17 @@ void Canvas::handleMouseRelease(Qt::MouseButton button)
             noteFile()->save(); //save the new controlPoint position
             update();
         }
+    }else if(button==Qt::MiddleButton){
+        Note *nt = getNoteUnderMouse(mousePos().x(), mousePos().y());
+        if(nt->type == NoteType::redirecting){
+            NoteFile *nfUnderMouse = misliWindow->currentDir()->noteFileByName(nt->addressString);
+            if(nfUnderMouse != NULL){
+                Canvas * newCanvas = new Canvas(misliWindow);
+                misliWindow->ui->tabWidget->addTab(newCanvas, "");
+                newCanvas->setNoteFile(nfUnderMouse);
+            }
+        }
+
     }
 }
 
@@ -669,7 +682,7 @@ void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not o
         getNoteUnderMouse(x,y)->setSelected(true); //to pickup a selected note with control pressed (not to deselect it)
 
         //Store all the coordinates before the move
-        for(Note *nt: misliWindow->currentDir()->currentNoteFile->notes){
+        for(Note *nt: currentNoteFile->notes){
             if(nt->isSelected()) nt->posBeforeMove = nt->rect().topLeft();
         }
         moveOn = true;
@@ -765,16 +778,17 @@ void Canvas::jumpToNearestNote()
 
 NoteFile* Canvas::noteFile()
 {
-    if(misliWindow->currentDir()==NULL){
-        return NULL;
+    if(currentDir()==nullptr){
+        qDebug()<<"[Canvas::noteFile] Current dir is null.";
+        return nullptr;
     }else{
-        return misliWindow->currentDir()->currentNoteFile;
+        return currentNoteFile;
     }
 }
 void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care what happens to the last NF
                                                 //Else we need no know the misliDir of the last one
 {
-    MisliDir *misliDir = misliWindow->currentDir();
+    MisliDir *misliDir = currentDir();
 
     if(misliDir==NULL){
         if(newNoteFile!=NULL){
@@ -805,30 +819,10 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
                 return;
             }
         }else{ //If there's no notefile in the dir
-            //On the first start - set the default NF (with some help notes)
-            if(misliWindow->misliDesktopGUI->firstProgramStart()){
-                //Copy the first preset notefile
-                QString path = QDir(misliWindow->currentDir()->directoryPath()).filePath("notes.misl");
-                QFile ntFile(path);
-                QFile::copy(":/other/initial_start_nf_"+misliWindow->misliDesktopGUI->language()+".misl",path);
-                ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
-                misliWindow->currentDir()->addNoteFile(path);
-
-                //Copy the second preset notefile
-                path = QDir(misliWindow->currentDir()->directoryPath()).filePath("notes2.misl");
-                ntFile.setFileName(path);
-                QFile::copy(":/other/notes2.misl",path);
-                ntFile.setPermissions(QFile::ReadOwner | QFile::WriteOwner);//in the qrc the file is RO, we need RW
-                misliWindow->currentDir()->addNoteFile(path);
-
-                misliWindow->misliDesktopGUI->setFirstProgramStart(false);
-                return;
-            }else{//Else the "Make new notefile" button is shown and the user will do so
-                hide();
-                misliWindow->ui->jumpToNearestNotePushButton->hide();
-                misliWindow->ui->makeNoteFilePushButton->show();
-                misliWindow->ui->menuSwitch_to_another_note_file->setEnabled(false);
-            }
+            hide();
+            misliWindow->ui->jumpToNearestNotePushButton->hide();
+            misliWindow->ui->makeNoteFilePushButton->show();
+            misliWindow->ui->menuSwitch_to_another_note_file->setEnabled(false);
         }
     }else if(!misliWindow->currentDir()->noteFiles().contains(newNoteFile) && newNoteFile!=misliWindow->helpNoteFile){
         qDebug()<<"[Canvas::setNoteFile]Trying to set a notefile that does not belong to the current misli dir.";
@@ -842,10 +836,10 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
         update();
     }
 
-    if( newNoteFile != misliDir->currentNoteFile ){
-        misliDir->lastNoteFile = misliDir->currentNoteFile;
+    if( newNoteFile != currentNoteFile ){
+        lastNoteFile = currentNoteFile;
     }
-    misliDir->currentNoteFile = newNoteFile;
+    currentNoteFile = newNoteFile;
     misliWindow->updateNoteFilesListMenu();
     misliWindow->updateTitle();
     update();
@@ -950,4 +944,33 @@ void Canvas::pasteMimeData(const QMimeData *mimeData)
 QPointF Canvas::mousePos()
 {
     return mapFromGlobal(cursor().pos());
+}
+
+void Canvas::setCurrentDir(MisliDir * newDir)
+{
+    if(currentDir_m==newDir && newDir!=nullptr) return;
+
+    disconnect(nfChangedConnecton);
+    currentDir_m = newDir;
+
+    if(newDir != nullptr){
+        nfChangedConnecton = connect(newDir,&MisliDir::noteFilesChanged,[&] {
+            setNoteFile(currentNoteFile);
+        });
+        misliWindow->ui->addMisliDirPushButton->hide();
+        misliWindow->ui->makeNoteFilePushButton->setEnabled(true);
+
+        setNoteFile(currentNoteFile);
+        misliWindow->notes_search->findByText(misliWindow->ui->searchLineEdit->text());
+    }else{
+        if(misliWindow->misliInstance()->misliDirs().isEmpty()){//If there are no dirs
+            misliWindow->misliInstance()->addDir(QStandardPaths::writableLocation(QStandardPaths::DataLocation));
+            return;
+        }else{ //Else just switch to the last
+            setCurrentDir(misliWindow->misliInstance()->misliDirs().last());
+            return;
+        }
+    }
+
+    misliWindow->updateDirListMenu();
 }

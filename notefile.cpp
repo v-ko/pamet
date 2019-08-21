@@ -201,17 +201,18 @@ void NoteFile::redo()
     }
 }
 
-Note* NoteFile::addNote(Note* nt)
+void NoteFile::addNote(Note* nt)
 {
     loadNote(nt);
     save();
     emit visualChange();
-    return nt;
 }
 Note* NoteFile::loadNote(Note *nt)
 {
     //A check for the free ids system
-    if(nt->id>lastNoteId){lastNoteId=nt->id;}
+    if(nt->id > lastNoteId){
+        lastNoteId = nt->id;
+    }
 
     notes.push_back(nt);
 
@@ -226,7 +227,7 @@ Note* NoteFile::loadNote(Note *nt)
 }
 Note *NoteFile::cloneNote(Note *nt)
 {
-    Note * nt2 = new Note(nt->id,nt->text_m,nt->rect(),nt->fontSize(),nt->timeMade,nt->timeModified,nt->textColor(),nt->backgroundColor());
+    Note * nt2 = new Note(nt);
     loadNote(nt2);
     return nt2;
 }
