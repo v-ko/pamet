@@ -1,0 +1,11 @@
+[Unit]
+Description=Template web server with file upload
+
+[Service]
+Type=simple
+WorkingDirectory=/sync/C++/templates/flask_server
+ExecStart=/sync/C++/templates/flask_server/run_flask.sh
+Restart=on-failure
+
+[Install]
+WantedBy=default.target

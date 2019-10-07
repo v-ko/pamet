@@ -1,0 +1,14 @@
+{
+  "name": "Sofia playlist unification",
+  "version": "0.1",
+  "manifest_version": 2,
+  "description": "Enables you to add songs from various online streaming services to your playlist (you need to install the accompanying native app)",
+  "browser_action": {
+    "default_title": "Default",
+	"default_popup": "popup.html"
+  },
+  "permissions": [
+    "nativeMessaging",
+  	"tabs"
+  ]
+}

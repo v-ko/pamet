@@ -1,0 +1,93 @@
+/*  This file is part of Misli.
+
+    Misli is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Misli is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Misli.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
+//tooltips --done
+//dovyrshi bg help-a --done
+//pri syzdavane na initial note-a da q slaga ot qrc --done
+
+//da pokazva sled kato vs e zaredilo --done
+//licensing --done
+
+//donations - BTC --done
+//update plan --done
+
+//update translations --done
+<<<<<<< Updated upstream
+=======
+//commit --done
+
+//Build windows --done
+//Static build windows --done
+
+//BUG: ne6to s destroy na event-ite ne e v dobyr red i dava FC na windows (vj link-a v tmp)--done
+//BUG mai pravi nenujen save pri puskane --done
+//BUG: syzdai zapiska ot teksta v klipborda na programata// e gre6en prevod i/ili si e gre6no i na angl--done
+
+//update translations --done
+>>>>>>> Stashed changes
+//commit
+
+//Build windows
+//Static build windows
+
+//Video za predstavqne na angl i bg
+//Nqkolko tester-a za durakoustoi4ivost
+
+//Get my shit together (FB,blog,etc)
+//Release
+//razprostranenie
+
+//Static build Linux
+//Packages
+//>arch package
+
+//====Android port=========
+//Za mobile versiqta - donations s napomnqne kolko rabota e svyr6ena
+
+//=========Future changes=========
+//ogledai mural.ly za idei
+//polzvai enum za note type
+//opravi for loop-ovete na c++11
+//*Automated test with some tool for automation (make note , choose dir , make link , etc.)
+//Progress bars
+//Proper logging
+//Redo
+//Memory based undo/redo limitation
+//CLI
+//Do 15 fevruari 2015 da sym izkaral autoupdate-va6ta versiq
+
+//====Release routine====
+//update translations
+//commit
+//build on Windows
+
+//=========Test cases===========
+//Input inaccessible/non-existent dir when adding a dir
+
+#include "mislidesktopgui.h"
+
+int main(int argc, char *argv[])
+{
+    MisliDesktopGui misli(argc, argv);
+    //In the constructor:
+    //1.Load the language and fail-safe settings and construct the windows
+    //2.present splash screen
+    //3.Start loading notes asynchronosly
+    //4.Present GUI
+
+    return misli.exec();
+}
+

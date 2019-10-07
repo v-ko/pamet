@@ -133,7 +133,9 @@ void NoteFile::virtualSave()
     for(unsigned int c=0;c<comment.size();c++) iniStringStream<<comment[c]<<'\n';
 
     //The flag for displaying first on startup
-    if(isDisplayedFirstOnStartup) iniStringStream<<"is_displayed_first_on_startup"<<'\n';
+    if(isDisplayedFirstOnStartup){
+        iniStringStream<<"is_displayed_first_on_startup"<<'\n';
+    }
 
     //Adding the notes
     for(Note *nt: notes) iniStringStream<<nt->propertiesInIniString();
