@@ -148,17 +148,35 @@ void MisliDir::loadNoteFiles()
     unloadAllNoteFiles();
 
     QDir dir(folderPath);
-    QStringList files;
-    if(use_json){
 
-    }else{
+    QStringList nfs_misl = dir.entryList(QStringList()<<"*.misl", QDir::Files);
+    QStringList nfs_json = dir.entryList(QStringList()<<"*.json", QDir::Files);
 
+    // First load any .misl (legacy) note files and backup + convert them
+    for(QString fileName: nfs_misl){
+        //backup
+        QString oldPath = dir.absoluteFilePath(fileName);
+        QString backupPath = oldPath + ".backup";
+
+        if (QFile::exists(backupPath))
+        {
+            QFile::remove(backupPath);
+        }
+        QFile::copy(oldPath, backupPath);
+
+        //load nf
+        loadNoteFile(oldPath);
     }
 
-    files = dir.entryList(QStringList()<<"*.json", QDir::Files);
-    files.append(dir.entryList(QStringList()<<"*.misl", QDir::Files));
+    //Rename all misl to json
+    for(NoteFile *nf: noteFiles()){
+        QString newName = nf->filePath();
+        newName.chop(5);
+        newName = newName + ".json";
+        renameNoteFile(nf, newName);
+    }
 
-    for(QString fileName: files){
+    for(QString fileName: nfs_json){
         loadNoteFile(dir.absoluteFilePath(fileName));
     }
 }
@@ -226,7 +244,6 @@ void MisliDir::loadNoteFile(QString pathToNoteFile)
     NoteFile *nf = new NoteFile;
 
     nf->saveWithRequest = true;
-    nf->keepHistoryViaGit = keepHistoryViaGit;
     nf->eyeZ = defaultEyeZ();
     nf->setPathAndLoad(pathToNoteFile);
 
@@ -253,4 +270,37 @@ void MisliDir::handleSaveRequest(NoteFile *nf)
     nf->saveLastInHistoryToFile();
     if(fsWatchIsEnabled) fs_watch->addPath(nf->filePath());
     nf->saveWithRequest = true;
+}
+
+bool MisliDir::renameNoteFile(NoteFile *nf, QString newName)
+{
+    if(noteFileByName(newName) != nullptr){
+        return false;
+    }
+
+    QString newFilePath = QDir(folderPath).filePath(newName);
+    QString oldName = nf->name();
+
+    QFile file(nf->filePath());
+
+    if( !file.copy(newFilePath) ){ //Copy to a nf with the new name
+        qDebug() << "Error copying " << file.fileName() << " to " << newFilePath;
+        return false;
+    }
+    fs_watch->removePath(nf->filePath());//deal with fs_watch
+    nf->filePath_m = newFilePath;
+    nf->save();
+    nf->setPathAndLoad(nf->filePath());
+    file.remove();
+
+    //Now change all the notes that point to this one too
+    for(NoteFile *nf2: noteFiles_m){
+        for(Note *nt: nf2->notes){
+            if(nt->type==NoteType::redirecting){
+                if(nt->textForDisplay_m==oldName){
+                    nt->changeText("this_note_points_to:" + newName);
+                }
+            }
+        }
+    }
 }

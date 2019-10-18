@@ -71,6 +71,7 @@ public slots:
     void setDefaultEyeZ(float);
 
     //Other
+    bool renameNoteFile(NoteFile *nf, QString newName);
     void loadNoteFile(QString pathToNoteFile);
     void loadNoteFiles();
     void reinitNotesPointingToNotefiles();

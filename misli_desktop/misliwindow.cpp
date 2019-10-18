@@ -582,40 +582,11 @@ void MisliWindow::renameNoteFile()
         return;
     }
 
-//    if(use_json){
-//        name = name + ".json";
-//    }else{
-//        name = name + ".misl";
-//    }
-
-    QString file_addr=QDir(currentDir()->folderPath).filePath(name);
-    QString old_name=nf->name();
-
-    QFile file(nf->filePath());
-
-
-    if( file.copy(file_addr) ){ //Copy to a nf with the new name
-        currentDir()->fs_watch->removePath(nf->filePath());//deal with fs_watch
-        nf->filePath_m = file_addr;
-        nf->save();
-        nf->setPathAndLoad(nf->filePath());
-        file.remove();
-
-        //Now change all the notes that point to this one too
-        for(NoteFile *nf2: currentDir()->noteFiles_m){
-            for(Note *nt: nf2->notes){
-                if(nt->type==NoteType::redirecting){
-                    if(nt->textForDisplay_m==old_name){
-                        nt->changeText("this_note_points_to:"+name);
-                    }
-                }
-            }
-        }
-
-        currentCanvas_m->setNoteFile(nf);
-    }else{
+    if(! currentDir()->renameNoteFile(nf, name)){
         misliDesktopGUI->showWarningMessage(tr("Error while renaming file."));
+        return;
     }
+    currentCanvas_m->setNoteFile(nf);
 }
 void MisliWindow::deleteNoteFileFromFS()
 {

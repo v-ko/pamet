@@ -147,23 +147,6 @@ int NoteFile::loadFromFilePath()   //returns negative on errors
         loadFromJsonString(fileString);
     }else if(filePath().endsWith(".misl")){
         loadFromIniString(fileString);
-
-        QString oldPath = filePath_m;
-        QString backupPath = oldPath + ".backup";
-
-        //rename self to json
-        filePath_m.chop(5);
-        filePath_m = filePath_m + ".json";
-
-        //rename file on disk to backup
-        if (QFile::exists(backupPath))
-        {
-            QFile::remove(backupPath);
-        }
-        QFile::rename(oldPath, backupPath);
-
-        //save
-        save();
     }
     return 0;
 }
