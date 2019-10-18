@@ -9,7 +9,7 @@
 #include "timelinemodule.h"
 #include "archivemodule.h"
 #include "../notefile.h"
-#include "../petko10.h"
+#include "../util.h"
 
 class TimelineWidget;
 
@@ -21,9 +21,9 @@ public:
     //Functions
     explicit Timeline(TimelineWidget *timelineWidget_);
     ~Timeline();
-    float scaleToPixels(qint64 miliseconds);
-    float scaleToMSeconds(qint64 pixels);
-    qint64 toPixelsFromMSecs(qint64 miliseconds);
+    int scaleToPixels(qint64 miliseconds);
+    double scaleToMSeconds(qint64 pixels);
+    int toPixelsFromMSecs(qint64 miliseconds);
     void drawDelimiter(QPainter* painter, qint64 delimiterInMSecs, float lineHeight);
     void addModule(TimelineModule *module);
     qint64 leftEdgeInMSecs();

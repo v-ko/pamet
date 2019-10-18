@@ -89,9 +89,9 @@ public:
     QMetaObject::Connection nfChangedConnecton;
 
     float distanceToPrimeNoteX, distanceToPrimeNoteY, resizeX, resizeY;
-    int XonPush,YonPush,PushLeft;
-    float EyeXOnPush,EyeYOnPush;
-    bool timedOutMove,moveOn,noteResizeOn, userIsDraggingStuff, draggedStuffIsValid, linkControlPointDragOn;
+    int XonPush, YonPush, PushLeft;
+    float EyeXOnPush, EyeYOnPush;
+    bool timedOutMove, moveOn, noteResizeOn, userIsDraggingStuff, draggedStuffIsValid, linkControlPointDragOn;
     bool linkingIsOn;
     bool ctrlUpdateHack;
 

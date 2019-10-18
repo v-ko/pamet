@@ -14,6 +14,9 @@
     along with Misli.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <algorithm>
+#include <math.h>
+
 #include <QFont>
 #include <QFontMetrics>
 #include <QRect>
@@ -24,86 +27,15 @@
 #include <QUrl>
 #include <QFileInfo>
 #include <QDir>
-
-#include "petko10.h"
-#include "petko10q.h"
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include "common.h"
+#include "util.h"
 #include "note.h"
 
-Note::Note(int id_, QString iniString)
-{
-    QString tmpString;
-    QStringList linkIDStrings,linkCPxStrings, linkCPyStrings, txt_colString,bg_colString;
-    int err=0;
-    float x,y,a,b;
 
-    id = id_;
-
-    err += q_get_value_for_key(iniString,"txt",text_m);
-        text_m.replace(QString("\\n"),QString("\n"));
-
-    err += q_get_value_for_key(iniString,"x",x);
-    err += q_get_value_for_key(iniString,"y",y);
-    err += q_get_value_for_key(iniString,"a",a);
-        a = stop(a,MIN_NOTE_A,MAX_NOTE_A); //values should be btw 1-1000
-    err += q_get_value_for_key(iniString,"b",b);
-        b = stop(b,MIN_NOTE_B,MAX_NOTE_B);
-    setRect(QRectF(x,y,a,b));
-
-    err += q_get_value_for_key(iniString,"font_size",fontSize_m);
-    if(q_get_value_for_key(iniString,"t_made",tmpString)==0){
-        timeMade=timeMade.fromString(tmpString,"d.M.yyyy H:m:s");
-    }else timeMade = timeMade.currentDateTime();
-    if(q_get_value_for_key(iniString,"t_mod",tmpString)==0){
-        timeModified=timeModified.fromString(tmpString,"d.M.yyyy H:m:s");
-    }else timeModified = timeMade.currentDateTime();
-    if(q_get_value_for_key(iniString,"txt_col",txt_colString)==-1){
-        txt_colString.clear();
-        txt_colString.push_back("0");
-        txt_colString.push_back("0");
-        txt_colString.push_back("1");
-        txt_colString.push_back("1");
-    }
-    textColor_m.setRgbF(txt_colString[0].toFloat(),
-            txt_colString[1].toFloat(),
-            txt_colString[2].toFloat(),
-            txt_colString[3].toFloat());
-
-    if(q_get_value_for_key(iniString,"bg_col",bg_colString)==-1){
-        bg_colString.clear();
-        bg_colString.push_back("0");
-        bg_colString.push_back("0");
-        bg_colString.push_back("1");
-        bg_colString.push_back("0.1");
-    }
-    backgroundColor_m.setRgbF(bg_colString[0].toFloat(),
-            bg_colString[1].toFloat(),
-            bg_colString[2].toFloat(),
-            bg_colString[3].toFloat());
-
-    commonInitFunction();
-
-    err += q_get_value_for_key(iniString,"l_id",linkIDStrings);
-    //getting the link text should be here
-    q_get_value_for_key(iniString,"l_CP_x",linkCPxStrings); //Those two are optional
-    q_get_value_for_key(iniString,"l_CP_y",linkCPyStrings);
-    int iter = 0;
-    for(QString linkString: linkIDStrings){ //getting the links in the notes
-        if( linkIDStrings.size()==linkCPxStrings.size() &&
-                linkIDStrings.size()==linkCPyStrings.size())
-        {//There are control points saved
-            addLink( Link( linkString.toInt(), QPointF(linkCPxStrings[iter].toFloat(),linkCPyStrings[iter].toFloat()) ) );
-        }else{ //There are no (or corrupted) control points saved
-            addLink( Link(linkString.toInt()) );
-        }
-        iter++;
-    }
-    //Process tags
-    q_get_value_for_key(iniString, "tags", tags);
-
-    if(err!=0) qDebug()<<"[Note::Note]Some of the note properties were not read correctly.Number of errors:"<<-err;
-}
 Note::Note(Note *nt)
 {
     id = nt->id;
@@ -111,33 +43,130 @@ Note::Note(Note *nt)
     rect_m = nt->rect_m;
     timeMade = nt->timeMade;
     timeModified = nt->timeModified;
-    fontSize_m = nt->fontSize_m;
+    fontSize = nt->fontSize;
     textColor_m = nt->textColor_m;
     backgroundColor_m = nt->backgroundColor_m;
     tags = nt->tags;
-
-    commonInitFunction();
 }
-Note::Note()
+Note::Note(int id_, QString text)
 {
-    fontSize_m = 1;
-    textColor_m.setRgbF(0,0,1,1);
-    backgroundColor_m.setRgbF(0,0,1,0.1);
-    timeMade = QDateTime::currentDateTime();
-    timeModified = QDateTime::currentDateTime();
-    commonInitFunction();
-}
-void Note::commonInitFunction()
-{
-    //date on which I fixed the property ... (I introduced it ~18.11.2012)
-    QDateTime t_default(QDate(2013,3,8),QTime(0,0,0));
-    if(!timeMade.isValid()) timeMade=t_default;
-    if(!timeModified.isValid()) timeModified=t_default;
-
-    setTextForShortening(text_m);
+    id = id_;
+    text_m = text;
+    textForShortening = text_m;
     checkForDefinitions();
 }
+Note * Note::fromJsonObject(QJsonObject json)
+{
+    Note * nt = new Note(json["id"].toInt() , json["text"].toString());
 
+    nt->setRect(QRectF(json["x"].toDouble(),
+                json["y"].toDouble(),
+                json["width"].toDouble(),
+                json["height"].toDouble()));
+
+    nt->fontSize = json["font_size"].toDouble();
+    nt->timeMade = QDateTime::fromString(json["t_made"].toString(), TIME_FORMAT);
+    nt->timeModified = QDateTime::fromString(json["t_mod"].toString(), TIME_FORMAT);
+
+    QJsonArray txt_colString = json["txt_col"].toArray();
+    nt->textColor_m.setRgbF(txt_colString[0].toDouble(),
+            txt_colString[1].toDouble(),
+            txt_colString[2].toDouble(),
+            txt_colString[3].toDouble());
+
+    QJsonArray bg_colString = json["bg_col"].toArray();
+    nt->backgroundColor_m.setRgbF(bg_colString[0].toDouble(),
+            bg_colString[1].toDouble(),
+            bg_colString[2].toDouble(),
+            bg_colString[3].toDouble());
+
+    QJsonArray links = json["links"].toArray();
+    for (auto l: links){
+        QJsonObject l_obj = l.toObject();
+        nt->addLink(Link::fromJsonObject(l_obj));
+    }
+
+    QJsonArray tags_arr = json["tags"].toArray();
+
+    for(auto tag: tags_arr){
+        nt->tags.append(tag.toString());
+    }
+
+    nt->checkForDefinitions();
+    return nt;
+}
+Note * Note::fromIniString(int id_, QString iniString)
+{
+    int err = 0;
+
+    QString tmpString;
+    err += q_get_value_for_key(iniString,"txt", tmpString);
+        tmpString.replace(QString("\\n"),QString("\n"));
+
+    Note * nt = new Note(id_ , tmpString);
+
+    float x, y, a, b;
+    err += q_get_value_for_key(iniString,"x",x);
+    err += q_get_value_for_key(iniString,"y",y);
+    err += q_get_value_for_key(iniString,"a",a);
+    a = std::max<float>(MIN_NOTE_A, std::min<float>(a, MAX_NOTE_A));
+    err += q_get_value_for_key(iniString,"b",b);
+    b = std::max<float>(MIN_NOTE_A, std::min<float>(b, MAX_NOTE_A));
+    nt->setRect(QRectF(qreal(x), qreal(y), qreal(a), qreal(b)));
+
+    err += q_get_value_for_key(iniString,"font_size", nt->fontSize);
+
+    if(q_get_value_for_key(iniString,"t_made",tmpString) == 0){
+        nt->timeMade = nt->timeMade.fromString(tmpString,"d.M.yyyy H:m:s");
+    }
+
+    if(q_get_value_for_key(iniString,"t_mod",tmpString)==0){
+        nt->timeModified = nt->timeModified.fromString(tmpString,"d.M.yyyy H:m:s");
+    }
+
+    QStringList txt_colString, bg_colString;
+    if(q_get_value_for_key(iniString,"txt_col",txt_colString)==0){
+        nt->textColor_m.setRgbF(txt_colString[0].toDouble(),
+                txt_colString[1].toDouble(),
+                txt_colString[2].toDouble(),
+                txt_colString[3].toDouble());
+    }
+
+
+    if(q_get_value_for_key(iniString,"bg_col",bg_colString)==0){
+        nt->backgroundColor_m.setRgbF(bg_colString[0].toDouble(),
+                bg_colString[1].toDouble(),
+                bg_colString[2].toDouble(),
+                bg_colString[3].toDouble());
+    }
+
+
+    QStringList linkIDStrings,linkCPxStrings, linkCPyStrings;
+    err += q_get_value_for_key(iniString,"l_id",linkIDStrings);
+    q_get_value_for_key(iniString,"l_CP_x",linkCPxStrings); //Those two are optional
+    q_get_value_for_key(iniString,"l_CP_y",linkCPyStrings);
+
+    int iter = 0;
+    for(QString linkString: linkIDStrings){ //getting the links in the notes
+        if( linkIDStrings.size() == linkCPxStrings.size() &&
+                linkIDStrings.size() == linkCPyStrings.size())
+        {//There are control points saved
+            QPointF cp = QPointF(linkCPxStrings[iter].toDouble(),
+                                 linkCPyStrings[iter].toDouble());
+            nt->addLink(Link( linkString.toInt(), cp, QString() ));
+        }else{ //There are no (or corrupted) control points saved
+            nt->addLink(Link(linkString.toInt()) );
+        }
+        iter++;
+    }
+
+    q_get_value_for_key(iniString, "tags", nt->tags);
+
+    if(err!=0) qDebug()<<"[Note::Note]Some of the note properties were not read correctly.Number of errors:"<<-err;
+
+    nt->checkForDefinitions();
+    return nt;
+}
 Note::~Note()
 {
     delete img;
@@ -150,14 +179,19 @@ QRectF Note::adjustTextSize(QPainter &p)
     //-------Init painter for the text shortening----------
     QRectF textField = textRect();
     QRectF textFieldNeeded;
-    QString textCopy = textForShortening_m;
+    QString initialText = textForShortening;
+    //Be within the size limit
+    if(initialText.size() > MAX_TEXT_FOR_DISPLAY_SIZE){
+        initialText = initialText.left(MAX_TEXT_FOR_DISPLAY_SIZE);
+    }
+    QString textCopy = initialText;
 
     //=========Shortening the text in the box=============
     textIsShortened = false; //assume we don't need shortening
 
     leftMargin = 0;
     rightMargin = textCopy.size();
-    testPosition = leftMargin + ceil(float(rightMargin-leftMargin)/2);
+    testPosition = int(leftMargin + ceil((rightMargin-leftMargin)/2.0));
 
     //-----If there's no resizing needed (common case , that's why it's on the top)--------
     textFieldNeeded = p.boundingRect(textField, Qt::TextWordWrap | alignment() | Qt::AlignVCenter ,textCopy);
@@ -184,13 +218,13 @@ QRectF Note::adjustTextSize(QPainter &p)
             leftMargin=testPosition; //if it does - bring the base iterator to the current pos
         }
 
-        testPosition=leftMargin + ceil(float(rightMargin-leftMargin)/2); //new position for the probe_iterator - optimally in the middle of the interval
+        testPosition = int(leftMargin + ceil( (rightMargin-leftMargin) / 2.0)); //new position for the probe_iterator - optimally in the middle of the interval
         if(testPosition<=3){
             textIsShortened = true;
             textCopy="...";
             goto after_shortening;
         }
-        textCopy = textForShortening_m;
+        textCopy = initialText;
     }
 
     textIsShortened = true;
@@ -208,7 +242,7 @@ void Note::checkTextForNoteFileLink() //there's an argument , because search ini
         addressString = q_get_text_between(text_m,':',0,200); //get text between ":" and the end
         addressString = addressString.trimmed(); //remove white spaces from both sides
         type = NoteType::redirecting;
-        setTextForShortening(addressString);
+        textForShortening = addressString;
     }
 }
 void Note::checkTextForFileDefinition()
@@ -222,9 +256,9 @@ void Note::checkTextForFileDefinition()
         file.setFileName(addressString);
         type = NoteType::textFile;
         if(file.open(QIODevice::ReadOnly)){
-            setTextForShortening(QFileInfo(file).fileName()+":\n"+file.read(MAX_TEXT_FOR_DISPLAY_SIZE));
+            textForShortening = QFileInfo(file).fileName() + ":\n" + file.read(MAX_TEXT_FOR_DISPLAY_SIZE);
         }else{
-            setTextForShortening( tr("Failed to open file:")+addressString);
+            textForShortening =  tr("Failed to open file:") + addressString;
         }
         file.close();
         return;
@@ -232,7 +266,7 @@ void Note::checkTextForFileDefinition()
         addressString = q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
         addressString = addressString.trimmed(); //remove white spaces from both sides
         if(addressString.startsWith(".")) addressString.remove(0,1).prepend(QDir::currentPath());
-        setTextForShortening("");
+        textForShortening = "";
         type = NoteType::picture;
     }
 }
@@ -242,7 +276,7 @@ void Note::checkTextForSystemCallDefinition()
         addressString=q_get_text_between(text_m,':',0,MAX_URI_LENGTH); //get text between ":" and the end
         addressString=addressString.trimmed(); //remove white spaces from both sides
         type=NoteType::systemCall;
-        setTextForShortening(addressString);
+        textForShortening = addressString;
     }
 }
 void Note::checkTextForWebPageDefinition()
@@ -250,16 +284,16 @@ void Note::checkTextForWebPageDefinition()
     if (text_m.startsWith(QString("define_web_page_note:"))){
         QString iniString = q_get_text_between(text_m,':',0,2*MAX_URI_LENGTH+20); //URL+name+some identifiers ~= 4100 chars
         int err = q_get_value_for_key(iniString,"url",addressString);
-        addressString=addressString.trimmed(); //remove white spaces from both sides
+        addressString = addressString.trimmed(); //remove white spaces from both sides
         QString name;
-        err+=q_get_value_for_key(iniString,"name",name);
+        err += q_get_value_for_key(iniString, "name", name);
 
-        if(err==0 && QUrl(addressString).isValid()){
+        if(err == 0 && QUrl(addressString).isValid()){
             type = NoteType::webPage;
-            setTextForShortening(name);
+            textForShortening = name;
         }else{
             if(err==0){
-                setTextForShortening(tr("URL is invalid"));
+                textForShortening = tr("URL is invalid");
             }
         }
     }
@@ -277,18 +311,18 @@ void Note::drawNote(QPainter &painter)
     //Resize appropriately to fit in the note boundaries
     if( (type==NoteType::picture) && textForDisplay_m.isEmpty() ){
 
-        if(img==NULL){
+        if(img==nullptr){
             img = new QImage(addressString);
         }
 
         if(img->isNull()){
             delete img;
-            img = NULL;
-            setTextForShortening( tr("Failed to open file:") + addressString);
+            img = nullptr;
+            textForShortening =  tr("Failed to open file:") + addressString;
             type = NoteType::normal;
         }else{
 
-            float frame_ratio,pixmap_ratio;
+            double frame_ratio,pixmap_ratio;
             frame_ratio = rect().width()/rect().height();
             pixmap_ratio = float(img->width())/float(img->height());
 
@@ -317,7 +351,7 @@ void Note::drawNote(QPainter &painter)
     //So this is kind of a hack to use pointSize without the text being different size on different (by DPI) displays
     font.setPointSizeF(10000);
     QFontMetrics fm(font);
-    font.setPointSizeF( ( fontSize_m *10000/float(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
+    font.setPointSizeF( ( fontSize *10000/float(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
     painter.setFont(font);
 
     pen.setColor( textColor_m );
@@ -328,7 +362,7 @@ void Note::drawNote(QPainter &painter)
     painter.drawText( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m);
 
     //For testing
-    //painter.drawText(rect().topLeft(),QString::number(fm.height())+"'"+QString::number(fontSize_m *10000/float(fm.height())));
+    //painter.drawText(rect().topLeft(),QString::number(fm.height())+"'"+QString::number(fontSize *10000/float(fm.height())));
     //QRectF boundingRect = painter.boundingRect( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m );
     //painter.fillRect( boundingRect, QBrush( QColor(255,0,0,60)));
     //painter.fillRect( textRect() , QBrush( QColor(0,255,0,60))); //shows the probe iterator which may be for the right margin so it's normal if it's a wrong bounding box
@@ -425,10 +459,6 @@ QString Note::text()
     return text_m;
 }
 
-float Note::fontSize()
-{
-    return fontSize_m;
-}
 QRectF& Note::rect()
 {
     return rect_m;
@@ -443,10 +473,6 @@ QColor Note::backgroundColor()
 {
     return backgroundColor_m;
 }
-QString Note::textForShortening()
-{
-    return textForShortening_m;
-}
 QString Note::textForDisplay()
 {
     return textForDisplay_m;
@@ -456,11 +482,11 @@ bool Note::isSelected()
     return isSelected_m;
 }
 
-void Note::setText(QString newText)
+void Note::changeText(QString newText)
 {
     if(newText!=text_m){
         text_m = newText;
-        setTextForShortening(text_m);
+        textForShortening = text_m;
         checkForDefinitions();
         emit textChanged(text_m);
         emit propertiesChanged();
@@ -470,28 +496,17 @@ void Note::changeTextAndTimestamp(QString newText)
 {
     if(newText!=text_m){
         timeModified=QDateTime::currentDateTime();
-        setText(newText);
-    }
-}
-
-void Note::setFontSize(float newFontSize)
-{
-    if( 0>newFontSize && newFontSize>MAX_FONT_SIZE){
-        qDebug()<<"[Note::setFontSize]Font size out of range. Note text:"<<text_m;
-    }else{
-        fontSize_m = newFontSize;
-
-        emit visualChange();
-        emit fontSizeChanged(newFontSize);
-        emit propertiesChanged();
+        changeText(newText);
     }
 }
 void Note::setRect(QRectF newRect)
 {
-    rect_m.setX( round(float(newRect.x())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
-    rect_m.setY( round(float(newRect.y())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
-    rect_m.setWidth( stop( round(float(newRect.width())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE ,MIN_NOTE_A,MAX_NOTE_A) );
-    rect_m.setHeight( stop(round(float(newRect.height())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE ,MIN_NOTE_B,MAX_NOTE_B) );
+    rect_m.setX( round(double(newRect.x())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
+    rect_m.setY( round(double(newRect.y())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE );
+    double width = round(double(newRect.width())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE;
+    double height = round(double(newRect.height())/SNAP_GRID_INTERVAL_SIZE)*SNAP_GRID_INTERVAL_SIZE;
+    rect_m.setWidth( std::max<double>(MIN_NOTE_A, std::min<double>(width, MAX_NOTE_A)) );
+    rect_m.setHeight( std::max<double>(MIN_NOTE_A, std::min<double>(height, MAX_NOTE_A)) );
 }
 void Note::setColors(QColor newTextColor, QColor newBackgroundColor)
 {
@@ -504,12 +519,6 @@ void Note::setColors(QColor newTextColor, QColor newBackgroundColor)
         emit visualChange();
         emit propertiesChanged();
     }
-}
-void Note::setTextForShortening(QString text_)
-{
-    //Be within the size limit
-    if(text_.size()>MAX_TEXT_FOR_DISPLAY_SIZE) textForShortening_m = text_.left(MAX_TEXT_FOR_DISPLAY_SIZE);
-    else textForShortening_m=text_;
 }
 void Note::setTextForDisplay(QString text_)
 {
@@ -536,7 +545,7 @@ void Note::autoSize(QPainter &painter)
     while(textIsShortened){
         if(rect().width()>=MAX_NOTE_A && rect().height()>=MAX_NOTE_B) break;
         if(rect().width()<=MAX_NOTE_A) rect().setWidth(rect().width()+2);
-        if(rect().height()<=MAX_NOTE_B) rect().setHeight(rect().height()+float(2)/A_TO_B_NOTE_SIZE_RATIO);
+        if(rect().height()<=MAX_NOTE_B) rect().setHeight(rect().height()+double(2)/A_TO_B_NOTE_SIZE_RATIO);
         adjustTextSize(painter);
     }
 
@@ -577,7 +586,7 @@ void Note::autoSize(QPainter &painter)
 
 void Note::checkForDefinitions()
 {
-    type=NoteType::normal; //assuming the note isn't special
+    type = NoteType::normal; //assuming the note isn't special
     checkTextForNoteFileLink();
     checkTextForFileDefinition();
     checkTextForSystemCallDefinition();
@@ -604,7 +613,52 @@ void Note::removeLink(int linkId)
     }
     emit linksChanged();
 }
-QString Note::propertiesInIniString()
+QJsonObject Note::toJsonObject()
+{
+    QJsonObject json;
+    json["id"] = id;
+    json["text"] = text_m;
+    json["x"] = rect_m.x();
+    json["y"] = rect_m.y();
+    json["width"] = rect_m.width();
+    json["height"] = rect_m.height();
+    json["font_size"] = fontSize;
+    json["t_made"] = timeMade.toString("d.M.yyyy H:m:s");
+    json["t_mod"] = timeModified.toString("d.M.yyyy H:m:s");
+
+    QJsonArray txt_col, bg_col;
+    txt_col.append(textColor_m.redF());
+    txt_col.append(textColor_m.greenF());
+    txt_col.append(textColor_m.blueF());
+    txt_col.append(textColor_m.alphaF());
+    bg_col.append(backgroundColor_m.redF());
+    bg_col.append(backgroundColor_m.greenF());
+    bg_col.append(backgroundColor_m.blueF());
+    bg_col.append(backgroundColor_m.alphaF());
+
+    json["txt_col"] = txt_col;
+    json["bg_col"] = bg_col;
+
+    QJsonArray links;
+
+    for(Link ln: outlinks){
+        links.append(ln.toJsonObject());
+    }
+
+    json["links"] = links;
+
+    QJsonArray tags_json;
+
+    for(QString tag: tags){
+        tags_json.append(tag);
+    }
+
+    json["tags"] = tags_json;
+
+    return json;
+}
+
+QString Note::toIniString()
 {
     QString iniString;
     QTextStream iniStringStream(&iniString);
@@ -618,7 +672,7 @@ QString Note::propertiesInIniString()
     iniStringStream<<"z="<<0<<'\n';
     iniStringStream<<"a="<<rect_m.width()<<'\n';
     iniStringStream<<"b="<<rect_m.height()<<'\n';
-    iniStringStream<<"font_size="<<fontSize_m<<'\n';
+    iniStringStream<<"font_size="<<fontSize<<'\n';
     iniStringStream<<"t_made="<<timeMade.toString("d.M.yyyy H:m:s")<<'\n';
     iniStringStream<<"t_mod="<<timeModified.toString("d.M.yyyy H:m:s")<<'\n';
     iniStringStream<<"txt_col="<<textColor_m.redF()<<";"<<textColor_m.greenF()<<";"<<textColor_m.blueF()<<";"<<textColor_m.alphaF()<<'\n';
@@ -687,7 +741,7 @@ QRectF Note::textRect()
     txtRect.setTop(rect().top() + NOTE_SPACING );
     txtRect.setHeight(rect().height() - 2*NOTE_SPACING + 1);//dirty fix because boundingRect returns a bigger rect
     txtRect.setWidth(rect().width() - 2*NOTE_SPACING);
-    txtRect.moveTop(txtRect.top() - fontSize_m*0.1); // FIXME use fontMetrics to make this correction exact
+    txtRect.moveTop(txtRect.top() - fontSize*0.1); // FIXME use fontMetrics to make this correction exact
 
     return txtRect;
 }

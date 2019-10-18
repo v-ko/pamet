@@ -60,10 +60,9 @@ void StatisticsModule::paintRoutine(QPainter &painter)
         int textY = ( statsForDrawing.indexOf(st)/10 )*30+50; //10 captions per row
         painter.drawText(textX,textY,st->name);
 
-        for(int i=0; i<st->values.size() ; i++){
+        for(int i=0; i < st->values.size() ; i++){
             painter.drawEllipse(timeline->toPixelsFromMSecs(st->timestamps[i].toMSecsSinceEpoch()),
-                                timeline->baselineY()-Scale(10,timeline->baselineY(),st->values[i]),5,5);
-            //if()
+                                timeline->baselineY() - timeline->baselineY() * st->values[i] / 10, 5, 5);
         }
     }
 }
@@ -86,7 +85,7 @@ void StatisticsModule::loadStats()
                 break;
             }
             Statistic* statistic = statsbyName(values[1]);
-            if(statistic==NULL){
+            if(statistic==nullptr){
 
                 stats.push_back(Statistic());
                 statistic = &stats.back();

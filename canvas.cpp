@@ -28,8 +28,8 @@ Canvas::Canvas(MisliWindow *misliWindow_) :
 
     //Random
     misliWindow = misliWindow_;
-    linkOnControlPointDrag = NULL;
-    cpChangeNote = NULL;
+    linkOnControlPointDrag = nullptr;
+    cpChangeNote = nullptr;
     PushLeft = false;
     timedOutMove = false;
     moveOn = false;
@@ -124,7 +124,7 @@ float Canvas::heightScaleFactor()
 
 void Canvas::paintEvent(QPaintEvent*)
 {
-    if(noteFile()==NULL) return;
+    if(noteFile()==nullptr) return;
 
     //Init the painter
     QPainter painter;
@@ -182,11 +182,11 @@ void Canvas::paintEvent(QPaintEvent*)
             displayed_notes++;
 
             //Check the validity of the address string
-            if(nt->type==NoteType::redirecting){
-                if(misliWindow->currentDir()->noteFileByName(nt->addressString)==NULL &&
-                   nt->textForShortening()!=tr("Missing note file") )
+            if(nt->type == NoteType::redirecting){
+                if(misliWindow->currentDir()->noteFileByName(nt->addressString) == nullptr &&
+                   nt->textForShortening!=tr("Missing note file") )
                 {
-                    nt->setTextForShortening(tr("Missing note file"));
+                    nt->textForShortening = tr("Missing note file");
                 }
             }
 
@@ -279,7 +279,7 @@ void Canvas::paintEvent(QPaintEvent*)
 
 void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    if(noteFile()==NULL) return;
+    if(noteFile()==nullptr) return;
 
     //Don't accept doubleClick on modifiers, because it ruin a selection
     if( (event->button()==Qt::LeftButton) &&
@@ -290,20 +290,20 @@ void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
 }
 void Canvas::wheelEvent(QWheelEvent *event)
 {
-    if(noteFile()==NULL) return;
+    if(noteFile()==nullptr) return;
 
     int numDegrees = event->delta() / 8;
     int numSteps = numDegrees / 15;
 
-    noteFile()->eyeZ-=MOVE_SPEED*numSteps;
-    noteFile()->eyeZ = stop(noteFile()->eyeZ,1,1000); //can't change eye_z to more than 1000 or less than 1
+    noteFile()->eyeZ -= MOVE_SPEED * numSteps;
+    noteFile()->eyeZ = std::max(1.0, std::min(noteFile()->eyeZ, 1000.0));
 
     update();
     //glutPostRedisplay(); artefact
 }
 void Canvas::mouseMoveEvent(QMouseEvent *event)
 {
-    if(noteFile()==NULL) return;
+    if(noteFile()==nullptr) return;
 
     if(PushLeft){
         if(moveOn){
@@ -321,7 +321,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
                         ln.usesControlPoint = false;
                         ln.controlPointIsSet = false;
                     }
-                    noteFile()->initLinks();
+                    noteFile()->arrangeLinksGeometry();
                 }
             }
 
@@ -339,15 +339,15 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
                     newRect.setSize( QSizeF(d_x, d_y) );
                     nt->setRect( newRect );
 
-                    noteFile()->initLinks();
+                    noteFile()->arrangeLinksGeometry();
                 }
             }
 
-        }else if(linkOnControlPointDrag!=NULL){ //We're changing a control point
+        }else if(linkOnControlPointDrag!=nullptr){ //We're changing a control point
             linkOnControlPointDrag->controlPoint = unproject(mousePos());
             linkOnControlPointDrag->isSelected = true;
             linkOnControlPointDrag->controlPointIsChanged = true;
-            noteFile()->initNoteLinks(cpChangeNote);
+            noteFile()->arrangeLinksGeometry(cpChangeNote);
             update();
         }else{ //Else we're moving about the canvas (respectively - changing the camera position)
 
@@ -397,10 +397,10 @@ void Canvas::doubleClick()
 {
     Note *nt = getNoteUnderMouse(mousePos().x(),mousePos().y());
 
-    if(nt!=NULL){ //if we've clicked on a note
+    if(nt!=nullptr){ //if we've clicked on a note
         if(nt->type==NoteType::redirecting){ //if it's a valid redirecting note
 
-            if(misliWindow->currentDir()->noteFileByName(nt->addressString)!=NULL)
+            if(misliWindow->currentDir()->noteFileByName(nt->addressString)!=nullptr)
             setNoteFile(misliWindow->currentDir()->noteFileByName(nt->addressString));
 
         }else if(nt->type==NoteType::textFile){
@@ -417,15 +417,12 @@ void Canvas::doubleClick()
             QByteArray out = process.readAllStandardOutput();
             if(!out.isEmpty()){
                 //Put the feedback in a note below the command
-                Note *newNote = new Note();
-                newNote->id = noteFile()->getNewId();
-                newNote->text_m = QString(out);
-                newNote->setRect(QRect(nt->rect().x(),nt->rect().bottom()+1,1,1));
+                Note *newNote = new Note(noteFile()->getNewId(), QString(out));
+                newNote->setRect(QRectF(nt->rect().x(), nt->rect().bottom() + 1, 1, 1));
                 newNote->timeMade = QDateTime::currentDateTime();
                 newNote->timeModified = QDateTime::currentDateTime();
                 newNote->textColor_m = nt->textColor();
                 newNote->backgroundColor_m = nt->backgroundColor();
-                newNote->commonInitFunction();
                 newNote->requestAutoSize = true;
                 noteFile()->addNote(newNote);
             }
@@ -444,7 +441,7 @@ void Canvas::doubleClick()
 }
 void Canvas::handleMousePress(Qt::MouseButton button)
 {
-    if(noteFile()==NULL) return;
+    if(noteFile()==nullptr) return;
 
     Note *noteUnderMouse, *noteForResize;
     Link *linkUnderMouse;
@@ -476,7 +473,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
 
             noteUnderMouse = getNoteUnderMouse(x,y);
             linkingIsOn = false;
-            if(noteUnderMouse!=NULL){
+            if(noteUnderMouse!=nullptr){
                 if( noteFile()->linkSelectedNotesTo(noteUnderMouse)>0 ){
                     noteFile()->save();
                 }
@@ -490,7 +487,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         if( !(ctrl_is_pressed | shift_is_pressed) ) { //if neither ctrl or shift are pressed resize only the note under mouse
             noteFile()->clearNoteSelection();
         }
-        if (noteForResize!=NULL){
+        if (noteForResize!=nullptr){
             noteForResize->setSelected(true);
             noteResizeOn=true;
             resizeX=noteForResize->rect().x();
@@ -501,7 +498,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
 
         //---------DRAG LINK CONTROL POINT---------------
         linkOnControlPointDrag = getControlPointUnderMouse(mousePos().x(),mousePos().y());
-        if(linkOnControlPointDrag!=NULL){
+        if(linkOnControlPointDrag!=nullptr){
             linkOnControlPointDrag->isSelected = true;
             if(!linkOnControlPointDrag->usesControlPoint){
                 linkOnControlPointDrag->controlPoint = unproject(mousePos());
@@ -518,13 +515,13 @@ void Canvas::handleMousePress(Qt::MouseButton button)
 
         //Select links
         linkUnderMouse = getLinkUnderMouse(x,y);
-        if (linkUnderMouse!=NULL){
+        if (linkUnderMouse!=nullptr){
             linkUnderMouse->isSelected = true;
         }
 
         //Select notes
         noteUnderMouse = getNoteUnderMouse(x,y);
-        if (noteUnderMouse!=NULL){
+        if (noteUnderMouse!=nullptr){
 
             if(noteUnderMouse->isSelected()){
                 noteUnderMouse->setSelected(false);
@@ -558,7 +555,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
 
         contextMenu->clear();
 
-        if(noteUnderMouse!=NULL){
+        if(noteUnderMouse!=nullptr){
             noteUnderMouse->setSelected(true);
 
             contextMenu->addAction(misliWindow->ui->actionEdit_note);
@@ -583,7 +580,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
 }
 void Canvas::handleMouseRelease(Qt::MouseButton button)
 {
-    if(noteFile()==NULL) return;
+    if(noteFile()==nullptr) return;
 
     if(button==Qt::LeftButton){
         PushLeft = false;
@@ -591,13 +588,13 @@ void Canvas::handleMouseRelease(Qt::MouseButton button)
         if(moveOn){
             moveOn = false;
             noteFile()->save(); //saving the new positions
-            noteFile()->initLinks();
+            noteFile()->arrangeLinksGeometry();
         }else if(noteResizeOn){
             noteResizeOn = false;
             noteFile()->save(); //save the new size
-            noteFile()->initLinks();
-        }else if(linkOnControlPointDrag!=NULL){
-            linkOnControlPointDrag = NULL;
+            noteFile()->arrangeLinksGeometry();
+        }else if(linkOnControlPointDrag!=nullptr){
+            linkOnControlPointDrag = nullptr;
             noteFile()->save(); //save the new controlPoint position
             update();
         }
@@ -605,7 +602,7 @@ void Canvas::handleMouseRelease(Qt::MouseButton button)
         Note *nt = getNoteUnderMouse(mousePos().x(), mousePos().y());
         if(nt->type == NoteType::redirecting){
             NoteFile *nfUnderMouse = misliWindow->currentDir()->noteFileByName(nt->addressString);
-            if(nfUnderMouse != NULL){
+            if(nfUnderMouse != nullptr){
                 Canvas * newCanvas = new Canvas(misliWindow);
                 misliWindow->ui->tabWidget->addTab(newCanvas, "");
                 newCanvas->setNoteFile(nfUnderMouse);
@@ -623,7 +620,7 @@ Note *Canvas::getNoteUnderMouse(int mouseX, int mouseY)
         }
     }
 
-return NULL;
+return nullptr;
 }
 Note *Canvas::getNoteClickedForResize(int mouseX , int mouseY)
 {
@@ -633,7 +630,7 @@ Note *Canvas::getNoteClickedForResize(int mouseX , int mouseY)
             return nt;
         }
     }
-    return NULL;
+    return nullptr;
 }
 Link *Canvas::getLinkUnderMouse(int mouseX,int mouseY) //returns one link (not necesserily the top one) onder the mouse
 {
@@ -647,7 +644,7 @@ Link *Canvas::getLinkUnderMouse(int mouseX,int mouseY) //returns one link (not n
             }
         }
     }
-    return NULL;
+    return nullptr;
 }
 Link *Canvas::getControlPointUnderMouse(int x, int y)
 {
@@ -666,20 +663,20 @@ Link *Canvas::getControlPointUnderMouse(int x, int y)
             }
         }
     }
-    cpChangeNote = NULL;
-    return NULL;
+    cpChangeNote = nullptr;
+    return nullptr;
 }
 
 void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not off the move flag is set to true
 
-    int x=mousePos().x();
-    int y=mousePos().y();
+    qreal x = mousePos().x();
+    qreal y = mousePos().y();
 
-    float dist = dottodot(XonPush,YonPush,x,y);
+    qreal dist = QLineF(XonPush, YonPush, x, y).length();
 
     if( (timedOutMove && PushLeft ) && ( dist<MOVE_FUNC_TOLERANCE ) ){
 
-        getNoteUnderMouse(x,y)->setSelected(true); //to pickup a selected note with control pressed (not to deselect it)
+        getNoteUnderMouse(x, y)->setSelected(true); //to pickup a selected note with control pressed (not to deselect it)
 
         //Store all the coordinates before the move
         for(Note *nt: currentNoteFile->notes){
@@ -747,7 +744,7 @@ void Canvas::paste()
             }
         }
     }
-    noteFile()->initLinks();
+    noteFile()->arrangeLinksGeometry();
 
     clipboardNF->makeAllIDsNegative(); //restore ids to positive in the clipboard
     noteFile()->save();
@@ -755,7 +752,7 @@ void Canvas::paste()
 
 void Canvas::jumpToNearestNote()
 {
-    Note *nearest_note = NULL;
+    Note *nearest_note = nullptr;
     float best_result = 0, result,x_unprojected, y_unprojected;
 
     unproject(mousePos().x(),mousePos().y(),x_unprojected,y_unprojected);
@@ -790,9 +787,9 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
 {
     MisliDir *misliDir = currentDir();
 
-    if(misliDir==NULL){
-        if(newNoteFile!=NULL){
-            qDebug()<<"[Canvas::setNoteFile]Trying to set a notefile while currentDir is NULL.";
+    if(misliDir==nullptr){
+        if(newNoteFile!=nullptr){
+            qDebug()<<"[Canvas::setNoteFile]Trying to set a notefile while currentDir is nullptr.";
             return;
         }else{ //Just update the UI - that's all that's needed in that case
             hide();
@@ -807,11 +804,11 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
 
     disconnect(visualChangeConnection);
 
-    if(newNoteFile==NULL){
+    if(newNoteFile==nullptr){
         //Check the current dir for NFs
         if(!misliDir->noteFiles().isEmpty()){
             //If it's not empty set a notefile - the default or there's none - the first
-            if(misliDir->defaultNfOnStartup()!=NULL){
+            if(misliDir->defaultNfOnStartup()!=nullptr){
                 setNoteFile(misliDir->defaultNfOnStartup());
                 return;
             }else{
@@ -890,12 +887,12 @@ void Canvas::pasteMimeData(const QMimeData *mimeData)
     //We'll use the note input mechanism to make the new notes from the dropped items
     misliWindow->edit_w->x_on_new_note=mousePos().x(); //cursor position relative to the gl widget
     misliWindow->edit_w->y_on_new_note=mousePos().y();
-    misliWindow->edit_w->edited_note=NULL;
+    misliWindow->edit_w->edited_note=nullptr;
 
     if(mimeData->hasImage()){
         QString imageName = QInputDialog::getText(this,tr("Give a name to the image"),tr("Enter a name for the image"));
         QImage img = qvariant_cast<QImage>(mimeData->imageData());
-        QDir misliDir(misliWindow->currentDir()->directoryPath());
+        QDir misliDir(misliWindow->currentDir()->folderPath);
 
         if(imageName.isEmpty()){
             misliWindow->misliDesktopGUI->showWarningMessage(tr("Can't use an empty name."));

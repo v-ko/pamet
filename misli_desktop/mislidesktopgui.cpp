@@ -101,7 +101,7 @@ void MisliDesktopGui::updateTranslator()
         }
     }
 
-    if(misliWindow != NULL){
+    if(misliWindow != nullptr){
         bool showHelp = false;
         if(misliWindow->currentCanvas_m->noteFile() == misliWindow->helpNoteFile){
             showHelp = true;

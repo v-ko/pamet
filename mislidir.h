@@ -21,8 +21,8 @@
 #include <QSettings>
 #include <QFileSystemWatcher>
 
-#include "petko10.h"
-#include "petko10q.h"
+#include "util.h"
+#include "util.h"
 
 #include "notefile.h"
 #include "common.h"
@@ -41,7 +41,7 @@ public:
     ~MisliDir();
 
     int makeNotesFile(QString);
-    void softDeleteAllNoteFiles();
+    void unloadAllNoteFiles();
     void deleteAllNoteFiles();
 
     NoteFile * noteFileByName(QString name);
@@ -49,14 +49,13 @@ public:
 
     //Properties
     float defaultEyeZ();
-    QString directoryPath();
     QList<NoteFile*> noteFiles();
 
     //Variables
     QList<NoteFile*> noteFiles_m; //all the notefiles
     QFileSystemWatcher *fs_watch; //to watch the dir for changes
     QTimer * hangingNfCheck; //periodical check for unaccounted for note files
-    QString directoryPath_m;
+    QString folderPath;
     QSettings settings;
     bool keepHistoryViaGit = false;
 
@@ -65,17 +64,15 @@ public:
 signals:
     //Property chabges
     void defaultEyeZChanged(float);
-    void directoryPathChanged(QString);
     void noteFilesChanged();
 
 public slots:
     //Set properties
     void setDefaultEyeZ(float);
-    void setDirectoryPath(QString newDirPath);
 
     //Other
-    void addNoteFile(QString pathToNoteFile);
-    void loadNotesFiles();
+    void loadNoteFile(QString pathToNoteFile);
+    void loadNoteFiles();
     void reinitNotesPointingToNotefiles();
 
     void checkForHangingNFs();

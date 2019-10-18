@@ -94,7 +94,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>24</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuEdit">
@@ -222,6 +222,7 @@
     <addaction name="actionJump_to_nearest_note"/>
     <addaction name="menuDonate_Bitcoin"/>
     <addaction name="actionExport_all_as_web_notes"/>
+    <addaction name="actionMigrate_to_JSON_format"/>
    </widget>
    <widget class="QMenu" name="menuLanguage">
     <property name="title">
@@ -712,6 +713,16 @@
    </property>
    <property name="shortcut">
     <string>T</string>
+   </property>
+  </action>
+  <action name="actionUse_JSON_format">
+   <property name="text">
+    <string>Use JSON format</string>
+   </property>
+  </action>
+  <action name="actionMigrate_to_JSON_format">
+   <property name="text">
+    <string>Migrate to JSON format</string>
    </property>
   </action>
  </widget>

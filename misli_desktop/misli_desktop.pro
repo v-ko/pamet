@@ -50,11 +50,10 @@ HEADERS += \
     ../note.h \
     ../notefile.h \
     ../notessearch.h \
+    ../util.h \
     editnotedialogue.h \
     mislidesktopgui.h \
     misliwindow.h \
-    ../petko10.h \
-    ../petko10q.h \
     timelinewidget.h \
     timeline.h \
     timelinemodule.h \
@@ -72,12 +71,11 @@ SOURCES += \
     ../note.cpp \
     ../notefile.cpp \
     ../notessearch.cpp \
+    ../util.cpp \
     editnotedialogue.cpp \
     main.cpp \
     mislidesktopgui.cpp \
     misliwindow.cpp \
-    ../petko10.cpp \
-    ../petko10q.cpp \
     timelinewidget.cpp \
     timeline.cpp \
     timelinemodule.cpp \

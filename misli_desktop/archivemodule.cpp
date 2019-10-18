@@ -5,5 +5,5 @@ ArchiveModule::ArchiveModule(Timeline *timeline_):
     checkbox("Archive module")
 {
     controlWidget = &checkbox;
-    noteFile.setFilePath("/sync/misli/archive.timeline");
+    noteFile.setPathAndLoad("/sync/misli/archive.timeline");
 }

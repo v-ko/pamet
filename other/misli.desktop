@@ -1,8 +1,9 @@
 [Desktop Entry]
 Name=Misli
-Comment=Organize thoughts
-Exec=/sync/builds/misli/build-misli_desktop-Desktop-Release/misli
+Comment=A program to organize thoughts and notes
+Exec=misli
 Icon=/sync/C++/misli/misli/img/icon.png
 Terminal=false
 Type=Application
 StartupWMClass=misli
+Hidden=false

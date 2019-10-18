@@ -42,20 +42,18 @@ class Note : public QObject
 Q_OBJECT
 
     //------Properties that are read/written on the file------------
-    Q_PROPERTY(QString text READ text WRITE setText NOTIFY textChanged)
-    Q_PROPERTY(float fontSize READ fontSize WRITE setFontSize NOTIFY fontSizeChanged)
+    Q_PROPERTY(QString text READ text WRITE changeText NOTIFY textChanged)
     Q_PROPERTY(QRectF rect READ rect WRITE setRect NOTIFY rectChanged)
     //------Properties needed only for the program----------------
-    Q_PROPERTY(QString textForShortening READ textForShortening WRITE setTextForShortening NOTIFY textForShorteningChanged)
     Q_PROPERTY(QString textForDisplay READ textForDisplay WRITE setTextForDisplay NOTIFY textForDisplayChanged)
     Q_PROPERTY(bool isSelected READ isSelected WRITE setSelected NOTIFY selectedChanged)
 
 public:
     //Functions
-    Note(int id_, QString iniString);
     Note(Note *nt);
-    Note();//int id_, QString text_, QRectF rect_, float font_size_, QDateTime t_made_, QDateTime t_mod_, QColor txt_col_, QColor bg_col_);
-    void commonInitFunction();
+    Note(int id_, QString text);
+    static Note * fromJsonObject(QJsonObject json);
+    static Note * fromIniString(int id_, QString iniString);
     ~Note();
 
     void checkTextForNoteFileLink(); //gets called from MisliDir only
@@ -64,13 +62,13 @@ public:
     void checkTextForWebPageDefinition();
 
     void autoSize(QPainter &painter);
-    QString propertiesInIniString();
+    QJsonObject toJsonObject();
+    QString toIniString();
     QRectF textRect();
 
     //Accessing properties
     QString text();
     QRectF &rect();
-    QString textForShortening();
     QString textForDisplay();
     bool isSelected();
 
@@ -78,7 +76,6 @@ public:
     QColor backgroundColor();
 
     //Calculated properties
-    float fontSize();
     Qt::AlignmentFlag alignment();
 
     //------Variables that are read/written on the file------------
@@ -87,20 +84,22 @@ public:
     QRectF rect_m;
     QString text_m;
 
-    float fontSize_m;
-    QDateTime timeMade, timeModified;
-    QColor textColor_m, backgroundColor_m; //text and background colors
+    double fontSize = 1;
+    QDateTime timeMade = QDateTime::currentDateTime();
+    QDateTime timeModified = QDateTime::currentDateTime();
+    QColor textColor_m = QColor::fromRgbF(0,0,1,1);
+    QColor backgroundColor_m = QColor::fromRgbF(0,0,1,0.1);
     QList<Link> outlinks;
     QStringList tags;
 
     //------Variables needed only for the program----------------
-    QString textForShortening_m;
+    QString textForShortening;
     QString textForDisplay_m; //this gets drawn in the note
     QString addressString;
 
     QPointF posBeforeMove;
 
-    QImage *img = NULL;
+    QImage *img = nullptr;
 
 
     NoteType type = NoteType::normal;
@@ -112,7 +111,6 @@ public:
 signals:
     //Property changes
     void textChanged(QString);
-    void fontSizeChanged(float);
     void rectChanged(QRectF);
     void textForShorteningChanged(QString);
     void textForDisplayChanged(QString);
@@ -125,12 +123,10 @@ signals:
 
 public slots:
     //Set properties
-    void setText(QString);
+    void changeText(QString);
     void changeTextAndTimestamp(QString);
-    void setFontSize(float);
     void setRect(QRectF newRect);
     void setColors(QColor newTextColor, QColor newBackgroundColor);
-    void setTextForShortening(QString);
     void setTextForDisplay(QString text_);
     void setSelected(bool value);
 

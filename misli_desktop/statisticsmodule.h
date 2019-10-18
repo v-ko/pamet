@@ -18,10 +18,10 @@ public:
         for(Statistic &st: stats){
             if(name==st.name) return &st;
         }
-        return NULL;
+        return nullptr;
     }
     QString statsFilePath(){
-        QFileInfo statsFile(timeline->timelineWidget->misliWindow->currentDir()->directoryPath()+"/statistics.csv");
+        QFileInfo statsFile(timeline->timelineWidget->misliWindow->currentDir()->folderPath+"/statistics.csv");
         if(statsFile.exists()){
             return statsFile.filePath();
         }else{

@@ -19,7 +19,7 @@
 #include <QDesktopWidget>
 #include <QDebug>
 
-#include "petko10.h"
+#include "util.h"
 #include "note.h"
 #include "notefile.h"
 #include "common.h"
@@ -53,46 +53,25 @@ NoteFile::~NoteFile()
 
 QString NoteFile::filePath()
 {
+    // Hacky workaround for the legacy format transition
+//    if(filePath_m.endsWith(".misl") && use_json){
+//        QString hack_path = filePath_m;
+//        hack_path.chop(5);
+//        return  hack_path + ".json";
+//    }
     return filePath_m;
 }
 
 QString NoteFile::name()
 {
-    QString name_ = QFileInfo(filePath_m).fileName();
+    QString name_ = QFileInfo(filePath()).fileName();
     name_.chop(5);
     return name_;
 }
-
-int NoteFile::init()   //returns negative on errors
+int NoteFile::loadFromIniString(QString fileString)
 {
-    QFile ntFile(filePath_m);
-    QString fileString;
-    QStringList lines,noteIniStrings,note_ids;
-
-    //Clear stuff
-    lastNoteId=0;
-    for(Note *nt: notes) delete nt;
-    notes.clear();
-    comment.clear();
-
-    //Open the file
-    if(!ntFile.open(QIODevice::ReadOnly)){
-        qDebug()<<"[NoteFile::init]Error opening notefile: "<<filePath_m;
-        return -2;
-    }
-    //Check for abnormally large files
-    if(ntFile.size()>10000000){
-        qDebug()<<"[NoteFile::init]Note file "<<name()<<" is more than 10MB.Skipping.";
-        return -3;
-    }
-    //Get the data into a string
-    fileString=fileString.fromUtf8(ntFile.readAll().data());
-    ntFile.close();
-
-    //Clear the windows standart junk
-    fileString = fileString.replace("\r","");
-    //Get the lines in separate strings
-    lines = fileString.split(QString("\n"),QString::SkipEmptyParts);
+    fileString = fileString.replace("\r",""); //Clear the windows standart junk
+    QStringList lines = fileString.split(QString("\n"),QString::SkipEmptyParts);
 
     //Get the comments and tags
     for(QString line: lines){ //for every line of text
@@ -108,29 +87,95 @@ int NoteFile::init()   //returns negative on errors
     }
 
     //Extract the groups(notes)
-    if(q_get_groups(fileString,note_ids,noteIniStrings)!=1){d("error when extracting the groups");exit(43);}
-
-    //Create the notes
-    for(int i=0;i<noteIniStrings.size();i++){ //get the notes
-        loadNote(new Note(note_ids[i].toInt(),noteIniStrings[i]));
+    QStringList noteIniStrings, note_ids;
+    if(q_get_groups(fileString, note_ids, noteIniStrings) != 1){
+        qDebug()<<"error when extracting the groups";
+        exit(43);
     }
 
-    initLinks();
+    //Load the notes
+    for(int i = 0; i < noteIniStrings.size(); i++){
+        loadNote(Note::fromIniString(note_ids[i].toInt(), noteIniStrings[i]));
+    }
 
+    arrangeLinksGeometry();
     return 0;
 }
-void NoteFile::initLinks()  //init all the links in the note_file notes
+void NoteFile::loadFromJsonString(QString jsonString)
 {
-    for(Note *nt: notes) initNoteLinks(nt);
+    QJsonParseError err;
+    QJsonDocument doc = QJsonDocument::fromJson(jsonString.toUtf8(), &err);
+
+    if(err.error != QJsonParseError::NoError){
+        qDebug() << "Error parsing notefile " << filePath() << " : " << err.error;
+    }
+
+    QJsonObject json = doc.object();
+
+    isDisplayedFirstOnStartup = json["is_displayed_first_on_startup"].toBool();
+
+    QJsonArray notes_arr = json["notes"].toArray();
+    for(auto nt: notes_arr){
+        loadNote(Note::fromJsonObject(nt.toObject()));
+    }
+    arrangeLinksGeometry();
+}
+int NoteFile::loadFromFilePath()   //returns negative on errors
+{
+    QFile ntFile(filePath());
+
+    //Clear the properties
+    lastNoteId = 0;
+    for(Note *nt: notes) delete nt;
+    notes.clear();
+    comment.clear();
+
+    //Open the file
+    if(!ntFile.open(QIODevice::ReadOnly)){
+        qDebug()<<"[NoteFile::init]Error opening notefile: " << filePath();
+        return -2;
+    }
+    //Check for abnormally large files
+    if(ntFile.size() > 10000000){
+        qDebug()<<"[NoteFile::init]Note file " << name() << " is more than 10MB.Skipping.";
+        return -3;
+    }
+    QString fileString = fileString.fromUtf8(ntFile.readAll().data());
+    ntFile.close();
+
+    if(filePath().endsWith(".json")){
+        loadFromJsonString(fileString);
+    }else if(filePath().endsWith(".misl")){
+        loadFromIniString(fileString);
+
+        QString oldPath = filePath_m;
+        QString backupPath = oldPath + ".backup";
+
+        //rename self to json
+        filePath_m.chop(5);
+        filePath_m = filePath_m + ".json";
+
+        //rename file on disk to backup
+        if (QFile::exists(backupPath))
+        {
+            QFile::remove(backupPath);
+        }
+        QFile::rename(oldPath, backupPath);
+
+        //save
+        save();
+    }
+    return 0;
+}
+void NoteFile::arrangeLinksGeometry()  //init all the links in the note_file notes
+{
+    for(Note *nt: notes) arrangeLinksGeometry(nt);
 }
 
-void NoteFile::virtualSave()
+QString NoteFile::toIniString()
 {
     QString iniString;
-    QTextStream iniStringStream(&iniString,QIODevice::ReadWrite);
-
-    //Adding the comments
-    for(unsigned int c=0;c<comment.size();c++) iniStringStream<<comment[c]<<'\n';
+    QTextStream iniStringStream(&iniString, QIODevice::ReadWrite);
 
     //The flag for displaying first on startup
     if(isDisplayedFirstOnStartup){
@@ -138,22 +183,46 @@ void NoteFile::virtualSave()
     }
 
     //Adding the notes
-    for(Note *nt: notes) iniStringStream<<nt->propertiesInIniString();
+    for(Note *nt: notes) iniStringStream << nt->toIniString();
 
-    undoHistory.push_back(iniString);
+    return iniString;
+}
+
+QString NoteFile::toJsonString()
+{
+    QJsonObject json;
+
+    //The flag for displaying first on startup
+    if(isDisplayedFirstOnStartup){
+        json["is_displayed_first_on_startup"] = true;
+    }
+
+    //Adding the notes
+    QJsonArray noteObjects;
+    for(Note *nt: notes) noteObjects.append(nt->toJsonObject());
+
+    json["notes"] = noteObjects;
+
+    return QJsonDocument(json).toJson();
+}
+
+void NoteFile::saveStateToHistory()
+{
+    undoHistory.push_back(this->toJsonString());
     redoHistory.clear();
 
-    if(undoHistory.size()>MAX_UNDO_STEPS){ //Avoid a memory leak by having max undo steps
+    //Avoid a memory leak by having max undo steps
+    if(undoHistory.size()>MAX_UNDO_STEPS){
         undoHistory.pop_front();
     }
 }
-void NoteFile::hardSave()
+void NoteFile::saveLastInHistoryToFile()
 {
     if(saveWithRequest){
         emit requestingSave(this);
         return;
     }else{
-        QFile ntFile(filePath_m);
+        QFile ntFile(filePath());
         if( !ntFile.open(QIODevice::WriteOnly) ){
             qDebug()<<"[NoteFile::hardSave]Failed opening the file.";
         }
@@ -164,32 +233,19 @@ void NoteFile::hardSave()
 }
 void NoteFile::save()
 {
-    if(filePath_m=="clipboardNoteFile") return;
+    if(filePath()=="clipboardNoteFile") return;
 
-    virtualSave();
-    hardSave();
-    //Git commit
-    QProcess p;
-    if(keepHistoryViaGit){
-        p.setWorkingDirectory(QFileInfo(filePath_m).dir().path());
-        p.start("git",QStringList()<<"add"<<"-A");
-        p.waitForFinished();
-        qDebug()<<p.readAll();
-        p.start("git",QStringList()<<"commit"<<"-m"<<"'"+QDateTime::currentDateTime().toString("yyyy.MM.dd HH:mm:ss")+"'");
-        p.waitForFinished();
-        qDebug()<<p.readAll();
-        //FIXME handle stuff that might happen, check if git is available in order to avoid littering the log, etc
-        //the other stuff is in MisliDir::setDirectoryPath
-    }
+    saveStateToHistory();
+    saveLastInHistoryToFile();
 }
 void NoteFile::undo()
 {
     if(undoHistory.size()>=2){
         redoHistory.push_front(undoHistory.back());
         undoHistory.pop_back(); //pop the current version
-        hardSave();
+        saveLastInHistoryToFile();
 
-        init();
+        loadFromFilePath();
     }
 }
 void NoteFile::redo()
@@ -197,9 +253,9 @@ void NoteFile::redo()
     if(redoHistory.size()>=1){
         undoHistory.push_back(redoHistory.front());
         redoHistory.pop_back(); //pop the current version
-        hardSave();
+        saveLastInHistoryToFile();
 
-        init();
+        loadFromFilePath();
     }
 }
 
@@ -221,7 +277,7 @@ Note* NoteFile::loadNote(Note *nt)
     //Connections
     connect(nt,SIGNAL(propertiesChanged()),this,SLOT(save()));
     connect(nt,SIGNAL(visualChange()),this,SIGNAL(visualChange()));
-    connect(nt,SIGNAL(linksChanged()),this,SLOT(initLinks()));
+    connect(nt,SIGNAL(linksChanged()),this,SLOT(arrangeLinksGeometry()));
     connect(nt,&Note::textChanged,[=](){
         emit noteTextChanged(this);
     });
@@ -236,7 +292,8 @@ Note *NoteFile::cloneNote(Note *nt)
 void NoteFile::deleteSelected() //deletes all marked selected and returns their number
 {
     int deletedItemsCount = 0;
-    while(getFirstSelectedNote()!=NULL){ //delete selected notes
+
+    while(getFirstSelectedNote()!=nullptr){ //delete selected notes
         deletedItemsCount++;
         Note *nt = getFirstSelectedNote();
         notes.removeOne(nt);
@@ -252,8 +309,8 @@ void NoteFile::deleteSelected() //deletes all marked selected and returns their 
             }
         }
     }
-    if(deletedItemsCount!=0){
-        initLinks();
+    if(deletedItemsCount != 0){
+        arrangeLinksGeometry();
         save();
         emit noteTextChanged(this);
         emit visualChange();
@@ -265,11 +322,11 @@ Note *NoteFile::getFirstSelectedNote() //returns first (in the vector arrangemen
     for(Note *nt: notes){
             if(nt->isSelected()){return nt;}
     }
-    return NULL;
+    return nullptr;
 }
 Note *NoteFile::getLowestIdNote()
 {
-    if(notes.size()==0){return NULL;}
+    if(notes.size()==0){return nullptr;}
 
     int lowest_id=notes[0]->id; //we assume the first note
     for(Note *nt: notes){ //for the rest of the notes
@@ -284,7 +341,7 @@ Note *NoteFile::getNoteById(int id) //returns the note with the given id
     for(Note *nt: notes){
         if( nt->id==id ){return nt;} //ako id-to syvpada vyrni pointera kym toq note
     }
-    return NULL;
+    return nullptr;
 }
 void NoteFile::selectAllNotes()
 {
@@ -327,7 +384,7 @@ void NoteFile::makeAllIDsNegative()
 int NoteFile::getNewId()
 {
     for(int i=1;i<65535;i++){
-        if(getNoteById(i)==NULL){
+        if(getNoteById(i)==nullptr){
             return i;
         }
     }
@@ -344,7 +401,7 @@ int NoteFile::linkSelectedNotesTo(Note *nt)
     }
     return linksAdded;
 }
-void NoteFile::initNoteLinks(Note *nt) //smqta koordinatite
+void NoteFile::arrangeLinksGeometry(Note *nt) //smqta koordinatite
 {
     checkForInvalidLinks(nt);
 
@@ -458,19 +515,17 @@ void NoteFile::initNoteLinks(Note *nt) //smqta koordinatite
 
     }//next link
 
-
-
     emit visualChange();
 }
 
-void NoteFile::setFilePath(QString newPath)
+void NoteFile::setPathAndLoad(QString newPath)
 {
     if(newPath==filePath_m) return;
 
     if(QFileInfo(newPath).isReadable()){
         isReadable = true;
         filePath_m = newPath;
-        init();
+        loadFromFilePath();
     }else{
         qDebug()<<"[NoteFile::setFilePath]File not readable:"<<newPath;
     }
@@ -483,7 +538,7 @@ void NoteFile::checkForInvalidLinks(Note *nt)
 
     while(iterator.hasNext()){
         Link ln = iterator.next();
-        if(getNoteById(ln.id)==NULL){ //if there's no note with the specified link id
+        if(getNoteById(ln.id)==nullptr){ //if there's no note with the specified link id
             nt->removeLink(ln.id);
             linksChangedHere = true;
         }

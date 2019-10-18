@@ -16,12 +16,13 @@
 
 #include <QDebug>
 
+#include "common.h"
 #include "misliinstance.h"
 #include "mislidir.h"
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 
-MisliDir::MisliDir(QString nts_dir, bool enableFSWatch)
+MisliDir::MisliDir(QString folder_path, bool enableFSWatch)
 {
     fsWatchIsEnabled = enableFSWatch;
 
@@ -29,68 +30,37 @@ MisliDir::MisliDir(QString nts_dir, bool enableFSWatch)
     if(fsWatchIsEnabled){
         fs_watch = new QFileSystemWatcher(this);
         connect(fs_watch,SIGNAL(fileChanged(QString)),this,SLOT(handleChangedFile(QString)) );
+
         hangingNfCheck = new QTimer;
         connect(hangingNfCheck,SIGNAL(timeout()),this,SLOT(checkForHangingNFs() ));
     }else{
-        fs_watch = NULL;
-        hangingNfCheck = NULL;
+        fs_watch = nullptr;
+        hangingNfCheck = nullptr;
     }
 
     //Connect propery changes
     connect(this,SIGNAL(noteFilesChanged()),this,SLOT(reinitNotesPointingToNotefiles()));
 
     //Setup
-    setDirectoryPath(nts_dir);
-}
-MisliDir::~MisliDir()
-{
-    softDeleteAllNoteFiles();
-    delete fs_watch;
-    delete hangingNfCheck;
-}
-QString MisliDir::directoryPath()
-{
-    return directoryPath_m;
-}
-void MisliDir::setDirectoryPath(QString newDirPath)
-{
-    QDir newDir(newDirPath);
+    QDir newDir(folder_path);
+
     if(!newDir.exists()){
-        qDebug()<<"[MisliDir::setDirectoryPath]Directory missing, creating it.";
-        if(!newDir.mkdir(newDirPath)){
-            qDebug()<<"[MisliDir::setDirectoryPath]Failed making directory:"<<newDirPath;
+        qDebug() << "[MisliDir::setDirectoryPath]Directory missing, creating it.";
+
+        if(!newDir.mkdir(folder_path)){
+            qDebug() << "[MisliDir::setDirectoryPath]Failed making directory: " << folder_path;
             return;
         }
     }
-    directoryPath_m = newDirPath;
 
-    QFileInfo gitOptionFile(newDir.filePath(".keep_history_via_git"));
-    if(gitOptionFile.exists()) keepHistoryViaGit = true;
-
-    //Upon leading at least the current dir is set to this one in order to correct relative paths in the Note class
-    //which has no access to the MisliDir class and its info
-    QDir::setCurrent(directoryPath_m);
-
-    loadNotesFiles();
-
-    if(keepHistoryViaGit){
-        //Do a profilactic or innitial commit
-        QProcess p;
-        p.start("git",QStringList()<<"init");
-        p.waitForFinished();
-        qDebug()<<p.readAll();
-        p.start("git",QStringList()<<"add"<<"-A");
-        p.waitForFinished();
-        qDebug()<<p.readAll();
-        p.start("git",QStringList()<<"commit"<<"-m"<<"'Dir init commit'");
-        p.waitForFinished();
-        qDebug()<<p.readAll();
-        p.start("git",QStringList()<<"gc"<<"--auto");
-        p.waitForFinished();
-        qDebug()<<p.readAll();
-    }
-
-    emit directoryPathChanged(newDirPath);
+    folderPath = folder_path;
+    loadNoteFiles();
+}
+MisliDir::~MisliDir()
+{
+    unloadAllNoteFiles();
+    delete fs_watch;
+    delete hangingNfCheck;
 }
 QList<NoteFile*> MisliDir::noteFiles()
 {
@@ -104,10 +74,10 @@ void MisliDir::checkForHangingNFs()
     for(NoteFile * nf: noteFiles_m){
         if(!nf->isReadable){
             //Try to init
-            if( nf->init() == 0 ){ //File is found and initialized properly
+            if( nf->loadFromFilePath() == 0 ){ //File is found and initialized properly
                 nf->isReadable = true;
                 //qDebug()<<"Adding path to fs_watch: "<<nf->filePath_m;
-                fs_watch->addPath(nf->filePath_m); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
+                fs_watch->addPath(nf->filePath()); //when a file is deleted it gets off the fs_watch and we need to re-add it when a unix-type file save takes place
             }else{
                 missingNfCount++;
             }
@@ -123,7 +93,7 @@ NoteFile * MisliDir::noteFileByName(QString name)
             return nf;
         }
     }
-    return NULL;
+    return nullptr;
 }
 
 NoteFile * MisliDir::defaultNfOnStartup()
@@ -131,7 +101,7 @@ NoteFile * MisliDir::defaultNfOnStartup()
     for(NoteFile *nf: noteFiles_m){
         if(nf->isDisplayedFirstOnStartup) return nf;
     }
-    return NULL;
+    return nullptr;
 }
 
 int MisliDir::makeNotesFile(QString name)
@@ -139,11 +109,17 @@ int MisliDir::makeNotesFile(QString name)
     QFile ntFile;
     QString filePath;
 
-    if(noteFileByName(name)!=NULL){ //Check if such a NF doesn't exist already
+    if(noteFileByName(name)!=nullptr){ //Check if such a NF doesn't exist already
         return -1;
     }
 
-    filePath=QDir(directoryPath_m).filePath(name+".misl");
+//    if(use_json){
+//        name = name + ".json";
+//    }else{
+//        name = name + ".misl";
+//    }
+
+    filePath=QDir(folderPath).filePath(name);
 
     ntFile.setFileName(filePath);
 
@@ -154,28 +130,36 @@ int MisliDir::makeNotesFile(QString name)
 
     ntFile.close();
 
-    addNoteFile(filePath);
+    loadNoteFile(filePath);
 
     return 0;
 }
 
 void MisliDir::softDeleteNF(NoteFile* nf)
 {
-    if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath_m);
+    if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath());
     noteFiles_m.removeOne(nf);
     delete nf;
     emit noteFilesChanged();
 }
 
-void MisliDir::loadNotesFiles()
+void MisliDir::loadNoteFiles()
 {
-    softDeleteAllNoteFiles();
+    unloadAllNoteFiles();
 
-    QDir dir(directoryPath_m);
-    QStringList files = dir.entryList(QStringList()<<"*.misl",QDir::Files);
+    QDir dir(folderPath);
+    QStringList files;
+    if(use_json){
+
+    }else{
+
+    }
+
+    files = dir.entryList(QStringList()<<"*.json", QDir::Files);
+    files.append(dir.entryList(QStringList()<<"*.misl", QDir::Files));
 
     for(QString fileName: files){
-        addNoteFile(dir.absoluteFilePath(fileName));
+        loadNoteFile(dir.absoluteFilePath(fileName));
     }
 }
 void MisliDir::reinitNotesPointingToNotefiles()
@@ -196,9 +180,9 @@ void MisliDir::handleChangedFile(QString filePath)
     dummyNF.filePath_m = filePath; //Get the name
     nf = noteFileByName(dummyNF.name()); //Locate the nf whith that name
 
-    if(nf==NULL) return;//avoid segfaults on a wrong name
+    if(nf==nullptr) return;//avoid segfaults on a wrong name
 
-    if( nf->init()==0 ){
+    if( nf->loadFromFilePath()==0 ){
         nf->isReadable = true;
     }else if(err ==-2){ //most times the file is deleted and then replaced on sync , so we need to check back for it later
         nf->isReadable=false;
@@ -207,7 +191,7 @@ void MisliDir::handleChangedFile(QString filePath)
     emit noteFilesChanged();
 }
 
-void MisliDir::softDeleteAllNoteFiles()
+void MisliDir::unloadAllNoteFiles()
 {
     while(!noteFiles_m.isEmpty()){
         softDeleteNF(noteFiles_m.first());
@@ -216,7 +200,7 @@ void MisliDir::softDeleteAllNoteFiles()
 
 void MisliDir::deleteAllNoteFiles()
 {
-    QDir dir(directoryPath_m);
+    QDir dir(folderPath);
 
     for(NoteFile *nf: noteFiles_m){
         if(!dir.remove(nf->filePath())){
@@ -224,7 +208,7 @@ void MisliDir::deleteAllNoteFiles()
             return;
         }
     }
-    softDeleteAllNoteFiles();
+    unloadAllNoteFiles();
 }
 
 float MisliDir::defaultEyeZ()
@@ -237,24 +221,24 @@ void MisliDir::setDefaultEyeZ(float value)
     settings.sync();
 }
 
-void MisliDir::addNoteFile(QString pathToNoteFile)
+void MisliDir::loadNoteFile(QString pathToNoteFile)
 {
     NoteFile *nf = new NoteFile;
 
     nf->saveWithRequest = true;
     nf->keepHistoryViaGit = keepHistoryViaGit;
     nf->eyeZ = defaultEyeZ();
-    nf->setFilePath(pathToNoteFile);
+    nf->setPathAndLoad(pathToNoteFile);
 
     //If the file didn't init correctly - don't add it
     if(!nf->isReadable | nf->name().isEmpty() ){
-        qDebug()<<"[MisliDir::addNoteFile]Note file is not readable, skipping:"<<pathToNoteFile;
+        qDebug()<<"[MisliDir::addNoteFile]Note file is not readable, skipping: "<<pathToNoteFile;
         delete nf;
         return;
     }
 
     noteFiles_m.push_back(nf);
-    nf->virtualSave(); //should be only a virtual save for ctrl-z
+    nf->saveStateToHistory(); //should be only a virtual save for ctrl-z
 
     if(fsWatchIsEnabled) fs_watch->addPath(nf->filePath());
     connect(nf,SIGNAL(requestingSave(NoteFile*)),this,SLOT(handleSaveRequest(NoteFile*)));
@@ -265,8 +249,8 @@ void MisliDir::addNoteFile(QString pathToNoteFile)
 void MisliDir::handleSaveRequest(NoteFile *nf)
 {
     nf->saveWithRequest = false;
-    if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath_m);
-    nf->hardSave();
-    if(fsWatchIsEnabled) fs_watch->addPath(nf->filePath_m);
+    if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath());
+    nf->saveLastInHistoryToFile();
+    if(fsWatchIsEnabled) fs_watch->addPath(nf->filePath());
     nf->saveWithRequest = true;
 }

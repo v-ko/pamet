@@ -1,6 +1,6 @@
 #include <QDebug>
 
-#include "petko10q.h"
+#include "util.h"
 
 char * q_get_text_between(char *source_string, char A, char B, int length=-1)
 {
@@ -12,14 +12,14 @@ char * q_get_text_between(char *source_string, char A, char B, int length=-1)
     if(A!=0){A_pos=txt.indexOf(QChar(A));}
     //trim - remove
     if( (A_pos!=-1)&&(A_pos!=-2) ){txt.remove(0,A_pos+1);} //remove preceding string and the delimiting char
-    if (A_pos==-1)return NULL;//if not found (if ==-2 => A==NULL =>dont trim)
+    if (A_pos==-1)return nullptr;//if not found (if ==-2 => A==nullptr =>dont trim)
 
     //find first use of B indexOf
     if(B!=0){B_pos=txt.indexOf(QChar(B));}
     else { return strdup(txt.toUtf8().data()); }
     //trim - truncate
     if(B_pos!=-1){txt.truncate(B_pos);}
-    else return NULL; //if not found
+    else return nullptr; //if not found
 
     return strdup(txt.toUtf8().data());
 }
@@ -34,14 +34,14 @@ char * q_get_text_between(const char *source_string, char A, char B, int length=
     if(A!=0){A_pos=txt.indexOf(QChar(A));}
     //trim - remove
     if( (A_pos!=-1)&&(A_pos!=-2) ){txt.remove(0,A_pos+1);} //remove preceding string and the delimiting char
-    if (A_pos==-1)return NULL;//if not found (if ==-2 => A==NULL =>dont trim)
+    if (A_pos==-1)return nullptr;//if not found (if ==-2 => A==nullptr =>dont trim)
 
     //find first use of B indexOf
     if(B!=0){B_pos=txt.indexOf(QChar(B));}
     else { return strdup(txt.toUtf8().data()); }
     //trim - truncate
     if(B_pos!=-1){txt.truncate(B_pos);}
-    else return NULL; //if not found
+    else return nullptr; //if not found
 
     return strdup(txt.toUtf8().data());
 }
@@ -55,7 +55,7 @@ QString q_get_text_between(QString txt, char A, char B, int length)
     if(A!=0){A_pos=txt.indexOf(QChar(A));}
     //trim - remove
     if( (A_pos!=-1)&&(A_pos!=-2) ){txt.remove(0,A_pos+1);} //remove preceding string and the delimiting char
-    if (A_pos==-1)return NULL;//if not found (if ==-2 => A==NULL =>dont trim)
+    if (A_pos==-1)return nullptr;//if not found (if ==-2 => A==nullptr =>dont trim)
 
     //find first use of B indexOf
     if(B!=0){B_pos=txt.indexOf(QChar(B));}
@@ -93,6 +93,15 @@ int q_get_value_for_key(QString string, QString key, float& result)
     int err = q_get_value_for_key(string,key,txt);
     if (err<0) return err;
     result = txt.toFloat();
+    return 0;
+}
+
+int q_get_value_for_key(QString string, QString key, double& result)
+{
+    QString txt;
+    int err = q_get_value_for_key(string,key,txt);
+    if (err<0) return err;
+    result = txt.toDouble();
     return 0;
 }
 

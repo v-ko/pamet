@@ -68,9 +68,7 @@ void PhotoModule::loadToTmp(qint64 positionInMSecs, qint64 viewportSizeInMSecs)
 
             //qDebug()<<"Valid picture:"<<filePath<<",with DateTime:"<<out;
 
-            nt=new Note();
-            nt->id = 0;
-            nt->text_m = text;
+            nt = new Note(0, text);
             nt->setRect(QRectF(0,0,100,100));
             nt->timeMade = timeMade;
             nt->timeModified = timeMade.addMSecs(days/20);

@@ -14,26 +14,25 @@
     along with Misli.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+
 #include "link.h"
 #include "common.h"
 #include "note.h"
 
-Link::Link(int id_,QPointF controlPoint_)
+Link::Link(int id_, QPointF controlPoint_, QString text_)
 {
-    id=id_;
+    id = id_;
     controlPoint = controlPoint_;
+    text = text_;
     usesControlPoint = true;
-    isSelected=false;
     controlPointIsSet = true;
-    controlPointIsChanged = true;
 }
 Link::Link(int id_)
 {
-    id=id_;
-    usesControlPoint = false;
-    isSelected=false;
-    controlPointIsSet = false;
-    controlPointIsChanged = true;
+    id = id_;
 }
 
 QPointF Link::middleOfTheLine()
@@ -44,4 +43,25 @@ QPointF Link::middleOfTheLine()
 QPointF Link::realControlPoint()
 {
     return 2*controlPoint - line.p1()/2 - line.p2()/2;
+}
+
+Link Link::fromJsonObject(QJsonObject obj){
+    QJsonArray cp_arr = obj["cp"].toArray();
+    QPointF cp(cp_arr[0].toDouble(), cp_arr[1].toDouble());
+
+    return Link(obj["to_id"].toInt(), cp, obj["text"].toString());
+}
+QJsonObject Link::toJsonObject()
+{
+    QJsonObject json;
+    json["to_id"] = id;
+    json["text"] = text;
+
+    QJsonArray cp;
+    cp.append(controlPoint.x());
+    cp.append(controlPoint.y());
+
+    json["cp"] = cp;
+
+    return json;
 }

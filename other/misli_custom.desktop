@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Misli
+Comment=Organize thoughts
+Exec=/sync/C++/builds/misli/build-misli_desktop-Desktop-Release/misli 2>&1 |cat| python -c 'import sys,time;sys.stdout.write("".join(( " ".join((time.strftime("[%Y-%m-%d %H:%M:%S]", time.localtime()), line)) for line in sys.stdin )))' >> /sync/misli/desktop.log
+Icon=/sync/C++/misli/misli/img/icon.png
+Terminal=false
+Type=Application
+StartupWMClass=misli
+Hidden=false

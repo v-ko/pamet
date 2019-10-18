@@ -28,11 +28,13 @@ class Link
 {
 public:
     //Functions
-    Link(int id_, QPointF controlPoint_);
+    Link(int id_, QPointF controlPoint_, QString text_);
     Link(int id_);
 
     QPointF middleOfTheLine();
     QPointF realControlPoint();
+    static Link fromJsonObject(QJsonObject obj);
+    QJsonObject toJsonObject();
 
     //Hard variables
     int id;
@@ -42,7 +44,7 @@ public:
     QLineF line, autoLine;
     QPointF controlPoint;
     QPainterPath path;
-    bool isSelected, usesControlPoint, controlPointIsSet, controlPointIsChanged;
+    bool isSelected = false, usesControlPoint = false, controlPointIsSet = false, controlPointIsChanged = true;
 };
 
 #endif // LINK_H

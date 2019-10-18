@@ -38,17 +38,17 @@ Timeline::~Timeline()
     for (TimelineModule *module: modules) delete module;
 }
 
-float Timeline::scaleToPixels(qint64 miliseconds)
+int Timeline::scaleToPixels(qint64 miliseconds)
 {
-    return miliseconds*( double(rect().width())/double(viewportSizeInMSecs) );
+    return int(miliseconds * ( double(rect().width())/double(viewportSizeInMSecs) ));
 }
 
-float Timeline::scaleToMSeconds(qint64 pixels)
+double Timeline::scaleToMSeconds(qint64 pixels)
 {
-    return pixels*( double(viewportSizeInMSecs)/double(rect().width()) );
+    return pixels * ( double(viewportSizeInMSecs)/double(rect().width()) );
 }
 
-qint64 Timeline::toPixelsFromMSecs(qint64 miliseconds)
+int Timeline::toPixelsFromMSecs(qint64 miliseconds)
 {
     qint64 leftViewportEdge = positionInMSecs - viewportSizeInMSecs/2;
     qint64 offsetInMSecs = miliseconds - leftViewportEdge;
@@ -265,13 +265,13 @@ void Timeline::paintEvent(QPaintEvent *)
     //Remove notes that are not onscreen, too small or too large
     for(int i=0; i<nts.size(); i++){
         Note *nt = nts[i];
-        nt->fontSize_m = fontSizeForNote(nt);
+        nt->fontSize = fontSizeForNote(nt);
         float x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
         float w = scaleToPixels( nt->timeMade.msecsTo(nt->timeModified) );
         nt->rect_m.setRect(x, baselineY(), w, rect().height()-baselineY());
 
         if( ( !nt->rect().intersects(rect()) ) |
-            ( nt->fontSize_m<1) |
+            ( nt->fontSize<1) |
             ( nt->rect().width()>rect().width() ) ){
             nt->setRect(QRectF()); //clear the position so it doesn't parttake in the selection
             nts.removeOne(nt);
@@ -286,13 +286,13 @@ void Timeline::paintEvent(QPaintEvent *)
 
         //Get the largest note
         for( Note *testNote: nts){
-            if( testNote->fontSize_m > nt->fontSize_m ){
+            if( testNote->fontSize > nt->fontSize ){
                 nt = testNote;
             }
         }
 
         QFont font("Helvetica");
-        font.setPointSizeF( nt->fontSize_m );
+        font.setPointSizeF( nt->fontSize );
         painter.setFont( font );
         QRectF boundingRect = painter.boundingRect( nt->rect_m, Qt::TextWordWrap | nt->alignment() | Qt::AlignVCenter, nt->text() );
         nt->rect_m.setHeight( boundingRect.height()+10 );
@@ -348,7 +348,7 @@ void Timeline::mouseDoubleClickEvent(QMouseEvent *event)
     slider.setGeometry(event->x(), baselineY(), rect().width(), 10);
     slider.setMaximum( rect().width() );
 
-    if( nt==NULL){
+    if( nt==nullptr){
         slider.setValue( scaleToPixels(viewportSizeInMSecs/4));
         timelineWidget->misliWindow->edit_w->newNote();
     }else{
@@ -402,5 +402,5 @@ Note *Timeline::getNoteUnderMouse( QPoint mousePosition )
             return nt;
         }
     }
-    return NULL;
+    return nullptr;
 }

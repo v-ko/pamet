@@ -178,7 +178,7 @@ void EditNoteDialogue::newNote()
     move(QCursor::pos());
 
     ui->textEdit->setText("");
-    edited_note = NULL;
+    edited_note = nullptr;
 
     //UI stuff
     ui->openButton->hide();
@@ -217,7 +217,7 @@ void EditNoteDialogue::editNote() //false for new note , true for edit
         ui->dayButton->hide();
         edited_note = misliWindow->currentCanvas_m->noteFile()->getFirstSelectedNote();
     }
-    if(edited_note==NULL){return;}
+    if(edited_note==nullptr){return;}
 
     if(misliWindow->timelineTabIsActive()){
         slider->move( timeline->scaleToPixels(edited_note->timeMade.toMSecsSinceEpoch() - timeline->leftEdgeInMSecs()),
@@ -264,33 +264,27 @@ void EditNoteDialogue::inputDone()
     bg_col.setRgbF(0,0,1,0.1);
     float x, y;
 
-    if( edited_note==NULL){//If we're making a new note
+    if( edited_note==nullptr){//If we're making a new note
 
         if( !misliWindow->timelineTabIsActive() ){
             misliWindow->currentCanvas_m->unproject(x_on_new_note,y_on_new_note, x, y); //get mouse pos in real coordinates
-            nt=new Note();
-            nt->id = misliWindow->currentCanvas_m->noteFile()->getNewId();
-            nt->text_m = text;
+            nt = new Note(misliWindow->currentCanvas_m->noteFile()->getNewId(), text);
             nt->setRect(QRectF(x,y,1,1));
             nt->timeMade = QDateTime::currentDateTime();
             nt->timeModified = QDateTime::currentDateTime();
             nt->textColor_m = txt_col;
             nt->backgroundColor_m = bg_col;
-            nt->commonInitFunction();
             nt->requestAutoSize = true;
 
             misliWindow->currentCanvas_m->noteFile()->linkSelectedNotesTo(nt);
             misliWindow->currentCanvas_m->noteFile()->addNote(nt); //invokes save
         }else if( misliWindow->timelineTabIsActive() ){
-            nt=new Note();
-            nt->id = 0;
-            nt->text_m = text;
+            nt = new Note(0, text);
             nt->setRect(QRectF(x,y,1,1));
             nt->timeMade = QDateTime::fromMSecsSinceEpoch( timeline->leftEdgeInMSecs() + timeline->scaleToMSeconds( slider->pos().x() ) );
             nt->timeModified = nt->timeMade.addMSecs( timeline->scaleToMSeconds(slider->value()) );
             nt->textColor_m = txt_col;
             nt->backgroundColor_m = bg_col;
-            nt->commonInitFunction();
 
             timeline->archiveModule.noteFile.addNote(nt);
         }
@@ -306,12 +300,12 @@ void EditNoteDialogue::inputDone()
                 edited_note->timeModified = newEnd;
 
                 if(text!=edited_note->text()){
-                    edited_note->setText(text);
+                    edited_note->changeText(text);
                 }else{
                     emit edited_note->propertiesChanged();
                 }
             }else{
-                edited_note->setText(text);
+                edited_note->changeText(text);
             }
 
         }else{
@@ -383,8 +377,8 @@ void EditNoteDialogue::closeEvent(QCloseEvent *)
 
 QString EditNoteDialogue::maybeToRelativePath(QString path)
 {
-    if(path.startsWith(misliWindow->currentDir()->directoryPath())){
-        return path.replace(misliWindow->currentDir()->directoryPath(),".");
+    if(path.startsWith(misliWindow->currentDir()->folderPath)){
+        return path.replace(misliWindow->currentDir()->folderPath,".");
     }else{
         return path;
     }

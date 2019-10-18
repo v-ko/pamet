@@ -64,14 +64,12 @@ int NotesSearch::loadNotes(NoteFile *noteFile, MisliDir* misliDir, float initial
 
     //(Re)load all items
     for(Note *nt: noteFile->notes){
-        //if(nt->type!=NoteType::textFile){ //don't search through the text files (too large)
-        searchItem.nt=nt;
+        searchItem.nt = nt;
         searchItem.probability=initial_probability;
         searchItem.nf = noteFile;
         searchItem.md = misliDir;
         searchItems.push_back(searchItem);
         notes_loaded++;
-        //}
     }
     return notes_loaded;
 }

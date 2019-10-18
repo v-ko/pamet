@@ -76,7 +76,7 @@ void MisliInstance::loadStoredDirs()
 void MisliInstance::saveDirsToSettings()
 {
     QStringList notesDirsStringList;
-    for(MisliDir* misliDir: misliDirs_m) notesDirsStringList.push_back(misliDir->directoryPath_m);
+    for(MisliDir* misliDir: misliDirs_m) notesDirsStringList.push_back(misliDir->folderPath);
 
     settings.setValue("notes_dir",QVariant(notesDirsStringList));
     settings.sync();

@@ -38,9 +38,12 @@
 #define MOVE_FUNC_TOLERANCE 12 //in pixels
 #define MAX_FONT_SIZE 100
 #define MAX_URI_LENGTH 2048
+#define TIME_FORMAT "d.M.yyyy H:m:s"
 
 const qint64 days = 24*60*60*1000;
 const qint64 months = 30*days;
 const qint64 years = 12*months;
+
+extern bool use_json;
 
 #endif // COMMON_H

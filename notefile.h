@@ -18,7 +18,7 @@
 #define NOTEFILE_H
 
 #include "note.h"
-#include "petko10q.h"
+#include "util.h"
 #include <QObject>
 
 class MisliDir;
@@ -27,7 +27,7 @@ class NoteFile : public QObject
 {
     Q_OBJECT
 
-    Q_PROPERTY(QString filePath READ filePath WRITE setFilePath NOTIFY filePathChanged)
+    Q_PROPERTY(QString filePath READ filePath WRITE setPathAndLoad NOTIFY filePathChanged)
 
 public:
     //Functions
@@ -42,7 +42,7 @@ public:
     void clearNoteSelection();
     void clearLinkSelection();
     int linkSelectedNotesTo(Note *nt);
-    void initNoteLinks(Note *nt);
+    void arrangeLinksGeometry(Note *nt);
     void checkForInvalidLinks(Note *nt);
 
     void makeCoordsRelativeTo(double x,double y);
@@ -54,9 +54,15 @@ public:
     Note *cloneNote(Note* nt);
     void deleteSelected();
 
-    int init();
-    void virtualSave();
-    void hardSave();
+    int loadFromFilePath();
+    int loadFromIniString(QString fileString);
+    void loadFromJsonString(QString jsonString);
+    bool loadFileAsJson();
+    QString toIniString();
+    QString toJsonString();
+
+    void saveStateToHistory();
+    void saveLastInHistoryToFile();
     void undo();
     void redo();
 
@@ -68,7 +74,7 @@ public:
     int lastNoteId;
     std::vector<QString> comment; //the comments in the file
     QString filePath_m; //note file path
-    float eyeX,eyeY,eyeZ; //camera position for the GUI cases (can't be QPointF, it has z)
+    double eyeX, eyeY, eyeZ; //camera position for the GUI cases (can't be QPointF, it has z)
     QStringList undoHistory, redoHistory; //The current state is on the back of undoHistory
     bool isDisplayedFirstOnStartup;
     bool isTimelineNoteFile;
@@ -88,11 +94,11 @@ signals:
 
 public slots:
     //Set properties
-    void setFilePath(QString newPath);
+    void setPathAndLoad(QString newPath);
 
     //Other
     void save();
-    void initLinks();
+    void arrangeLinksGeometry();
 };
 
 #endif // NOTEFILE_H

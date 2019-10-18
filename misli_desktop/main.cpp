@@ -82,6 +82,7 @@
 //build installer PS C:\C++\misli\misli\installer> C:\Qt\QtIFW2.0.0\bin\binarycreator.exe --offline-only -c config\config.xml -p packages MisliInstaller.exe
 //pray to Bill Gates
 
+#include "../common.h"
 #include "mislidesktopgui.h"
 #include "archivemodule.h"
 #include "photomodule.h"
