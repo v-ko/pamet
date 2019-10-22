@@ -42,8 +42,8 @@ CODECFORTR = UTF-8
 TRANSLATIONS += ../translations/misli_bg.ts
 
 HEADERS += \
-    ../canvas.h \
-    ../common.h \
+    ../canvaswidget.h \
+    ../global.h \
     ../link.h \
     ../mislidir.h \
     ../misliinstance.h \
@@ -64,7 +64,7 @@ HEADERS += \
     statisticsmodule.h
 
 SOURCES += \
-    ../canvas.cpp \
+    ../canvaswidget.cpp \
     ../link.cpp \
     ../mislidir.cpp \
     ../misliinstance.cpp \

@@ -16,7 +16,7 @@
 
 #include <QDebug>
 
-#include "common.h"
+#include "global.h"
 #include "misliinstance.h"
 #include "mislidir.h"
 #include "misli_desktop/misliwindow.h"
@@ -229,11 +229,11 @@ void MisliDir::deleteAllNoteFiles()
     unloadAllNoteFiles();
 }
 
-float MisliDir::defaultEyeZ()
+double MisliDir::defaultEyeZ()
 {
     return settings.value("eye_z",QVariant(90)).toFloat();
 }
-void MisliDir::setDefaultEyeZ(float value)
+void MisliDir::setDefaultEyeZ(double value)
 {
     settings.setValue("eye_z",QVariant(value));
     settings.sync();
@@ -303,4 +303,5 @@ bool MisliDir::renameNoteFile(NoteFile *nf, QString newName)
             }
         }
     }
+    return true;
 }

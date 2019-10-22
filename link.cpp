@@ -19,7 +19,7 @@
 #include <QJsonObject>
 
 #include "link.h"
-#include "common.h"
+#include "global.h"
 #include "note.h"
 
 Link::Link(int id_, QPointF controlPoint_, QString text_)

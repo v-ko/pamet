@@ -174,16 +174,16 @@ int q_get_groups(QString string, QStringList &names, QStringList &groups)
         return 1;
     }
 }
-float q_version_string_to_number(QString version)
+int q_version_string_to_number(QString version)
 {//Implies 3 version numbers and max 999 on each
-    float result;
+    int result;
     QStringList numbers = version.split(".");
     if(numbers.size()<3){
-        qDebug()<<"[q_version_string_to_number]Bad version number. Returning 0. Number:"+version;
+        qDebug()<<"[q_version_string_to_number]Bad version number. Returning 0. Number:" + version;
         return 0;
     }
-    result = numbers[0].toFloat()*1000000;
-    result += numbers[1].toFloat()*1000;
-    result += numbers[2].toFloat();
+    result = numbers[0].toInt()*1000000;
+    result += numbers[1].toInt()*1000;
+    result += numbers[2].toInt();
     return result;
 }

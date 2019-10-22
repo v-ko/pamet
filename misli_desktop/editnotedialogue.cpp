@@ -21,7 +21,7 @@
 #include <QLayout>
 
 #include "misliwindow.h"
-#include "../canvas.h"
+#include "../canvaswidget.h"
 
 EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     linkMenu(this),
@@ -224,7 +224,7 @@ void EditNoteDialogue::editNote() //false for new note , true for edit
                       timeline->baselineY() );
         qint64 intTest = edited_note->timeModified.toMSecsSinceEpoch() -
                 edited_note->timeMade.toMSecsSinceEpoch();
-        float test = timeline->scaleToPixels( intTest );
+        double test = timeline->scaleToPixels( intTest );
         slider->setValue( test );
         slider->show();
     }
@@ -262,7 +262,7 @@ void EditNoteDialogue::inputDone()
     QColor txt_col,bg_col;
     txt_col.setRgbF(0,0,1,1);
     bg_col.setRgbF(0,0,1,0.1);
-    float x, y;
+    double x, y;
 
     if( edited_note==nullptr){//If we're making a new note
 
@@ -386,15 +386,16 @@ QString EditNoteDialogue::maybeToRelativePath(QString path)
 
 void EditNoteDialogue::on_openButton_clicked()
 {
-    QString path = edited_note->addressString.split(" ")[0];
-    QFile f(path);
-    if(!f.exists()){
-        f.open(QFile::WriteOnly);
-        f.setPermissions(QFileDevice::ExeOwner | f.permissions());
-        f.write("#!/bin/bash\n");
-        f.write("#!/usr/bin/env python\n");
-        f.close();
+    QString scriptPath = edited_note->addressString.split(" ")[0];
+    scriptPath = QDir(misliWindow->currentDir()->folderPath).filePath(scriptPath);
+    QFile scriptFile(scriptPath);
 
+    if(!scriptFile.exists()){
+        scriptFile.open(QFile::WriteOnly);
+        scriptFile.setPermissions(QFileDevice::ExeOwner | scriptFile.permissions());
+        scriptFile.write("#!/bin/bash\n");
+        scriptFile.write("#!/usr/bin/env python\n");
+        scriptFile.close();
     }
-    QProcess::execute("subl3", QStringList()<<path);
+    QProcess::execute("subl3", QStringList() << scriptPath);
 }

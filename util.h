@@ -15,5 +15,5 @@ int q_get_value_for_key(QString string, QString key, unsigned int& result);
 int q_get_value_for_key(QString string, QString key, bool& result);
 int q_get_value_for_key(QString string, QString key, QStringList& result);
 int q_get_groups(QString string,QStringList& names,QStringList& groups);
-float q_version_string_to_number(QString version);
+int q_version_string_to_number(QString version);
 #endif // PETKO10Q_H

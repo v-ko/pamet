@@ -89,7 +89,7 @@ void CommunicationsModule::loadChatMessages(QString chatText)
                 (query.value(1).toString()=="Petko Ditchev") |
                 (query.value(1).toString()=="1048489022@facebook.com") ){
             item->setText( text+time );
-            item->setBackgroundColor( QColor(0,255,0,30));
+            item->setBackground( QBrush(QColor(0,255,0,30)) );
             item->setTextAlignment(Qt::AlignRight);
         }else if( query.value(2).toString().contains("@facebook") &&
                   (query.value(2).toString().split("@facebook").size()<3) ){

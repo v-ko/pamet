@@ -28,7 +28,7 @@
 #include "misli_desktop/mislidesktopgui.h"
 #include "misli_desktop/editnotedialogue.h"
 
-class Canvas : public QWidget
+class CanvasWidget : public QWidget
 {
     Q_OBJECT
 
@@ -36,25 +36,25 @@ class Canvas : public QWidget
 
 public:
     //Functions
-    Canvas(MisliWindow *misliWindow_);
-    ~Canvas();
+    CanvasWidget(MisliWindow *misliWindow_);
+    ~CanvasWidget();
 
     Note *getNoteUnderMouse(int mouseX , int mouseY);
     Note *getNoteClickedForResize(int mouseX , int mouseY);
     Link *getLinkUnderMouse(int x,int y); //returns one link (not necesserily the top one) under the mouse
     Link *getControlPointUnderMouse(int x, int y);
 
-    void unproject(float screenX, float screenY, float &realX, float &realY);
-    void project(float realX, float realY, float &screenX, float &screenY);
+    void unproject(double screenX, double screenY, double &realX, double &realY);
+    void project(double realX, double realY, double &screenX, double &screenY);
     QPointF unproject(QPointF);
     QLineF project(QLineF);
     QRectF project(QRectF);
     QPointF project(QPointF);
-    float projectX(float realX);
-    float projectY(float realY);
-    float unprojectX(float screenX);
-    float unprojectY(float screenY);
-    float heightScaleFactor();
+    double projectX(double realX);
+    double projectY(double realY);
+    double unprojectX(double screenX);
+    double unprojectY(double screenY);
+    double heightScaleFactor();
     QPointF mousePos();
 
     void centerEyeOnNote(Note * nt);
@@ -88,9 +88,9 @@ public:
     NoteFile *currentNoteFile = nullptr, *lastNoteFile = nullptr;
     QMetaObject::Connection nfChangedConnecton;
 
-    float distanceToPrimeNoteX, distanceToPrimeNoteY, resizeX, resizeY;
+    double distanceToPrimeNoteX, distanceToPrimeNoteY, resizeX, resizeY;
     int XonPush, YonPush, PushLeft;
-    float EyeXOnPush, EyeYOnPush;
+    double EyeXOnPush, EyeYOnPush;
     bool timedOutMove, moveOn, noteResizeOn, userIsDraggingStuff, draggedStuffIsValid, linkControlPointDragOn;
     bool linkingIsOn;
     bool ctrlUpdateHack;

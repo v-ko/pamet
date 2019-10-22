@@ -32,7 +32,7 @@
 #include "timelinewidget.h"
 
 
-class Canvas;
+class CanvasWidget;
 class MisliDesktopGui;
 class MisliDir;
 
@@ -55,11 +55,11 @@ public:
 
     //Properties
     MisliDir* currentDir();
-    Canvas * currentCanvas();
+    CanvasWidget * currentCanvas();
 
     //GUI
     Ui::MisliWindow *ui;
-    Canvas *currentCanvas_m = nullptr;
+    CanvasWidget *currentCanvas_m = nullptr;
     EditNoteDialogue *edit_w;
     NotesSearch *notes_search;
     QTabWidget tabWidget;
@@ -97,7 +97,7 @@ public slots:
     void updateTitle();
 
     void copySelectedNotesToClipboard();
-    void colorSelectedNotes(float txtR,float txtG,float txtB,float txtA,float backgroundR,float backgroundG,float backgroundB,float backgroundA);
+    void colorSelectedNotes(double txtR,double txtG,double txtB,double txtA,double backgroundR,double backgroundG,double backgroundB,double backgroundA);
     void colorTransparentBackground();
 
     void zoomOut();
@@ -105,6 +105,7 @@ public slots:
 
     void updateNoteFilesListMenu();
     void updateDirListMenu();
+    void updateTagShortcutsLabels();
 
     void handleNoteFilesChange();
 

@@ -19,8 +19,8 @@
 #include <QFileSystemWatcher>
 
 #include "mislidesktopgui.h"
-#include "../common.h"
-#include "../canvas.h"
+#include "../global.h"
+#include "../canvaswidget.h"
 
 MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     QApplication(argc,argv)

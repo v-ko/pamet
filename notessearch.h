@@ -29,20 +29,20 @@ public:
         MisliDir *md;
         NoteFile *nf;
         Note *nt;
-        float probability;
+        double probability;
         QString text;
     };
 
     //Functions
-    NotesSearch(MisliWindow *misli_window, float initial_probability);
+    NotesSearch(MisliWindow *misli_window, double initial_probability);
     int loadNotes();
-    int loadNotes(MisliDir * misliDir, float initial_probability);
-    int loadNotes(NoteFile * noteFile, MisliDir *misliDir, float initial_probability);
+    int loadNotes(MisliDir * misliDir, double initial_probability);
+    int loadNotes(NoteFile * noteFile, MisliDir *misliDir, double initial_probability);
     static bool compareItems(SearchItem first,SearchItem second);
 
     //Variables
     QList<SearchItem> searchItems,searchResults;
-    float initialProbability;
+    double initialProbability;
     MisliWindow *misliWindow;
 
 signals:

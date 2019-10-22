@@ -19,10 +19,10 @@
 
 #include "notessearch.h"
 #include "misliwindow.h"
-#include "canvas.h"
+#include "canvaswidget.h"
 #include "ui_misliwindow.h"
 
-NotesSearch::NotesSearch(MisliWindow *misli_window, float initial_probability)
+NotesSearch::NotesSearch(MisliWindow *misli_window, double initial_probability)
 {
     misliWindow = misli_window;
     initialProbability = initial_probability;
@@ -37,7 +37,7 @@ int NotesSearch::loadNotes()
     }
     return notes_loaded;
 }
-int NotesSearch::loadNotes(MisliDir *misliDir, float initial_probability)
+int NotesSearch::loadNotes(MisliDir *misliDir, double initial_probability)
 {
     int notes_loaded=0;
 
@@ -50,7 +50,7 @@ int NotesSearch::loadNotes(MisliDir *misliDir, float initial_probability)
     }
     return notes_loaded;
 }
-int NotesSearch::loadNotes(NoteFile *noteFile, MisliDir* misliDir, float initial_probability)
+int NotesSearch::loadNotes(NoteFile *noteFile, MisliDir* misliDir, double initial_probability)
 {
     int notes_loaded=0;
     SearchItem searchItem;

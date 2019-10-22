@@ -9,7 +9,7 @@ public:
     struct Statistic{
         QString name;
         QList<QDateTime> timestamps;
-        QList<float> values;
+        QList<double> values;
     };
 
     //Functions

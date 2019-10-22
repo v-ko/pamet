@@ -22,7 +22,7 @@
 #include "util.h"
 #include "note.h"
 #include "notefile.h"
-#include "common.h"
+#include "global.h"
 #include "misliinstance.h"
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"

@@ -31,7 +31,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 
-#include "common.h"
+#include "global.h"
 #include "util.h"
 #include "note.h"
 
@@ -40,6 +40,7 @@ Note::Note(Note *nt)
 {
     id = nt->id;
     text_m = nt->text_m;
+    textForShortening = text_m;
     rect_m = nt->rect_m;
     timeMade = nt->timeMade;
     timeModified = nt->timeModified;
@@ -47,6 +48,7 @@ Note::Note(Note *nt)
     textColor_m = nt->textColor_m;
     backgroundColor_m = nt->backgroundColor_m;
     tags = nt->tags;
+    checkForDefinitions();
 }
 Note::Note(int id_, QString text)
 {
@@ -105,13 +107,13 @@ Note * Note::fromIniString(int id_, QString iniString)
 
     Note * nt = new Note(id_ , tmpString);
 
-    float x, y, a, b;
+    double x, y, a, b;
     err += q_get_value_for_key(iniString,"x",x);
     err += q_get_value_for_key(iniString,"y",y);
     err += q_get_value_for_key(iniString,"a",a);
-    a = std::max<float>(MIN_NOTE_A, std::min<float>(a, MAX_NOTE_A));
+    a = std::max<double>(MIN_NOTE_A, std::min<double>(a, MAX_NOTE_A));
     err += q_get_value_for_key(iniString,"b",b);
-    b = std::max<float>(MIN_NOTE_A, std::min<float>(b, MAX_NOTE_A));
+    b = std::max<double>(MIN_NOTE_A, std::min<double>(b, MAX_NOTE_A));
     nt->setRect(QRectF(qreal(x), qreal(y), qreal(a), qreal(b)));
 
     err += q_get_value_for_key(iniString,"font_size", nt->fontSize);
@@ -324,7 +326,7 @@ void Note::drawNote(QPainter &painter)
 
             double frame_ratio,pixmap_ratio;
             frame_ratio = rect().width()/rect().height();
-            pixmap_ratio = float(img->width())/float(img->height());
+            pixmap_ratio = double(img->width())/double(img->height());
 
             if( frame_ratio > pixmap_ratio ){
                 //if the width for the note frame is proportionally bigger than the pictures width
@@ -351,7 +353,7 @@ void Note::drawNote(QPainter &painter)
     //So this is kind of a hack to use pointSize without the text being different size on different (by DPI) displays
     font.setPointSizeF(10000);
     QFontMetrics fm(font);
-    font.setPointSizeF( ( fontSize *10000/float(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
+    font.setPointSizeF( ( fontSize *10000/double(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
     painter.setFont(font);
 
     pen.setColor( textColor_m );
@@ -362,7 +364,7 @@ void Note::drawNote(QPainter &painter)
     painter.drawText( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m);
 
     //For testing
-    //painter.drawText(rect().topLeft(),QString::number(fm.height())+"'"+QString::number(fontSize *10000/float(fm.height())));
+    //painter.drawText(rect().topLeft(),QString::number(fm.height())+"'"+QString::number(fontSize *10000/double(fm.height())));
     //QRectF boundingRect = painter.boundingRect( textRect(), Qt::TextWordWrap | alignment() | Qt::AlignVCenter, textForDisplay_m );
     //painter.fillRect( boundingRect, QBrush( QColor(255,0,0,60)));
     //painter.fillRect( textRect() , QBrush( QColor(0,255,0,60))); //shows the probe iterator which may be for the right margin so it's normal if it's a wrong bounding box

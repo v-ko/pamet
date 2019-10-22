@@ -24,11 +24,11 @@ public:
     int scaleToPixels(qint64 miliseconds);
     double scaleToMSeconds(qint64 pixels);
     int toPixelsFromMSecs(qint64 miliseconds);
-    void drawDelimiter(QPainter* painter, qint64 delimiterInMSecs, float lineHeight);
+    void drawDelimiter(QPainter* painter, qint64 delimiterInMSecs, double lineHeight);
     void addModule(TimelineModule *module);
     qint64 leftEdgeInMSecs();
-    float baselineY();
-    float fontSizeForNote(Note *nt);
+    double baselineY();
+    double fontSizeForNote(Note *nt);
     Note *getNoteUnderMouse(QPoint mousePosition);
 
     //Variables
@@ -39,7 +39,7 @@ public:
     qint64 positionInMSecs; //position of the center of the visible timeline
     //miliseconds since (or before for negative values) 1970.1.1 00:00:00 (the posix standard)
     QSlider slider;
-    float baselinePositionCoefficient;
+    double baselinePositionCoefficient;
     ArchiveModule archiveModule;
     int lastMousePos;
 

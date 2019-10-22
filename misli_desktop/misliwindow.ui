@@ -75,6 +75,33 @@
        </widget>
       </item>
       <item>
+       <widget class="QWidget" name="tagGUI" native="true">
+        <layout class="QVBoxLayout" name="verticalLayout_2">
+         <item>
+          <layout class="QHBoxLayout" name="tagFirstRowHLayout">
+           <item>
+            <widget class="QLabel" name="tagTextLabel">
+             <property name="text">
+              <string>Tag label:</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="tagTextLineEdit"/>
+           </item>
+           <item>
+            <widget class="QPushButton" name="exitTagModeButton">
+             <property name="text">
+              <string>Exit tag mode</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+        </layout>
+       </widget>
+      </item>
+      <item>
        <widget class="QTabWidget" name="tabWidget">
         <property name="tabsClosable">
          <bool>true</bool>
@@ -222,7 +249,6 @@
     <addaction name="actionJump_to_nearest_note"/>
     <addaction name="menuDonate_Bitcoin"/>
     <addaction name="actionExport_all_as_web_notes"/>
-    <addaction name="actionMigrate_to_JSON_format"/>
    </widget>
    <widget class="QMenu" name="menuLanguage">
     <property name="title">
@@ -731,16 +757,16 @@
   <connection>
    <sender>actionClose</sender>
    <signal>triggered()</signal>
-   <receiver>MisliWindow</receiver>
-   <slot>close()</slot>
+   <receiver>actionToggle_tag</receiver>
+   <slot>toggle()</slot>
    <hints>
     <hint type="sourcelabel">
      <x>-1</x>
      <y>-1</y>
     </hint>
     <hint type="destinationlabel">
-     <x>399</x>
-     <y>299</y>
+     <x>-1</x>
+     <y>-1</y>
     </hint>
    </hints>
   </connection>
@@ -805,6 +831,22 @@
     <hint type="destinationlabel">
      <x>202</x>
      <y>48</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>tagTextLineEdit</sender>
+   <signal>textChanged(QString)</signal>
+   <receiver>tabWidget</receiver>
+   <slot>update()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>516</x>
+     <y>142</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>531</x>
+     <y>380</y>
     </hint>
    </hints>
   </connection>

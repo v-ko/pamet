@@ -16,12 +16,12 @@
 
 #include <QInputDialog>
 
-#include "canvas.h"
+#include "canvaswidget.h"
 #include "misli_desktop/misliwindow.h"
 #include "notessearch.h"
 #include "ui_misliwindow.h"
 
-Canvas::Canvas(MisliWindow *misliWindow_) :
+CanvasWidget::CanvasWidget(MisliWindow *misliWindow_) :
     detailsMenu(tr("Details"),this)
 {
     hide();
@@ -55,74 +55,74 @@ Canvas::Canvas(MisliWindow *misliWindow_) :
     setFocusPolicy(Qt::ClickFocus);
     setAcceptDrops(true);
 }
-Canvas::~Canvas()
+CanvasWidget::~CanvasWidget()
 {
     delete searchField;
     delete contextMenu;
     delete infoLabel;
     delete move_func_timeout;
 }
-QPointF Canvas::project(QPointF point)
+QPointF CanvasWidget::project(QPointF point)
 {
     return QPointF(projectX(point.x()),projectY(point.y()));
 }
-QLineF Canvas::project(QLineF line)
+QLineF CanvasWidget::project(QLineF line)
 {
     return QLineF(project(line.p1()),project(line.p2()));
 }
-QRectF Canvas::project(QRectF rect)
+QRectF CanvasWidget::project(QRectF rect)
 {
     return QRectF(project(rect.topLeft()),project(rect.bottomRight()));
 }
-void Canvas::project(float realX, float realY, float &screenX, float &screenY)
+void CanvasWidget::project(double realX, double realY, double &screenX, double &screenY)
 {
     screenX = projectX(realX);
     screenY = projectY(realY);
 }
-void Canvas::unproject(float screenX, float screenY, float &realX, float &realY)
+void CanvasWidget::unproject(double screenX, double screenY, double &realX, double &realY)
 {
     realX = unprojectX(screenX);
     realY = unprojectY(screenY);
 }
-QPointF Canvas::unproject(QPointF point)
+QPointF CanvasWidget::unproject(QPointF point)
 {
     return QPointF(unprojectX(point.x()),unprojectY(point.y()));
 }
 
-float Canvas::projectX(float realX)
+double CanvasWidget::projectX(double realX)
 {
     realX -= noteFile()->eyeX;
     realX = realX/noteFile()->eyeZ; //The heigher we look from - the smaller the note
     realX = realX*1000; //More readable note sizes (and not to break compatability, this section was changed)
-    return realX + float(width())/2;
+    return realX + double(width())/2;
 }
-float Canvas::projectY(float realY)
+double CanvasWidget::projectY(double realY)
 {
     realY -= noteFile()->eyeY;
     realY = realY/noteFile()->eyeZ;
     realY = realY*1000;
-    return realY + float(height())/2;
+    return realY + double(height())/2;
 }
-float Canvas::unprojectX(float screenX)
+double CanvasWidget::unprojectX(double screenX)
 {
-    screenX -= float(width())/2;
+    screenX -= double(width())/2;
     screenX = screenX/1000;
     screenX = screenX*noteFile()->eyeZ;
     return screenX + noteFile()->eyeX;
 }
-float Canvas::unprojectY(float screenY)
+double CanvasWidget::unprojectY(double screenY)
 {
-    screenY -= float(height())/2;
+    screenY -= double(height())/2;
     screenY = screenY/1000;
     screenY = screenY*noteFile()->eyeZ;
     return screenY + noteFile()->eyeY;
 }
-float Canvas::heightScaleFactor()
+double CanvasWidget::heightScaleFactor()
 {
     return 1000/noteFile()->eyeZ;
 }
 
-void Canvas::paintEvent(QPaintEvent*)
+void CanvasWidget::paintEvent(QPaintEvent*)
 {
     if(noteFile()==nullptr) return;
 
@@ -201,7 +201,7 @@ void Canvas::paintEvent(QPaintEvent*)
 
             //Wash out some notes to visualize tags if tags view is activated
             if(misliWindow->ui->actionToggle_tags_view->isChecked()){
-                if(!nt->tags.contains("for_export_v1")){
+                if(!nt->tags.contains(misliWindow->ui->tagTextLineEdit->text())){
                     painter.fillRect(nt->rect(), QBrush(QColor(255,255,255,128), Qt::SolidPattern));
                 }
             }
@@ -209,10 +209,10 @@ void Canvas::paintEvent(QPaintEvent*)
             //Draw additional lines to help alignment
             if( (moveOn | noteResizeOn) && nt->isSelected_m){
 
-                float x = nt->rect().x();
-                float y = nt->rect().y();
-                float rectX = nt->rect().right(); //coordinates of the rectangle encapsulating the note
-                float rectY = nt->rect().bottom();
+                double x = nt->rect().x();
+                double y = nt->rect().y();
+                double rectX = nt->rect().right(); //coordinates of the rectangle encapsulating the note
+                double rectY = nt->rect().bottom();
 
                 QLineF leftLine(x,y-ALIGNMENT_LINE_LENGTH,x,rectY+ALIGNMENT_LINE_LENGTH);
                 QLineF rightLine(rectX,y-ALIGNMENT_LINE_LENGTH,rectX,rectY+ALIGNMENT_LINE_LENGTH);
@@ -254,7 +254,7 @@ void Canvas::paintEvent(QPaintEvent*)
     if( ctrlUpdateHack ){
         ctrlUpdateHack = false;
         NoteFile *clipboardNF = misliWindow->clipboardNoteFile;
-        float x,y;
+        double x,y;
         x = mapFromGlobal(cursor().pos()).x(); //get mouse screen coords
         y = mapFromGlobal(cursor().pos()).y();
         unproject(x,y,x,y); //translate them to canvas coords
@@ -277,7 +277,7 @@ void Canvas::paintEvent(QPaintEvent*)
     }
 }
 
-void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
+void CanvasWidget::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if(noteFile()==nullptr) return;
 
@@ -288,7 +288,7 @@ void Canvas::mouseDoubleClickEvent(QMouseEvent *event)
         doubleClick();
     }
 }
-void Canvas::wheelEvent(QWheelEvent *event)
+void CanvasWidget::wheelEvent(QWheelEvent *event)
 {
     if(noteFile()==nullptr) return;
 
@@ -301,7 +301,7 @@ void Canvas::wheelEvent(QWheelEvent *event)
     update();
     //glutPostRedisplay(); artefact
 }
-void Canvas::mouseMoveEvent(QMouseEvent *event)
+void CanvasWidget::mouseMoveEvent(QMouseEvent *event)
 {
     if(noteFile()==nullptr) return;
 
@@ -330,7 +330,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
             for(Note *nt:noteFile()->notes){
                 if(nt->isSelected_m){
 
-                    float d_x, d_y, realX, realY;
+                    double d_x, d_y, realX, realY;
                     unproject(event->x(),event->y(),realX,realY);
                     d_x = realX - resizeX;
                     d_y = realY - resizeY;
@@ -351,7 +351,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
             update();
         }else{ //Else we're moving about the canvas (respectively - changing the camera position)
 
-            float xrel=event->x()-XonPush,yrel=event->y()-YonPush;
+            double xrel=event->x()-XonPush,yrel=event->y()-YonPush;
             noteFile()->eyeX = EyeXOnPush - xrel*noteFile()->eyeZ/1000; // eyez/1000 is the transform factor practically
             noteFile()->eyeY = EyeYOnPush - yrel*noteFile()->eyeZ/1000;
             update();
@@ -365,7 +365,7 @@ void Canvas::mouseMoveEvent(QMouseEvent *event)
         update(); //while showing the shadows of the notes for pasting
     }
 }
-void Canvas::dragEnterEvent(QDragEnterEvent *event)
+void CanvasWidget::dragEnterEvent(QDragEnterEvent *event)
 {
     //Pretty much if there's items of the types we accept - we acknowledge the drop
     //but if they are invalid - we indicate that. Before the drop - with a redish canvas.
@@ -381,43 +381,46 @@ void Canvas::dragEnterEvent(QDragEnterEvent *event)
         update();
     }
 }
-void Canvas::dragLeaveEvent(QDragLeaveEvent *)
+void CanvasWidget::dragLeaveEvent(QDragLeaveEvent *)
 {
     userIsDraggingStuff = false;
     update();
 }
-void Canvas::dropEvent(QDropEvent *event)
+void CanvasWidget::dropEvent(QDropEvent *event)
 {
     pasteMimeData(event->mimeData());
     userIsDraggingStuff = false;
     update();
 }
 
-void Canvas::doubleClick()
+void CanvasWidget::doubleClick()
 {
     Note *nt = getNoteUnderMouse(mousePos().x(),mousePos().y());
 
     if(nt!=nullptr){ //if we've clicked on a note
-        if(nt->type==NoteType::redirecting){ //if it's a valid redirecting note
+        if(nt->type == NoteType::redirecting){ //if it's a valid redirecting note
 
             if(misliWindow->currentDir()->noteFileByName(nt->addressString)!=nullptr)
             setNoteFile(misliWindow->currentDir()->noteFileByName(nt->addressString));
 
-        }else if(nt->type==NoteType::textFile){
+        }else if(nt->type == NoteType::textFile){
 
             QDesktopServices::openUrl(QUrl("file://"+nt->addressString, QUrl::TolerantMode));
 
-        }else if(nt->type==NoteType::systemCall){
+        }else if(nt->type == NoteType::systemCall){
 
             QProcess process;
 
             //Run the command and get the output
+            process.setWorkingDirectory(currentDir()->folderPath);
             process.start(nt->addressString);
             process.waitForFinished(-1);
             QByteArray out = process.readAllStandardOutput();
+            QByteArray err = process.readAllStandardError();
+            QString cwd = QDir::currentPath();
             if(!out.isEmpty()){
                 //Put the feedback in a note below the command
-                Note *newNote = new Note(noteFile()->getNewId(), QString(out));
+                Note *newNote = new Note(noteFile()->getNewId(), QString(out + err));
                 newNote->setRect(QRectF(nt->rect().x(), nt->rect().bottom() + 1, 1, 1));
                 newNote->timeMade = QDateTime::currentDateTime();
                 newNote->timeModified = QDateTime::currentDateTime();
@@ -439,7 +442,7 @@ void Canvas::doubleClick()
         misliWindow->edit_w->newNote();
     }
 }
-void Canvas::handleMousePress(Qt::MouseButton button)
+void CanvasWidget::handleMousePress(Qt::MouseButton button)
 {
     if(noteFile()==nullptr) return;
 
@@ -578,7 +581,7 @@ void Canvas::handleMousePress(Qt::MouseButton button)
         contextMenu->popup(cursor().pos());
     }
 }
-void Canvas::handleMouseRelease(Qt::MouseButton button)
+void CanvasWidget::handleMouseRelease(Qt::MouseButton button)
 {
     if(noteFile()==nullptr) return;
 
@@ -603,7 +606,7 @@ void Canvas::handleMouseRelease(Qt::MouseButton button)
         if(nt->type == NoteType::redirecting){
             NoteFile *nfUnderMouse = misliWindow->currentDir()->noteFileByName(nt->addressString);
             if(nfUnderMouse != nullptr){
-                Canvas * newCanvas = new Canvas(misliWindow);
+                CanvasWidget * newCanvas = new CanvasWidget(misliWindow);
                 misliWindow->ui->tabWidget->addTab(newCanvas, "");
                 newCanvas->setNoteFile(nfUnderMouse);
             }
@@ -612,7 +615,7 @@ void Canvas::handleMouseRelease(Qt::MouseButton button)
     }
 }
 
-Note *Canvas::getNoteUnderMouse(int mouseX, int mouseY)
+Note *CanvasWidget::getNoteUnderMouse(int mouseX, int mouseY)
 {
     for(Note *nt: noteFile()->notes){
         if( project(nt->rect()).contains(QPointF(mouseX,mouseY))){
@@ -622,7 +625,7 @@ Note *Canvas::getNoteUnderMouse(int mouseX, int mouseY)
 
 return nullptr;
 }
-Note *Canvas::getNoteClickedForResize(int mouseX , int mouseY)
+Note *CanvasWidget::getNoteClickedForResize(int mouseX , int mouseY)
 {
     for(Note *nt: noteFile()->notes){
         if(QLineF(unproject(QPointF(mouseX,mouseY)),nt->rect().bottomRight()).length()<=RESIZE_CIRCLE_RADIUS){
@@ -632,7 +635,7 @@ Note *Canvas::getNoteClickedForResize(int mouseX , int mouseY)
     }
     return nullptr;
 }
-Link *Canvas::getLinkUnderMouse(int mouseX,int mouseY) //returns one link (not necesserily the top one) onder the mouse
+Link *CanvasWidget::getLinkUnderMouse(int mouseX,int mouseY) //returns one link (not necesserily the top one) onder the mouse
 {
     QRectF mouseSelectionRect(0,0,CLICK_RADIUS,CLICK_RADIUS); //not perfect, but works
     mouseSelectionRect.moveCenter(unproject(QPointF(mouseX,mouseY)));
@@ -646,7 +649,7 @@ Link *Canvas::getLinkUnderMouse(int mouseX,int mouseY) //returns one link (not n
     }
     return nullptr;
 }
-Link *Canvas::getControlPointUnderMouse(int x, int y)
+Link *CanvasWidget::getControlPointUnderMouse(int x, int y)
 {
     for(Note *nt: noteFile()->notes){
         for(Link &ln: nt->outlinks){
@@ -667,7 +670,7 @@ Link *Canvas::getControlPointUnderMouse(int x, int y)
     return nullptr;
 }
 
-void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not off the move flag is set to true
+void CanvasWidget::startMove(){ //if the mouse hasn't moved and time_out_move is not off the move flag is set to true
 
     qreal x = mousePos().x();
     qreal y = mousePos().y();
@@ -689,9 +692,9 @@ void Canvas::startMove(){ //if the mouse hasn't moved and time_out_move is not o
     timedOutMove = false;
 }
 
-QString Canvas::copySelectedNotes(NoteFile *sourceNotefile, NoteFile *targetNoteFile)
+QString CanvasWidget::copySelectedNotes(NoteFile *sourceNotefile, NoteFile *targetNoteFile)
 {
-    QString clip_text;
+    QString clipboardText;
 
     //Copy selected notes (only the info that would be in the file)
     for(Note *nt_in_source: sourceNotefile->notes){
@@ -699,26 +702,26 @@ QString Canvas::copySelectedNotes(NoteFile *sourceNotefile, NoteFile *targetNote
             Note *nt_in_target = targetNoteFile->cloneNote(nt_in_source);
             //Add the links
             nt_in_target->outlinks = nt_in_source->outlinks;
+
             //Add the note text to the regular clipboard
-            clip_text+=nt_in_source->text_m;
-            clip_text+="\n\n"; //leave space before the next (gets trimmed in the end)
+            clipboardText += nt_in_source->text_m;
+            clipboardText += "\n\n"; //leave space before the next (gets trimmed in the end)
         }
     }
 
-    return clip_text;
+    return clipboardText;
 }
 
-void Canvas::paste()
+void CanvasWidget::paste()
 {
-    NoteFile *clipboardNF=misliWindow->clipboardNoteFile;
-    float x,y;
+    NoteFile *clipboardNF = misliWindow->clipboardNoteFile;
     int old_id;
 
     clipboardNF->makeAllIDsNegative();
 
     //Make coordinates relative to the mouse
-    x=mousePos().x(); //get mouse screen coords
-    y=mousePos().y();
+    double x = mousePos().x(); //get mouse screen coords
+    double y = mousePos().y();
     unproject(x,y,x,y); //translate them to canvas coords
     clipboardNF->makeCoordsRelativeTo(-x,-y);
 
@@ -750,10 +753,10 @@ void Canvas::paste()
     noteFile()->save();
 }
 
-void Canvas::jumpToNearestNote()
+void CanvasWidget::jumpToNearestNote()
 {
     Note *nearest_note = nullptr;
-    float best_result = 0, result,x_unprojected, y_unprojected;
+    double best_result = 0, result,x_unprojected, y_unprojected;
 
     unproject(mousePos().x(),mousePos().y(),x_unprojected,y_unprojected);
 
@@ -773,7 +776,7 @@ void Canvas::jumpToNearestNote()
     }
 }
 
-NoteFile* Canvas::noteFile()
+NoteFile* CanvasWidget::noteFile()
 {
     if(currentDir()==nullptr){
         qDebug()<<"[Canvas::noteFile] Current dir is null.";
@@ -782,7 +785,7 @@ NoteFile* Canvas::noteFile()
         return currentNoteFile;
     }
 }
-void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care what happens to the last NF
+void CanvasWidget::setNoteFile(NoteFile *newNoteFile) //This function has to not care what happens to the last NF
                                                 //Else we need no know the misliDir of the last one
 {
     MisliDir *misliDir = currentDir();
@@ -843,14 +846,14 @@ void Canvas::setNoteFile(NoteFile *newNoteFile) //This function has to not care 
     emit noteFileChanged(newNoteFile);//In principle it should be unused
 }
 
-void Canvas::centerEyeOnNote(Note *nt)
+void CanvasWidget::centerEyeOnNote(Note *nt)
 {
     noteFile()->eyeX = nt->rect().center().x();
     noteFile()->eyeY = nt->rect().center().y();
     update();
 }
 
-bool Canvas::mimeDataIsCompatible(const QMimeData *mimeData)
+bool CanvasWidget::mimeDataIsCompatible(const QMimeData *mimeData)
 {
     if(mimeData->hasUrls()){
         QList<QUrl> urls = mimeData->urls();
@@ -882,7 +885,7 @@ bool Canvas::mimeDataIsCompatible(const QMimeData *mimeData)
         return false;
     }
 }
-void Canvas::pasteMimeData(const QMimeData *mimeData)
+void CanvasWidget::pasteMimeData(const QMimeData *mimeData)
 {
     //We'll use the note input mechanism to make the new notes from the dropped items
     misliWindow->edit_w->x_on_new_note=mousePos().x(); //cursor position relative to the gl widget
@@ -938,12 +941,12 @@ void Canvas::pasteMimeData(const QMimeData *mimeData)
     }
 }
 
-QPointF Canvas::mousePos()
+QPointF CanvasWidget::mousePos()
 {
     return mapFromGlobal(cursor().pos());
 }
 
-void Canvas::setCurrentDir(MisliDir * newDir)
+void CanvasWidget::setCurrentDir(MisliDir * newDir)
 {
     if(currentDir_m==newDir && newDir!=nullptr) return;
 

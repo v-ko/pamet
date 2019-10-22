@@ -32,7 +32,7 @@
 #include "../misliinstance.h"
 
 #include "editnotedialogue.h"
-#include "../canvas.h"
+#include "../canvaswidget.h"
 #include "mislidesktopgui.h"
 
 MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
@@ -83,11 +83,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     //---Init widgets and widnows---
     ui->mainLayout->addWidget(ui->tabWidget);
     edit_w = new EditNoteDialogue(this);
-    Canvas *cv = new Canvas(this);
+    CanvasWidget *cv = new CanvasWidget(this);
     currentCanvas_m = cv;
     qDebug()<<"ADDING TAB";
     ui->tabWidget->addTab(cv, "");
-    Canvas * cv1 = dynamic_cast<Canvas*>(ui->tabWidget->currentWidget());
+    CanvasWidget * cv1 = dynamic_cast<CanvasWidget*>(ui->tabWidget->currentWidget());
     if ( cv1 == cv ){
         qDebug()<<"SUCCESS";
     }else{
@@ -98,6 +98,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     ui->searchListView->hide();
     ui->searchScopeComboBox->hide();
     ui->jumpToNearestNotePushButton->hide();
+    ui->tagGUI->hide();
     updateMenu.addAction(ui->actionDownload_it);
 
     addAction(ui->actionSelect_note_under_mouse);
@@ -144,7 +145,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionRemove_current,&QAction::triggered,this,&MisliWindow::removeCurrentFolder);
     connect(ui->actionTransparent_background,&QAction::triggered,this,&MisliWindow::colorTransparentBackground);
     connect(ui->actionDelete_notefile,&QAction::triggered,this,&MisliWindow::deleteNoteFileFromFS);
-    connect(ui->jumpToNearestNotePushButton,&QPushButton::clicked,currentCanvas_m,&Canvas::jumpToNearestNote);
+    connect(ui->jumpToNearestNotePushButton,&QPushButton::clicked,currentCanvas_m,&CanvasWidget::jumpToNearestNote);
     connect(ui->actionAdd_new,&QAction::triggered,this,&MisliWindow::addNewFolder);
     connect(ui->addMisliDirPushButton,&QPushButton::clicked,this,&MisliWindow::addNewFolder);
     connect(ui->menuFolders,&QMenu::triggered,this,&MisliWindow::handleFoldersMenuClick);
@@ -153,7 +154,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionRename_notefile,&QAction::triggered,this,&MisliWindow::renameNoteFile);
     connect(ui->actionMake_this_view_point_default_for_the_notefile,&QAction::triggered,this,&MisliWindow::makeViewpointDefault);
     connect(ui->actionCopy,&QAction::triggered,this,&MisliWindow::copySelectedNotesToClipboard);
-    connect(ui->actionPaste,&QAction::triggered,currentCanvas_m,&Canvas::paste);
+    connect(ui->actionPaste,&QAction::triggered,currentCanvas_m,&CanvasWidget::paste);
 
     //Download update action (lambda)
     connect(ui->actionDownload_it,&QAction::triggered,currentCanvas_m,[&](){
@@ -402,32 +403,31 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     //Toggle the tags view (handled mostly in Canvas::paintEvent()
     connect(ui->actionToggle_tags_view, &QAction::toggled, [&](){
         currentCanvas_m->update();
+        if(ui->actionToggle_tags_view->isChecked()){
+            ui->tagGUI->show();
+        }else{
+            ui->tagGUI->hide();
+        }
     });
     //Tag the selected notes
     connect(ui->actionToggle_tag, &QAction::triggered, [&](){
         int tagsChanged = 0;
+        QString tag = ui->tagTextLineEdit->text();
+
+        if(tag.isEmpty()) return;
+
         for(Note * nt: currentCanvas_m->noteFile()->notes){
             if(nt->isSelected()){
                 tagsChanged++;
-                if(nt->tags.contains("for_export_v1")){
-                    nt->tags.removeOne("for_export_v1");
+                if(nt->tags.contains(tag)){
+                    nt->tags.removeOne(tag);
                 }else{
-                    nt->tags.append("for_export_v1");
+                    nt->tags.append(tag);
                 }
             }
         }
         if(tagsChanged>0) currentCanvas()->currentNoteFile->save();
     });
-   /* // Migrate to JSON
-    connect(ui->actionMigrate_to_JSON_format, &QAction::triggered, [&](){
-        use_json = true;
-
-        for(auto md: misliInstance()->misliDirs()){
-            for(auto nf: md->noteFiles()){
-                nf->save();
-            }
-        }
-    });*/
 
     //---------------------Creating the virtual note files----------------------
     clipboardNoteFile = new NoteFile;
@@ -694,7 +694,7 @@ void MisliWindow::updateTitle()
     ui->tabWidget->setTabText(ui->tabWidget->indexOf(currentCanvas_m), title);
 }
 
-void MisliWindow::colorSelectedNotes(float txtR, float txtG, float txtB, float txtA, float backgroundR, float backgroundG, float backgroundB, float backgroundA)
+void MisliWindow::colorSelectedNotes(double txtR, double txtG, double txtB, double txtA, double backgroundR, double backgroundG, double backgroundB, double backgroundA)
 {
     Note *nt;
     while(currentCanvas_m->noteFile()->getFirstSelectedNote()!=nullptr){
@@ -835,13 +835,13 @@ void MisliWindow::handleVersionInfoReply(QNetworkReply *reply)
     }
     updateCheckDone = true;
 }
-Canvas * MisliWindow::currentCanvas(){
+CanvasWidget * MisliWindow::currentCanvas(){
     return currentCanvas_m;
 }
 void MisliWindow::on_tabWidget_currentChanged(int index)
 {
     QWidget *cw = ui->tabWidget->currentWidget();
-    Canvas *cv = dynamic_cast<Canvas*>(cw);
+    CanvasWidget *cv = dynamic_cast<CanvasWidget*>(cw);
     if(cv != nullptr) {
         qDebug()<<"TEST COMPLETED";
         currentCanvas_m = cv;
@@ -858,4 +858,10 @@ void MisliWindow::on_tabWidget_currentChanged(int index)
 void MisliWindow::on_tabWidget_tabBarClicked(int index)
 {
 
+}
+
+
+void MisliWindow::updateTagShortcutsLabels()
+{
+//    misliDesktopGUI->settings->
 }

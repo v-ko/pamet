@@ -25,10 +25,10 @@
 #include "util.h"
 
 #include "notefile.h"
-#include "common.h"
+#include "global.h"
 
 class MisliInstance;
-class Canvas;
+class CanvasWidget;
 
 class MisliDir : public QObject
 
@@ -48,7 +48,7 @@ public:
     NoteFile * defaultNfOnStartup();
 
     //Properties
-    float defaultEyeZ();
+    double defaultEyeZ();
     QList<NoteFile*> noteFiles();
 
     //Variables
@@ -63,12 +63,12 @@ public:
 
 signals:
     //Property chabges
-    void defaultEyeZChanged(float);
+    void defaultEyeZChanged(double);
     void noteFilesChanged();
 
 public slots:
     //Set properties
-    void setDefaultEyeZ(float);
+    void setDefaultEyeZ(double);
 
     //Other
     bool renameNoteFile(NoteFile *nf, QString newName);

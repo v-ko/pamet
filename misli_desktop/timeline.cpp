@@ -10,7 +10,7 @@
 #include "timelinewidget.h"
 #include "misliwindow.h"
 #include "ui_timelinewidget.h"
-#include "../common.h"
+#include "../global.h"
 
 Timeline::Timeline(TimelineWidget *timelineWidget_) :
     QWidget(timelineWidget_),
@@ -55,11 +55,11 @@ int Timeline::toPixelsFromMSecs(qint64 miliseconds)
     return scaleToPixels(offsetInMSecs);
 }
 
-void Timeline::drawDelimiter(QPainter *painter, qint64 delimiterInMSecs, float lineHeight)
+void Timeline::drawDelimiter(QPainter *painter, qint64 delimiterInMSecs, double lineHeight)
 {
-    float offset = toPixelsFromMSecs(delimiterInMSecs);
-    float y1 = baselineY() - lineHeight/2;
-    float y2 = baselineY() + lineHeight/2;
+    double offset = toPixelsFromMSecs(delimiterInMSecs);
+    double y1 = baselineY() - lineHeight/2;
+    double y2 = baselineY() + lineHeight/2;
 
     QLineF line(offset, y1, offset, y2);
     painter->drawLine(line);
@@ -77,7 +77,7 @@ void Timeline::paintEvent(QPaintEvent *)
     painter.fillRect(0,0,width(),height(),QColor(255,255,255,255)); //clear background
     QFont font;
     QPen watermarkTextPen( QColor(0,0,0,60) );
-    float opacity = 1;
+    double opacity = 1;
 
     //Test text + current time
     painter.drawText(1,15, "positionInSecs:"+QString::number(positionInMSecs)+
@@ -115,7 +115,7 @@ void Timeline::paintEvent(QPaintEvent *)
         {
             //Draw delimeters
             painter.setPen(Qt::black);
-            drawDelimiter(&painter, delimeterPosition, scaleToPixels( float(1*days)/10) );
+            drawDelimiter(&painter, delimeterPosition, scaleToPixels( double(1*days)/10) );
             //Draw text
             QRectF textField;
             textField.setWidth( scaleToPixels(days) );
@@ -163,7 +163,7 @@ void Timeline::paintEvent(QPaintEvent *)
         {
             //Draw delimeters
             painter.setPen(Qt::red);
-            drawDelimiter(&painter, delimeterPosition, scaleToPixels( float(months)/10) );
+            drawDelimiter(&painter, delimeterPosition, scaleToPixels( double(months)/10) );
 
             //Draw text
             QRectF textField;
@@ -212,7 +212,7 @@ void Timeline::paintEvent(QPaintEvent *)
         {
             //Draw delimeters
             painter.setPen(Qt::blue);
-            drawDelimiter(&painter, delimeterPosition, scaleToPixels( float(years)/10) );
+            drawDelimiter(&painter, delimeterPosition, scaleToPixels( double(years)/10) );
 
             //Draw text
             QRectF textField;
@@ -241,7 +241,7 @@ void Timeline::paintEvent(QPaintEvent *)
     //Remove notes that are not onscreen
     for(int i=0; i<nts.size(); i++){
         Note *nt = nts[i];
-        float x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
+        double x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
         QRectF tmpRect = nt->rect();
         tmpRect.moveCenter( QPointF(x, 0) );
         tmpRect.moveBottom( baselineY()-5 );
@@ -266,8 +266,8 @@ void Timeline::paintEvent(QPaintEvent *)
     for(int i=0; i<nts.size(); i++){
         Note *nt = nts[i];
         nt->fontSize = fontSizeForNote(nt);
-        float x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
-        float w = scaleToPixels( nt->timeMade.msecsTo(nt->timeModified) );
+        double x = scaleToPixels( nt->timeMade.toMSecsSinceEpoch() - leftEdgeInMSecs() );
+        double w = scaleToPixels( nt->timeMade.msecsTo(nt->timeModified) );
         nt->rect_m.setRect(x, baselineY(), w, rect().height()-baselineY());
 
         if( ( !nt->rect().intersects(rect()) ) |
@@ -385,13 +385,13 @@ qint64 Timeline::leftEdgeInMSecs()
 {
     return positionInMSecs - viewportSizeInMSecs/2;
 }
-float Timeline::baselineY()
+double Timeline::baselineY()
 {
     return baselinePositionCoefficient*rect().height();
 }
-float Timeline::fontSizeForNote(Note *nt)
+double Timeline::fontSizeForNote(Note *nt)
 {
-    float fontSize = scaleToPixels( (nt->timeModified.toMSecsSinceEpoch() - nt->timeMade.toMSecsSinceEpoch())/40 );
+    double fontSize = scaleToPixels( (nt->timeModified.toMSecsSinceEpoch() - nt->timeMade.toMSecsSinceEpoch())/40 );
     if(fontSize<0) fontSize = 0;
     return fontSize;
 }

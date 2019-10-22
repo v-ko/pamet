@@ -44,7 +44,10 @@ public:
     QLineF line, autoLine;
     QPointF controlPoint;
     QPainterPath path;
-    bool isSelected = false, usesControlPoint = false, controlPointIsSet = false, controlPointIsChanged = true;
+    bool isSelected = false;
+    bool usesControlPoint = false;
+    bool controlPointIsSet = false;
+    bool controlPointIsChanged = true;
 };
 
 #endif // LINK_H
