@@ -106,22 +106,12 @@ NoteFile * MisliDir::defaultNfOnStartup()
 
 int MisliDir::makeNotesFile(QString name)
 {
-    QFile ntFile;
-    QString filePath;
-
-    if(noteFileByName(name)!=nullptr){ //Check if such a NF doesn't exist already
+    if(noteFileByName(name) != nullptr){ //Check if such a NF doesn't exist already
         return -1;
     }
 
-//    if(use_json){
-//        name = name + ".json";
-//    }else{
-//        name = name + ".misl";
-//    }
-
-    filePath=QDir(folderPath).filePath(name);
-
-    ntFile.setFileName(filePath);
+    QString filePath = QDir(folderPath).filePath(name + ".json");
+    QFile ntFile(filePath);
 
     if(!ntFile.open(QIODevice::WriteOnly)){ //Creates the NF
         qDebug()<<"Error making new notes file";
@@ -135,7 +125,7 @@ int MisliDir::makeNotesFile(QString name)
     return 0;
 }
 
-void MisliDir::softDeleteNF(NoteFile* nf)
+void MisliDir::unloadNoteFile(NoteFile* nf)
 {
     if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath());
     noteFiles_m.removeOne(nf);
@@ -212,7 +202,7 @@ void MisliDir::handleChangedFile(QString filePath)
 void MisliDir::unloadAllNoteFiles()
 {
     while(!noteFiles_m.isEmpty()){
-        softDeleteNF(noteFiles_m.first());
+        unloadNoteFile(noteFiles_m.first());
     }
 }
 

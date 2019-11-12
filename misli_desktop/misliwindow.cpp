@@ -597,7 +597,8 @@ void MisliWindow::deleteNoteFileFromFS()
     //If the user confirms
     if(ret==QMessageBox::Ok){
         QString filePath = currentCanvas_m->noteFile()->filePath(); //It gets deleted with the soft delete
-        currentDir()->softDeleteNF(currentCanvas_m->noteFile()); //Before the hard delete (fs_watch gets disabled there)
+        currentDir()->unloadNoteFile(currentCanvas_m->noteFile()); //Before the hard delete (fs_watch gets disabled there)
+        currentCanvas_m->setNoteFile(nullptr);
         if(!dir.remove(filePath)){
             QMessageBox::information(this,tr("FYI"),tr("Could not delete the file from the file system.Check your permissions."));
         }
