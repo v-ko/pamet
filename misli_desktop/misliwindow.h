@@ -120,6 +120,7 @@ public slots:
 private slots:
     void on_tabWidget_currentChanged(int index);
     void on_tabWidget_tabBarClicked(int index);
+    void on_tabWidget_tabCloseRequested(int index);
 };
 
 #endif // MISLIWINDOW_H

@@ -68,9 +68,6 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
     edit_w = new EditNoteDialogue(this);
 
-//    currentCanvas_m = new CanvasWidget(this, misliLibrary()->defaultNoteFile());
-
-//    ui->tabWidget->addTab(currentCanvas(), "");
     ui->tabWidget->addTab(&timelineWidget,"/timeline(beta)");
 
     ui->searchLineEdit->hide();
@@ -880,4 +877,15 @@ void MisliWindow::openNoteFileInNewTab(NoteFile *nf)
 {
     CanvasWidget * newCanvas = new CanvasWidget(this, nf);
     ui->tabWidget->addTab(newCanvas, nf->name());
+}
+
+void MisliWindow::on_tabWidget_tabCloseRequested(int index)
+{
+    if(ui->tabWidget->widget(index) == &timelineWidget){
+        return;
+    }
+
+    QWidget *w = ui->tabWidget->widget(index);
+    ui->tabWidget->removeTab(index);
+    delete w;
 }
