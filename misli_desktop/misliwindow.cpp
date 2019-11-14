@@ -146,7 +146,12 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionRename_notefile,&QAction::triggered,this,&MisliWindow::renameNoteFile);
     connect(ui->actionMake_this_view_point_default_for_the_notefile,&QAction::triggered,this,&MisliWindow::makeViewpointDefault);
     connect(ui->actionCopy,&QAction::triggered,this,&MisliWindow::copySelectedNotesToClipboard);
-    connect(ui->actionPaste,&QAction::triggered,currentCanvas_m,&CanvasWidget::paste);
+
+
+    // Paste action
+    connect(ui->actionPaste, &QAction::triggered, [&](){
+         currentCanvas_m->paste();
+    });
 
     //Download update action (lambda)
     connect(ui->actionDownload_it,&QAction::triggered,currentCanvas_m,[&](){
@@ -589,7 +594,8 @@ void MisliWindow::deleteNoteFileFromFS()
     //If the user confirms
     if(ret==QMessageBox::Ok){
         QString filePath = currentCanvas_m->noteFile()->filePath(); //It gets deleted with the soft delete
-        currentDir()->softDeleteNF(currentCanvas_m->noteFile()); //Before the hard delete (fs_watch gets disabled there)
+        currentDir()->unloadNoteFile(currentCanvas_m->noteFile()); //Before the hard delete (fs_watch gets disabled there)
+        currentCanvas_m->setNoteFile(nullptr);
         if(!dir.remove(filePath)){
             QMessageBox::information(this, tr("FYI"),tr("Could not delete the file from the file system.Check your permissions."));
         }

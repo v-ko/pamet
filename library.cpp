@@ -106,16 +106,12 @@ NoteFile * Library::defaultNfOnStartup()
 
 int Library::makeCanvas(QString name)
 {
-    QFile ntFile;
-    QString filePath;
-
-    if(noteFileByName(name) != nullptr){
+    if(noteFileByName(name) != nullptr){ //Check if such a NF doesn't exist already
         return -1;
     }
 
-    filePath = QDir(folderPath).filePath(name);
-
-    ntFile.setFileName(filePath);
+    QString filePath = QDir(folderPath).filePath(name + ".json");
+    QFile ntFile(filePath);
 
     if(!ntFile.open(QIODevice::WriteOnly)){ //Creates the NF
         qDebug()<<"Error making new notes file";
@@ -206,7 +202,7 @@ void Library::handleChangedFile(QString filePath)
 void Library::unloadAllNoteFiles()
 {
     while(!noteFiles_m.isEmpty()){
-        softDeleteNF(noteFiles_m.first());
+        unloadNoteFile(noteFiles_m.first());
     }
 }
 
@@ -259,7 +255,7 @@ bool Library::renameNoteFile(NoteFile *nf, QString newName)
         return false;
     }
 
-    QString newFilePath = QDir(folderPath).filePath(newName);
+    QString newFilePath = QDir(folderPath).filePath(newName + ".json");
     QString oldName = nf->name();
 
     QFile file(nf->filePath());

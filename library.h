@@ -96,7 +96,7 @@ public slots:
     void handleChangedFile(QString filePath);
 
     void handleSaveRequest(NoteFile *nf);
-    void softDeleteNF(NoteFile *nf);
+    void unloadNoteFile(NoteFile *nf);
 
 };
 
