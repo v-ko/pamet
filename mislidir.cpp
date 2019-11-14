@@ -268,7 +268,7 @@ bool MisliDir::renameNoteFile(NoteFile *nf, QString newName)
         return false;
     }
 
-    QString newFilePath = QDir(folderPath).filePath(newName);
+    QString newFilePath = QDir(folderPath).filePath(newName + ".json");
     QString oldName = nf->name();
 
     QFile file(nf->filePath());

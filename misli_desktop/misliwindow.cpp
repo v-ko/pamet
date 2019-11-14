@@ -154,7 +154,12 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionRename_notefile,&QAction::triggered,this,&MisliWindow::renameNoteFile);
     connect(ui->actionMake_this_view_point_default_for_the_notefile,&QAction::triggered,this,&MisliWindow::makeViewpointDefault);
     connect(ui->actionCopy,&QAction::triggered,this,&MisliWindow::copySelectedNotesToClipboard);
-    connect(ui->actionPaste,&QAction::triggered,currentCanvas_m,&CanvasWidget::paste);
+
+
+    // Paste action
+    connect(ui->actionPaste, &QAction::triggered, [&](){
+         currentCanvas_m->paste();
+    });
 
     //Download update action (lambda)
     connect(ui->actionDownload_it,&QAction::triggered,currentCanvas_m,[&](){
