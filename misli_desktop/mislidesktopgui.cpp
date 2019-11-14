@@ -78,6 +78,11 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
 
     misliWindow = new MisliWindow(this);
     misliWindow->showMaximized();
+    if(misliLibrary->defaultNoteFile() != nullptr){
+        misliWindow->openNoteFileInNewTab(misliLibrary->defaultNoteFile());
+        misliWindow->ui->tabWidget->tabBar()->moveTab(1, 0);
+        misliWindow->ui->tabWidget->setCurrentIndex(0);
+    }
 
     splash.finish(misliWindow);
 
@@ -111,17 +116,18 @@ void MisliDesktopGui::updateTranslator()
     }
 
     if(misliWindow != nullptr){
-        bool showHelp = false;
-        if(misliWindow->currentCanvas_m->noteFile() == misliWindow->helpNoteFile){
-            showHelp = true;
-        }
+        // FIX this to save the last open nf (might just be handled by the state preservation mechanism on close at some point)
+//        bool showHelp = false;
+//        if(misliWindow->currentCanvas()->noteFile() == misliWindow->helpNoteFile){
+//            showHelp = true;
+//        }
         misliWindow->deleteLater();
         misliWindow = new MisliWindow(this);
         misliWindow->showMaximized();
 
-        if(showHelp == true){
-            misliWindow->currentCanvas_m->setNoteFile(misliWindow->helpNoteFile);
-        }
+//        if(showHelp == true){
+//            misliWindow->currentCanvas()->setNoteFile(misliWindow->helpNoteFile);
+//        }
     }
 }
 

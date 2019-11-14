@@ -45,21 +45,16 @@ class MisliWindow : public QMainWindow
     Q_OBJECT
     
 public:
-    //Functions
-    MisliWindow(MisliDesktopGui * misli_dg_);
+    MisliWindow(MisliDesktopGui *misli_dg_);
     ~MisliWindow();
 
     bool timelineTabIsActive();
 
     Library *misliLibrary();
-
-    //Properties
-    Library* currentDir();
-    CanvasWidget * currentCanvas();
+    CanvasWidget *currentCanvasWidget();
 
     //GUI
     Ui::MisliWindow *ui;
-    CanvasWidget *currentCanvas_m = nullptr;
     EditNoteDialogue *edit_w;
     NotesSearch *notes_search;
     QTabWidget tabWidget;
@@ -92,6 +87,7 @@ public slots:
     void makeViewpointDefault();
     void makeNoteFileDefault();
     void addNewFolder();
+    void openNoteFileInNewTab(NoteFile *nf);
 //    void removeCurrentFolder();
 
     void updateTitle();

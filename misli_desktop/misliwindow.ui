@@ -850,6 +850,22 @@
     </hint>
    </hints>
   </connection>
+  <connection>
+   <sender>jumpToNearestNotePushButton</sender>
+   <signal>clicked()</signal>
+   <receiver>actionJump_to_nearest_note</receiver>
+   <slot>trigger()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>531</x>
+     <y>42</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
+  </connection>
  </connections>
  <slots>
   <slot>edit_note()</slot>

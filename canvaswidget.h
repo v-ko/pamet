@@ -32,11 +32,9 @@ class CanvasWidget : public QWidget
 {
     Q_OBJECT
 
-    Q_PROPERTY(NoteFile* noteFile READ noteFile WRITE setNoteFile NOTIFY noteFileChanged)
-
 public:
     //Functions
-    CanvasWidget(MisliWindow *misliWindow_);
+    CanvasWidget(MisliWindow *misliWindow_, NoteFile *nf);
     ~CanvasWidget();
 
     Note *getNoteUnderMouse(int mouseX , int mouseY);
@@ -65,11 +63,8 @@ public:
 
     //Properties
     NoteFile *noteFile();
-    Library *currentDir(){
-        if(currentDir_m == nullptr){
-            qDebug()<<"Current dir requested but it's Null";
-        }
-        return currentDir_m;
+    Library *library(){
+        return misliWindow->misliDesktopGUI->misliLibrary;
     }
 
     //Variables
@@ -83,7 +78,7 @@ public:
     QTimer *move_func_timeout;
     QTime lastReleaseEvent;
 
-    Library * currentDir_m=nullptr;
+//    Library * currentDir_m=nullptr;
     NoteFile *currentNoteFile = nullptr, *lastNoteFile = nullptr;
     QMetaObject::Connection nfChangedConnecton;
 
@@ -95,7 +90,6 @@ public:
     bool ctrlUpdateHack;
 
 signals:
-    void noteFileChanged(NoteFile* nf); //Pretty much unused. Everyone who cares is visible to one another
     void linkingStateToggled(bool);
 
 public slots:

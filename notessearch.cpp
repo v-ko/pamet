@@ -121,7 +121,7 @@ void NotesSearch::findByText(QString searchString)
         //Match the scope
         switch (misliWindow->ui->searchScopeComboBox->currentIndex()) {
         case 1:
-            if(currentItem.lib!=misliWindow->currentDir()){
+            if(currentItem.lib!=misliWindow->misliLibrary()){
                 searchResultsIterator.remove();
                 addPrecedingDots = false;
                 addTrailingDots = false;
@@ -129,7 +129,7 @@ void NotesSearch::findByText(QString searchString)
             }
             break;
         case 2:
-            if(currentItem.nf!=misliWindow->currentCanvas()->currentNoteFile) {
+            if(currentItem.nf != misliWindow->currentCanvasWidget()->currentNoteFile) {
                 searchResultsIterator.remove();
                 addPrecedingDots = false;
                 addTrailingDots = false;

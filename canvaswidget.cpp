@@ -22,7 +22,7 @@
 #include "notessearch.h"
 #include "ui_misliwindow.h"
 
-CanvasWidget::CanvasWidget(MisliWindow *misliWindow_) :
+CanvasWidget::CanvasWidget(MisliWindow *misliWindow_, NoteFile *nf) :
     detailsMenu(tr("Details"),this)
 {
     hide();
@@ -55,6 +55,8 @@ CanvasWidget::CanvasWidget(MisliWindow *misliWindow_) :
     setMouseTracking(1);
     setFocusPolicy(Qt::ClickFocus);
     setAcceptDrops(true);
+
+    setNoteFile(nf);
 }
 CanvasWidget::~CanvasWidget()
 {
@@ -184,7 +186,7 @@ void CanvasWidget::paintEvent(QPaintEvent*)
 
             //Check the validity of the address string
             if(nt->type == NoteType::redirecting){
-                if(misliWindow->currentDir()->noteFileByName(nt->addressString) == nullptr &&
+                if(misliWindow->misliLibrary()->noteFileByName(nt->addressString) == nullptr &&
                    nt->textForShortening!=tr("Missing note file") )
                 {
                     nt->textForShortening = tr("Missing note file");
@@ -252,7 +254,7 @@ void CanvasWidget::paintEvent(QPaintEvent*)
     }
 
     //Show the shadows of stuff that's about to be pasted when ctrl is pressed
-    if( ctrlUpdateHack ){
+    if( misliWindow->misliDesktopGUI->queryKeyboardModifiers() & Qt::ControlModifier ){
         ctrlUpdateHack = false;
         NoteFile *clipboardNF = misliWindow->clipboardNoteFile;
         double x,y;
@@ -361,7 +363,7 @@ void CanvasWidget::mouseMoveEvent(QMouseEvent *event)
         update();
     }
 
-    if(misliWindow->misliDesktopGUI->keyboardModifiers()==Qt::ControlModifier){
+    if(misliWindow->misliDesktopGUI->keyboardModifiers() == Qt::ControlModifier){
         ctrlUpdateHack = true;
         update(); //while showing the shadows of the notes for pasting
     }
@@ -401,8 +403,8 @@ void CanvasWidget::doubleClick()
     if(nt!=nullptr){ //if we've clicked on a note
         if(nt->type == NoteType::redirecting){ //if it's a valid redirecting note
 
-            if(misliWindow->currentDir()->noteFileByName(nt->addressString)!=nullptr)
-            setNoteFile(misliWindow->currentDir()->noteFileByName(nt->addressString));
+            if(misliWindow->misliLibrary()->noteFileByName(nt->addressString)!=nullptr)
+            setNoteFile(misliWindow->misliLibrary()->noteFileByName(nt->addressString));
 
         }else if(nt->type == NoteType::textFile){
 
@@ -413,7 +415,7 @@ void CanvasWidget::doubleClick()
             QProcess process;
 
             //Run the command and get the output
-            process.setWorkingDirectory(currentDir()->folderPath);
+            process.setWorkingDirectory(library()->folderPath);
             process.start(nt->addressString);
             process.waitForFinished(-1);
             QByteArray out = process.readAllStandardOutput();
@@ -609,12 +611,10 @@ void CanvasWidget::handleMouseRelease(Qt::MouseButton button)
         }
 
         if(nt->type == NoteType::redirecting){
-            NoteFile *nfUnderMouse = misliWindow->currentDir()->noteFileByName(nt->addressString);
+            NoteFile *nfUnderMouse = misliWindow->misliLibrary()->noteFileByName(nt->addressString);
 
             if(nfUnderMouse != nullptr){
-                CanvasWidget * newCanvas = new CanvasWidget(misliWindow);
-                misliWindow->ui->tabWidget->addTab(newCanvas, nfUnderMouse->name());
-                newCanvas->setNoteFile(nfUnderMouse);
+                misliWindow->openNoteFileInNewTab(nfUnderMouse);
             }
         }
     }
@@ -783,72 +783,52 @@ void CanvasWidget::jumpToNearestNote()
 
 NoteFile* CanvasWidget::noteFile()
 {
-    if(currentDir() == nullptr){
-        qDebug() << "[Canvas::noteFile] Current dir is null.";
-        return nullptr;
-    }else{
-        return currentNoteFile;
-    }
+    return currentNoteFile;
 }
 void CanvasWidget::setNoteFile(NoteFile *newNoteFile) //This function has to not care what happens to the last NF
                                                 //Else we need no know the misliDir of the last one
 {
-    Library *misliDir = currentDir();
-
-    if(misliDir==nullptr){
-        if(newNoteFile!=nullptr){
-            qDebug()<<"[Canvas::setNoteFile]Trying to set a notefile while currentDir is nullptr.";
-            return;
-        }else{ //Just update the UI - that's all that's needed in that case
-            hide();
-            misliWindow->ui->makeNoteFilePushButton->show();
-            misliWindow->ui->menuSwitch_to_another_note_file->setEnabled(false);
-            misliWindow->updateNoteFilesListMenu();
-            misliWindow->updateTitle();
-            update();
-            return;
-        }
+    if( newNoteFile == currentNoteFile ){
+        return;
     }
 
     disconnect(visualChangeConnection);
 
-    if(newNoteFile==nullptr){
-        //Check the current dir for NFs
-        if(!misliDir->noteFiles().isEmpty()){
-            //If it's not empty set a notefile - the default or there's none - the first
-            if(misliDir->defaultNfOnStartup()!=nullptr){
-                setNoteFile(misliDir->defaultNfOnStartup());
+    if(newNoteFile == nullptr){
+
+        if(!library()->noteFiles().isEmpty()){ // If the library is NOT empty
+
+            if(library()->defaultNoteFile() != nullptr){
+                setNoteFile(library()->defaultNoteFile());
                 return;
+
             }else{
-                setNoteFile(misliDir->noteFiles()[0]);
+                setNoteFile(library()->noteFiles()[0]);
                 return;
             }
-        }else{ //If there's no notefile in the dir
-            hide();
+
+        }else{ //If the library IS empty
             misliWindow->ui->jumpToNearestNotePushButton->hide();
             misliWindow->ui->makeNoteFilePushButton->show();
             misliWindow->ui->menuSwitch_to_another_note_file->setEnabled(false);
+            misliWindow->updateNoteFilesListMenu();
+            misliWindow->updateTitle();
+            hide();
         }
-    }else if(!misliWindow->currentDir()->noteFiles().contains(newNoteFile) && newNoteFile!=misliWindow->helpNoteFile){
-        qDebug()<<"[Canvas::setNoteFile]Trying to set a notefile that does not belong to the current misli dir.";
-        return;
-    }else{
-        visualChangeConnection = connect(newNoteFile,SIGNAL(visualChange()),this,SLOT(update()));
+
+    }else{ //If the newNoteFile is NOT NULL
+        visualChangeConnection = connect(newNoteFile, SIGNAL(visualChange()), this, SLOT(update()));
 
         misliWindow->ui->makeNoteFilePushButton->hide();
         misliWindow->ui->menuSwitch_to_another_note_file->setEnabled(true);
         show();
-        update();
     }
 
-    if( newNoteFile != currentNoteFile ){
-        lastNoteFile = currentNoteFile;
-    }
+    lastNoteFile = currentNoteFile;
     currentNoteFile = newNoteFile;
     misliWindow->updateNoteFilesListMenu();
     misliWindow->updateTitle();
     update();
-    emit noteFileChanged(newNoteFile);//In principle it should be unused
 }
 
 void CanvasWidget::centerEyeOnNote(Note *nt)
@@ -900,7 +880,7 @@ void CanvasWidget::pasteMimeData(const QMimeData *mimeData)
     if(mimeData->hasImage()){
         QString imageName = QInputDialog::getText(this,tr("Give a name to the image"),tr("Enter a name for the image"));
         QImage img = qvariant_cast<QImage>(mimeData->imageData());
-        QDir misliDir(misliWindow->currentDir()->folderPath);
+        QDir misliDir(misliWindow->misliLibrary()->folderPath);
 
         if(imageName.isEmpty()){
             QMessageBox::warning(this, "Warning", tr("Can't use an empty name."));

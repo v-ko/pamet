@@ -172,8 +172,8 @@ void EditNoteDialogue::newNote()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note = misliWindow->currentCanvas_m->mousePos().x(); //cursor position relative to the gl widget
-    y_on_new_note = misliWindow->currentCanvas_m->mousePos().y();
+    x_on_new_note = misliWindow->currentCanvasWidget()->mousePos().x(); //cursor position relative to the gl widget
+    y_on_new_note = misliWindow->currentCanvasWidget()->mousePos().y();
 
     move(QCursor::pos());
 
@@ -215,7 +215,7 @@ void EditNoteDialogue::editNote() //false for new note , true for edit
         ui->monthButton->hide();
         ui->weekButton->hide();
         ui->dayButton->hide();
-        edited_note = misliWindow->currentCanvas_m->noteFile()->getFirstSelectedNote();
+        edited_note = misliWindow->currentCanvasWidget()->noteFile()->getFirstSelectedNote();
     }
     if(edited_note==nullptr){return;}
 
@@ -267,8 +267,8 @@ void EditNoteDialogue::inputDone()
     if( edited_note==nullptr){//If we're making a new note
 
         if( !misliWindow->timelineTabIsActive() ){
-            misliWindow->currentCanvas_m->unproject(x_on_new_note,y_on_new_note, x, y); //get mouse pos in real coordinates
-            nt = new Note(misliWindow->currentCanvas_m->noteFile()->getNewId(), text);
+            misliWindow->currentCanvasWidget()->unproject(x_on_new_note,y_on_new_note, x, y); //get mouse pos in real coordinates
+            nt = new Note(misliWindow->currentCanvasWidget()->noteFile()->getNewId(), text);
             nt->setRect(QRectF(x,y,1,1));
             nt->timeMade = QDateTime::currentDateTime();
             nt->timeModified = QDateTime::currentDateTime();
@@ -276,8 +276,8 @@ void EditNoteDialogue::inputDone()
             nt->backgroundColor_m = bg_col;
             nt->requestAutoSize = true;
 
-            misliWindow->currentCanvas_m->noteFile()->linkSelectedNotesTo(nt);
-            misliWindow->currentCanvas_m->noteFile()->addNote(nt); //invokes save
+            misliWindow->currentCanvasWidget()->noteFile()->linkSelectedNotesTo(nt);
+            misliWindow->currentCanvasWidget()->noteFile()->addNote(nt); //invokes save
         }else if( misliWindow->timelineTabIsActive() ){
             nt = new Note(0, text);
             nt->setRect(QRectF(x,y,1,1));
@@ -334,7 +334,7 @@ void EditNoteDialogue::updateChooseNFMenu()
 {
     chooseNFMenu.clear();
 
-    for(NoteFile *nf: misliWindow->currentDir()->noteFiles()){
+    for(NoteFile *nf: misliWindow->misliLibrary()->noteFiles()){
         chooseNFMenu.addAction(nf->name());
     }
 }
@@ -377,8 +377,8 @@ void EditNoteDialogue::closeEvent(QCloseEvent *)
 
 QString EditNoteDialogue::maybeToRelativePath(QString path)
 {
-    if(path.startsWith(misliWindow->currentDir()->folderPath)){
-        return path.replace(misliWindow->currentDir()->folderPath,".");
+    if(path.startsWith(misliWindow->misliLibrary()->folderPath)){
+        return path.replace(misliWindow->misliLibrary()->folderPath,".");
     }else{
         return path;
     }
@@ -387,7 +387,7 @@ QString EditNoteDialogue::maybeToRelativePath(QString path)
 void EditNoteDialogue::on_openButton_clicked()
 {
     QString scriptPath = edited_note->addressString.split(" ")[0];
-    scriptPath = QDir(misliWindow->currentDir()->folderPath).filePath(scriptPath);
+    scriptPath = QDir(misliWindow->misliLibrary()->folderPath).filePath(scriptPath);
     QFile scriptFile(scriptPath);
 
     if(!scriptFile.exists()){

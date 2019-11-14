@@ -44,7 +44,7 @@ public:
     void unloadAllNoteFiles();
 
     NoteFile * noteFileByName(QString name);
-    NoteFile * defaultNfOnStartup();
+    NoteFile * defaultNoteFile();
 
     //Properties
     double defaultEyeZ();
@@ -60,16 +60,6 @@ public:
 
     bool debug, fsWatchIsEnabled;
 
-
-    // REFACTORING -- From misliInstance:
-
-    Library *addDir(QString path);
-    Library *loadDir(QString path);
-    void removeDir(Library *dir);
-    void unloadDir(Library *dir);
-
-    //Properties
-    QList<Library*> misliDirs();
 
     //Variables
 //    QSettings settings;

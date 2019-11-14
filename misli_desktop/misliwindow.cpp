@@ -53,24 +53,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     notes_search->loadNotes();
     ui->searchListView->setModel(notes_search);
     QItemSelectionModel *selectionModel = ui->searchListView->selectionModel();
-    //Handle search result selection (lambda)
-    connect(selectionModel, &QItemSelectionModel::selectionChanged, this,
-            [&](const QItemSelection &, const QItemSelection &){
-        const QModelIndex index = ui->searchListView->selectionModel()->currentIndex();
-        NotesSearch::SearchItem searchItem = notes_search->searchResults.at(index.row());
-        //Set the last noteFile for the Back function if appropriate
-        //if( (searchItem.md==currentDir()) && (searchItem.nf!=canvas->noteFile()) ){
 
-        //}
-//        currentCanvas()->setCurrentDir(searchItem.lib);
-        currentCanvas_m->setNoteFile(searchItem.nf);
-        if(searchItem.nf->notes.contains(searchItem.nt)){
-            currentCanvas_m->centerEyeOnNote(searchItem.nt);
-            ui->searchListView->clearSelection();
-        }else{//If the note was deleted
-            notes_search->findByText(ui->searchLineEdit->text());
-        }
-    });
     //Add combobox items for the search scopes
     ui->searchScopeComboBox->addItem(tr("all notes"));
     ui->searchScopeComboBox->addItem(tr("the current dir"));
@@ -81,17 +64,22 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
 
     //---Init widgets and widnows---
-    ui->mainLayout->addWidget(ui->tabWidget);
+//    ui->mainLayout->addWidget(ui->tabWidget);
+
     edit_w = new EditNoteDialogue(this);
-    currentCanvas_m = new CanvasWidget(this);
-    ui->tabWidget->addTab(currentCanvas_m, "");
+
+//    currentCanvas_m = new CanvasWidget(this, misliLibrary()->defaultNoteFile());
+
+//    ui->tabWidget->addTab(currentCanvas(), "");
     ui->tabWidget->addTab(&timelineWidget,"/timeline(beta)");
+
     ui->searchLineEdit->hide();
     ui->searchListView->hide();
     ui->searchScopeComboBox->hide();
+
     ui->jumpToNearestNotePushButton->hide();
+    ui->addMisliDirPushButton->hide();
     ui->tagGUI->hide();
-    updateMenu.addAction(ui->actionDownload_it);
 
     addAction(ui->actionSelect_note_under_mouse);
     addAction(ui->actionNext_notefile);
@@ -100,6 +88,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     addAction(ui->actionGotoTab2);
 
     //============Update check stuff=======================
+    updateMenu.addAction(ui->actionDownload_it);
+
     //If it's the android build - just hide the action. No network connectivity will solve the rest
 #ifndef Q_OS_ANDROID
     ui->menuOther->addAction(ui->actionCheck_for_updates);
@@ -110,7 +100,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
         ui->actionCheck_for_updates->setChecked(false);
     } //from here on this is the flag if we're checking for updates or not (the checked state)
 
-    connect(&network,&QNetworkAccessManager::finished,this,&MisliWindow::handleVersionInfoReply);
+    connect(&network,&QNetworkAccessManager::finished, this, &MisliWindow::handleVersionInfoReply);
     if(network.networkAccessible()){
         startUpdateCheck();
     }else{
@@ -124,7 +114,9 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
     //--------------------Connect signals/slots-----------------------------------
     //Actions/shortcuts
-    connect(ui->actionJump_to_nearest_note,SIGNAL(triggered()),currentCanvas_m,SLOT(jumpToNearestNote()));
+    connect(ui->actionJump_to_nearest_note, &QAction::triggered, [&](){
+        currentCanvasWidget()->jumpToNearestNote();
+    });
     connect(ui->actionEdit_note,&QAction::triggered,edit_w,&EditNoteDialogue::editNote);
     connect(ui->actionNew_note,&QAction::triggered,edit_w,&EditNoteDialogue::newNote);
     connect(ui->actionNew_notefile,&QAction::triggered,this,&MisliWindow::newNoteFile);
@@ -137,7 +129,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 //    connect(ui->actionRemove_current,&QAction::triggered,this,&MisliWindow::removeCurrentFolder);
     connect(ui->actionTransparent_background,&QAction::triggered,this,&MisliWindow::colorTransparentBackground);
     connect(ui->actionDelete_notefile,&QAction::triggered,this,&MisliWindow::deleteNoteFileFromFS);
-    connect(ui->jumpToNearestNotePushButton,&QPushButton::clicked,currentCanvas_m,&CanvasWidget::jumpToNearestNote);
+//    connect(ui->jumpToNearestNotePushButton,&QPushButton::clicked,currentCanvas(),&CanvasWidget::jumpToNearestNote);
 //    connect(ui->actionAdd_new,&QAction::triggered,this,&MisliWindow::addNewFolder);
     connect(ui->addMisliDirPushButton,&QPushButton::clicked,this,&MisliWindow::addNewFolder);
     connect(ui->menuFolders,&QMenu::triggered,this,&MisliWindow::handleFoldersMenuClick);
@@ -148,55 +140,74 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     connect(ui->actionCopy,&QAction::triggered,this,&MisliWindow::copySelectedNotesToClipboard);
 
 
+    //Handle search result selection (lambda)
+    connect(selectionModel, &QItemSelectionModel::selectionChanged, this,
+            [&](const QItemSelection &, const QItemSelection &){
+        const QModelIndex index = ui->searchListView->selectionModel()->currentIndex();
+        NotesSearch::SearchItem searchItem = notes_search->searchResults.at(index.row());
+        //Set the last noteFile for the Back function if appropriate
+        //if( (searchItem.md==currentDir()) && (searchItem.nf!=canvas->noteFile()) ){
+
+        //}
+//        currentCanvas()->setCurrentDir(searchItem.lib);
+        currentCanvasWidget()->setNoteFile(searchItem.nf);
+        if(searchItem.nf->notes.contains(searchItem.nt)){
+            currentCanvasWidget()->centerEyeOnNote(searchItem.nt);
+            ui->searchListView->clearSelection();
+        }else{//If the note was deleted
+            notes_search->findByText(ui->searchLineEdit->text());
+        }
+    });
+
     // Paste action
     connect(ui->actionPaste, &QAction::triggered, [&](){
-         currentCanvas_m->paste();
+         currentCanvasWidget()->paste();
     });
 
     //Download update action (lambda)
-    connect(ui->actionDownload_it,&QAction::triggered,currentCanvas_m,[&](){
+    connect(ui->actionDownload_it, &QAction::triggered, [&](){
         QDesktopServices::openUrl(QUrl("http://sourceforge.net/projects/misli/"));
     });
 
     //Delete selected (lambda)
-    connect(ui->actionDelete_selected,&QAction::triggered,currentCanvas_m,[&](){
+    connect(ui->actionDelete_selected, &QAction::triggered, [&](){
         if(timelineTabIsActive()){
             timelineWidget.timeline->archiveModule.noteFile.deleteSelected();
         }else{
-            currentCanvas_m->noteFile()->deleteSelected();
+            currentCanvasWidget()->noteFile()->deleteSelected();
         }
     });
     //Undo (lambda)
-    connect(ui->actionUndo,&QAction::triggered,[&](){
-        currentCanvas_m->noteFile()->undo();
+    connect(ui->actionUndo, &QAction::triggered,[&](){
+        currentCanvasWidget()->noteFile()->undo();
     });
     //Redo (lambda)
-    connect(ui->actionRedo,&QAction::triggered,[&](){
-        currentCanvas_m->noteFile()->redo();
+    connect(ui->actionRedo, &QAction::triggered,[&](){
+        currentCanvasWidget()->noteFile()->redo();
     });
     //Cut (lambda)
-    connect(ui->actionCut,&QAction::triggered,[&](){
+    connect(ui->actionCut, &QAction::triggered,[&](){
         copySelectedNotesToClipboard();
-        currentCanvas_m->noteFile()->deleteSelected();
+        currentCanvasWidget()->noteFile()->deleteSelected();
     });
     //Paste note from clipboard
     connect(ui->actionCreate_note_from_the_clipboard_text,&QAction::triggered,[&](){
-        if( currentCanvas_m->mimeDataIsCompatible( misliDesktopGUI->clipboard()->mimeData() ) ){
+        if( currentCanvasWidget()->mimeDataIsCompatible( misliDesktopGUI->clipboard()->mimeData() ) ){
                 misliDesktopGUI->setOverrideCursor(Qt::WaitCursor);
-                currentCanvas_m->pasteMimeData(misliDesktopGUI->clipboard()->mimeData());
+                currentCanvasWidget()->pasteMimeData(misliDesktopGUI->clipboard()->mimeData());
                 misliDesktopGUI->restoreOverrideCursor();
         }
     });
     //Make link (lambda)
     connect(ui->actionMake_link,&QAction::triggered,[&](){
-        if(currentCanvas_m->noteFile()->getFirstSelectedNote()!=nullptr){
-            currentCanvas_m->linkingIsOn = true;
-            currentCanvas_m->update();
+        if(currentCanvasWidget()->noteFile()->getFirstSelectedNote()!=nullptr){
+            currentCanvasWidget()->linkingIsOn = true;
+            currentCanvasWidget()->update();
         }
     });
     //Make current view point height default (lambda)
     connect(ui->actionSet_this_height_as_default,&QAction::triggered,[&](){
-        currentDir()->setDefaultEyeZ(currentCanvas_m->noteFile()->eyeZ);
+        misliLibrary()->setDefaultEyeZ(currentCanvasWidget()->noteFile()->eyeZ);
         //pri load polzwaneto na stoinostta stava v Library:: NoteFile
     });
     //Set language to Bulgarian (lambda)
@@ -225,22 +236,22 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Move down (lambda)
     connect(ui->actionMove_down,&QAction::triggered,[&](){
-        currentCanvas_m->noteFile()->eyeY+=MOVE_SPEED;
+        currentCanvasWidget()->noteFile()->eyeY+=MOVE_SPEED;
         QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-        currentCanvas_m->update();
+        currentCanvasWidget()->update();
     });
     //Move up (lambda)
     connect(ui->actionMove_up,&QAction::triggered,[&](){
-        currentCanvas_m->noteFile()->eyeY-=MOVE_SPEED;
+        currentCanvasWidget()->noteFile()->eyeY-=MOVE_SPEED;
         QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-        currentCanvas_m->update();
+        currentCanvasWidget()->update();
     });
     //Move left (lambda)
     connect(ui->actionMove_left,&QAction::triggered,[&](){
-        if(ui->tabWidget->currentWidget()==currentCanvas_m){
-            currentCanvas_m->noteFile()->eyeX-=MOVE_SPEED;
+        if(ui->tabWidget->currentWidget()==currentCanvasWidget()){
+            currentCanvasWidget()->noteFile()->eyeX-=MOVE_SPEED;
             QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-            currentCanvas_m->update();
+            currentCanvasWidget()->update();
         }else if(ui->tabWidget->currentWidget()==&timelineWidget){
             timelineWidget.timeline->positionInMSecs -= timelineWidget.timeline->viewportSizeInMSecs/60;
             timelineWidget.timeline->update();
@@ -249,10 +260,10 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Move right (lambda)
     connect(ui->actionMove_right,&QAction::triggered,[&](){
-        if(ui->tabWidget->currentWidget()==currentCanvas_m){
-            currentCanvas_m->noteFile()->eyeX+=MOVE_SPEED;
+        if(ui->tabWidget->currentWidget()==currentCanvasWidget()){
+            currentCanvasWidget()->noteFile()->eyeX+=MOVE_SPEED;
             QCursor::setPos( mapToGlobal( QPoint( width()/2 , height()/2 )) );
-            currentCanvas_m->update();
+            currentCanvasWidget()->update();
         }else if(ui->tabWidget->currentWidget()==&timelineWidget){
             timelineWidget.timeline->positionInMSecs += timelineWidget.timeline->viewportSizeInMSecs/60;
             timelineWidget.timeline->update();
@@ -260,11 +271,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Select all notes (lambda)
     connect(ui->actionSelect_all_notes,&QAction::triggered,[&](){
-        currentCanvas_m->noteFile()->selectAllNotes();
+        currentCanvasWidget()->noteFile()->selectAllNotes();
     });
     //Select all red notes (lambda)
     connect(ui->actionSelect_all_red_notes,&QAction::triggered,[&](){
-        NoteFile *nf = currentCanvas_m->noteFile();
+        NoteFile *nf = currentCanvasWidget()->noteFile();
         for(Note *nt: nf->notes){
             if(nt->textColor()==Qt::red){
                 nt->setSelected(true);
@@ -278,8 +289,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Emulate left click on enter (return) press (lambda)
     connect(ui->actionSelect_note_under_mouse,&QAction::triggered,[&](){
-        currentCanvas_m->handleMousePress(Qt::LeftButton);
-        currentCanvas_m->handleMouseRelease(Qt::LeftButton);
+        currentCanvasWidget()->handleMousePress(Qt::LeftButton);
+        currentCanvasWidget()->handleMouseRelease(Qt::LeftButton);
     });
     //Show the About dialog (lambda)
     connect(ui->actionAbout,&QAction::triggered,[&](){
@@ -315,11 +326,11 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Switch to the last note file
     connect(ui->actionSwitch_to_the_last_note_file, &QAction::triggered, [&](){
-        if(currentCanvas()->lastNoteFile!=nullptr) currentCanvas()->setNoteFile(currentCanvas()->lastNoteFile);
+        if(currentCanvasWidget()->lastNoteFile!=nullptr) currentCanvasWidget()->setNoteFile(currentCanvasWidget()->lastNoteFile);
     });
     //Export notes as web pages (lambda)
     connect(ui->actionExport_all_as_web_notes,&QAction::triggered,[&](){
-        QDir webDir(currentDir()->folderPath+"/web");
+        QDir webDir(misliLibrary()->folderPath+"/web");
         if(!webDir.exists()) webDir.mkpath(webDir.absolutePath());
 
         QImage img(1000,1000, QImage::Format_ARGB32);//hacky workaround to get the text length adjust
@@ -332,7 +343,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
         jsFile.close();
         styleFile.close();
 
-        for(NoteFile *nf: currentDir()->noteFiles()){
+        for(NoteFile *nf: misliLibrary()->noteFiles()){
             QFile file(webDir.absoluteFilePath(nf->name()+".html"));
             file.open(QIODevice::WriteOnly);
             QTextStream stream(&file);
@@ -399,7 +410,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     });
     //Toggle the tags view (handled mostly in Canvas::paintEvent()
     connect(ui->actionToggle_tags_view, &QAction::toggled, [&](){
-        currentCanvas_m->update();
+        currentCanvasWidget()->update();
         if(ui->actionToggle_tags_view->isChecked()){
             ui->tagGUI->show();
         }else{
@@ -413,7 +424,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
 
         if(tag.isEmpty()) return;
 
-        for(Note * nt: currentCanvas_m->noteFile()->notes){
+        for(Note * nt: currentCanvasWidget()->noteFile()->notes){
             if(nt->isSelected()){
                 tagsChanged++;
                 if(nt->tags.contains(tag)){
@@ -423,7 +434,7 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
                 }
             }
         }
-        if(tagsChanged>0) currentCanvas()->currentNoteFile->save();
+        if(tagsChanged>0) currentCanvasWidget()->currentNoteFile->save();
     });
 
     //---------------------Creating the virtual note files----------------------
@@ -451,8 +462,8 @@ MisliWindow::MisliWindow(MisliDesktopGui * misli_dg_):
     grabGesture(Qt::PinchGesture);
 
     //BRUTE FORCE BUG SQUASHING (graphics glitch in ui.tabWidget)
-    ui->tabWidget->setCurrentIndex(1);
-    ui->tabWidget->setCurrentIndex(0);
+//    ui->tabWidget->setCurrentIndex(1);
+//    ui->tabWidget->setCurrentIndex(0);
 }
 
 MisliWindow::~MisliWindow()
@@ -460,14 +471,14 @@ MisliWindow::~MisliWindow()
     delete ui;
     delete clipboardNoteFile;
     delete helpNoteFile;
-    delete currentCanvas_m;
+    delete currentCanvasWidget();
     delete edit_w;
     delete notes_search;
 }
 
 bool MisliWindow::timelineTabIsActive()
 {
-    if(ui->tabWidget->currentWidget()==&timelineWidget){
+    if(ui->tabWidget->currentWidget() == &timelineWidget){
         return true;
     }else{
         return false;
@@ -478,9 +489,9 @@ void MisliWindow::closeEvent(QCloseEvent *)
     misliDesktopGUI->setQuitOnLastWindowClosed(true);
 }
 
-Library* MisliWindow::currentDir()
+Library* MisliWindow::misliLibrary()
 {
-    return currentCanvas()->currentDir();
+    return misliDesktopGUI->misliLibrary;
 }
 
 
@@ -496,16 +507,13 @@ bool MisliWindow::event(QEvent *event)
 void MisliWindow::keyPressEvent(QKeyEvent *event)
 {
     QWidget::keyPressEvent(event);
-    if(event->modifiers() & Qt::ControlModifier){
-        currentCanvas_m->ctrlUpdateHack=true;
-    }
 
     update();
 }
 void MisliWindow::keyReleaseEvent(QKeyEvent *event)
 {
     QWidget::keyReleaseEvent(event);
-    currentCanvas_m->ctrlUpdateHack=false;
+
     update();
 }
 
@@ -522,19 +530,14 @@ bool MisliWindow::gestureEvent(QGestureEvent *event)
 
 void MisliWindow::pinchTriggered(QPinchGesture *gesture)
 {
-    currentCanvas_m->noteFile()->eyeZ =  currentCanvas_m->noteFile()->eyeZ/gesture->scaleFactor();
-    currentCanvas_m->update();
-}
-
-Library * MisliWindow::misliLibrary()
-{
-    return misliDesktopGUI->misliLibrary;
+    currentCanvasWidget()->noteFile()->eyeZ =  currentCanvasWidget()->noteFile()->eyeZ/gesture->scaleFactor();
+    currentCanvasWidget()->update();
 }
 
 void MisliWindow::newNoteFromClipboard()
 {
-    edit_w->x_on_new_note=currentCanvas_m->mousePos().x(); //cursor position relative to the gl widget
-    edit_w->y_on_new_note=currentCanvas_m->mousePos().y();
+    edit_w->x_on_new_note=currentCanvasWidget()->mousePos().x(); //cursor position relative to the gl widget
+    edit_w->y_on_new_note=currentCanvasWidget()->mousePos().y();
     edit_w->edited_note=nullptr;
     edit_w->setTextEditText( QApplication::clipboard()->text() );
     edit_w->inputDone();
@@ -546,56 +549,56 @@ void MisliWindow::newNoteFile()
     if(name.isEmpty()) return;
 
 
-    int ret = currentDir()->makeCanvas( name );
+    int ret = misliLibrary()->makeCanvas( name );
     if(  ret != 0 ) {
         QMessageBox::warning(this,tr("Could not make the notefile"),tr("Error making notefile , exclude bad symbols from the name (; < >  ... )"));
         return;
     }
 
-    currentDir()->reinitNotesPointingToNotefiles();
+    misliLibrary()->reinitNotesPointingToNotefiles();
 
     //Add a link in the current nf that points to the new nf
-    NoteFile *newNF = currentDir()->noteFiles_m.back();
-    Note *new_note = new Note(currentCanvas()->currentNoteFile->getNewId(), "this_note_points_to:" + newNF->name());
-    new_note->setRect(QRectF(currentCanvas_m->unproject(currentCanvas_m->mousePos()), QSizeF(4, 2)));
+    NoteFile *newNF = misliLibrary()->noteFiles_m.back();
+    Note *new_note = new Note(currentCanvasWidget()->currentNoteFile->getNewId(), "this_note_points_to:" + newNF->name());
+    new_note->setRect(QRectF(currentCanvasWidget()->unproject(currentCanvasWidget()->mousePos()), QSizeF(4, 2)));
     new_note->requestAutoSize = true;
-    currentCanvas()->currentNoteFile->addNote(new_note);
+    currentCanvasWidget()->currentNoteFile->addNote(new_note);
 
     //Add a link in the new nf to the parent nf
-    new_note = new Note(currentCanvas()->currentNoteFile->getNewId(), "this_note_points_to:" + currentCanvas()->currentNoteFile->name());
+    new_note = new Note(currentCanvasWidget()->currentNoteFile->getNewId(), "this_note_points_to:" + currentCanvasWidget()->currentNoteFile->name());
     new_note->setRect(QRectF(0, 0, 1, 1));
     new_note->requestAutoSize = true;
 
-    currentCanvas_m->setNoteFile(newNF);
+    currentCanvasWidget()->setNoteFile(newNF);
     newNF->addNote(new_note);
 }
 void MisliWindow::renameNoteFile()
 {
     QString name = QInputDialog::getText(this, tr("Making a new notefile"),tr("Enter a name for the notefile:"));
-    NoteFile * nf = currentCanvas_m->noteFile();
+    NoteFile * nf = currentCanvasWidget()->noteFile();
 
-    if(currentDir()->noteFileByName(name)!=nullptr){
+    if(misliLibrary()->noteFileByName(name)!=nullptr){
         QMessageBox::warning(this, tr("Could not make the notefile"),tr("A notefile with this name exists."));
         return;
     }
 
-    if(! currentDir()->renameNoteFile(nf, name)){
+    if(! misliLibrary()->renameNoteFile(nf, name)){
         QMessageBox::warning(this, tr("Warning"), tr("Error while renaming file."));
         return;
     }
-    currentCanvas_m->setNoteFile(nf);
+    currentCanvasWidget()->setNoteFile(nf);
 }
 void MisliWindow::deleteNoteFileFromFS()
 {
-    QDir dir(currentDir()->folderPath);
+    QDir dir(misliLibrary()->folderPath);
 
     //Warn the user
     int ret = QMessageBox::warning(this, tr("Warning"), tr("This will delete the note file permanetly!"),QMessageBox::Ok,QMessageBox::Cancel);
     //If the user confirms
     if(ret==QMessageBox::Ok){
-        QString filePath = currentCanvas_m->noteFile()->filePath(); //It gets deleted with the soft delete
-        currentDir()->unloadNoteFile(currentCanvas_m->noteFile()); //Before the hard delete (fs_watch gets disabled there)
-        currentCanvas_m->setNoteFile(nullptr);
+        QString filePath = currentCanvasWidget()->noteFile()->filePath(); //It gets deleted with the soft delete
+        misliLibrary()->unloadNoteFile(currentCanvasWidget()->noteFile()); //Before the hard delete (fs_watch gets disabled there)
+        currentCanvasWidget()->setNoteFile(nullptr);
         if(!dir.remove(filePath)){
             QMessageBox::information(this, tr("FYI"),tr("Could not delete the file from the file system.Check your permissions."));
         }
@@ -604,18 +607,18 @@ void MisliWindow::deleteNoteFileFromFS()
 }
 void MisliWindow::nextNoteFile()
 {
-    for(int i=0;i<(currentDir()->noteFiles_m.size()-1);i++){ //for every notefile without the last one
-        if( (currentCanvas_m->noteFile()->name()==currentDir()->noteFiles_m[i]->name()) ){
-            currentCanvas_m->setNoteFile(currentDir()->noteFiles_m[i+1]);
+    for(int i=0;i<(misliLibrary()->noteFiles_m.size()-1);i++){ //for every notefile without the last one
+        if( (currentCanvasWidget()->noteFile()->name()==misliLibrary()->noteFiles_m[i]->name()) ){
+            currentCanvasWidget()->setNoteFile(misliLibrary()->noteFiles_m[i+1]);
             break;
         }
     }
 }
 void MisliWindow::previousNoteFile()
 {
-    for(int i=1;i<(currentDir()->noteFiles_m.size());i++){ //for every notefile without the last one
-        if( (currentCanvas_m->noteFile()->name()==currentDir()->noteFiles_m[i]->name()) ){
-            currentCanvas_m->setNoteFile(currentDir()->noteFiles_m[i-1]);
+    for(int i=1;i<(misliLibrary()->noteFiles_m.size());i++){ //for every notefile without the last one
+        if( (currentCanvasWidget()->noteFile()->name()==misliLibrary()->noteFiles_m[i]->name()) ){
+            currentCanvasWidget()->setNoteFile(misliLibrary()->noteFiles_m[i-1]);
             break;
         }
     }
@@ -623,37 +626,37 @@ void MisliWindow::previousNoteFile()
 
 void MisliWindow::zoomOut()
 {
-    currentCanvas_m->noteFile()->eyeZ+=MOVE_SPEED;
-    currentCanvas_m->update();
+    currentCanvasWidget()->noteFile()->eyeZ+=MOVE_SPEED;
+    currentCanvasWidget()->update();
 }
 void MisliWindow::zoomIn()
 {
-    currentCanvas_m->noteFile()->eyeZ-=MOVE_SPEED;
-    currentCanvas_m->update();
+    currentCanvasWidget()->noteFile()->eyeZ-=MOVE_SPEED;
+    currentCanvasWidget()->update();
 }
 
 void MisliWindow::toggleHelp()
 {
-    if(currentCanvas_m->noteFile()!=helpNoteFile){
-        nfBeforeHelp = currentCanvas_m->noteFile();
-        currentCanvas_m->setNoteFile(helpNoteFile);
+    if(currentCanvasWidget()->noteFile()!=helpNoteFile){
+        nfBeforeHelp = currentCanvasWidget()->noteFile();
+        currentCanvasWidget()->setNoteFile(helpNoteFile);
     }else{
-        currentCanvas_m->setNoteFile(nfBeforeHelp);
+        currentCanvasWidget()->setNoteFile(nfBeforeHelp);
     }
 }
 void MisliWindow::makeViewpointDefault()
 {
-    currentCanvas_m->noteFile()->makeCoordsRelativeTo(currentCanvas_m->noteFile()->eyeX,currentCanvas_m->noteFile()->eyeY);
-    currentCanvas_m->noteFile()->arrangeLinksGeometry();
-    currentCanvas_m->noteFile()->eyeX=0;
-    currentCanvas_m->noteFile()->eyeY=0;
-    currentCanvas_m->noteFile()->save();
-    currentCanvas_m->update();
+    currentCanvasWidget()->noteFile()->makeCoordsRelativeTo(currentCanvasWidget()->noteFile()->eyeX,currentCanvasWidget()->noteFile()->eyeY);
+    currentCanvasWidget()->noteFile()->arrangeLinksGeometry();
+    currentCanvasWidget()->noteFile()->eyeX=0;
+    currentCanvasWidget()->noteFile()->eyeY=0;
+    currentCanvasWidget()->noteFile()->save();
+    currentCanvasWidget()->update();
 }
 void MisliWindow::makeNoteFileDefault()
 {
-    for(NoteFile* nf: currentDir()->noteFiles_m){
-        if(nf==currentCanvas_m->noteFile()){
+    for(NoteFile* nf: misliLibrary()->noteFiles_m){
+        if(nf==currentCanvasWidget()->noteFile()){
             if(!nf->isDisplayedFirstOnStartup){
                 nf->isDisplayedFirstOnStartup=true;
                 nf->save();
@@ -680,11 +683,13 @@ void MisliWindow::updateTitle()
     QString title;
 
     //title=tr("Misli - ");
-    if(currentCanvas_m->noteFile()==nullptr){
-        title+=tr("No note files present");
+    if( currentCanvasWidget() == nullptr ){
+        title = tr("Misli");
+    }else if( currentCanvasWidget()->noteFile() == nullptr){
+        title += tr("No note files present");
     }else{
-        title += currentCanvas_m->noteFile()->name();
-        if(!currentCanvas_m->noteFile()->isReadable){
+        title += currentCanvasWidget()->noteFile()->name();
+        if(!currentCanvasWidget()->noteFile()->isReadable){
             title+=tr("(file is not readable)");
         }
     }
@@ -696,8 +701,8 @@ void MisliWindow::updateTitle()
 void MisliWindow::colorSelectedNotes(double txtR, double txtG, double txtB, double txtA, double backgroundR, double backgroundG, double backgroundB, double backgroundA)
 {
     Note *nt;
-    while(currentCanvas_m->noteFile()->getFirstSelectedNote()!=nullptr){
-        nt=currentCanvas_m->noteFile()->getFirstSelectedNote();
+    while(currentCanvasWidget()->noteFile()->getFirstSelectedNote()!=nullptr){
+        nt=currentCanvasWidget()->noteFile()->getFirstSelectedNote();
 
         QColor textColor,bgColor;
         textColor.setRgbF(txtR,txtG,txtB,txtA);
@@ -711,8 +716,8 @@ void MisliWindow::colorSelectedNotes(double txtR, double txtG, double txtB, doub
 void MisliWindow::colorTransparentBackground()
 {
     Note *nt;
-    while(currentCanvas_m->noteFile()->getFirstSelectedNote()!=nullptr){
-        nt=currentCanvas_m->noteFile()->getFirstSelectedNote();
+    while(currentCanvasWidget()->noteFile()->getFirstSelectedNote()!=nullptr){
+        nt=currentCanvasWidget()->noteFile()->getFirstSelectedNote();
 
         nt->setColors(nt->textColor(),QColor(0,0,0,0));
         nt->setSelected(false);
@@ -722,11 +727,14 @@ void MisliWindow::colorTransparentBackground()
 void MisliWindow::updateNoteFilesListMenu()
 {
     ui->menuSwitch_to_another_note_file->clear();
-    if(currentDir()==nullptr) return;
-    for(NoteFile *nf: currentDir()->noteFiles_m){
+
+    if(misliLibrary() == nullptr) return;
+    if(currentCanvasWidget() == nullptr) return;
+
+    for(NoteFile *nf: misliLibrary()->noteFiles_m){
         QAction *action = ui->menuSwitch_to_another_note_file->addAction(nf->name());
         action->setCheckable(true);
-        if(nf==currentCanvas_m->noteFile()) action->setChecked(true);
+        if(nf == currentCanvasWidget()->noteFile()) action->setChecked(true);
     }
 }
 //void MisliWindow::updateDirListMenu()
@@ -748,27 +756,27 @@ void MisliWindow::updateNoteFilesListMenu()
 void MisliWindow::copySelectedNotesToClipboard() //It's not a lambda because it's used also in cut, and other
 {
     //Avoid clearing the clipboard when there's nothing selected for copy
-    if(currentCanvas_m->noteFile()->getFirstSelectedNote()==nullptr) return;
+    if(currentCanvasWidget()->noteFile()->getFirstSelectedNote()==nullptr) return;
 
     //Clear the clipboard note file
     clipboardNoteFile->selectAllNotes();
     clipboardNoteFile->deleteSelected();
 
-    QString clipText = currentCanvas_m->copySelectedNotes(currentCanvas_m->noteFile(),clipboardNoteFile);
+    QString clipText = currentCanvasWidget()->copySelectedNotes(currentCanvasWidget()->noteFile(),clipboardNoteFile);
 
     //Get the number of selected notes
     int selectedNotesCount = 0;
-    for(Note *note: currentCanvas_m->noteFile()->notes){
+    for(Note *note: currentCanvasWidget()->noteFile()->notes){
         if(note->isSelected()) selectedNotesCount++;
     }
 
     //Prepare the coordinates for pasting
     //If there is only one note - center it in the clipboard nf , so it pastes on the mouse
     if(selectedNotesCount==1){
-        QPointF p = currentCanvas_m->noteFile()->getFirstSelectedNote()->rect().topLeft();
+        QPointF p = currentCanvasWidget()->noteFile()->getFirstSelectedNote()->rect().topLeft();
         clipboardNoteFile->makeCoordsRelativeTo(p.x(), p.y());
     }else{//If there are more - keep the coordinates relative to the mouse
-        QPointF p = currentCanvas_m->unproject(currentCanvas_m->mousePos());
+        QPointF p = currentCanvasWidget()->unproject(currentCanvasWidget()->mousePos());
         clipboardNoteFile->makeCoordsRelativeTo(p.x(), p.y());
     }
 
@@ -789,7 +797,7 @@ void MisliWindow::addNewFolder()
 
 void MisliWindow::handleNoteFilesChange()
 {
-    currentCanvas_m->setNoteFile(currentCanvas()->currentNoteFile);
+    currentCanvasWidget()->setNoteFile(currentCanvasWidget()->currentNoteFile);
 }
 
 void MisliWindow::handleFoldersMenuClick(QAction *action)
@@ -806,9 +814,9 @@ void MisliWindow::handleFoldersMenuClick(QAction *action)
 }
 void MisliWindow::handleNoteFilesMenuClick(QAction *action)
 {
-    for(NoteFile *nf: currentDir()->noteFiles()){
+    for(NoteFile *nf: misliLibrary()->noteFiles()){
         if(nf->name()==action->text()){
-            currentCanvas_m->setNoteFile(nf);
+            currentCanvasWidget()->setNoteFile(nf);
             return;
         }
     }
@@ -834,28 +842,32 @@ void MisliWindow::handleVersionInfoReply(QNetworkReply *reply)
     }
     updateCheckDone = true;
 }
-CanvasWidget * MisliWindow::currentCanvas(){
-    return currentCanvas_m;
+CanvasWidget * MisliWindow::currentCanvasWidget(){
+    QWidget *cw = ui->tabWidget->currentWidget();
+
+    if(timelineTabIsActive()){
+        if(ui->tabWidget->count() == 1){
+            qDebug() << "[MisliWindow::currentCanvasWidget] Just Timeline left. Risky stuff yo.";
+            return nullptr;
+        }
+        cw = ui->tabWidget->previousInFocusChain();
+    }
+
+    if(cw == nullptr){
+        qDebug() << "[MisliWindow::currentCanvasWidget] The widget of the curent tab is null.";
+        return nullptr;
+    }
+
+    CanvasWidget *cv = dynamic_cast<CanvasWidget*>(cw);
+
+    if(cv == nullptr) {
+        qDebug()<<"Error when converting QWidget to CanvasWidget.";
+    }
+
+    return cv;
 }
 void MisliWindow::on_tabWidget_currentChanged(int index)
 {
-    QWidget *cw = ui->tabWidget->currentWidget();
-    CanvasWidget *cv = dynamic_cast<CanvasWidget*>(cw);
-
-    if(cv != nullptr) {
-        qDebug()<<"TEST COMPLETED";
-        currentCanvas_m = cv;
-    }else{
-        TimelineWidget *tw = dynamic_cast<TimelineWidget*>(cw);
-        if (tw != nullptr){
-            qDebug()<<"Switched to Timeline";
-        }else{
-            qDebug()<<"ERROR ON CHANGING CURRENT CANVAS. TODO : REVIEW THIS CODE";
-            return;
-        }
-    }
-
-    //cv->setCurrentDir();
     updateTitle();
 }
 
@@ -864,3 +876,8 @@ void MisliWindow::on_tabWidget_tabBarClicked(int index)
 
 }
 
+void MisliWindow::openNoteFileInNewTab(NoteFile *nf)
+{
+    CanvasWidget * newCanvas = new CanvasWidget(this, nf);
+    ui->tabWidget->addTab(newCanvas, nf->name());
+}

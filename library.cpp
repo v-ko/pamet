@@ -96,12 +96,18 @@ NoteFile * Library::noteFileByName(QString name)
     return nullptr;
 }
 
-NoteFile * Library::defaultNfOnStartup()
+NoteFile * Library::defaultNoteFile()
 {
+    if(noteFiles_m.isEmpty()){
+        qDebug()<<"[Library::defaultNfOnStartup] No note files.";
+        return nullptr;
+    }
+
     for(NoteFile *nf: noteFiles_m){
         if(nf->isDisplayedFirstOnStartup) return nf;
     }
-    return nullptr;
+
+    return noteFiles_m[0];
 }
 
 int Library::makeCanvas(QString name)
@@ -125,7 +131,7 @@ int Library::makeCanvas(QString name)
     return 0;
 }
 
-void Library::softDeleteNF(NoteFile* nf)
+void Library::unloadNoteFile(NoteFile* nf)
 {
     if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath());
     noteFiles_m.removeOne(nf);
