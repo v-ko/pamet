@@ -10,7 +10,7 @@
 #include <QtConcurrent/QtConcurrent>
 //FIXME those are needed in the individual modules
 
-#include <../misliinstance.h>
+#include <../library.h>
 
 class Timeline;
 

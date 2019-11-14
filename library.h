@@ -27,22 +27,21 @@
 #include "notefile.h"
 #include "global.h"
 
-class MisliInstance;
+class Library;
 class CanvasWidget;
 
-class MisliDir : public QObject
+class Library : public QObject
 
 {
     Q_OBJECT
 
 public:
     //Functions
-    MisliDir(QString nts_dir, bool enableFSWatch = true);
-    ~MisliDir();
+    Library(QString storageLocation, bool enableFSWatch = true);
+    ~Library();
 
-    int makeNotesFile(QString);
+    int makeCanvas(QString);
     void unloadAllNoteFiles();
-    void deleteAllNoteFiles();
 
     NoteFile * noteFileByName(QString name);
     NoteFile * defaultNfOnStartup();
@@ -59,7 +58,24 @@ public:
     QSettings settings;
     bool keepHistoryViaGit = false;
 
-    bool debug,fsWatchIsEnabled;
+    bool debug, fsWatchIsEnabled;
+
+
+    // REFACTORING -- From misliInstance:
+
+    Library *addDir(QString path);
+    Library *loadDir(QString path);
+    void removeDir(Library *dir);
+    void unloadDir(Library *dir);
+
+    //Properties
+    QList<Library*> misliDirs();
+
+    //Variables
+//    QSettings settings;
+    QString fileStoragePath;
+
+
 
 signals:
     //Property chabges

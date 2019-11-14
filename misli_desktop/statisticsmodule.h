@@ -21,7 +21,7 @@ public:
         return nullptr;
     }
     QString statsFilePath(){
-        QFileInfo statsFile(timeline->timelineWidget->misliWindow->currentDir()->folderPath+"/statistics.csv");
+        QFileInfo statsFile(timeline->timelineWidget->misliWindow->misliLibrary()->fileStoragePath + "/statistics.csv");
         if(statsFile.exists()){
             return statsFile.filePath();
         }else{

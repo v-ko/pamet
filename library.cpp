@@ -17,12 +17,12 @@
 #include <QDebug>
 
 #include "global.h"
-#include "misliinstance.h"
-#include "mislidir.h"
+#include "library_obsolete.h"
+#include "library.h"
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 
-MisliDir::MisliDir(QString folder_path, bool enableFSWatch)
+Library::Library(QString storageLocation, bool enableFSWatch)
 {
     fsWatchIsEnabled = enableFSWatch;
 
@@ -42,32 +42,32 @@ MisliDir::MisliDir(QString folder_path, bool enableFSWatch)
     connect(this,SIGNAL(noteFilesChanged()),this,SLOT(reinitNotesPointingToNotefiles()));
 
     //Setup
-    QDir newDir(folder_path);
+    QDir newDir(storageLocation);
 
     if(!newDir.exists()){
-        qDebug() << "[MisliDir::setDirectoryPath]Directory missing, creating it.";
+        qDebug() << "[Library::setDirectoryPath]Directory missing, creating it.";
 
-        if(!newDir.mkdir(folder_path)){
-            qDebug() << "[MisliDir::setDirectoryPath]Failed making directory: " << folder_path;
+        if(!newDir.mkdir(storageLocation)){
+            qDebug() << "[Library::setDirectoryPath]Failed making directory: " << storageLocation;
             return;
         }
     }
 
-    folderPath = folder_path;
+    folderPath = storageLocation;
     loadNoteFiles();
 }
-MisliDir::~MisliDir()
+Library::~Library()
 {
     unloadAllNoteFiles();
     delete fs_watch;
     delete hangingNfCheck;
 }
-QList<NoteFile*> MisliDir::noteFiles()
+QList<NoteFile*> Library::noteFiles()
 {
     return noteFiles_m;
 }
 
-void MisliDir::checkForHangingNFs()
+void Library::checkForHangingNFs()
 {
     int missingNfCount=0;
 
@@ -86,7 +86,7 @@ void MisliDir::checkForHangingNFs()
     if(missingNfCount==0) hangingNfCheck->stop(); //if none are missing - stop checking
 }
 
-NoteFile * MisliDir::noteFileByName(QString name)
+NoteFile * Library::noteFileByName(QString name)
 {
     for(NoteFile *nf: noteFiles_m){
         if(nf->name()==name){
@@ -96,7 +96,7 @@ NoteFile * MisliDir::noteFileByName(QString name)
     return nullptr;
 }
 
-NoteFile * MisliDir::defaultNfOnStartup()
+NoteFile * Library::defaultNfOnStartup()
 {
     for(NoteFile *nf: noteFiles_m){
         if(nf->isDisplayedFirstOnStartup) return nf;
@@ -104,22 +104,16 @@ NoteFile * MisliDir::defaultNfOnStartup()
     return nullptr;
 }
 
-int MisliDir::makeNotesFile(QString name)
+int Library::makeCanvas(QString name)
 {
     QFile ntFile;
     QString filePath;
 
-    if(noteFileByName(name)!=nullptr){ //Check if such a NF doesn't exist already
+    if(noteFileByName(name) != nullptr){
         return -1;
     }
 
-//    if(use_json){
-//        name = name + ".json";
-//    }else{
-//        name = name + ".misl";
-//    }
-
-    filePath=QDir(folderPath).filePath(name);
+    filePath = QDir(folderPath).filePath(name);
 
     ntFile.setFileName(filePath);
 
@@ -135,7 +129,7 @@ int MisliDir::makeNotesFile(QString name)
     return 0;
 }
 
-void MisliDir::softDeleteNF(NoteFile* nf)
+void Library::softDeleteNF(NoteFile* nf)
 {
     if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath());
     noteFiles_m.removeOne(nf);
@@ -143,7 +137,7 @@ void MisliDir::softDeleteNF(NoteFile* nf)
     emit noteFilesChanged();
 }
 
-void MisliDir::loadNoteFiles()
+void Library::loadNoteFiles()
 {
     unloadAllNoteFiles();
 
@@ -180,7 +174,7 @@ void MisliDir::loadNoteFiles()
         loadNoteFile(dir.absoluteFilePath(fileName));
     }
 }
-void MisliDir::reinitNotesPointingToNotefiles()
+void Library::reinitNotesPointingToNotefiles()
 {
     for(NoteFile *nf: noteFiles_m){
         for(Note *nt: nf->notes){
@@ -189,7 +183,7 @@ void MisliDir::reinitNotesPointingToNotefiles()
     }
 }
 
-void MisliDir::handleChangedFile(QString filePath)
+void Library::handleChangedFile(QString filePath)
 {
     int err=0;
 
@@ -209,37 +203,24 @@ void MisliDir::handleChangedFile(QString filePath)
     emit noteFilesChanged();
 }
 
-void MisliDir::unloadAllNoteFiles()
+void Library::unloadAllNoteFiles()
 {
     while(!noteFiles_m.isEmpty()){
         softDeleteNF(noteFiles_m.first());
     }
 }
 
-void MisliDir::deleteAllNoteFiles()
+double Library::defaultEyeZ()
 {
-    QDir dir(folderPath);
-
-    for(NoteFile *nf: noteFiles_m){
-        if(!dir.remove(nf->filePath())){
-            qDebug()<<"[MisliDir::deleteAllNoteFiles]Could not remove notefile"<<nf->name();
-            return;
-        }
-    }
-    unloadAllNoteFiles();
+    return settings.value("eye_z",QVariant(90)).toDouble();
 }
-
-double MisliDir::defaultEyeZ()
-{
-    return settings.value("eye_z",QVariant(90)).toFloat();
-}
-void MisliDir::setDefaultEyeZ(double value)
+void Library::setDefaultEyeZ(double value)
 {
     settings.setValue("eye_z",QVariant(value));
     settings.sync();
 }
 
-void MisliDir::loadNoteFile(QString pathToNoteFile)
+void Library::loadNoteFile(QString pathToNoteFile)
 {
     NoteFile *nf = new NoteFile;
 
@@ -249,7 +230,7 @@ void MisliDir::loadNoteFile(QString pathToNoteFile)
 
     //If the file didn't init correctly - don't add it
     if(!nf->isReadable | nf->name().isEmpty() ){
-        qDebug()<<"[MisliDir::addNoteFile]Note file is not readable, skipping: "<<pathToNoteFile;
+        qDebug()<<"[Library::addNoteFile]Note file is not readable, skipping: " << pathToNoteFile;
         delete nf;
         return;
     }
@@ -263,7 +244,7 @@ void MisliDir::loadNoteFile(QString pathToNoteFile)
     emit noteFilesChanged();
 }
 
-void MisliDir::handleSaveRequest(NoteFile *nf)
+void Library::handleSaveRequest(NoteFile *nf)
 {
     nf->saveWithRequest = false;
     if(fsWatchIsEnabled) fs_watch->removePath(nf->filePath());
@@ -272,7 +253,7 @@ void MisliDir::handleSaveRequest(NoteFile *nf)
     nf->saveWithRequest = true;
 }
 
-bool MisliDir::renameNoteFile(NoteFile *nf, QString newName)
+bool Library::renameNoteFile(NoteFile *nf, QString newName)
 {
     if(noteFileByName(newName) != nullptr){
         return false;

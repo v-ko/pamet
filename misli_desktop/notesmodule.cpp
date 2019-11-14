@@ -6,7 +6,7 @@ NotesModule::NotesModule(Timeline *timeline_):
     checkbox("Notes module")
 {
     controlWidget = &checkbox;
-    misliDir = new MisliDir("/sync/misli",true);
+    misliDir = new Library("/sync/misli",true);
     loadNotes();
 }
 

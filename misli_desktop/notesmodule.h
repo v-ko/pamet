@@ -11,7 +11,7 @@ public:
 
     //Variables
     QCheckBox checkbox;
-    MisliDir *misliDir;
+    Library *misliDir;
 signals:
 
 public slots:

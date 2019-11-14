@@ -30,53 +30,62 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
     //Set some creditentials
     setOrganizationName("p10"); //this is needed for proper settings access in windows
     setApplicationName("misli");
-    setApplicationVersion("3.0.0");
+    setApplicationVersion(MISLI_VERSION);
 
     //Construct the splash screen
     QSplashScreen splash(QPixmap(":/img/icon.png"));
     splash.show();
 
-    //Init the settings
-    settings = new QSettings;
-
-    //Assume we won't start successfully , if we do - the value gets -1-ed on close
-    setFailedStarts(failedStarts()+1);
-
     //Ask for a language on first program start
-    if(!settings->contains("language")){
+    if(!QSettings().contains("language")){
         QWidget dummyWidget;
-        QString newLanguage = QInputDialog::getItem(&dummyWidget,tr("Set the language"),tr("Language:/Език:"),QStringList()<<"English"<<"Български",0,false);
-        if(newLanguage=="English") setLanguage("en");
-        if(newLanguage=="Български") setLanguage("bg");
+        QString newLanguage = QInputDialog::getItem(&dummyWidget,
+                                                    tr("Set the language"),
+                                                    tr("Language:/Език:"),
+                                                    QStringList() << "English" << "Български", 0,
+                                                    false);
+        if(newLanguage == "English") setLanguage("en");
+        else if(newLanguage == "Български") setLanguage("bg");
+    }else{
+        updateTranslator();
     }
-    updateTranslator();
 
     //Stuff to do before quitting
-    connect(this, &MisliDesktopGui::aboutToQuit, [&]{
-        if(clearSettingsOnExit){
-            settings->clear();
-            settings->sync();
-        }else{
-            setFailedStarts(0);
-        }
-    });
+//    connect(this, &MisliDesktopGui::aboutToQuit, [&]{
 
+//    });
+
+
+
+
+    QStringList notesDirs;
+
+    //------Extract the directory paths from the settings----------
+    if(QSettings().contains("notes_dir")){
+        notesDirs = QSettings().value("notes_dir").toStringList();
+        qDebug()<<"Loading notes dirs:" <<  notesDirs;
+    }
+
+    if( (notesDirs.size() > 1) | (notesDirs.size() < 0) ){
+        qDebug() << "Bad notes dirs size (!=1)";
+        return;
+    }
 
     //Construct the misli instance class
-    misliInstance = new MisliInstance();
-    //Start worker thread as soon as the main loop starts
-    //(so that we first show the splash screen and then start work)
-    misliInstance->loadStoredDirs();
+    misliLibrary = new Library(notesDirs[0]);
+//    misliLibrary->loadStoredDirs(); //just calls the constructors and adds them to the list
+
+
     misliWindow = new MisliWindow(this);
-    splash.finish(misliWindow);
     misliWindow->showMaximized();
+
+    splash.finish(misliWindow);
 
     workerThread.start(); //Used for search results finding
 }
 MisliDesktopGui::~MisliDesktopGui()
 {
     delete misliWindow;
-    delete settings;
     delete translator;
 
     workerThread.quit();
@@ -85,16 +94,16 @@ MisliDesktopGui::~MisliDesktopGui()
 
 void MisliDesktopGui::updateTranslator()
 {
-    //processEvents();
     removeTranslator(translator);
     delete translator;
 
     translator = new QTranslator;
 
-    if(language()!=QString("en")){
+    if(language() != QString("en")){
         //Generate filename and install translator
-        QString file_name = "misli_"+language();
-        if( !translator->load(file_name,QString(":/translations/")) ){
+        QString file_name = "misli_" + language();
+
+        if( !translator->load(file_name, ":/translations/") ){
             qDebug()<<"[MisliDesktopGui::updateTranslator]Error loading the translations file.";
         }else{
             installTranslator(translator);
@@ -116,33 +125,17 @@ void MisliDesktopGui::updateTranslator()
     }
 }
 
-int MisliDesktopGui::failedStarts()
-{
-    return settings->value("failed_starts",QVariant(0)).toInt();
-}
-
-QString MisliDesktopGui::language()
-{
-    return settings->value("language",QVariant("en")).toString();
-}
-void MisliDesktopGui::setFailedStarts(int value)
-{
-    settings->setValue("failed_starts",QVariant(value));
-    settings->sync();
-}
 void MisliDesktopGui::setLanguage(QString newLanguage)
 {
-    if(newLanguage!=language()){
-        settings->setValue("language",newLanguage);
-        settings->sync();
+    if(newLanguage != language()){
+        QSettings().setValue("language", newLanguage);
+        QSettings().sync();
 
         updateTranslator();
     }
 }
 
-void MisliDesktopGui::showWarningMessage(QString message)
+QString MisliDesktopGui::language()
 {
-    QMessageBox msg;
-    msg.setText(message);
-    msg.exec();
+    return QSettings().value("language",QVariant("en")).toString();
 }

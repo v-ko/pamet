@@ -19,14 +19,16 @@
 
 #include <QAbstractListModel>
 
-#include "misliinstance.h"
+#include "library.h"
+
+class MisliWindow;
 
 class NotesSearch : public QAbstractListModel
 {
     Q_OBJECT
 public:
     struct SearchItem{
-        MisliDir *md;
+        Library *lib;
         NoteFile *nf;
         Note *nt;
         double probability;
@@ -36,9 +38,9 @@ public:
     //Functions
     NotesSearch(MisliWindow *misli_window, double initial_probability);
     int loadNotes();
-    int loadNotes(MisliDir * misliDir, double initial_probability);
-    int loadNotes(NoteFile * noteFile, MisliDir *misliDir, double initial_probability);
-    static bool compareItems(SearchItem first,SearchItem second);
+    int loadNotes(Library * lib, double initial_probability);
+    int loadNotes(NoteFile * noteFile, Library *lib, double initial_probability);
+    static bool compareItems(SearchItem first, SearchItem second);
 
     //Variables
     QList<SearchItem> searchItems,searchResults;

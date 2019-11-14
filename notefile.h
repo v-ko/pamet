@@ -21,7 +21,7 @@
 #include "util.h"
 #include <QObject>
 
-class MisliDir;
+class Library;
 
 class NoteFile : public QObject
 {

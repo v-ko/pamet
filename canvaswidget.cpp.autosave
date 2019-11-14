@@ -783,12 +783,7 @@ void CanvasWidget::jumpToNearestNote()
 
 NoteFile* CanvasWidget::noteFile()
 {
-    if(currentDir() == nullptr){
-        qDebug() << "[Canvas::noteFile] Current dir is null.";
-        return nullptr;
-    }else{
-        return currentNoteFile;
-    }
+    return currentNoteFile;
 }
 void CanvasWidget::setNoteFile(NoteFile *newNoteFile) //This function has to not care what happens to the last NF
                                                 //Else we need no know the misliDir of the last one

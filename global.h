@@ -19,6 +19,8 @@
 
 #include <qglobal.h>
 
+#define MISLI_VERSION "3.0.0"
+
 #define CLICK_RADIUS 0.3
 #define MOVE_SPEED 3
 #define MOVE_FUNC_TIMEOUT 300 //milisecs to hold the mouse on a note to move it

@@ -26,7 +26,7 @@
 #include "link.h"
 
 class NoteFile;
-class MisliDir;
+class Library;
 
 enum class NoteType {
     normal,
@@ -56,7 +56,7 @@ public:
     static Note * fromIniString(int id_, QString iniString);
     ~Note();
 
-    void checkTextForNoteFileLink(); //gets called from MisliDir only
+    void checkTextForNoteFileLink(); //gets called from Library only
     void checkTextForFileDefinition();
     void checkTextForSystemCallDefinition();
     void checkTextForWebPageDefinition();

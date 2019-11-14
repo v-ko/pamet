@@ -28,29 +28,43 @@ NotesSearch::NotesSearch(MisliWindow *misli_window, double initial_probability)
     initialProbability = initial_probability;
 }
 
+//int NotesSearch::loadNotes()
+//{
+//    int notes_loaded=0;
+
+//    for(Library* misliDir: misliWindow->misliLibrary()->misliDirs()  ){
+//        notes_loaded += loadNotes(misliDir,initialProbability);
+//    }
+//    return notes_loaded;
+//}
+//int NotesSearch::loadNotes(Library *lib, double initial_probability)
+//{
+//    int notes_loaded=0;
+
+//    //Load only the notes that are not marked as indexed
+//    for(auto nf: lib->noteFiles()){
+//        if(!nf->indexedForSearch){
+//            notes_loaded += loadNotes(nf, lib, initial_probability);
+//            nf->indexedForSearch = true;
+//        }
+//    }
+//    return notes_loaded;
+//}
 int NotesSearch::loadNotes()
 {
     int notes_loaded=0;
-
-    for(MisliDir* misliDir: misliWindow->misliInstance()->misliDirs()  ){
-        notes_loaded += loadNotes(misliDir,initialProbability);
-    }
-    return notes_loaded;
-}
-int NotesSearch::loadNotes(MisliDir *misliDir, double initial_probability)
-{
-    int notes_loaded=0;
+    auto lib = misliWindow->misliLibrary();
 
     //Load only the notes that are not marked as indexed
-    for(auto nf: misliDir->noteFiles()){
+    for(auto nf: lib->noteFiles()){
         if(!nf->indexedForSearch){
-            notes_loaded += loadNotes(nf, misliDir, initial_probability);
+            notes_loaded += loadNotes(nf, lib, initialProbability);
             nf->indexedForSearch = true;
         }
     }
     return notes_loaded;
 }
-int NotesSearch::loadNotes(NoteFile *noteFile, MisliDir* misliDir, double initial_probability)
+int NotesSearch::loadNotes(NoteFile *noteFile, Library* lib, double initial_probability)
 {
     int notes_loaded=0;
     SearchItem searchItem;
@@ -67,7 +81,7 @@ int NotesSearch::loadNotes(NoteFile *noteFile, MisliDir* misliDir, double initia
         searchItem.nt = nt;
         searchItem.probability=initial_probability;
         searchItem.nf = noteFile;
-        searchItem.md = misliDir;
+        searchItem.lib = lib;
         searchItems.push_back(searchItem);
         notes_loaded++;
     }
@@ -107,7 +121,7 @@ void NotesSearch::findByText(QString searchString)
         //Match the scope
         switch (misliWindow->ui->searchScopeComboBox->currentIndex()) {
         case 1:
-            if(currentItem.md!=misliWindow->currentDir()){
+            if(currentItem.lib!=misliWindow->currentDir()){
                 searchResultsIterator.remove();
                 addPrecedingDots = false;
                 addTrailingDots = false;

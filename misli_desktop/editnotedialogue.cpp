@@ -158,9 +158,9 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     });
 }
 
-MisliInstance * EditNoteDialogue::misli_i()
+Library * EditNoteDialogue::misli_i()
 {
-    return misliWindow->misliInstance();
+    return misliWindow->misliLibrary();
 }
 
 EditNoteDialogue::~EditNoteDialogue()

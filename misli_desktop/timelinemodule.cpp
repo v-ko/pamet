@@ -4,7 +4,7 @@
 #include <QDirIterator>
 #include <QCheckBox>
 #include <QMediaMetaData>
-#include "../mislidir.h"
+#include "../library.h"
 #include "timeline.h"
 
 TimelineModule::TimelineModule(Timeline *timeline_)

@@ -44,9 +44,9 @@ TRANSLATIONS += ../translations/misli_bg.ts
 HEADERS += \
     ../canvaswidget.h \
     ../global.h \
+    ../library.h \
+    ../library_obsolete.h \
     ../link.h \
-    ../mislidir.h \
-    ../misliinstance.h \
     ../note.h \
     ../notefile.h \
     ../notessearch.h \
@@ -65,9 +65,9 @@ HEADERS += \
 
 SOURCES += \
     ../canvaswidget.cpp \
+    ../library.cpp \
+    ../library_obsolete.cpp \
     ../link.cpp \
-    ../mislidir.cpp \
-    ../misliinstance.cpp \
     ../note.cpp \
     ../notefile.cpp \
     ../notessearch.cpp \

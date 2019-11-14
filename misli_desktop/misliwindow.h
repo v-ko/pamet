@@ -26,7 +26,7 @@
 
 #include "ui_misliwindow.h"
 #include "editnotedialogue.h"
-#include "../misliinstance.h"
+#include "../library_obsolete.h"
 #include "../notefile.h"
 #include "../notessearch.h"
 #include "timelinewidget.h"
@@ -34,7 +34,7 @@
 
 class CanvasWidget;
 class MisliDesktopGui;
-class MisliDir;
+class Library;
 
 namespace Ui {
 class MisliWindow;
@@ -51,10 +51,10 @@ public:
 
     bool timelineTabIsActive();
 
-    MisliInstance *misliInstance();
+    Library *misliLibrary();
 
     //Properties
-    MisliDir* currentDir();
+    Library* currentDir();
     CanvasWidget * currentCanvas();
 
     //GUI
@@ -92,7 +92,7 @@ public slots:
     void makeViewpointDefault();
     void makeNoteFileDefault();
     void addNewFolder();
-    void removeCurrentFolder();
+//    void removeCurrentFolder();
 
     void updateTitle();
 
@@ -104,8 +104,7 @@ public slots:
     void zoomIn();
 
     void updateNoteFilesListMenu();
-    void updateDirListMenu();
-    void updateTagShortcutsLabels();
+//    void updateDirListMenu();
 
     void handleNoteFilesChange();
 

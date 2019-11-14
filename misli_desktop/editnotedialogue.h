@@ -22,7 +22,7 @@
 #include <QMenu>
 
 class Note;
-class MisliInstance;
+class Library;
 
 class MisliWindow;
 namespace Ui {
@@ -38,7 +38,7 @@ public:
     EditNoteDialogue(MisliWindow * misliWindow_);
     ~EditNoteDialogue();
 
-    MisliInstance * misli_i();
+    Library * misli_i();
     QString maybeToRelativePath(QString path);
     
     //Variables
