@@ -55,9 +55,6 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
 
 //    });
 
-
-
-
     QStringList notesDirs;
 
     //------Extract the directory paths from the settings----------
@@ -73,14 +70,11 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
 
     //Construct the misli instance class
     misliLibrary = new Library(notesDirs[0]);
-//    misliLibrary->loadStoredDirs(); //just calls the constructors and adds them to the list
-
 
     misliWindow = new MisliWindow(this);
     misliWindow->showMaximized();
     if(misliLibrary->defaultNoteFile() != nullptr){
         misliWindow->openNoteFileInNewTab(misliLibrary->defaultNoteFile());
-        misliWindow->ui->tabWidget->tabBar()->moveTab(1, 0);
         misliWindow->ui->tabWidget->setCurrentIndex(0);
     }
 

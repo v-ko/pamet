@@ -876,7 +876,11 @@ void MisliWindow::on_tabWidget_tabBarClicked(int index)
 void MisliWindow::openNoteFileInNewTab(NoteFile *nf)
 {
     CanvasWidget * newCanvas = new CanvasWidget(this, nf);
+
     ui->tabWidget->addTab(newCanvas, nf->name());
+
+    int timelineIndex = ui->tabWidget->indexOf(&timelineWidget);
+    ui->tabWidget->tabBar()->moveTab(timelineIndex, ui->tabWidget->count()-1);
 }
 
 void MisliWindow::on_tabWidget_tabCloseRequested(int index)
