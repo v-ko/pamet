@@ -828,6 +828,10 @@ void CanvasWidget::setNoteFile(NoteFile *newNoteFile) //This function has to not
     currentNoteFile = newNoteFile;
     misliWindow->updateNoteFilesListMenu();
     misliWindow->updateTitle();
+
+    int myIndex = misliWindow->ui->tabWidget->indexOf(this);
+    misliWindow->ui->tabWidget->setTabText(myIndex, noteFile()->name());
+
     update();
 }
 
