@@ -172,8 +172,13 @@ void EditNoteDialogue::newNote()
 {
     setWindowTitle(tr("Make new note"));
 
-    x_on_new_note = misliWindow->currentCanvasWidget()->mousePos().x(); //cursor position relative to the gl widget
-    y_on_new_note = misliWindow->currentCanvasWidget()->mousePos().y();
+    if(misliWindow->timelineTabIsActive()){
+        x_on_new_note = misliWindow->timelineWidget.timeline->mapFromGlobal(cursor().pos()).x();
+        y_on_new_note = misliWindow->timelineWidget.timeline->mapFromGlobal(cursor().pos()).y();
+    }else{
+        x_on_new_note = misliWindow->currentCanvasWidget()->mousePos().x(); //cursor position relative to the gl widget
+        y_on_new_note = misliWindow->currentCanvasWidget()->mousePos().y();
+    }
 
     move(QCursor::pos());
 
