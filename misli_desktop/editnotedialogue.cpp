@@ -156,6 +156,15 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
         ui->textEdit->setFocus();
         ui->textEdit->moveCursor (QTextCursor::End);
     });
+
+    //Set the web page note template
+    connect(ui->actionEscape, &QAction::triggered,[&](){
+        QString text = ui->textEdit->toPlainText();
+        if(!text.isEmpty()){
+            misliWindow->misliDesktopGUI->clipboard()->setText(text);
+        }
+        close();
+    });
 }
 
 Library * EditNoteDialogue::misli_i()

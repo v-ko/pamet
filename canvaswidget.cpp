@@ -42,11 +42,6 @@ CanvasWidget::CanvasWidget(MisliWindow *misliWindow_, NoteFile *nf) :
     infoLabel = new QLabel(this);
     infoLabel->setFont(QFont("Halvetica",15));
 
-    searchField = new QLineEdit(this);
-    searchField->move(0,0);
-    searchField->resize(200,searchField->height());
-    searchField->hide();
-
     //Setting the timer for the move_func
     move_func_timeout = new QTimer(this);
     move_func_timeout->setSingleShot(1);
@@ -60,7 +55,6 @@ CanvasWidget::CanvasWidget(MisliWindow *misliWindow_, NoteFile *nf) :
 }
 CanvasWidget::~CanvasWidget()
 {
-    delete searchField;
     delete contextMenu;
     delete infoLabel;
     delete move_func_timeout;
@@ -127,6 +121,7 @@ double CanvasWidget::heightScaleFactor()
 
 void CanvasWidget::paintEvent(QPaintEvent*)
 {
+    QTime paintStartTime = QTime::currentTime();
     if(noteFile()==nullptr) return;
 
     //Init the painter
@@ -278,6 +273,8 @@ void CanvasWidget::paintEvent(QPaintEvent*)
     }else{
         misliWindow->ui->jumpToNearestNotePushButton->hide();
     }
+
+    qDebug() << "Painter latency: " << QTime::currentTime().msecsTo( paintStartTime);
 }
 
 void CanvasWidget::mouseDoubleClickEvent(QMouseEvent *event)

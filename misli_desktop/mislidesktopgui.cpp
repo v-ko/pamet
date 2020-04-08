@@ -16,7 +16,9 @@
 
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QFileDialog>
 #include <QFileSystemWatcher>
+#include <QStandardPaths>
 
 #include "mislidesktopgui.h"
 #include "../global.h"
@@ -63,9 +65,31 @@ MisliDesktopGui::MisliDesktopGui(int argc, char *argv[]) :
         qDebug()<<"Loading notes dirs:" <<  notesDirs;
     }
 
-    if( (notesDirs.size() > 1) | (notesDirs.size() < 0) ){
+    if(notesDirs.size() != 1){
         qDebug() << "Bad notes dirs size (!=1)";
-        return;
+        if(notesDirs.size()>1){ //Get the firs from the old config if present
+            notesDirs = QStringList(notesDirs[0]);
+        }else{ // Or request a folder
+            QWidget dummyWidget;
+            QString storageChoice = QInputDialog::getItem(&dummyWidget,
+                                                        tr("Set the storage folder"),
+                                                        tr("Set the storage folder:"),
+                                                        QStringList() << "Use default folder" << "Choose folder", 0,
+                                                        false);
+            if(storageChoice == "Use default folder"){
+                notesDirs = QStringList(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+            }else{
+                QString storageFolder = QFileDialog::getExistingDirectory(&dummyWidget,
+                                                            tr("Choose a storage folder"),
+                                                            tr("Choose a storage folder:"));
+                if(storageFolder.isEmpty()){
+                    notesDirs = QStringList(QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation));
+                }else{
+                    notesDirs = QStringList(storageFolder);
+                }
+            }
+        }
+        QSettings().setValue("notes_dir", notesDirs);
     }
 
     //Construct the misli instance class

@@ -45,7 +45,6 @@ HEADERS += \
     ../canvaswidget.h \
     ../global.h \
     ../library.h \
-    ../library_obsolete.h \
     ../link.h \
     ../note.h \
     ../notefile.h \
@@ -66,7 +65,6 @@ HEADERS += \
 SOURCES += \
     ../canvaswidget.cpp \
     ../library.cpp \
-    ../library_obsolete.cpp \
     ../link.cpp \
     ../note.cpp \
     ../notefile.cpp \

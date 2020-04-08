@@ -17,7 +17,6 @@
 #include <QDebug>
 
 #include "global.h"
-#include "library_obsolete.h"
 #include "library.h"
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"

@@ -72,7 +72,6 @@ public:
     Note *cpChangeNote;
     Link *linkOnControlPointDrag;
 
-    QLineEdit *searchField;
     QMenu *contextMenu, detailsMenu;
     QLabel *infoLabel;
     QTimer *move_func_timeout;

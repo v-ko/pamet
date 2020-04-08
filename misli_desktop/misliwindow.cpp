@@ -555,7 +555,11 @@ void MisliWindow::newNoteFile()
     misliLibrary()->reinitNotesPointingToNotefiles();
 
     //Add a link in the current nf that points to the new nf
-    NoteFile *newNF = misliLibrary()->noteFiles_m.back();
+    NoteFile *newNF = misliLibrary()->noteFileByName(name);
+    if(newNF == nullptr){
+        qDebug() << "Newly created note with name " << name << " not found.";
+        return;
+    }
     Note *new_note = new Note(currentCanvasWidget()->currentNoteFile->getNewId(), "this_note_points_to:" + newNF->name());
     new_note->setRect(QRectF(currentCanvasWidget()->unproject(currentCanvasWidget()->mousePos()), QSizeF(4, 2)));
     new_note->requestAutoSize = true;
@@ -855,10 +859,10 @@ CanvasWidget * MisliWindow::currentCanvasWidget(){
         return nullptr;
     }
 
-    CanvasWidget *cv = dynamic_cast<CanvasWidget*>(cw);
+    CanvasWidget *cv = qobject_cast<CanvasWidget*>(cw);
 
     if(cv == nullptr) {
-        qDebug()<<"Error when converting QWidget to CanvasWidget.";
+        qDebug() << "Error when converting QWidget to CanvasWidget.";
     }
 
     return cv;

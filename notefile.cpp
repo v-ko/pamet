@@ -23,7 +23,6 @@
 #include "note.h"
 #include "notefile.h"
 #include "global.h"
-#include "library_obsolete.h"
 #include "misli_desktop/misliwindow.h"
 #include "misli_desktop/mislidesktopgui.h"
 

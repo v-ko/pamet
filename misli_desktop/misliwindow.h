@@ -26,7 +26,6 @@
 
 #include "ui_misliwindow.h"
 #include "editnotedialogue.h"
-#include "../library_obsolete.h"
 #include "../notefile.h"
 #include "../notessearch.h"
 #include "timelinewidget.h"
