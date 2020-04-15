@@ -157,11 +157,13 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
         ui->textEdit->moveCursor (QTextCursor::End);
     });
 
-    //Set the web page note template
+    //Push the discarded note edits to the clipboard history (restoring the current clipboard)
     connect(ui->actionEscape, &QAction::triggered,[&](){
         QString text = ui->textEdit->toPlainText();
         if(!text.isEmpty()){
-            misliWindow->misliDesktopGUI->clipboard()->setText(text);
+            if(text != edited_note->text()){
+                misliWindow->misliDesktopGUI->clipboard()->setText(text);
+            }
         }
         close();
     });
