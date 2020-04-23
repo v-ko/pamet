@@ -160,11 +160,20 @@ EditNoteDialogue::EditNoteDialogue(MisliWindow *misliWindow_) :
     //Push the discarded note edits to the clipboard history (restoring the current clipboard)
     connect(ui->actionEscape, &QAction::triggered,[&](){
         QString text = ui->textEdit->toPlainText();
+        bool shouldCopy = false;
+
         if(!text.isEmpty()){
-            if(text != edited_note->text()){
-                misliWindow->misliDesktopGUI->clipboard()->setText(text);
+            if(edited_note == nullptr){
+                if(!text.isEmpty()){
+                    shouldCopy = true;
+                }
+            }else if(text != edited_note->text()){
+                shouldCopy = true;
             }
         }
+
+        if(shouldCopy) misliWindow->misliDesktopGUI->clipboard()->setText(text);
+
         close();
     });
 }
