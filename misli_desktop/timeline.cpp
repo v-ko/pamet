@@ -294,8 +294,9 @@ void Timeline::paintEvent(QPaintEvent *)
         QFont font("Helvetica");
         font.setPointSizeF( nt->fontSize );
         painter.setFont( font );
-        QRectF boundingRect = painter.boundingRect( nt->rect_m, Qt::TextWordWrap | nt->alignment() | Qt::AlignVCenter, nt->text() );
-        nt->rect_m.setHeight( boundingRect.height()+10 );
+        QRectF boundingRect = painter.boundingRect( nt->textRect(), Qt::TextWordWrap | nt->alignment() | Qt::AlignVCenter, nt->text() );
+//        qDebug() << "bounding vs note, fontsize" << boundingRect.width() << nt->rect_m.width() << nt->fontSize;
+        nt->rect_m.setHeight( boundingRect.height() * 1.6 ); //Hacky fix for bad textfield calculations
 
         //If there are notes intersecting with this one - move it under them
         bool intersectPresent = true;
