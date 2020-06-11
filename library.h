@@ -64,7 +64,7 @@ public:
     //Variables
 //    QSettings settings;
     QString fileStoragePath;
-
+    QStringList filter_menu_tags;
 
 
 signals:

@@ -16,6 +16,7 @@
 
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QAction>
 
 #include "canvaswidget.h"
 #include "misli_desktop/misliwindow.h"
@@ -51,6 +52,18 @@ CanvasWidget::CanvasWidget(MisliWindow *misliWindow_, NoteFile *nf) :
     setFocusPolicy(Qt::ClickFocus);
     setAcceptDrops(true);
 
+    //Prepare per tag filter actions for the context menu
+    per_tag_filter_menu.setTitle("Filter per tag (hacky)");
+    for(auto tag: misliWindow->misliLibrary()->filter_menu_tags){
+        QAction *action = new QAction(tag);
+        action->setCheckable(true);
+        action->setChecked(true);
+
+        per_tag_filter_menu.addAction(action);
+        connect(action, SIGNAL(triggered()), this, SLOT(update));
+    }
+
+    // Set notefile
     setNoteFile(nf);
 }
 CanvasWidget::~CanvasWidget()
@@ -168,6 +181,14 @@ void CanvasWidget::paintEvent(QPaintEvent*)
     windowFrame.setSize( QSizeF(width()/heightScaleFactor(), height()/heightScaleFactor()) );
     windowFrame.moveCenter(QPointF(noteFile()->eyeX,noteFile()->eyeY));
 
+    // Allowed tags
+    QStringList allowedTags;
+    for(auto action: per_tag_filter_menu.actions()){
+        if(!action->isChecked()){
+            allowedTags.append(action->text());
+        }
+    }
+
     //=============Start painting===========================
     int displayed_notes = 0;
     for(Note* nt: noteFile()->notes){
@@ -176,66 +197,76 @@ void CanvasWidget::paintEvent(QPaintEvent*)
         circleColor.setAlpha(60);//same as BG but transparent
 
         //Draw the note (only if it's on screen (to avoid lag) )
-        if(nt->rect().intersects(windowFrame)){
-            displayed_notes++;
+        if(!nt->rect().intersects(windowFrame)){
+            continue;
+        }
 
-            //Check the validity of the address string
-            if(nt->type == NoteType::redirecting){
-                if(misliWindow->misliLibrary()->noteFileByName(nt->addressString) == nullptr &&
-                   nt->textForShortening!=tr("Missing note file") )
-                {
-                    nt->textForShortening = tr("Missing note file");
-                }
+        bool hideNote = false;
+        for(auto tag: nt->tags){
+            if(allowedTags.indexOf(tag) != -1){
+                hideNote = true;
             }
+        }
+        if(hideNote) continue;
 
-            //Handle autoSize requests
-            if(nt->requestAutoSize){
-                nt->requestAutoSize = false;
-                nt->autoSize(painter);
-                noteFile()->save();
+        displayed_notes++;
+
+        //Check the validity of the address string
+        if(nt->type == NoteType::redirecting){
+            if(misliWindow->misliLibrary()->noteFileByName(nt->addressString) == nullptr &&
+               nt->textForShortening!=tr("Missing note file") )
+            {
+                nt->textForShortening = tr("Missing note file");
             }
-            //Draw the actual note
-            nt->drawNote(painter);
+        }
 
-            //Wash out some notes to visualize tags if tags view is activated
-            if(misliWindow->ui->actionToggle_tags_view->isChecked()){
-                if(!nt->tags.contains(misliWindow->ui->tagTextLineEdit->text())){
-                    painter.fillRect(nt->rect(), QBrush(QColor(255,255,255,128), Qt::SolidPattern));
-                }
+        //Handle autoSize requests
+        if(nt->requestAutoSize){
+            nt->requestAutoSize = false;
+            nt->autoSize(painter);
+            noteFile()->save();
+        }
+        //Draw the actual note
+        nt->drawNote(painter);
+
+        //Wash out some notes to visualize tags if tags view is activated
+        if(misliWindow->ui->actionToggle_tags_view->isChecked()){
+            if(!nt->tags.contains(misliWindow->ui->tagTextLineEdit->text())){
+                painter.fillRect(nt->rect(), QBrush(QColor(255,255,255,128), Qt::SolidPattern));
             }
+        }
 
-            //Draw additional lines to help alignment
-            if( (moveOn | noteResizeOn) && nt->isSelected_m){
+        //Draw additional lines to help alignment
+        if( (moveOn | noteResizeOn) && nt->isSelected_m){
 
-                double x = nt->rect().x();
-                double y = nt->rect().y();
-                double rectX = nt->rect().right(); //coordinates of the rectangle encapsulating the note
-                double rectY = nt->rect().bottom();
+            double x = nt->rect().x();
+            double y = nt->rect().y();
+            double rectX = nt->rect().right(); //coordinates of the rectangle encapsulating the note
+            double rectY = nt->rect().bottom();
 
-                QLineF leftLine(x,y-ALIGNMENT_LINE_LENGTH,x,rectY+ALIGNMENT_LINE_LENGTH);
-                QLineF rightLine(rectX,y-ALIGNMENT_LINE_LENGTH,rectX,rectY+ALIGNMENT_LINE_LENGTH);
-                QLineF bottomLine(x-ALIGNMENT_LINE_LENGTH,rectY,rectX+ALIGNMENT_LINE_LENGTH,rectY);
-                QLineF topLine(x-ALIGNMENT_LINE_LENGTH,y,rectX+ALIGNMENT_LINE_LENGTH,y);
+            QLineF leftLine(x,y-ALIGNMENT_LINE_LENGTH,x,rectY+ALIGNMENT_LINE_LENGTH);
+            QLineF rightLine(rectX,y-ALIGNMENT_LINE_LENGTH,rectX,rectY+ALIGNMENT_LINE_LENGTH);
+            QLineF bottomLine(x-ALIGNMENT_LINE_LENGTH,rectY,rectX+ALIGNMENT_LINE_LENGTH,rectY);
+            QLineF topLine(x-ALIGNMENT_LINE_LENGTH,y,rectX+ALIGNMENT_LINE_LENGTH,y);
 
-                //Set the color
-                pen.setColor(nt->textColor());
-                painter.setPen( pen );
-                painter.drawLine(leftLine);
-                painter.drawLine(rightLine);
-                painter.drawLine(bottomLine);
-                painter.drawLine(topLine);
-            }
+            //Set the color
+            pen.setColor(nt->textColor());
+            painter.setPen( pen );
+            painter.drawLine(leftLine);
+            painter.drawLine(rightLine);
+            painter.drawLine(bottomLine);
+            painter.drawLine(topLine);
+        }
 
-            //If it's selected - draw the resize circle
-            if(nt->isSelected_m){
-                painter.setBrush(circleColor);
-                painter.drawEllipse(nt->rect().bottomRight(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
+        //If it's selected - draw the resize circle
+        if(nt->isSelected_m){
+            painter.setBrush(circleColor);
+            painter.drawEllipse(nt->rect().bottomRight(),RESIZE_CIRCLE_RADIUS,RESIZE_CIRCLE_RADIUS);
 
-                if(linkingIsOn){
-                    Link ln(0);
-                    ln.line.setPoints(nt->rect().center(), unproject(mousePos()));
-                    nt->drawLink(painter, ln);
-                }
+            if(linkingIsOn){
+                Link ln(0);
+                ln.line.setPoints(nt->rect().center(), unproject(mousePos()));
+                nt->drawLink(painter, ln);
             }
         }
     } //next note
@@ -577,6 +608,7 @@ void CanvasWidget::handleMousePress(Qt::MouseButton button)
         contextMenu->addAction(misliWindow->ui->actionCopy);
         contextMenu->addAction(misliWindow->ui->actionPaste);
         contextMenu->addAction(misliWindow->ui->actionCreate_note_from_the_clipboard_text);
+        contextMenu->addMenu(&per_tag_filter_menu);
 
         contextMenu->popup(cursor().pos());
     }

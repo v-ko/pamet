@@ -72,7 +72,7 @@ public:
     Note *cpChangeNote;
     Link *linkOnControlPointDrag;
 
-    QMenu *contextMenu, detailsMenu;
+    QMenu *contextMenu, detailsMenu, per_tag_filter_menu;
     QLabel *infoLabel;
     QTimer *move_func_timeout;
     QTime lastReleaseEvent;

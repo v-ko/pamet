@@ -54,6 +54,17 @@ Library::Library(QString storageLocation, bool enableFSWatch)
 
     folderPath = storageLocation;
     loadNoteFiles();
+
+    // Load the hacky tags note if it exists somewhere
+    for (auto nf: noteFiles_m){
+        for(auto nt: nf->notes){
+            if(nt->text().startsWith("define_filter_menu_tags:")){
+                auto lines = nt->text().split("\n", QString::SkipEmptyParts);
+                lines.pop_front(); // The "define_filter_menu_tags:"
+                filter_menu_tags = lines;
+            }
+        }
+    }
 }
 Library::~Library()
 {
