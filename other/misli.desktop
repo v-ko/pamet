@@ -2,7 +2,7 @@
 Name=Misli
 Comment=A program to organize thoughts and notes
 Exec=misli
-Icon=/sync/C++/misli/misli/img/icon.png
+Icon=misli.png
 Terminal=false
 Type=Application
 StartupWMClass=misli

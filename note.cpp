@@ -351,9 +351,11 @@ void Note::drawNote(QPainter &painter)
 
     //Point size uses transformations, pixel size is the same on all devices
     //So this is kind of a hack to use pointSize without the text being different size on different (by DPI) displays
-    font.setPointSizeF(10000);
-    QFontMetrics fm(font);
-    font.setPointSizeF( ( fontSize *10000/double(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
+//    font.setPointSizeF(10000);
+//    QFontMetrics fm(font);
+//    font.setPointSizeF( ( fontSize *10000/double(fm.height()) )*1.552 ); //the last constant is the pixelSize/pointSize ratio of my laptop
+
+    font.setPointSizeF(fontSize);
     painter.setFont(font);
 
     pen.setColor( textColor_m );
