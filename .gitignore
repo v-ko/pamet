@@ -20,3 +20,12 @@ canvaswidget.h.autosave
 misli_desktop/misliwindow.h.autosave
 *.pyc
 *.user
+misli.py/.idea/inspectionProfiles/profiles_settings.xml
+misli.py/.idea/misc.xml
+misli.py/.idea/misli.py.iml
+misli.py/.idea/modules.xml
+misli.py/.idea/vcs.xml
+misli.py/misli.egg-info/dependency_links.txt
+misli.py/misli.egg-info/PKG-INFO
+misli.py/misli.egg-info/SOURCES.txt
+misli.py/misli.egg-info/top_level.txt

@@ -1,0 +1,45 @@
+#!/usr/bin/env python
+
+import os
+import json
+import logging
+
+from misli import misli
+from misli.gui.notes import components_lib
+from misli.gui.desktop.app import DesktopApp
+from PySide2.QtCore import QStandardPaths
+from misli.services.file_system_storage import FSStorageBackend
+
+logging.basicConfig(level=logging.INFO)
+
+default_data_path = QStandardPaths.writableLocation(
+    QStandardPaths.GenericDataLocation)
+
+config_file_path = os.path.join(default_data_path, 'config.json')
+
+default_config = {}
+default_fs_repo_path = os.path.join(default_data_path, 'default_repo')
+default_config['file_system_storage_path'] = default_fs_repo_path
+
+
+def main():
+    # Load the basic config
+    if not os.path.exists(config_file_path):
+        config = default_config
+        with open(config_file_path, 'w') as cf:
+            json.dump(config, cf)
+    else:
+        with open(config_file_path) as cf:
+            config = json.load(cf)
+
+    # Init the app
+    fs_repo = FSStorageBackend.open(config['file_system_storage_path'])
+    misli.set_repo(fs_repo)
+    misli.set_components_lib(components_lib)
+
+    desktop_app = DesktopApp()
+    desktop_app.exec_()
+
+
+if __name__ == '__main__':
+    main()

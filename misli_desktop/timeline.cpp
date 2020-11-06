@@ -291,7 +291,7 @@ void Timeline::paintEvent(QPaintEvent *)
             }
         }
 
-        QFont font("Helvetica");
+        QFont font("Nimbus Sans");
         font.setPointSizeF( nt->fontSize );
         painter.setFont( font );
         QRectF boundingRect = painter.boundingRect( nt->textRect(), Qt::TextWordWrap | nt->alignment() | Qt::AlignVCenter, nt->text() );
