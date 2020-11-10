@@ -7,6 +7,10 @@ from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush
 from misli.gui.map_page.map_page_component import MapPageComponent
 from misli.gui.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from misli.gui.constants import MAX_RENDER_TIME
+
+from misli.core.primitives import Point, Rectangle
+# from misli.objects.base_object import BaseObject
+
 from misli.core.logging import get_logger
 log = get_logger(__name__)
 
@@ -58,14 +62,14 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)
 
-    def set_state(self, new_state: dict):
+    def set_props(self, **page):
         self.update()
 
     def render_img_cache_rect_unprojected(self, child):
-        nt_rect = QRectF(*child.note().rect())
+        nt_rect = Rectangle(*child.note.rect())
 
         # Project and round down to the pixel grid
-        cache_rect = self.viewport.projectRect(nt_rect).toRect()
+        cache_rect = self.viewport.project_rect(nt_rect).toRect()
 
         cache_rect.moveTo(
             cache_rect.x() - RENDER_CACHE_PADDING,
@@ -78,9 +82,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
     def render_child(self, child):
         painter = QPainter()
 
-        nt_rect = QRectF(*child.note().rect())
+        nt_rect = QRectF(*child.note.rect())
         cache_rect = self.render_img_cache_rect_unprojected(child)
-        display_rect = self.viewport.projectRect(nt_rect)
+        display_rect = self.viewport.project_rect(nt_rect)
 
         pcommand_cache = child.data.get('pcommand_cache', None)
         render_img = child.data.get('render_cache', None)
@@ -114,7 +118,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         draw_point_x = display_rect.x() - cache_rect.x()
         draw_point_y = display_rect.y() - cache_rect.y()
 
-        scale_factor = self.viewport.heightScaleFactor()
+        scale_factor = self.viewport.height_scale_factor()
 
         painter.translate(draw_point_x, draw_point_y)
         painter.scale(scale_factor, scale_factor)
@@ -138,10 +142,10 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         pen.setCosmetic(True)
         painter.setPen(pen)
 
-        unprojected_viewport = self.viewport.unprojectRect(self.rect())
+        unprojected_viewport = self.viewport.unproject_rect(self.rect())
         rendered_notes = 0
-        for child in self._children:
-            nt_rect = QRectF(*child.note().rect())
+        for child in self.get_children():
+            nt_rect = Rectangle(*child.note.rect())
 
             if not nt_rect.intersects(unprojected_viewport):
                 continue
@@ -152,7 +156,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 QTimer.singleShot(0, self.update)
 
                 log.info('Painted urgently. Queued rerender.',
-                         extra={'page_id': self._page_id})
+                         extra={'page_id': self.id})
 
             pcommand_cache = child.data.get('pcommand_cache', None)
             render_img = child.data.get('render_cache', None)
@@ -172,8 +176,8 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         # Draw the prerendered components
         # A separate loop in order to apply the render time restriction to the
         # slow component rendering only
-        for child in self._children:
-            nt_rect = QRectF(*child.note().rect())
+        for child in self.get_children():
+            nt_rect = Rectangle(*child.note.rect())
 
             if not nt_rect.intersects(unprojected_viewport):
                 continue
@@ -200,29 +204,15 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         painter.end()
 
     def mousePressEvent(self, event):
-
         if event.button() is Qt.LeftButton:
-            self.mousePosOnPress = event.pos()
-            self.viewportPosOnPress = self.viewport.center
-            self.canvasDrag.start()
+            super().handle_left_mouse_press(Point.from_QPointF(event.pos()))
 
     def mouseReleaseEvent(self, event):
-
         if event.button() is Qt.LeftButton:
-
-            if self.canvasDrag.isActive():
-                self.canvasDrag.stop()
+            super().handle_left_mouse_release(Point.from_QPointF(event.pos()))
 
     def mouseMoveEvent(self, event):
-
-        if self.canvasDrag.isActive():
-            delta = QPointF(self.mousePosOnPress - event.pos())
-            unprojectedDelta = delta / self.viewport.heightScaleFactor()
-            self.viewport.center = self.viewportPosOnPress + unprojectedDelta
-            # self.updateNotesDisplay()
-            self.update()
-
-        self.lastMousePosition = event.pos()
+        super().handle_mouse_move(Point.from_QPointF(event.pos()))
 
     def wheelEvent(self, event):
         numDegrees = event.delta() / 8
@@ -238,7 +228,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
             'Wheel event. Delta: %s . Eye height: %s' %
             (delta, self.viewport.eyeHeight))
 
-        for child in self._children:
+        for child in self.get_children():
             child.data['render_cache_expired'] = True
 
         self.update()

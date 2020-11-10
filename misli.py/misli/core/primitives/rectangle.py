@@ -2,9 +2,15 @@ from PySide2.QtCore import QRectF
 from .rectangle_base import RectangleBase
 
 
-class Rectangle(RectangleBase):
+class Rectangle(QRectF, RectangleBase):
     def __init__(self, x, y, w, h):
-        self.qrectf = QRectF(x, y, w, h)
+        QRectF.__init__(self, x, y, w, h)
 
-    def intersects(self, rectangle):
-        return self.qrectf.intersects(rectangle.qrectf)
+    @classmethod
+    def from_QRectF(cls, qrectf):
+        return cls(qrectf.left(), qrectf.top(),
+                   qrectf.width(), qrectf.height())
+
+    @classmethod
+    def from_QRect(cls, qrect):
+        return cls.from_QRectF(qrect)

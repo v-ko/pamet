@@ -3,14 +3,22 @@
 import os
 import json
 import logging
+import signal
+
+from PySide2.QtCore import QStandardPaths
+
+from PySide2.QtGui import QFontMetrics
+from PySide2.QtCore import QTimer
 
 from misli import misli
-from misli.gui.notes import components_lib
+from misli.gui import components_lib
 from misli.gui.desktop.app import DesktopApp
-from PySide2.QtCore import QStandardPaths
+from misli.gui.desktop import defaultFont
+
 from misli.services.file_system_storage import FSStorageBackend
 
 logging.basicConfig(level=logging.INFO)
+signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 default_data_path = QStandardPaths.writableLocation(
     QStandardPaths.GenericDataLocation)
@@ -20,6 +28,10 @@ config_file_path = os.path.join(default_data_path, 'config.json')
 default_config = {}
 default_fs_repo_path = os.path.join(default_data_path, 'default_repo')
 default_config['file_system_storage_path'] = default_fs_repo_path
+
+
+def call_delayed(callback, delay=0):
+    QTimer.singleShot(delay * 1000, callback)
 
 
 def main():
@@ -36,6 +48,11 @@ def main():
     fs_repo = FSStorageBackend.open(config['file_system_storage_path'])
     misli.set_repo(fs_repo)
     misli.set_components_lib(components_lib)
+    misli.call_delayed = call_delayed
+
+    # font_metrics = QFontMetrics(defaultFont())
+    # misli.line_spacing_in_pixels = font_metrics.lineSpacing()
+    misli.line_spacing_in_pixels = 20
 
     desktop_app = DesktopApp()
     desktop_app.exec_()

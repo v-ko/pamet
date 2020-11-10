@@ -1,28 +1,21 @@
 from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QColor, QFontMetrics, QTextLayout
-from PySide2.QtCore import QSizeF, Qt, QRectF, QPointF
+from PySide2.QtCore import QSizeF, Qt, QRectF, QPointF, QRect
 # from PySide2.QtGui import QFontMetrics
 
 from misli.gui.desktop import defaultFont
 # from misli import log
 from misli.gui.constants import NOTE_MARGIN
-from misli.gui.note_component import NoteComponent
+from misli.gui.component import Component
+from misli.objects import Note
 
 
-class TextNoteQtComponent(QLabel, NoteComponent):
-    def __init__(self, page_id, note_id):
-        NoteComponent.__init__(self, page_id, note_id)
-        QLabel.__init__(self, self.note().text)
+class TextNoteQtComponent(QLabel, Component):
+    def __init__(self, parent_id):
+        Component.__init__(self, parent_id)
+        QLabel.__init__(self, '')
 
-        palette = self.palette()
-
-        bg_col = QColor(*[c*255 for c in self.note().bg_col])
-        fg_col = QColor(*[c*255 for c in self.note().txt_col])
-
-        palette.setColor(self.backgroundRole(), bg_col)
-        palette.setColor(self.foregroundRole(), fg_col)
-
-        self.setPalette(palette)
+        self.note = None
 
         self.setTextFormat(Qt.MarkdownText)
         self.setWordWrap(True)
@@ -30,15 +23,6 @@ class TextNoteQtComponent(QLabel, NoteComponent):
         self.setMargin(NOTE_MARGIN)
         self.setHidden(True)
 
-        rect = QRectF(*self.note().rect())
-        width = rect.size().width()
-        height = rect.size().height()
-
-        self.setGeometry(0, 0, width, height)
-
-        font = defaultFont()
-        font.setPointSizeF(self.note().font_size * font.pointSizeF())
-        self.setFont(font)
         # fontMetrics = QFontMetrics(self.widget.font())
 
         # print('Font ascent', fontMetrics.ascent())
@@ -50,10 +34,32 @@ class TextNoteQtComponent(QLabel, NoteComponent):
         # if self.widget.font().pointSizeF() != 13:
         #     print(self.note)
 
-    def set_state(self, note):
-        self.setText(self.elideText(note.text))
+    def set_props(self, **kwargs):
+        note = Note(**kwargs)
+        self.note = note
 
-    def elideText(self, text):
+        palette = self.palette()
+
+        bg_col = QColor(*[c*255 for c in note.bg_col])
+        fg_col = QColor(*[c*255 for c in note.txt_col])
+
+        palette.setColor(self.backgroundRole(), bg_col)
+        palette.setColor(self.foregroundRole(), fg_col)
+
+        self.setPalette(palette)
+
+        rect = QRect(*note.rect())
+
+        self.setGeometry(rect)  # 0, 0, width, height)
+
+        font = defaultFont()
+        font.setPointSizeF(note.font_size * font.pointSizeF())
+        self.setFont(font)
+
+        elided_text = self.elide_text(note.text, QRectF(*note.rect()))
+        self.setText(elided_text)
+
+    def elide_text(self, text, rect):
         fontMetrics = QFontMetrics(self.font())
 
         # print('Font ascent', fontMetrics.ascent())
@@ -65,12 +71,12 @@ class TextNoteQtComponent(QLabel, NoteComponent):
 
         lineSpacing = fontMetrics.lineSpacing()
 
-        size = QRectF(*self.note().rect).size()
+        size = rect.size()
         size -= QSizeF(2 * NOTE_MARGIN, 2 * NOTE_MARGIN)
         idealTextRect = QRectF(QPointF(NOTE_MARGIN, NOTE_MARGIN), size)
         textRect = idealTextRect
 
-        textLayout = QTextLayout(self.note().text, self.font())
+        textLayout = QTextLayout(text, self.font())
         textLayout.beginLayout()
 
         lineVPositions = []
@@ -92,9 +98,9 @@ class TextNoteQtComponent(QLabel, NoteComponent):
             if i < (len(lineVPositions) - 1):  # Last line
                 startIndex = line.textStart()
                 endIndex = startIndex + line.textLength()
-                lineText = self.note().text[startIndex:endIndex]
+                lineText = text[startIndex:endIndex]
             else:
-                lastLine = self.note().text[line.textStart():]
+                lastLine = text[line.textStart():]
                 lineText = fontMetrics.elidedText(
                     lastLine, Qt.ElideRight, textRect.width())
 
@@ -105,5 +111,4 @@ class TextNoteQtComponent(QLabel, NoteComponent):
 
         textLayout.endLayout()
 
-        # return elidedText
         return ''.join([t for t, r in elidedText])

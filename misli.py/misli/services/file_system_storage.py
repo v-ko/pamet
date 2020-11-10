@@ -96,7 +96,7 @@ class FSStorageBackend(Repository):
 
                     words[i] = ''.join(new_word)
                 text = ' '.join(words)
-                print(text)
+                # print(text)
                 nt['text'] = text
 
         for nt in notes:

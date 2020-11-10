@@ -6,9 +6,26 @@ class Misli():
         self._repo = None
         self._components_lib = None
         self._components = {}
-        # StateManager.__init__(self)
+        self._components_for_update = set()
 
-    def add_component(self, component):
+    def _create_component(self, base_object):
+        ComponentClass = self.components_lib.get(base_object.obj_type)
+        component = ComponentClass(base_object.id)
+        component.set_props(**base_object.state())
+        self.add_component(component, base_object)
+        return component
+
+    def init_components_for_page(self, page_id):
+        page = self.page(page_id)
+        component = self._create_component(page)
+
+        for note in page.notes():
+            child_comp = self._create_component(note)
+            component.add_child(child_comp)
+
+        return component
+
+    def add_component(self, component, base_object):
         self._components[component.id] = component
 
     def component(self, id):
@@ -26,6 +43,17 @@ class Misli():
 
     def page(self, page_id):
         return self._repo.page(page_id)
+
+    def call_delayed(self, callback, delay):
+        raise NotImplementedError()
+
+    def update_component(self, component_id):
+        self._components_for_update.add(component_id)
+        self.call_delayed(self._update_components, 0)
+
+    def _update_components(self):
+        for component_id in self._components_for_update:
+            self.component(component_id).update()
 
     # def find_one(self, **kwargs):
     #     for res in self.find(**kwargs):

@@ -25,19 +25,20 @@ class BrowserTab(QWidget, BaseObject):
 
         if self.page_name:
             self.clear_layout()
-            new_page_state = misli.find_page(name=self.page_name)
+            # new_page_state = misli.find_page(name=self.page_name)
+            #
+            # if not new_page_state:
+            #     log.error(
+            #         '[%s] No page with name %s' % (str(self), self.page_name))
+            #     return
 
-            if not new_page_state:
-                log.error(
-                    '[%s] No page with name %s' % (str(self), self.page_name))
-                return
+            page_component = misli.init_components_for_page(self.page_name)
+            # PageClass = page_classes.get(new_page_state.page_class, None)
+            # if not PageClass:
+            #     log.error('No such page type', new_page_state.page_class)
+            #     return
+            #
+            # page = PageClass()
+            # page.set_props(new_page_state.asdict())
 
-            PageClass = page_classes.get(new_page_state.page_class, None)
-            if not PageClass:
-                log.error('No such page type', new_page_state.page_class)
-                return
-
-            page = PageClass()
-            page.set_state(new_page_state.asdict())
-
-            self.layout().addWidget(page)
+            self.layout().addWidget(page_component)

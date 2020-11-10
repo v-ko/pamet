@@ -2,8 +2,7 @@ from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 from misli.gui.desktop.ui_browser_window import Ui_BrowserWindow
 
-# from misli import misli
-from misli.gui.map_page.map_page_qt_component import MapPageQtComponent
+from misli import misli
 
 
 class BrowserWindow(QMainWindow):
@@ -19,7 +18,7 @@ class BrowserWindow(QMainWindow):
         self.ui.tabWidget.currentChanged.connect(
             self.handle_tab_changed)
 
-        mock_mpc = MapPageQtComponent('ИИ')
+        mock_mpc = misli.init_components_for_page('ИИ')
         self.ui.tabWidget.addTab(mock_mpc, 'daimuu')
 
     def handle_tab_changed(self, index):
