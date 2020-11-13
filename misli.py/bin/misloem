@@ -2,7 +2,6 @@
 
 import os
 import json
-import logging
 import signal
 
 from PySide2.QtCore import QStandardPaths
@@ -10,7 +9,7 @@ from PySide2.QtCore import QStandardPaths
 from PySide2.QtGui import QFontMetrics
 from PySide2.QtCore import QTimer
 
-from misli import misli
+from misli import misli, logging
 from misli.gui import components_lib
 from misli.gui.desktop.app import DesktopApp
 from misli.gui.desktop import defaultFont

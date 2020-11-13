@@ -1,5 +1,5 @@
-from .notes.text_note_qt_component import TextNoteQtComponent
-from .map_page.map_page_qt_component import MapPageQtComponent
+from .notes.text.qt_component import TextNoteQtComponent
+from .map_page.qt_component import MapPageQtComponent
 # from .redirect import RedirectNoteComponent
 # from .markdown import MarkdownNoteComponent
 # from .textedit import TexteditNoteComponent

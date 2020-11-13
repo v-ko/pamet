@@ -1,4 +1,4 @@
-# from misli import log
+from collections import defaultdict
 
 
 class Misli():
@@ -7,6 +7,8 @@ class Misli():
         self._components_lib = None
         self._components = {}
         self._components_for_update = set()
+        self._components_for_base_object = defaultdict(list)
+        self._base_object_for_component = {}
 
     def _create_component(self, base_object):
         ComponentClass = self.components_lib.get(base_object.obj_type)
@@ -27,6 +29,11 @@ class Misli():
 
     def add_component(self, component, base_object):
         self._components[component.id] = component
+        self._components_for_base_object[base_object.id].append(component)
+        self._base_object_for_component[component.id] = base_object
+
+    def base_object_for_component(self, component_id):
+        return self._base_object_for_component[component_id]
 
     def component(self, id):
         return self._components[id]
@@ -47,13 +54,15 @@ class Misli():
     def call_delayed(self, callback, delay):
         raise NotImplementedError()
 
-    def update_component(self, component_id):
+    def update_component(self, component_id: int):
         self._components_for_update.add(component_id)
         self.call_delayed(self._update_components, 0)
 
     def _update_components(self):
         for component_id in self._components_for_update:
             self.component(component_id).update()
+
+        self._components_for_update.clear()
 
     # def find_one(self, **kwargs):
     #     for res in self.find(**kwargs):

@@ -6,7 +6,7 @@ import random
 import string
 
 example_nf = '/sync/misli/ИИ.json'
-RANDOMIZE_TEXT = True
+RANDOMIZE_TEXT = False
 
 
 class FSStorageBackend(Repository):

@@ -4,42 +4,18 @@ from PySide2.QtWidgets import QWidget  # , QApplication
 from PySide2.QtCore import Qt, QRectF, QPointF, QPoint, QTimer
 from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush
 
-from misli.gui.map_page.map_page_component import MapPageComponent
-from misli.gui.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
+from misli import misli
+from misli.gui.map_page.component import MapPageComponent
+
 from misli.gui.constants import MAX_RENDER_TIME
 
 from misli.core.primitives import Point, Rectangle
 # from misli.objects.base_object import BaseObject
 
-from misli.core.logging import get_logger
-log = get_logger(__name__)
+from misli.core import logging
+log = logging.getLogger(__name__)
 
 RENDER_CACHE_PADDING = 1
-
-
-class Activateable():
-    def __init__(self, name):
-        self._name = name
-        self._isActive = False
-
-    def isActive(self):
-        return self._isActive
-
-    def start(self):
-        if self._isActive:
-            log.warning('Trying to start %s while it`s active' % self._name)
-            return
-
-        log.warning('Starting canvas drag')
-        self._isActive = True
-
-    def stop(self):
-        if not self._isActive:
-            log.warning('Trying to stop %s while it`s inactive' % self._name)
-            return
-
-        log.info('Stopping canvas drag')
-        self._isActive = False
 
 
 class MapPageQtComponent(QWidget, MapPageComponent):
@@ -47,9 +23,6 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         QWidget.__init__(self)
         MapPageComponent.__init__(self, page_id)
 
-        self.canvasDrag = Activateable("canvasDrag")
-        self.viewportPosOnPress = QPointF()
-        self.mousePosOnPress = QPointF()
         self.debug_drawing = False
 
         # Widget config
@@ -65,11 +38,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
     def set_props(self, **page):
         self.update()
 
-    def render_img_cache_rect_unprojected(self, child):
-        nt_rect = Rectangle(*child.note.rect())
-
+    def render_cache_rect_unprojected(self, display_rect):
         # Project and round down to the pixel grid
-        cache_rect = self.viewport.project_rect(nt_rect).toRect()
+        cache_rect = display_rect.toRect()
 
         cache_rect.moveTo(
             cache_rect.x() - RENDER_CACHE_PADDING,
@@ -79,12 +50,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
         return cache_rect
 
-    def render_child(self, child):
+    def render_child(self, child, display_rect):
         painter = QPainter()
-
-        nt_rect = QRectF(*child.note.rect())
-        cache_rect = self.render_img_cache_rect_unprojected(child)
-        display_rect = self.viewport.project_rect(nt_rect)
+        cache_rect = self.render_cache_rect_unprojected(display_rect)
 
         pcommand_cache = child.data.get('pcommand_cache', None)
         render_img = child.data.get('render_cache', None)
@@ -143,11 +111,20 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         painter.setPen(pen)
 
         unprojected_viewport = self.viewport.unproject_rect(self.rect())
-        rendered_notes = 0
+
+        display_rects = {}  # id: rect
         for child in self.get_children():
-            nt_rect = Rectangle(*child.note.rect())
+            note = misli.base_object_for_component(child.id)
+            nt_rect = note.rect()
 
             if not nt_rect.intersects(unprojected_viewport):
+                continue
+
+            display_rects[child.id] = self.viewport.project_rect(nt_rect)
+
+        rendered_notes = 0
+        for child in self.get_children():
+            if child.id not in display_rects:
                 continue
 
             paint_urgently = False
@@ -155,15 +132,17 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 paint_urgently = True
                 QTimer.singleShot(0, self.update)
 
-                log.info('Painted urgently. Queued rerender.',
-                         extra={'page_id': self.id})
+                # log.info('Painted urgently. Queued rerender.',
+                #          extra={'page_id': self.id})
 
             pcommand_cache = child.data.get('pcommand_cache', None)
             render_img = child.data.get('render_cache', None)
             render_cache_expired = child.data.get('render_cache_expired', True)
 
             if not render_img:
-                cache_rect = self.render_img_cache_rect_unprojected(child)
+                cache_rect = self.render_cache_rect_unprojected(
+                    display_rects[child.id])
+
                 render_img = QImage(cache_rect.size(), QImage.Format_ARGB32)
 
                 render_img.fill(QColor(100, 100, 100, 100))
@@ -171,33 +150,41 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
             if ((render_cache_expired or not pcommand_cache)
                     and not paint_urgently):
-                self.render_child(child)
+                self.render_child(child, display_rects[child.id])
 
         # Draw the prerendered components
         # A separate loop in order to apply the render time restriction to the
         # slow component rendering only
         for child in self.get_children():
-            nt_rect = Rectangle(*child.note.rect())
-
-            if not nt_rect.intersects(unprojected_viewport):
+            if child.id not in display_rects:
                 continue
 
-            cache_rect = self.render_img_cache_rect_unprojected(child)
+            cache_rect = self.render_cache_rect_unprojected(
+                display_rects[child.id])
+
             render_img = child.data.get('render_cache')
 
             if self.debug_drawing:
                 painter.setPen(Qt.NoPen)
-                display_rect = self.viewport.projectRect(nt_rect)
-                painter.fillRect(display_rect,
+                painter.fillRect(display_rects[child.id],
                                  QBrush(Qt.green, Qt.SolidPattern))
 
             painter.drawImage(cache_rect, render_img)
             rendered_notes += 1
 
+            # Draw a yellow selection overlay
+            painter.save()
+            if child.id in self.selected_nc_ids:
+                painter.fillRect(display_rects[child.id],
+                                 QColor(255, 255, 0, 127))
+
+            painter.restore()
+
+        # Report latency
         latency = int(1000 * (time.time() - paint_t0))
         fps = 1000 / latency
-        print('Paint event latency: %s ms. Notes %s' %
-              (latency, rendered_notes))
+        # print('Paint event latency: %s ms. Notes %s' %
+        #       (latency, rendered_notes))
 
         painter.setPen(Qt.red)
         painter.drawText(10, 10, 'FPS: %s' % int(fps))
@@ -215,24 +202,10 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         super().handle_mouse_move(Point.from_QPointF(event.pos()))
 
     def wheelEvent(self, event):
-        numDegrees = event.delta() / 8
-        numSteps = numDegrees / 15
+        degrees = event.delta() / 8
+        steps = degrees / 15
 
-        delta = MOVE_SPEED * numSteps
-        self.viewport.eyeHeight -= delta
-        self.viewport.eyeHeight = max(
-            MIN_HEIGHT_SCALE,
-            min(self.viewport.eyeHeight, MAX_HEIGHT_SCALE))
-
-        log.info(
-            'Wheel event. Delta: %s . Eye height: %s' %
-            (delta, self.viewport.eyeHeight))
-
-        for child in self.get_children():
-            child.data['render_cache_expired'] = True
-
-        self.update()
-        # //glutPostRedisplay(); artefact, thank you for siteseeing
+        self.handle_mouse_scroll(steps)
 
     def resizeEvent(self, event):
         pass

@@ -14,3 +14,6 @@ class Rectangle(QRectF, RectangleBase):
     @classmethod
     def from_QRect(cls, qrect):
         return cls.from_QRectF(qrect)
+
+    def to_QRectF(self):
+        return QRectF(self.x(), self.y(), self.width(), self.height())
