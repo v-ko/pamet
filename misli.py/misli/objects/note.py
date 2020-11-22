@@ -3,9 +3,10 @@ from misli.core.primitives import Rectangle
 
 
 class Note(BaseObject):
-    def __init__(self, **kwargs):
-        obj_type = kwargs.pop('obj_type', 'Note')
-        BaseObject.__init__(self, obj_type=obj_type, **kwargs)
+    def __init__(self, **state):
+        obj_type = state.pop('obj_type', 'Note')
+        page_id = state.pop('page_id', '')
+        BaseObject.__init__(self, obj_type=obj_type, page_id=page_id, **state)
 
     def rect(self):
         return Rectangle(self.x, self.y, self.width, self.height)

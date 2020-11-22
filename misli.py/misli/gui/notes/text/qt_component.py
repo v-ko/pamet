@@ -1,14 +1,14 @@
 from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QColor, QFontMetrics, QTextLayout, QPainter
-from PySide2.QtCore import QSizeF, Qt, QRectF, QPointF
+from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
 from misli.gui.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
 from misli.gui.component import Component
 
 
 class TextNoteQtComponent(QLabel, Component):
-    def __init__(self, parent_id, bla=10):
-        Component.__init__(self, parent_id)
+    def __init__(self, parent_id):
+        Component.__init__(self, parent_id, obj_class='Text')
         QLabel.__init__(self, 'dsa')
 
         self.elided_text = []
@@ -32,26 +32,25 @@ class TextNoteQtComponent(QLabel, Component):
 
         x, y = props['x'], props['y']
         w, h = props['width'], props['height']
-
-        rectf = QRectF(x, y, w, h)
-
-        self.setGeometry(rectf.toRect())
+        self.setGeometry(QRect(x, y, w, h))
 
         font = self.font()
         # font.setPixelSize(20)
         # font.setPointSizeF(props['font_size'] * font.pointSizeF())
         font.setPointSizeF(14)
         self.setFont(font)
-        font_metrics = QFontMetrics(self.font())
 
-        print('Font ascent', font_metrics.ascent())
-        print('Font descent', font_metrics.descent())
-        print('Font height', font_metrics.height())
-        print('Font leading', font_metrics.leading())
-        print('Font lineSpacing', font_metrics.lineSpacing())
-        print('Font pointSizeF', self.font().pointSizeF())
+        # font_metrics = QFontMetrics(self.font())
+        # print('Font ascent', font_metrics.ascent())
+        # print('Font descent', font_metrics.descent())
+        # print('Font height', font_metrics.height())
+        # print('Font leading', font_metrics.leading())
+        # print('Font lineSpacing', font_metrics.lineSpacing())
+        # print('Font pointSizeF', self.font().pointSizeF())
 
-        self.elided_text = self.elide_text(props['text'])
+        if 'text' in props:
+            self.elided_text = self.elide_text(props['text'])
+
         # self.setText('<p style="line-height:%s%%;margin-top:-5px;margin-right
         # :5px;margin-bottom:5px">%s</p>' %
         #              (100*20/float(font_metrics.lineSpacing()), elided_text))

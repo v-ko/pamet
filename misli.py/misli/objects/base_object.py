@@ -1,24 +1,28 @@
-# from misli.objects import State
-
-
 class BaseObject():
-    def __init__(self, **kwargs):
-        if 'data' not in kwargs:
-            kwargs['data'] = {}
-        if 'id' not in kwargs:
-            kwargs['id'] = id(self)
+    def __init__(self, **state):
+        self.id = 0
+        self.data = {}
 
-        self.__dict__.update(kwargs)
+        self.__state_keys = state.keys()
 
-        self.__children = []
+        if 'id' not in state:
+            state['id'] = id(self)
+        if 'data' not in state:
+            state['data'] = {}
+
+        self.set_state(**state)
 
     def state(self):
-        return self.__dict__
+        self_state = {}
+        for k, v in self.__dict__.items():
+            if k in self.__state_keys:
+                self_state[k] = v
 
-    def add_child(self, child):
-        self.__children.append(child)
+        return self_state
 
-    def get_children(self):
-        return self.__children
+    def set_state(self, **state):
+        for k in state:
+            if k not in self.__state_keys:
+                del state[k]
 
-    # def __del__(self):
+        self.__dict__.update(state)

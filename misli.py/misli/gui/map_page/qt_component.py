@@ -1,16 +1,13 @@
 import time
 
-from PySide2.QtWidgets import QWidget  # , QApplication
-from PySide2.QtCore import Qt, QRectF, QPointF, QPoint, QTimer
+from PySide2.QtWidgets import QWidget
+from PySide2.QtCore import Qt, QPoint, QTimer
 from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush
 
 from misli import misli
-from misli.gui.map_page.component import MapPageComponent
-
 from misli.gui.constants import MAX_RENDER_TIME
-
-from misli.core.primitives import Point, Rectangle
-# from misli.objects.base_object import BaseObject
+from misli.core.primitives import Point
+from misli.gui.map_page.component import MapPageComponent
 
 from misli.core import logging
 log = logging.getLogger(__name__)
@@ -173,15 +170,21 @@ class MapPageQtComponent(QWidget, MapPageComponent):
             rendered_notes += 1
 
             # Draw a yellow selection overlay
-            painter.save()
             if child.id in self.selected_nc_ids:
                 painter.fillRect(display_rects[child.id],
                                  QColor(255, 255, 0, 127))
 
-            painter.restore()
+        if self.drag_select.active and self.drag_select.rect:
+            painter.fillRect(self.drag_select.rect, QColor(100, 100, 100, 50))
+            for nc_id in self.drag_select.nc_ids:
+                if nc_id not in display_rects:
+                    continue
+
+                painter.fillRect(display_rects[nc_id],
+                                 QColor(255, 255, 0, 127))
 
         # Report latency
-        latency = int(1000 * (time.time() - paint_t0))
+        latency = 1000 * (time.time() - paint_t0)
         fps = 1000 / latency
         # print('Paint event latency: %s ms. Notes %s' %
         #       (latency, rendered_notes))
@@ -200,6 +203,11 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
     def mouseMoveEvent(self, event):
         super().handle_mouse_move(Point.from_QPointF(event.pos()))
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() is Qt.LeftButton:
+            self.handle_left_mouse_double_click(
+                Point.from_QPointF(event.pos()))
 
     def wheelEvent(self, event):
         degrees = event.delta() / 8

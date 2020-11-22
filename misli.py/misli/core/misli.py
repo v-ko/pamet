@@ -1,4 +1,5 @@
 from collections import defaultdict
+from misli.objects import Page, Note
 
 
 class Misli():
@@ -7,33 +8,82 @@ class Misli():
         self._components_lib = None
         self._components = {}
         self._components_for_update = set()
+        self._pages_for_saving = set()
         self._components_for_base_object = defaultdict(list)
         self._base_object_for_component = {}
+        self._desktop_app = None
 
-    def _create_component(self, base_object):
-        ComponentClass = self.components_lib.get(base_object.obj_type)
-        component = ComponentClass(base_object.id)
-        component.set_props(**base_object.state())
-        self.add_component(component, base_object)
+    def desktop_app(self):
+        if not self._desktop_app:
+            raise Exception('No desktop_app object set')
+
+        return self._desktop_app
+
+    def set_desktop_app(self, app):
+        self._desktop_app = app
+        self._add_component(app)
+
+    def create_component(self, obj_class, parent_id):
+        ComponentClass = self.components_lib.get(obj_class)
+        component = ComponentClass(parent_id)
+        self._add_component(component)
+
+        if parent_id:
+            self.component(parent_id).add_child(component.id)
+
         return component
 
-    def init_components_for_page(self, page_id):
+    def remove_component(self, component_id):
+        component = self.component(component_id)
+
+        if component.parent_id:
+            parent = self.component(component.parent_id)
+            parent.remove_child(component_id)
+
+        # Deregister component
+        if component in self._base_object_for_component:
+            base_object = self._base_object_for_component[component]
+            self._components_for_base_object[base_object].remove(component)
+            del self._base_object_for_component[component]
+
+        del component
+
+    def create_component_for_note(
+            self, page_id, note_id, obj_class, parent_id):
+
+        component = self.create_component(obj_class, parent_id)
+        note = self.page(page_id).note(note_id)
+        component.set_props(**note.state())
+
+        self.register_component_with_base_object(component, note)
+        return component
+
+    def create_components_for_page(self, page_id, parent_id):
         page = self.page(page_id)
-        component = self._create_component(page)
+        page_component = self.create_component(
+            obj_class=page.obj_class, parent_id=parent_id)
+
+        page_component.set_props(**page.state())
+        self.register_component_with_base_object(page_component, page)
 
         for note in page.notes():
-            child_comp = self._create_component(note)
-            component.add_child(child_comp)
+            self.create_component_for_note(
+                page.id, note.id, note.obj_class, page_component.id)
 
-        return component
+        return page_component
 
-    def add_component(self, component, base_object):
+    def _add_component(self, component):
         self._components[component.id] = component
+
+    def register_component_with_base_object(self, component, base_object):
         self._components_for_base_object[base_object.id].append(component)
         self._base_object_for_component[component.id] = base_object
 
     def base_object_for_component(self, component_id):
         return self._base_object_for_component[component_id]
+
+    def components_for_base_object(self, base_object_id):
+        return self._components_for_base_object[base_object_id]
 
     def component(self, id):
         return self._components[id]
@@ -51,6 +101,9 @@ class Misli():
     def page(self, page_id):
         return self._repo.page(page_id)
 
+    def pages(self):
+        return self._repo.pages()
+
     def call_delayed(self, callback, delay):
         raise NotImplementedError()
 
@@ -64,39 +117,73 @@ class Misli():
 
         self._components_for_update.clear()
 
-    # def find_one(self, **kwargs):
-    #     for res in self.find(**kwargs):
-    #         return res
+    def _save_page(self, page):
+        self._pages_for_saving.add(page)
+        self.call_delayed(self._save_pages, 0)
 
-    #     return None
+    def _save_pages(self):
+        for page in self._pages_for_saving:
+            self._repo.save_page(page)
 
-    # def find_page(self, **kwargs):
-    #     kwargs['obj_type'] = 'Page'
-    #     return self.find_one(**kwargs)
+    def update_page(self, page_id, **page_state):
+        page = self.page(page_id)
 
-# init
-        # if not state_manager:
-        #     state_manager = StateManager()
+        if page_state:
+            page.set_state(**page_state)
+        self._save_page(page)
 
-        # self._state_manager = state_manager
+        page_components = self.components_for_base_object(page_id)
+        for pc in page_components:
+            pc.set_props(**page.state())
+            self.update_component(pc.id)
 
-    # def load(self, state, action_type):
-    #     self._state_manager.load(state)
-    #     log.info('[Milsi][load]', action_type)
+        # push change?
 
-    # def update(self, old_state, new_state, action_type):
-    #     self.states[old_state._id].update(new_state)
-    #     log.info('[Milsi][update]', action_type)
+    def create_page(self, id, obj_class, **page_state):
+        if not page_state:
+            page_state = {}
+        page_state['id'] = id
+        page_state['obj_class'] = obj_class
 
-    # def unload(self, state, action_type):
-    #     self._state_manager.unload(state)
-    #     log.info('[Milsi][unload]', action_type)
+        page = Page(**page_state)
+        self._repo.load_page(page)
+        self._repo.save_page(page)
+        return page
 
-    # def update_many(self, state_updates, action_type):
-    #     for state_update in state_updates:
-    #         self.states[state_update._id].update(state_update)
+    def delete_page(self, page_id):
+        page = self.page(page_id)
+        self._repo.delete_page(page)
 
-    #     log.info('[Milsi][update]', action_type)
+    def update_note(self, note_id, page_id, **note_state):
+        page = self.page(page_id)
+        note = page.note(note_id)
 
-    # def find(self, **kwargs):
-    #     return self._state_manager.find(**kwargs)
+        note.set_state(**note_state)
+        self._save_page(page)
+
+        note_components = self.components_for_base_object(note_id)
+        for nc in note_components:
+            nc.set_props(**note.state())
+
+            # Hacky cache clearing
+            nc.data = {}
+
+            self.update_component(nc.id)
+
+        # push change?
+
+    def create_note(self, page_id, **note_state):
+        page = self.page(page_id)
+        note = Note(**note_state)
+
+        page.add_note(note)
+
+        self._repo.save_page(page)
+        return note
+
+    def delete_note(self, note_id, page_id):
+        page = self.page(page_id)
+        note = page.note(note_id)
+
+        page.remove_note(note)
+        self.save_page(page)

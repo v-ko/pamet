@@ -2,16 +2,15 @@ from PySide2.QtWidgets import QApplication
 
 from misli import misli
 from misli import ORGANISATION_NAME, DESKTOP_APP_NAME, DESKTOP_APP_VERSION
-from misli.objects import State
-from misli.gui.desktop.browser_window import BrowserWindow
-
-default_state = State(obj_type='DesktopApp')
+from misli.gui.component import Component
 
 
-class DesktopApp(QApplication):  # rename to QtApp ?
+class DesktopApp(QApplication, Component):  # rename to QtApp ?
     def __init__(self):
-        super(DesktopApp, self).__init__()
+        QApplication.__init__(self)
+        Component.__init__(self, parent_id='', obj_class='DesktopApp')
 
+        self.id = '__desktop_app__'
         self._misli = misli
         self.browsers = []
 
@@ -19,6 +18,13 @@ class DesktopApp(QApplication):  # rename to QtApp ?
         self.setApplicationName(DESKTOP_APP_NAME)
         self.setApplicationVersion(DESKTOP_APP_VERSION)
 
-        browser = BrowserWindow()
-        self.browsers.append(browser)
-        browser.showMaximized()
+        self.browser_window_ids = []
+
+    def add_child(self, child_id):
+        child = misli.component(child_id)
+        if child.obj_class == 'BrowserWindow':
+            self.browser_window_ids.append(child.id)
+            child.showMaximized()
+
+    def update(self):
+        pass

@@ -8,8 +8,10 @@ class RectangleBase():
     @classmethod
     def from_points(cls, top_left, bottom_right):
         size = top_left - bottom_right
+        x = min(top_left.x(), bottom_right.x())
+        y = min(top_left.y(), bottom_right.y())
         w, h = abs(size.x()), abs(size.y())
-        return cls(top_left.x(), top_left.y(), w, h)
+        return cls(x, y, w, h)
 
     def intersects(self, rectangle):
         raise NotImplementedError

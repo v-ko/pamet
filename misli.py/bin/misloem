@@ -1,32 +1,21 @@
 #!/usr/bin/env python
 
 import os
-import json
 import signal
 
-from PySide2.QtCore import QStandardPaths
-
-from PySide2.QtGui import QFontMetrics
 from PySide2.QtCore import QTimer
 
 from misli import misli, logging
 from misli.gui import components_lib
+from misli.gui.desktop import usecases
 from misli.gui.desktop.app import DesktopApp
-from misli.gui.desktop import defaultFont
+from misli.gui.desktop.config import get_config
 
-from misli.services.file_system_storage import FSStorageBackend
+from misli.services.file_system_storage import FSStorageRepository
 
 logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
-
-default_data_path = QStandardPaths.writableLocation(
-    QStandardPaths.GenericDataLocation)
-
-config_file_path = os.path.join(default_data_path, 'config.json')
-
-default_config = {}
-default_fs_repo_path = os.path.join(default_data_path, 'default_repo')
-default_config['file_system_storage_path'] = default_fs_repo_path
 
 
 def call_delayed(callback, delay=0):
@@ -34,26 +23,28 @@ def call_delayed(callback, delay=0):
 
 
 def main():
-    # Load the basic config
-    if not os.path.exists(config_file_path):
-        config = default_config
-        with open(config_file_path, 'w') as cf:
-            json.dump(config, cf)
-    else:
-        with open(config_file_path) as cf:
-            config = json.load(cf)
-
     # Init the app
-    fs_repo = FSStorageBackend.open(config['file_system_storage_path'])
+    config = get_config()
+    repo_path = config['repository_path']
+
+    if os.path.exists(repo_path):
+        fs_repo = FSStorageRepository.open(repo_path)
+    else:
+        fs_repo = FSStorageRepository.create(repo_path)
+
+    if not fs_repo:
+        log.error('Error initializing repository. Exiting.')
+        return
+
     misli.set_repo(fs_repo)
     misli.set_components_lib(components_lib)
     misli.call_delayed = call_delayed
 
-    # font_metrics = QFontMetrics(defaultFont())
-    # misli.line_spacing_in_pixels = font_metrics.lineSpacing()
     misli.line_spacing_in_pixels = 20
 
     desktop_app = DesktopApp()
+    misli.set_desktop_app(desktop_app)
+    usecases.new_browser_window_ensure_page()
     desktop_app.exec_()
 
 

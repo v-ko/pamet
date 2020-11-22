@@ -1,44 +1,54 @@
 from PySide2.QtWidgets import QVBoxLayout, QWidget
+from PySide2.QtCore import Qt
 
-from misli import misli, log
-from misli.objects import BaseObject
-from misli.gui.containers import page_classes
+from misli import misli
+from misli.gui.component import Component
+from ..notes import usecases
 
 
-class BrowserTab(QWidget, BaseObject):
-    def __init__(self, **kwargs):
-        parent = kwargs.get('parent', None)
-
-        QWidget.__init__(parent=parent)
-        BaseObject.__init__(**kwargs)
+class BrowserTabComponent(QWidget, Component):
+    def __init__(self, parent_id):
+        QWidget.__init__(self)
+        Component.__init__(self, parent_id, obj_class='BrowserTab')
 
         self.setLayout(QVBoxLayout())
+        self._page_component = None
+        self.current_page_id = ''
+        self._edit_component = None
 
-    def clear_layout(self):
-        layout = self.layout()
+    def page_component(self):
+        return self._page_component
 
-        for i in range(layout.count()):
-            layout.removeWidget(layout.itemAt(i))
+    def update(self):
+        if not self.current_page_id and not self._page_component:
+            return
 
-    def set_state(self, state_dict):
-        self.page_name = state_dict.pop('page_name', None)
+        pc_id = ''
+        if self._page_component:
+            pc_id = self._page_component.id
 
-        if self.page_name:
-            self.clear_layout()
-            # new_page_state = misli.find_page(name=self.page_name)
-            #
-            # if not new_page_state:
-            #     log.error(
-            #         '[%s] No page with name %s' % (str(self), self.page_name))
-            #     return
+        if self.current_page_id and self.current_page_id != pc_id:
+            if self._page_component:
+                self.layout().removeWidget(self._page_component)
 
-            page_component = misli.init_components_for_page(self.page_name)
-            # PageClass = page_classes.get(new_page_state.page_class, None)
-            # if not PageClass:
-            #     log.error('No such page type', new_page_state.page_class)
-            #     return
-            #
-            # page = PageClass()
-            # page.set_props(new_page_state.asdict())
+            self._page_component = misli.create_components_for_page(
+                self.current_page_id, parent_id=self.id)
+            self.layout().addWidget(self._page_component)
 
-            self.layout().addWidget(page_component)
+    def add_child(self, child_id):
+        child = misli.component(child_id)
+        if child.obj_class == 'TextEdit':
+            if self._edit_component:
+                usecases.finish_editing_note(self._edit_component.id)
+
+            self._edit_component = child
+            child.setParent(self)
+            child.setWindowFlag(Qt.Sheet, True)
+
+            child.show()
+
+    def remove_child(self, child_id):
+        child = misli.component(child_id)
+        if child.obj_class == 'TextEdit':
+            self._edit_component = None
+            child.hide()

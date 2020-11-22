@@ -64,3 +64,33 @@ def set_viewport_height(map_page_component_id: int, new_height: float):
 
     misli.update_component(map_page_component_id)
     # //glutPostRedisplay(); artefact, thank you for siteseeing
+
+
+def update_drag_select(
+        map_page_component_id: int, select_rect=None, drag_selected_nc_ids=[]):
+
+    map_page_component = misli.component(map_page_component_id)
+
+    if not select_rect:
+        map_page_component.drag_select.active = False
+        map_page_component.selected_nc_ids.update(
+            map_page_component.drag_select.nc_ids)
+
+        map_page_component.drag_select.nc_ids.clear()
+    else:
+        map_page_component.drag_select.active = True
+        map_page_component.drag_select.nc_ids.clear()
+
+        for nc_id in drag_selected_nc_ids:
+            if nc_id not in map_page_component.selected_nc_ids:
+                map_page_component.drag_select.nc_ids.append(nc_id)
+
+    misli.update_component(map_page_component_id)
+
+
+def create_new_note(map_page_component_id: int, position):
+    map_page_component = misli.component(map_page_component_id)
+    page = misli.base_object_for_component(map_page_component_id)
+
+    note = misli.create_note(page.id, obj_class='Text')
+

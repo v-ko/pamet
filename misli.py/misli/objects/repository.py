@@ -1,11 +1,9 @@
-# from misli.objects import State
+from misli.objects.base_object import BaseObject
 
 
-class Repository():
+class Repository(BaseObject):
     def __init__(self):
-        pass
+        BaseObject.__init__(self, obj_type='Repository')
 
     def page(self, page_id):
-        # Mock
-
-        return
+        return NotImplementedError()

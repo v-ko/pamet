@@ -1,12 +1,20 @@
-from PySide2.QtGui import QFont
+from misli.gui import components_lib
 
-DEFAULT_FONT_SIZE = 13  # LineSpacing = 20. Grid match
+from .browser_window import BrowserWindow
+from .browser_tab import BrowserTabComponent
+from ..map_page.qt_component import MapPageQtComponent
+
+from ..notes.text.qt_component import TextNoteQtComponent
+from ..notes.text.note_edit_qt_component import TextNoteEditQtComponent
 
 
-def defaultFont():
-    font = QFont('Halvetica')
-    font.setStyleStrategy(font.PreferAntialias)
-    font.setHintingPreference(font.PreferNoHinting)
-    font.setPointSizeF(DEFAULT_FONT_SIZE)
+components_lib.add('BrowserWindow', BrowserWindow)
+components_lib.add('BrowserTab', BrowserTabComponent)
+components_lib.add('MapPage', MapPageQtComponent)
 
-    return font
+components_lib.add('Text', TextNoteQtComponent)
+components_lib.add('Redirect', TextNoteQtComponent)
+
+components_lib.add('TextEdit', TextNoteEditQtComponent)
+components_lib.map_edit_component('Text', 'TextEdit')
+components_lib.map_edit_component('Redirect', 'TextEdit')

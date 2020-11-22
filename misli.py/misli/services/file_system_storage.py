@@ -1,39 +1,94 @@
 import os
 import json
-from misli.objects import Repository, Page, Note
-
 import random
 import string
 
-example_nf = '/sync/misli/ИИ.json'
+from misli.objects import Repository, Page, Note
+from misli import logging
+log = logging.getLogger(__name__)
+
 RANDOMIZE_TEXT = False
 
 
-class FSStorageBackend(Repository):
-    def __init__(self):
-        self.pages = {}
-        mock_page = self.convert_v3_to_v4(example_nf)
-        self.pages[mock_page.id] = mock_page
+class FSStorageRepository(Repository):
+    def __init__(self, path):
+        Repository.__init__(self)
+
+        self.path = path
+        self._pages = {}
+
+        # Parse repo folder
+        for file in os.scandir(path):
+            if self.is_misli_page(file.path):
+                try:
+                    with open(file.path) as pf:
+                        page_state = json.load(pf)
+
+                except Exception as e:
+                    log.error('Exception %s while loading page' % e, file.path)
+                    continue
+
+                page = Page(**page_state)
+                self.load_page(page)
+
+            elif file.path.endswith('.json'):
+                page_state = self.convert_v3_to_v4(file.path)
+
+                if page_state:
+                    page = Page(**page_state)
+                    self.load_page(page)
+                    self.save_page(page)
+                    os.rename(file.path, file.path + '.backup')
+                    log.info('Loaded and backed up v3 page', file.name)
+
+            else:
+                log.warning('Untracked file in the repo: %s' % file.name)
+
+    def path_for_page(self, page):
+        name = page.id + '.misl.json'
+        return os.path.join(self.path, name)
 
     @classmethod
-    def open(cls, repo_path):
-        repo = cls()
-        # Регистрираш първо репото (лоудва му се стейта от system.page.json)
-        # Може да преместиш от там да зарежда и десктоп сетингите (др записка)
-        # После адваш страниците в SM маркирани с това репо
-
-        # for file in os.scandir(repo_path): това е за в Репозиторъ
-        #     if self.is_page_json(file_path):
-        return repo
-
-    def page(self, page_id):
-        if page_id not in self.pages:
+    def open(cls, path):
+        if not os.path.exists(path) or not os.path.isdir(path):
+            log.error('Bad path. Cannot create repository for', path)
             return None
 
-        return self.pages[page_id]
+        return cls(path)
 
-    def is_page_json(self, file_path):
-        if file_path.endswith('.page.json') and os.path.isfile(file_path):
+    @classmethod
+    def create(cls, path):
+        if os.path.exists(path):
+            if os.listdir(path):
+                log.error('Cannot create repository in non-empty folder', path)
+                return None
+
+        os.makedirs(path, exist_ok=True)
+        return cls(path)
+
+    def load_page(self, page):
+        self._pages[page.id] = page
+
+    def save_page(self, page):
+        try:
+            path = self.path_for_page(page)
+            with open(path, 'w') as pf:
+                page_state = page.state(include_notes=True)
+                json.dump(page_state, pf)
+        except Exception as e:
+            log.error('Exception while saving page at', path, e)
+
+    def pages(self):
+        return [page for pid, page in self._pages.items()]
+
+    def page(self, page_id):
+        if page_id not in self._pages:
+            return None
+
+        return self._pages[page_id]
+
+    def is_misli_page(self, file_path):
+        if file_path.endswith('.misl.json') and os.path.exists(file_path):
             return True
 
         return False
@@ -83,6 +138,8 @@ class FSStorageBackend(Repository):
                 nt[coord] = nt[coord] * ONE_V3_COORD_UNIT_TO_V4
 
             nt['font_size'] = nt['font_size']  # * DEFAULT_FONT_SIZE
+            nt['obj_type'] = 'Note'
+            nt['page_id'] = name
 
         for nt in notes:
             if RANDOMIZE_TEXT:
@@ -104,19 +161,20 @@ class FSStorageBackend(Repository):
             if nt['text'].startswith('this_note_points_to:'):
                 nt['href'] = nt['text'].split(':', 1)[1]
                 nt['text'] = nt['href']
-                nt['obj_type'] = 'Redirect'
+                nt['obj_class'] = 'Redirect'
 
             else:
-                nt['obj_type'] = 'Text'
+                nt['obj_class'] = 'Text'
 
             # Testing
             # nt['class'] = 'Test'
             # if nt['id'] % 2 == 0:
             #     nt['font_size'] = 2
 
-        json_object['notes'] = [Note(**n) for n in notes]
+        json_object['note_states'] = json_object.pop('notes')
+        json_object['obj_class'] = 'MapPage'
 
-        return Page(**json_object)
+        return json_object
 
     # def defaultCanvas(self):
     #     cv = json.load(open(example_nf))

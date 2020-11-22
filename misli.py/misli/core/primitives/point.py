@@ -9,3 +9,6 @@ class Point(PointBase, QPointF):
     @classmethod
     def from_QPointF(cls, qpointf):
         return cls(qpointf.x(), qpointf.y())
+
+    def to_QPointF(self):
+        return QPointF(self.x(), self.y())

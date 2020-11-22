@@ -1,20 +1,18 @@
-from .notes.text.qt_component import TextNoteQtComponent
-from .map_page.qt_component import MapPageQtComponent
-# from .redirect import RedirectNoteComponent
-# from .markdown import MarkdownNoteComponent
-# from .textedit import TexteditNoteComponent
+compopnents_by_class = {}
+edit_components_for_class = {}
 
 
-compopnents_by_type = {
-    'Text': TextNoteQtComponent,
-    'Redirect': TextNoteQtComponent,
-    'Page': MapPageQtComponent
-}
-
-
-def add(name, ComponentClass):
-    compopnents_by_type[name] = ComponentClass
+def add(obj_class_name, ComponentClass):
+    compopnents_by_class[obj_class_name] = ComponentClass
 
 
 def get(note_type):
-    return compopnents_by_type[note_type]
+    return compopnents_by_class[note_type]
+
+
+def map_edit_component(obj_class_name, edit_class_name):
+    edit_components_for_class[obj_class_name] = edit_class_name
+
+
+def get_edit_class_name(obj_class_name):
+    return edit_components_for_class[obj_class_name]
