@@ -1,5 +1,7 @@
 from collections import defaultdict
 from misli.objects import Page, Note
+from misli import logging
+log = logging.getLogger(__name__)
 
 
 class Misli():
@@ -89,6 +91,7 @@ class Misli():
         return self._components[id]
 
     def set_repo(self, repo):
+        log.info('Setting repo to %s' % repo.path)
         self._repo = repo
 
     @property
@@ -179,6 +182,7 @@ class Misli():
         page.add_note(note)
 
         self._repo.save_page(page)
+
         return note
 
     def delete_note(self, note_id, page_id):

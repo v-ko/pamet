@@ -2,6 +2,7 @@ from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QColor, QFontMetrics, QTextLayout, QPainter
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
+from misli.core.primitives import Color
 from misli.gui.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
 from misli.gui.component import Component
 
@@ -22,8 +23,8 @@ class TextNoteQtComponent(QLabel, Component):
     def set_props(self, **props):
         palette = self.palette()
 
-        bg_col = QColor(*[c*255 for c in props['bg_col']])
-        fg_col = QColor(*[c*255 for c in props['txt_col']])
+        fg_col = Color(*props['color']).to_QColor()
+        bg_col = Color(*props['background_color']).to_QColor()
 
         palette.setColor(self.backgroundRole(), bg_col)
         palette.setColor(self.foregroundRole(), fg_col)

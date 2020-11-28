@@ -3,7 +3,7 @@ import json
 import random
 import string
 
-from misli.objects import Repository, Page, Note
+from misli.objects import Repository, Page
 from misli import logging
 log = logging.getLogger(__name__)
 
@@ -137,7 +137,6 @@ class FSStorageRepository(Repository):
             for coord in ['x', 'y', 'width', 'height']:
                 nt[coord] = nt[coord] * ONE_V3_COORD_UNIT_TO_V4
 
-            nt['font_size'] = nt['font_size']  # * DEFAULT_FONT_SIZE
             nt['obj_type'] = 'Note'
             nt['page_id'] = name
 
@@ -157,6 +156,9 @@ class FSStorageRepository(Repository):
                 nt['text'] = text
 
         for nt in notes:
+            nt['color'] = nt.pop('txt_col')
+            nt['background_color'] = nt.pop('bg_col')
+
             # Redirect notes
             if nt['text'].startswith('this_note_points_to:'):
                 nt['href'] = nt['text'].split(':', 1)[1]

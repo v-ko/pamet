@@ -16,7 +16,7 @@ class BrowserTabComponent(QWidget, Component):
         self.current_page_id = ''
         self._edit_component = None
 
-    def page_component(self):
+    def current_page_component(self):
         return self._page_component
 
     def update(self):
@@ -37,10 +37,15 @@ class BrowserTabComponent(QWidget, Component):
 
     def add_child(self, child_id):
         child = misli.component(child_id)
-        if child.obj_class == 'TextEdit':
-            if self._edit_component:
-                usecases.finish_editing_note(self._edit_component.id)
 
+        # If we're adding an edit component
+        if child.obj_class in misli.components_lib.edit_component_names():
+
+            # Abort any ongoing editing
+            if self._edit_component:
+                usecases.abort_editing_note(self._edit_component.id)
+
+            # Setup the editing component
             self._edit_component = child
             child.setParent(self)
             child.setWindowFlag(Qt.Sheet, True)

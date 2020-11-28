@@ -19,11 +19,16 @@ default_config['app_intro_dismissed'] = False
 
 
 def _verify_config(config):
+    fixes_applied = False
     for k, v in default_config.items():
         if k not in config:
             log.info('Missing key "%s" in config. Setting default "%s"' %
                      (k, v))
             config[k] = v
+            fixes_applied = True
+
+    if fixes_applied:
+        save_config(config)
 
     return config
 

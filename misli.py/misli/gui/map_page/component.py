@@ -7,6 +7,7 @@ from misli import misli, logging
 from misli.gui.desktop.helpers import control_is_pressed, shift_is_pressed
 from misli.gui.map_page import usecases
 from misli.core.primitives import Point, Rectangle
+from misli.objects import Note
 from misli.gui.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from misli.gui.notes import usecases as notes_usecases
 log = logging.getLogger(__name__)
@@ -128,4 +129,12 @@ class MapPageComponent(Component):
         if nc:
             notes_usecases.start_editing_note(self.parent_id, nc.id, position)
         else:
-            pass
+            pos = self.viewport.unproject_point(position)
+
+            page = misli.base_object_for_component(self.id)
+            note = Note(page_id=page.id, obj_class='Text', text='')
+            note.x = pos.x()
+            note.y = pos.y()
+
+            notes_usecases.create_new_note(
+                self.parent_id, position, **note.state())

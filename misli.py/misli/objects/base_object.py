@@ -1,16 +1,17 @@
 class BaseObject():
     def __init__(self, **state):
+        state.setdefault('id', id(self))
+        state.setdefault('data', {})
+
+        self.__state_keys = []
         self.id = 0
         self.data = {}
 
-        self.__state_keys = state.keys()
-
-        if 'id' not in state:
-            state['id'] = id(self)
-        if 'data' not in state:
-            state['data'] = {}
-
+        self.add_state_keys(state.keys())
         self.set_state(**state)
+
+    def add_state_keys(self, keys):
+        self.__state_keys.extend(keys)
 
     def state(self):
         self_state = {}
@@ -21,8 +22,6 @@ class BaseObject():
         return self_state
 
     def set_state(self, **state):
-        for k in state:
-            if k not in self.__state_keys:
-                del state[k]
+        filtered = {k: state[k] for k in state if k in self.__state_keys}
 
-        self.__dict__.update(state)
+        self.__dict__.update(filtered)

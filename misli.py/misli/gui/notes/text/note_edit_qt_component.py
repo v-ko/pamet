@@ -4,9 +4,7 @@ from PySide2.QtCore import Qt
 
 from .ui_text_note_edit_component import Ui_TextNoteEditComponent
 from .note_edit_component import TextNoteEditComponent
-from .. import usecases
 from misli import misli
-from misli.core.primitives import Rectangle
 
 
 class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
@@ -18,16 +16,13 @@ class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
         self.ui.setupUi(self)
 
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
-        self.shortcuts = [esc_shortcut]
 
         self.ui.ok_button.clicked.connect(self._handle_ok_click)
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
 
-        self.note_display_rect = Rectangle(0, 0, 300, 300)
-        self.note_text = ''
-
     def update(self):
-        display_rect = self.note_display_rect
+        display_rect = self.note.rect().to_QRectF()
+        display_rect.moveCenter(self.display_position.to_QPointF())
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
@@ -37,12 +32,9 @@ class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
         top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
         display_rect.moveTopLeft(top_left)
 
-        self.setGeometry(display_rect.to_QRectF().toRect())
-        self.ui.textEdit.setPlainText(self.note_text)
+        self.setGeometry(display_rect.toRect())
+        self.ui.textEdit.setPlainText(self.note.text)
 
     def _handle_ok_click(self):
-        text = self.ui.textEdit.toPlainText()
-        usecases.finish_editing_note(self.id, text=text)
-
-    def _handle_esc_shortcut(self):
-        usecases.finish_editing_note(self.id)
+        self.note.text = self.ui.textEdit.toPlainText()
+        TextNoteEditComponent._handle_ok_click(self)

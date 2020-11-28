@@ -86,11 +86,3 @@ def update_drag_select(
                 map_page_component.drag_select.nc_ids.append(nc_id)
 
     misli.update_component(map_page_component_id)
-
-
-def create_new_note(map_page_component_id: int, position):
-    map_page_component = misli.component(map_page_component_id)
-    page = misli.base_object_for_component(map_page_component_id)
-
-    note = misli.create_note(page.id, obj_class='Text')
-
