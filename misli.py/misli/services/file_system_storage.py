@@ -39,7 +39,7 @@ class FSStorageRepository(Repository):
                     self.load_page(page)
                     self.save_page(page)
                     os.rename(file.path, file.path + '.backup')
-                    log.info('Loaded and backed up v3 page', file.name)
+                    log.info('Loaded and backed up v3 page %s' % file.name)
 
             else:
                 log.warning('Untracked file in the repo: %s' % file.name)

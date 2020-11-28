@@ -177,10 +177,11 @@ class Misli():
 
     def create_note(self, page_id, **note_state):
         page = self.page(page_id)
+
+        note_state['page_id'] = page_id
         note = Note(**note_state)
 
         page.add_note(note)
-
         self._repo.save_page(page)
 
         return note

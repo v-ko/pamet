@@ -13,7 +13,8 @@ class Note(BaseObject):
         self.width = state.pop('width', DEFAULT_NOTE_WIDTH)
         self.height = state.pop('height', DEFAULT_NOTE_HEIGHT)
         self.color = state.pop('color', DEFAULT_COLOR)
-        self.background_color = state.pop('background_color', DEFAULT_BG_COLOR)
+        self.background_color = state.pop(
+            'background_color', DEFAULT_BG_COLOR)
 
         keys = ['page_id', 'x', 'y', 'width', 'height', 'background_color',
                 'color']
@@ -23,8 +24,8 @@ class Note(BaseObject):
     def rect(self):
         return Rectangle(self.x, self.y, self.width, self.height)
 
-    def color(self):
-        return Color(*DEFAULT_COLOR)
+    def get_color(self):
+        return Color(*self._color)
 
-    def background_color(self):
-        return Color(*DEFAULT_BG_COLOR)
+    def get_background_color(self):
+        return Color(*self._background_color)

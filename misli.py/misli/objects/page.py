@@ -1,6 +1,7 @@
 from misli.objects.base_object import BaseObject
 from misli.objects.note import Note
-# from misli.objects.state import State
+from misli import logging
+log = logging.getLogger(__name__)
 
 
 class Page(BaseObject):
@@ -23,6 +24,11 @@ class Page(BaseObject):
         return [note for nid, note in self._notes.items()]
 
     def add_note(self, note):
+        if note.page_id != self.id:
+            log.error('Note id different from my id: "%s". Fixing.' % note.page_id)
+            raise Exception()
+            note.page_id = self.id
+
         self._notes[note.id] = note
 
     def remove_note(self, note):
@@ -30,5 +36,10 @@ class Page(BaseObject):
 
     def state(self, include_notes=False):
         self_state = super().state()
-        self_state['note_states'] = [n.state() for n in self.notes()]
+        self_state['note_states'] = []
+
+        for nt in self.notes():
+            nt_state = nt.state()
+            self_state['note_states'].append(nt_state)
+
         return self_state

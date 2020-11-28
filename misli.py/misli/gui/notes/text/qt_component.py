@@ -1,5 +1,5 @@
 from PySide2.QtWidgets import QLabel
-from PySide2.QtGui import QColor, QFontMetrics, QTextLayout, QPainter
+from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
 from misli.core.primitives import Color
