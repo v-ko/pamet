@@ -1,5 +1,9 @@
 import time
 
+from PySide2.QtWidgets import QShortcut
+from PySide2.QtGui import QKeySequence
+from PySide2.QtCore import Qt
+
 from misli.gui.component import Component
 from misli.gui.map_page.viewport import Viewport
 
@@ -23,6 +27,9 @@ class MapPageComponent(Component):
         self.selected_nc_ids = set()
         self.left_mouse_last_press_time = 0
 
+        delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
+        delete_shortcut.activated.connect(self._handle_delete_shortcut)
+
         class DragSelect():
             def __init__(self):
                 self.nc_ids = []
@@ -30,6 +37,9 @@ class MapPageComponent(Component):
                 self.rect = None
 
         self.drag_select = DragSelect()
+
+    def _handle_delete_shortcut(self):
+        usecases.delete_selected_notes(self.id)
 
     def get_note_components_in_area(self, rect):
         unprojected_rect = self.viewport.unproject_rect(rect)

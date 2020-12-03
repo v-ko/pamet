@@ -42,7 +42,7 @@ class Misli():
             parent = self.component(component.parent_id)
             parent.remove_child(component_id)
 
-        # Deregister component
+        # Unregister component
         if component in self._base_object_for_component:
             base_object = self._base_object_for_component[component]
             self._components_for_base_object[base_object].remove(component)
@@ -140,8 +140,6 @@ class Misli():
             pc.set_props(**page.state())
             self.update_component(pc.id)
 
-        # push change?
-
     def create_page(self, id, obj_class, **page_state):
         if not page_state:
             page_state = {}
@@ -173,8 +171,6 @@ class Misli():
 
             self.update_component(nc.id)
 
-        # push change?
-
     def create_note(self, page_id, **note_state):
         page = self.page(page_id)
 
@@ -190,5 +186,11 @@ class Misli():
         page = self.page(page_id)
         note = page.note(note_id)
 
+        note_components = self.components_for_base_object(note.id)
+        for nc in note_components:
+            self.remove_component(nc.id)
+
         page.remove_note(note)
-        self.save_page(page)
+
+        self.update_page(page_id)
+        self._save_page(page)

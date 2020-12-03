@@ -25,8 +25,8 @@ class Page(BaseObject):
 
     def add_note(self, note):
         if note.page_id != self.id:
-            log.error('Note id different from my id: "%s". Fixing.' % note.page_id)
-            raise Exception()
+            raise Exception(
+                'Note id different from my id: "%s".' % note.page_id)
             note.page_id = self.id
 
         self._notes[note.id] = note

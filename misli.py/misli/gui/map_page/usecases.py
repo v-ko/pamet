@@ -86,3 +86,11 @@ def update_drag_select(
                 map_page_component.drag_select.nc_ids.append(nc_id)
 
     misli.update_component(map_page_component_id)
+
+
+def delete_selected_notes(map_page_component_id):
+    map_page_component = misli.component(map_page_component_id)
+
+    for nc_id in map_page_component.selected_nc_ids:
+        note = misli.base_object_for_component(nc_id)
+        misli.delete_note(note.id, note.page_id)

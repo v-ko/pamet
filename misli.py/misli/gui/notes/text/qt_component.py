@@ -50,6 +50,11 @@ class TextNoteQtComponent(QLabel, Component):
         # print('Font pointSizeF', self.font().pointSizeF())
 
         if 'text' in props:
+            if '\n' in props['text']:
+                self._alignment = Qt.AlignLeft
+            else:
+                self._alignment = Qt.AlignHCenter
+
             self.elided_text = self.elide_text(props['text'])
 
         # self.setText('<p style="line-height:%s%%;margin-top:-5px;margin-right
@@ -80,7 +85,7 @@ class TextNoteQtComponent(QLabel, Component):
             line_rect.moveTop(vertical_offset + line_rect.top())
             line_rect.setHeight(line_rect.height() + hacky_padding)
             after_rect = painter.drawText(
-                line_rect, Qt.AlignHCenter | Qt.TextDontClip, line_text)
+                line_rect, self._alignment | Qt.TextDontClip, line_text)
 
             # print(after_rect)
             # painter.drawRect(line_rect)
@@ -102,7 +107,22 @@ class TextNoteQtComponent(QLabel, Component):
             line_vpositions.append(line_y)
             line_y += line_spacing
 
-        words = text.split()
+        text_lines = text.split('\n')
+        eol_word_indices = []
+        words = []
+
+        # Идеята е да се направи пак words list, ама просто ред по ред да се
+        # добавят за да може да се марикират позициите на думите, които са
+        # последни за всеки ред и да се ползва това в долния алгоритъм за
+        # викане на break (след добавяне към words_on_line) ако сме на таква
+        # дума
+
+        for line in text_lines:
+            words_on_line = line.split()
+            words.extend(words_on_line)
+
+            eol_word_indices.append(len(words) - 1)
+
         elided_text = []
         word_reached_idx = 0
 
@@ -118,6 +138,8 @@ class TextNoteQtComponent(QLabel, Component):
             width_left = text_rect.width()
             words_on_line = []
 
+            # Fill the line with the words left from the text
+            # (and elide where needed)
             for i, w in enumerate(words_left):
                 word = w
                 if i != 0:
@@ -144,6 +166,10 @@ class TextNoteQtComponent(QLabel, Component):
                 processed_words += 1
                 width_left -= word_bbox.width()
                 words_on_line.append(w)
+
+                # Check if we're on EoL (because of a line break in the text)
+                if (word_reached_idx + i) in eol_word_indices:
+                    break
 
             if not words_on_line:
                 break
