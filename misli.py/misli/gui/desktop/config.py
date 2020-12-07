@@ -43,6 +43,7 @@ def get_config():
     if not os.path.exists(config_file_path):
         save_config(default_config)
         return default_config
+
     else:
         with open(config_file_path) as cf:
             config = json.load(cf)

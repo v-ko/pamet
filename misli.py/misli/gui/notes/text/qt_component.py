@@ -13,10 +13,6 @@ class TextNoteQtComponent(QLabel, Component):
         QLabel.__init__(self, 'dsa')
 
         self.elided_text = []
-        # self.setTextFormat(Qt.RichText)
-        # self.setWordWrap(True)
-        # self.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
-        # self.setMargin(NOTE_MARGIN)
         self.setMargin(0)
 
     def set_props(self, **props):
@@ -110,12 +106,6 @@ class TextNoteQtComponent(QLabel, Component):
         eol_word_indices = []
         words = []
 
-        # Идеята е да се направи пак words list, ама просто ред по ред да се
-        # добавят за да може да се марикират позициите на думите, които са
-        # последни за всеки ред и да се ползва това в долния алгоритъм за
-        # викане на break (след добавяне към words_on_line) ако сме на таква
-        # дума
-
         for line in text_lines:
             words_on_line = line.split()
             words.extend(words_on_line)
@@ -179,7 +169,7 @@ class TextNoteQtComponent(QLabel, Component):
 
         return elided_text
 
-    def elide_text2(self, text, rect):
+    def elide_text_old(self, text, rect):
         font_metrics = QFontMetrics(self.font())
 
         # lineSpacing = font_metrics.lineSpacing()
