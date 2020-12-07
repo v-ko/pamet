@@ -4,16 +4,18 @@ from PySide2.QtWidgets import QShortcut
 from PySide2.QtGui import QKeySequence
 from PySide2.QtCore import Qt
 
-from misli.gui.component import Component
+from misli.gui.base_component import Component
 from misli.gui.map_page.viewport import Viewport
 
-from misli import misli, logging
+import misli
+from misli import logging
 from misli.gui.desktop.helpers import control_is_pressed, shift_is_pressed
 from misli.gui.map_page import usecases
 from misli.core.primitives import Point, Rectangle
 from misli.objects import Note
-from misli.gui.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
-from misli.gui.notes import usecases as notes_usecases
+from misli.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
+from misli.gui import usecases as notes_usecases
+
 log = logging.getLogger(__name__)
 
 
@@ -46,7 +48,7 @@ class MapPageComponent(Component):
         intersecting = []
 
         for child in self.get_children():
-            note = misli.base_object_for_component(child.id)
+            note = misli.gui.base_object_for_component(child.id)
 
             if note.rect().intersects(unprojected_rect):
                 intersecting.append(child)
@@ -58,7 +60,7 @@ class MapPageComponent(Component):
         intersecting = []
 
         for child in self.get_children():
-            note = misli.base_object_for_component(child.id)
+            note = misli.gui.base_object_for_component(child.id)
 
             if note.rect().contains(unprojected_mouse_pos):
                 intersecting.append(child)
@@ -141,7 +143,7 @@ class MapPageComponent(Component):
         else:
             pos = self.viewport.unproject_point(position)
 
-            page = misli.base_object_for_component(self.id)
+            page = misli.gui.base_object_for_component(self.id)
             note = Note(page_id=page.id, obj_class='Text', text='')
             note.x = pos.x()
             note.y = pos.y()

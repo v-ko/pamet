@@ -1,22 +1,22 @@
-from misli import misli
+import misli
 from misli.gui.desktop.config import get_config
 
 
 def new_browser_window(page_id):
-    app = misli.desktop_app()
+    app = misli.gui.component('__desktop-app')
 
-    window = misli.create_component(
+    window = misli.gui.create_component(
         obj_class='BrowserWindow', parent_id=app.id)
 
     new_browser_tab(window.id, page_id)
 
 
 def new_browser_tab(browser_window_id, page_id):
-    tab = misli.create_component(
+    tab = misli.gui.create_component(
         obj_class='BrowserTab', parent_id=browser_window_id)
 
     tab.current_page_id = page_id
-    misli.update_component(tab.id)
+    misli.gui.update_component(tab.id)
 
 
 def new_browser_window_ensure_page():

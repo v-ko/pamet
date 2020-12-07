@@ -4,21 +4,21 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, QPoint, QTimer
 from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush
 
-from misli import misli
-from misli.gui.constants import MAX_RENDER_TIME
+import misli
+from misli.constants import MAX_RENDER_TIME
 from misli.core.primitives import Point
 from misli.gui.map_page.component import MapPageComponent
 
-from misli.core import logging
+from misli import logging
 log = logging.getLogger(__name__)
 
 RENDER_CACHE_PADDING = 1
 
 
 class MapPageQtComponent(QWidget, MapPageComponent):
-    def __init__(self, page_id):
+    def __init__(self, parent_id):
         QWidget.__init__(self)
-        MapPageComponent.__init__(self, page_id)
+        MapPageComponent.__init__(self, parent_id)
 
         self.debug_drawing = False
 
@@ -32,8 +32,13 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)
 
-    def set_props(self, **page):
-        self.update()
+    # def set_props(self, **page):
+    #     self.update()
+
+    def add_child(self, child_id):
+        MapPageComponent.add_child(self, child_id)
+        child = misli.gui.component(child_id)
+        child.setHidden(True)
 
     def render_cache_rect_unprojected(self, display_rect):
         # Project and round down to the pixel grid
@@ -51,9 +56,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         painter = QPainter()
         cache_rect = self.render_cache_rect_unprojected(display_rect)
 
-        pcommand_cache = child.data.get('pcommand_cache', None)
-        render_img = child.data.get('render_cache', None)
-        render_cache_expired = child.data.get('render_cache_expired', True)
+        pcommand_cache = child.cache.get('pcommand_cache', None)
+        render_img = child.cache.get('render_cache', None)
+        render_cache_expired = child.cache.get('render_cache_expired', True)
 
         if not pcommand_cache:  # Gets deleted when expired
             # In order to be pixel perfect - relay through QPicture
@@ -62,11 +67,11 @@ class MapPageQtComponent(QWidget, MapPageComponent):
             pcommand_cache = QPicture()
 
             child.render(pcommand_cache, QPoint(0, 0))
-            child.data['pcommand_cache'] = pcommand_cache
+            child.cache['pcommand_cache'] = pcommand_cache
 
         if render_cache_expired or not render_img:
             render_img = QImage(cache_rect.size(), QImage.Format_ARGB32)
-            child.data['render_cache'] = render_img
+            child.cache['render_cache'] = render_img
 
         render_img.fill(0)
 
@@ -91,8 +96,8 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         pcommand_cache.play(painter)
         painter.end()
 
-        child.data['render_cache'] = render_img
-        child.data['render_cache_expired'] = False
+        child.cache['render_cache'] = render_img
+        child.cache['render_cache_expired'] = False
 
     def paintEvent(self, event):
         paint_t0 = time.time()
@@ -111,7 +116,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
         display_rects = {}  # id: rect
         for child in self.get_children():
-            note = misli.base_object_for_component(child.id)
+            note = misli.gui.base_object_for_component(child.id)
             nt_rect = note.rect()
 
             if not nt_rect.intersects(unprojected_viewport):
@@ -132,9 +137,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 # log.info('Painted urgently. Queued rerender.',
                 #          extra={'page_id': self.id})
 
-            pcommand_cache = child.data.get('pcommand_cache', None)
-            render_img = child.data.get('render_cache', None)
-            render_cache_expired = child.data.get('render_cache_expired', True)
+            pcommand_cache = child.cache.get('pcommand_cache', None)
+            render_img = child.cache.get('render_cache', None)
+            render_cache_expired = child.cache.get('render_cache_expired', True)
 
             if not render_img:
                 cache_rect = self.render_cache_rect_unprojected(
@@ -143,7 +148,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 render_img = QImage(cache_rect.size(), QImage.Format_ARGB32)
 
                 render_img.fill(QColor(100, 100, 100, 100))
-                child.data['render_cache'] = render_img
+                child.cache['render_cache'] = render_img
 
             if ((render_cache_expired or not pcommand_cache)
                     and not paint_urgently):
@@ -159,7 +164,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
             cache_rect = self.render_cache_rect_unprojected(
                 display_rects[child.id])
 
-            render_img = child.data.get('render_cache')
+            render_img = child.cache.get('render_cache')
 
             if self.debug_drawing:
                 painter.setPen(Qt.NoPen)

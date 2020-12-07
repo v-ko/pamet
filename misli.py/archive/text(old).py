@@ -2,7 +2,7 @@ from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QColor, QFontMetrics, QTextLayout
 from PySide2.QtCore import QSizeF, Qt, QRectF, QPointF
 from misli import log
-from misli.gui.constants import NOTE_MARGIN
+from misli.constants import NOTE_MARGIN
 
 
 class TextNoteComponent(QLabel):

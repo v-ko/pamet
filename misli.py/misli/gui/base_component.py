@@ -1,4 +1,4 @@
-from misli import misli
+import misli
 from misli.objects.base_object import BaseObject
 
 
@@ -11,16 +11,17 @@ class Component(BaseObject):
 
         self.parent_id = parent_id
         self.__children = []
+        self.cache = {}
 
     def set_props(self, **props):
         pass
 
     def add_child(self, child_id):
-        child = misli.component(child_id)
+        child = misli.gui.component(child_id)
         self.__children.append(child)
 
     def remove_child(self, child_id):
-        child = misli.component(child_id)
+        child = misli.gui.component(child_id)
         if child not in self.__children:
             return
 
@@ -28,3 +29,6 @@ class Component(BaseObject):
 
     def get_children(self):
         return self.__children
+
+    def update(self):
+        raise NotImplementedError

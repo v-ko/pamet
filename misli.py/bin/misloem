@@ -5,21 +5,23 @@ import signal
 
 from PySide2.QtCore import QTimer
 
-from misli import misli, logging
-from misli.gui import components_lib
+import misli
+from misli import logging, MainLoop
+from misli.gui import update_components_from_changes
 from misli.gui.desktop import usecases
-from misli.gui.desktop.app import DesktopApp
 from misli.gui.desktop.config import get_config
 
 from misli.services.file_system_storage import FSStorageRepository
+from misli.services.file_system_storage import save_changes
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
-def call_delayed(callback, delay=0):
-    QTimer.singleShot(delay * 1000, callback)
+class QtMainLoop(MainLoop):
+    def call_delayed(self, callback, delay=0):
+        QTimer.singleShot(delay * 1000, callback)
 
 
 def main():
@@ -45,13 +47,13 @@ def main():
         return
 
     misli.set_repo(fs_repo)
-    misli.set_components_lib(components_lib)
-    misli.call_delayed = call_delayed
+    misli.set_main_loop(QtMainLoop())
+    misli.on_change(update_components_from_changes)
+    misli.on_change(save_changes)
 
     misli.line_spacing_in_pixels = 20
 
-    desktop_app = DesktopApp()
-    misli.set_desktop_app(desktop_app)
+    desktop_app = misli.gui.create_component('DesktopApp', parent_id='')
     usecases.new_browser_window_ensure_page()
     desktop_app.exec_()
 

@@ -2,9 +2,12 @@ from PySide2.QtWidgets import QWidget, QShortcut
 from PySide2.QtGui import QKeySequence
 from PySide2.QtCore import Qt
 
-from .ui_text_note_edit_component import Ui_TextNoteEditComponent
-from .note_edit_component import TextNoteEditComponent
-from misli import misli
+from .ui_edit_component import Ui_TextNoteEditComponent
+from .edit_component import TextNoteEditComponent
+
+import misli
+from misli import logging
+log = logging.getLogger(__name__)
 
 
 class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
@@ -21,19 +24,21 @@ class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
 
     def update(self):
+        log.info('EditComponent update')
         display_rect = self.note.rect().to_QRectF()
         display_rect.moveCenter(self.display_position.to_QPointF())
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
 
-        tab_component = misli.component(self.parent_id)
+        tab_component = misli.gui.component(self.parent_id)
 
         top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
         display_rect.moveTopLeft(top_left)
 
         self.setGeometry(display_rect.toRect())
         self.ui.textEdit.setPlainText(self.note.text)
+        self.show()
 
     def _handle_ok_click(self):
         self.note.text = self.ui.textEdit.toPlainText()

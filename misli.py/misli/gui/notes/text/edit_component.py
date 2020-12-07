@@ -1,8 +1,8 @@
-from misli.gui.component import Component
+from misli.gui.base_component import Component
 from misli.objects import Note
 from misli.core.primitives import Point
 
-from .. import usecases
+from ... import usecases
 
 
 class TextNoteEditComponent(Component):

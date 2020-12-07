@@ -7,6 +7,7 @@ edit_components_for_obj_class = {}
 
 
 def add(obj_class_name, ComponentClass):
+    log.info('Adding component %s' % obj_class_name)
     components_by_class_name[obj_class_name] = ComponentClass
 
 

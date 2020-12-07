@@ -6,7 +6,7 @@ from PySide2.QtGui import QPainter, QPicture
 
 from misli import log
 from misli.objects import Note
-from misli.gui.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
+from misli.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from misli.gui.map_page.viewport import Viewport
 from misli.gui.notes.note_widget_box import NoteWidgetBox
 

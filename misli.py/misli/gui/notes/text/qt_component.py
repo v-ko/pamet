@@ -3,8 +3,8 @@ from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
 from misli.core.primitives import Color
-from misli.gui.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
-from misli.gui.component import Component
+from misli.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
+from misli.gui.base_component import Component
 
 
 class TextNoteQtComponent(QLabel, Component):
@@ -18,7 +18,6 @@ class TextNoteQtComponent(QLabel, Component):
         # self.setAlignment(Qt.AlignHCenter | Qt.AlignVCenter)
         # self.setMargin(NOTE_MARGIN)
         self.setMargin(0)
-        self.setHidden(True)
 
     def set_props(self, **props):
         palette = self.palette()

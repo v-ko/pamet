@@ -3,7 +3,10 @@ import json
 import random
 import string
 
+import misli
 from misli.objects import Repository, Page
+from misli.objects.change import ChangeTypes
+
 from misli import logging
 log = logging.getLogger(__name__)
 
@@ -178,7 +181,23 @@ class FSStorageRepository(Repository):
 
         return json_object
 
-    # def defaultCanvas(self):
-    #     cv = json.load(open(example_nf))
-    #     cv = self.convertCanvasFromV3toV4(cv)
-    #     return Canvas(cv)
+
+def save_changes(changes):
+    pages_to_save = set()
+
+    savable_changes = [ChangeTypes.CREATE,
+                       ChangeTypes.DELETE,
+                       ChangeTypes.UPDATE]
+
+    for change in changes:
+        if change.type in savable_changes:
+            last_state = change.last_state()
+            if last_state['obj_type'] == 'Note':
+                pages_to_save.add(last_state['page_id'])
+
+            elif last_state['obj_type'] == 'Page':
+                pages_to_save.add(last_state['id'])
+
+    for page_id in pages_to_save:
+        page = misli.page(page_id)
+        misli.repo().save_page(page)
