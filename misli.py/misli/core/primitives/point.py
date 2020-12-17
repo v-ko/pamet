@@ -4,6 +4,7 @@ from .point_base import PointBase
 
 class Point(PointBase, QPointF):
     def __init__(self, x, y):
+        PointBase.__init__(self, x, y)
         QPointF.__init__(self, x, y)
 
     @classmethod

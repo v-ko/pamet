@@ -9,8 +9,7 @@ from misli.constants import MAX_RENDER_TIME
 from misli.core.primitives import Point
 from misli.gui.map_page.component import MapPageComponent
 
-from misli import logging
-log = logging.getLogger(__name__)
+log = misli.get_logger(__name__)
 
 RENDER_CACHE_PADDING = 1
 
@@ -27,7 +26,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         pal.setColor(pal.Window, Qt.white)
 
         self.setPalette(pal)
-        self.setMouseTracking(1)
+        self.setMouseTracking(True)
         self.setFocusPolicy(Qt.ClickFocus)
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)

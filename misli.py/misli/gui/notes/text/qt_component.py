@@ -13,6 +13,7 @@ class TextNoteQtComponent(QLabel, Component):
         QLabel.__init__(self, 'dsa')
 
         self.elided_text = []
+        self._alignment = Qt.AlignHCenter
         self.setMargin(0)
 
     def set_props(self, **props):
@@ -115,7 +116,7 @@ class TextNoteQtComponent(QLabel, Component):
         elided_text = []
         word_reached_idx = 0
 
-        for i, line_y in enumerate(line_vpositions):
+        for line_y in line_vpositions:
 
             words_left = words[word_reached_idx:]
             line_rect = QRectF(text_rect)

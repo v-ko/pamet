@@ -27,7 +27,7 @@ class Note(BaseObject):
         return Rectangle(self.x, self.y, self.width, self.height)
 
     def get_color(self):
-        return Color(*self._color)
+        return Color(*self.color)
 
     def get_background_color(self):
-        return Color(*self._background_color)
+        return Color(*self.background_color)

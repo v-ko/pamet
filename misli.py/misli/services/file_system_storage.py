@@ -3,14 +3,14 @@ import json
 import random
 import string
 
-import misli
-from misli.objects import Repository, Page
-from misli.objects.change import ChangeTypes
+from misli.objects import Page
+from .repository import Repository
 
-from misli import logging
-log = logging.getLogger(__name__)
+from misli import get_logger
+log = get_logger(__name__)
 
 RANDOMIZE_TEXT = False
+V4_FILE_EXT = '.misl.json'
 
 
 class FSStorageRepository(Repository):
@@ -18,37 +18,36 @@ class FSStorageRepository(Repository):
         Repository.__init__(self)
 
         self.path = path
-        self._pages = {}
+        self._page_ids = []
 
-        # Parse repo folder
-        for file in os.scandir(path):
-            if self.is_misli_page(file.path):
-                try:
-                    with open(file.path) as pf:
-                        page_state = json.load(pf)
+        self._process_legacy_pages()
 
-                except Exception as e:
-                    log.error('Exception %s while loading page' % e, file.path)
-                    continue
+    def _process_legacy_pages(self):
+        for file in os.scandir(self.path):
 
-                page = Page(**page_state)
-                self.load_page(page)
+            if self.is_v4_page(file.path):
+                pass
 
             elif file.path.endswith('.json'):
                 page_state = self.convert_v3_to_v4(file.path)
 
-                if page_state:
-                    page = Page(**page_state)
-                    self.load_page(page)
-                    self.save_page(page)
-                    os.rename(file.path, file.path + '.backup')
-                    log.info('Loaded and backed up v3 page %s' % file.name)
+                if not page_state:
+                    log.warning('Empty page state for legacy page %s' %
+                                file.name)
+                    continue
+
+                self.create_page(**page_state)
+
+                backup_path = file.path + '.backup'
+                os.rename(file.path, backup_path)
+                log.info('Loaded v3 page %s and backed it up as %s' %
+                         (file.name, backup_path))
 
             else:
                 log.warning('Untracked file in the repo: %s' % file.name)
 
-    def path_for_page(self, page):
-        name = page.id + '.misl.json'
+    def _path_for_page(self, page_id):
+        name = page_id + V4_FILE_EXT
         return os.path.join(self.path, name)
 
     @classmethod
@@ -63,35 +62,83 @@ class FSStorageRepository(Repository):
     def create(cls, path):
         if os.path.exists(path):
             if os.listdir(path):
-                log.error('Cannot create repository in non-empty folder', path)
+                log.error('Cannot create repository in non-empty folder %s' %
+                          path)
                 return None
 
         os.makedirs(path, exist_ok=True)
         return cls(path)
 
-    def load_page(self, page):
-        self._pages[page.id] = page
+    def create_page(self, **page_state):
+        page = Page(**page_state)
 
-    def save_page(self, page):
+        path = self._path_for_page(page.id)
         try:
-            path = self.path_for_page(page)
+            if os.path.exists(path):
+                log.error('Cannot create page. File already exists %s' % path)
+                return
+
             with open(path, 'w') as pf:
                 page_state = page.state(include_notes=True)
                 json.dump(page_state, pf)
+
         except Exception as e:
-            log.error('Exception while saving page at', path, e)
+            log.error('Exception while creating page at %s: %s' % (path, e))
 
-    def pages(self):
-        return [page for pid, page in self._pages.items()]
+    def page_ids(self):
+        page_ids = []
 
-    def page(self, page_id):
-        if page_id not in self._pages:
+        for file in os.scandir(self.path):
+            if self.is_v4_page(file.path):
+                page_id = file.name[:-len(V4_FILE_EXT)]  # Strip extension
+
+                if not page_id:
+                    log.warning('Page with no id at %s' % file.path)
+                    continue
+
+                page_ids.append(page_id)
+
+        return page_ids
+
+    def page_state(self, page_id, include_notes=True):
+        path = self._path_for_page(page_id)
+
+        try:
+            with open(path) as pf:
+                page_state = json.load(pf)
+
+        except Exception as e:
+            log.error('Exception %s while loading page' % e, path)
             return None
 
-        return self._pages[page_id]
+        return page_state
 
-    def is_misli_page(self, file_path):
-        if file_path.endswith('.misl.json') and os.path.exists(file_path):
+    def update_page(self, **page_state):
+        page = Page(**page_state)
+
+        path = self._path_for_page(page.id)
+        try:
+            if not os.path.exists(path):
+                log.warning('Page at %s was missing. Will create it.' % path)
+
+            with open(path, 'w') as pf:
+                page_state = page.state(include_notes=True)
+                json.dump(page_state, pf)
+
+        except Exception as e:
+            log.error('Exception while updating page at %s: %s' % (path, e))
+
+    def delete_page(self, page_id):
+        path = self._path_for_page(page_id)
+
+        if os.path.exists(path):
+            os.remove(path)
+
+        else:
+            log.error('Cannot delete missing page: %s' % path)
+
+    def is_v4_page(self, file_path):
+        if file_path.endswith(V4_FILE_EXT):
             return True
 
         return False
@@ -150,7 +197,7 @@ class FSStorageRepository(Repository):
 
                 for i, word in enumerate(words):
                     new_word = []
-                    for c in word:
+                    for ch in word:
                         new_word.append(random.choice(string.ascii_letters))
 
                     words[i] = ''.join(new_word)
@@ -180,24 +227,3 @@ class FSStorageRepository(Repository):
         json_object['obj_class'] = 'MapPage'
 
         return json_object
-
-
-def save_changes(changes):
-    pages_to_save = set()
-
-    savable_changes = [ChangeTypes.CREATE,
-                       ChangeTypes.DELETE,
-                       ChangeTypes.UPDATE]
-
-    for change in changes:
-        if change.type in savable_changes:
-            last_state = change.last_state()
-            if last_state['obj_type'] == 'Note':
-                pages_to_save.add(last_state['page_id'])
-
-            elif last_state['obj_type'] == 'Page':
-                pages_to_save.add(last_state['id'])
-
-    for page_id in pages_to_save:
-        page = misli.page(page_id)
-        misli.repo().save_page(page)

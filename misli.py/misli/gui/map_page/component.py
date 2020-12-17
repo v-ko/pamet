@@ -8,7 +8,6 @@ from misli.gui.base_component import Component
 from misli.gui.map_page.viewport import Viewport
 
 import misli
-from misli import logging
 from misli.gui.desktop.helpers import control_is_pressed, shift_is_pressed
 from misli.gui.map_page import usecases
 from misli.core.primitives import Point, Rectangle
@@ -16,7 +15,7 @@ from misli.objects import Note
 from misli.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from misli.gui import usecases as notes_usecases
 
-log = logging.getLogger(__name__)
+log = misli.get_logger(__name__)
 
 
 class MapPageComponent(Component):
@@ -28,11 +27,12 @@ class MapPageComponent(Component):
         self.mouse_position_on_left_press = Point(0, 0)
         self.selected_nc_ids = set()
         self.left_mouse_last_press_time = 0
+        self.viewport_position_on_press = Point(0, 0)
 
         delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
         delete_shortcut.activated.connect(self._handle_delete_shortcut)
 
-        class DragSelect():
+        class DragSelect:
             def __init__(self):
                 self.nc_ids = []
                 self.active = False
@@ -139,7 +139,8 @@ class MapPageComponent(Component):
         nc = self.get_note_component_at(position)
 
         if nc:
-            notes_usecases.start_editing_note(self.parent_id, nc.id, position)
+            notes_usecases.start_editing_note(
+                self.parent_id, nc.id, position.to_coords())
         else:
             pos = self.viewport.unproject_point(position)
 
@@ -149,4 +150,4 @@ class MapPageComponent(Component):
             note.y = pos.y()
 
             notes_usecases.create_new_note(
-                self.parent_id, position, **note.state())
+                self.parent_id, position.to_coords(), **note.state())

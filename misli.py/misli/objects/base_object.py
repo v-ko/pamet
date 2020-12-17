@@ -1,4 +1,4 @@
-class BaseObject():
+class BaseObject:
     def __init__(self, **state):
         self.__state_keys = []
         self.id = 0

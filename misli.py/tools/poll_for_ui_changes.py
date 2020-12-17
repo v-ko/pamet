@@ -31,7 +31,7 @@ def main():
         print('Given path is not a folder')
         return
 
-    ui_files = defaultdict(int)
+    ui_files_tmod = defaultdict(float)
 
     def pollAndGenerate(verbose=False):
         updated_count = 0
@@ -46,7 +46,7 @@ def main():
 
                 tmod = os.path.getmtime(f_path)
 
-                if tmod == ui_files[f_path]:
+                if tmod == ui_files_tmod[f_path]:
                     continue
 
                 command = ['pyside2-uic', f_path]
@@ -57,7 +57,7 @@ def main():
                 with open(out_path, 'w') as of:
                     of.write(output)
 
-                ui_files[f_path] = tmod
+                ui_files_tmod[f_path] = tmod
 
                 updated_count += 1
 

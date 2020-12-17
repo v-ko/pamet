@@ -7,8 +7,13 @@ class ChangeTypes(Enum):
     DELETE = 3
 
 
-class Change():
-    def __init__(self, change_type, old_state={}, new_state={}):
+class Change:
+    def __init__(self, change_type, old_state=None, new_state=None):
+        if old_state is None:
+            old_state = {}
+        if new_state is None:
+            new_state = {}
+            
         self.type = change_type
         self.old_state = old_state
         self.new_state = new_state

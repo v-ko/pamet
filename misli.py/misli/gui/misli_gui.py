@@ -3,8 +3,7 @@ from collections import defaultdict
 import misli
 from ..objects import Page, Note
 from misli.objects.change import ChangeTypes
-from misli import logging
-log = logging.getLogger(__name__)
+log = misli.get_logger(__name__)
 
 
 _components = {}
@@ -13,6 +12,29 @@ _base_object_for_component = {}
 
 _components_for_update = []
 _pages_for_saving = set()
+
+_action_handlers = []
+_action_stack = []
+
+
+# Action channel interface
+def push_action(action):
+    _action_stack.append(action)
+    misli.call_delayed(_handle_actions, 0)
+
+
+def on_action(handler):
+    _action_handlers.append(handler)
+
+
+def _handle_actions():
+    if not _action_stack:
+        return
+
+    for handler in _action_handlers:
+        handler(_action_stack)
+
+    _action_stack.clear()
 
 
 # Runtime component interface
@@ -64,6 +86,10 @@ def create_component_for_note(
 
 def component(id):
     return _components[id]
+
+
+def components():
+    return [c for c_id, c in _components.items()]
 
 
 def base_object_for_component(component_id):
@@ -141,7 +167,7 @@ def _update_components_for_page_change(page_change):
     page = Page(**page_state)
 
     if page_change.type == ChangeTypes.CREATE:
-        raise NotImplementedError
+        pass
 
     elif page_change.type == ChangeTypes.UPDATE:
         page_components = components_for_base_object(page.id)

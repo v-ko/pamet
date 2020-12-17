@@ -6,8 +6,7 @@ from .ui_edit_component import Ui_TextNoteEditComponent
 from .edit_component import TextNoteEditComponent
 
 import misli
-from misli import logging
-log = logging.getLogger(__name__)
+log = misli.get_logger(__name__)
 
 
 class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):

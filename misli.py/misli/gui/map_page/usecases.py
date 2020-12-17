@@ -1,9 +1,10 @@
 import misli
+from misli.gui.actions_lib import action
 
-from misli import logging
-log = logging.getLogger(__name__)
+log = misli.get_logger(__name__)
 
 
+@action('map_page.mouse_drag_navigation')
 def mouse_drag_navigation(map_page_component_id: int, new_viewport_center):
     map_page_component = misli.gui.component(map_page_component_id)
 
@@ -11,6 +12,7 @@ def mouse_drag_navigation(map_page_component_id: int, new_viewport_center):
     misli.gui.update_component(map_page_component_id)
 
 
+@action('map_page.update_note_selections')
 def update_note_selections(map_page_component_id: int,
                            selection_updates: dict):
 
@@ -42,6 +44,7 @@ def update_note_selections(map_page_component_id: int,
     misli.gui.update_component(map_page_component_id)
 
 
+@action('map_page.clear_note_selection')
 def clear_note_selection(map_page_component_id: int):
     map_page_component = misli.gui.component(map_page_component_id)
 
@@ -55,6 +58,7 @@ def clear_note_selection(map_page_component_id: int):
     update_note_selections(map_page_component_id, selection_updates)
 
 
+@action('map_page.set_viewport_height')
 def set_viewport_height(map_page_component_id: int, new_height: float):
     map_page_component = misli.gui.component(map_page_component_id)
     map_page_component.viewport.eyeHeight = new_height
@@ -66,6 +70,7 @@ def set_viewport_height(map_page_component_id: int, new_height: float):
     # //glutPostRedisplay(); artefact, thank you for siteseeing
 
 
+@action('map_page.update_drag_select')
 def update_drag_select(
         map_page_component_id: int, select_rect=None, drag_selected_nc_ids=[]):
 
@@ -88,6 +93,7 @@ def update_drag_select(
     misli.gui.update_component(map_page_component_id)
 
 
+@action('map_page.delete_selected_notes')
 def delete_selected_notes(map_page_component_id):
     map_page_component = misli.gui.component(map_page_component_id)
 

@@ -1,7 +1,7 @@
 from misli.objects.base_object import BaseObject
 from misli.objects.note import Note
-from misli import logging
-log = logging.getLogger(__name__)
+from misli import get_logger
+log = get_logger(__name__)
 
 
 class Page(BaseObject):
@@ -27,7 +27,6 @@ class Page(BaseObject):
         if note.page_id != self.id:
             raise Exception(
                 'Note id different from my id: "%s".' % note.page_id)
-            note.page_id = self.id
 
         self._notes[note.id] = note
 

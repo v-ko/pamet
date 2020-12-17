@@ -1,4 +1,4 @@
-class RectangleBase():
+class RectangleBase:
     def __init__(self, x, y, w, h):
         self._x = x
         self._y = y
