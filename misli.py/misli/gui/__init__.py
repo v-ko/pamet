@@ -3,9 +3,9 @@ from .actions_lib import action
 
 from . import components_lib
 
-from .desktop.app import DesktopApp
-from .desktop.browser_window import BrowserWindow
-from .desktop.browser_tab import BrowserTabComponent
+from .desktop import DesktopApp
+from .desktop import BrowserWindow
+from .desktop import BrowserTabComponent
 from .map_page.qt_component import MapPageQtComponent
 from .notes.text.qt_component import TextNoteQtComponent
 from .notes.text.edit_qt_component import TextNoteEditQtComponent

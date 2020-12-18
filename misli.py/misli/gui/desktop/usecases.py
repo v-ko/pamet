@@ -5,7 +5,7 @@ from misli.gui.desktop.config import get_config
 
 @action('desktop.new_browser_window')
 def new_browser_window(page_id):
-    app = misli.gui.component('__desktop-app')
+    app = misli.gui.find_component(obj_class='DesktopApp')
 
     window = misli.gui.create_component(
         obj_class='BrowserWindow', parent_id=app.id)

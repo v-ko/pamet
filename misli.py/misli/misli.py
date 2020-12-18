@@ -1,3 +1,4 @@
+from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 from misli.core.main_loop import NoMainLoop
 from misli.objects import Page, Note
 from misli.objects.change import Change, ChangeTypes
@@ -74,6 +75,10 @@ def _handle_changes():
 
 # -------------Pages CRUD-------------
 def create_page(**page_state):
+    # Create a new id both when missing key 'id' is missing or ==None
+    _id = page_state.pop('id', None)
+    page_state['id'] = _id or get_new_id()
+
     _page = Page(**page_state)
 
     load_page(_page)
@@ -106,6 +111,14 @@ def page(page_id):
     return _pages[page_id]
 
 
+def find_pages(**props):
+    return find_many_by_props(_pages, **props)
+
+
+def find_page(**props):
+    return find_one_by_props(_pages, **props)
+
+
 def update_page(page_id, **page_state):
     _page = page(page_id)
     old_state = _page.state()
@@ -127,10 +140,14 @@ def delete_page(page_id):
 
 # -------------Notes C_UD-------------
 def create_note(**note_state):
+    # Create a new id both when missing key 'id' is missing or ==None
+    _id = note_state.pop('id', None)
+    note_state['id'] = _id or get_new_id()
+
     page_id = note_state.pop('page_id', None)
     if not page_id:
-        log.error('Cannot create note without page_id. State: %s' % note_state)
-        return
+        raise Exception(
+            'Cannot create note without page_id. State: %s' % note_state)
 
     _page = page(page_id)
     note_state['page_id'] = page_id

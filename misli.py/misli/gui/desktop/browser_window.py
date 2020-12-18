@@ -22,7 +22,6 @@ class BrowserWindow(QMainWindow, Component):
 
     def handle_tab_changed(self, index):
         self.ui.tabWidget.widget(0).update()
-        print('tab changed')
 
     def add_child(self, child_id):
         child = misli.gui.component(child_id)

@@ -1,8 +1,10 @@
 from collections import defaultdict
 
 import misli
-from ..objects import Page, Note
 from misli.objects.change import ChangeTypes
+from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
+from misli.gui.actions_lib import ActionObject
+from ..objects import Page, Note
 log = misli.get_logger(__name__)
 
 
@@ -14,27 +16,32 @@ _components_for_update = []
 _pages_for_saving = set()
 
 _action_handlers = []
-_action_stack = []
+_actions_for_dispatch = []
 
 
 # Action channel interface
-def push_action(action):
-    _action_stack.append(action)
+def push_action(action_state):
+    log.info(str(ActionObject(**action_state)))
+    _actions_for_dispatch.append(action_state)
     misli.call_delayed(_handle_actions, 0)
 
 
+# The first action state returned is the top-level action start state
+# The rest of the states are nested in it and won't invoke a separate on_action
+# By the same logic the last action returned is the Finished state of the
+# top-level action
 def on_action(handler):
     _action_handlers.append(handler)
 
 
 def _handle_actions():
-    if not _action_stack:
+    if not _actions_for_dispatch:
         return
 
     for handler in _action_handlers:
-        handler(_action_stack)
+        handler(_actions_for_dispatch)
 
-    _action_stack.clear()
+    _actions_for_dispatch.clear()
 
 
 # Runtime component interface
@@ -42,9 +49,11 @@ def _add_component(component):
     _components[component.id] = component
 
 
-def create_component(obj_class, parent_id):
+def create_component(obj_class, parent_id, id=None):
     ComponentClass = misli.gui.components_lib.get(obj_class)
     _component = ComponentClass(parent_id=parent_id)
+    _component.id = id or get_new_id()
+
     _add_component(_component)
 
     if parent_id:
@@ -90,6 +99,14 @@ def component(id):
 
 def components():
     return [c for c_id, c in _components.items()]
+
+
+def find_components(**props):
+    return find_many_by_props(_components, **props)
+
+
+def find_component(**props):
+    return find_one_by_props(_components, **props)
 
 
 def base_object_for_component(component_id):

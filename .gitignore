@@ -18,3 +18,25 @@ other/misli_custom.desktop~
 *.egg-info
 
 misli_web
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/1_map_page.clear_note_selection/1_map_page.clear_note_selection.png.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/1_map_page.clear_note_selection/1_map_page.clear_note_selection.png_good.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/2_map_page.update_drag_select/2_map_page.update_drag_select.png.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/2_map_page.update_drag_select/2_map_page.update_drag_select.png_good.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/3_notes.create_new_note/3_notes.create_new_note.png.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/3_notes.create_new_note/3_notes.create_new_note.png_good.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/4_map_page.update_drag_select/4_map_page.update_drag_select.png.png
+misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/4_map_page.update_drag_select/4_map_page.update_drag_select.png_good.png
+misli.py/tests/visual/tmp_recording/snapshots/0_desktop.new_browser_window_ensure_page.png
+misli.py/tests/visual/tmp_recording/snapshots/1_map_page.clear_note_selection.png
+misli.py/tests/visual/tmp_recording/snapshots/2_map_page.update_drag_select.png
+misli.py/tests/visual/tmp_recording/snapshots/3_notes.create_new_note.png
+misli.py/tests/visual/tmp_recording/snapshots/4_map_page.update_drag_select.png
+misli.py/tests/visual/tmp_recording/snapshots/5_notes.finish_creating_note.png
+misli.py/tests/visual/tmp_recording/tmp_recording.actions-recording.json
+misli.py/tests/visual/tmp_recording2/snapshots/0_desktop.new_browser_window_ensure_page.png
+misli.py/tests/visual/tmp_recording2/snapshots/1_map_page.clear_note_selection.png
+misli.py/tests/visual/tmp_recording2/snapshots/2_map_page.update_drag_select.png
+misli.py/tests/visual/tmp_recording2/snapshots/3_notes.create_new_note.png
+misli.py/tests/visual/tmp_recording2/snapshots/4_map_page.update_drag_select.png
+misli.py/tests/visual/tmp_recording2/snapshots/5_notes.finish_creating_note.png
+misli.py/tests/visual/tmp_recording2/tmp_recording2.actions-recording.json

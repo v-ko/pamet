@@ -6,6 +6,7 @@ import signal
 import misli
 from misli.gui import update_components_from_changes
 from misli.gui.desktop import usecases, QtMainLoop
+# from misli.gui.desktop.constants import DESKTOP_APP_COMPONENT_NAME
 from misli.gui.desktop.config import get_config
 
 from misli.services.file_system_storage import FSStorageRepository

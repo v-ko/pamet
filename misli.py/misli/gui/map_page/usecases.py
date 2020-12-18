@@ -72,9 +72,12 @@ def set_viewport_height(map_page_component_id: int, new_height: float):
 
 @action('map_page.update_drag_select')
 def update_drag_select(
-        map_page_component_id: int, select_rect=None, drag_selected_nc_ids=[]):
+        map_page_component_id, select_rect=None, drag_selected_nc_ids=None):
 
     map_page_component = misli.gui.component(map_page_component_id)
+
+    if drag_selected_nc_ids is None:
+        drag_selected_nc_ids = []
 
     if not select_rect:
         map_page_component.drag_select.active = False

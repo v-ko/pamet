@@ -10,7 +10,6 @@ class DesktopApp(QApplication, Component):
         QApplication.__init__(self)
         Component.__init__(self, parent_id=parent_id, obj_class='DesktopApp')
 
-        self.id = '__desktop-app'
         self.browsers = []
 
         self.setOrganizationName(ORGANISATION_NAME)

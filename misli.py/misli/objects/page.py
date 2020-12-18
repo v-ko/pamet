@@ -12,6 +12,9 @@ class Page(BaseObject):
         super(Page, self).__init__(obj_type=obj_type, **page_state)
 
         self._notes = {}
+        self.name = ''
+
+        self.add_state_keys(['name'])
 
         if note_states:
             for ns in note_states:
@@ -37,8 +40,9 @@ class Page(BaseObject):
         self_state = super().state()
         self_state['note_states'] = []
 
-        for nt in self.notes():
-            nt_state = nt.state()
-            self_state['note_states'].append(nt_state)
+        if include_notes:
+            for nt in self.notes():
+                nt_state = nt.state()
+                self_state['note_states'].append(nt_state)
 
         return self_state
