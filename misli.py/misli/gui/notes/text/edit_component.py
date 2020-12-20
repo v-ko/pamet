@@ -1,5 +1,5 @@
 from misli.gui.base_component import Component
-from misli.objects import Note
+from misli.entities import Note
 from misli.core.primitives import Point
 
 from ... import usecases

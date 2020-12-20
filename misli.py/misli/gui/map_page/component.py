@@ -11,8 +11,9 @@ import misli
 from misli.gui.desktop.helpers import control_is_pressed, shift_is_pressed
 from misli.gui.map_page import usecases
 from misli.core.primitives import Point, Rectangle
-from misli.objects import Note
+from misli.entities import Note
 from misli.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
+from misli.constants import RESIZE_CIRCLE_RADIUS
 from misli.gui import usecases as notes_usecases
 
 log = misli.get_logger(__name__)
@@ -32,13 +33,16 @@ class MapPageComponent(Component):
         delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
         delete_shortcut.activated.connect(self._handle_delete_shortcut)
 
-        class DragSelect:
-            def __init__(self):
-                self.nc_ids = []
-                self.active = False
-                self.rect = None
+        self.mouse_drag_navigation_active = False
 
-        self.drag_select = DragSelect()
+        self.drag_select_active = False
+        self.drag_select_nc_ids = []
+        self.drag_select_rect_props = []
+
+        self.note_resize_active = False
+        self._note_resize_click_position = None
+        self._note_resize_delta_from_note_edge = None
+        self._note_resize_main_note = None
 
     def _handle_delete_shortcut(self):
         usecases.delete_selected_notes(self.id)
@@ -74,6 +78,15 @@ class MapPageComponent(Component):
 
         return intersecting[0]
 
+    def resize_circle_intersect(self, position):
+        for nc in self.get_children():
+            unprojected_pos = self.viewport.unproject_point(position)
+            resize_circle_center = nc.note().rect().bottom_right()
+
+            distance = resize_circle_center.distance_to(unprojected_pos)
+            if distance <= RESIZE_CIRCLE_RADIUS:
+                return nc
+
     def handle_left_mouse_press(self, position):
         self.mouse_position_on_left_press = position
         self.left_mouse_last_press_time = time.time()
@@ -83,18 +96,39 @@ class MapPageComponent(Component):
         ctrl_pressed = control_is_pressed()
         shift_pressed = shift_is_pressed()
 
-        nc_under_mouse = self.get_note_component_at(position)
+        nc_under_mouse = None
+        ncs_under_mouse = self.get_note_components_at(position)
+        if ncs_under_mouse:
+            nc_under_mouse = ncs_under_mouse[0]
 
         if ctrl_pressed and shift_pressed:
-            usecases.update_drag_select(self.id, True)
+            usecases.start_drag_select(self.id, position.to_list())
+            return
 
-        elif ctrl_pressed:
+        if ctrl_pressed:
+
             if nc_under_mouse:
                 nc_selected = nc_under_mouse.id in self.selected_nc_ids
                 usecases.update_note_selections(
                     self.id, {nc_under_mouse.id: not nc_selected})
 
-        else:
+        # Check for resize initiation
+        resize_nc = self.resize_circle_intersect(position)
+
+        if resize_nc:
+            if resize_nc.id not in self.selected_nc_ids:
+                usecases.update_note_selections(self.id, {resize_nc.id: True})
+
+            resize_circle_center = resize_nc.note().rect().bottom_right()
+            rcc_projected = self.viewport.project_point(resize_circle_center)
+            self._note_resize_delta_from_note_edge = rcc_projected - position
+            self._note_resize_click_position = position
+            self._note_resize_main_note = resize_nc.note()
+            usecases.start_notes_resize(self.id)
+
+            return
+
+        if not ctrl_pressed and not shift_pressed:
             usecases.clear_note_selection(self.id)
             if nc_under_mouse:
                 usecases.update_note_selections(
@@ -102,29 +136,54 @@ class MapPageComponent(Component):
 
     def handle_left_mouse_release(self, position):
         self.left_mouse_is_pressed = False
-        usecases.update_drag_select(self.id, False)
+
+        if self.drag_select_active:
+            usecases.stop_drag_select(self.id)
+
+        if self.note_resize_active:
+            new_size = self._new_note_size_on_resize(position)
+            usecases.stop_notes_resize(self.id, new_size, self.selected_nc_ids)
+
+    def _new_note_size_on_resize(self, new_mouse_pos):
+        mouse_delta = new_mouse_pos - self._note_resize_click_position
+        size_delta = mouse_delta - self._note_resize_delta_from_note_edge
+
+        size_delta = size_delta / self.viewport.height_scale_factor()
+        new_size = self._note_resize_main_note.size() + size_delta
+
+        return new_size
+
+    def _handle_move_on_drag_select(self, new_position):
+        selection_rect = Rectangle.from_points(
+                self.mouse_position_on_left_press, new_position)
+
+        ncs_in_selection = self.get_note_components_in_area(selection_rect)
+        drag_selected_nc_ids = [nc.id for nc in ncs_in_selection]
+
+        usecases.update_drag_select(
+            self.id, selection_rect.to_list(), drag_selected_nc_ids)
 
     def handle_mouse_move(self, new_position):
         delta = self.mouse_position_on_left_press - new_position
 
-        if self.drag_select.active:
-            selection_rect = Rectangle. from_points(
-                self.mouse_position_on_left_press, new_position)
-            ncs_in_selection = self.get_note_components_in_area(selection_rect)
-            drag_selected_nc_ids = [nc.id for nc in ncs_in_selection]
-
-            self.drag_select.rect = selection_rect
-            usecases.update_drag_select(self.id, True, drag_selected_nc_ids)
-
+        if not self.left_mouse_is_pressed:
+            pass
             return
 
-        if self.left_mouse_is_pressed:
+        if self.drag_select_active:
+            self._handle_move_on_drag_select(new_position)
+        elif self.note_resize_active:
+            new_size = self._new_note_size_on_resize(new_position)
+            usecases.resize_note_components(
+                self.id, new_size.to_list(), self.selected_nc_ids)
+        else:
             # Page viewport change by mouse drag
             unprojected_delta = delta / self.viewport.height_scale_factor()
             new_viewport_center = (self.viewport_position_on_press +
                                    unprojected_delta)
 
-            usecases.mouse_drag_navigation(self.id, new_viewport_center)
+            usecases.change_viewport_center(
+                self.id, new_viewport_center.to_list())
 
     def handle_mouse_scroll(self, steps):
         delta = MOVE_SPEED * steps
@@ -140,7 +199,7 @@ class MapPageComponent(Component):
 
         if nc:
             notes_usecases.start_editing_note(
-                self.parent_id, nc.id, position.to_coords())
+                self.parent_id, nc.id, position.to_list())
         else:
             pos = self.viewport.unproject_point(position)
 
@@ -150,4 +209,4 @@ class MapPageComponent(Component):
             note.y = pos.y()
 
             notes_usecases.create_new_note(
-                self.parent_id, position.to_coords(), **note.state())
+                self.parent_id, position.to_list(), **note.state())

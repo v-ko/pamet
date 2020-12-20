@@ -1,1 +1,0 @@
-DESKTOP_APP_COMPONENT_NAME = '__desktop-app'

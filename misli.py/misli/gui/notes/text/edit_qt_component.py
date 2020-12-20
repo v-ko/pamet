@@ -1,6 +1,6 @@
 from PySide2.QtWidgets import QWidget, QShortcut
 from PySide2.QtGui import QKeySequence
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QRectF, QPointF
 
 from .ui_edit_component import Ui_TextNoteEditComponent
 from .edit_component import TextNoteEditComponent
@@ -24,8 +24,8 @@ class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
 
     def update(self):
         log.info('EditComponent update')
-        display_rect = self.note.rect().to_QRectF()
-        display_rect.moveCenter(self.display_position.to_QPointF())
+        display_rect = QRectF(*self.note.rect().to_list())
+        display_rect.moveCenter(QPointF(*self.display_position.to_list()))
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)

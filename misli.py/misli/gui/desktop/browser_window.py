@@ -1,7 +1,6 @@
 from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 
-import misli
 from misli.gui.desktop.ui_browser_window import Ui_BrowserWindow
 from misli.gui.base_component import Component
 
@@ -23,8 +22,7 @@ class BrowserWindow(QMainWindow, Component):
     def handle_tab_changed(self, index):
         self.ui.tabWidget.widget(0).update()
 
-    def add_child(self, child_id):
-        child = misli.gui.component(child_id)
+    def add_child(self, child):
         if child.obj_class == 'BrowserTab':
             self.ui.tabWidget.addTab(child, child.current_page_id)
 

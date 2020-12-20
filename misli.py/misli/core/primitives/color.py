@@ -1,14 +1,12 @@
-from PySide2.QtGui import QColor
-
-from .color_base import ColorBase
-
-
-class Color(ColorBase):
+class Color:
     def __init__(self, r, g, b, a):
-        super().__init__(r, g, b, a)
+        if r > 1 or g > 1 or b > 1 or a > 1:
+            raise ValueError
 
-    def state(self):
-        return [self._r, self._g, self._b, self._a]
+        self._r = r
+        self._g = g
+        self._b = b
+        self._a = a
 
-    def to_QColor(self):
-        return QColor(*[c * 255 for c in self.state()])
+    def to_uint8_rgba_list(self):
+        return [c * 255 for c in [self._r, self._g, self._b, self._a]]

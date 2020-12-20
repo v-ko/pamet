@@ -1,14 +1,14 @@
 import misli
-from misli.objects.change import ChangeTypes
-from misli.objects import BaseObject
+from misli.entities.change import ChangeTypes
+from misli.entities import BaseEntity
 
 from misli import get_logger
 log = get_logger(__name__)
 
 
-class Repository(BaseObject):
+class Repository(BaseEntity):
     def __init__(self):
-        BaseObject.__init__(self, obj_type='Repository')
+        BaseEntity.__init__(self, id=None, obj_type='Repository')
 
         self._pages = {}
 

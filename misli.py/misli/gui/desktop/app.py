@@ -1,6 +1,5 @@
 from PySide2.QtWidgets import QApplication
 
-import misli
 from misli import ORGANISATION_NAME, DESKTOP_APP_NAME, DESKTOP_APP_VERSION
 from misli.gui.base_component import Component
 
@@ -18,8 +17,7 @@ class DesktopApp(QApplication, Component):
 
         self.browser_window_ids = []
 
-    def add_child(self, child_id):
-        child = misli.gui.component(child_id)
+    def add_child(self, child):
         if child.obj_class == 'BrowserWindow':
             self.browser_window_ids.append(child.id)
             child.showMaximized()

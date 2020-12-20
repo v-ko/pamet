@@ -1,15 +1,17 @@
-class BaseObject:
-    def __init__(self, **state):
+class BaseEntity:
+    def __init__(self, id, obj_type, obj_class=None):
         self.__state_keys = []
-        self.id = None
-        self.obj_type = 'BaseObject'
 
-        self.add_state_keys(['id', 'obj_type'])
-        self.add_state_keys(state.keys())
+        self.id = id
+        self.obj_type = obj_type
+        self.obj_class = obj_class
 
-        self.set_state(**state)
+        self.add_state_keys(['id', 'obj_type', 'obj_class'])
 
     def add_state_keys(self, keys):
+        if type(keys) != list:
+            raise ValueError
+
         self.__state_keys.extend(keys)
 
     def state(self):

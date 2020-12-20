@@ -3,7 +3,7 @@ import shutil
 import pytest
 
 from misli.services.file_system_storage import FSStorageRepository
-from misli.objects import Page, Note
+from misli.entities import Page, Note
 
 
 @pytest.fixture()

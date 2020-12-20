@@ -1,7 +1,7 @@
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 from misli.core.main_loop import NoMainLoop
-from misli.objects import Page, Note
-from misli.objects.change import Change, ChangeTypes
+from misli.entities import Page, Note
+from misli.entities.change import Change, ChangeTypes
 from misli.services.in_memory_storage import Repository
 
 from misli import get_logger

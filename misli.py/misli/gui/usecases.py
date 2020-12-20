@@ -1,6 +1,6 @@
 import misli
 from misli.core.primitives import Point
-from misli.objects import Note
+from misli.entities import Note
 from misli.gui.actions_lib import action
 
 log = misli.get_logger(__name__)

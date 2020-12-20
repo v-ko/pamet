@@ -1,5 +1,5 @@
 import misli
-from misli.objects import Page, Note
+from misli.entities import Page, Note
 
 
 def test_page_CRUD():

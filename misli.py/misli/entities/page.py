@@ -1,21 +1,24 @@
-from misli.objects.base_object import BaseObject
-from misli.objects.note import Note
+from misli.entities.base_entity import BaseEntity
+from misli.entities.note import Note
 from misli import get_logger
 log = get_logger(__name__)
 
 
-class Page(BaseObject):
+class Page(BaseEntity):
     def __init__(self, **page_state):
-        note_states = page_state.pop('note_states', [])
+        id = page_state.pop('id', None)
         obj_type = page_state.pop('obj_type', 'Page')
+        obj_class = page_state.pop('obj_class', None)
 
-        super(Page, self).__init__(obj_type=obj_type, **page_state)
+        BaseEntity.__init__(
+            self, id=id, obj_type=obj_type, obj_class=obj_class)
 
         self._notes = {}
         self.name = ''
 
         self.add_state_keys(['name'])
 
+        note_states = page_state.pop('note_states', [])
         if note_states:
             for ns in note_states:
                 self.add_note(Note(**ns))

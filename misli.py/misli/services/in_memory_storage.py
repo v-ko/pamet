@@ -1,4 +1,4 @@
-from misli.objects import Page
+from misli.entities import Page
 from .repository import Repository
 
 from misli import get_logger

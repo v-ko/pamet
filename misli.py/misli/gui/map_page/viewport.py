@@ -8,7 +8,7 @@ class Viewport(object):
         self._map_page_component = _map_page_component
 
         self._center = Point(0, 0)
-        self.eyeHeight = INITIAL_EYE_Z  # self._font_metrics.lineSpacing()
+        self.eyeHeight = INITIAL_EYE_Z
 
     def __repr__(self):
         info = (self.center(), self.eyeHeight)
@@ -18,19 +18,18 @@ class Viewport(object):
         return self._center
 
     def set_center(self, new_center):
+        if type(new_center) != Point:
+            raise ValueError
+
         self._center = new_center
 
     def height_scale_factor(self):
         return misli.line_spacing_in_pixels / self.eyeHeight
 
     def project_rect(self, rect):
-        top_left = self.project_point(rect.topLeft())
-        bottom_right = self.project_point(rect.bottomRight())
+        top_left = self.project_point(rect.top_left())
+        bottom_right = self.project_point(rect.bottom_right())
         return Rectangle.from_points(top_left, bottom_right)
-
-    # def projectLine(self, line):
-    #     return QLineF(self.project_point(line.p1()),
-    #                   self.project_point(line.p2()))
 
     def project_point(self, point):
         return Point(self.project_x(point.x()), self.project_y(point.y()))
@@ -49,8 +48,8 @@ class Viewport(object):
         return Point(self.unproject_x(point.x()), self.unproject_y(point.y()))
 
     def unproject_rect(self, rect):
-        top_left = self.unproject_point(rect.topLeft())
-        bottom_right = self.unproject_point(rect.bottomRight())
+        top_left = self.unproject_point(rect.top_left())
+        bottom_right = self.unproject_point(rect.bottom_right())
         return Rectangle.from_points(top_left, bottom_right)
 
     def unproject_x(self, x_on_screen):

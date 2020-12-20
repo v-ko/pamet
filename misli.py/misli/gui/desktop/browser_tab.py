@@ -35,9 +35,7 @@ class BrowserTabComponent(QWidget, Component):
                 self.current_page_id, parent_id=self.id)
             self.layout().addWidget(self._page_component)
 
-    def add_child(self, child_id):
-        child = misli.gui.component(child_id)
-
+    def add_child(self, child):
         # If we're adding an edit component
         if child.obj_class in misli.gui.components_lib.edit_component_names():
 
@@ -50,8 +48,9 @@ class BrowserTabComponent(QWidget, Component):
             child.setParent(self)
             child.setWindowFlag(Qt.Sheet, True)
 
-    def remove_child(self, child_id):
-        child = misli.gui.component(child_id)
+    def remove_child(self, child):
         if child.obj_class == 'TextEdit':
             self._edit_component = None
             child.hide()
+
+        Component.remove_child(self, child)

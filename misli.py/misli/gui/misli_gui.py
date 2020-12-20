@@ -1,10 +1,10 @@
 from collections import defaultdict
 
 import misli
-from misli.objects.change import ChangeTypes
+from misli.entities.change import ChangeTypes
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 from misli.gui.actions_lib import ActionObject
-from ..objects import Page, Note
+from ..entities import Page, Note
 log = misli.get_logger(__name__)
 
 
@@ -57,7 +57,7 @@ def create_component(obj_class, parent_id, id=None):
     _add_component(_component)
 
     if parent_id:
-        component(parent_id).add_child(_component.id)
+        component(parent_id).add_child(_component)
 
     return _component
 
@@ -72,7 +72,7 @@ def create_components_for_page(page_id, parent_id):
     page_component = create_component(
         obj_class=page.obj_class, parent_id=parent_id)
 
-    page_component.set_props(**page.state())
+    page_component.set_props_from_base_object(**page.state())
     _register_component_with_base_object(page_component, page)
 
     for note in page.notes():
@@ -87,7 +87,7 @@ def create_component_for_note(
 
     component = create_component(obj_class, parent_id)
     note = misli.page(page_id).note(note_id)
-    component.set_props(**note.state())
+    component.set_props_from_base_object(**note.state())
 
     _register_component_with_base_object(component, note)
     return component
@@ -128,7 +128,7 @@ def remove_component(component_id):
 
     if _component.parent_id:
         parent = component(_component.parent_id)
-        parent.remove_child(component_id)
+        parent.remove_child(_component)
 
     # Unregister _component
     if _component in _base_object_for_component:
@@ -160,10 +160,12 @@ def _update_components_for_note_change(note_change):
     elif note_change.type == ChangeTypes.UPDATE:
         note_components = components_for_base_object(note.id)
         for nc in note_components:
-            nc.set_props(**note.state())
+            nc.set_props_from_base_object(**note.state())
 
             # Hacky cache clearing
-            nc.cache = {}
+            nc.should_rebuild_pcommand_cache = True
+            nc.should_reallocate_image_cache = True
+            nc.shoud_rerender_image_cache = True
 
             update_component(nc.id)
 
@@ -189,7 +191,7 @@ def _update_components_for_page_change(page_change):
     elif page_change.type == ChangeTypes.UPDATE:
         page_components = components_for_base_object(page.id)
         for pc in page_components:
-            pc.set_props(**page_state)
+            pc.set_props_from_base_object(**page_state)
             update_component(pc.id)
 
     elif page_change.type == ChangeTypes.DELETE:

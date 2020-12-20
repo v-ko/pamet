@@ -1,39 +1,36 @@
 from PySide2.QtWidgets import QLabel
-from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter
+from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter, QColor
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
-from misli.core.primitives import Color
 from misli.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
-from misli.gui.base_component import Component
+from misli.gui.notes.base_note_component import NoteComponent
 
 
-class TextNoteQtComponent(QLabel, Component):
+class TextNoteQtComponent(QLabel, NoteComponent):
     def __init__(self, parent_id):
-        Component.__init__(self, parent_id, obj_class='Text')
-        QLabel.__init__(self, 'dsa')
+        NoteComponent.__init__(self, parent_id, obj_class='Text')
+        QLabel.__init__(self, '')
 
         self.elided_text = []
         self._alignment = Qt.AlignHCenter
         self.setMargin(0)
 
-    def set_props(self, **props):
+    def set_props_from_note(self):
+        note = self.note()
         palette = self.palette()
 
-        fg_col = Color(*props['color']).to_QColor()
-        bg_col = Color(*props['background_color']).to_QColor()
+        fg_col = QColor(*note.get_color().to_uint8_rgba_list())
+        bg_col = QColor(*note.get_background_color().to_uint8_rgba_list())
 
         palette.setColor(self.backgroundRole(), bg_col)
         palette.setColor(self.foregroundRole(), fg_col)
 
         self.setPalette(palette)
-
-        x, y = props['x'], props['y']
-        w, h = props['width'], props['height']
-        self.setGeometry(QRect(x, y, w, h))
+        self.setGeometry(QRect(*note.rect().to_list()))
 
         font = self.font()
         # font.setPixelSize(20)
-        # font.setPointSizeF(props['font_size'] * font.pointSizeF())
+        # font.setPointSizeF(note_props['font_size'] * font.pointSizeF())
         font.setPointSizeF(14)
         self.setFont(font)
 
@@ -45,13 +42,12 @@ class TextNoteQtComponent(QLabel, Component):
         # print('Font lineSpacing', font_metrics.lineSpacing())
         # print('Font pointSizeF', self.font().pointSizeF())
 
-        if 'text' in props:
-            if '\n' in props['text']:
-                self._alignment = Qt.AlignLeft
-            else:
-                self._alignment = Qt.AlignHCenter
+        if '\n' in note.text:
+            self._alignment = Qt.AlignLeft
+        else:
+            self._alignment = Qt.AlignHCenter
 
-            self.elided_text = self.elide_text(props['text'])
+        self.elided_text = self.elide_text(note.text)
 
         # self.setText('<p style="line-height:%s%%;margin-top:-5px;margin-right
         # :5px;margin-bottom:5px">%s</p>' %
