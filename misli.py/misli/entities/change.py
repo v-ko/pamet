@@ -13,10 +13,13 @@ class Change:
             old_state = {}
         if new_state is None:
             new_state = {}
-            
+
         self.type = change_type
         self.old_state = old_state
         self.new_state = new_state
+
+    def __repr__(self):
+        return '<Change type=%s>' % self.type
 
     def last_state(self):
         if self.new_state:

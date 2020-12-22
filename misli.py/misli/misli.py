@@ -55,6 +55,7 @@ def call_delayed(callback, delay, args=None, kwargs=None):
 
 # Change channel interface
 def push_change(change):
+    log.info(str(change))
     _change_stack.append(change)
     call_delayed(_handle_changes, 0)
 

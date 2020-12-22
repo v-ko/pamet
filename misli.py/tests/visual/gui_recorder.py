@@ -2,11 +2,13 @@ import os
 import shutil
 import json
 
-from PySide2.QtCore import Qt, QPoint
+from PySide2.QtCore import QPoint
 from PySide2.QtGui import QPixmap, QRegion
 
 import misli
+from misli.gui.actions_lib import ActionObject
 from constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
+log = misli.get_logger(__name__)
 
 # Save smaller images for the visual comparisons in order to ignore pixel-level
 # differences (that might occure on different resolutions, etc)
@@ -21,31 +23,32 @@ class MisliGuiRecorder:
         self.snapshots = {}
 
     def capture_qt_component_to_image(self, image_id):
-        browser_windows = [c for c in misli.gui.components()
-                           if c.obj_class == self.component_name]
+        matching_components = [c for c in misli.gui.components()
+                               if c.obj_class == self.component_name]
 
-        if not browser_windows:
+        if not matching_components:
             self.snapshots[image_id] = None
 
-        if len(browser_windows) > 1:
+        if len(matching_components) > 1:
             raise Exception('More than one browser window')
 
-        browser_window = browser_windows[0]
+        target_component = matching_components[0]
 
-        pixmap = QPixmap(browser_window.rect().size())
-        browser_window.render(pixmap, QPoint(), QRegion(browser_window.rect()))
+        pixmap = QPixmap(target_component.rect().size())
+        target_component.render(pixmap, QPoint(), QRegion(target_component.rect()))
 
         self.snapshots[image_id] = pixmap
 
-    def record_action_state(self, action_state):
-        self.recoding.append(action_state)
-        self.capture_qt_component_to_image(len(self.recoding) - 1)
-
     def handle_action_channel(self, action_states):
         top_lvl_action = action_states[-1]
+        self.recoding.append(top_lvl_action)
 
+        action = ActionObject(**top_lvl_action)
+        log.info('Recorded action %s' % action)
+
+        last_index = len(self.recoding) - 1
         misli.call_delayed(
-            self.record_action_state, 0, args=[top_lvl_action])
+            self.capture_qt_component_to_image, 0, args=[last_index])
 
     def save_recording(self, output_folder, overwrite=False):
         if os.path.exists(output_folder):

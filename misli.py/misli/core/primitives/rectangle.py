@@ -35,11 +35,29 @@ class Rectangle:
     def height(self):
         return self._h
 
+    def top(self):
+        return self._y
+
+    def left(self):
+        return self._x
+
     def bottom(self):
         return self.y() + self.height()
 
     def right(self):
         return self.x() + self.width()
+
+    def top_left(self):
+        return Point(self.x(), self.y())
+
+    def top_right(self):
+        return Point(self.right(), self.top())
+
+    def bottom_right(self):
+        return self.top_left() + Point(self.width(), self.height())
+
+    def bottom_left(self):
+        return Point(self.left(), self.bottom())
 
     def intersection(self, other):
         a, b = self, other
@@ -60,12 +78,6 @@ class Rectangle:
     def contains(self, point):
         return ((self.x() < point.x() < self.right()) and
                 (self.y() < point.y() < self.bottom()))
-
-    def top_left(self):
-        return Point(self.x(), self.y())
-
-    def bottom_right(self):
-        return self.top_left() + Point(self.width(), self.height())
 
     def to_list(self):
         return [self._x, self._y, self._w, self._h]

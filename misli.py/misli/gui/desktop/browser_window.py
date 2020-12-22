@@ -1,6 +1,7 @@
 from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 
+from . import usecases
 from misli.gui.desktop.ui_browser_window import Ui_BrowserWindow
 from misli.gui.base_component import Component
 
@@ -28,3 +29,6 @@ class BrowserWindow(QMainWindow, Component):
 
     def update(self):
         pass
+
+    def closeEvent(self, close_event):
+        usecases.close_browser_window(self.id)

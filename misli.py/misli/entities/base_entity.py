@@ -1,8 +1,11 @@
+from misli.helpers import get_new_id
+
+
 class BaseEntity:
     def __init__(self, id, obj_type, obj_class=None):
         self.__state_keys = []
 
-        self.id = id
+        self.id = id or get_new_id()
         self.obj_type = obj_type
         self.obj_class = obj_class
 

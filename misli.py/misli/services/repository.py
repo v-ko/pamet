@@ -28,7 +28,7 @@ class Repository(BaseEntity):
         raise NotImplementedError
 
     def save_changes(self, changes):
-        pages_for_update = {}
+        pages_for_update = {}  # {id: True}
 
         savable_changes = [ChangeTypes.CREATE,
                            ChangeTypes.DELETE,
@@ -39,18 +39,19 @@ class Repository(BaseEntity):
 
             if last_state['obj_type'] == 'Note':
                 if change.type in savable_changes:
-                    page = misli.page(last_state['page_id'])
-                    pages_for_update[page.id] = page.state()
+                    pages_for_update[last_state['page_id']] = True
 
             elif last_state['obj_type'] == 'Page':
                 if change.type == ChangeTypes.CREATE:
                     self.create_page(**last_state)
 
                 elif change.type == ChangeTypes.UPDATE:
-                    pages_for_update[last_state['id']] = last_state
+                    pages_for_update[last_state['id']] = True
 
                 elif change.type == ChangeTypes.DELETE:
                     self.delete_page(last_state['id'])
 
-        for page_id, page_state in pages_for_update.items():
-            self.update_page(**page_state)
+        for page_id, _ in pages_for_update.items():
+            page = misli.page(page_id)
+
+            self.update_page(**page.state(include_notes=True))

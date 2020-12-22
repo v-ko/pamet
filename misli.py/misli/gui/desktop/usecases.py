@@ -35,3 +35,11 @@ def new_browser_window_ensure_page():
         page = pages[0]
 
     new_browser_window(page.id)
+
+
+@action('desktop.close_browser_window')
+def close_browser_window(browser_window_id):
+    misli.gui.remove_component(browser_window_id)
+    # app = misli.gui.find_component(obj_class='DesktopApp')
+    # app.should_quit = True
+    # misli.gui.update_component(app.id)

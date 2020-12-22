@@ -1,3 +1,4 @@
 from misli.core.primitives import Color
 
-selection_overlay_color = Color(1, 1, 0, 0.5)
+SELECTION_OVERLAY_COLOR = Color(1, 1, 0, 0.5)
+ALIGNMENT_LINE_LENGTH = 120

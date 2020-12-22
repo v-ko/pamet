@@ -56,9 +56,9 @@ def main():
     desktop_app.exec_()
 
     # Process recorded action_states
-    log.info('Processing recorded action states')
+    log.info('App closed. Processing recorded action states.')
     controller.save_recording(output_folder, overwrite=overwrite)
-    print('Recording finished.')
+    print('Recording saved to %s' % output_folder)
 
 
 if __name__ == '__main__':

@@ -19,13 +19,13 @@ def main():
     config = get_config()
     repo_path = config['repository_path']
 
-    # Testing - restore repo changes
-    for f in os.scandir(repo_path):
-        if f.name.endswith('backup'):
-            os.rename(f.path, f.path[:-7])
+    # # Testing - restore repo changes
+    # for f in os.scandir(repo_path):
+    #     if f.name.endswith('backup'):
+    #         os.rename(f.path, f.path[:-7])
 
-        if f.name.endswith('misl.json'):
-            os.remove(f.path)
+    #     if f.name.endswith('misl.json'):
+    #         os.remove(f.path)
 
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path)

@@ -79,7 +79,6 @@ class FSStorageRepository(Repository):
                 return
 
             with open(path, 'w') as pf:
-                page_state = page.state(include_notes=True)
                 json.dump(page_state, pf)
 
         except Exception as e:
@@ -110,6 +109,9 @@ class FSStorageRepository(Repository):
         except Exception as e:
             log.error('Exception %s while loading page' % e, path)
             return None
+
+        if not include_notes:
+            page_state.pop('note_states')
 
         return page_state
 

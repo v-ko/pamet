@@ -7,7 +7,7 @@ from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush
 import misli
 from misli.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from misli.core.primitives import Point, Rectangle
-from misli.gui.constants import selection_overlay_color
+from misli.gui.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
 from misli.gui.map_page.component import MapPageComponent
 
 log = misli.get_logger(__name__)
@@ -92,6 +92,47 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         child.image_cache = render_img
         child.shoud_rerender_image_cache = False
 
+    def _draw_guide_lines_for_child(self, display_rect: Rectangle, painter):
+        # Draw guiding lines. How: get the four lines, sort the points,
+        # elongate them and draw
+        rect = display_rect
+        h_lines = [[rect.top_left(), rect.top_right()],
+                   [rect.bottom_left(), rect.bottom_right()]]
+        v_lines = [[rect.top_left(), rect.bottom_left()],
+                   [rect.top_right(), rect.bottom_right()]]
+
+        elong = ALIGNMENT_LINE_LENGTH
+        all_lines = [*h_lines, *v_lines]
+
+        for line in h_lines:
+            p1, p2 = line
+
+            p1 = Point(
+                p1.x() - elong,  # p1.x == p2.x
+                min(p1.y(), p1.y()))
+            p2 = Point(
+                p2.x() + elong,
+                max(p1.y(), p2.y()))
+
+            all_lines.append([p1, p2])
+
+        for line in v_lines:
+            p1, p2 = line
+
+            p1 = Point(
+                min(p1.x(), p2.x()),
+                p1.y() - elong)  # p1.y == p2.y
+            p2 = Point(
+                max(p1.x(), p2.x()),
+                p2.y() + elong)
+
+            all_lines.append([p1, p2])
+
+        for line in all_lines:
+            p1, p2 = line
+            points = [*p1.to_list(), *p2.to_list()]
+            painter.drawLine(*points)
+
     def _visible_display_rects_by_child_id(self):
         viewport_rect = Rectangle(
             self.rect().x(),
@@ -128,22 +169,23 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         painter.setPen(pen)
 
         # Vars for stats
-        image_cache_memory_allocations = 0
         placeholders_drawn = 0
+        image_cache_memory_allocations = 0
         pc_cache_jobs = 0
         render_to_image_jobs = 0
         notes_reusing_cache = 0
         reused_expired_caches = 0
         non_urgent_count = 0
+        paint_urgently = False
+
         # Determine the components inside the viewport
         display_rects_by_child_id = self._visible_display_rects_by_child_id()
 
         # Render the notes into a painter-commands-cache and an image cache
         # (prep only placeholders if slow)
         # At minimum renders one component into cache and preps placeholders
-        for child_id in display_rects_by_child_id:
+        for child_id, display_rect in display_rects_by_child_id.items():
             child = self.child(child_id)
-            paint_urgently = False
 
             if time.time() - paint_t0 > MAX_RENDER_TIME:
                 paint_urgently = True
@@ -158,8 +200,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
             # Allocate the image_cache. Done on resize, but not e.g. translate
             if child.should_reallocate_image_cache:
                 image_cache_memory_allocations += 1
-                cache_rect = self.image_cache_rect_unprojected(
-                    display_rects_by_child_id[child.id])
+                cache_rect = self.image_cache_rect_unprojected(display_rect)
 
                 render_img = QImage(cache_rect.size(), QImage.Format_ARGB32)
                 child.image_cache = render_img
@@ -167,28 +208,38 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
             if child.shoud_rerender_image_cache:
                 render_to_image_jobs += 1
-
-                self.render_image_cache_for_child(
-                    child, display_rects_by_child_id[child.id])
-
                 non_urgent_count += 1
+
+                self.render_image_cache_for_child(child, display_rect)
 
             else:
                 notes_reusing_cache += 1
 
         # Draw the cached images, along with various decorations
-        for child in self.get_children():
-            if child.id not in display_rects_by_child_id:
-                continue
+        for child_id, display_rect in display_rects_by_child_id.items():
+            child = self.child(child_id)
 
             render_img = child.image_cache
 
+            nt_main_color = QColor(
+                *child.note().get_color().to_uint8_rgba_list())
+
+            nt_background_color = QColor(
+                *child.note().get_background_color().to_uint8_rgba_list())
+
+            nt_background_brush = QBrush(nt_background_color, Qt.SolidPattern)
+
+            painter.setPen(nt_main_color)
+            painter.setBrush(nt_background_brush)
+
             if not render_img:  # Draw okaceholders where needed
                 placeholders_drawn += 1
-                placeholder_brush = QBrush(
-                    QColor(100, 100, 100, 100), Qt.SolidPattern)
-                painter.fillRect(display_rects_by_child_id[child.id],
-                                 placeholder_brush)
+
+                ph_color = QColor(nt_background_color)
+                ph_color.setAlpha(60)
+                ph_brush = QBrush(ph_color, Qt.DiagCrossPattern)
+
+                painter.fillRect(display_rect, ph_brush)
                 continue
 
             if child.should_rebuild_pcommand_cache or \
@@ -197,42 +248,43 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 reused_expired_caches += 1
 
             # Draw the cached redering of the component
-            cache_rect = self.image_cache_rect_unprojected(
-                display_rects_by_child_id[child.id])
+            cache_rect = self.image_cache_rect_unprojected(display_rect)
             painter.drawImage(cache_rect, render_img)
 
             if self.debug_drawing:
+                painter.save()
                 painter.setPen(Qt.NoPen)
-                painter.fillRect(display_rects_by_child_id[child.id],
-                                 QBrush(Qt.green, Qt.SolidPattern))
+                green_brush = QBrush(Qt.green, Qt.SolidPattern)
+                painter.fillRect(display_rect, green_brush)
+                painter.restore()
 
             # Draw addinional stuff for selected notes
             if child.id in self.selected_nc_ids:
                 # Draw a yellow selection overlay
                 overlay_color = QColor(
-                    *selection_overlay_color.to_uint8_rgba_list())
+                    *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
                 painter.fillRect(
-                    display_rects_by_child_id[child.id], overlay_color)
+                    display_rect, overlay_color)
 
                 # Draw the resize circle
-                center = display_rects_by_child_id[child.id].bottomRight()
+                center = display_rect.bottomRight()
                 radius = RESIZE_CIRCLE_RADIUS
                 radius *= self.viewport.height_scale_factor()
 
-                circle_outline_color = QColor(
-                    *child.note().get_color().to_uint8_rgba_list())
-                circle_fill_color = QColor(circle_outline_color)
+                circle_fill_color = QColor(nt_main_color)
                 circle_fill_color.setAlpha(60)
 
                 painter.save()
-                painter.setPen(circle_outline_color)
                 painter.setBrush(QBrush(circle_fill_color, Qt.SolidPattern))
 
                 painter.drawEllipse(center, radius, radius)
                 painter.restore()
 
-                # Draw guiding lines
-                pass
+            if self.note_resize_active:
+                if child.id in self.selected_nc_ids:
+                    qdr = display_rect
+                    dr = Rectangle(qdr.x(), qdr.y(), qdr.width(), qdr.height())
+                    self._draw_guide_lines_for_child(dr, painter)
 
         if self.drag_select_active:
             # Draw the selection rects
@@ -242,7 +294,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
             # Draw the selection overlays
             for nc_id in self.drag_select_nc_ids:
                 overlay_color = QColor(
-                    *selection_overlay_color.to_uint8_rgba_list())
+                    *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
                 painter.fillRect(
                     display_rects_by_child_id[nc_id], overlay_color)
 
