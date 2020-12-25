@@ -1,13 +1,7 @@
-import logging
 import time
 import random
-
-logging.basicConfig(level=logging.INFO)
-
-
-def get_logger(name):
-    log = logging.getLogger(__name__)
-    return log
+import logging
+from .misli_logging import set_level, get_logger
 
 
 def set_reproducible_ids(enabled):
@@ -15,6 +9,9 @@ def set_reproducible_ids(enabled):
         random.seed(0)
     else:
         random.seed(time.time())
+
+
+set_level(logging.DEBUG)
 
 
 from .misli import *

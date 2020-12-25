@@ -2,12 +2,13 @@ import time
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, QPoint, QTimer, QRectF
-from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush
+from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
 
 import misli
 from misli.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from misli.core.primitives import Point, Rectangle
 from misli.gui.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
+from misli.gui.constants import LONG_PRESS_TIMEOUT
 from misli.gui.map_page.component import MapPageComponent
 
 log = misli.get_logger(__name__)
@@ -23,6 +24,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
         self._paint_event_count = 0
         self.debug_drawing = False
+        self._mouse_press_position = QPoint()
 
         # Widget config
         pal = self.palette()
@@ -90,7 +92,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         painter.end()
 
         child.image_cache = render_img
-        child.shoud_rerender_image_cache = False
+        child.should_rerender_image_cache = False
 
     def _draw_guide_lines_for_child(self, display_rect: Rectangle, painter):
         # Draw guiding lines. How: get the four lines, sort the points,
@@ -206,7 +208,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 child.image_cache = render_img
                 child.should_reallocate_image_cache = False
 
-            if child.shoud_rerender_image_cache:
+            if child.should_rerender_image_cache:
                 render_to_image_jobs += 1
                 non_urgent_count += 1
 
@@ -244,7 +246,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
             if child.should_rebuild_pcommand_cache or \
                child.should_reallocate_image_cache or \
-               child.shoud_rerender_image_cache:
+               child.should_rerender_image_cache:
                 reused_expired_caches += 1
 
             # Draw the cached redering of the component
@@ -280,7 +282,8 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 painter.drawEllipse(center, radius, radius)
                 painter.restore()
 
-            if self.note_resize_active:
+            # Draw lines for easier visual alignment
+            if self.note_resize_active or self.note_drag_active:
                 if child.id in self.selected_nc_ids:
                     qdr = display_rect
                     dr = Rectangle(qdr.x(), qdr.y(), qdr.width(), qdr.height())
@@ -330,7 +333,17 @@ class MapPageQtComponent(QWidget, MapPageComponent):
            (reused_expired_caches > 0 or placeholders_drawn > 0):
             QTimer.singleShot(0, self.update)
 
+    def check_for_long_press(self):
+        new_pos = self.mapFromGlobal(QCursor.pos())
+        if self._mouse_press_position == new_pos:
+            self.handle_left_mouse_long_press(
+                Point(new_pos.x(), new_pos.y()))
+
     def mousePressEvent(self, event):
+        self._mouse_press_position = event.pos()
+
+        QTimer.singleShot(LONG_PRESS_TIMEOUT * 1000, self.check_for_long_press)
+
         if event.button() is Qt.LeftButton:
             super().handle_left_mouse_press(
                 Point(event.pos().x(), event.pos().y()))

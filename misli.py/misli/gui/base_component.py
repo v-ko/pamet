@@ -16,7 +16,7 @@ class Component(BaseEntity):
 
         self.should_rebuild_pcommand_cache = True
         self.should_reallocate_image_cache = True
-        self.shoud_rerender_image_cache = True
+        self.should_rerender_image_cache = True
 
     def set_props_from_base_object(self, **base_object_props):
         pass

@@ -124,7 +124,12 @@ def update_page(page_id, **page_state):
     _page = page(page_id)
     old_state = _page.state()
 
-    change = Change(ChangeTypes.UPDATE, old_state, page_state)
+    _page.set_state(**page_state)
+    new_state = _page.state()
+
+    _pages[_page.id].set_state(**new_state)
+
+    change = Change(ChangeTypes.UPDATE, old_state, new_state)
     push_change(change)
 
 
@@ -145,16 +150,15 @@ def create_note(**note_state):
     _id = note_state.pop('id', None)
     note_state['id'] = _id or get_new_id()
 
-    page_id = note_state.pop('page_id', None)
+    page_id = note_state.get('page_id')
     if not page_id:
         raise Exception(
             'Cannot create note without page_id. State: %s' % note_state)
 
-    _page = page(page_id)
     note_state['page_id'] = page_id
     note = Note(**note_state)
 
-    _page.add_note(note)
+    _pages[note.page_id].add_note(note)
 
     change = Change(ChangeTypes.CREATE, old_state={}, new_state=note.state())
     push_change(change)
@@ -163,29 +167,23 @@ def create_note(**note_state):
 
 
 def update_note(**note_state):
-    page_id = note_state.pop('page_id', None)
-    note_id = note_state.pop('id', None)
-
-    if not page_id or not note_id:
+    if 'page_id' not in note_state or 'id' not in note_state:
         log.error('Could not update note without id and page_id parameters. '
                   'Given state: %s' % note_state)
         return
 
-    _page = page(page_id)
-    note = _page.note(note_id)
-    old_state = note.state()
+    note = Note(**note_state)
+    old_state = page(note.page_id).note(note.id).state()
 
     note.set_state(**note_state)
+    _pages[note.page_id].update_note(note)
 
     change = Change(ChangeTypes.UPDATE, old_state, new_state=note.state())
     push_change(change)
 
 
-def delete_note(note_id, page_id):
-    _page = page(page_id)
-    note = _page.note(note_id)
-
-    _page.remove_note(note)
+def delete_note(note):
+    _pages[note.page_id].remove_note(note)
 
     change = Change(ChangeTypes.DELETE, note.state(), new_state={})
     push_change(change)

@@ -6,7 +6,7 @@ class MainLoop:
         raise NotImplementedError
 
 
-class NoMainLoop:
+class NoMainLoop(MainLoop):
     def __init__(self):
         self.callback_stack = []
 

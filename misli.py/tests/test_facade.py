@@ -25,13 +25,15 @@ def test_note_CRUD():
     note_state = Note(page_id=page.id, text='test text').state()
     note = misli.create_note(**note_state)
 
-    assert page.notes() == [note]
+    assert misli.page(page.id).note_states == {note.id: note.state()}
 
     note.text = 'test text changed'
-    misli.update_note(**note_state)
+    misli.update_note(**note.state())
 
-    assert page.notes() == [note]
+    updated = misli.page(page.id).note(note.id).state()
 
-    misli.delete_note(note.id, page.id)
+    assert updated == note.state()
+
+    misli.delete_note(note)
 
     assert page.notes() == []

@@ -3,7 +3,7 @@ import json
 import random
 import string
 
-from misli.entities import Page
+from misli.entities import Page, Note
 from .repository import Repository
 
 from misli import get_logger
@@ -99,7 +99,7 @@ class FSStorageRepository(Repository):
 
         return page_ids
 
-    def page_state(self, page_id, include_notes=True):
+    def page_state(self, page_id):
         path = self._path_for_page(page_id)
 
         try:
@@ -109,9 +109,6 @@ class FSStorageRepository(Repository):
         except Exception as e:
             log.error('Exception %s while loading page' % e, path)
             return None
-
-        if not include_notes:
-            page_state.pop('note_states')
 
         return page_state
 
@@ -124,7 +121,7 @@ class FSStorageRepository(Repository):
                 log.warning('Page at %s was missing. Will create it.' % path)
 
             with open(path, 'w') as pf:
-                page_state = page.state(include_notes=True)
+                page_state = page.state()
                 json.dump(page_state, pf)
 
         except Exception as e:
@@ -207,9 +204,10 @@ class FSStorageRepository(Repository):
                 # print(text)
                 nt['text'] = text
 
-        for nt in notes:
+        for i, nt in enumerate(notes):
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
+            nt['id'] = str(nt['id'])
 
             # Redirect notes
             if nt['text'].startswith('this_note_points_to:'):
@@ -220,12 +218,22 @@ class FSStorageRepository(Repository):
             else:
                 nt['obj_class'] = 'Text'
 
+            # Remove unimplemented attributes to avoid errors
+            note = Note()
+            new_state = {}
+            for key in nt:
+                if hasattr(note, key):
+                    new_state[key] = nt[key]
+
+            notes[i] = new_state
+
             # Testing
             # nt['class'] = 'Test'
             # if nt['id'] % 2 == 0:
             #     nt['font_size'] = 2
 
-        json_object['note_states'] = json_object.pop('notes')
+        note_states = {n['id']: n for n in json_object.pop('notes')}
+        json_object['note_states'] = note_states
         json_object['obj_class'] = 'MapPage'
 
         return json_object

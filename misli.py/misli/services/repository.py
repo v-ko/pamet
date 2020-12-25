@@ -54,4 +54,4 @@ class Repository(BaseEntity):
         for page_id, _ in pages_for_update.items():
             page = misli.page(page_id)
 
-            self.update_page(**page.state(include_notes=True))
+            self.update_page(**page.state())

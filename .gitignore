@@ -57,3 +57,6 @@ misli.py/tests/visual/manually_verified_inspections/tmp_recording/tmp_recording.
 misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/0_desktop.new_browser_window_ensure_page/0_desktop.new_browser_window_ensure_page.png.png
 misli.py/tests/visual/tmp_last_visual_inspection_diffs/tmp_recording/0_desktop.new_browser_window_ensure_page/0_desktop.new_browser_window_ensure_page.png_good.png
 misli.py/tests/visual/automatic_inspection_output/tmp_recording/snapshots/0_desktop.new_browser_window_ensure_page.png
+misli.py/.vscode/launch.json
+misli.py/.vscode/settings.json
+*.code-workspace

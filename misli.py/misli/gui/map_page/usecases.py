@@ -88,7 +88,7 @@ def set_viewport_height(map_page_component_id: int, new_height: float):
     for child in map_page_component.get_children():
         # child.image_cache = None
         child.should_reallocate_image_cache = True
-        child.shoud_rerender_image_cache = True
+        child.should_rerender_image_cache = True
 
     misli.gui.update_component(map_page_component_id)
     # //glutPostRedisplay(); artefact, thank you for siteseeing
@@ -140,7 +140,7 @@ def delete_selected_notes(map_page_component_id):
 
     for nc_id in map_page_component.selected_nc_ids:
         note = misli.gui.base_object_for_component(nc_id)
-        misli.delete_note(note.id, note.page_id)
+        misli.delete_note(note)
 
 
 @action('map_page.start_notes_resize')
@@ -161,7 +161,7 @@ def resize_note_components(map_page_component_id, new_size, nc_ids):
         nc.set_props_from_base_object(**note.state())
         nc.should_rebuild_pcommand_cache = True
         nc.should_reallocate_image_cache = True
-        nc.shoud_rerender_image_cache = True
+        nc.should_rerender_image_cache = True
 
         misli.gui.update_component(nc.id)
     misli.gui.update_component(map_page_component_id)
@@ -188,4 +188,43 @@ def stop_notes_resize(map_page_component_id, new_size, nc_ids):
                 for nc_id in nc_ids]
     resize_notes(new_size, page.id, note_ids)
 
+    misli.gui.update_component(map_page_component_id)
+
+
+@action('map_page.start_note_drag')
+def start_note_drag(map_page_component_id, main_note_pos, mouse_pos):
+    map_page_component = misli.gui.component(map_page_component_id)
+    map_page_component.main_note_pos_on_drag_start = main_note_pos
+    map_page_component.mouse_position_on_left_press = mouse_pos
+    map_page_component.note_drag_active = True
+    misli.gui.update_component(map_page_component_id)
+
+
+@action('map_page.note_drag_nc_position_update')
+def note_drag_nc_position_update(map_page_component_id, nc_ids, delta):
+    d = Point(*delta)
+
+    for nc_id in nc_ids:
+        nc = misli.gui.component(nc_id)
+        note = misli.gui.base_object_for_component(nc_id)
+        note.x += d.x()
+        note.y += d.y()
+        nc.set_props_from_base_object(**note.state())
+
+        misli.gui.update_component(nc.id)
+    misli.gui.update_component(map_page_component_id)
+
+
+@action('map_page.stop_note_drag')
+def stop_note_drag(map_page_component_id, nc_ids, delta):
+    map_page_component = misli.gui.component(map_page_component_id)
+    d = Point(*delta)
+
+    for nc_id in nc_ids:
+        note = misli.gui.base_object_for_component(nc_id)
+        note.x += d.x()
+        note.y += d.y()
+        misli.update_note(**note.state())
+
+    map_page_component.note_drag_active = False
     misli.gui.update_component(map_page_component_id)

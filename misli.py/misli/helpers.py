@@ -1,5 +1,6 @@
 import random
 import uuid
+from .constants import ALIGNMENT_GRID_UNIT
 
 
 def get_new_id():
@@ -40,3 +41,7 @@ def find_one_by_props(item_list, **props):
         return None
 
     return items_found[0]
+
+
+def snap_to_grid(x):
+    return round(x / ALIGNMENT_GRID_UNIT) * ALIGNMENT_GRID_UNIT

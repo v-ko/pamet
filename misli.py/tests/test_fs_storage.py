@@ -26,13 +26,13 @@ def test_fs_repo_CRUD(fs_repo):
 
     note = Note(page_id=page.id, text='test text')
     page.add_note(note)
-    fs_repo.update_page(**page.state(include_notes=True))
+    fs_repo.update_page(**page.state())
 
-    print(page.state(include_notes=True))
+    print(page.state())
 
-    assert fs_repo.page_state(page.id) == page.state(include_notes=True)
+    assert fs_repo.page_state(page.id) == page.state()
 
     fs_repo.delete_page(page.id)
 
     assert fs_repo.page_ids() == []
-    assert False
+

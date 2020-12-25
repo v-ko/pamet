@@ -14,6 +14,7 @@ log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
+@log.traced
 def main():
     # Init the app
     config = get_config()

@@ -8,6 +8,7 @@ log = misli.get_logger(__name__)
 
 
 ACTIONS = {}
+_actions_stack = []
 
 
 def action(_type):
@@ -16,20 +17,21 @@ def action(_type):
         @functools.wraps(func)
         def wrapper_action(*args, **kwargs):
 
-            action = ActionObject(
+            action = Action(
                 _type, ActionRunStates.STARTED, args=list(args), kwargs=kwargs)
-            misli.gui.push_action(action.to_dict())
+
+            misli.gui.push_action(action)
 
             # Call the actual function
             func(*args, **kwargs)
 
             action.duration = time.time() - action.start_time
             action.run_state = ActionRunStates.FINISHED
-            misli.gui.push_action(action.to_dict())
+            misli.gui.push_action(action.copy())
 
         ACTIONS[_type] = wrapper_action
-        return wrapper_action
 
+        return wrapper_action
     return decorator_action
 
 
@@ -38,7 +40,7 @@ class ActionRunStates(Enum):
     FINISHED = 2
 
 
-class ActionObject:
+class Action:
     def __init__(
             self,
             type,
@@ -77,12 +79,15 @@ class ActionObject:
         self.args = args
 
     def __repr__(self):
-        s = ('<ActionObject run_state=%s id=%s type=%s args=%s '
+        s = ('<Action run_state=%s id=%s type=%s args=%s '
              'kwargs=%s>' % (self.run_state, self.id, self.type,
                              self.args, self.kwargs))
         return s
 
+    def copy(self):
+        return Action(**vars(self))
+
     def to_dict(self):
-        self_dict = vars(self).copy()
+        self_dict = vars(self)
         self_dict['run_state'] = self.run_state.name
         return self_dict

@@ -6,7 +6,7 @@ from PySide2.QtCore import QPoint
 from PySide2.QtGui import QPixmap, QRegion
 
 import misli
-from misli.gui.actions_lib import ActionObject
+from misli.gui.actions_lib import Action
 from constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
 log = misli.get_logger(__name__)
 
@@ -43,7 +43,7 @@ class MisliGuiRecorder:
         top_lvl_action = action_states[-1]
         self.recoding.append(top_lvl_action)
 
-        action = ActionObject(**top_lvl_action)
+        action = Action(**top_lvl_action)
         log.info('Recorded action %s' % action)
 
         last_index = len(self.recoding) - 1
