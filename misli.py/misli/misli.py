@@ -1,3 +1,5 @@
+from typing import Callable
+
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 from misli.core.main_loop import NoMainLoop
 from misli.entities import Page, Note
@@ -19,16 +21,19 @@ _change_handlers = []
 _change_stack = []
 
 
+@log.traced
 def set_main_loop(main_loop):
     global _main_loop
     _main_loop = main_loop
 
 
+@log.traced
 def repo():
     return _repo
 
 
-def set_repo(repo):
+@log.traced
+def set_repo(repo: Repository):
     global _repo
     log.info('Setting repo to %s' % repo.path)
 
@@ -44,26 +49,35 @@ def set_repo(repo):
         _pages[page.id] = page
 
 
-def call_delayed(callback, delay, args=None, kwargs=None):
+def call_delayed(
+        callback: Callable,
+        delay: float,
+        args: list = None,
+        kwargs: dict = None):
+
     if args is None:
         args = []
     if kwargs is None:
         kwargs = {}
 
+    log.debug('Will call %s delayed with %ssecs' % (callback.__name__, delay))
     _main_loop.call_delayed(callback, delay, args, kwargs)
 
 
 # Change channel interface
-def push_change(change):
+@log.traced
+def push_change(change: Change):
     log.info(str(change))
     _change_stack.append(change)
     call_delayed(_handle_changes, 0)
 
 
-def on_change(handler):
+@log.traced
+def on_change(handler: Callable):
     _change_handlers.append(handler)
 
 
+@log.traced
 def _handle_changes():
     if not _change_stack:
         return
@@ -75,6 +89,7 @@ def _handle_changes():
 
 
 # -------------Pages CRUD-------------
+@log.traced
 def create_page(**page_state):
     # Create a new id both when missing key 'id' is missing or ==None
     _id = page_state.pop('id', None)
@@ -89,10 +104,12 @@ def create_page(**page_state):
     return _page
 
 
-def load_page(_page):
+@log.traced
+def load_page(_page: Page):
     _pages[_page.id] = _page
 
 
+# @log.traced
 # def unload_page(page_id):
 #     if page_id not in _pages:
 #         log.error('Cannot unload missing page %s' % page_id)
@@ -101,27 +118,37 @@ def load_page(_page):
 #     del _pages[page_id]
 
 
+@log.traced
 def pages():
-    return [page for pid, page in _pages.items()]
+    return [page.copy() for pid, page in _pages.items()]
 
 
-def page(page_id):
+# @log.traced
+def page(page_id: str):
     if page_id not in _pages:
         return None
 
-    return _pages[page_id]
+    return _pages[page_id].copy()
 
 
+@log.traced
 def find_pages(**props):
     return find_many_by_props(_pages, **props)
 
 
+@log.traced
 def find_page(**props):
     return find_one_by_props(_pages, **props)
 
 
-def update_page(page_id, **page_state):
-    _page = page(page_id)
+@log.traced
+def update_page(**page_state):
+    if 'id' not in page_state:
+        log.error('Could not update note without a supplied id. '
+                  'Given state: %s' % page_state)
+        return
+
+    _page = page(page_state['id'])
     old_state = _page.state()
 
     _page.set_state(**page_state)
@@ -133,7 +160,8 @@ def update_page(page_id, **page_state):
     push_change(change)
 
 
-def delete_page(page_id):
+@log.traced
+def delete_page(page_id: str):
     _page = _pages.pop(page_id, None)
 
     if not _page:
@@ -144,7 +172,8 @@ def delete_page(page_id):
     push_change(change)
 
 
-# -------------Notes C_UD-------------
+# -------------Notes CRUD-------------
+@log.traced
 def create_note(**note_state):
     # Create a new id both when missing key 'id' is missing or ==None
     _id = note_state.pop('id', None)
@@ -166,6 +195,7 @@ def create_note(**note_state):
     return note
 
 
+@log.traced
 def update_note(**note_state):
     if 'page_id' not in note_state or 'id' not in note_state:
         log.error('Could not update note without id and page_id parameters. '
@@ -182,8 +212,19 @@ def update_note(**note_state):
     push_change(change)
 
 
-def delete_note(note):
+@log.traced
+def delete_note(note: Note):
     _pages[note.page_id].remove_note(note)
 
     change = Change(ChangeTypes.DELETE, note.state(), new_state={})
     push_change(change)
+
+
+# ---------Common-------------
+def entity(entity_id):
+    if entity_id in _pages:
+        return page(entity_id)
+
+    for pid, p in _pages.items():
+        if entity_id in p.note_states:
+            return p.note(entity_id)

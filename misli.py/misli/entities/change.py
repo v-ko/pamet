@@ -8,7 +8,12 @@ class ChangeTypes(Enum):
 
 
 class Change:
-    def __init__(self, change_type, old_state=None, new_state=None):
+    def __init__(
+            self,
+            change_type: ChangeTypes,
+            old_state: dict = None,
+            new_state: dict = None):
+
         if old_state is None:
             old_state = {}
         if new_state is None:

@@ -6,16 +6,16 @@ edit_components_by_class_name = {}
 edit_components_for_obj_class = {}
 
 
-def add(obj_class_name, ComponentClass):
+def add(obj_class_name: str, ComponentClass):
     log.info('Adding component %s' % obj_class_name)
     components_by_class_name[obj_class_name] = ComponentClass
 
 
-def get(note_type):
+def get(note_type: str):
     return components_by_class_name[note_type]
 
 
-def map_edit_component(obj_class_name, edit_class_name):
+def map_edit_component(obj_class_name: str, edit_class_name: str):
     if edit_class_name not in components_by_class_name:
         log.error('Can\'t map edit component %s, it\'s not registered' %
                   edit_class_name)
@@ -26,7 +26,7 @@ def map_edit_component(obj_class_name, edit_class_name):
     edit_components_for_obj_class[obj_class_name] = edit_class_name
 
 
-def get_edit_class_name(obj_class_name):
+def get_edit_class_name(obj_class_name: str):
     return edit_components_for_obj_class[obj_class_name]
 
 

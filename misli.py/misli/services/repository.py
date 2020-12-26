@@ -8,7 +8,7 @@ log = get_logger(__name__)
 
 class Repository(BaseEntity):
     def __init__(self):
-        BaseEntity.__init__(self, id=None, obj_type='Repository')
+        BaseEntity.__init__(self, id='', obj_type='Repository')
 
         self._pages = {}
 

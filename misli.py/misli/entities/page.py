@@ -17,7 +17,10 @@ class Page(BaseEntity):
 
         self.add_state_keys(['name', 'note_states'])
 
-    def note(self, id):
+    def __repr__(self):
+        return '<Page id=%s>' % self.id
+
+    def note(self, id: str):
         return Note(**self.note_states[id])
 
     def notes(self):
@@ -28,18 +31,18 @@ class Page(BaseEntity):
         return self._note_states
 
     @note_states.setter
-    def note_states(self, new_states):
+    def note_states(self, new_states: dict):
         self._note_states = new_states
 
-    def add_note(self, note):
+    def add_note(self, note: Note):
         if note.page_id != self.id:
             raise Exception(
                 'Note id different from my id: "%s".' % note.page_id)
 
         self._note_states[note.id] = note.state()
 
-    def remove_note(self, note):
+    def remove_note(self, note: Note):
         del self._note_states[note.id]
 
-    def update_note(self, note):
+    def update_note(self, note: Note):
         self._note_states[note.id] = note.state()

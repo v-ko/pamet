@@ -18,12 +18,12 @@ class DesktopApp(QApplication, Component):
         self.browser_window_ids = []
         self.should_quit = False
 
-    def add_child(self, child):
+    def add_child(self, child: Component):
         if child.obj_class == 'BrowserWindow':
             self.browser_window_ids.append(child.id)
             child.showMaximized()
 
-    def remove_child(self, child):
+    def remove_child(self, child: Component):
         if child.obj_class == 'BrowserWindow':
             Component.remove_child(self, child)
             child.close()

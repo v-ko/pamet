@@ -1,15 +1,18 @@
 import time
 
-from PySide2.QtWidgets import QWidget
+from PySide2.QtWidgets import QWidget, QShortcut
 from PySide2.QtCore import Qt, QPoint, QTimer, QRectF
 from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
+from PySide2.QtGui import QKeySequence
 
 import misli
+from misli.gui.map_page import usecases
 from misli.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from misli.core.primitives import Point, Rectangle
 from misli.gui.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
 from misli.gui.constants import LONG_PRESS_TIMEOUT
 from misli.gui.map_page.component import MapPageComponent
+from misli.gui.base_component import Component
 
 log = misli.get_logger(__name__)
 
@@ -26,6 +29,14 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         self.debug_drawing = False
         self._mouse_press_position = QPoint()
 
+        delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
+        delete_shortcut.activated.connect(self._handle_delete_shortcut)
+
+        select_all_shortcut = QShortcut(
+            QKeySequence(Qt.CTRL + Qt.Key_A), self)
+        select_all_shortcut.activated.connect(
+            lambda: usecases.select_all_notes(self.id))
+
         # Widget config
         pal = self.palette()
         pal.setColor(pal.Window, Qt.white)
@@ -36,11 +47,11 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)
 
-    def add_child(self, child):
+    def add_child(self, child: Component):
         MapPageComponent.add_child(self, child)
         child.setHidden(True)
 
-    def image_cache_rect_unprojected(self, display_rect):
+    def image_cache_rect_unprojected(self, display_rect: Rectangle):
         # Project and round down to the pixel grid
         cache_rect = display_rect.toRect()
 
@@ -52,7 +63,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
         return cache_rect
 
-    def prep_command_cache_for_child(self, child):
+    def prep_command_cache_for_child(self, child: Component):
         # In order to be pixel perfect - relay through QPicture
         # Otherwise QWidget rounds up coordinates.
         # RIP 30 hours of trying other workarounds
@@ -62,7 +73,8 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         child.pcommand_cache = pcommand_cache
         child.should_rebuild_pcommand_cache = False
 
-    def render_image_cache_for_child(self, child, display_rect):
+    def render_image_cache_for_child(
+            self, child: Component, display_rect: Rectangle):
         painter = QPainter()
         cache_rect = self.image_cache_rect_unprojected(display_rect)
 
@@ -94,7 +106,8 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         child.image_cache = render_img
         child.should_rerender_image_cache = False
 
-    def _draw_guide_lines_for_child(self, display_rect: Rectangle, painter):
+    def _draw_guide_lines_for_child(
+            self, display_rect: Rectangle, painter: QPainter):
         # Draw guiding lines. How: get the four lines, sort the points,
         # elongate them and draw
         rect = display_rect
@@ -325,7 +338,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                        'True' if paint_urgently else 'False',
                        self._paint_event_count))
 
-        print(stats_text)
+        log.info(stats_text)
         painter.drawText(10, 10, stats_text)
         painter.end()
 
@@ -335,7 +348,8 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
     def check_for_long_press(self):
         new_pos = self.mapFromGlobal(QCursor.pos())
-        if self._mouse_press_position == new_pos:
+        if self._mouse_press_position == new_pos and \
+           self.left_mouse_is_pressed:
             self.handle_left_mouse_long_press(
                 Point(new_pos.x(), new_pos.y()))
 

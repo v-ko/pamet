@@ -7,7 +7,9 @@ log = misli.get_logger(__name__)
 
 
 @action('notes.create_new_note')
-def create_new_note(tab_component_id: int, position_coords, **note_state):
+def create_new_note(
+        tab_component_id: str, position_coords: list, note_state: dict):
+
     tab_component = misli.gui.component(tab_component_id)
     position = Point.from_coords(position_coords)
 
@@ -24,7 +26,7 @@ def create_new_note(tab_component_id: int, position_coords, **note_state):
 
 
 @action('notes.finish_creating_note')
-def finish_creating_note(edit_component_id, **note_state):
+def finish_creating_note(edit_component_id: str, note_state: dict):
     edit_component = misli.gui.component(edit_component_id)
 
     misli.create_note(**note_state)
@@ -32,9 +34,10 @@ def finish_creating_note(edit_component_id, **note_state):
 
 
 @action('notes.start_editing_note')
-def start_editing_note(tab_component_id, note_component_id, position_coords):
+def start_editing_note(
+        tab_component_id: str, note_component_id: str, position_coords: list):
 
-    note = misli.gui.base_object_for_component(note_component_id)
+    note = misli.gui.entity_for_component(note_component_id)
     position = Point.from_coords(position_coords)
 
     edit_class_name = misli.gui.components_lib.get_edit_class_name(
@@ -49,9 +52,9 @@ def start_editing_note(tab_component_id, note_component_id, position_coords):
 
 
 @action('notes.finish_editing_note')
-def finish_editing_note(edit_component_id, **note_state):
+def finish_editing_note(edit_component_id: str, note_state: dict):
     edit_component = misli.gui.component(edit_component_id)
-    note = misli.gui.base_object_for_component(edit_component_id)
+    note = misli.gui.entity_for_component(edit_component_id)
 
     misli.update_note(**note_state)
     misli.update_page(note.page_id)
@@ -60,6 +63,6 @@ def finish_editing_note(edit_component_id, **note_state):
 
 
 @action('notes.abort_editing_note')
-def abort_editing_note(edit_component_id):
+def abort_editing_note(edit_component_id: str):
     edit_component = misli.gui.component(edit_component_id)
     misli.gui.remove_component(edit_component.id)

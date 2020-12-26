@@ -11,7 +11,7 @@ def set_reproducible_ids(enabled):
         random.seed(time.time())
 
 
-set_level(logging.DEBUG)
+set_level(logging.INFO)
 
 
 from .misli import *

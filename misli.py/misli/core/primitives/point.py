@@ -1,3 +1,4 @@
+from __future__ import annotations
 import math
 
 
@@ -19,10 +20,10 @@ class Point:
     def __repr__(self):
         return '<Point x=%s y=%s>' % (self.x(), self.y())
 
-    def __add__(self, other):
+    def __add__(self, other: Point):
         return Point(self.x() + other.x(), self.y() + other.y())
 
-    def __sub__(self, other):
+    def __sub__(self, other: Point):
         return Point(self.x() - other.x(), self.y() - other.y())
 
     def __truediv__(self, k):

@@ -18,7 +18,7 @@ default_config['repository_path'] = default_fs_repo_path
 default_config['app_intro_dismissed'] = False
 
 
-def _verify_config(config):
+def _verify_config(config: dict):
     fixes_applied = False
     for k, v in default_config.items():
         if k not in config:
@@ -33,7 +33,7 @@ def _verify_config(config):
     return config
 
 
-def save_config(config):
+def save_config(config: dict):
     with open(config_file_path, 'w') as cf:
         json.dump(config, cf)
 

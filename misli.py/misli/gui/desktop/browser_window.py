@@ -7,7 +7,7 @@ from misli.gui.base_component import Component
 
 
 class BrowserWindow(QMainWindow, Component):
-    def __init__(self, parent_id):
+    def __init__(self, parent_id: str):
         QMainWindow.__init__(self)
         Component.__init__(self, parent_id, obj_class='BrowserWindow')
 
@@ -20,10 +20,10 @@ class BrowserWindow(QMainWindow, Component):
         self.ui.tabWidget.currentChanged.connect(
             self.handle_tab_changed)
 
-    def handle_tab_changed(self, index):
+    def handle_tab_changed(self, index: int):
         self.ui.tabWidget.widget(0).update()
 
-    def add_child(self, child):
+    def add_child(self, child: Component):
         if child.obj_class == 'BrowserTab':
             self.ui.tabWidget.addTab(child, child.current_page_id)
 

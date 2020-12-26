@@ -1,10 +1,11 @@
+from __future__ import annotations
 from misli.entities.base_entity import BaseEntity
 
 
 class Component(BaseEntity):
-    def __init__(self, parent_id, obj_class):
+    def __init__(self, parent_id: str, obj_class: str):
         BaseEntity.__init__(
-            self, id=None, obj_type='Component', obj_class=obj_class)
+            self, id='', obj_type='Component', obj_class=obj_class)
 
         self.parent_id = parent_id
         self.add_state_keys(['parent_id'])
@@ -21,16 +22,16 @@ class Component(BaseEntity):
     def set_props_from_base_object(self, **base_object_props):
         pass
 
-    def add_child(self, child):
+    def add_child(self, child: Component):
         self.__children[child.id] = child
 
-    def remove_child(self, child):
+    def remove_child(self, child: Component):
         if child.id not in self.__children:
             return
 
         del self.__children[child.id]
 
-    def child(self, child_id):
+    def child(self, child_id: str):
         return self.__children[child_id]
 
     def get_children(self):

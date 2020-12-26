@@ -1,5 +1,5 @@
 class Color:
-    def __init__(self, r, g, b, a):
+    def __init__(self, r: float, g: float, b: float, a: float):
         if r > 1 or g > 1 or b > 1 or a > 1:
             raise ValueError
 

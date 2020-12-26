@@ -11,14 +11,14 @@ ACTIONS = {}
 _actions_stack = []
 
 
-def action(_type):
+def action(name):
     def decorator_action(func):
 
         @functools.wraps(func)
         def wrapper_action(*args, **kwargs):
 
             action = Action(
-                _type, ActionRunStates.STARTED, args=list(args), kwargs=kwargs)
+                name, ActionRunStates.STARTED, args=list(args), kwargs=kwargs)
 
             misli.gui.push_action(action)
 
@@ -29,7 +29,7 @@ def action(_type):
             action.run_state = ActionRunStates.FINISHED
             misli.gui.push_action(action.copy())
 
-        ACTIONS[_type] = wrapper_action
+        ACTIONS[name] = wrapper_action
 
         return wrapper_action
     return decorator_action
@@ -43,7 +43,7 @@ class ActionRunStates(Enum):
 class Action:
     def __init__(
             self,
-            type,
+            name,
             run_state=ActionRunStates.STARTED,
             args=None,
             kwargs=None,
@@ -51,7 +51,7 @@ class Action:
             start_time=None,
             duration=-1):
 
-        self.type = type
+        self.name = name
         self.run_state = None
         self.set_run_state(run_state)
 
@@ -64,7 +64,7 @@ class Action:
         self.start_time = start_time if start_time is not None else time.time()
         self.duration = duration
 
-    def set_run_state(self, run_state):
+    def set_run_state(self, run_state: ActionRunStates):
         if type(run_state) == ActionRunStates:
             self.run_state = run_state
         else:
@@ -79,10 +79,8 @@ class Action:
         self.args = args
 
     def __repr__(self):
-        s = ('<Action run_state=%s id=%s type=%s args=%s '
-             'kwargs=%s>' % (self.run_state, self.id, self.type,
-                             self.args, self.kwargs))
-        return s
+        return ('<Action name=%s run_state=%s id=%s>' %
+                (self.name, self.run_state.name, self.id))
 
     def copy(self):
         return Action(**vars(self))

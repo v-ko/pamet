@@ -18,9 +18,9 @@ class TextNoteEditComponent(Component):
 
     def _handle_ok_click(self):
         if self.create_mode:
-            usecases.finish_creating_note(self.id, **self.note.state())
+            usecases.finish_creating_note(self.id, self.note.state())
         else:
-            usecases.finish_editing_note(self.id, **self.note.state())
+            usecases.finish_editing_note(self.id, self.note.state())
 
     def _handle_esc_shortcut(self):
         usecases.abort_editing_note(self.id)

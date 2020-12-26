@@ -4,7 +4,7 @@ from misli.gui.desktop.config import get_config
 
 
 @action('desktop.new_browser_window')
-def new_browser_window(page_id):
+def new_browser_window(page_id: str):
     app = misli.gui.find_component(obj_class='DesktopApp')
 
     window = misli.gui.create_component(
@@ -14,7 +14,7 @@ def new_browser_window(page_id):
 
 
 @action('desktop.new_browser_tab')
-def new_browser_tab(browser_window_id, page_id):
+def new_browser_tab(browser_window_id: str, page_id: str):
     tab = misli.gui.create_component(
         obj_class='BrowserTab', parent_id=browser_window_id)
 
@@ -38,7 +38,7 @@ def new_browser_window_ensure_page():
 
 
 @action('desktop.close_browser_window')
-def close_browser_window(browser_window_id):
+def close_browser_window(browser_window_id: str):
     misli.gui.remove_component(browser_window_id)
     # app = misli.gui.find_component(obj_class='DesktopApp')
     # app.should_quit = True

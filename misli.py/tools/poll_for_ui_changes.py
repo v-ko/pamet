@@ -33,7 +33,7 @@ def main():
 
     ui_files_tmod = defaultdict(float)
 
-    def pollAndGenerate(verbose=False):
+    def poll_and_generate(verbose=False):
         updated_count = 0
 
         for r, d, files in os.walk(folder_path):
@@ -67,12 +67,12 @@ def main():
         return updated_count
 
     # Start doing stuff
-    count = pollAndGenerate()
+    count = poll_and_generate()
     print('Found and updated %s ui files' % count)
 
     while True:
         try:
-            pollAndGenerate(verbose=True)
+            poll_and_generate(verbose=True)
             time.sleep(2)
         except KeyboardInterrupt:
             print('\nTerminated by user. Exiting.')

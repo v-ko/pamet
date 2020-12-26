@@ -7,8 +7,8 @@ import misli
 from misli.gui import update_components_from_changes
 from misli.gui.desktop import usecases, QtMainLoop
 
-from gui_recorder import MisliGuiRecorder
-from gui_replay import MisliGuiReplay
+from .gui_recorder import MisliGuiRecorder
+from .gui_replay import MisliGuiReplay
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)

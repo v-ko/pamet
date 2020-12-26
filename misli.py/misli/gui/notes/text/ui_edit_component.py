@@ -46,5 +46,8 @@ class Ui_TextNoteEditComponent(object):
     def retranslateUi(self, TextNoteEditComponent):
         TextNoteEditComponent.setWindowTitle(QCoreApplication.translate("TextNoteEditComponent", u"Form", None))
         self.ok_button.setText(QCoreApplication.translate("TextNoteEditComponent", u"Save (ctrl+S)", None))
+#if QT_CONFIG(shortcut)
+        self.ok_button.setShortcut(QCoreApplication.translate("TextNoteEditComponent", u"Ctrl+S", None))
+#endif // QT_CONFIG(shortcut)
     # retranslateUi
 

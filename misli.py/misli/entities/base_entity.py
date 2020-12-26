@@ -2,7 +2,7 @@ from misli.helpers import get_new_id
 
 
 class BaseEntity:
-    def __init__(self, id, obj_type, obj_class=None):
+    def __init__(self, id: str, obj_type: str, obj_class: str = None):
         self.__state_keys = []
 
         self.id = id
@@ -17,10 +17,7 @@ class BaseEntity:
     def copy(self):
         return type(self)(**self.state())
 
-    def add_state_keys(self, keys):
-        if type(keys) != list:
-            raise ValueError
-
+    def add_state_keys(self, keys: list):
         for key in keys:
             if not hasattr(self, key):
                 raise KeyError
@@ -32,13 +29,10 @@ class BaseEntity:
         return self._id
 
     @id.setter
-    def id(self, new_id):
+    def id(self, new_id: str):
         if not new_id:
             self._id = get_new_id()
             return
-
-        if type(new_id) != str:
-            raise ValueError
 
         self._id = new_id
 

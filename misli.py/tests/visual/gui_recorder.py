@@ -7,7 +7,7 @@ from PySide2.QtGui import QPixmap, QRegion
 
 import misli
 from misli.gui.actions_lib import Action
-from constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
+from .constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
 log = misli.get_logger(__name__)
 
 # Save smaller images for the visual comparisons in order to ignore pixel-level
@@ -35,7 +35,8 @@ class MisliGuiRecorder:
         target_component = matching_components[0]
 
         pixmap = QPixmap(target_component.rect().size())
-        target_component.render(pixmap, QPoint(), QRegion(target_component.rect()))
+        target_component.render(
+            pixmap, QPoint(), QRegion(target_component.rect()))
 
         self.snapshots[image_id] = pixmap
 

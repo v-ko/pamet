@@ -5,12 +5,11 @@ import pytest
 from misli.services.file_system_storage import FSStorageRepository
 from misli.entities import Page, Note
 
+REPO_PATH = './tmp_mock_repo'
+
 
 @pytest.fixture()
 def fs_repo():
-    REPO_PATH = './tmp_mock_repo'
-    print(os.path.abspath(REPO_PATH))
-
     fs_repo = FSStorageRepository.create(REPO_PATH)
     yield fs_repo
 
@@ -28,11 +27,8 @@ def test_fs_repo_CRUD(fs_repo):
     page.add_note(note)
     fs_repo.update_page(**page.state())
 
-    print(page.state())
-
     assert fs_repo.page_state(page.id) == page.state()
 
     fs_repo.delete_page(page.id)
 
     assert fs_repo.page_ids() == []
-

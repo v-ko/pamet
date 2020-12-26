@@ -34,6 +34,9 @@ class Note(BaseEntity):
         if state:
             log.warning('Unaccounted for state keys %s' % str(state.keys()))
 
+    def __repr__(self):
+        return '<Note id=%s>' % self.id
+
     def rect(self):
         return Rectangle(self.x, self.y, self.width, self.height)
 
@@ -48,7 +51,7 @@ class Note(BaseEntity):
         return self._width
 
     @width.setter
-    def width(self, width):
+    def width(self, width: float):
         width = min(MAX_NOTE_WIDTH, max(width, MIN_NOTE_WIDTH))
         self._width = snap_to_grid(width)
 
@@ -57,7 +60,7 @@ class Note(BaseEntity):
         return self._height
 
     @height.setter
-    def height(self, height):
+    def height(self, height: float):
         height = min(MAX_NOTE_HEIGHT, max(height, MIN_NOTE_HEIGHT))
         self._height = snap_to_grid(height)
 
@@ -73,7 +76,7 @@ class Note(BaseEntity):
         return self._x
 
     @x.setter
-    def x(self, x):
+    def x(self, x: float):
         self._x = snap_to_grid(x)
 
     @property
@@ -81,5 +84,5 @@ class Note(BaseEntity):
         return self._y
 
     @y.setter
-    def y(self, y):
+    def y(self, y: float):
         self._y = snap_to_grid(y)

@@ -4,12 +4,12 @@ import argparse
 from PIL import Image, ImageChops, ImageStat
 
 import misli
-from constants import RECORDING_EXTENSION, SNAP_EXTENSION
+from .constants import RECORDING_EXTENSION, SNAP_EXTENSION
 from misli.gui import update_components_from_changes
 from misli.gui.desktop import QtMainLoop
 
-from gui_recorder import MisliGuiRecorder
-from gui_replay import MisliGuiReplay
+from .gui_recorder import MisliGuiRecorder
+from .gui_replay import MisliGuiReplay
 
 INSPECTION_TEMPLATES_PATH = 'inspection_templates'
 AUTOMATIC_INSPECTION_OUTPUT_PATH = 'automatic_inspection_output'
