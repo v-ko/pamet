@@ -60,3 +60,9 @@ misli.py/tests/visual/automatic_inspection_output/tmp_recording/snapshots/0_desk
 misli.py/.vscode/launch.json
 misli.py/.vscode/settings.json
 *.code-workspace
+misli/other/misli_custom.desktop~
+misli/other/misli.desktop~
+misli/misli_desktop/misli_desktop.pro.user.4.10-pre1
+misli/installer/packages/com.p10.misli/data/data.7z
+misli.py/web_shell/brython_stdlib.js
+misli.py/web_shell/brython.js
