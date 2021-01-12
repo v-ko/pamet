@@ -19,7 +19,7 @@ class Component(BaseEntity):
         self.should_reallocate_image_cache = True
         self.should_rerender_image_cache = True
 
-    def set_props_from_base_object(self, **base_object_props):
+    def set_props_from_entity(self, **entity_props):
         pass
 
     def add_child(self, child: Component):

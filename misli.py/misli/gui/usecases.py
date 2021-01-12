@@ -61,6 +61,8 @@ def finish_editing_note(edit_component_id: str, note_state: dict):
 
     misli.gui.remove_component(edit_component.id)
 
+    # autosize_note(note_component_id)
+
 
 @action('notes.abort_editing_note')
 def abort_editing_note(edit_component_id: str):

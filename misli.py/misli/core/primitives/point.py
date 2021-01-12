@@ -1,4 +1,3 @@
-from __future__ import annotations
 import math
 
 
@@ -20,10 +19,10 @@ class Point:
     def __repr__(self):
         return '<Point x=%s y=%s>' % (self.x(), self.y())
 
-    def __add__(self, other: Point):
+    def __add__(self, other: 'Point'):
         return Point(self.x() + other.x(), self.y() + other.y())
 
-    def __sub__(self, other: Point):
+    def __sub__(self, other: 'Point'):
         return Point(self.x() - other.x(), self.y() - other.y())
 
     def __truediv__(self, k):
@@ -41,7 +40,7 @@ class Point:
     def to_list(self):
         return [self._x, self._y]
 
-    def distance_to(self, point):
+    def distance_to(self, point: 'Point'):
         distance = math.sqrt(
             (self.x() - point.x())**2 + (self.y() - point.y())**2)
         return distance

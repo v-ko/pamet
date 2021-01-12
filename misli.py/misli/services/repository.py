@@ -10,6 +10,7 @@ class Repository(BaseEntity):
     def __init__(self):
         BaseEntity.__init__(self, id='', obj_type='Repository')
 
+        self.path = ''
         self._pages = {}
 
     def create_page(self, **page_state):

@@ -162,7 +162,7 @@ def resize_note_components(
         note = nc.note()
 
         note.set_size(Point(*new_size))  # Here size restrictions are applied
-        nc.set_props_from_base_object(**note.state())
+        nc.set_props_from_entity(**note.state())
         nc.should_rebuild_pcommand_cache = True
         nc.should_reallocate_image_cache = True
         nc.should_rerender_image_cache = True
@@ -216,7 +216,7 @@ def note_drag_nc_position_update(
         note = misli.gui.entity_for_component(nc_id)
         note.x += d.x()
         note.y += d.y()
-        nc.set_props_from_base_object(**note.state())
+        nc.set_props_from_entity(**note.state())
 
         misli.gui.update_component(nc.id)
     misli.gui.update_component(map_page_component_id)

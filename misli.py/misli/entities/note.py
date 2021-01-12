@@ -40,6 +40,9 @@ class Note(BaseEntity):
     def rect(self):
         return Rectangle(self.x, self.y, self.width, self.height)
 
+    def set_color(self, color: Color):
+        self.color = color.to_list()
+
     def get_color(self):
         return Color(*self.color)
 

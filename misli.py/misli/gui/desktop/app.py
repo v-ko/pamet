@@ -1,6 +1,7 @@
 from PySide2.QtWidgets import QApplication
 
-from misli import ORGANISATION_NAME, DESKTOP_APP_NAME, DESKTOP_APP_VERSION
+from misli.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
+from misli.constants import DESKTOP_APP_VERSION
 from misli.gui.base_component import Component
 
 

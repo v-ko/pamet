@@ -1,10 +1,11 @@
 from typing import Callable
 
-from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
+from misli.helpers import get_new_id, find_many_by_props
+from misli.helpers import find_one_by_props
 from misli.core.main_loop import NoMainLoop
 from misli.entities import Page, Note
 from misli.entities.change import Change, ChangeTypes
-from misli.services.in_memory_storage import Repository
+from misli.services.in_memory_storage import InMemoryRepository, Repository
 
 from misli import get_logger
 
@@ -12,7 +13,7 @@ from misli import get_logger
 log = get_logger(__name__)
 
 line_spacing_in_pixels = 20
-_repo = Repository()
+_repo = InMemoryRepository()
 _main_loop = NoMainLoop()
 
 _pages = {}
@@ -37,12 +38,13 @@ def set_repo(repo: Repository):
     global _repo
     log.info('Setting repo to %s' % repo.path)
 
-    if _pages:
-        log.error('Cannot change repo while there are pages loaded')
-        return
+    # if _pages:
+    #     log.error('Cannot change repo while there are pages loaded')
+    #     return
 
     _repo = repo
 
+    _pages.clear()
     # Load the pages from the new repo
     for page_id in repo.page_ids():
         page = Page(**repo.page_state(page_id))
@@ -60,7 +62,7 @@ def call_delayed(
     if kwargs is None:
         kwargs = {}
 
-    log.debug('Will call %s delayed with %ssecs' % (callback.__name__, delay))
+    log.debug('Will call %s delayed with %s secs' % (callback.__name__, delay))
     _main_loop.call_delayed(callback, delay, args, kwargs)
 
 

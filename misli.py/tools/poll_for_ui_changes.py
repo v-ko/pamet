@@ -58,7 +58,6 @@ def main():
                     of.write(output)
 
                 ui_files_tmod[f_path] = tmod
-
                 updated_count += 1
 
                 if verbose:

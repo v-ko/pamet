@@ -3,11 +3,13 @@
 import os
 import signal
 
+# from misli_debug import set_logging_level, LoggingLevels
+# set_logging_level(LoggingLevels.DEBUG)
+
 import misli
 from misli.gui import update_components_from_changes
 from misli.gui.desktop import usecases, QtMainLoop
 from misli.gui.desktop.config import get_config
-
 from misli.services.file_system_storage import FSStorageRepository
 
 log = misli.get_logger(__name__)
@@ -15,7 +17,6 @@ signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def main():
-    # Init the app
     config = get_config()
     repo_path = config['repository_path']
 

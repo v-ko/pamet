@@ -4,14 +4,15 @@
 <head>
 <meta charset="utf-8">
 <script type="text/javascript" src="brython.js"></script>
-<script type="text/javascript" src="brython_stdlib.js"></script>
+<script type="text/javascript" src="brython_modules.js"></script>
+<!-- <script type="text/javascript" src="brython_stdlib.js"></script> -->
+<!-- <script type="text/javascript" src="misli.brython.js"></script> -->
+<!-- <script type="text/javascript" src="test.brython.js"></script> -->
 </head>
 
 <body onload="brython(1)">
-<script type="text/python">
-import misli
-print(misli)
-</script>
+	<label id="label">Loading</label>
+<script type="text/python" src="index.py" id="__main__"></script>
 </body>
 
 </html>

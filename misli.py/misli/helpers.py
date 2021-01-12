@@ -1,7 +1,8 @@
+import time
 import random
 import types
 import uuid
-from .constants import ALIGNMENT_GRID_UNIT
+from misli.constants import ALIGNMENT_GRID_UNIT
 
 
 def get_new_id():
@@ -53,3 +54,10 @@ def decorate_all_in_module(module, decorator):
         obj = getattr(module, name)
         if isinstance(obj, types.FunctionType):
             setattr(module, name, decorator(obj))
+
+
+def set_reproducible_ids(enabled):
+    if enabled:
+        random.seed(0)
+    else:
+        random.seed(time.time())

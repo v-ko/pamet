@@ -10,6 +10,7 @@ class InMemoryRepository(Repository):
         Repository.__init__(self)
 
         self._pages = {}
+        self.path = 'in-memory'
 
     def create_page(self, **page_state):
         page = Page(**page_state)

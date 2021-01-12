@@ -1,4 +1,3 @@
-from __future__ import annotations
 from . import Point
 
 
@@ -21,7 +20,7 @@ class Rectangle:
         return ('<Rectangle x=%s y=%s width=%s height=%s ' %
                 tuple(self.to_list()))
 
-    def __eq__(self, other: Rectangle):
+    def __eq__(self, other: 'Rectangle'):
         return self.to_list() == other.to_list()
 
     def x(self):
@@ -60,7 +59,7 @@ class Rectangle:
     def bottom_left(self):
         return Point(self.left(), self.bottom())
 
-    def intersection(self, other: Rectangle):
+    def intersection(self, other: 'Rectangle'):
         a, b = self, other
         x1 = max(min(a.x(), a.right()), min(b.x(), b.right()))
         y1 = max(min(a.y(), a.bottom()), min(b.y(), b.bottom()))
@@ -70,7 +69,7 @@ class Rectangle:
         if x1 < x2 and y1 < y2:
             return type(self)(x1, y1, x2 - x1, y2 - y1)
 
-    def intersects(self, other: Rectangle):
+    def intersects(self, other: 'Rectangle'):
         if self.intersection(other):
             return True
         else:

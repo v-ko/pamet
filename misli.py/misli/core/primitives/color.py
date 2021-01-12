@@ -9,4 +9,7 @@ class Color:
         self._a = a
 
     def to_uint8_rgba_list(self):
-        return [c * 255 for c in [self._r, self._g, self._b, self._a]]
+        return [c * 255 for c in self.to_list()]
+
+    def to_list(self):
+        return [self._r, self._g, self._b, self._a]

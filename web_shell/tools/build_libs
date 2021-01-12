@@ -1,0 +1,132 @@
+#!/usr/bin/env python
+import os
+from os.path import join
+import shutil
+import argparse
+import subprocess
+
+REQUIREMENTS = ['rsync', 'brython-cli']
+
+BRYTHON_JS = 'brython.js'
+BRYTHON_STDLIB = 'brython_stdlib.js'
+BRYTHON_MODULES_JS = 'brython_modules.js'
+MISLI_BRYTHON_JS = 'misli.brython.js'
+MISLI = 'misli'
+WEB_SHELL = 'web_shell'
+STATIC = 'static'
+
+
+def requirements_met():
+    requirements_met = True
+    for r in REQUIREMENTS:
+        if not shutil.which(r):
+            print('Required executable "%s" missing' % r)
+            requirements_met = False
+
+    return requirements_met
+
+
+def brython_installed(folder):
+    entries = os.listdir(folder)
+    return BRYTHON_JS in entries and BRYTHON_STDLIB in entries
+
+
+def modules_present(build_dir):
+    entries = os.listdir(build_dir)
+    modules_present = True
+
+    for module in [MISLI, WEB_SHELL]:
+        if module not in entries:
+            print('Module %s missing' % module)
+            modules_present = False
+
+    return modules_present
+
+
+def call(command_and_args: list, cwd: str):
+    print('In "%s" calling "%s"' % (' '.join(command_and_args), cwd))
+    subprocess.run(command_and_args, cwd=cwd)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--misli_module_path', default='../../misli.py/misli')
+    parser.add_argument('--web_shell_path', default='../')
+    parser.add_argument('--build_dir', default='../../builds/web_shell')
+    parser.add_argument(
+        '--deployment_dir', default='../../deployments/web_shell')
+    args = parser.parse_args()
+
+    misli_module_path = os.path.abspath(args.misli_module_path)
+    web_shell_path = os.path.abspath(args.web_shell_path)
+    build_dir = os.path.abspath(args.build_dir)
+    deployment_dir = os.path.abspath(args.deployment_dir)
+
+    for d in [misli_module_path, web_shell_path]:
+        if not os.path.exists(d):
+            print('No such path:', d)
+            return -1
+
+    for d in [build_dir, deployment_dir]:
+        os.makedirs(d, exist_ok=True)
+
+    if not requirements_met():
+        return -1
+
+    # Copy the needed modules
+    for m_path in [misli_module_path, web_shell_path]:
+        call(['rsync', '-r', '--delete', m_path, '.'], cwd=build_dir)
+
+    if not modules_present(build_dir):
+        return -1
+
+    if not brython_installed(build_dir):
+        print('Installing brython libs')
+        call(['brython-cli', '--install'], cwd=build_dir)
+
+        if not brython_installed(build_dir):
+            print('Error - brython libs still missing after install. Aborting')
+            return -1
+
+    # Compile the lib with the needed modules
+    call(['brython-cli', '--modules'], cwd=build_dir)
+
+    if BRYTHON_MODULES_JS not in os.listdir(build_dir):
+        print('Build error. %s missing. Aborting process.' %
+              BRYTHON_MODULES_JS)
+        return -1
+
+    # Comptile the package for the misli module
+    build_misli_dir = join(build_dir, MISLI)
+    call(['brython-cli', '--make_package', MISLI], cwd=build_misli_dir)
+
+    if MISLI_BRYTHON_JS not in os.listdir(build_misli_dir):
+        print('Build error. %s missing. Aborting process.' % MISLI_BRYTHON_JS)
+        return -1
+
+    print('Copying libs to deployment folder')
+    static_data_folder = join(deployment_dir, STATIC)
+    os.makedirs(static_data_folder, exist_ok=True)
+
+    shutil.copy(
+        join(build_dir, BRYTHON_JS),
+        join(static_data_folder, BRYTHON_JS))
+    shutil.copy(
+        join(build_dir, BRYTHON_MODULES_JS),
+        join(static_data_folder, BRYTHON_MODULES_JS))
+    shutil.copy(
+        join(build_dir, MISLI, MISLI_BRYTHON_JS),
+        join(static_data_folder, MISLI_BRYTHON_JS))
+
+    for file in os.scandir(join(build_dir, WEB_SHELL)):
+        if file.is_dir():
+            continue
+
+        shutil.copy(file, join(static_data_folder, file.name))
+
+    print('Build successful!')
+
+
+if __name__ == '__main__':
+    if main():
+        print('Build process failed.')

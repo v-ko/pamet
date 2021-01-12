@@ -4,7 +4,7 @@ import functools
 from typing import Callable
 from collections import defaultdict
 
-# from rich.logging import RichHandler
+from misli.constants import LOGGING_LEVEL
 
 
 class BColors:
@@ -20,13 +20,7 @@ class BColors:
 
 
 function_call_stack_per_thread = defaultdict(list)
-logging_level = None
-
-
-def set_level(level):
-    global logging_level
-    logging_level = level
-    logging.basicConfig(level=logging_level)  # , handlers=[RichHandler()]
+logging.basicConfig(level=LOGGING_LEVEL)
 
 
 def get_logger(name: str):
@@ -40,24 +34,24 @@ class Logger:
 
     def get_trace_decorator(self, logger_name: str):
         def trace_decorator(func: Callable):
-            # Wrap the function only if we're traceging
-            if logging_level != logging.DEBUG:
+            # Wrap the function only at DEBUG level
+            if LOGGING_LEVEL != logging.DEBUG:
                 return func
 
-            # Prep the wrapper
             name = '.'.join([logger_name, func.__name__])
-            # name_str = '%s.[blue]%s[/]' % (logger_name, func.__name__)
 
-            # Set a cian color to the func name to have it stand out
+            # Set color to the func name to have it stand out
             name_str = '%s.%s%s%s' % (
-                logger_name, BColors.OKCYAN, func.__name__, BColors.ENDC)
+                logger_name, BColors.OKBLUE, func.__name__, BColors.ENDC)
             log = logging.getLogger('TRACE: ')
 
             @functools.wraps(func)
             def wrapper_func(*args, **kwargs):
+                # Keep separate function stacks per thread
                 thread_id = threading.get_ident()
                 function_call_stack_per_thread[thread_id].append(name)
 
+                # Prep the log string
                 stack_depth = len(function_call_stack_per_thread[thread_id])
                 indent = ' ' * 4 * (stack_depth - 1)
 

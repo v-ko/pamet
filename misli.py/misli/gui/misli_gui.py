@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import misli
 from misli.entities.change import ChangeTypes
-from misli.misli_logging import BColors
+from misli.core.logging import BColors
 from misli.entities import Page, Note, BaseEntity, Change
 from misli.gui.actions_lib import Action
 from misli.gui.base_component import Component
@@ -101,10 +101,12 @@ def entity_for_component(component_id: str):
 
 
 @log.traced
-def components_for_base_object(entity_id: str):
+def components_for_entity(entity_id: str):
     if entity_id in _component_ids_by_entity_id:
         return [component(eid)
                 for eid in _component_ids_by_entity_id[entity_id]]
+
+    return []
 
 
 @log.traced
@@ -113,7 +115,7 @@ def create_components_for_page(page_id: str, parent_id: str):
     page_component = create_component(
         obj_class=page.obj_class, parent_id=parent_id)
 
-    page_component.set_props_from_base_object(**page.state())
+    page_component.set_props_from_entity(**page.state())
     _register_component_with_entity(page_component, page)
 
     for note in page.notes():
@@ -129,7 +131,7 @@ def create_component_for_note(
 
     component = create_component(obj_class, parent_id)
     note = misli.page(page_id).note(note_id)
-    component.set_props_from_base_object(**note.state())
+    component.set_props_from_entity(**note.state())
 
     _register_component_with_entity(component, note)
     return component
@@ -182,7 +184,7 @@ def _update_components_for_note_change(note_change: Change):
     note = Note(**note_change.last_state())
 
     if note_change.type == ChangeTypes.CREATE:
-        page_components = components_for_base_object(
+        page_components = components_for_entity(
             note.page_id)
 
         # Create a note component for all opened views for its page
@@ -193,9 +195,9 @@ def _update_components_for_note_change(note_change: Change):
             update_component(pc.id)
 
     elif note_change.type == ChangeTypes.UPDATE:
-        note_components = components_for_base_object(note.id)
+        note_components = components_for_entity(note.id)
         for nc in note_components:
-            nc.set_props_from_base_object(**note.state())
+            nc.set_props_from_entity(**note.state())
 
             # Hacky cache clearing
             nc.should_rebuild_pcommand_cache = True
@@ -205,11 +207,11 @@ def _update_components_for_note_change(note_change: Change):
             update_component(nc.id)
 
     elif note_change.type == ChangeTypes.DELETE:
-        note_components = components_for_base_object(note.id)
+        note_components = components_for_entity(note.id)
         for nc in note_components:
             remove_component(nc.id)
 
-        page_components = components_for_base_object(
+        page_components = components_for_entity(
             note.page_id)
 
         for pc in page_components:
@@ -225,9 +227,9 @@ def _update_components_for_page_change(page_change: Change):
         pass
 
     elif page_change.type == ChangeTypes.UPDATE:
-        page_components = components_for_base_object(page.id)
+        page_components = components_for_entity(page.id)
         for pc in page_components:
-            pc.set_props_from_base_object(**page_state)
+            pc.set_props_from_entity(**page_state)
             update_component(pc.id)
 
     elif page_change.type == ChangeTypes.DELETE:

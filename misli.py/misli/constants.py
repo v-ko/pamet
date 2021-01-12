@@ -1,3 +1,9 @@
+import os
+from misli_debug import LoggingLevels
+
+log_lvl_name = os.environ.get('MISLI_LOGGING_LEVEL', LoggingLevels.ERROR.name)
+LOGGING_LEVEL = LoggingLevels[log_lvl_name].value
+
 MAX_RENDER_TIME = 0.017  # (s) ~60 fps
 NOTE_MARGIN = 5
 
@@ -25,3 +31,7 @@ DEFAULT_COLOR = [0, 0, 1, 1]
 RESIZE_CIRCLE_RADIUS = 20
 
 ALIGNMENT_GRID_UNIT = 10
+
+ORGANISATION_NAME = 'p10'
+DESKTOP_APP_NAME = 'misli'
+DESKTOP_APP_VERSION = '4.0.0'
