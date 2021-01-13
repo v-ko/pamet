@@ -1,9 +1,0 @@
-{
-  "name": "org.sofia.playlistserver",
-  "description": "Playlist server",
-  "path": "/sync/C++/music_unify/native_messaging_reciever/playlist_server.py",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://cgagaepgpeeogjdfjjjidhpaicecmkal/"
-  ]
-}
