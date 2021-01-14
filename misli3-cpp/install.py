@@ -2,12 +2,14 @@
 
 import argparse
 import os
+import shutil
 
 LOCAL = os.path.expanduser('~/.local')
 LOCAL_BIN = os.path.join(LOCAL, 'bin')
 LOCAL_LIB = os.path.join(LOCAL, 'lib')
 LOCAL_APPS = os.path.join(LOCAL, 'share', 'applications')
 ICONS_DIR = os.path.join(LOCAL, 'share', 'icons', 'hicolor', '256x256', 'apps')
+SOURCE_PATH = './'
 
 for path in [LOCAL, LOCAL_APPS, LOCAL_BIN, LOCAL_LIB, ICONS_DIR]:
     os.makedirs(path, exist_ok=True)
@@ -38,8 +40,8 @@ def main():
                 print('Removing existing file at install path', install_path)
                 os.remove(install_path)
 
-            print('Symlinking %s to %s' % (build_path, install_path))
-            os.symlink(build_path, install_path)
+            print('Copying %s to %s' % (build_path, install_path))
+            shutil.copy(build_path, install_path)
 
     # Apply changes
     # Executable
@@ -67,12 +69,13 @@ def main():
         apply(dl, target_path)
 
     # Icon
-    icon_path = os.path.abspath('img/icon.png')
+    icon_path = os.path.abspath(os.path.join(SOURCE_PATH, 'img/icon.png'))
     icon_install_path = os.path.join(ICONS_DIR, 'misli.png')
     apply(icon_path, icon_install_path)
 
     # Desktop entry
-    desktop_entry = os.path.abspath('other/misli.desktop')
+    desktop_entry = os.path.abspath(
+        os.path.join(SOURCE_PATH, 'other/misli.desktop'))
     apply(desktop_entry, os.path.join(LOCAL_APPS, 'misli.desktop'))
 
     os.system('update-desktop-database ~/.local/share/applications')

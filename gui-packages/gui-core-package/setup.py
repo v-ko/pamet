@@ -1,6 +1,6 @@
 import setuptools
 
 setuptools.setup(
-    name="misli-brython",
+    name="misli-gui",
     packages=setuptools.find_packages()
 )
