@@ -5,15 +5,14 @@ with open("../README.md", "r") as fh:
 
 setuptools.setup(
     name="misli",
-    version="0.0.1",
+    version="4.0.0.a1",
     author="Petko Ditchev",
     author_email="pditchev@gmail.com",
-    description="An application for organizing thoughts, notes and projects",
+    # description="An application for organizing thoughts, notes and projects",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/petko10/misli",
     packages=setuptools.find_packages(),
-    scripts=['bin/misloem'],
     # classifiers=[
     #     "Programming Language :: Python :: 3",
     #     "License :: OSI Approved :: MIT License",

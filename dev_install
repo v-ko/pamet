@@ -29,13 +29,13 @@ def main():
             unsuccessful_install_folders.append(root)
 
     if successful_install_folders:
-        print('\nInstallation successful for these folders:')
+        print('\nInstallation successful for folders:')
 
         for f in successful_install_folders:
             print(f)
 
     if unsuccessful_install_folders:
-        print('\nInstallation did not succeed in these folders:')
+        print('\nInstallation did not succeed in folders:')
 
         for f in unsuccessful_install_folders:
             print(f)
