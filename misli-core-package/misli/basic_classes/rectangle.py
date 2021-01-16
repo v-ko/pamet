@@ -1,4 +1,4 @@
-from . import Point
+from misli.basic_classes import Point
 
 
 class Rectangle:

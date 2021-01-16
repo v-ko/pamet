@@ -1,39 +1,40 @@
 import misli
-from misli.entities import Page, Note
+import pamet
+from pamet.entities import Page, Note
 
 
 def test_page_CRUD():
-    page_state = Page(id='test_page').state()
-    page = misli.create_page(**page_state)
+    page = Page(id='test_page')
+    pamet.add_page(page, [])
 
-    assert [p.state() for p in misli.pages()] == [page.state()]
+    assert [p.state() for p in pamet.pages()] == [page.state()]
 
     page.obj_class = 'MapPage'
-    misli.update_page(id=page.id, obj_class='MapPage')
+    pamet.update_page(id=page.id, obj_class='MapPage')
 
-    assert [p.state() for p in misli.pages()] == [page.state()]
+    assert [p.state() for p in pamet.pages()] == [page.state()]
 
-    misli.delete_page(page.id)
+    pamet.delete_page(page.id)
 
-    assert misli.pages() == []
+    assert pamet.pages() == []
 
 
 def test_note_CRUD():
-    page_state = Page(id='test_page').state()
-    page = misli.create_page(**page_state)
+    page = Page(id='test_page')
+    pamet.add_page(page, [])
 
-    note_state = Note(page_id=page.id, text='test text').state()
-    note = misli.create_note(**note_state)
+    note = Note(page_id=page.id, text='test text')
+    pamet.add_note(note)
 
-    assert misli.page(page.id).note_states == {note.id: note.state()}
+    assert [n.state() for n in pamet.notes(page.id)] == [note.state()]
 
     note.text = 'test text changed'
-    misli.update_note(**note.state())
+    pamet.update_note(**note.state())
 
-    updated = misli.page(page.id).note(note.id).state()
+    updated = pamet.note(page.id, note.id).state()
 
     assert updated == note.state()
 
-    misli.delete_note(note)
+    pamet.delete_note(note)
 
-    assert page.notes() == []
+    assert pamet.notes(page.id) == []

@@ -2,6 +2,7 @@ from typing import Callable
 from browser import window, document, timer
 
 import misli
+import pamet
 
 
 class JSMainLoop:
@@ -15,14 +16,14 @@ def main():
     label.text = 'LOADED, YO'
     label.style.color = 'red'
 
-    window.misli = misli
+    window.pamet = pamet
 
     misli.set_main_loop(JSMainLoop())
     print('test')
-    misli.create_page(id='test_page')
-    misli.create_note(
+    pamet.add_page(id='test_page')
+    pamet.add_note(
         page_id='test_page', text='Test that shit out')
-    print(misli.page('test_page').notes()[0].state())
+    print(pamet.page('test_page').notes()[0].state())
 
 
 if __name__ == '__main__':

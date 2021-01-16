@@ -1,6 +1,6 @@
 from misli import get_logger
-from misli.entities.base_entity import BaseEntity
-from misli.core.primitives import Point, Rectangle, Color
+from misli.entities import BaseEntity
+from misli.basic_classes import Point, Rectangle, Color
 from misli.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from misli.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from misli.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT

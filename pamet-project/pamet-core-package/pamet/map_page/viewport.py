@@ -1,6 +1,6 @@
 import misli
 from misli.constants import INITIAL_EYE_Z
-from misli.core.primitives import Point, Rectangle
+from misli.basic_classes import Point, Rectangle
 
 
 class Viewport(object):

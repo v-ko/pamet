@@ -2,24 +2,29 @@ from typing import Callable
 
 from misli.helpers import get_new_id, find_many_by_props
 from misli.helpers import find_one_by_props
-from misli.core.main_loop import NoMainLoop
-from misli.entities import Page, Note
+from misli.main_loop import NoMainLoop
 from misli.entities.change import Change, ChangeTypes
-from misli.services.in_memory_storage import InMemoryRepository, Repository
 
 from misli import get_logger
 
 
 log = get_logger(__name__)
 
-line_spacing_in_pixels = 20
-_repo = InMemoryRepository()
+_repo = None
 _main_loop = NoMainLoop()
 
-_pages = {}
+_entity_indices = {}
 
-_change_handlers = []
-_change_stack = []
+_subscribtions = {}
+_change_stacks = {}
+
+
+def create_entity_index(index_id):
+    _entity_indices[index_id] = {}
+
+
+def delete_entity_index(index_id):
+    del _entity_indices[index_id]
 
 
 @log.traced
@@ -28,27 +33,23 @@ def set_main_loop(main_loop):
     _main_loop = main_loop
 
 
-@log.traced
-def repo():
-    return _repo
+def channels():
+    return list(_change_stacks.keys())
 
 
 @log.traced
-def set_repo(repo: Repository):
-    global _repo
-    log.info('Setting repo to %s' % repo.path)
+def add_channel(channel_name):
+    _subscribtions[channel_name] = []
+    _change_stacks[channel_name] = []
 
-    # if _pages:
-    #     log.error('Cannot change repo while there are pages loaded')
-    #     return
 
-    _repo = repo
+@log.traced
+def remove_channel(channel_name):
+    if channel_name not in _change_stacks:
+        raise Exception('Trying to delete non-existent channel')
 
-    _pages.clear()
-    # Load the pages from the new repo
-    for page_id in repo.page_ids():
-        page = Page(**repo.page_state(page_id))
-        _pages[page.id] = page
+    del _subscribtions[channel_name]
+    del _change_stacks[channel_name]
 
 
 def call_delayed(
@@ -68,165 +69,144 @@ def call_delayed(
 
 # Change channel interface
 @log.traced
-def push_change(change: Change):
+def dispatch(change: Change, channel: str):
     log.info(str(change))
-    _change_stack.append(change)
+
+    _change_stacks[channel].append(change)
     call_delayed(_handle_changes, 0)
 
 
 @log.traced
-def on_change(handler: Callable):
-    _change_handlers.append(handler)
+def subscribe(handler: Callable, channel: str):
+    if channel not in channels():
+        raise Exception('No such channel')
+
+    if handler in _subscribtions[channel]:
+        raise Exception('Handler %s already added to channel %s' %
+                        (handler, channel))
+
+    _subscribtions[channel].append(handler)
+
+
+@log.traced
+def unsubscribe(handler: Callable, channel: str):
+    if channel not in _subscribtions:
+        raise Exception('No such channel')
+
+    if handler not in _subscribtions[channel]:
+        raise Exception('Trying to remove missing handler %s form channel %s' %
+                        (handler, channel))
+
+    _subscribtions[channel].remove(handler)
+
+
+@log.traced
+def repo():
+    return _repo
+
+
+@log.traced
+def set_repo(repo, updates_channel: str):
+    global _repo
+    log.info('Setting repo to %s' % repo.path)
+
+    _repo = repo
+    subscribe(repo.save_changes, updates_channel)
 
 
 @log.traced
 def _handle_changes():
-    if not _change_stack:
-        return
+    for channel in channels():
+        if not _change_stacks[channel]:
+            return
 
-    for handler in _change_handlers:
-        handler(_change_stack)
+        for handler in _subscribtions[channel]:
+            handler(_change_stacks[channel])
 
-    _change_stack.clear()
+        _change_stacks[channel].clear()
 
 
-# -------------Pages CRUD-------------
+# -------------Entity CRUD-------------
 @log.traced
-def create_page(**page_state):
-    # Create a new id both when missing key 'id' is missing or ==None
-    _id = page_state.pop('id', None)
-    page_state['id'] = _id or get_new_id()
+def add_entity(_entity, index_id):
+    if not _entity.id:
+        _entity.id = get_new_id()
 
-    _page = Page(**page_state)
-
-    load_page(_page)
-    change = Change(ChangeTypes.CREATE, old_state={}, new_state=_page.state())
-    push_change(change)
-
-    return _page
+    load_entity(_entity, index_id)
+    change = Change(
+        ChangeTypes.CREATE, old_state={}, new_state=_entity.asdict())
+    dispatch(change, 'all')
 
 
 @log.traced
-def load_page(_page: Page):
-    _pages[_page.id] = _page
+def load_entity(_entity, index_id):
+    if entity(_entity.id, index_id):
+        raise Exception('Entity already exists')
+
+    _entity_indices[index_id][_entity.id] = _entity
+
+
+@log.traced
+def unload_entity(_entity, index_id):
+    if not entity(_entity.id, index_id):
+        raise Exception('Cannot unload missing entity %s' % _entity)
+
+    del _entity_indices[index_id][_entity.id]
+
+
+@log.traced
+def entities(index_id):
+    return [entity.copy()
+            for eid, entity in _entity_indices[index_id].items()]
 
 
 # @log.traced
-# def unload_page(page_id):
-#     if page_id not in _pages:
-#         log.error('Cannot unload missing page %s' % page_id)
-#         return
-
-#     del _pages[page_id]
-
-
-@log.traced
-def pages():
-    return [page.copy() for pid, page in _pages.items()]
-
-
-# @log.traced
-def page(page_id: str):
-    if page_id not in _pages:
+def entity(entity_id, index_id):
+    if entity_id not in _entity_indices[index_id]:
         return None
 
-    return _pages[page_id].copy()
+    return _entity_indices[index_id][entity_id].copy()
 
 
 @log.traced
-def find_pages(**props):
-    return find_many_by_props(_pages, **props)
+def find_entities(index_id, **props):
+    if index_id not in _entity_indices:
+        return []
+
+    return find_many_by_props(_entity_indices[index_id], **props)
 
 
 @log.traced
-def find_page(**props):
-    return find_one_by_props(_pages, **props)
+def find_entity(index_id, **props):
+    if index_id not in _entity_indices:
+        return None
+
+    return find_one_by_props(_entity_indices[index_id], **props)
 
 
 @log.traced
-def update_page(**page_state):
-    if 'id' not in page_state:
-        log.error('Could not update note without a supplied id. '
-                  'Given state: %s' % page_state)
+def update_entity(new_entity, index_id):
+    ent = entity(new_entity.id, index_id)
+
+    if not ent:
+        log.error('Cannot update missing entity %s' % new_entity)
         return
 
-    _page = page(page_state['id'])
-    old_state = _page.state()
+    old_state = ent.asdict()
+    _entity_indices[index_id][ent.id] = new_entity
 
-    _page.set_state(**page_state)
-    new_state = _page.state()
-
-    _pages[_page.id].set_state(**new_state)
-
-    change = Change(ChangeTypes.UPDATE, old_state, new_state)
-    push_change(change)
+    change = Change(ChangeTypes.UPDATE, old_state, new_entity.asdict())
+    dispatch(change, 'all')
 
 
 @log.traced
-def delete_page(page_id: str):
-    _page = _pages.pop(page_id, None)
+def remove_entity(entity_id, index_id):
+    ent = entity(entity_id, index_id)
 
-    if not _page:
-        log.error('Could not delete missing page %s' % page_id)
+    if not ent:
+        log.error('Could not delete missing entity %s' % entity_id)
         return
 
-    change = Change(ChangeTypes.DELETE, old_state=_page.state(), new_state={})
-    push_change(change)
-
-
-# -------------Notes CRUD-------------
-@log.traced
-def create_note(**note_state):
-    # Create a new id both when missing key 'id' is missing or ==None
-    _id = note_state.pop('id', None)
-    note_state['id'] = _id or get_new_id()
-
-    page_id = note_state.get('page_id')
-    if not page_id:
-        raise Exception(
-            'Cannot create note without page_id. State: %s' % note_state)
-
-    note_state['page_id'] = page_id
-    note = Note(**note_state)
-
-    _pages[note.page_id].add_note(note)
-
-    change = Change(ChangeTypes.CREATE, old_state={}, new_state=note.state())
-    push_change(change)
-
-    return note
-
-
-@log.traced
-def update_note(**note_state):
-    if 'page_id' not in note_state or 'id' not in note_state:
-        log.error('Could not update note without id and page_id parameters. '
-                  'Given state: %s' % note_state)
-        return
-
-    note = Note(**note_state)
-    old_state = page(note.page_id).note(note.id).state()
-
-    note.set_state(**note_state)
-    _pages[note.page_id].update_note(note)
-
-    change = Change(ChangeTypes.UPDATE, old_state, new_state=note.state())
-    push_change(change)
-
-
-@log.traced
-def delete_note(note: Note):
-    _pages[note.page_id].remove_note(note)
-
-    change = Change(ChangeTypes.DELETE, note.state(), new_state={})
-    push_change(change)
-
-
-# ---------Common-------------
-def entity(entity_id):
-    if entity_id in _pages:
-        return page(entity_id)
-
-    for pid, p in _pages.items():
-        if entity_id in p.note_states:
-            return p.note(entity_id)
+    unload_entity(ent, index_id)
+    change = Change(ChangeTypes.DELETE, old_state=ent.state(), new_state={})
+    dispatch(change, 'all')

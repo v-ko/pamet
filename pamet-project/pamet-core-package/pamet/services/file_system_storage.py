@@ -3,7 +3,7 @@ import json
 import random
 import string
 
-from misli.entities import Page, Note
+from pamet.entities import Page, Note
 from .repository import Repository
 
 from misli import get_logger
@@ -69,8 +69,9 @@ class FSStorageRepository(Repository):
         os.makedirs(path, exist_ok=True)
         return cls(path)
 
-    def create_page(self, **page_state):
-        page = Page(**page_state)
+    def create_page(self, page, notes):
+        page_state = page.state()
+        page_state['note_states'] = [n.state() for n in notes]
 
         path = self._path_for_page(page.id)
         try:
@@ -99,7 +100,7 @@ class FSStorageRepository(Repository):
 
         return page_ids
 
-    def page_state(self, page_id):
+    def page_with_notes(self, page_id):
         path = self._path_for_page(page_id)
 
         try:
@@ -110,10 +111,14 @@ class FSStorageRepository(Repository):
             log.error('Exception %s while loading page' % e, path)
             return None
 
-        return page_state
+        note_states = page_state.pop('note_states', [])
+        notes = [Note(**ns) for ns in note_states]
 
-    def update_page(self, **page_state):
-        page = Page(**page_state)
+        return Page(**page_state), notes
+
+    def update_page(self, page, notes):
+        page_state = page.state()
+        page_state['note_states'] = [n.state() for n in notes]
 
         path = self._path_for_page(page.id)
         try:
@@ -121,7 +126,7 @@ class FSStorageRepository(Repository):
                 log.warning('Page at %s was missing. Will create it.' % path)
 
             with open(path, 'w') as pf:
-                page_state = page.state()
+                page_state = page_state
                 json.dump(page_state, pf)
 
         except Exception as e:

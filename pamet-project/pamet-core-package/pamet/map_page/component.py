@@ -1,14 +1,17 @@
-from misli.gui.base_component import Component
-from misli.gui.map_page.viewport import Viewport
-
 import misli
-from misli.gui.desktop.helpers import control_is_pressed, shift_is_pressed
-from misli.gui.map_page import usecases
-from misli.core.primitives import Point, Rectangle
-from misli.entities import Note
+import misli_gui
+
+from misli.basic_classes import Point, Rectangle
 from misli.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from misli.constants import RESIZE_CIRCLE_RADIUS
-from misli.gui import usecases as notes_usecases
+
+from misli_gui.base_component import Component
+from misli_qt.helpers import control_is_pressed, shift_is_pressed
+
+from pamet.note_components import usecases as notes_usecases
+from pamet.map_page import usecases
+from pamet.entities import Note
+from pamet.map_page.viewport import Viewport
 
 log = misli.get_logger(__name__)
 
@@ -220,7 +223,7 @@ class MapPageComponent(Component):
         else:
             pos = self.viewport.unproject_point(mouse_pos)
 
-            page = misli.gui.entity_for_component(self.id)
+            page = misli_gui.entity_for_component(self.id)
             note = Note(page_id=page.id, obj_class='Text', text='')
             note.x = pos.x()
             note.y = pos.y()

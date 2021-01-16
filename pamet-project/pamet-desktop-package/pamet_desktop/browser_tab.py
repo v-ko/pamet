@@ -1,9 +1,11 @@
 from PySide2.QtWidgets import QVBoxLayout, QWidget
 from PySide2.QtCore import Qt
 
-import misli
-from misli.gui.base_component import Component
-from .. import usecases
+import pamet
+import misli_gui
+from misli_gui.base_component import Component
+
+from pamet.note_components import usecases
 
 
 class BrowserTabComponent(QWidget, Component):
@@ -31,13 +33,13 @@ class BrowserTabComponent(QWidget, Component):
             if self._page_component:
                 self.layout().removeWidget(self._page_component)
 
-            self._page_component = misli.gui.create_components_for_page(
+            self._page_component = pamet.create_components_for_page(
                 self.current_page_id, parent_id=self.id)
             self.layout().addWidget(self._page_component)
 
     def add_child(self, child: Component):
         # If we're adding an edit component
-        if child.obj_class in misli.gui.components_lib.edit_component_names():
+        if child.obj_class in misli_gui.components_lib.edit_component_names():
 
             # Abort any ongoing editing
             if self._edit_component:

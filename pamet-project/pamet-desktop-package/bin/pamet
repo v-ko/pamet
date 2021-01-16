@@ -3,14 +3,18 @@
 import os
 import signal
 
-# from misli_debug import set_logging_level, LoggingLevels
-# set_logging_level(LoggingLevels.DEBUG)
+from misli_debug import set_logging_level, LoggingLevels
+set_logging_level(LoggingLevels.DEBUG)
 
 import misli
-from misli.gui import update_components_from_changes
-from misli.gui.desktop import usecases, QtMainLoop
-from misli.gui.desktop.config import get_config
-from misli.services.file_system_storage import FSStorageRepository
+from pamet.services.file_system_storage import FSStorageRepository
+
+import misli_gui
+from pamet import update_components_from_changes
+
+from pamet import usecases
+from pamet_desktop.qt_main_loop import QtMainLoop
+from pamet_desktop.config import get_config
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -37,14 +41,13 @@ def main():
         log.error('Error initializing repository. Exiting.')
         return
 
-    misli.set_repo(fs_repo)
+    misli.set_repo(fs_repo, 'all')
     misli.set_main_loop(QtMainLoop())
-    misli.on_change(update_components_from_changes)
-    misli.on_change(fs_repo.save_changes)
+    misli.subscribe(update_components_from_changes, channel='all')
 
     misli.line_spacing_in_pixels = 20
 
-    desktop_app = misli.gui.create_component('DesktopApp', parent_id='')
+    desktop_app = misli_gui.create_component('DesktopApp', parent_id='')
     usecases.new_browser_window_ensure_page()
     desktop_app.exec_()
 

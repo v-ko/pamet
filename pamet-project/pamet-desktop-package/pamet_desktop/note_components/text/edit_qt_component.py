@@ -2,8 +2,10 @@ from PySide2.QtWidgets import QWidget, QShortcut
 from PySide2.QtGui import QKeySequence
 from PySide2.QtCore import Qt, QRectF, QPointF
 
+import misli_gui
+
+from pamet.note_components.text.edit_component import TextNoteEditComponent
 from .ui_edit_component import Ui_TextNoteEditComponent
-from .edit_component import TextNoteEditComponent
 
 import misli
 log = misli.get_logger(__name__)
@@ -30,7 +32,7 @@ class TextNoteEditQtComponent(QWidget, TextNoteEditComponent):
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
 
-        tab_component = misli.gui.component(self.parent_id)
+        tab_component = misli_gui.component(self.parent_id)
 
         top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
         display_rect.moveTopLeft(top_left)

@@ -13,13 +13,13 @@ class Repository(BaseEntity):
         self.path = ''
         self._pages = {}
 
-    def create_page(self, **page_state):
+    def create_page(self, page, notes):
         raise NotImplementedError
 
     def page_ids(self):
         raise NotImplementedError
 
-    def page_state(self, page_id):
+    def page_with_notes(self, page_id):
         raise NotImplementedError
 
     def update_page(self, page_state):

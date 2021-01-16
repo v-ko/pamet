@@ -6,8 +6,11 @@ from PySide2.QtCore import QPoint
 from PySide2.QtGui import QPixmap, QRegion
 
 import misli
-from misli.gui.actions_lib import Action
+import misli_gui
+
+from misli_gui.actions_lib import Action
 from .constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
+
 log = misli.get_logger(__name__)
 
 # Save smaller images for the visual comparisons in order to ignore pixel-level
@@ -23,7 +26,7 @@ class MisliGuiRecorder:
         self.snapshots = {}
 
     def capture_qt_component_to_image(self, image_id):
-        matching_components = [c for c in misli.gui.components()
+        matching_components = [c for c in misli_gui.components()
                                if c.obj_class == self.component_name]
 
         if not matching_components:

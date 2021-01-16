@@ -1,9 +1,10 @@
 from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 
-from . import usecases
-from misli.gui.desktop.ui_browser_window import Ui_BrowserWindow
-from misli.gui.base_component import Component
+from misli_gui.base_component import Component
+
+from pamet import usecases
+from .ui_browser_window import Ui_BrowserWindow
 
 
 class BrowserWindow(QMainWindow, Component):

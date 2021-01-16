@@ -1,5 +1,5 @@
 from __future__ import annotations
-from misli.entities.base_entity import BaseEntity
+from misli.entities.base import BaseEntity
 
 
 class Component(BaseEntity):

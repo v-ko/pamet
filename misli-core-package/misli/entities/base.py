@@ -1,6 +1,3 @@
-from misli.helpers import get_new_id
-
-
 class BaseEntity:
     def __init__(self, id: str, obj_type: str, obj_class: str = None):
         self.__state_keys = []
@@ -30,10 +27,6 @@ class BaseEntity:
 
     @id.setter
     def id(self, new_id: str):
-        if not new_id:
-            self._id = get_new_id()
-            return
-
         self._id = new_id
 
     def state(self):
@@ -47,6 +40,9 @@ class BaseEntity:
             self_dict[key] = val
 
         return self_dict
+
+    def asdict(self):
+        return self.state()
 
     def set_state(self, **state):
         for key, val in state.items():

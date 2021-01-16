@@ -6,13 +6,16 @@ from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide2.QtGui import QKeySequence
 
 import misli
-from misli.gui.map_page import usecases
 from misli.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
-from misli.core.primitives import Point, Rectangle
-from misli.gui.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
-from misli.gui.constants import LONG_PRESS_TIMEOUT
-from misli.gui.map_page.component import MapPageComponent
-from misli.gui.base_component import Component
+from misli.basic_classes import Point, Rectangle
+
+from misli_gui.base_component import Component
+from misli_gui.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
+from misli_gui.constants import LONG_PRESS_TIMEOUT
+
+from pamet.map_page import usecases
+from pamet.map_page.component import MapPageComponent
+
 
 log = misli.get_logger(__name__)
 

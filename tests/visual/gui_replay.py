@@ -2,7 +2,7 @@ import os
 import json
 
 import misli
-from misli.gui.actions_lib import ACTIONS, Action
+from misli_gui.actions_lib import ACTIONS, Action
 
 log = misli.get_logger(__name__)
 

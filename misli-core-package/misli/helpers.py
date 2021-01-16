@@ -1,12 +1,11 @@
 import time
 import random
-import types
 import uuid
 from misli.constants import ALIGNMENT_GRID_UNIT
 
 
 def get_new_id():
-    guid = str(uuid.UUID(int=random.getrandbits(128)))[:8]
+    guid = str(uuid.UUID(int=random.getrandbits(128)))[-8:]
     return guid
 
 
@@ -49,11 +48,11 @@ def snap_to_grid(x):
     return round(x / ALIGNMENT_GRID_UNIT) * ALIGNMENT_GRID_UNIT
 
 
-def decorate_all_in_module(module, decorator):
-    for name in dir(module):
-        obj = getattr(module, name)
-        if isinstance(obj, types.FunctionType):
-            setattr(module, name, decorator(obj))
+# def decorate_all_in_module(module, decorator):
+#     for name in dir(module):
+#         obj = getattr(module, name)
+#         if isinstance(obj, types.FunctionType):
+#             setattr(module, name, decorator(obj))
 
 
 def set_reproducible_ids(enabled):

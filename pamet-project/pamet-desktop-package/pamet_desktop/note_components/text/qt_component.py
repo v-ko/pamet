@@ -3,7 +3,7 @@ from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter, QColor
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
 from misli.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
-from misli.gui.notes.base_note_component import NoteComponent
+from pamet.note_components.base_note_component import NoteComponent
 from misli import get_logger
 log = get_logger(__name__)
 

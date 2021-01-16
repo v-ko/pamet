@@ -4,7 +4,7 @@ import setuptools
 #     long_description = fh.read()
 
 setuptools.setup(
-    name="pamet",
+    name="pamet_desktop",
     version="4.0.0.a1",
     author="Petko Ditchev",
     author_email="pditchev@gmail.com",

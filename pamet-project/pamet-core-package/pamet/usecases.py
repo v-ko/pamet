@@ -1,70 +1,49 @@
 import misli
-from misli.core.primitives import Point
-from misli.entities import Note
-from misli.gui.actions_lib import action
-
-log = misli.get_logger(__name__)
-
-
-@action('notes.create_new_note')
-def create_new_note(
-        tab_component_id: str, position_coords: list, note_state: dict):
-
-    tab_component = misli.gui.component(tab_component_id)
-    position = Point.from_coords(position_coords)
-
-    note = Note(**note_state)
-
-    edit_component = misli.gui.create_component(
-        'TextEdit', tab_component.id)
-
-    edit_component.note = note
-    edit_component.display_position = position
-    edit_component.create_mode = True
-
-    misli.gui.update_component(edit_component.id)
+import pamet
+from pamet.entities import Page
+import misli_gui
+from misli_gui.actions_lib import action
+from pamet_desktop.config import get_config
 
 
-@action('notes.finish_creating_note')
-def finish_creating_note(edit_component_id: str, note_state: dict):
-    edit_component = misli.gui.component(edit_component_id)
+@action('desktop.new_browser_window')
+def new_browser_window(page_id: str):
+    app = misli_gui.find_component(obj_class='DesktopApp')
 
-    misli.create_note(**note_state)
-    misli.gui.remove_component(edit_component.id)
+    window = misli_gui.create_component(
+        obj_class='BrowserWindow', parent_id=app.id)
 
-
-@action('notes.start_editing_note')
-def start_editing_note(
-        tab_component_id: str, note_component_id: str, position_coords: list):
-
-    note = misli.gui.entity_for_component(note_component_id)
-    position = Point.from_coords(position_coords)
-
-    edit_class_name = misli.gui.components_lib.get_edit_class_name(
-        note.obj_class)
-    edit_component = misli.gui.create_component_for_note(
-        note.page_id, note.id, edit_class_name, tab_component_id)
-
-    edit_component.note = note
-    edit_component.display_position = position
-
-    misli.gui.update_component(edit_component.id)
+    new_browser_tab(window.id, page_id)
 
 
-@action('notes.finish_editing_note')
-def finish_editing_note(edit_component_id: str, note_state: dict):
-    edit_component = misli.gui.component(edit_component_id)
-    note = misli.gui.entity_for_component(edit_component_id)
+@action('desktop.new_browser_tab')
+def new_browser_tab(browser_window_id: str, page_id: str):
+    tab = misli_gui.create_component(
+        obj_class='BrowserTab', parent_id=browser_window_id)
 
-    misli.update_note(**note_state)
-    misli.update_page(note.page_id)
-
-    misli.gui.remove_component(edit_component.id)
-
-    # autosize_note(note_component_id)
+    tab.current_page_id = page_id
+    misli_gui.update_component(tab.id)
 
 
-@action('notes.abort_editing_note')
-def abort_editing_note(edit_component_id: str):
-    edit_component = misli.gui.component(edit_component_id)
-    misli.gui.remove_component(edit_component.id)
+@action('desktop.new_browser_window_ensure_page')
+def new_browser_window_ensure_page():
+    desktop_config = get_config()
+    if 'home_page_id' in desktop_config:
+        raise NotImplementedError()  # Load from id/url
+
+    pages = pamet.pages()
+    if not pages:
+        page = Page(id='notes', obj_class='MapPage')
+        pamet.add_page(page, notes=[])
+    else:
+        page = pages[0]
+
+    new_browser_window(page.id)
+
+
+@action('desktop.close_browser_window')
+def close_browser_window(browser_window_id: str):
+    misli_gui.remove_component(browser_window_id)
+    # app = misli_gui.find_component(obj_class='DesktopApp')
+    # app.should_quit = True
+    # misli_gui.update_component(app.id)

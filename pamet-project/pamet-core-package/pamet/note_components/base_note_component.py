@@ -1,5 +1,5 @@
-from misli.entities import Note
-from misli.gui.base_component import Component
+from misli_gui.base_component import Component
+from pamet.entities import Note
 
 
 class NoteComponent(Component):
