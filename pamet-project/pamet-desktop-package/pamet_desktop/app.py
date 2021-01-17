@@ -1,10 +1,12 @@
 from PySide2.QtWidgets import QApplication
 
+from misli import dataclasses
 from misli.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
 from misli.constants import DESKTOP_APP_VERSION
 from misli_gui.base_component import Component
 
 
+@dataclasses.dataclass
 class DesktopApp(QApplication, Component):
     def __init__(self, parent_id):
         QApplication.__init__(self)

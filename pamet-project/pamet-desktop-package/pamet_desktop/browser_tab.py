@@ -1,6 +1,7 @@
 from PySide2.QtWidgets import QVBoxLayout, QWidget
 from PySide2.QtCore import Qt
 
+from misli import dataclasses
 import pamet
 import misli_gui
 from misli_gui.base_component import Component
@@ -8,6 +9,7 @@ from misli_gui.base_component import Component
 from pamet.note_components import usecases
 
 
+@dataclasses.dataclass
 class BrowserTabComponent(QWidget, Component):
     def __init__(self, parent_id: str):
         QWidget.__init__(self)
@@ -38,6 +40,7 @@ class BrowserTabComponent(QWidget, Component):
             self.layout().addWidget(self._page_component)
 
     def add_child(self, child: Component):
+        Component.add_child(self, child)
         # If we're adding an edit component
         if child.obj_class in misli_gui.components_lib.edit_component_names():
 

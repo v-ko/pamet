@@ -6,6 +6,7 @@ from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide2.QtGui import QKeySequence
 
 import misli
+from misli import dataclasses
 from misli.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from misli.basic_classes import Point, Rectangle
 
@@ -23,6 +24,7 @@ IMAGE_CACHE_PADDING = 1
 MIN_FULL_CHILD_RENDERS_PER_PAINT_EVENT = 10
 
 
+@dataclasses.dataclass
 class MapPageQtComponent(QWidget, MapPageComponent):
     def __init__(self, parent_id):
         QWidget.__init__(self)

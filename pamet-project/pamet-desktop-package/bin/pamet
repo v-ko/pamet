@@ -12,6 +12,7 @@ from pamet.services.file_system_storage import FSStorageRepository
 import misli_gui
 from pamet import update_components_from_changes
 
+import pamet
 from pamet import usecases
 from pamet_desktop.qt_main_loop import QtMainLoop
 from pamet_desktop.config import get_config
@@ -24,13 +25,13 @@ def main():
     config = get_config()
     repo_path = config['repository_path']
 
-    # # Testing - restore repo changes
-    # for f in os.scandir(repo_path):
-    #     if f.name.endswith('backup'):
-    #         os.rename(f.path, f.path[:-7])
+    # Testing - restore repo changes
+    for f in os.scandir(repo_path):
+        if f.name.endswith('backup'):
+            os.rename(f.path, f.path[:-7])
 
-    #     if f.name.endswith('misl.json'):
-    #         os.remove(f.path)
+        if f.name.endswith('misl.json'):
+            os.remove(f.path)
 
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path)
@@ -40,6 +41,10 @@ def main():
     if not fs_repo:
         log.error('Error initializing repository. Exiting.')
         return
+
+    for page_id in fs_repo.page_ids():
+        page, notes = fs_repo.page_with_notes(page_id)
+        pamet.load_page(page, notes)
 
     misli.set_repo(fs_repo, 'all')
     misli.set_main_loop(QtMainLoop())

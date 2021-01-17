@@ -1,5 +1,5 @@
 from misli import get_logger
-from misli.entities import BaseEntity
+from misli import dataclasses
 from misli.basic_classes import Point, Rectangle, Color
 from misli.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from misli.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
@@ -9,30 +9,17 @@ from misli.helpers import snap_to_grid
 log = get_logger(__name__)
 
 
-class Note(BaseEntity):
-    def __init__(self, **state):
-        id = state.pop('id', None)
-        obj_type = state.pop('obj_type', 'Note')
-
-        BaseEntity.__init__(self, id=id, obj_type=obj_type)
-
-        self.obj_class = state.pop('obj_class', '')
-        self.page_id = state.pop('page_id', '')
-        self._x = state.pop('x', 0)
-        self._y = state.pop('y', 0)
-        self._width = state.pop('width', DEFAULT_NOTE_WIDTH)
-        self._height = state.pop('height', DEFAULT_NOTE_HEIGHT)
-        self.color = state.pop('color', DEFAULT_COLOR)
-        self.background_color = state.pop('background_color', DEFAULT_BG_COLOR)
-        self.text = state.pop('text', '')
-
-        keys = ['page_id', 'x', 'y', 'width', 'height', 'background_color',
-                'color', 'obj_class', 'text']
-        self.add_state_keys(keys)
-        self.set_state(**state)
-
-        if state:
-            log.warning('Unaccounted for state keys %s' % str(state.keys()))
+@dataclasses.dataclass
+class Note(dataclasses.Entity):
+    obj_class: float = ''
+    page_id: float = ''
+    _x: float = 0
+    _y: float = 0
+    _width: float = DEFAULT_NOTE_WIDTH
+    _height: float = DEFAULT_NOTE_HEIGHT
+    color: float = DEFAULT_COLOR
+    background_color: float = DEFAULT_BG_COLOR
+    text: float = ''
 
     def __repr__(self):
         return '<Note id=%s>' % self.id

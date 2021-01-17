@@ -1,10 +1,13 @@
 from __future__ import annotations
-from misli.entities.base import BaseEntity
+from misli.dataclasses import Entity, dataclass
+from misli import get_logger
+log = get_logger(__name__)
 
 
-class Component(BaseEntity):
+@dataclass
+class Component(Entity):
     def __init__(self, parent_id: str, obj_class: str):
-        BaseEntity.__init__(
+        Entity.__init__(
             self, id='', obj_type='Component', obj_class=obj_class)
 
         self.parent_id = parent_id
@@ -19,12 +22,15 @@ class Component(BaseEntity):
         self.should_reallocate_image_cache = True
         self.should_rerender_image_cache = True
 
+    @log.traced
     def set_props_from_entity(self, **entity_props):
         pass
 
+    @log.traced
     def add_child(self, child: Component):
         self.__children[child.id] = child
 
+    @log.traced
     def remove_child(self, child: Component):
         if child.id not in self.__children:
             return
@@ -37,5 +43,6 @@ class Component(BaseEntity):
     def get_children(self):
         return [c for cid, c in self.__children.items()]
 
+    @log.traced
     def update(self):
         raise NotImplementedError

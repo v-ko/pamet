@@ -1,6 +1,7 @@
 import misli
 import misli_gui
 
+from misli import dataclasses
 from misli.basic_classes import Point, Rectangle
 from misli.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from misli.constants import RESIZE_CIRCLE_RADIUS
@@ -16,6 +17,7 @@ from pamet.map_page.viewport import Viewport
 log = misli.get_logger(__name__)
 
 
+@dataclasses.dataclass
 class MapPageComponent(Component):
     def __init__(self, parent_id: str):
         Component.__init__(self, parent_id, obj_class='MapPage')

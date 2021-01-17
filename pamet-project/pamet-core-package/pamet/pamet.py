@@ -2,7 +2,8 @@ from typing import List
 from dataclasses import replace
 
 import misli
-from misli.entities import Change, ChangeTypes
+import pamet
+from misli.change import Change, ChangeTypes
 import misli_gui
 from pamet.entities import Page, Note
 
@@ -160,7 +161,7 @@ def create_component_for_note(
         page_id: str, note_id: str, obj_class: str, parent_id: str):
 
     component = misli_gui.create_component(obj_class, parent_id)
-    note = misli.page(page_id).note(note_id)
+    note = pamet.note(page_id, note_id)
     component.set_props_from_entity(**note.state())
 
     misli_gui.register_component_with_entity(component, note, note.page_id)
@@ -176,7 +177,7 @@ def _update_components_for_note_change(note_change: Change):
 
     if note_change.type == ChangeTypes.CREATE:
         page_components = misli_gui.components_for_entity(
-            note.page_id)
+            note.page_id, Page)
 
         # Create a note component for all opened views for its page
         for pc in page_components:
@@ -186,7 +187,7 @@ def _update_components_for_note_change(note_change: Change):
             misli_gui.update_component(pc.id)
 
     elif note_change.type == ChangeTypes.UPDATE:
-        note_components = misli_gui.components_for_entity(note.id)
+        note_components = misli_gui.components_for_entity(note.id, note.page_id)
         for nc in note_components:
             nc.set_props_from_entity(**note.state())
 
@@ -218,7 +219,7 @@ def _update_components_for_page_change(page_change: Change):
         pass
 
     elif page_change.type == ChangeTypes.UPDATE:
-        page_components = misli_gui.components_for_entity(page.id)
+        page_components = misli_gui.components_for_entity(page.id, Page)
         for pc in page_components:
             pc.set_props_from_entity(**page_state)
             misli_gui.update_component(pc.id)

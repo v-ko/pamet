@@ -60,7 +60,7 @@ def finish_editing_note(edit_component_id: str, note_state: dict):
     note = misli_gui.entity_for_component(edit_component_id)
 
     pamet.update_note(**note_state)
-    pamet.update_page(note.page_id)
+    pamet.update_page(id=note.page_id)
 
     misli_gui.remove_component(edit_component.id)
 

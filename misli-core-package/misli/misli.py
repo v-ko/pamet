@@ -3,7 +3,7 @@ from typing import Callable
 from misli.helpers import get_new_id, find_many_by_props
 from misli.helpers import find_one_by_props
 from misli.main_loop import NoMainLoop
-from misli.entities.change import Change, ChangeTypes
+from misli.change import Change, ChangeTypes
 
 from misli import get_logger
 

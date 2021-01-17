@@ -36,7 +36,9 @@ class FSStorageRepository(Repository):
                                 file.name)
                     continue
 
-                self.create_page(**page_state)
+                note_states = page_state.pop('note_states', [])
+                notes = [Note(**ns) for nid, ns in note_states.items()]
+                self.create_page(Page(**page_state), notes)
 
                 backup_path = file.path + '.backup'
                 os.rename(file.path, backup_path)

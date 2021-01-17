@@ -1,12 +1,14 @@
 from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 
+from misli import dataclasses
 from misli_gui.base_component import Component
 
 from pamet import usecases
 from .ui_browser_window import Ui_BrowserWindow
 
 
+@dataclasses.dataclass
 class BrowserWindow(QMainWindow, Component):
     def __init__(self, parent_id: str):
         QMainWindow.__init__(self)

@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import misli
 from misli.logging import BColors
-from misli.entities import BaseEntity
+from misli import Entity
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 
 from . import components_lib
@@ -83,7 +83,7 @@ def create_component(obj_class: str, parent_id: str, id=None):
 
 @log.traced
 def register_component_with_entity(
-        component: Component, _entity: BaseEntity, index_id):
+        component: Component, _entity: Entity, index_id):
     _component_ids_by_entity_id[(_entity.id, index_id)].append(component.id)
     _entity_id_by_component_id[component.id] = (_entity.id, index_id)
 

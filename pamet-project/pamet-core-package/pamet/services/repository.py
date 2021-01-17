@@ -1,15 +1,13 @@
-import misli
-from misli.entities.change import ChangeTypes
-from misli.entities import BaseEntity
+import pamet
+from misli.change import ChangeTypes
+from pamet.entities import Page
 
 from misli import get_logger
 log = get_logger(__name__)
 
 
-class Repository(BaseEntity):
+class Repository():
     def __init__(self):
-        BaseEntity.__init__(self, id='', obj_type='Repository')
-
         self.path = ''
         self._pages = {}
 
@@ -44,7 +42,7 @@ class Repository(BaseEntity):
 
             elif last_state['obj_type'] == 'Page':
                 if change.type == ChangeTypes.CREATE:
-                    self.create_page(**last_state)
+                    self.create_page(Page(**last_state), [])
 
                 elif change.type == ChangeTypes.UPDATE:
                     pages_for_update[last_state['id']] = True
@@ -53,6 +51,6 @@ class Repository(BaseEntity):
                     self.delete_page(last_state['id'])
 
         for page_id, _ in pages_for_update.items():
-            page = misli.page(page_id)
-
-            self.update_page(**page.state())
+            page = pamet.page(page_id)
+            notes = pamet.notes(page.id)
+            self.update_page(page, notes)
