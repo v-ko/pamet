@@ -5,15 +5,10 @@ log = get_logger(__name__)
 
 @dataclass
 class Page(Entity):
-    def __init__(self, **page_state):
-        id = page_state.pop('id', None)
-        obj_class = page_state.pop('obj_class', None)
+    name: str = ''
 
-        Entity.__init__(
-            self, id=id, obj_type='Page', obj_class=obj_class)
-
-        self.name = page_state.get('name', '')
-        self.add_state_keys(['name'])
+    def __post_init__(self, **page_state):
+        self.obj_type = 'Page'
 
     def __repr__(self):
         return '<Page id=%s>' % self.id

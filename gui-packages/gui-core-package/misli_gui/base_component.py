@@ -1,48 +1,78 @@
 from __future__ import annotations
-from misli.dataclasses import Entity, dataclass
+
+from misli.helpers import get_new_id
+from misli.dataclasses import Entity
+import misli_gui
 from misli import get_logger
 log = get_logger(__name__)
 
 
-@dataclass
-class Component(Entity):
-    def __init__(self, parent_id: str, obj_class: str):
-        Entity.__init__(
-            self, id='', obj_type='Component', obj_class=obj_class)
-
+class Component():
+    def __init__(self, parent_id: str, default_state: Entity, obj_class: str):
+        default_state.id = get_new_id()
         self.parent_id = parent_id
-        self.add_state_keys(['parent_id'])
+        self.obj_class = obj_class
+        # misli_gui.add_compoenent(self)
+        self.__state = default_state
 
-        self.__children = {}
+    # def __del__(self):
+    #     misli_gui.remove_component(self)
 
-        self.pcommand_cache = None
-        self.image_cache = None
+    @property
+    def id(self):
+        return self.__state.id
 
-        self.should_rebuild_pcommand_cache = True
-        self.should_reallocate_image_cache = True
-        self.should_rerender_image_cache = True
+    @property
+    def _state(self):
+        return self.__state
 
-    @log.traced
-    def set_props_from_entity(self, **entity_props):
+    def state(self):
+        return self.__state.copy()
+
+    def set_state(self, **changes):
+        misli_gui.update_component(self.id, **changes)
+
+    def _set_state(self, new_state):
+        # old_state = self.__state
+        self.__state = new_state
+        # self.handle_state_update(old_state, new_state)
+
+    # def add_child(self, child):
+    #     # self.__children.append(child)
+
+    #     self.handle_child_added(child)
+
+    # def remove_child(self, child):
+
+    def handle_state_update(self, old_state, new_state):
         pass
 
-    @log.traced
-    def add_child(self, child: Component):
-        self.__children[child.id] = child
+    # def handle_child_added(self, child):
+    #     pass
 
-    @log.traced
-    def remove_child(self, child: Component):
-        if child.id not in self.__children:
-            return
+    # def handle_child_removed(self, child):
+    #     pass
 
-        del self.__children[child.id]
+    # def handle_child_updated(self, old_state, new_state):
+    #     pass
+
+    def handle_child_changes(
+            self, children_added, children_removed, children_updated):
+        pass
+
+    # @log.traced
+    # def add_child(self, child: Component):
+
+    # @log.traced
+    # def remove_child(self, child: Component):
+    #     if child.id not in self.__children:
+    #         return
+
+    #     del self.__children[child.id]
 
     def child(self, child_id: str):
-        return self.__children[child_id]
+        return misli_gui.component(child_id)
 
     def get_children(self):
-        return [c for cid, c in self.__children.items()]
-
-    @log.traced
-    def update(self):
-        raise NotImplementedError
+        # return [c for cid, c in self.__children.items()]
+        return misli_gui.component_children(self.id)

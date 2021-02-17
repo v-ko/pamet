@@ -19,50 +19,46 @@ def create_new_note(
 
     edit_component = misli_gui.create_component(
         'TextEdit', tab_component.id)
+    edit_component_state = misli_gui.component_state(edit_component.id)
 
-    edit_component.note = note
-    edit_component.display_position = position
-    edit_component.create_mode = True
+    edit_component_state.note = note
+    edit_component_state.display_position = position
+    edit_component_state.create_mode = True
 
-    misli_gui.update_component(edit_component.id)
+    misli_gui.update_component_state(edit_component_state)
 
 
 @action('notes.finish_creating_note')
-def finish_creating_note(edit_component_id: str, note_state: dict):
+def finish_creating_note(edit_component_id: str, note: Note):
     edit_component = misli_gui.component(edit_component_id)
 
-    note = Note(**note_state)
-    pamet.add_note(note)
-    misli_gui.remove_component(edit_component.id)
+    pamet.create_note(**note.asdict())
+    misli_gui.remove_component(edit_component)
 
 
 @action('notes.start_editing_note')
 def start_editing_note(
         tab_component_id: str, note_component_id: str, position_coords: list):
 
-    note = misli_gui.entity_for_component(note_component_id)
+    note = misli_gui.component(note_component_id).note
     position = Point.from_coords(position_coords)
 
-    edit_class_name = misli_gui.components_lib.get_edit_class_name(
-        note.obj_class)
-    edit_component = pamet.create_component_for_note(
-        note.page_id, note.id, edit_class_name, tab_component_id)
+    edit_component = pamet.create_and_bind_edit_component(
+        tab_component_id, note)
 
-    edit_component.note = note
-    edit_component.display_position = position
+    # edit_component.note = note
+    edit_component_state = misli_gui.component_state(edit_component.id)
+    edit_component_state.display_position = position
 
-    misli_gui.update_component(edit_component.id)
+    misli_gui.update_component_state(edit_component_state)
 
 
 @action('notes.finish_editing_note')
-def finish_editing_note(edit_component_id: str, note_state: dict):
+def finish_editing_note(edit_component_id: str, note: Note):
     edit_component = misli_gui.component(edit_component_id)
-    note = misli_gui.entity_for_component(edit_component_id)
 
-    pamet.update_note(**note_state)
-    pamet.update_page(id=note.page_id)
-
-    misli_gui.remove_component(edit_component.id)
+    pamet.update_note(note)
+    misli_gui.remove_component(edit_component)
 
     # autosize_note(note_component_id)
 
@@ -70,4 +66,4 @@ def finish_editing_note(edit_component_id: str, note_state: dict):
 @action('notes.abort_editing_note')
 def abort_editing_note(edit_component_id: str):
     edit_component = misli_gui.component(edit_component_id)
-    misli_gui.remove_component(edit_component.id)
+    misli_gui.remove_component(edit_component)

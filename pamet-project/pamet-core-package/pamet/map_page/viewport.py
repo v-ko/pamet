@@ -1,27 +1,21 @@
 import misli
-from misli.constants import INITIAL_EYE_Z
 from misli.basic_classes import Point, Rectangle
 
 
 class Viewport(object):
-    def __init__(self, _map_page_component):
-        self._map_page_component = _map_page_component
-
-        self._center = Point(0, 0)
-        self.eyeHeight = INITIAL_EYE_Z
+    def __init__(self, _map_page_component_state):
+        self._map_page_component_state = _map_page_component_state
 
     def __repr__(self):
         info = (self.center(), self.eyeHeight)
         return '<Viewport center=%s eyeHeight=%s>' % info
 
     def center(self):
-        return self._center
+        return self._map_page_component_state.viewport_center
 
-    def set_center(self, new_center):
-        if type(new_center) != Point:
-            raise ValueError
-
-        self._center = new_center
+    @property
+    def eyeHeight(self):
+        return self._map_page_component_state.viewport_height
 
     def height_scale_factor(self):
         return misli.line_spacing_in_pixels / self.eyeHeight
@@ -37,12 +31,12 @@ class Viewport(object):
     def project_x(self, x_on_page):
         x_on_page -= self.center().x()
         x_on_page *= self.height_scale_factor()
-        return x_on_page + self._map_page_component.width() / 2
+        return x_on_page + self._map_page_component_state.geometry.width() / 2
 
     def project_y(self, y_on_page):
         y_on_page -= self.center().y()
         y_on_page *= self.height_scale_factor()
-        return y_on_page + self._map_page_component.height() / 2
+        return y_on_page + self._map_page_component_state.geometry.height() / 2
 
     def unproject_point(self, point):
         return Point(self.unproject_x(point.x()), self.unproject_y(point.y()))
@@ -53,11 +47,11 @@ class Viewport(object):
         return Rectangle.from_points(top_left, bottom_right)
 
     def unproject_x(self, x_on_screen):
-        x_on_screen -= self._map_page_component.width() / 2
+        x_on_screen -= self._map_page_component_state.geometry.width() / 2
         x_on_screen /= self.height_scale_factor()
         return x_on_screen + self.center().x()
 
     def unproject_y(self, y_on_screen):
-        y_on_screen -= self._map_page_component.height() / 2
+        y_on_screen -= self._map_page_component_state.geometry.height() / 2
         y_on_screen /= self.height_scale_factor()
         return y_on_screen + self.center().y()

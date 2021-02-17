@@ -35,6 +35,10 @@ class Rectangle:
     def height(self):
         return self._h
 
+    def set_size(self, width, height):
+        self._w = width
+        self._h = height
+
     def top(self):
         return self._y
 

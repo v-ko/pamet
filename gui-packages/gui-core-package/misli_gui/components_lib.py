@@ -11,8 +11,8 @@ def add(obj_class_name: str, ComponentClass):
     components_by_class_name[obj_class_name] = ComponentClass
 
 
-def get(note_type: str):
-    return components_by_class_name[note_type]
+def get(obj_class_name: str):
+    return components_by_class_name[obj_class_name]
 
 
 def map_edit_component(obj_class_name: str, edit_class_name: str):
@@ -32,3 +32,12 @@ def get_edit_class_name(obj_class_name: str):
 
 def edit_component_names():
     return edit_components_by_class_name.keys()
+
+
+def create_component(obj_class, *args, **kwargs):
+    component_class = get(obj_class)
+
+    if not component_class:
+        raise Exception('No such note class: %s' % obj_class)
+
+    return component_class(*args, **kwargs)

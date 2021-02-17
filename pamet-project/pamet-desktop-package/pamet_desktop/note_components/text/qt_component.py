@@ -2,25 +2,23 @@ from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter, QColor
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
-from misli import dataclasses
 from misli.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
 from pamet.note_components.base_note_component import NoteComponent
 from misli import get_logger
 log = get_logger(__name__)
 
 
-@dataclasses.dataclass
 class TextNoteQtComponent(QLabel, NoteComponent):
     def __init__(self, parent_id):
-        NoteComponent.__init__(self, parent_id, obj_class='Text')
+        NoteComponent.__init__(self, obj_class='Text', parent_id=parent_id)
         QLabel.__init__(self, '')
 
         self.elided_text = []
         self._alignment = Qt.AlignHCenter
         self.setMargin(0)
 
-    def set_props_from_note(self):
-        note = self.note()
+    def handle_state_update(self, old_state, new_state):
+        note = self.note
         palette = self.palette()
 
         fg_col = QColor(*note.get_color().to_uint8_rgba_list())
@@ -149,7 +147,7 @@ class TextNoteQtComponent(QLabel, NoteComponent):
                     if at_the_last_line or word_idx == 0:
                         word = font_metrics.elidedText(
                             word, Qt.ElideRight, width_left)
-                        log.info('ELIDED WORD: %s' % word)
+                        # log.info('ELIDED WORD: %s' % word)
 
                         words_on_line.append(word)
                         used_words += 1

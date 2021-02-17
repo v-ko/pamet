@@ -4,7 +4,7 @@ _FIELDS = '__misli_dataclass_fields__'
 def get_fields(cls, default=None):
     try:
         attr_name = '__%s_misli_dataclass_fields__' % cls.__name__
-        print('Getting fields at attr_name', attr_name)
+        # print('Getting fields at attr_name', attr_name)
         return getattr(cls, attr_name)
 
     except Exception:
@@ -17,7 +17,7 @@ def get_fields(cls, default=None):
 
 def set_fields(cls, fields):
     attr_name = '__%s_misli_dataclass_fields__' % cls.__name__
-    print('Setting fields to %s at attr_name %s' % (fields, attr_name))
+    # print('Setting fields to %s at attr_name %s' % (fields, attr_name))
     setattr(cls, attr_name, fields)
 
 
@@ -34,7 +34,7 @@ def dataclass(cls):
     fields = {}
     for c in reversed(cls.__mro__):
         fields.update(get_fields(c, {}))
-        print('Fields from subclass: %s for class %s' % (fields, c.__name__))
+        # print('Fields from subclass: %s for class %s' % (fields, c.__name__))
 
     cls_annotations = cls.__dict__.get('__annotations__', {})
     for name, atr_type in cls_annotations.items():
@@ -75,6 +75,11 @@ class Entity:
 
         if kwargs:
             raise Exception('Unexpected arguments %s' % list(kwargs.keys()))
+
+        self.__post_init__()
+
+    def __post_init__(self):
+        pass
 
     def __copy__(self):
         return self.copy()
@@ -120,4 +125,7 @@ class Entity:
             setattr(self, key, val)
 
     def replace(self, **changes):
-        self.set_state(changes)
+        self.set_state(**changes)
+
+    def gid(self):
+        return self.id

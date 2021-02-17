@@ -1,5 +1,5 @@
-import misli
 from .entities import Page
 from .pamet import *
 
-misli.create_entity_index(Page)
+misli.subscribe(PAGES_CHANNEL, update_components_for_page_changes)
+misli.subscribe(ALL_NOTES_CHANNEL, update_components_for_note_changes)

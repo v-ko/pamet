@@ -20,15 +20,15 @@ def find_many_by_props(item_list: [list, dict], **props):
         raise ValueError
 
     for item in item_list:
-        item_state = item.state()
+        # item_state = item.state()
 
         skip = False
         for key, value in props.items():
-            if key not in item_state:
+            if not hasattr(item, key):
                 skip = True
                 continue
 
-            if item_state[key] != value:
+            if getattr(item, key) != value:
                 skip = True
 
         if not skip:

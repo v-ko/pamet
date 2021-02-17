@@ -6,10 +6,8 @@ from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide2.QtGui import QKeySequence
 
 import misli
-from misli import dataclasses
 from misli.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from misli.basic_classes import Point, Rectangle
-
 from misli_gui.base_component import Component
 from misli_gui.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
 from misli_gui.constants import LONG_PRESS_TIMEOUT
@@ -17,25 +15,55 @@ from misli_gui.constants import LONG_PRESS_TIMEOUT
 from pamet.map_page import usecases
 from pamet.map_page.component import MapPageComponent
 
-
 log = misli.get_logger(__name__)
 
 IMAGE_CACHE_PADDING = 1
 MIN_FULL_CHILD_RENDERS_PER_PAINT_EVENT = 10
 
 
-@dataclasses.dataclass
+class NoteComponentCache:
+    def __init__(self):
+        self.pcommand_cache: QPicture = None
+        self.image_cache: QImage = None
+
+        self.should_rebuild_pcommand_cache: bool = True
+        self.should_reallocate_image_cache: bool = True
+        self.should_rerender_image_cache: bool = True
+
+
 class MapPageQtComponent(QWidget, MapPageComponent):
     def __init__(self, parent_id):
         QWidget.__init__(self)
+        # MapPageComponent.__init__(self, parent_id)
         MapPageComponent.__init__(self, parent_id)
 
+        # Initialize the base component and subscribe to state changes
+        # self.component = component
+        # page = self.component.page()
+        # # misli_gui.add_component(self.component)
+
+        # ent_sub_id = misli.subscribe_to_entity(
+        #     PAGES_CHANNEL, page.id, self.handle_page_change)
+
+        # comp_sub_id = misli.subscribe_to_entity(
+        #     COMPONENTS_CHANNEL,
+        #     self.component.page().id,
+        #     self.handle_component_change)
+
+        # notes_sub_id = misli.subscribe(
+        #     NOTE_COMPONENTS_CHANNEL(page.id), self.handle_note_changes)
+
+        # self.subscribtion_ids = [ent_sub_id, comp_sub_id, notes_sub_id]
+
+        # Local variables
+        self._cache_per_nc_id = {}
         self._paint_event_count = 0
         self.debug_drawing = False
         self._mouse_press_position = QPoint()
 
+        # Setup shortcuts
         delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
-        delete_shortcut.activated.connect(self._handle_delete_shortcut)
+        delete_shortcut.activated.connect(self.handle_delete_shortcut)
 
         select_all_shortcut = QShortcut(
             QKeySequence(Qt.CTRL + Qt.Key_A), self)
@@ -52,8 +80,68 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)
 
+    # def handle_page_change(self, change: Change):
+    #     if not change.is_update():
+    #         return
+
+    #     self.update_from_page(
+    #         self.component.id, change.last_state())
+
+    def note_component_cache(self, note_component_id):
+        if note_component_id not in self._cache_per_nc_id:
+            self.create_note_component_cache(note_component_id)
+
+        return self._cache_per_nc_id[note_component_id]
+
+    def create_note_component_cache(self, note_component_id):
+        self._cache_per_nc_id[note_component_id] = NoteComponentCache()
+
+    def delete_note_component_cache(self, note_component_id):
+        del self._cache_per_nc_id[note_component_id]
+
+    def handle_state_update(self, old_state, new_state):
+        if old_state.viewport_center != new_state.viewport_center:
+            pass
+
+        if old_state.viewport_height != new_state.viewport_height:
+            # Invalidate image_cache for all children
+            for child in self.get_children():
+                ncc = self.note_component_cache(child.id)
+                ncc.should_reallocate_image_cache = True
+                ncc.should_rerender_image_cache = True
+
+        self.update()
+
+    @log.traced
+    def handle_child_changes(self, added, removed, updated):
+        for nc in added:
+            nc.setHidden(True)
+
+        for nc in removed:
+            self.delete_note_component_cache(nc.id)
+
+        for note_component in updated:
+            nc_cache = self.note_component_cache(note_component.id)
+            nc_cache.should_rebuild_pcommand_cache = True
+            nc_cache.should_reallocate_image_cache = True
+            nc_cache.should_rerender_image_cache = True
+
+        self.update()
+        # for change in changes:
+        #     if change.is_create():-
+        #         _note = Note(**change.last_state())
+        #         child = misli_gui.components_lib.create_component(
+        #             _note.obj_class)
+        #         child.set_props_from_note(_note)
+
+        #         add_child
+
+    # def __del__(self):
+    #     for sub_id in self.subscribtion_ids:
+    #         misli.unsubscribe(sub_id)
+
     def add_child(self, child: Component):
-        MapPageComponent.add_child(self, child)
+        self.__children[child.id] = child
         child.setHidden(True)
 
     def image_cache_rect_unprojected(self, display_rect: Rectangle):
@@ -75,16 +163,19 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         pcommand_cache = QPicture()
 
         child.render(pcommand_cache, QPoint(0, 0))
-        child.pcommand_cache = pcommand_cache
-        child.should_rebuild_pcommand_cache = False
 
-    def render_image_cache_for_child(
+        nc_cache = self.note_component_cache(child.id)
+        nc_cache.pcommand_cache = pcommand_cache
+        nc_cache.should_rebuild_pcommand_cache = False
+
+    def _render_image_cache_for_child(
             self, child: Component, display_rect: Rectangle):
         painter = QPainter()
         cache_rect = self.image_cache_rect_unprojected(display_rect)
+        nc_cache = self.note_component_cache(child.id)
 
-        pcommand_cache = child.pcommand_cache
-        render_img = child.image_cache
+        pcommand_cache = nc_cache.pcommand_cache
+        render_img = nc_cache.image_cache
         render_img.fill(0)
 
         if self.debug_drawing:
@@ -108,8 +199,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         pcommand_cache.play(painter)
         painter.end()
 
-        child.image_cache = render_img
-        child.should_rerender_image_cache = False
+        nc_cache = self.note_component_cache(child.id)
+        nc_cache.image_cache = render_img
+        nc_cache.should_rerender_image_cache = False
 
     def _draw_guide_lines_for_child(
             self, display_rect: Rectangle, painter: QPainter):
@@ -163,7 +255,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
 
         display_rects_by_child_id = {}  # {nc_id: rect}
         for child in self.get_children():
-            nt_rect = child.note().rect()
+            nt_rect = child.note.rect()
 
             if not nt_rect.intersects(unprojected_viewport):
                 continue
@@ -175,6 +267,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         return display_rects_by_child_id
 
     def paintEvent(self, event):
+        state = self.state()
         self._paint_event_count += 1
         paint_t0 = time.time()
 
@@ -206,6 +299,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         # At minimum renders one component into cache and preps placeholders
         for child_id, display_rect in display_rects_by_child_id.items():
             child = self.child(child_id)
+            nc_cache = self.note_component_cache(child.id)
 
             if time.time() - paint_t0 > MAX_RENDER_TIME:
                 paint_urgently = True
@@ -213,24 +307,24 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 if non_urgent_count >= MIN_FULL_CHILD_RENDERS_PER_PAINT_EVENT:
                     continue
 
-            if child.should_rebuild_pcommand_cache:
+            if nc_cache.should_rebuild_pcommand_cache:
                 pc_cache_jobs += 1
                 self.prep_command_cache_for_child(child)
 
             # Allocate the image_cache. Done on resize, but not e.g. translate
-            if child.should_reallocate_image_cache:
+            if nc_cache.should_reallocate_image_cache:
                 image_cache_memory_allocations += 1
                 cache_rect = self.image_cache_rect_unprojected(display_rect)
 
                 render_img = QImage(cache_rect.size(), QImage.Format_ARGB32)
-                child.image_cache = render_img
-                child.should_reallocate_image_cache = False
+                nc_cache.image_cache = render_img
+                nc_cache.should_reallocate_image_cache = False
 
-            if child.should_rerender_image_cache:
+            if nc_cache.should_rerender_image_cache:
                 render_to_image_jobs += 1
                 non_urgent_count += 1
 
-                self.render_image_cache_for_child(child, display_rect)
+                self._render_image_cache_for_child(child, display_rect)
 
             else:
                 notes_reusing_cache += 1
@@ -238,14 +332,15 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         # Draw the cached images, along with various decorations
         for child_id, display_rect in display_rects_by_child_id.items():
             child = self.child(child_id)
+            nc_cache = self.note_component_cache(child.id)
 
-            render_img = child.image_cache
+            render_img = nc_cache.image_cache
 
             nt_main_color = QColor(
-                *child.note().get_color().to_uint8_rgba_list())
+                *child.note.get_color().to_uint8_rgba_list())
 
             nt_background_color = QColor(
-                *child.note().get_background_color().to_uint8_rgba_list())
+                *child.note.get_background_color().to_uint8_rgba_list())
 
             nt_background_brush = QBrush(nt_background_color, Qt.SolidPattern)
 
@@ -262,9 +357,9 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 painter.fillRect(display_rect, ph_brush)
                 continue
 
-            if child.should_rebuild_pcommand_cache or \
-               child.should_reallocate_image_cache or \
-               child.should_rerender_image_cache:
+            if nc_cache.should_rebuild_pcommand_cache or \
+               nc_cache.should_reallocate_image_cache or \
+               nc_cache.should_rerender_image_cache:
                 reused_expired_caches += 1
 
             # Draw the cached redering of the component
@@ -279,7 +374,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 painter.restore()
 
             # Draw addinional stuff for selected notes
-            if child.id in self.selected_nc_ids:
+            if child.id in state.selected_nc_ids:
                 # Draw a yellow selection overlay
                 overlay_color = QColor(
                     *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
@@ -301,19 +396,22 @@ class MapPageQtComponent(QWidget, MapPageComponent):
                 painter.restore()
 
             # Draw lines for easier visual alignment
-            if self.note_resize_active or self.note_drag_active:
-                if child.id in self.selected_nc_ids:
+            if state.note_resize_active or state.note_drag_active:
+                if child.id in state.selected_nc_ids:
                     qdr = display_rect
                     dr = Rectangle(qdr.x(), qdr.y(), qdr.width(), qdr.height())
                     self._draw_guide_lines_for_child(dr, painter)
 
-        if self.drag_select_active:
+        if state.drag_select_active:
             # Draw the selection rects
-            drag_select_rect = QRectF(*self.drag_select_rect_props)
+            drag_select_rect = QRectF(*state.drag_select_rect_props)
             painter.fillRect(drag_select_rect, QColor(100, 100, 100, 50))
 
             # Draw the selection overlays
-            for nc_id in self.drag_select_nc_ids:
+            for nc_id in state.drag_selected_nc_ids:
+                if nc_id not in display_rects_by_child_id:
+                    continue
+
                 overlay_color = QColor(
                     *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
                 painter.fillRect(
@@ -354,7 +452,7 @@ class MapPageQtComponent(QWidget, MapPageComponent):
     def check_for_long_press(self):
         new_pos = self.mapFromGlobal(QCursor.pos())
         if self._mouse_press_position == new_pos and \
-           self.left_mouse_is_pressed:
+           self._left_mouse_is_pressed:
             self.handle_left_mouse_long_press(
                 Point(new_pos.x(), new_pos.y()))
 
@@ -364,16 +462,17 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         QTimer.singleShot(LONG_PRESS_TIMEOUT * 1000, self.check_for_long_press)
 
         if event.button() is Qt.LeftButton:
-            super().handle_left_mouse_press(
+            self.handle_left_mouse_press(
                 Point(event.pos().x(), event.pos().y()))
 
     def mouseReleaseEvent(self, event):
         if event.button() is Qt.LeftButton:
-            super().handle_left_mouse_release(
+            self.handle_left_mouse_release(
                 Point(event.pos().x(), event.pos().y()))
 
     def mouseMoveEvent(self, event):
-        super().handle_mouse_move(Point(event.pos().x(), event.pos().y()))
+        self.handle_mouse_move(
+            Point(event.pos().x(), event.pos().y()))
 
     def mouseDoubleClickEvent(self, event):
         if event.button() is Qt.LeftButton:
@@ -387,4 +486,4 @@ class MapPageQtComponent(QWidget, MapPageComponent):
         self.handle_mouse_scroll(steps)
 
     def resizeEvent(self, event):
-        pass
+        self.handle_resize_event(event.size().width(), event.size().height())

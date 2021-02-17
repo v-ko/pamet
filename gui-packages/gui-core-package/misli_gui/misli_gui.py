@@ -3,7 +3,7 @@ from collections import defaultdict
 
 import misli
 from misli.logging import BColors
-from misli import Entity
+from misli.change import Change
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 
 from . import components_lib
@@ -12,13 +12,22 @@ from .base_component import Component
 
 log = misli.get_logger(__name__)
 
+COMPONENTS_CHANNEL = '__components__'
+misli.add_channel(COMPONENTS_CHANNEL)
 
 _components = {}
-_component_ids_by_entity_id = defaultdict(list)
-_entity_id_by_component_id = {}
+_components_per_parent = {}
 
-_components_for_update = []
-_pages_for_saving = set()
+# _entity_connections[channel][entity_id] = List[(component_id, handler)]
+# _entity_connections = defaultdict(defaultdict(list))
+
+_components_for_addition = []
+_components_for_removal = []
+_added_components_per_parent = defaultdict(list)
+_removed_components_per_parent = defaultdict(list)
+_updated_components = []
+_old_component_states = {}
+# _pages_for_saving = set()
 
 _action_handlers = []
 _actions_for_dispatch = []
@@ -50,7 +59,7 @@ def on_action(handler: Callable):
     _action_handlers.append(handler)
 
 
-@log.traced
+# @log.traced
 def _handle_actions():
     if not _actions_for_dispatch:
         return
@@ -63,58 +72,55 @@ def _handle_actions():
 
 # Runtime component interface
 @log.traced
-def _add_component(component: Component):
-    _components[component.id] = component
-
-
-@log.traced
-def create_component(obj_class: str, parent_id: str, id=None):
-    ComponentClass = components_lib.get(obj_class)
-    _component = ComponentClass(parent_id=parent_id)
-    _component.id = id or get_new_id()
-
-    _add_component(_component)
-
-    if parent_id:
-        component(parent_id).add_child(_component)
-
+def create_component(obj_class, *args, **kwargs):
+    _component = components_lib.create_component(obj_class, *args, **kwargs)
+    add_component(_component)
     return _component
 
 
-@log.traced
-def register_component_with_entity(
-        component: Component, _entity: Entity, index_id):
-    _component_ids_by_entity_id[(_entity.id, index_id)].append(component.id)
-    _entity_id_by_component_id[component.id] = (_entity.id, index_id)
+def add_component(_component: Component):
+    # _components_for_addition.append(_component)
+    _components[_component.id] = _component
+    _components_per_parent[_component.id] = []
+
+    if _component.parent_id:
+        if _component.parent_id not in _components_per_parent:
+            raise Exception(
+                'Cannot add component with missing parent with id: %s' %
+                _component.parent_id)
+
+        _added_components_per_parent[_component.parent_id].append(_component)
+        _components_per_parent[_component.parent_id].append(_component)
+        # parent = component(_component.parent_id)
+        # parent.handle_child_added(_component)
+
+    # _added_components.append(_component)
+
+    misli.call_delayed(_update_components, 0)
 
 
-@log.traced
-def unregister_component_from_entities(component: Component):
-    if component.id in _entity_id_by_component_id:
-        entity_id, index_id = _entity_id_by_component_id[component.id]
-        _component_ids_by_entity_id[(entity_id, index_id)].remove(component.id)
-        del _entity_id_by_component_id[component.id]
+# @log.traced
+# def add_component_immediate(_component: Component):
+    # if not _component.id:
+    #     _component.id = get_new_id()
+
+    # change = Change.CREATE(_component.asdict())
+    # misli.dispatch(change.asdict(), COMPONENTS_CHANNEL)
 
 
-@log.traced
-def entity_for_component(component_id: str):
-    if component_id in _entity_id_by_component_id:
-        entity_id, index_id = _entity_id_by_component_id[component_id]
-        return misli.entity(entity_id, index_id)
-
-
-@log.traced
-def components_for_entity(entity_id: str, index_id):
-    if (entity_id, index_id) in _component_ids_by_entity_id:
-        return [component(eid)
-                for eid in _component_ids_by_entity_id[(entity_id, index_id)]]
-
-    return []
-
-
-@log.traced
+# @log.traced
 def component(id: str):
+    if id not in _components:
+        return None
     return _components[id]
+
+
+def component_state(component_id):
+    return component(component_id).state()
+
+
+def component_children(component_id):
+    return _components_per_parent[component_id]
 
 
 @log.traced
@@ -133,27 +139,129 @@ def find_component(**props):
 
 
 @log.traced
-def update_component(component_id: str):
-    if component_id not in _components_for_update:
-        _components_for_update.append(component_id)
+def update_component_state(new_state):
+    _component = component(new_state.id)
+    old_state = _component.state()
+    _component._set_state(new_state)
+
+    if _component.id not in _old_component_states:
+        _old_component_states[_component.id] = old_state
+
+    if _component not in _updated_components:
+        _updated_components.append(_component)
+
+    # if component_id in _component_state_changes:
+    #     _component_state_changes[component_id].update(changes)
+    #     return
+
+    # _component = component(component_id)
+    # component_state = _component.state
+    # component_state.replace(changes)
+
+    # _component_state_changes[component_id] = changes
     misli.call_delayed(_update_components, 0)
 
 
-@log.traced
-def remove_component(component_id: str):
-    _component = component(component_id)
+# def _update_component_immediate(component_id):
+#     _component = component(component_id)
+#     # old_state = _component.state
+#     # new_state = _component_state_changes[component_id]
+
+#     # _component.apply_state_change(new_state)
+
+#     old_state = _old_component_states[component_id]
+#     new_state = _component.state()
+
+#     if _component.parent_id:
+#         parent = component(_component.parent_id)
+#         parent.handle_child_updated(old_state, new_state)
+
+#     # change = Change.UPDATE(old_state.asdict(), new_state.asdict())
+#     # misli.dispatch(change.asdict(), COMPONENTS_CHANNEL)
+
+
+def remove_component(_component: Component):
+    _components_for_removal.append(_component)
+
+    del _components_per_parent[_component.id]
+    del _components[_component.id]
 
     if _component.parent_id:
-        parent = component(_component.parent_id)
-        parent.remove_child(_component)
+        if _component.parent_id not in _components_per_parent:
+            raise Exception(
+                'Cannot add component with missing parent with id: %s' %
+                _component.parent_id)
 
-    # Unregister _component
-    unregister_component_from_entities(_component)
+        _components_per_parent[_component.parent_id].remove(_component)
+        _removed_components_per_parent[_component.parent_id].append(_component)
+
+    misli.call_delayed(_update_components, 0)
 
 
-@log.traced
+# @log.traced
+# def remove_component_immediate(_component: str):
+#     # if not _component:
+#     #     raise Exception('Cannot remove missing component with id %s' %
+#     #                     _component.id)
+
+#     if _component.parent_id:
+#         _components_per_parent[_component.parent_id].remove(_component)
+#         parent = component(_component.parent_id)
+#         parent.handle_child_removed(_component)
+
+#     del _components[_component.id]
+#     # change = Change.DELETE(_component.asdict())
+#     # misli.dispatch(change.asdict(), COMPONENTS_CHANNEL)
+
+
+# @log.traced
 def _update_components():
-    for component_id in _components_for_update:
-        component(component_id).update()
+    # (added, removed, updated)
+    child_changes_per_parent_id = defaultdict(lambda: ([], [], []))
 
-    _components_for_update.clear()
+    for _component in _updated_components:
+        # add_component_immediate(_component)
+        old_state = _old_component_states[_component.id]
+        _component.handle_state_update(old_state, _component.state())
+
+        if _component.parent_id:
+            child_changes_per_parent_id[_component.parent_id][2].append(
+                _component)
+
+    for parent_id, added in _added_components_per_parent.items():
+        child_changes_per_parent_id[parent_id][0].extend(added)
+
+    for parent_id, removed in _removed_components_per_parent.items():
+        child_changes_per_parent_id[parent_id][1].extend(removed)
+
+    _updated_components.clear()
+    _added_components_per_parent.clear()
+    _removed_components_per_parent.clear()
+
+    for component_id, changes in child_changes_per_parent_id.items():
+        _component = component(component_id)
+        _component.handle_child_changes(*changes)
+
+# Should be subscribed to the COMPONENTS_CHANNEL in the module init
+# def apply_component_changes(changes):
+#     for change in changes:
+#         state_dict = change.last_state()
+#         _component = component(state_dict['id'])
+
+#         if change.is_create():
+#             parent_id = _component.parent_id
+#             if parent_id:
+#                 parent = component(parent_id)
+#                 parent.handle_child_added(_component)
+
+#         elif change.is_update():
+#             _component.apply_state_change(state_dict)
+
+#         elif change.is_delete():
+#             parent_id = state_dict['parent_id']
+#             if parent_id:
+#                 parent = component(parent_id)
+#                 parent.handle_child_removed(_component)
+
+
+# misli.subscribe(COMPONENTS_CHANNEL, apply_component_changes)

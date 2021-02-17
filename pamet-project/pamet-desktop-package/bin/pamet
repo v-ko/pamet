@@ -10,12 +10,13 @@ import misli
 from pamet.services.file_system_storage import FSStorageRepository
 
 import misli_gui
-from pamet import update_components_from_changes
+# from pamet import update_components_from_changes
 
 import pamet
-from pamet import usecases
+from pamet_desktop import usecases
 from pamet_desktop.qt_main_loop import QtMainLoop
 from pamet_desktop.config import get_config
+from pamet_desktop.app import DesktopAppComponent
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -46,14 +47,17 @@ def main():
         page, notes = fs_repo.page_with_notes(page_id)
         pamet.load_page(page, notes)
 
-    misli.set_repo(fs_repo, 'all')
+    # pamet.set_repo(fs_repo, 'all')
     misli.set_main_loop(QtMainLoop())
-    misli.subscribe(update_components_from_changes, channel='all')
+    # misli.subscribe(pamet.PAGES_CHANNEL, fs_repo.save_changes)
+    # misli.subscribe(pamet.ALL_NOTES_CHANNEL, fs_repo.save_changes)
+    # misli.subscribe(update_components_from_changes, channel='all')
 
     misli.line_spacing_in_pixels = 20
 
-    desktop_app = misli_gui.create_component('DesktopApp', parent_id='')
-    usecases.new_browser_window_ensure_page()
+    desktop_app = DesktopAppComponent()
+    misli_gui.add_component(desktop_app)
+    misli.call_delayed(usecases.new_browser_window_ensure_page, 0)
     desktop_app.exec_()
 
 

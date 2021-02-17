@@ -1,5 +1,5 @@
 from misli import get_logger
-from misli import dataclasses
+from misli.dataclasses import Entity, dataclass
 from misli.basic_classes import Point, Rectangle, Color
 from misli.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from misli.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
@@ -9,20 +9,23 @@ from misli.helpers import snap_to_grid
 log = get_logger(__name__)
 
 
-@dataclasses.dataclass
-class Note(dataclasses.Entity):
-    obj_class: float = ''
-    page_id: float = ''
+@dataclass
+class Note(Entity):
+    obj_class: str = ''
+    page_id: str = ''
     _x: float = 0
     _y: float = 0
     _width: float = DEFAULT_NOTE_WIDTH
     _height: float = DEFAULT_NOTE_HEIGHT
-    color: float = DEFAULT_COLOR
-    background_color: float = DEFAULT_BG_COLOR
-    text: float = ''
+    color: list = DEFAULT_COLOR
+    background_color: list = DEFAULT_BG_COLOR
+    text: str = ''
 
     def __repr__(self):
         return '<Note id=%s>' % self.id
+
+    def gid(self):
+        return (self.page_id, self.id)
 
     def rect(self):
         return Rectangle(self.x, self.y, self.width, self.height)
