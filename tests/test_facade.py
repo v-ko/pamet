@@ -7,12 +7,12 @@ def test_page_CRUD():
     page = Page(id='test_page')
     pamet.add_page(page, [])
 
-    assert [p.state() for p in pamet.pages()] == [page.state()]
+    assert [p.asdict() for p in pamet.pages()] == [page.asdict()]
 
     page.obj_class = 'MapPage'
     pamet.update_page(id=page.id, obj_class='MapPage')
 
-    assert [p.state() for p in pamet.pages()] == [page.state()]
+    assert [p.asdict() for p in pamet.pages()] == [page.asdict()]
 
     pamet.delete_page(page.id)
 
@@ -26,14 +26,14 @@ def test_note_CRUD():
     note = Note(page_id=page.id, text='test text')
     pamet.add_note(note)
 
-    assert [n.state() for n in pamet.notes(page.id)] == [note.state()]
+    assert [n.asdict() for n in pamet.notes(page.id)] == [note.asdict()]
 
     note.text = 'test text changed'
-    pamet.update_note(**note.state())
+    pamet.update_note(**note.asdict())
 
-    updated = pamet.note(page.id, note.id).state()
+    updated = pamet.note(page.id, note.id).asdict()
 
-    assert updated == note.state()
+    assert updated == note.asdict()
 
     pamet.delete_note(note)
 

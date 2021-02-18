@@ -12,34 +12,36 @@ log = get_logger(__name__)
 _main_loop = NoMainLoop()
 
 
-class SubscribtionTypes(Enum):
+class SubscriptionTypes(Enum):
     CHANNEL = 1
     ENTITY = 2
     INVALID = 0
 
 
-class Subscribtion:
+# An implementation of per entity subscribtions is commented out, since it's
+# turned out to be redundant for the time being and no testing was done
+class Subscription:
     def __init__(self, handler, sub_type, channel, entity_id):
         self.id = id(self)
         self.handler = handler
         self.type = sub_type
-        self.channel = None
-        self.entity_id = None
+        self.channel = channel
+        self.entity_id = entity_id
 
     @classmethod
     def channel_type(cls, channel, handler):
-        return cls(handler, SubscribtionTypes.CHANNEL, channel, None)
+        return cls(handler, SubscriptionTypes.CHANNEL, channel, None)
 
     @classmethod
     def entity_type(cls, channel, entity_id, handler):
-        return cls(handler, SubscribtionTypes.ENTITY, channel, entity_id)
+        return cls(handler, SubscriptionTypes.ENTITY, channel, entity_id)
 
 
-_subscribtions = {}  # by id
-_channel_subscribtions = defaultdict(list)  # [channel] = list
-_per_entity_subscribtions = defaultdict(list)  # [(channel, entity_id)] = list
+_subscriptions = {}  # by id
+_channel_subscriptions = defaultdict(list)  # [channel] = list
+# _per_entity_subscriptions = defaultdict(list)  # [(channel, entity_id)] = list
 _message_stacks = {}
-_subscribtion_keys_by_id = dict
+_subscription_keys_by_id = dict
 
 
 @log.traced
@@ -94,29 +96,29 @@ def subscribe(channel: str, handler: Callable):
     if channel not in channels():
         raise Exception('No such channel')
 
-    if handler in _channel_subscribtions[channel]:
+    if handler in _channel_subscriptions[channel]:
         raise Exception('Handler %s already added to channel %s' %
                         (handler, channel))
 
-    sub = Subscribtion.channel_type(channel, handler)
+    sub = Subscription.channel_type(channel, handler)
 
-    _channel_subscribtions[channel].append(handler)
-    _subscribtions[sub.id] = sub
+    _channel_subscriptions[channel].append(handler)
+    _subscriptions[sub.id] = sub
 
     return sub.id
 
 
 def subscribe_to_entity(channel, entity_id, handler):
-    sub = Subscribtion.entity_type(channel, entity_id, handler)
+    sub = Subscription.entity_type(channel, entity_id, handler)
 
-    _per_entity_subscribtions[(channel, entity_id)].append(handler)
-    _subscribtions[sub.id] = sub
+    # _per_entity_subscriptions[(channel, entity_id)].append(handler)
+    _subscriptions[sub.id] = sub
 
     return sub.id
 
 
 def subscribtion(subscribtion_id):
-    if subscribtion_id not in _subscribtions:
+    if subscribtion_id not in _subscriptions:
         return None
 
     return subscribtion_id
@@ -129,14 +131,14 @@ def unsubscribe(subscribtion_id):
         raise Exception('Cannot unsubscribe missing subscribtion with id %s' %
                         subscribtion_id)
 
-    if sub.type == SubscribtionTypes.CHANNEL:
-        _channel_subscribtions[sub.channel].remove(sub.handler)
+    if sub.type == SubscriptionTypes.CHANNEL:
+        _channel_subscriptions[sub.channel].remove(sub.handler)
 
-    elif sub.type == SubscribtionTypes.ENTITY:
-        _per_entity_subscribtions[(sub.channel, sub.entity_id)].remove(
-            sub.handler)
+    # elif sub.type == SubscriptionTypes.ENTITY:
+    #     _per_entity_subscriptions[(sub.channel, sub.entity_id)].remove(
+    #         sub.handler)
 
-    _subscribtions.remove(sub)
+    _subscriptions[sub.id].remove(sub)
 
 
 @log.traced
@@ -146,17 +148,17 @@ def _invoke_handlers():
             continue
 
         # Send the messages to the per-channel subscribers
-        for handler in _channel_subscribtions[channel]:
+        for handler in _channel_subscriptions[channel]:
             handler([m.copy() for m in messages])
 
-        # Send the messages to the per-entity subscribers
-        for message in messages:
-            change = Change(**message)
-            entity_id = change.last_state()['id']
-
-            per_entity_key = (channel, entity_id)
-            if per_entity_key in _per_entity_subscribtions:
-                for handler in _per_entity_subscribtions[per_entity_key]:
-                    handler(message.copy())
+        # # Send the messages to the per-entity subscribers
+        # for message in messages:
+        #     change = Change(**message)
+        #     entity_id = change.last_state()['id']
+        #
+        #     per_entity_key = (channel, entity_id)
+        #     if per_entity_key in _per_entity_subscriptions:
+        #         for handler in _per_entity_subscriptions[per_entity_key]:
+        #             handler(message.copy())
 
         _message_stacks[channel].clear()

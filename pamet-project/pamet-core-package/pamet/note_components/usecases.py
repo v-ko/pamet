@@ -10,60 +10,59 @@ log = misli.get_logger(__name__)
 
 @action('notes.create_new_note')
 def create_new_note(
-        tab_component_id: str, position_coords: list, note_state: dict):
+        tab_view_id: str, position_coords: list, note_state: dict):
 
-    tab_component = misli_gui.component(tab_component_id)
+    tab_view = misli_gui.view(tab_view_id)
     position = Point.from_coords(position_coords)
 
     note = Note(**note_state)
 
-    edit_component = misli_gui.create_component(
-        'TextEdit', tab_component.id)
-    edit_component_state = misli_gui.component_state(edit_component.id)
+    edit_view = misli_gui.create_view(
+        'TextEdit', tab_view.id)
+    edit_view_model = misli_gui.view_model(edit_view.id)
 
-    edit_component_state.note = note
-    edit_component_state.display_position = position
-    edit_component_state.create_mode = True
+    edit_view_model.note = note
+    edit_view_model.display_position = position
+    edit_view_model.create_mode = True
 
-    misli_gui.update_component_state(edit_component_state)
+    misli_gui.update_view_model(edit_view_model)
 
 
 @action('notes.finish_creating_note')
-def finish_creating_note(edit_component_id: str, note: Note):
-    edit_component = misli_gui.component(edit_component_id)
+def finish_creating_note(edit_view_id: str, note: Note):
+    edit_view = misli_gui.view(edit_view_id)
 
     pamet.create_note(**note.asdict())
-    misli_gui.remove_component(edit_component)
+    misli_gui.remove_view(edit_view)
 
 
 @action('notes.start_editing_note')
 def start_editing_note(
-        tab_component_id: str, note_component_id: str, position_coords: list):
+        tab_view_id: str, note_component_id: str, position_coords: list):
 
-    note = misli_gui.component(note_component_id).note
+    note = misli_gui.view(note_component_id).note
     position = Point.from_coords(position_coords)
 
-    edit_component = pamet.create_and_bind_edit_component(
-        tab_component_id, note)
+    edit_view = pamet.create_and_bind_edit_view(
+        tab_view_id, note)
 
-    # edit_component.note = note
-    edit_component_state = misli_gui.component_state(edit_component.id)
-    edit_component_state.display_position = position
+    edit_view_model = misli_gui.view_model(edit_view.id)
+    edit_view_model.display_position = position
 
-    misli_gui.update_component_state(edit_component_state)
+    misli_gui.update_view_model(edit_view_model)
 
 
 @action('notes.finish_editing_note')
-def finish_editing_note(edit_component_id: str, note: Note):
-    edit_component = misli_gui.component(edit_component_id)
+def finish_editing_note(edit_view_id: str, note: Note):
+    edit_view = misli_gui.view(edit_view_id)
 
     pamet.update_note(note)
-    misli_gui.remove_component(edit_component)
+    misli_gui.remove_view(edit_view)
 
     # autosize_note(note_component_id)
 
 
 @action('notes.abort_editing_note')
-def abort_editing_note(edit_component_id: str):
-    edit_component = misli_gui.component(edit_component_id)
-    misli_gui.remove_component(edit_component)
+def abort_editing_note(edit_view_id: str):
+    edit_view = misli_gui.view(edit_view_id)
+    misli_gui.remove_view(edit_view)

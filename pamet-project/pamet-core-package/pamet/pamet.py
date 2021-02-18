@@ -44,7 +44,7 @@ misli.add_channel(ALL_NOTES_CHANNEL)
 
 
 # -------------Pages CRUD-------------
-def init_page(_page, _notes: list = None):
+def init_note_index_and_channel(_page, _notes: list = None):
     _notes = _notes or []
 
     # Make a per-page notes index
@@ -56,14 +56,14 @@ def init_page(_page, _notes: list = None):
     misli.add_channel(NOTES_CHANNEL(_page.id))
 
 
-def deinit_page(page_id):
+def remove_note_index_and_channel(page_id):
     del _note_indices[page_id]
     misli.remove_channel(NOTES_CHANNEL(page_id))
 
 
 @log.traced
 def add_page(_page, _notes: list):
-    init_page(_page, _notes)
+    init_note_index_and_channel(_page, _notes)
 
     if not _page.id:
         _page.id = get_new_id()
@@ -76,13 +76,13 @@ def add_page(_page, _notes: list):
 
 @log.traced
 def load_page(_page: Page, notes: list):
-    init_page(_page, notes)
+    init_note_index_and_channel(_page, notes)
     _pages[_page.id] = _page
 
 
 @log.traced
 def unload_page(page_id):
-    deinit_page(page_id)
+    remove_note_index_and_channel(page_id)
     del _pages[page_id]
 
 
@@ -214,68 +214,55 @@ def update_note(_note):
     misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))
 
 
-# @log.traced
-# def delete_note(note_id):
-#     _note = note(note_id)
-#     if not _note:
-#         raise Exception('Cannot delete missing note with id %s' % note_id)
-
-#     del _note_indices[_note.page_id][_note.id]
-
-#     change = Change(ChangeTypes.DELETE, _note.asdict(), {})
-#     misli.dispatch(change.asdict(), ALL_NOTES_CHANNEL)
-#     misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.id))
-
-
 # -------------------GUI stuff------------------------
 @log.traced
-def create_and_bind_page_component(page_id: str, parent_id: str):
+def create_and_bind_page_view(page_id: str, parent_id: str):
     _page = page(page_id)
-    page_component = misli_gui.create_component(
+    page_view = misli_gui.create_view(
         obj_class=_page.obj_class, parent_id=parent_id)
 
-    page_component_state = misli_gui.component_state(page_component.id)
-    page_component_state.page = _page
-    misli_gui.update_component_state(page_component_state)
+    page_view_model = misli_gui.view_model(page_view.id)
+    page_view_model.page = _page
+    misli_gui.update_view_model(page_view_model)
 
-    binder.map_component_to_entity(page_component, _page)
+    binder.map_entity_to_view(_page, page_view)
 
     for _note in notes(_page.id):
-        create_and_bind_note_component(page_component.id, _note)
+        create_and_bind_note_view(page_view.id, _note)
 
-    return page_component
-
-
-@log.traced
-def create_and_bind_note_component(page_component_id, _note):
-    note_component = misli_gui.create_component(
-        obj_class=_note.obj_class, parent_id=page_component_id)
-
-    note_component_state = misli_gui.component_state(note_component.id)
-    note_component_state.note = _note
-    misli_gui.update_component_state(note_component_state)
-
-    binder.map_component_to_entity(note_component, _note)
-
-    return note_component
+    return page_view
 
 
 @log.traced
-def create_and_bind_edit_component(tab_component_id, _note):
+def create_and_bind_note_view(page_view_id, _note):
+    note_view = misli_gui.create_view(
+        obj_class=_note.obj_class, parent_id=page_view_id)
+
+    note_view_model = misli_gui.view_model(note_view.id)
+    note_view_model.note = _note
+    misli_gui.update_view_model(note_view_model)
+
+    binder.map_entity_to_view(_note, note_view)
+
+    return note_view
+
+
+@log.traced
+def create_and_bind_edit_view(tab_view_id, _note):
 
     edit_class_name = misli_gui.components_lib.get_edit_class_name(
         _note.obj_class)
 
-    edit_component = misli_gui.create_component(
-        obj_class=edit_class_name, parent_id=tab_component_id)
+    edit_view = misli_gui.create_view(
+        obj_class=edit_class_name, parent_id=tab_view_id)
 
-    edit_component_state = misli_gui.component_state(edit_component.id)
-    edit_component_state.note = _note
-    misli_gui.update_component_state(edit_component_state)
+    edit_view_model = misli_gui.view_model(edit_view.id)
+    edit_view_model.note = _note
+    misli_gui.update_view_model(edit_view_model)
 
-    binder.map_component_to_entity(edit_component, _note)
+    binder.map_entity_to_view(_note, edit_view)
 
-    return edit_component
+    return edit_view
 
 
 # I should consider refactoring those when I implement Changes (undo, etc)
@@ -283,7 +270,7 @@ def create_and_bind_edit_component(tab_component_id, _note):
 # that should happen when needed and not earlier
 
 @log.traced
-def update_components_for_page_changes(changes: List[Change]):
+def update_views_for_page_changes(changes: List[dict]):
     for page_change_dict in changes:
         page_change = Change(**page_change_dict)
         page_state = page_change.last_state()
@@ -291,16 +278,16 @@ def update_components_for_page_changes(changes: List[Change]):
 
         if page_change.is_update():
 
-            page_components = binder.components_mapped_to_entity(_page.gid())
-            for pc in page_components:
-                pcs = misli_gui.component_state(pc.id)
+            page_views = binder.views_mapped_to_entity(_page.gid())
+            for pc in page_views:
+                pcs = misli_gui.view_model(pc.id)
                 pcs.page = _page
-                misli_gui.update_component_state(pc.id)
+                misli_gui.update_view_model(pc.id)
 
         elif page_change.is_delete():
-            page_components = binder.components_mapped_to_entity(_page.gid())
-            for pc in page_components:
-                misli_gui.remove_component(pc)
+            page_views = binder.views_mapped_to_entity(_page.gid())
+            for pc in page_views:
+                misli_gui.remove_view(pc)
                 # I may have to do something more elegant here - with
                 # some kind of notification
 
@@ -309,43 +296,28 @@ def update_components_for_page_changes(changes: List[Change]):
 
 
 @log.traced
-def update_components_for_note_changes(changes: List[Change]):
+def update_views_for_note_changes(changes: List[dict]):
     for note_change_dict in changes:
         note_change = Change(**note_change_dict)
         _note = Note(**note_change.last_state())
 
         if note_change.is_create():
             _page = pamet.page(_note.page_id)
-            page_components = binder.components_mapped_to_entity(_page.gid())
+            page_views = binder.views_mapped_to_entity(_page.gid())
 
             # Create a note component for all opened views for its page
-            for pc in page_components:
-                create_and_bind_note_component(pc.id, _note)
+            for pc in page_views:
+                create_and_bind_note_view(pc.id, _note)
 
         elif note_change.is_update():
-            note_components = binder.components_mapped_to_entity(_note.gid())
+            note_views = binder.views_mapped_to_entity(_note.gid())
 
-            for nc in note_components:
-                ncs = misli_gui.component_state(nc.id)
+            for nc in note_views:
+                ncs = misli_gui.view_model(nc.id)
                 ncs.note = _note
-                misli_gui.update_component_state(ncs)
+                misli_gui.update_view_model(ncs)
 
-        elif note_change.change_type == ChangeTypes.DELETE:
-            note_components = binder.components_mapped_to_entity(_note.gid())
-            for nc in note_components:
-                misli_gui.remove_component(nc)
-
-
-# @log.traced
-# def update_components_from_changes(changes: List[Change]):
-#     for change in changes:
-#         obj_type = change.last_state()['obj_type']
-
-#         if obj_type == 'Note':
-#             _update_components_for_note_change(change)
-
-#         elif obj_type == 'Page':
-#             _update_components_for_page_change(change)
-
-#         else:
-#             raise NotImplementedError
+        elif note_change.type == ChangeTypes.DELETE:
+            note_views = binder.views_mapped_to_entity(_note.gid())
+            for nc in note_views:
+                misli_gui.remove_view(nc)

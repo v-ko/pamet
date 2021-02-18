@@ -72,8 +72,8 @@ class FSStorageRepository(Repository):
         return cls(path)
 
     def create_page(self, page, notes):
-        page_state = page.state()
-        page_state['note_states'] = [n.state() for n in notes]
+        page_state = page.asdict()
+        page_state['note_states'] = [n.asdict() for n in notes]
 
         path = self._path_for_page(page.id)
         try:
@@ -119,8 +119,8 @@ class FSStorageRepository(Repository):
         return Page(**page_state), notes
 
     def update_page(self, page, notes):
-        page_state = page.state()
-        page_state['note_states'] = [n.state() for n in notes]
+        page_state = page.asdict()
+        page_state['note_states'] = [n.asdict() for n in notes]
 
         path = self._path_for_page(page.id)
         try:

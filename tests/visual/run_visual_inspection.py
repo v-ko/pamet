@@ -30,7 +30,7 @@ def run_recording(file_for_replay, output_folder, replay_speed):
     misli.on_change(update_components_from_changes)
     misli.gui.on_action(replay.queue_next_action)
 
-    desktop_app = misli.gui.create_component('DesktopApp', parent_id='')
+    desktop_app = misli.gui.create_view('DesktopApp', parent_id='')
 
     replay.queue_next_action([])
     desktop_app.exec_()

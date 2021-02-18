@@ -23,7 +23,7 @@ class InMemoryRepository(Repository):
         if page_id not in self._pages:
             return None
 
-        return self._pages[page_id].state()
+        return self._pages[page_id].asdict()
 
     def update_page(self, page_state):
         page = Page(**page_state)

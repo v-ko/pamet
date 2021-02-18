@@ -9,17 +9,17 @@ class ChangeTypes(Enum):
 
 
 class Change:
-    change_type: ChangeTypes
+    type: ChangeTypes
     old_state: dict = dict
     new_state: dict = dict
 
     def __init__(
             self,
-            change_type: ChangeTypes,
+            type: ChangeTypes,
             old_state: dict = None,
             new_state: dict = None):
 
-        self.change_type = change_type
+        self.type = type
         self.old_state = old_state or {}
         self.new_state = new_state or {}
 
@@ -33,31 +33,31 @@ class Change:
     @classmethod
     def CREATE(cls, state):
         return cls(
-            change_type=ChangeTypes.CREATE, old_state={}, new_state=state)
+            _type=ChangeTypes.CREATE, old_state={}, new_state=state)
 
     @classmethod
     def UPDATE(cls, old_state, new_state):
         return cls(
-            change_type=ChangeTypes.UPDATE,
+            _type=ChangeTypes.UPDATE,
             old_state=old_state,
             new_state=new_state)
 
     @classmethod
     def DELETE(cls, old_state):
         return cls(
-            change_type=ChangeTypes.DELETE, old_state=old_state, new_state={})
+            _type=ChangeTypes.DELETE, old_state=old_state, new_state={})
 
     def __repr__(self):
-        return '<Change type=%s>' % self.change_type
+        return '<Change type=%s>' % self.type
 
     def is_create(self):
-        return self.change_type == ChangeTypes.CREATE
+        return self.type == ChangeTypes.CREATE
 
     def is_update(self):
-        return self.change_type == ChangeTypes.UPDATE
+        return self.type == ChangeTypes.UPDATE
 
     def is_delete(self):
-        return self.change_type == ChangeTypes.DELETE
+        return self.type == ChangeTypes.DELETE
 
     def last_state(self):
         if self.new_state:

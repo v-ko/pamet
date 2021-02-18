@@ -47,7 +47,7 @@ def main():
         replay.speed = replay_speed
         misli.gui.on_action(replay.queue_next_action)
 
-    desktop_app = misli.gui.create_component('DesktopApp', parent_id='')
+    desktop_app = misli.gui.create_view('DesktopApp', parent_id='')
 
     if file_for_replay:
         replay.queue_next_action()

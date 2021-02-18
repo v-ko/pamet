@@ -2,22 +2,22 @@ from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter, QColor
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
-from misli.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
-from pamet.note_components.base_note_component import NoteComponent
+from pamet.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
+from pamet.note_components.base_note_view import NoteView
 from misli import get_logger
 log = get_logger(__name__)
 
 
-class TextNoteQtComponent(QLabel, NoteComponent):
+class TextNoteViewWidget(QLabel, NoteView):
     def __init__(self, parent_id):
-        NoteComponent.__init__(self, obj_class='Text', parent_id=parent_id)
+        NoteView.__init__(self, obj_class='Text', parent_id=parent_id)
         QLabel.__init__(self, '')
 
         self.elided_text = []
         self._alignment = Qt.AlignHCenter
         self.setMargin(0)
 
-    def handle_state_update(self, old_state, new_state):
+    def handle_model_update(self, old_state, new_state):
         note = self.note
         palette = self.palette()
 

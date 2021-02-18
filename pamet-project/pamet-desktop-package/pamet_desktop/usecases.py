@@ -23,8 +23,8 @@ def new_browser_window_ensure_page():
 
 @action('desktop.new_browser_window')
 def new_browser_window(page_id: str):
-    app = misli_gui.find_component(obj_class='DesktopApp')
-    window = misli_gui.create_component(
+    app = misli_gui.find_view(obj_class='DesktopApp')
+    window = misli_gui.create_view(
         obj_class='BrowserWindow', parent_id=app.id)
 
     # new_window =
@@ -36,16 +36,13 @@ def new_browser_window(page_id: str):
 
 @action('desktop.close_browser_window')
 def close_browser_window(browser_window_id: str):
-    browser_window = misli_gui.component(browser_window_id)
-    misli_gui.remove_component(browser_window)
-    # app = misli_gui.find_component(obj_class='DesktopApp')
-    # app.should_quit = True
-    # misli_gui.update_component(app.id)
+    browser_window = misli_gui.view(browser_window_id)
+    misli_gui.remove_view(browser_window)
 
 
 @action('desktop.new_browser_tab')
 def new_browser_tab(browser_window_id: str, page_id: str):
-    tab_component = misli_gui.create_component(
+    tab_component = misli_gui.create_view(
         obj_class='BrowserTab', parent_id=browser_window_id)
 
     tab_go_to_page(tab_component.id, page_id)
@@ -54,14 +51,14 @@ def new_browser_tab(browser_window_id: str, page_id: str):
 @action('tab_go_to_page')
 def tab_go_to_page(tab_component_id, page_id):
     page = pamet.page(page_id)
-    page_component = pamet.create_and_bind_page_component(
+    page_view = pamet.create_and_bind_page_view(
         page.id, parent_id=tab_component_id)
 
-    page_component_state = misli_gui.component_state(page_component.id)
-    page_component_state.page = page
+    page_view_model = misli_gui.view_model(page_view.id)
+    page_view_model.page = page
 
-    tab_component_state = misli_gui.component_state(tab_component_id)
-    tab_component_state.page_component_id = page_component.id
+    tab_view_model = misli_gui.view_model(tab_component_id)
+    tab_view_model.page_view_id = page_view.id
 
-    misli_gui.update_component_state(tab_component_state)
-    misli_gui.update_component_state(page_component_state)
+    misli_gui.update_view_model(tab_view_model)
+    misli_gui.update_view_model(page_view_model)

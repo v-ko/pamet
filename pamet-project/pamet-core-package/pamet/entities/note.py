@@ -1,11 +1,11 @@
 from misli import get_logger
 from misli.dataclasses import Entity, dataclass
 from misli.basic_classes import Point, Rectangle, Color
-from misli.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
-from misli.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
-from misli.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
-from misli.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
-from misli.helpers import snap_to_grid
+from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
+from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
+from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
+from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
+from pamet.helpers import snap_to_grid
 log = get_logger(__name__)
 
 

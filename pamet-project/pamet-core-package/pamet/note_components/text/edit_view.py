@@ -1,4 +1,4 @@
-from misli_gui.base_component import Component
+from misli_gui.base_view import View
 from pamet.entities import Note
 from misli.basic_classes import Point
 from misli.dataclasses import dataclass, Entity
@@ -7,25 +7,25 @@ from pamet.note_components import usecases
 
 
 @dataclass
-class TextNoteEditComponentState(Entity):
+class TextNoteEditViewModel(Entity):
     create_mode: bool = False
     note: Note
     display_position: Point
 
 
-class TextNoteEditComponent(Component):
+class TextNoteEditView(View):
     def __init__(self, parent_id):
-        default_state = TextNoteEditComponentState()
+        default_state = TextNoteEditViewModel()
 
-        Component.__init__(
+        View.__init__(
             self,
             parent_id=parent_id,
             obj_class='TextEdit',
-            default_state=default_state)
+            initial_model=default_state)
 
     @property
     def note(self):
-        return self._state.note.copy()
+        return self.last_model.note.copy()
 
     def _handle_esc_shortcut(self):
         usecases.abort_editing_note(self.id)

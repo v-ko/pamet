@@ -16,7 +16,7 @@ import pamet
 from pamet_desktop import usecases
 from pamet_desktop.qt_main_loop import QtMainLoop
 from pamet_desktop.config import get_config
-from pamet_desktop.app import DesktopAppComponent
+from pamet_desktop.app import DesktopAppView
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -55,8 +55,8 @@ def main():
 
     misli.line_spacing_in_pixels = 20
 
-    desktop_app = DesktopAppComponent()
-    misli_gui.add_component(desktop_app)
+    desktop_app = DesktopAppView()
+    misli_gui.add_view(desktop_app)
     misli.call_delayed(usecases.new_browser_window_ensure_page, 0)
     desktop_app.exec_()
 

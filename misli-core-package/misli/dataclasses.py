@@ -85,20 +85,9 @@ class Entity:
         return self.copy()
 
     def copy(self):
-        return type(self)(**self.state())
+        return type(self)(**self.asdict())
 
-    def add_state_keys(self, keys: list):
-        fields = get_fields(type(self))
-        for key in keys:
-            if not hasattr(self, key):
-                raise KeyError
-
-            fields[key] = None
-
-        set_fields(type(self), fields)
-
-    # To be deprecated
-    def state(self):
+    def asdict(self):
         self_dict = {}
         fields = get_fields(type(self))
 
@@ -112,20 +101,13 @@ class Entity:
 
         return self_dict
 
-    def asdict(self):
-        return self.state()
-
-    # To be deprecated
-    def set_state(self, **state):
+    def replace(self, **changes):
         fields = get_fields(type(self))
-        for key, val in state.items():
+        for key, val in changes.items():
             if key not in fields:
                 raise KeyError
 
             setattr(self, key, val)
-
-    def replace(self, **changes):
-        self.set_state(**changes)
 
     def gid(self):
         return self.id

@@ -1,22 +1,22 @@
 from misli.dataclasses import dataclass, Entity
-from misli_gui.base_component import Component
+from misli_gui.base_view import View
 from pamet.entities import Note
 
 
 @dataclass
-class NoteComponentState(Entity):
+class NoteViewModel(Entity):
     note: Note = None
 
 
-class NoteComponent(Component):
+class NoteView(View):
     def __init__(self, obj_class, parent_id):
-        Component.__init__(
+        View.__init__(
             self,
             parent_id=parent_id,
-            default_state=NoteComponentState(),
+            initial_model=NoteViewModel(),
             obj_class=obj_class
         )
 
     @property
     def note(self):
-        return self.state().note.copy()
+        return self.last_model.note.copy()

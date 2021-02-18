@@ -34,7 +34,7 @@ def edit_component_names():
     return edit_components_by_class_name.keys()
 
 
-def create_component(obj_class, *args, **kwargs):
+def create_view(obj_class, *args, **kwargs):
     component_class = get(obj_class)
 
     if not component_class:
