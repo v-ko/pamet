@@ -49,15 +49,16 @@ def on_action(handler: Callable):
 
 
 # Runtime component interface
-@log.traced
-def create_view(obj_class, *args, **kwargs):
-    _view = components_lib.create_view(obj_class, *args, **kwargs)
-    add_view(_view)
-    return _view
+# @log.traced
+# def create_view(obj_class, *args, **kwargs):
+#     _view = components_lib.create_view(obj_class, *args, **kwargs)
+#     add_view(_view)
+#     return _view
 
 
 def add_view(_view: View):
     _views[_view.id] = _view
+    _view_model = _view.last_model  # For debugging
     _view_model_by_id[_view.id] = _view.last_model
     _views_per_parent[_view.id] = []
 
@@ -83,8 +84,8 @@ def view(id: str):
 def view_model(view_id):
     if view_id not in _view_model_by_id:
         return None
-
-    return _view_model_by_id[view_id].copy()
+    _view_model = _view_model_by_id[view_id]
+    return _view_model.copy()
 
 
 def view_children(view_id):
@@ -143,10 +144,10 @@ def _update_views():
     child_changes_per_parent_id = defaultdict(lambda: ([], [], []))
 
     for _view in _updated_views:
-        old_state = _old_view_models[_view.id]
-        new_state = view_model(_view.id)
-        _view.update_cached_model(new_state)
-        _view.handle_model_update(old_state, new_state)
+        old_model = _old_view_models[_view.id]
+        new_model = view_model(_view.id)
+        _view.update_cached_model(new_model)
+        _view.handle_model_update(old_model, new_model)
 
         if _view.parent_id:
             child_changes_per_parent_id[_view.parent_id][2].append(

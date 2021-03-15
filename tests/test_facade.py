@@ -10,7 +10,7 @@ def test_page_CRUD():
     assert [p.asdict() for p in pamet.pages()] == [page.asdict()]
 
     page.obj_class = 'MapPage'
-    pamet.update_page(id=page.id, obj_class='MapPage')
+    pamet.update_page(id=page.id, view_class='MapPage')
 
     assert [p.asdict() for p in pamet.pages()] == [page.asdict()]
 

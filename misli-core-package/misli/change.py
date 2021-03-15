@@ -1,5 +1,4 @@
 from enum import Enum
-from misli.dataclasses import dataclass, Entity
 
 
 class ChangeTypes(Enum):

@@ -27,7 +27,7 @@ class MisliGuiRecorder:
 
     def capture_qt_component_to_image(self, image_id):
         matching_components = [c for c in misli_gui.views()
-                               if c.obj_class == self.component_name]
+                               if c.view_class == self.component_name]
 
         if not matching_components:
             self.snapshots[image_id] = None

@@ -12,15 +12,15 @@ log = misli.get_logger(__name__)
 def create_new_note(
         tab_view_id: str, position_coords: list, note_state: dict):
 
-    tab_view = misli_gui.view(tab_view_id)
     position = Point.from_coords(position_coords)
-
     note = Note(**note_state)
 
-    edit_view = misli_gui.create_view(
-        'TextEdit', tab_view.id)
-    edit_view_model = misli_gui.view_model(edit_view.id)
+    # edit_view = misli_gui.create_view(
+    #     'TextEdit', tab_view.id)
+    edit_view_class = pamet.view_library.get_edit_view_class('Text')
+    edit_view = edit_view_class(parent_id=tab_view_id)
 
+    edit_view_model = misli_gui.view_model(edit_view.id)
     edit_view_model.note = note
     edit_view_model.display_position = position
     edit_view_model.create_mode = True

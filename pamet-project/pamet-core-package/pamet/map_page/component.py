@@ -1,8 +1,9 @@
 from enum import Enum
+from dataclasses import dataclass, field
 
 import misli
 
-from misli.dataclasses import dataclass, Entity
+from misli import Entity
 from misli.basic_classes import Point, Rectangle
 from pamet.constants import RESIZE_CIRCLE_RADIUS
 
@@ -29,28 +30,28 @@ class MapPageMode(Enum):
 
 @dataclass
 class MapPageViewModel(Entity):
-    page: Page
+    page: Page = None
 
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
     viewport_center: Point = Point(0, 0)
     viewport_height: float = INITIAL_EYE_Z
 
-    selected_nc_ids: set = set
+    selected_nc_ids: set = field(default_factory=set)
 
     drag_navigation_active: bool = False
-    drag_navigation_start_position: Point
+    drag_navigation_start_position: Point = None
 
     drag_select_active: bool = False
-    mouse_position_on_drag_select_start: Point
-    drag_selected_nc_ids: list = list
-    drag_select_rect_props: list = list
+    mouse_position_on_drag_select_start: Point = None
+    drag_selected_nc_ids: list = field(default_factory=list)
+    drag_select_rect_props: list = field(default_factory=list)
 
     note_resize_active: bool = False
-    mouse_position_on_note_drag_start: Point
-    note_resize_click_position: Point
-    note_resize_delta_from_note_edge: Point
-    note_resize_main_note: Note
-    viewport_position_on_press: Point
+    mouse_position_on_note_drag_start: Point = None
+    note_resize_click_position: Point = None
+    note_resize_delta_from_note_edge: Point = None
+    note_resize_main_note: Note = None
+    viewport_position_on_press: Point = None
 
     note_drag_active: bool = False
 
@@ -84,6 +85,8 @@ class MapPageViewModel(Entity):
 
 
 class MapPageView(View):
+    view_class = 'MapPage'
+
     def __init__(self, parent_id: str):
         default_state = MapPageViewModel(
             page=Page(),
@@ -101,8 +104,7 @@ class MapPageView(View):
         View.__init__(
             self,
             parent_id,
-            initial_model=default_state,
-            obj_class='MapPage')
+            initial_model=default_state)
 
         self._left_mouse_is_pressed = False
         self._mouse_position_on_left_press = Point(0, 0)
@@ -307,7 +309,7 @@ class MapPageView(View):
             pos = self.viewport.unproject_point(mouse_pos)
 
             page = self.page
-            note = Note(page_id=page.id, obj_class='Text', text='')
+            note = Note(page_id=page.id, view_class='Text', text='')
             note.x = pos.x()
             note.y = pos.y()
 

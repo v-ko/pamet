@@ -56,7 +56,7 @@ def main():
     misli.line_spacing_in_pixels = 20
 
     desktop_app = DesktopAppView()
-    misli_gui.add_view(desktop_app)
+    # misli_gui.add_view(desktop_app)
     misli.call_delayed(usecases.new_browser_window_ensure_page, 0)
     desktop_app.exec_()
 

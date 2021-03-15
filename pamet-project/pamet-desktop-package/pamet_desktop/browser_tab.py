@@ -1,14 +1,13 @@
+from dataclasses import dataclass
+
 from PySide2.QtWidgets import QVBoxLayout, QWidget
 from PySide2.QtCore import Qt
 
-from misli.dataclasses import dataclass, Entity
-
+from misli import Entity
 import misli_gui
 from misli_gui.base_view import View
-
+from pamet import view_library
 from pamet.note_components import usecases
-
-BROWSER_TAB = 'BrowserTab'
 
 
 @dataclass
@@ -18,13 +17,15 @@ class BrowserTabViewState(Entity):
 
 
 class BrowserTabView(QWidget, View):
+    view_class = 'BrowserTab'
+
     def __init__(self, parent_id):
         QWidget.__init__(self)
         View.__init__(
             self,
             parent_id=parent_id,
-            initial_model=BrowserTabViewState(),
-            obj_class=BROWSER_TAB)
+            initial_model=BrowserTabViewState()
+        )
 
         self.page_view = None
         self._edit_view = None
@@ -49,7 +50,7 @@ class BrowserTabView(QWidget, View):
 
     def add_child(self, child):
         # If we're adding an edit component
-        if child.obj_class in misli_gui.components_lib.edit_component_names():
+        if child.view_class in view_library.edit_view_names():
 
             # Abort any ongoing editing
             if self._edit_view:
@@ -62,7 +63,7 @@ class BrowserTabView(QWidget, View):
             child.show()
 
     def remove_child(self, child):
-        if child.obj_class in misli_gui.components_lib.edit_component_names():
+        if child.view_class in view_library.edit_view_names():
             self._edit_view = None
             child.close()
 

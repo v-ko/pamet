@@ -1,33 +1,31 @@
+from dataclasses import dataclass, field
 from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 
-from misli.dataclasses import dataclass, Entity
-
-import misli_gui
+from misli import Entity
 from misli_gui.base_view import View
-
 from pamet_desktop import usecases
 
 from .ui_browser_window import Ui_BrowserWindow
 
-BROWSER_WINDOW_COMPONENT = 'BrowserWindow'
-
 
 @dataclass
-class BrowserWindowModelView(Entity):
-    obj_class: str = BROWSER_WINDOW_COMPONENT
+class BrowserWindowViewModel(Entity):
+    name: str = ''
     app_id: str = None
-    tab_ids: set = set
+    tab_ids: set = field(default_factory=set)
 
 
 class BrowserWindowView(QMainWindow, View):
+    view_class = 'BrowserWindow'
+
     def __init__(self, parent_id):
         QMainWindow.__init__(self)
         View.__init__(
             self,
             parent_id=parent_id,
-            initial_model=BrowserWindowModelView(),
-            obj_class=BROWSER_WINDOW_COMPONENT)
+            initial_model=BrowserWindowViewModel()
+        )
 
         self._tabs = {}  # By id
 

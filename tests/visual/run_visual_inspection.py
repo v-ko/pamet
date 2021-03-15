@@ -8,6 +8,8 @@ from .constants import RECORDING_EXTENSION, SNAP_EXTENSION
 from misli_gui import update_components_from_changes
 from misli_qt.qt_main_loop import QtMainLoop
 
+import pamet
+
 from .gui_recorder import MisliGuiRecorder
 from .gui_replay import MisliGuiReplay
 
@@ -30,7 +32,10 @@ def run_recording(file_for_replay, output_folder, replay_speed):
     misli.on_change(update_components_from_changes)
     misli.gui.on_action(replay.queue_next_action)
 
-    desktop_app = misli.gui.create_view('DesktopApp', parent_id='')
+    # desktop_app = misli.gui.create_view('DesktopApp', parent_id='')
+
+    desktop_app_class = pamet.view_library.get_view_class('BrowserWindow')
+    desktop_app = desktop_app_class(parent_id='')
 
     replay.queue_next_action([])
     desktop_app.exec_()

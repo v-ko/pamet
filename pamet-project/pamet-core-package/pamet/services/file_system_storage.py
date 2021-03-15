@@ -193,7 +193,6 @@ class FSStorageRepository(Repository):
             for coord in ['x', 'y', 'width', 'height']:
                 nt[coord] = nt[coord] * ONE_V3_COORD_UNIT_TO_V4
 
-            nt['obj_type'] = 'Note'
             nt['page_id'] = name
 
         for nt in notes:
@@ -215,15 +214,20 @@ class FSStorageRepository(Repository):
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
             nt['id'] = str(nt['id'])
+            nt['_x'] = nt.pop('x')
+            nt['_y'] = nt.pop('y')
+            nt['_width'] = nt.pop('width')
+            nt['_height'] = nt.pop('height')
 
             # Redirect notes
             if nt['text'].startswith('this_note_points_to:'):
                 nt['href'] = nt['text'].split(':', 1)[1]
                 nt['text'] = nt['href']
-                nt['obj_class'] = 'Redirect'
+                nt['view_class'] = 'Text'
+                # nt['view_class'] = 'Redirect'
 
             else:
-                nt['obj_class'] = 'Text'
+                nt['view_class'] = 'Text'
 
             # Remove unimplemented attributes to avoid errors
             note = Note()
@@ -241,6 +245,6 @@ class FSStorageRepository(Repository):
 
         note_states = {n['id']: n for n in json_object.pop('notes')}
         json_object['note_states'] = note_states
-        json_object['obj_class'] = 'MapPage'
+        json_object['view_class'] = 'MapPage'
 
         return json_object

@@ -9,8 +9,10 @@ log = get_logger(__name__)
 
 
 class TextNoteViewWidget(QLabel, NoteView):
+    view_class = 'Text'
+
     def __init__(self, parent_id):
-        NoteView.__init__(self, obj_class='Text', parent_id=parent_id)
+        NoteView.__init__(self, parent_id=parent_id)
         QLabel.__init__(self, '')
 
         self.elided_text = []

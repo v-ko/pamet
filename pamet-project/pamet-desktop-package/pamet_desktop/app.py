@@ -1,28 +1,29 @@
+from dataclasses import dataclass
 from PySide2.QtWidgets import QApplication
 
 import misli
-from misli.dataclasses import dataclass, Entity
+from misli import Entity
 from pamet.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
 from pamet.constants import DESKTOP_APP_VERSION
 from misli_gui.base_view import View
 log = misli.get_logger(__name__)
 
-DESKTOP_APP_COMPONENT = 'DesktopApp'
-
 
 @dataclass
 class DesktopAppViewModel(Entity):
-    dummy_prop: bool
+    pass
 
 
 class DesktopAppView(QApplication, View):
+    view_class = 'DesktopApp'
+
     def __init__(self):
         QApplication.__init__(self)
         View.__init__(
             self,
             parent_id='',
-            initial_model=DesktopAppViewModel(),
-            obj_class=DESKTOP_APP_COMPONENT)
+            initial_model=DesktopAppViewModel()
+        )
 
         self.browser_windows = {}
 

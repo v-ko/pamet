@@ -13,7 +13,7 @@ def new_browser_window_ensure_page():
 
     pages = pamet.pages()
     if not pages:
-        page = Page(id='notes', obj_class='MapPage')
+        page = Page(id='notes', view_class='MapPage')
         pamet.add_page(page, notes=[])
     else:
         page = pages[0]
@@ -23,9 +23,12 @@ def new_browser_window_ensure_page():
 
 @action('desktop.new_browser_window')
 def new_browser_window(page_id: str):
-    app = misli_gui.find_view(obj_class='DesktopApp')
-    window = misli_gui.create_view(
-        obj_class='BrowserWindow', parent_id=app.id)
+    app = misli_gui.find_view(view_class='DesktopApp')
+    # window = misli_gui.create_view(
+    #     obj_class='BrowserWindow', parent_id=app.id)
+
+    window_view_class = pamet.view_library.get_view_class('BrowserWindow')
+    window = window_view_class(parent_id=app.id)
 
     # new_window =
     # app.window_ids.add(window.id)
@@ -42,10 +45,13 @@ def close_browser_window(browser_window_id: str):
 
 @action('desktop.new_browser_tab')
 def new_browser_tab(browser_window_id: str, page_id: str):
-    tab_component = misli_gui.create_view(
-        obj_class='BrowserTab', parent_id=browser_window_id)
+    # tab_view = misli_gui.create_view(
+    #     obj_class='BrowserTab', parent_id=browser_window_id)
 
-    tab_go_to_page(tab_component.id, page_id)
+    tab_view_class = pamet.view_library.get_view_class('BrowserTab')
+    tab_view = tab_view_class(parent_id=browser_window_id)
+
+    tab_go_to_page(tab_view.id, page_id)
 
 
 @action('tab_go_to_page')

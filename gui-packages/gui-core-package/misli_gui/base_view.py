@@ -1,18 +1,19 @@
 from __future__ import annotations
 
 from misli.helpers import get_new_id
-from misli.dataclasses import Entity
+from misli import Entity
 import misli_gui
 from misli import get_logger
 log = get_logger(__name__)
 
 
 class View:
-    def __init__(self, parent_id: str, initial_model: Entity, obj_class: str):
+    def __init__(self, parent_id: str, initial_model: Entity):
         initial_model.id = get_new_id()
         self.parent_id = parent_id
-        self.obj_class = obj_class
         self.__last_model = initial_model
+
+        misli_gui.add_view(self)
 
     @property
     def id(self):

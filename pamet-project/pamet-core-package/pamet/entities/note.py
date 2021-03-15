@@ -1,5 +1,7 @@
+from dataclasses import dataclass, field
+
 from misli import get_logger
-from misli.dataclasses import Entity, dataclass
+from misli import Entity
 from misli.basic_classes import Point, Rectangle, Color
 from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
@@ -11,14 +13,16 @@ log = get_logger(__name__)
 
 @dataclass
 class Note(Entity):
-    obj_class: str = ''
+    view_class: str = ''
     page_id: str = ''
     _x: float = 0
     _y: float = 0
     _width: float = DEFAULT_NOTE_WIDTH
     _height: float = DEFAULT_NOTE_HEIGHT
-    color: list = DEFAULT_COLOR
-    background_color: list = DEFAULT_BG_COLOR
+    color: list = field(
+        default_factory=lambda: DEFAULT_COLOR.copy())
+    background_color: list = field(
+        default_factory=lambda: DEFAULT_BG_COLOR.copy())
     text: str = ''
 
     def __repr__(self):
