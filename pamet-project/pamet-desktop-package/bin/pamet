@@ -14,7 +14,7 @@ import misli_gui
 
 import pamet
 from pamet_desktop import usecases
-from pamet_desktop.qt_main_loop import QtMainLoop
+from misli_qt.qt_main_loop import QtMainLoop
 from pamet_desktop.config import get_config
 from pamet_desktop.app import DesktopAppView
 

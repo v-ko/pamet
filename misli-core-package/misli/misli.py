@@ -84,7 +84,7 @@ def call_delayed(
 
 # Channel interface
 # @log.traced
-def dispatch(message: dict, channel: str):
+def dispatch(message: object, channel: str):
     log.info('DISPATCH on "%s": %s' % (channel, message))
 
     _message_stacks[channel].append(message)
@@ -108,28 +108,28 @@ def subscribe(channel: str, handler: Callable):
     return sub.id
 
 
-def subscribe_to_entity(channel, entity_id, handler):
-    sub = Subscription.entity_type(channel, entity_id, handler)
+# def subscribe_to_entity(channel, entity_id, handler):
+#     sub = Subscription.entity_type(channel, entity_id, handler)
+#
+#     _per_entity_subscriptions[(channel, entity_id)].append(handler)
+#     _subscriptions[sub.id] = sub
+#
+#     return sub.id
 
-    # _per_entity_subscriptions[(channel, entity_id)].append(handler)
-    _subscriptions[sub.id] = sub
 
-    return sub.id
-
-
-def subscribtion(subscribtion_id):
-    if subscribtion_id not in _subscriptions:
+def subscription(subscription_id):
+    if subscription_id not in _subscriptions:
         return None
 
-    return subscribtion_id
+    return _subscriptions[subscription_id]
 
 
 @log.traced
-def unsubscribe(subscribtion_id):
-    sub = subscribtion(subscribtion_id)
+def unsubscribe(subscription_id):
+    sub = subscription(subscription_id)
     if not sub:
-        raise Exception('Cannot unsubscribe missing subscribtion with id %s' %
-                        subscribtion_id)
+        raise Exception('Cannot unsubscribe missing subscription with id %s' %
+                        subscription_id)
 
     if sub.type == SubscriptionTypes.CHANNEL:
         _channel_subscriptions[sub.channel].remove(sub.handler)

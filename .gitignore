@@ -11,7 +11,7 @@ node_modules
 .idea
 *.egg-info
 
-misli_web
+react_app
 
 # Exclude tmp stuff (visual tests ATM)
 tmp_*
@@ -29,3 +29,4 @@ tmp_*
 www
 
 */web_shell/test
+work-log

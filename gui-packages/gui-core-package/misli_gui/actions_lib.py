@@ -18,17 +18,17 @@ def action(name):
         @functools.wraps(func)
         def wrapper_action(*args, **kwargs):
 
-            action = Action(
+            _action = Action(
                 name, ActionRunStates.STARTED, args=list(args), kwargs=kwargs)
 
-            misli_gui.push_action(action)
+            misli_gui.push_action(_action)
 
             # Call the actual function
             func(*args, **kwargs)
 
-            action.duration = time.time() - action.start_time
-            action.run_state = ActionRunStates.FINISHED
-            misli_gui.push_action(action.copy())
+            _action.duration = time.time() - _action.start_time
+            _action.run_state = ActionRunStates.FINISHED
+            misli_gui.push_action(_action.copy())
 
         ACTIONS[name] = wrapper_action
 
@@ -86,7 +86,7 @@ class Action:
     def copy(self):
         return Action(**vars(self))
 
-    def to_dict(self):
+    def asdict(self):
         self_dict = vars(self)
         self_dict['run_state'] = self.run_state.name
         return self_dict

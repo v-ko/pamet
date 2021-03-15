@@ -4,7 +4,7 @@ from .app import DesktopAppView, DESKTOP_APP_COMPONENT
 from .browser_window import BrowserWindowView, BROWSER_WINDOW_COMPONENT
 from .browser_tab import BrowserTabView, BROWSER_TAB
 from pamet_desktop.map_page_widget import MapPageViewWidget
-from .note_components.text.qt_component import TextNoteViewWidget
+from .note_components.text.widget import TextNoteViewWidget
 from .note_components.text.edit_widget import TextNoteEditViewWidget
 
 components_lib.add(DESKTOP_APP_COMPONENT, DesktopAppView)

@@ -3,8 +3,7 @@ from collections import defaultdict
 
 import misli
 from misli.logging import BColors
-from misli.change import Change
-from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
+from misli.helpers import find_many_by_props, find_one_by_props
 
 from . import components_lib
 from .actions_lib import Action
@@ -12,7 +11,9 @@ from .base_view import View
 
 log = misli.get_logger(__name__)
 
-COMPONENTS_CHANNEL = '__components__'
+ACTIONS_CHANNEL = '__ACTIONS__'
+COMPONENTS_CHANNEL = '__COMPONENTS__'
+misli.add_channel(ACTIONS_CHANNEL)
 misli.add_channel(COMPONENTS_CHANNEL)
 
 _views = {}
@@ -24,9 +25,6 @@ _updated_views = []
 
 _view_model_by_id = {}
 _old_view_models = {}  # A bit redundant (view.last_state can be used)
-
-_action_handlers = []
-_actions_for_dispatch = []
 
 
 # Action channel interface
@@ -42,28 +40,12 @@ def push_action(action: Action):
         'Action %s%s %s%s ARGS=*(%s) KWARGS=**{%s}' %
         (green, action.run_state.name, action.name, end, args_str, kwargs_str))
 
-    _actions_for_dispatch.append(action)
-    misli.call_delayed(_handle_actions, 0)
+    misli.dispatch(action, ACTIONS_CHANNEL)
 
 
-# The first action state returned is the top-level action start state
-# The rest of the states are nested in it and won't invoke a separate on_action
-# By the same logic the last action returned is the Finished state of the
-# top-level action
 @log.traced
 def on_action(handler: Callable):
-    _action_handlers.append(handler)
-
-
-# @log.traced
-def _handle_actions():
-    if not _actions_for_dispatch:
-        return
-
-    for handler in _action_handlers:
-        handler([a.to_dict() for a in _actions_for_dispatch])
-
-    _actions_for_dispatch.clear()
+    misli.subscribe(ACTIONS_CHANNEL, handler)
 
 
 # Runtime component interface

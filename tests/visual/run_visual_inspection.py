@@ -6,7 +6,7 @@ from PIL import Image, ImageChops, ImageStat
 import misli
 from .constants import RECORDING_EXTENSION, SNAP_EXTENSION
 from misli_gui import update_components_from_changes
-from pamet_desktop.qt_main_loop import QtMainLoop
+from misli_qt.qt_main_loop import QtMainLoop
 
 from .gui_recorder import MisliGuiRecorder
 from .gui_replay import MisliGuiReplay
