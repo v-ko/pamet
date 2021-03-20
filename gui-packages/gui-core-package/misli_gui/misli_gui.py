@@ -5,7 +5,7 @@ import misli
 from misli.logging import BColors
 from misli.helpers import find_many_by_props, find_one_by_props
 
-from . import components_lib
+# from . import components_lib
 from .actions_lib import Action
 from .base_view import View
 

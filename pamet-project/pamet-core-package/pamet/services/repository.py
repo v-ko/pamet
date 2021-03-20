@@ -1,5 +1,5 @@
 import pamet
-from misli.change import ChangeTypes
+from misli.change import ChangeTypes, Change
 from pamet.entities import Page
 
 from misli import get_logger
@@ -33,7 +33,8 @@ class Repository():
                            ChangeTypes.DELETE,
                            ChangeTypes.UPDATE]
 
-        for change in changes:
+        for change_dict in changes:
+            change = Change(**change_dict)
             last_state = change.last_state()
 
             if last_state['obj_type'] == 'Note':
