@@ -1,6 +1,7 @@
 from typing import Callable
 from collections import defaultdict
 from enum import Enum
+from copy import deepcopy
 
 from misli.main_loop import NoMainLoop
 from misli.change import Change
@@ -69,7 +70,7 @@ def remove_channel(channel_name):
 
 def call_delayed(
         callback: Callable,
-        delay: float,
+        delay: float = 0,
         args: list = None,
         kwargs: dict = None):
 
@@ -149,7 +150,7 @@ def _invoke_handlers():
 
         # Send the messages to the per-channel subscribers
         for handler in _channel_subscriptions[channel]:
-            handler([m.copy() for m in messages])
+            handler([deepcopy(m) for m in messages])
 
         # # Send the messages to the per-entity subscribers
         # for message in messages:

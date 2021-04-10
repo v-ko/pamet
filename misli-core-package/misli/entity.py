@@ -1,10 +1,20 @@
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, field
 
 
 @dataclass
 class Entity:
-    id: str = ''
-    obj_type: str = ''
+    id: str = field(init=False, default='')
+    obj_type: str = field(init=False, default='')
+
+    @classmethod
+    def from_dict(cls, self_dict: dict):
+        self_id = self_dict.pop('id', '')
+        obj_type = self_dict.pop('obj_type', '')
+
+        instance = cls(**self_dict)
+        instance.id = self_id
+        instance.obj_type = obj_type
+        return instance
 
     def __post_init__(self):
         self.obj_type = type(self).__name__
@@ -14,9 +24,7 @@ class Entity:
 
     def copy(self):
         self_class = type(self)
-        self_dict = self.asdict()
-
-        return self_class(**self_dict)
+        return self_class.from_dict(self.asdict())
 
     def asdict(self):
         # The dataclasses.asdict recurses and that's not what we want

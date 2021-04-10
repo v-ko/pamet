@@ -6,7 +6,7 @@ from misli import get_logger
 log = get_logger(__name__)
 
 
-class Repository():
+class Repository:
     def __init__(self):
         self.path = ''
         self._pages = {}
@@ -41,15 +41,18 @@ class Repository():
                 if change.type in savable_changes:
                     pages_for_update[last_state['page_id']] = True
 
-            elif last_state['obj_type'] == 'Page':
+            elif last_state['obj_type'] == 'MapPage':
                 if change.type == ChangeTypes.CREATE:
-                    self.create_page(Page(**last_state), [])
+                    self.create_page(Page.from_dict(last_state), [])
 
                 elif change.type == ChangeTypes.UPDATE:
                     pages_for_update[last_state['id']] = True
 
                 elif change.type == ChangeTypes.DELETE:
                     self.delete_page(last_state['id'])
+
+            else:
+                raise NotImplementedError
 
         for page_id, _ in pages_for_update.items():
             page = pamet.page(page_id)

@@ -3,7 +3,8 @@ import json
 import random
 import string
 
-from pamet.entities import Page, Note
+from pamet.entities import Note
+from pamet.map_page.entity import MapPage
 from .repository import Repository
 
 from misli import get_logger
@@ -37,8 +38,8 @@ class FSStorageRepository(Repository):
                     continue
 
                 note_states = page_state.pop('note_states', [])
-                notes = [Note(**ns) for nid, ns in note_states.items()]
-                self.create_page(Page(**page_state), notes)
+                notes = [Note.from_dict(ns) for nid, ns in note_states.items()]
+                self.create_page(MapPage.from_dict(page_state), notes)
 
                 backup_path = file.path + '.backup'
                 os.rename(file.path, backup_path)
@@ -114,9 +115,9 @@ class FSStorageRepository(Repository):
             return None
 
         note_states = page_state.pop('note_states', [])
-        notes = [Note(**ns) for ns in note_states]
+        notes = [Note.from_dict(ns) for ns in note_states]
 
-        return Page(**page_state), notes
+        return MapPage.from_dict(page_state), notes
 
     def update_page(self, page, notes):
         page_state = page.asdict()

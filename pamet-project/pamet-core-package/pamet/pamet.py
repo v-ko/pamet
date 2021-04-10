@@ -17,7 +17,7 @@ ALL_NOTES_CHANNEL = '__all_notes_channel__'
 
 
 def NOTES_CHANNEL(page_id):
-    return '__notes_changes__%s' % page_id  # + page_id
+    return '__notes_changes__%s' % page_id
 
 
 _repo = None
@@ -62,13 +62,14 @@ def remove_note_index_and_channel(page_id):
 
 
 @log.traced
-def add_page(_page, _notes: list):
+def add_page(_page, _notes: list = None):
+    _notes = _notes or []
     init_note_index_and_channel(_page, _notes)
 
     if not _page.id:
         _page.id = get_new_id()
 
-    load_page(_page)
+    load_page(_page, _notes)
     change = Change(
         ChangeTypes.CREATE, old_state={}, new_state=_page.asdict())
     misli.dispatch(change.asdict(), PAGES_CHANNEL)
@@ -150,7 +151,7 @@ def create_note(**props):
 
     props['id'] = get_new_id()
 
-    _note = Note(**props)
+    _note = Note.from_dict(props)
     add_note(_note)
     return _note
 
@@ -278,7 +279,7 @@ def update_views_for_page_changes(changes: List[dict]):
     for page_change_dict in changes:
         page_change = Change(**page_change_dict)
         page_state = page_change.last_state()
-        _page = Page(**page_state)
+        _page = Page.from_dict(page_state)
 
         if page_change.is_update():
 
@@ -303,7 +304,7 @@ def update_views_for_page_changes(changes: List[dict]):
 def update_views_for_note_changes(changes: List[dict]):
     for note_change_dict in changes:
         note_change = Change(**note_change_dict)
-        _note = Note(**note_change.last_state())
+        _note = Note.from_dict(note_change.last_state())
 
         if note_change.is_create():
             _page = pamet.page(_note.page_id)

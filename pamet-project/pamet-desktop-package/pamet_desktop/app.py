@@ -5,6 +5,8 @@ import misli
 from misli import Entity
 from pamet.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
 from pamet.constants import DESKTOP_APP_VERSION
+
+import misli_gui
 from misli_gui.base_view import View
 log = misli.get_logger(__name__)
 
@@ -14,7 +16,7 @@ class DesktopAppViewModel(Entity):
     pass
 
 
-class DesktopAppView(QApplication, View):
+class DesktopApp(QApplication, View):
     view_class = 'DesktopApp'
 
     def __init__(self):
@@ -39,4 +41,4 @@ class DesktopAppView(QApplication, View):
             child.showMaximized()
 
         for child in removed:
-            del self.browser_windows[child.id]
+            self.browser_windows.pop(child.id)

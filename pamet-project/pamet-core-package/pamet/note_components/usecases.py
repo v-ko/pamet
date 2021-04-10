@@ -13,7 +13,7 @@ def create_new_note(
         tab_view_id: str, position_coords: list, note_state: dict):
 
     position = Point.from_coords(position_coords)
-    note = Note(**note_state)
+    note = Note.from_dict(note_state)
 
     # edit_view = misli_gui.create_view(
     #     'TextEdit', tab_view.id)

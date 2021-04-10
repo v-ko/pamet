@@ -8,10 +8,6 @@ class ChangeTypes(Enum):
 
 
 class Change:
-    type: ChangeTypes
-    old_state: dict = dict
-    new_state: dict = dict
-
     def __init__(
             self,
             type: ChangeTypes,

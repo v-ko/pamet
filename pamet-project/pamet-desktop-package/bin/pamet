@@ -9,20 +9,18 @@ set_logging_level(LoggingLevels.DEBUG)
 import misli
 from pamet.services.file_system_storage import FSStorageRepository
 
-import misli_gui
-# from pamet import update_components_from_changes
-
 import pamet
 from pamet_desktop import usecases
 from misli_qt.qt_main_loop import QtMainLoop
 from pamet_desktop.config import get_config
-from pamet_desktop.app import DesktopAppView
+from pamet_desktop.app import DesktopApp
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
 def main():
+    misli.line_spacing_in_pixels = 20
     config = get_config()
     repo_path = config['repository_path']
 
@@ -49,16 +47,14 @@ def main():
 
     # pamet.set_repo(fs_repo, 'all')
     misli.set_main_loop(QtMainLoop())
+
     misli.subscribe(pamet.PAGES_CHANNEL, fs_repo.save_changes)
     misli.subscribe(pamet.ALL_NOTES_CHANNEL, fs_repo.save_changes)
-    # misli.subscribe(update_components_from_changes, channel='all')
 
-    misli.line_spacing_in_pixels = 20
-
-    desktop_app = DesktopAppView()
-    # misli_gui.add_view(desktop_app)
+    desktop_app = DesktopApp()
     misli.call_delayed(usecases.new_browser_window_ensure_page, 0)
-    desktop_app.exec_()
+
+    return desktop_app.exec_()
 
 
 if __name__ == '__main__':

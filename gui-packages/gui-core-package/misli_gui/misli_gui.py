@@ -58,7 +58,7 @@ def on_action(handler: Callable):
 
 def add_view(_view: View):
     _views[_view.id] = _view
-    _view_model = _view.last_model  # For debugging
+    # _view_model = _view.last_model  # For debugging
     _view_model_by_id[_view.id] = _view.last_model
     _views_per_parent[_view.id] = []
 
@@ -123,8 +123,8 @@ def update_view_model(new_model):
 
 
 def remove_view(_view: View):
-    del _views_per_parent[_view.id]
-    del _views[_view.id]
+    _views_per_parent.pop(_view.id)
+    _views.pop(_view.id)
 
     if _view.parent_id:
         if _view.parent_id not in _views_per_parent:
