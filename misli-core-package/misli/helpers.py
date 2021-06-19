@@ -1,4 +1,3 @@
-import time
 import random
 import uuid
 
@@ -41,10 +40,3 @@ def find_one_by_props(item_list: [list, dict], **props):
         return None
 
     return items_found[0]
-
-
-def set_reproducible_ids(enabled):
-    if enabled:
-        random.seed(0)
-    else:
-        random.seed(time.time())

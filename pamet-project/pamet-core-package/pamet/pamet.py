@@ -219,8 +219,7 @@ def update_note(_note):
 @log.traced
 def create_and_bind_page_view(page_id: str, parent_id: str):
     _page = page(page_id)
-    # page_view = pamet.view_library.create_view(
-    #     obj_class=_page.obj_class, parent_id=parent_id)
+
     page_view_class = pamet.view_library.get_view_class(_page.view_class)
     page_view = page_view_class(parent_id=parent_id)
 
@@ -240,8 +239,6 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
 def create_and_bind_note_view(page_view_id, _note):
     note_view_class = pamet.view_library.get_view_class(_note.view_class)
     note_view = note_view_class(parent_id=page_view_id)
-    # note_view = misli_gui.create_view(
-    #     obj_class=_note.obj_class, parent_id=page_view_id)
 
     note_view_model = misli_gui.view_model(note_view.id)
     note_view_model.note = _note
@@ -255,10 +252,6 @@ def create_and_bind_note_view(page_view_id, _note):
 def create_and_bind_edit_view(tab_view_id, _note):
 
     edit_class = pamet.view_library.get_edit_view_class(_note.view_class)
-
-    # edit_view = misli_gui.create_view(
-    #     obj_class=edit_class_name, parent_id=tab_view_id)
-
     edit_view = edit_class(parent_id=tab_view_id)
 
     edit_view_model = misli_gui.view_model(edit_view.id)

@@ -287,7 +287,6 @@ class MapPageView(View):
                 self.id, state.selected_nc_ids, pos_delta.to_list())
 
         elif mode == state.modes.DRAG_NAVIGATION:
-            # Page drag navigation was active
             usecases.mouse_drag_navigation_move(self.id, delta)
 
     def handle_mouse_scroll(self, steps: int):

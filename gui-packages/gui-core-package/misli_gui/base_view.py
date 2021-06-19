@@ -9,7 +9,7 @@ log = get_logger(__name__)
 
 class View:
     def __init__(self, parent_id: str, initial_model: Entity):
-        initial_model.id = get_new_id()
+        initial_model.id = get_new_id()  # Generate the ViewModel.id(==View.id)
         self.parent_id = parent_id
         self.__last_model = initial_model
 

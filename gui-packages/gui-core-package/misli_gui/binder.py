@@ -27,6 +27,7 @@ class Binder:
     @log.traced
     def views_mapped_to_entity(self, entity_gid):
         component_ids = self._view_ids_by_entity_id[entity_gid]
+
         components = []
         for component_id in component_ids:
             component = misli_gui.view(component_id)
@@ -35,14 +36,4 @@ class Binder:
                 continue
 
             components.append(component)
-
         return components
-
-    # def entity_gid_for_component(self, component_id):
-    #     if component_id not in self._entity_id_by_component_id:
-    #         return None
-    #
-    #     return self._entity_id_by_component_id[component_id]
-
-    # def handle_changes(self, changes):
-    #     raise NotImplementedError

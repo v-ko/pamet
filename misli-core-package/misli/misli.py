@@ -4,13 +4,43 @@ from enum import Enum
 from copy import deepcopy
 
 from misli.main_loop import NoMainLoop
-from misli.change import Change
 from misli import get_logger
 
 
 log = get_logger(__name__)
 
+
+# ---------------Main loop related--------------------
 _main_loop = NoMainLoop()
+
+
+@log.traced
+def set_main_loop(main_loop):
+    global _main_loop
+    _main_loop = main_loop
+
+
+def call_delayed(
+        callback: Callable,
+        delay: float = 0,
+        args: list = None,
+        kwargs: dict = None):
+
+    if args is None:
+        args = []
+    if kwargs is None:
+        kwargs = {}
+
+    log.debug('Will call %s delayed with %s secs' % (callback.__name__, delay))
+    _main_loop.call_delayed(callback, delay, args, kwargs)
+
+
+# --------------Dispatcher related-------------------
+_subscriptions = {}  # by id
+_channel_subscriptions = defaultdict(list)  # [channel] = list
+# _per_entity_subscriptions = defaultdict(list)  # [(channel, entity_id)] = list
+_message_stacks = {}
+_subscription_keys_by_id = dict
 
 
 class SubscriptionTypes(Enum):
@@ -38,19 +68,6 @@ class Subscription:
         return cls(handler, SubscriptionTypes.ENTITY, channel, entity_id)
 
 
-_subscriptions = {}  # by id
-_channel_subscriptions = defaultdict(list)  # [channel] = list
-# _per_entity_subscriptions = defaultdict(list)  # [(channel, entity_id)] = list
-_message_stacks = {}
-_subscription_keys_by_id = dict
-
-
-@log.traced
-def set_main_loop(main_loop):
-    global _main_loop
-    _main_loop = main_loop
-
-
 def channels():
     return list(_message_stacks.keys())
 
@@ -66,21 +83,6 @@ def remove_channel(channel_name):
         raise Exception('Trying to delete non-existent channel')
 
     del _message_stacks[channel_name]
-
-
-def call_delayed(
-        callback: Callable,
-        delay: float = 0,
-        args: list = None,
-        kwargs: dict = None):
-
-    if args is None:
-        args = []
-    if kwargs is None:
-        kwargs = {}
-
-    log.debug('Will call %s delayed with %s secs' % (callback.__name__, delay))
-    _main_loop.call_delayed(callback, delay, args, kwargs)
 
 
 # Channel interface

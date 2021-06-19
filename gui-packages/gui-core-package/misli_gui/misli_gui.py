@@ -1,11 +1,12 @@
 from typing import Callable
 from collections import defaultdict
+import time
+import random
 
 import misli
 from misli.logging import BColors
 from misli.helpers import find_many_by_props, find_one_by_props
 
-# from . import components_lib
 from .actions_lib import Action
 from .base_view import View
 
@@ -23,7 +24,7 @@ _added_views_per_parent = defaultdict(list)
 _removed_views_per_parent = defaultdict(list)
 _updated_views = []
 
-_view_model_by_id = {}
+_view_models = {}
 _old_view_models = {}  # A bit redundant (view.last_state can be used)
 
 
@@ -48,19 +49,10 @@ def on_action(handler: Callable):
     misli.subscribe(ACTIONS_CHANNEL, handler)
 
 
-# Runtime component interface
-# @log.traced
-# def create_view(obj_class, *args, **kwargs):
-#     _view = components_lib.create_view(obj_class, *args, **kwargs)
-#     add_view(_view)
-#     return _view
-
-
 def add_view(_view: View):
     _views[_view.id] = _view
-    # _view_model = _view.last_model  # For debugging
-    _view_model_by_id[_view.id] = _view.last_model
     _views_per_parent[_view.id] = []
+    _view_models[_view.id] = _view.last_model
 
     if _view.parent_id:
         if _view.parent_id not in _views_per_parent:
@@ -82,9 +74,9 @@ def view(id: str):
 
 
 def view_model(view_id):
-    if view_id not in _view_model_by_id:
+    if view_id not in _view_models:
         return None
-    _view_model = _view_model_by_id[view_id]
+    _view_model = _view_models[view_id]
     return _view_model.copy()
 
 
@@ -111,7 +103,7 @@ def find_view(**props):
 def update_view_model(new_model):
     _view = view(new_model.id)
     old_model = _view.last_model
-    _view_model_by_id[_view.id] = new_model
+    _view_models[_view.id] = new_model
 
     if _view.id not in _old_view_models:
         _old_view_models[_view.id] = old_model
@@ -167,3 +159,11 @@ def _update_views():
     for view_id, changes in child_changes_per_parent_id.items():
         _view = view(view_id)
         _view.handle_child_changes(*changes)
+
+
+# ----------------Various---------------------
+def set_reproducible_ids(enabled):
+    if enabled:
+        random.seed(0)
+    else:
+        random.seed(time.time())

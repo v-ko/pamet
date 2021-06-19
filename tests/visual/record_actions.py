@@ -37,7 +37,7 @@ def main():
     replay_speed = args.replay_speed
 
     misli.set_main_loop(QtMainLoop())
-    misli.set_reproducible_ids(True)
+    misli_gui.set_reproducible_ids(True)
     misli.on_change(update_components_from_changes)
 
     controller = MisliGuiRecorder('BrowserWindow', ignored_actions_list)

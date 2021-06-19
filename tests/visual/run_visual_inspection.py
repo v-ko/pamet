@@ -21,7 +21,7 @@ DIFF_FOLDER = 'tmp_last_visual_inspection_diffs'
 
 def run_recording(file_for_replay, output_folder, replay_speed):
     misli.set_main_loop(QtMainLoop())
-    misli.set_reproducible_ids(True)
+    misli_gui.set_reproducible_ids(True)
 
     recorder = MisliGuiRecorder('BrowserWindow')
     misli.gui.on_action(recorder.handle_action_channel)
