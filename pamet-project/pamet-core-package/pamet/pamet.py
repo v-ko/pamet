@@ -24,7 +24,7 @@ _repo = None
 _pages = {}
 _note_indices = {}
 
-binder = misli_gui.Binder()
+binder = misli_gui.EntityToViewMapping()
 
 misli.add_channel(PAGES_CHANNEL)
 misli.add_channel(ALL_NOTES_CHANNEL)
@@ -227,7 +227,7 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
     page_view_model.page = _page
     misli_gui.update_view_model(page_view_model)
 
-    binder.map_entity_to_view(_page, page_view)
+    binder.map_entity_to_view(_page.gid(), page_view.id)
 
     for _note in notes(_page.id):
         create_and_bind_note_view(page_view.id, _note)
@@ -244,7 +244,7 @@ def create_and_bind_note_view(page_view_id, _note):
     note_view_model.note = _note
     misli_gui.update_view_model(note_view_model)
 
-    binder.map_entity_to_view(_note, note_view)
+    binder.map_entity_to_view(_note.gid(), note_view.id)
     return note_view
 
 
@@ -258,7 +258,7 @@ def create_and_bind_edit_view(tab_view_id, _note):
     edit_view_model.note = _note
     misli_gui.update_view_model(edit_view_model)
 
-    binder.map_entity_to_view(_note, edit_view)
+    binder.map_entity_to_view(_note.gid(), edit_view.id)
 
     return edit_view
 

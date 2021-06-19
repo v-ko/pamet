@@ -5,15 +5,15 @@ import misli_gui
 log = misli.get_logger(__name__)
 
 
-class Binder:
+class EntityToViewMapping:
     def __init__(self):
         self._view_ids_by_entity_id = defaultdict(list)
         self._entity_id_by_view_id = {}
 
     @log.traced
-    def map_entity_to_view(self, entity, view):
-        self._view_ids_by_entity_id[entity.gid()].append(view.id)
-        self._entity_id_by_view_id[view.id] = entity.gid()
+    def map_entity_to_view(self, entity_gid, view_id):
+        self._view_ids_by_entity_id[entity_gid].append(view_id)
+        self._entity_id_by_view_id[view_id] = entity_gid
 
     @log.traced
     def unmap_entity_from_view(self, entity_gid, view_id):
