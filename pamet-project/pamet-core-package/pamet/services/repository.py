@@ -52,6 +52,9 @@ class Repository:
                     self.delete_page(last_state['id'])
 
             else:
+                log.error('Saving changes for objects of type "%s" is not'
+                          'implemented. Change: %s' %
+                          (last_state['obj_type'], change_dict))
                 raise NotImplementedError
 
         for page_id, _ in pages_for_update.items():

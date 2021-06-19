@@ -3,13 +3,14 @@ from dataclasses import dataclass
 from PySide2.QtWidgets import QVBoxLayout, QWidget
 from PySide2.QtCore import Qt
 
-from misli import Entity
+from misli import Entity, register_entity
 import misli_gui
 from misli_gui.base_view import View
 from pamet import view_library
 from pamet.note_components import usecases
 
 
+@register_entity
 @dataclass
 class BrowserTabViewState(Entity):
     name: str = ''

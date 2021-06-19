@@ -23,6 +23,7 @@ def main():
     misli.line_spacing_in_pixels = 20
     config = get_config()
     repo_path = config['repository_path']
+    log.info('Using repository: %s' % repo_path)
 
     # # Testing - restore repo changes
     # for f in os.scandir(repo_path):

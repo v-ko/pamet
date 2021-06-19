@@ -1,10 +1,11 @@
 from dataclasses import dataclass
 
-from misli import Entity
+from misli import Entity, register_entity
 from misli_gui.base_view import View
 from pamet.entities import Note
 
 
+@register_entity
 @dataclass
 class NoteViewModel(Entity):
     note: Note = None

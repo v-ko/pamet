@@ -2,15 +2,15 @@ from dataclasses import dataclass
 from PySide2.QtWidgets import QApplication
 
 import misli
-from misli import Entity
+from misli import Entity, register_entity
 from pamet.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
 from pamet.constants import DESKTOP_APP_VERSION
 
-import misli_gui
 from misli_gui.base_view import View
 log = misli.get_logger(__name__)
 
 
+@register_entity
 @dataclass
 class DesktopAppViewModel(Entity):
     pass

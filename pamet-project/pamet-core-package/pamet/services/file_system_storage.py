@@ -212,9 +212,10 @@ class FSStorageRepository(Repository):
                 nt['text'] = text
 
         for i, nt in enumerate(notes):
+            nt['obj_type'] = 'Note'
+            nt['id'] = str(nt['id'])
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
-            nt['id'] = str(nt['id'])
             nt['_x'] = nt.pop('x')
             nt['_y'] = nt.pop('y')
             nt['_width'] = nt.pop('width')
@@ -245,7 +246,9 @@ class FSStorageRepository(Repository):
             #     nt['font_size'] = 2
 
         note_states = {n['id']: n for n in json_object.pop('notes')}
-        json_object['note_states'] = note_states
+
+        json_object['obj_type'] = 'MapPage'
         json_object['view_class'] = 'MapPage'
+        json_object['note_states'] = note_states
 
         return json_object

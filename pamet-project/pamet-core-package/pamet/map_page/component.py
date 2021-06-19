@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import misli
 
-from misli import Entity
+from misli import Entity, register_entity
 from misli.basic_classes import Point, Rectangle
 from pamet.constants import RESIZE_CIRCLE_RADIUS
 
@@ -28,6 +28,7 @@ class MapPageMode(Enum):
     NOTE_DRAG = 4
 
 
+@register_entity
 @dataclass
 class MapPageViewModel(Entity):
     page: Page = None
@@ -56,6 +57,7 @@ class MapPageViewModel(Entity):
     note_drag_active: bool = False
 
     def __post_init__(self):
+        Entity.__post_init__(self)
         self.modes = MapPageMode
         self.viewport = Viewport(self)
 
