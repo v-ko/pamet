@@ -7,7 +7,7 @@ from PySide2.QtGui import QKeySequence
 
 import misli
 from misli.basic_classes import Point, Rectangle
-from misli_gui.base_view import View
+from misli.gui.base_view import View
 
 from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from pamet.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH

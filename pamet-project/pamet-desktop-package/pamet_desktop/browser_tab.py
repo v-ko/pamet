@@ -3,9 +3,8 @@ from dataclasses import dataclass
 from PySide2.QtWidgets import QVBoxLayout, QWidget
 from PySide2.QtCore import Qt
 
-from misli import Entity, register_entity
-import misli_gui
-from misli_gui.base_view import View
+from misli import Entity, register_entity, gui
+from misli.gui.base_view import View
 from pamet import view_library
 from pamet.note_components import usecases
 
@@ -72,7 +71,7 @@ class BrowserTabView(QWidget, View):
         if self.page_view:
             self.layout().removeWidget(self.page_view)
 
-        page_view = misli_gui.view(page_view_id)
+        page_view = gui.view(page_view_id)
         self.layout().addWidget(page_view)
 
         self.page_view = page_view

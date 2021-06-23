@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from misli.helpers import get_new_id
-from misli import Entity
-import misli_gui
+from misli import Entity, gui
 from misli import get_logger
 log = get_logger(__name__)
 
@@ -13,7 +12,7 @@ class View:
         initial_model.id = self.id
         self.parent_id = parent_id
 
-        misli_gui.add_view(self, initial_model)
+        gui.add_view(self, initial_model)
 
     def __repr__(self):
         return '<%s id=%s>' % (type(self).__name__, self.id)
@@ -24,7 +23,7 @@ class View:
 
     @property
     def displayed_model(self):
-        model = misli_gui.displayed_view_model(self.id)
+        model = gui.displayed_view_model(self.id)
         if not model or model.id != self.id:
             raise Exception('Could not retrieve view model for view %s' % self)
         return model
@@ -40,7 +39,7 @@ class View:
         pass
 
     def child(self, child_id: str):
-        return misli_gui.view(child_id)
+        return gui.view(child_id)
 
     def get_children(self):
-        return misli_gui.view_children(self.id)
+        return gui.view_children(self.id)

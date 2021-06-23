@@ -3,7 +3,7 @@ from PySide2.QtWidgets import QMainWindow, QPushButton
 from PySide2.QtGui import QIcon
 
 from misli import Entity, register_entity
-from misli_gui.base_view import View
+from misli.gui.base_view import View
 from pamet_desktop import usecases
 
 from .ui_browser_window import Ui_BrowserWindow

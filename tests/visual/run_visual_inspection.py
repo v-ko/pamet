@@ -5,8 +5,8 @@ from PIL import Image, ImageChops, ImageStat
 
 import misli
 from .constants import RECORDING_EXTENSION, SNAP_EXTENSION
-from misli_gui import update_components_from_changes
-from misli_qt.qt_main_loop import QtMainLoop
+from misli.gui import update_components_from_changes
+from misli.gui.desktop import QtMainLoop
 
 import pamet
 

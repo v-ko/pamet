@@ -4,10 +4,10 @@ import signal
 import argparse
 
 import misli
-from misli_gui import update_components_from_changes
+from misli.gui import update_components_from_changes
 from pamet import usecases
 import pamet
-from misli_qt.qt_main_loop import QtMainLoop
+from misli.gui.desktop import QtMainLoop
 
 from .gui_recorder import MisliGuiRecorder
 from .gui_replay import MisliGuiReplay

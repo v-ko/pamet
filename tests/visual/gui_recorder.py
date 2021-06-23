@@ -6,9 +6,9 @@ from PySide2.QtCore import QPoint
 from PySide2.QtGui import QPixmap, QRegion
 
 import misli
-import misli_gui
+from misli import gui
 
-from misli_gui.actions_lib import Action
+from misli.gui.actions_lib import Action
 from .constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
 
 log = misli.get_logger(__name__)
@@ -26,7 +26,7 @@ class MisliGuiRecorder:
         self.snapshots = {}
 
     def capture_qt_component_to_image(self, image_id):
-        matching_components = [c for c in misli_gui.views()
+        matching_components = [c for c in gui.views()
                                if c.view_class == self.component_name]
 
         if not matching_components:

@@ -1,7 +1,8 @@
 from collections import defaultdict
 
 import misli
-import misli_gui
+from misli import gui
+
 log = misli.get_logger(__name__)
 
 
@@ -30,7 +31,7 @@ class EntityToViewMapping:
 
         components = []
         for component_id in component_ids:
-            component = misli_gui.view(component_id)
+            component = gui.view(component_id)
             if not component:
                 self.unmap_entity_from_view(entity_gid, component_id)
                 continue

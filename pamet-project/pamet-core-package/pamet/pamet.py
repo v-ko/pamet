@@ -4,12 +4,12 @@ import misli
 from misli.change import Change, ChangeTypes
 from misli.helpers import get_new_id, find_many_by_props
 from misli.helpers import find_one_by_props
-import misli_gui
 
 import pamet
 from pamet.entities import Page, Note
 
-from misli import get_logger
+from misli import get_logger, gui
+
 log = get_logger(__name__)
 
 PAGES_CHANNEL = '__page_changes__'
@@ -24,7 +24,7 @@ _repo = None
 _pages = {}
 _note_indices = {}
 
-binder = misli_gui.EntityToViewMapping()
+binder = gui.EntityToViewMapping()
 
 misli.add_channel(PAGES_CHANNEL)
 misli.add_channel(ALL_NOTES_CHANNEL)
@@ -223,9 +223,9 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
     page_view_class = pamet.view_library.get_view_class(_page.view_class)
     page_view = page_view_class(parent_id=parent_id)
 
-    page_view_model = misli_gui.view_model(page_view.id)
+    page_view_model = gui.view_model(page_view.id)
     page_view_model.page = _page
-    misli_gui.update_view_model(page_view_model)
+    gui.update_view_model(page_view_model)
 
     binder.map_entity_to_view(_page.gid(), page_view.id)
 
@@ -240,9 +240,9 @@ def create_and_bind_note_view(page_view_id, _note):
     note_view_class = pamet.view_library.get_view_class(_note.view_class)
     note_view = note_view_class(parent_id=page_view_id)
 
-    note_view_model = misli_gui.view_model(note_view.id)
+    note_view_model = gui.view_model(note_view.id)
     note_view_model.note = _note
-    misli_gui.update_view_model(note_view_model)
+    gui.update_view_model(note_view_model)
 
     binder.map_entity_to_view(_note.gid(), note_view.id)
     return note_view
@@ -254,9 +254,9 @@ def create_and_bind_edit_view(tab_view_id, _note):
     edit_class = pamet.view_library.get_edit_view_class(_note.view_class)
     edit_view = edit_class(parent_id=tab_view_id)
 
-    edit_view_model = misli_gui.view_model(edit_view.id)
+    edit_view_model = gui.view_model(edit_view.id)
     edit_view_model.note = _note
-    misli_gui.update_view_model(edit_view_model)
+    gui.update_view_model(edit_view_model)
 
     binder.map_entity_to_view(_note.gid(), edit_view.id)
 
@@ -278,14 +278,14 @@ def update_views_for_page_changes(changes: List[dict]):
 
             page_views = binder.views_mapped_to_entity(_page.gid())
             for pc in page_views:
-                pcs = misli_gui.view_model(pc.id)
+                pcs = gui.view_model(pc.id)
                 pcs.page = _page
-                misli_gui.update_view_model(pc.id)
+                gui.update_view_model(pc.id)
 
         elif page_change.is_delete():
             page_views = binder.views_mapped_to_entity(_page.gid())
             for pc in page_views:
-                misli_gui.remove_view(pc)
+                gui.remove_view(pc)
                 # I may have to do something more elegant here - with
                 # some kind of notification
 
@@ -311,11 +311,11 @@ def update_views_for_note_changes(changes: List[dict]):
             note_views = binder.views_mapped_to_entity(_note.gid())
 
             for nc in note_views:
-                ncs = misli_gui.view_model(nc.id)
+                ncs = gui.view_model(nc.id)
                 ncs.note = _note
-                misli_gui.update_view_model(ncs)
+                gui.update_view_model(ncs)
 
         elif note_change.type == ChangeTypes.DELETE:
             note_views = binder.views_mapped_to_entity(_note.gid())
             for nc in note_views:
-                misli_gui.remove_view(nc)
+                gui.remove_view(nc)

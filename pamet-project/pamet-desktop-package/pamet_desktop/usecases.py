@@ -1,7 +1,7 @@
 import pamet
 from pamet.map_page.entity import MapPage
-import misli_gui
-from misli_gui.actions_lib import action
+from misli import gui
+from misli.gui.actions_lib import action
 from pamet_desktop.config import get_config
 
 
@@ -23,7 +23,7 @@ def new_browser_window_ensure_page():
 
 @action('desktop.new_browser_window')
 def new_browser_window(page_id: str):
-    app = misli_gui.find_view(view_class='DesktopApp')
+    app = gui.find_view(view_class='DesktopApp')
 
     window_view_class = pamet.view_library.get_view_class('BrowserWindow')
     window = window_view_class(parent_id=app.id)
@@ -33,13 +33,13 @@ def new_browser_window(page_id: str):
 
 @action('desktop.close_browser_window')
 def close_browser_window(browser_window_id: str):
-    browser_window = misli_gui.view(browser_window_id)
-    misli_gui.remove_view(browser_window)
+    browser_window = gui.view(browser_window_id)
+    gui.remove_view(browser_window)
 
 
 @action('desktop.new_browser_tab')
 def new_browser_tab(browser_window_id: str, page_id: str):
-    # tab_view = misli_gui.create_view(
+    # tab_view = gui.create_view(
     #     obj_class='BrowserTab', parent_id=browser_window_id)
 
     tab_view_class = pamet.view_library.get_view_class('BrowserTab')
@@ -54,11 +54,11 @@ def tab_go_to_page(tab_component_id, page_id):
     page_view = pamet.create_and_bind_page_view(
         page.id, parent_id=tab_component_id)
 
-    page_view_model = misli_gui.view_model(page_view.id)
+    page_view_model = gui.view_model(page_view.id)
     page_view_model.page = page
 
-    tab_view_model = misli_gui.view_model(tab_component_id)
+    tab_view_model = gui.view_model(tab_component_id)
     tab_view_model.page_view_id = page_view.id
 
-    misli_gui.update_view_model(tab_view_model)
-    misli_gui.update_view_model(page_view_model)
+    gui.update_view_model(tab_view_model)
+    gui.update_view_model(page_view_model)

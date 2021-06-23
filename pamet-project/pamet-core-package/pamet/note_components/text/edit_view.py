@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from misli.basic_classes import Point
 from misli import Entity, register_entity
-from misli_gui.base_view import View
+from misli.gui.base_view import View
 
 from pamet.entities import Note
 from pamet.note_components import usecases

@@ -3,7 +3,7 @@ import functools
 from enum import Enum
 
 import misli
-import misli_gui
+from misli import gui
 from misli.helpers import get_new_id
 log = misli.get_logger(__name__)
 
@@ -21,14 +21,14 @@ def action(name):
             _action = Action(
                 name, ActionRunStates.STARTED, args=list(args), kwargs=kwargs)
 
-            misli_gui.push_action(_action)
+            gui.push_action(_action)
 
             # Call the actual function
             func(*args, **kwargs)
 
             _action.duration = time.time() - _action.start_time
             _action.run_state = ActionRunStates.FINISHED
-            misli_gui.push_action(_action.copy())
+            gui.push_action(_action.copy())
 
         ACTIONS[name] = wrapper_action
 
