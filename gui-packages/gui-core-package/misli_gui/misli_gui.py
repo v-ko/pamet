@@ -25,7 +25,8 @@ _removed_views_per_parent = defaultdict(list)
 _updated_views = []
 
 _view_models = {}
-_old_view_models = {}  # A bit redundant (view.last_state can be used)
+_old_view_models = {}
+_displayed_view_models = {}
 
 
 # Action channel interface
@@ -49,10 +50,11 @@ def on_action(handler: Callable):
     misli.subscribe(ACTIONS_CHANNEL, handler)
 
 
-def add_view(_view: View):
+def add_view(_view: View, initial_model):
     _views[_view.id] = _view
     _views_per_parent[_view.id] = []
-    _view_models[_view.id] = _view.last_model
+    _view_models[_view.id] = initial_model
+    _displayed_view_models[_view.id] = initial_model
 
     if _view.parent_id:
         if _view.parent_id not in _views_per_parent:
@@ -80,6 +82,13 @@ def view_model(view_id):
     return _view_model.copy()
 
 
+def displayed_view_model(view_id: str):
+    if view_id not in _displayed_view_models:
+        return None
+    _view_model = _displayed_view_models[view_id]
+    return _view_model.copy()
+
+
 def view_children(view_id):
     return _views_per_parent[view_id]
 
@@ -101,8 +110,8 @@ def find_view(**props):
 
 @log.traced
 def update_view_model(new_model):
-    _view = view(new_model.id)
-    old_model = _view.last_model
+    _view: View = view(new_model.id)
+    old_model = _view.displayed_model
     _view_models[_view.id] = new_model
 
     if _view.id not in _old_view_models:
@@ -138,7 +147,7 @@ def _update_views():
     for _view in _updated_views:
         old_model = _old_view_models[_view.id]
         new_model = view_model(_view.id)
-        _view.update_cached_model(new_model)
+        _displayed_view_models[_view.id] = new_model
         _view.handle_model_update(old_model, new_model)
 
         if _view.parent_id:

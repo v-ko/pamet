@@ -9,22 +9,28 @@ log = get_logger(__name__)
 
 class View:
     def __init__(self, parent_id: str, initial_model: Entity):
-        initial_model.id = get_new_id()  # Generate the ViewModel.id(==View.id)
+        self._id = get_new_id()  # Generate the ViewModel.id(==View.id)
+        initial_model.id = self.id
         self.parent_id = parent_id
-        self.__last_model = initial_model
 
-        misli_gui.add_view(self)
+        misli_gui.add_view(self, initial_model)
+
+    def __repr__(self):
+        return '<%s id=%s>' % (type(self).__name__, self.id)
 
     @property
     def id(self):
-        return self.__last_model.id
+        return self._id
 
     @property
-    def last_model(self):
-        return self.__last_model
+    def displayed_model(self):
+        model = misli_gui.displayed_view_model(self.id)
+        if not model or model.id != self.id:
+            raise Exception('Could not retrieve view model for view %s' % self)
+        return model
 
-    def update_cached_model(self, new_model):
-        self.__last_model = new_model
+    # def update_cached_model(self, new_model):
+    #     self.__displayed_model = new_model
 
     def handle_model_update(self, old_model, new_model):
         pass

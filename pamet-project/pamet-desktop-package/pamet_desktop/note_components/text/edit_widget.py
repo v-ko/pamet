@@ -32,7 +32,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
     def update(self):
         log.info('EditComponent update')
         display_rect = QRectF(*self.note.rect().to_list())
-        display_rect.moveCenter(QPointF(*self.last_model.display_position.to_list()))
+        display_rect.moveCenter(QPointF(*self.displayed_model.display_position.to_list()))
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
@@ -51,7 +51,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         note = self.note
         note.text = text
 
-        if self.last_model.create_mode:
+        if self.displayed_model.create_mode:
             usecases.finish_creating_note(self.id, note)
         else:
             usecases.finish_editing_note(self.id, note)

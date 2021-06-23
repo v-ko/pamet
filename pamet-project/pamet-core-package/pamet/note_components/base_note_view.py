@@ -21,4 +21,4 @@ class NoteView(View):
 
     @property
     def note(self):
-        return self.last_model.note.copy()
+        return self.displayed_model.note.copy()

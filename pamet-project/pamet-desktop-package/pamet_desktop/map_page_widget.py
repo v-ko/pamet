@@ -231,7 +231,7 @@ class MapPageViewWidget(QWidget, MapPageView):
         return display_rects_by_child_id
 
     def paintEvent(self, event):
-        model = self.last_model
+        model = self.displayed_model
         self._paint_event_count += 1
         paint_t0 = time.time()
 

@@ -30,7 +30,7 @@ class TextNoteEditView(View):
 
     @property
     def note(self):
-        return self.last_model.note.copy()
+        return self.displayed_model.note.copy()
 
     def _handle_esc_shortcut(self):
         usecases.abort_editing_note(self.id)
