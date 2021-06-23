@@ -3,7 +3,7 @@ import pytest
 
 import pamet
 from pamet.services.file_system_storage import FSStorageRepository
-from pamet.entities import Page, Note
+from pamet import Page, Note
 
 REPO_PATH = './tmp_mock_repo'
 

@@ -24,9 +24,11 @@ tmp_*
 */web_shell/brython_stdlib.js
 */web_shell/brython.js
 
-*/cordova_app/platforms
-*/cordova_app/plugins
+pamet-brython/cordova_app/platforms
+pamet-brython/cordova_app/plugins
 www
 
 */web_shell/test
 work-log
+
+pamet-brython

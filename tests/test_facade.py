@@ -1,6 +1,5 @@
-import misli
 import pamet
-from pamet.entities import Page, Note
+from pamet import Page, Note
 
 
 def test_page_CRUD():

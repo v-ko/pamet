@@ -2,7 +2,7 @@ import pamet
 from pamet.map_page.entity import MapPage
 from misli import gui
 from misli.gui.actions_lib import action
-from pamet_desktop.config import get_config
+from pamet.desktop.config import get_config
 
 
 @action('desktop.new_browser_window_ensure_page')

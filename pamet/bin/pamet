@@ -10,10 +10,10 @@ import misli
 from pamet.services.file_system_storage import FSStorageRepository
 
 import pamet
-from pamet_desktop import usecases
+from pamet.desktop import usecases
 from misli.gui.desktop import QtMainLoop
-from pamet_desktop.config import get_config
-from pamet_desktop.app import DesktopApp
+from pamet.desktop.config import get_config
+from pamet.desktop.app import DesktopApp
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
