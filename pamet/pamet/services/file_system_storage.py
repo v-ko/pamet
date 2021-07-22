@@ -5,6 +5,7 @@ import string
 
 from pamet.entities import Note
 from pamet.map_page.entity import MapPage
+from pamet.services.hacky_backups import backup_page_hackily
 from .repository import Repository
 
 from misli import get_logger
@@ -124,16 +125,14 @@ class FSStorageRepository(Repository):
         page_state['note_states'] = [n.asdict() for n in notes]
 
         path = self._path_for_page(page.id)
-        try:
-            if not os.path.exists(path):
-                log.warning('Page at %s was missing. Will create it.' % path)
+        if os.path.exists(path):
+            backup_page_hackily(path)
+        else:
+            log.warning('[update_page] Page at %s was missing. Will create'
+                        ' it.' % path)
 
-            with open(path, 'w') as pf:
-                page_state = page_state
-                json.dump(page_state, pf)
-
-        except Exception as e:
-            log.error('Exception while updating page at %s: %s' % (path, e))
+        with open(path, 'w') as pf:
+            json.dump(page_state, pf)
 
     def delete_page(self, page_id):
         path = self._path_for_page(page_id)
