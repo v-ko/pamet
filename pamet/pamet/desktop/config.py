@@ -52,9 +52,8 @@ def get_config():
         save_config(default_config)
         return default_config
 
-    else:
-        with open(config_file_path) as cf:
-            config = json.load(cf)
-            config = _where_empty_set_defaults(config)
+    with open(config_file_path) as cf:
+        config = json.load(cf)
+        config = _where_empty_set_defaults(config)
 
-            return config
+        return config
