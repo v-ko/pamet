@@ -1,3 +1,17 @@
+"""This module configures the debug options for misli.
+
+Example usage:
+    from misli_debug import set_logging , LoggingLevels
+    set_logging_level(LoggingLevels.DEBUG)
+
+    import misli
+    ...
+
+It's a separate module in order to have a clean syntax for setting the
+logging verbosity in test scripts. And the debugging level is set via an
+environment variable since logging function decorators are executed upon module
+initialization.
+"""
 import os
 from enum import Enum
 

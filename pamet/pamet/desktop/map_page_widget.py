@@ -6,7 +6,7 @@ from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide2.QtGui import QKeySequence
 
 import misli
-from misli.basic_classes import Point, Rectangle
+from misli.basic_classes import Point2D, Rectangle
 from misli.gui.base_view import View
 
 from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
@@ -183,10 +183,10 @@ class MapPageViewWidget(QWidget, MapPageView):
         for line in h_lines:
             p1, p2 = line
 
-            p1 = Point(
+            p1 = Point2D(
                 p1.x() - elong,  # p1.x == p2.x
                 min(p1.y(), p1.y()))
-            p2 = Point(
+            p2 = Point2D(
                 p2.x() + elong,
                 max(p1.y(), p2.y()))
 
@@ -195,10 +195,10 @@ class MapPageViewWidget(QWidget, MapPageView):
         for line in v_lines:
             p1, p2 = line
 
-            p1 = Point(
+            p1 = Point2D(
                 min(p1.x(), p2.x()),
                 p1.y() - elong)  # p1.y == p2.y
-            p2 = Point(
+            p2 = Point2D(
                 max(p1.x(), p2.x()),
                 p2.y() + elong)
 
@@ -418,7 +418,7 @@ class MapPageViewWidget(QWidget, MapPageView):
         if self._mouse_press_position == new_pos and \
            self._left_mouse_is_pressed:
             self.handle_left_mouse_long_press(
-                Point(new_pos.x(), new_pos.y()))
+                Point2D(new_pos.x(), new_pos.y()))
 
     def mousePressEvent(self, event):
         self._mouse_press_position = event.pos()
@@ -427,21 +427,21 @@ class MapPageViewWidget(QWidget, MapPageView):
 
         if event.button() is Qt.LeftButton:
             self.handle_left_mouse_press(
-                Point(event.pos().x(), event.pos().y()))
+                Point2D(event.pos().x(), event.pos().y()))
 
     def mouseReleaseEvent(self, event):
         if event.button() is Qt.LeftButton:
             self.handle_left_mouse_release(
-                Point(event.pos().x(), event.pos().y()))
+                Point2D(event.pos().x(), event.pos().y()))
 
     def mouseMoveEvent(self, event):
         self.handle_mouse_move(
-            Point(event.pos().x(), event.pos().y()))
+            Point2D(event.pos().x(), event.pos().y()))
 
     def mouseDoubleClickEvent(self, event):
         if event.button() is Qt.LeftButton:
             self.handle_left_mouse_double_click(
-                Point(event.pos().x(), event.pos().y()))
+                Point2D(event.pos().x(), event.pos().y()))
 
     def wheelEvent(self, event):
         degrees = event.delta() / 8

@@ -1,5 +1,5 @@
 import misli
-from misli.basic_classes import Point, Rectangle
+from misli.basic_classes import Point2D, Rectangle
 
 
 class Viewport(object):
@@ -26,7 +26,7 @@ class Viewport(object):
         return Rectangle.from_points(top_left, bottom_right)
 
     def project_point(self, point):
-        return Point(self.project_x(point.x()), self.project_y(point.y()))
+        return Point2D(self.project_x(point.x()), self.project_y(point.y()))
 
     def project_x(self, x_on_page):
         x_on_page -= self.center().x()
@@ -39,7 +39,7 @@ class Viewport(object):
         return y_on_page + self._map_page_view_model.geometry.height() / 2
 
     def unproject_point(self, point):
-        return Point(self.unproject_x(point.x()), self.unproject_y(point.y()))
+        return Point2D(self.unproject_x(point.x()), self.unproject_y(point.y()))
 
     def unproject_rect(self, rect):
         top_left = self.unproject_point(rect.top_left())

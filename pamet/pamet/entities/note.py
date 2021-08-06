@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 
 from misli import get_logger
 from misli import Entity, register_entity
-from misli.basic_classes import Point, Rectangle, Color
+from misli.basic_classes import Point2D, Rectangle, Color
 from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
@@ -63,9 +63,9 @@ class Note(Entity):
         self._height = snap_to_grid(height)
 
     def size(self):
-        return Point(self.width, self.height)
+        return Point2D(self.width, self.height)
 
-    def set_size(self, new_size: Point):
+    def set_size(self, new_size: Point2D):
         self.width = new_size.x()
         self.height = new_size.y()
 

@@ -3,6 +3,7 @@ import time
 
 
 class MainLoop:
+    """A main loop base class"""
     def call_delayed(
             self,
             callback: Callable,
@@ -14,6 +15,8 @@ class MainLoop:
 
 
 class NoMainLoop(MainLoop):
+    """A MainLoop implementation that relies on calling process_events instead
+    of actually initializing a main loop. Used mostly for testing."""
     def __init__(self):
         self.callback_stack = []
 

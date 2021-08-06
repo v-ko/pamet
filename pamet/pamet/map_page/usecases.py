@@ -2,7 +2,7 @@ import misli
 from misli import gui
 import pamet
 
-from misli.basic_classes import Point
+from misli.basic_classes import Point2D
 from misli.gui.actions_lib import action
 
 from pamet.entities import Note
@@ -13,8 +13,8 @@ log = misli.get_logger(__name__)
 @action('map_page.start_mouse_drag_navigation')
 def start_mouse_drag_navigation(
         map_page_view_id: str,
-        mouse_position: Point,
-        first_delta: Point):
+        mouse_position: Point2D,
+        first_delta: Point2D):
 
     map_page_view_model = gui.view_model(map_page_view_id)
 
@@ -27,7 +27,7 @@ def start_mouse_drag_navigation(
     mouse_drag_navigation_move(map_page_view_id, first_delta)
 
 
-def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point):
+def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point2D):
     map_page_view_model = gui.view_model(map_page_view_id)
 
     unprojected_delta = (
@@ -41,11 +41,11 @@ def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point):
 
 @action('map_page.change_viewport_center')
 def change_viewport_center(
-        map_page_view_id: str, new_viewport_center: Point):
+        map_page_view_id: str, new_viewport_center: Point2D):
 
     map_page_view_model = gui.view_model(map_page_view_id)
 
-    map_page_view_model.viewport_center = Point(*new_viewport_center)
+    map_page_view_model.viewport_center = Point2D(*new_viewport_center)
     gui.update_view_model(map_page_view_model)
 
 
@@ -114,10 +114,10 @@ def set_viewport_height(map_page_view_id: str, new_height: float):
 
 
 @action('map_page.start_drag_select')
-def start_drag_select(map_page_view_id: str, position: Point):
+def start_drag_select(map_page_view_id: str, position: Point2D):
     map_page_view_model = gui.view_model(map_page_view_id)
 
-    map_page_view_model.mouse_position_on_drag_select_start = Point(*position)
+    map_page_view_model.mouse_position_on_drag_select_start = Point2D(*position)
     map_page_view_model.drag_select_active = True
     gui.update_view_model(map_page_view_model)
 
@@ -169,8 +169,8 @@ def delete_selected_notes(map_page_view_id: str):
 def start_notes_resize(
         map_page_view_id: str,
         main_note: Note,
-        mouse_position: Point,
-        resize_circle_center_projected: Point):
+        mouse_position: Point2D,
+        resize_circle_center_projected: Point2D):
 
     map_page_view_model = gui.view_model(map_page_view_id)
 
@@ -191,7 +191,7 @@ def resize_note_views(
         ncs = gui.view_model(nc_id)
         note = ncs.note
 
-        note.set_size(Point(*new_size))  # Here size restrictions are applied
+        note.set_size(Point2D(*new_size))  # Here size restrictions are applied
         gui.update_view_model(ncs)
 
 
@@ -223,7 +223,7 @@ def start_note_drag(
         map_page_view_id: str, mouse_pos: list):
 
     map_page_view_model = gui.view_model(map_page_view_id)
-    map_page_view_model.mouse_position_on_note_drag_start = Point(
+    map_page_view_model.mouse_position_on_note_drag_start = Point2D(
         *mouse_pos)
     map_page_view_model.note_drag_active = True
     gui.update_view_model(map_page_view_model)
@@ -233,7 +233,7 @@ def start_note_drag(
 def note_drag_nc_position_update(
         map_page_view_id: str, nc_ids: list, delta: list):
 
-    d = Point(*delta)
+    d = Point2D(*delta)
 
     for nc_id in nc_ids:
         ncs = gui.view_model(nc_id)
@@ -249,7 +249,7 @@ def note_drag_nc_position_update(
 def stop_note_drag(map_page_view_id: str, nc_ids: list, delta: list):
     map_page_view_model = gui.view_model(map_page_view_id)
 
-    d = Point(*delta)
+    d = Point2D(*delta)
     for nc_id in nc_ids:
         ncs = gui.view_model(nc_id)
         note = pamet.note(ncs.note.page_id, ncs.note.id)

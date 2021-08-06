@@ -23,10 +23,6 @@ function_call_stack_per_thread = defaultdict(list)
 logging.basicConfig(level=LOGGING_LEVEL)
 
 
-def get_logger(name: str):
-    return Logger(name)
-
-
 def get_trace_decorator(logger_name: str):
     def trace_decorator(func: Callable):
         # Wrap the function only at DEBUG level
@@ -91,3 +87,28 @@ class Logger:
 
     def debug(self, *args, **kwargs):
         self.py_logger.debug(*args, **kwargs)
+
+
+def get_logger(name: str) -> Logger:
+    """Get a logger with the given name. This is the preferred way of logging
+    for apps using Misli.
+
+    Normally you would provide the file __name__ as the logger name. The logger
+     has a trace decorator that reports the calls of decorated functions as
+    a stack in order to have a visually distinct output while debugging.
+    Otherwise the Logger class is mostly a wrapper around the standard python
+    logging module.
+
+    For example:
+        from misli import get_logger
+
+        log = get_logger(__name__)
+        log.info('Got logger')
+
+        @log.traced
+        def traced_func(foo):
+            if not foo:
+                log.error('foo is empty')
+            return True
+    """
+    return Logger(name)

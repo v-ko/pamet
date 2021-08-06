@@ -1,7 +1,7 @@
 import misli
 from misli import gui
 import pamet
-from misli.basic_classes import Point
+from misli.basic_classes import Point2D
 from pamet.entities import Note
 from misli.gui.actions_lib import action
 
@@ -12,7 +12,7 @@ log = misli.get_logger(__name__)
 def create_new_note(
         tab_view_id: str, position_coords: list, note_state: dict):
 
-    position = Point.from_coords(position_coords)
+    position = Point2D.from_coords(position_coords)
     note = Note.from_dict(note_state)
 
     # edit_view = gui.create_view(
@@ -41,7 +41,7 @@ def start_editing_note(
         tab_view_id: str, note_component_id: str, position_coords: list):
 
     note = gui.view(note_component_id).note
-    position = Point.from_coords(position_coords)
+    position = Point2D.from_coords(position_coords)
 
     edit_view = pamet.create_and_bind_edit_view(
         tab_view_id, note)
