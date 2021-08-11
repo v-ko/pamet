@@ -3,9 +3,10 @@ from PySide2.QtGui import QKeySequence
 from PySide2.QtCore import Qt, QRectF, QPointF
 
 from misli import gui
+from misli.gui.view_library import register_view_class
 
 from pamet.note_components.text.edit_view import TextNoteEditView
-from .ui_edit_widget import Ui_TextNoteEditViewWidget
+from pamet.note_components.text.ui_edit_widget import Ui_TextNoteEditViewWidget
 
 from pamet.note_components import usecases
 
@@ -13,6 +14,7 @@ import misli
 log = misli.get_logger(__name__)
 
 
+@register_view_class(obj_type='TextNote', edit=True)
 class TextNoteEditViewWidget(QWidget, TextNoteEditView):
     def __init__(self, parent_id):
         TextNoteEditView.__init__(self, parent_id)

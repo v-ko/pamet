@@ -14,7 +14,6 @@ log = get_logger(__name__)
 @register_entity
 @dataclass
 class Note(Entity):
-    view_class: str = ''
     page_id: str = ''
     _x: float = 0
     _y: float = 0
@@ -30,7 +29,7 @@ class Note(Entity):
         return '<Note id=%s>' % self.id
 
     def gid(self):
-        return (self.page_id, self.id)
+        return self.page_id, self.id
 
     def rect(self):
         return Rectangle(self.x, self.y, self.width, self.height)

@@ -40,7 +40,7 @@ def main():
     misli_gui.set_reproducible_ids(True)
     misli.on_change(update_components_from_changes)
 
-    controller = MisliGuiRecorder('BrowserWindow', ignored_actions_list)
+    controller = MisliGuiRecorder('BrowserWindowView', ignored_actions_list)
     misli.gui.on_action(controller.handle_action_channel)
 
     if file_for_replay:
@@ -48,7 +48,7 @@ def main():
         replay.speed = replay_speed
         misli.gui.on_action(replay.queue_next_action)
 
-    desktop_app_class = pamet.view_library.get_view_class('BrowserWindow')
+    desktop_app_class = pamet.view_library.get_view_class('BrowserWindowView')
     desktop_app = desktop_app_class(parent_id='')
 
     if file_for_replay:

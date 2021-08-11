@@ -106,9 +106,10 @@ def get_logger(name: str) -> Logger:
         log.info('Got logger')
 
         @log.traced
-        def traced_func(foo):
+        def traced_function(foo):
             if not foo:
-                log.error('foo is empty')
+                log.error('foo is falsy')
+                return False
             return True
     """
     return Logger(name)

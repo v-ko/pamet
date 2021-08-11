@@ -10,7 +10,7 @@ def get_new_id():
 
 def find_many_by_props(item_list: [list, dict], **props):
     """Filter a list or dict and return only objets which have attributes
-    matching the provided keyword arguments (key==attr_name and val=attr_val)
+    matching the provided keyword arguments (key==attr_name and val==attr_val)
     """
     if type(item_list) == dict:
         item_list = [val for key, val in item_list.items()]

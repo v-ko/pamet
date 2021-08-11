@@ -104,8 +104,15 @@ def find_views(**props):
 
 
 @log.traced
-def find_view(**props):
-    return find_one_by_props(_views, **props)
+def find_view(class_name: str = '', **props):
+    if class_name:
+        found = [v for view_id, v in _views.items()
+                 if type(v).__name__ == class_name]
+        if not found:
+            return None
+        return found[0]
+    else:
+        return find_one_by_props(_views, **props)
 
 
 @log.traced

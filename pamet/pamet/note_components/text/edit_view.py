@@ -18,8 +18,6 @@ class TextNoteEditViewModel(Entity):
 
 
 class TextNoteEditView(View):
-    view_class = 'TextNote'
-
     def __init__(self, parent_id):
         default_state = TextNoteEditViewModel()
 

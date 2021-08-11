@@ -1,5 +1,7 @@
-import pamet
+from misli import entity_library
 from misli.change import ChangeTypes, Change
+
+import pamet
 from pamet.entities import Page
 
 from misli import get_logger
@@ -37,13 +39,13 @@ class Repository:
             change = Change(**change_dict)
             last_state = change.last_state()
 
-            if last_state['obj_type'] == 'Note':
+            if 'page_id' in last_state:
                 if change.type in savable_changes:
                     pages_for_update[last_state['page_id']] = True
 
             elif last_state['obj_type'] == 'MapPage':
                 if change.type == ChangeTypes.CREATE:
-                    self.create_page(Page.from_dict(last_state), [])
+                    self.create_page(entity_library.from_dict(last_state), [])
 
                 elif change.type == ChangeTypes.UPDATE:
                     pages_for_update[last_state['id']] = True

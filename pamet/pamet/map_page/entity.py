@@ -6,4 +6,4 @@ from pamet.entities import Page, register_entity
 @register_entity
 @dataclass
 class MapPage(Page):
-    view_class: str = 'MapPage'
+    pass

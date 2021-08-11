@@ -2,15 +2,16 @@ from PySide2.QtWidgets import QLabel
 from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter, QColor
 from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
+from misli.gui.view_library import register_view_class
 from pamet.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
 from pamet.note_components.base_note_view import NoteView
+
 from misli import get_logger
 log = get_logger(__name__)
 
 
+@register_view_class(obj_type='TextNote', edit=False)
 class TextNoteViewWidget(QLabel, NoteView):
-    view_class = 'Text'
-
     def __init__(self, parent_id):
         NoteView.__init__(self, parent_id=parent_id)
         QLabel.__init__(self, '')

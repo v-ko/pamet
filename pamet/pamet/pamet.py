@@ -151,7 +151,7 @@ def create_note(**props):
 
     props['id'] = get_new_id()
 
-    _note = Note.from_dict(props)
+    _note = misli.entity_library.from_dict(props)
     add_note(_note)
     return _note
 
@@ -220,7 +220,8 @@ def update_note(_note):
 def create_and_bind_page_view(page_id: str, parent_id: str):
     _page = page(page_id)
 
-    page_view_class = pamet.view_library.get_view_class(_page.view_class)
+    page_view_class = misli.gui.view_library.get_view_class(
+        obj_type=_page.obj_type)
     page_view = page_view_class(parent_id=parent_id)
 
     page_view_model = gui.view_model(page_view.id)
@@ -237,7 +238,8 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
 
 @log.traced
 def create_and_bind_note_view(page_view_id, _note):
-    note_view_class = pamet.view_library.get_view_class(_note.view_class)
+    note_view_class = misli.gui.view_library.get_view_class(
+        obj_type=_note.obj_type, edit=False)
     note_view = note_view_class(parent_id=page_view_id)
 
     note_view_model = gui.view_model(note_view.id)
@@ -251,7 +253,8 @@ def create_and_bind_note_view(page_view_id, _note):
 @log.traced
 def create_and_bind_edit_view(tab_view_id, _note):
 
-    edit_class = pamet.view_library.get_edit_view_class(_note.view_class)
+    edit_class = misli.gui.view_library.get_view_class(
+        obj_type=_note.obj_type, edit=True)
     edit_view = edit_class(parent_id=tab_view_id)
 
     edit_view_model = gui.view_model(edit_view.id)
@@ -272,7 +275,7 @@ def update_views_for_page_changes(changes: List[dict]):
     for page_change_dict in changes:
         page_change = Change(**page_change_dict)
         page_state = page_change.last_state()
-        _page = Page.from_dict(page_state)
+        _page = misli.entity_library.from_dict(page_state)
 
         if page_change.is_update():
 
@@ -297,7 +300,7 @@ def update_views_for_page_changes(changes: List[dict]):
 def update_views_for_note_changes(changes: List[dict]):
     for note_change_dict in changes:
         note_change = Change(**note_change_dict)
-        _note = Note.from_dict(note_change.last_state())
+        _note = misli.entity_library.from_dict(note_change.last_state())
 
         if note_change.is_create():
             _page = pamet.page(_note.page_id)

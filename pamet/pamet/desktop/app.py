@@ -3,10 +3,12 @@ from PySide2.QtWidgets import QApplication
 
 import misli
 from misli import Entity, register_entity
+from misli.gui.view_library import register_view_class
+from misli.gui.base_view import View
+
 from pamet.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
 from pamet.constants import DESKTOP_APP_VERSION
 
-from misli.gui.base_view import View
 log = misli.get_logger(__name__)
 
 
@@ -16,9 +18,8 @@ class DesktopAppViewModel(Entity):
     pass
 
 
+@register_view_class
 class DesktopApp(QApplication, View):
-    view_class = 'DesktopApp'
-
     def __init__(self):
         QApplication.__init__(self)
         View.__init__(

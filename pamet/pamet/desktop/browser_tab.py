@@ -5,7 +5,8 @@ from PySide2.QtCore import Qt
 
 from misli import Entity, register_entity, gui
 from misli.gui.base_view import View
-from pamet import view_library
+from misli.gui.view_library import register_view_class
+
 from pamet.note_components import usecases
 
 
@@ -16,9 +17,8 @@ class BrowserTabViewState(Entity):
     page_view_id: str = None
 
 
+@register_view_class
 class BrowserTabView(QWidget, View):
-    view_class = 'BrowserTab'
-
     def __init__(self, parent_id):
         QWidget.__init__(self)
         View.__init__(
@@ -50,7 +50,7 @@ class BrowserTabView(QWidget, View):
 
     def add_child(self, child):
         # If we're adding an edit component
-        if child.view_class in view_library.edit_view_names():
+        if type(child) in gui.view_library.get_view_classes(edit=True):
 
             # Abort any ongoing editing
             if self._edit_view:
@@ -63,7 +63,7 @@ class BrowserTabView(QWidget, View):
             child.show()
 
     def remove_child(self, child):
-        if child.view_class in view_library.edit_view_names():
+        if type(child) in gui.view_library.get_view_classes(edit=True):
             self._edit_view = None
             child.close()
 

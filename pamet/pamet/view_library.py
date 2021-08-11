@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from misli import get_logger
 log = get_logger(__name__)
 
@@ -5,11 +7,16 @@ _views_by_class_name = {}
 _edit_views_by_class_name = {}
 
 
-def add_view_class(view_type):
-    view_class_name = view_type.view_class
-    if view_class_name in _views_by_class_name:
-        raise Exception('A view with that name is already registered')
+def add_view_class(view_type, alternate_names: list = None):
+    alternate_names = alternate_names or []
 
+    view_class_name = view_type.__name__
+    # if view_class_name in _views_by_class_name:
+    #     raise Exception('A view with that name is already registered')
+
+    alternate_names += [view_class_name]
+    for name in alternate_names:
+        _views_by_class_name
     log.info('Adding view %s' % view_class_name)
     _views_by_class_name[view_class_name] = view_type
 

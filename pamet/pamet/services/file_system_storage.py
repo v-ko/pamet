@@ -3,7 +3,9 @@ import json
 import random
 import string
 
-from pamet.entities import Note
+from misli import entity_library
+
+from pamet.note_components.text.entity import TextNote
 from pamet.map_page.entity import MapPage
 from pamet.services.hacky_backups import backup_page_hackily
 from .repository import Repository
@@ -39,8 +41,9 @@ class FSStorageRepository(Repository):
                     continue
 
                 note_states = page_state.pop('note_states', [])
-                notes = [Note.from_dict(ns) for nid, ns in note_states.items()]
-                self.create_page(MapPage.from_dict(page_state), notes)
+                notes = [entity_library.from_dict(ns)
+                         for nid, ns in note_states.items()]
+                self.create_page(entity_library.from_dict(page_state), notes)
 
                 backup_path = file.path + '.backup'
                 os.rename(file.path, backup_path)
@@ -116,9 +119,21 @@ class FSStorageRepository(Repository):
             return None
 
         note_states = page_state.pop('note_states', [])
-        notes = [Note.from_dict(ns) for ns in note_states]
 
-        return MapPage.from_dict(page_state), notes
+        # TODO: remove for alpha
+        page_state.pop('view_class', '')
+
+        notes = []
+
+        for ns in note_states:
+
+            # TODO: remove for alpha
+            ns.pop('view_class', '')
+            ns['obj_type'] = 'TextNote'
+
+            notes.append(entity_library.from_dict(ns))
+
+        return entity_library.from_dict(page_state), notes
 
     def update_page(self, page, notes):
         page_state = page.asdict()
@@ -211,7 +226,6 @@ class FSStorageRepository(Repository):
                 nt['text'] = text
 
         for i, nt in enumerate(notes):
-            nt['obj_type'] = 'Note'
             nt['id'] = str(nt['id'])
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
@@ -224,14 +238,14 @@ class FSStorageRepository(Repository):
             if nt['text'].startswith('this_note_points_to:'):
                 nt['href'] = nt['text'].split(':', 1)[1]
                 nt['text'] = nt['href']
-                nt['view_class'] = 'Text'
-                # nt['view_class'] = 'Redirect'
+                nt['obj_type'] = 'Text'
+                # nt['obj_type'] = 'Redirect'
 
             else:
-                nt['view_class'] = 'Text'
+                nt['obj_type'] = 'Text'
 
             # Remove unimplemented attributes to avoid errors
-            note = Note()
+            note = TextNote()
             new_state = {}
             for key in nt:
                 if hasattr(note, key):
@@ -247,7 +261,6 @@ class FSStorageRepository(Repository):
         note_states = {n['id']: n for n in json_object.pop('notes')}
 
         json_object['obj_type'] = 'MapPage'
-        json_object['view_class'] = 'MapPage'
         json_object['note_states'] = note_states
 
         return json_object

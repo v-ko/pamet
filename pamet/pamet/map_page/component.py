@@ -5,9 +5,9 @@ import misli
 
 from misli import Entity, register_entity
 from misli.basic_classes import Point2D, Rectangle
-from pamet.constants import RESIZE_CIRCLE_RADIUS
-
 from misli.gui.base_view import View
+
+from pamet.constants import RESIZE_CIRCLE_RADIUS
 from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from pamet.constants import INITIAL_EYE_Z
@@ -87,8 +87,6 @@ class MapPageViewModel(Entity):
 
 
 class MapPageView(View):
-    view_class = 'MapPage'
-
     def __init__(self, parent_id: str):
         default_state = MapPageViewModel(
             page=Page(),

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, fields, field
-from misli.entity_library import register_entity, get_entity_class_by_name
+from misli.entity_library import register_entity, from_dict
 
 
 @register_entity
@@ -45,27 +45,7 @@ class Entity:
         return self.copy()
 
     def copy(self):
-        self_class = type(self)
-        return self_class.from_dict(self.asdict())
-
-    @classmethod
-    def from_dict(cls, self_dict: dict):
-        """Construct an entity given its state as a dict"""
-        # TODO: move this to the entity library
-
-        self_id = self_dict.pop('id', '')
-        obj_type = self_dict.pop('obj_type')
-
-        if cls != get_entity_class_by_name(obj_type):
-            raise Exception('Entity type mismatch (%s != %s). '
-                            'You probably haven\'t decorated an Entity sublass'
-                            ' with @register_entity' %
-                            (cls.__name__, obj_type))
-
-        instance = cls(**self_dict)
-        instance.id = self_id
-        instance.obj_type = obj_type
-        return instance
+        return from_dict(self.asdict())
 
     def asdict(self) -> dict:
         """Return the entity properties as a dict"""

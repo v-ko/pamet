@@ -13,11 +13,12 @@ def create_new_note(
         tab_view_id: str, position_coords: list, note_state: dict):
 
     position = Point2D.from_coords(position_coords)
-    note = Note.from_dict(note_state)
+    note = misli.entity_library.from_dict(note_state)
 
     # edit_view = gui.create_view(
     #     'TextEdit', tab_view.id)
-    edit_view_class = pamet.view_library.get_edit_view_class('Text')
+    edit_view_class = gui.view_library.get_view_class(
+        obj_type='TextNote', edit=True)
     edit_view = edit_view_class(parent_id=tab_view_id)
 
     edit_view_model = gui.view_model(edit_view.id)

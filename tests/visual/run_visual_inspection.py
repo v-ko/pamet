@@ -6,7 +6,7 @@ from PIL import Image, ImageChops, ImageStat
 import misli
 from .constants import RECORDING_EXTENSION, SNAP_EXTENSION
 from misli.gui import update_components_from_changes
-from misli.gui.desktop import QtMainLoop
+from misli.gui.qt_main_loop import QtMainLoop
 
 import pamet
 
@@ -23,7 +23,7 @@ def run_recording(file_for_replay, output_folder, replay_speed):
     misli.set_main_loop(QtMainLoop())
     misli_gui.set_reproducible_ids(True)
 
-    recorder = MisliGuiRecorder('BrowserWindow')
+    recorder = MisliGuiRecorder('BrowserWindowView')
     misli.gui.on_action(recorder.handle_action_channel)
 
     replay = MisliGuiReplay(file_for_replay)
@@ -34,7 +34,7 @@ def run_recording(file_for_replay, output_folder, replay_speed):
 
     # desktop_app = misli.gui.create_view('DesktopApp', parent_id='')
 
-    desktop_app_class = pamet.view_library.get_view_class('BrowserWindow')
+    desktop_app_class = pamet.view_library.get_view_class('BrowserWindowView')
     desktop_app = desktop_app_class(parent_id='')
 
     replay.queue_next_action([])
