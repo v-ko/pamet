@@ -7,7 +7,7 @@ import misli
 from misli.gui import update_components_from_changes
 from pamet import usecases
 import pamet
-from misli.gui.desktop import QtMainLoop
+from misli.gui.qt_main_loop import QtMainLoop
 
 from .gui_recorder import MisliGuiRecorder
 from .gui_replay import MisliGuiReplay

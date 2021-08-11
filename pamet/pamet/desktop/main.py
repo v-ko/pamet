@@ -2,7 +2,7 @@ import os
 import signal
 
 import misli
-from misli.gui.desktop import QtMainLoop
+from misli.gui.qt_main_loop import QtMainLoop
 
 import pamet
 from pamet.desktop.app import DesktopApp

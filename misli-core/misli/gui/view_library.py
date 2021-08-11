@@ -1,5 +1,3 @@
-from misli.helpers import find_many_by_props
-
 _views_by_class_name = {}
 _view_metadata_by_class_name = {}
 
