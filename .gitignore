@@ -1,25 +1,23 @@
 builds
 deployments
-
 node_modules
-*.pro.user.*
 
+*.pro.user.*
 *.desktop~
 *.autosave
 *.pyc
 *.user
 .idea
 *.egg-info
-
-react_app
+__pycache__
+.pytest_cache
+*.code-workspace
+.vscode
 
 # Exclude tmp stuff (visual tests ATM)
 tmp_*
 
-.vscode
-
-*.code-workspace
-
+react_app
 */installer/packages/com.p10.misli/data/data.7z
 */web_shell/brython_stdlib.js
 */web_shell/brython.js
@@ -27,8 +25,8 @@ tmp_*
 www
 
 */web_shell/test
-work-log
 
+work-log
 docs
 
 pamet-brython/cordova_app/platforms/

@@ -6,7 +6,6 @@ import string
 from misli import entity_library
 
 from pamet.note_components.text.entity import TextNote
-from pamet.map_page.entity import MapPage
 from pamet.services.hacky_backups import backup_page_hackily
 from .repository import Repository
 

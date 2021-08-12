@@ -1,7 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from misli import get_logger
-from misli import Entity, register_entity
+from misli import register_entity
 from pamet.entities.note import Note
 log = get_logger(__name__)
 

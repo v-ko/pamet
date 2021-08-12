@@ -1,2 +1,2 @@
-from .page import  Page, register_entity
+from .page import Page
 from .note import Note

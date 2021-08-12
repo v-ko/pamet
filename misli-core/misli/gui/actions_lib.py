@@ -1,5 +1,6 @@
 import time
 import functools
+from typing import Union
 from enum import Enum
 
 import misli
@@ -12,7 +13,18 @@ ACTIONS = {}
 _actions_stack = []
 
 
-def action(name):
+def action(name: str):
+    """A decorator that adds an action state emission on the start and end of
+    each function call (via misli.gui.push_action).
+
+    On module initialization this decorator saves the decorated function in the
+     actions library (by name). By registering actions and providing a stream
+     of action states it's possible to later replay the app usage.
+
+    Args:
+        name (str): The name of the action (domain-like naming convention, e.g.
+         'context.action_name')
+    """
     def decorator_action(func):
 
         @functools.wraps(func)
@@ -30,6 +42,10 @@ def action(name):
             _action.run_state = ActionRunStates.FINISHED
             gui.push_action(_action.copy())
 
+        if name in ACTIONS:
+            raise Exception(f'An action with the name {name} is already'
+                            f' registered')
+
         ACTIONS[name] = wrapper_action
 
         return wrapper_action
@@ -42,6 +58,9 @@ class ActionRunStates(Enum):
 
 
 class Action:
+    """Mostly functions as a data class to carry the action state, args, kwargs
+     and profiling info.
+    """
     def __init__(
             self,
             name,
@@ -65,13 +84,13 @@ class Action:
         self.start_time = start_time if start_time is not None else time.time()
         self.duration = duration
 
-    def set_run_state(self, run_state: ActionRunStates):
+    def set_run_state(self, run_state: Union[ActionRunStates, str]):
         if type(run_state) == ActionRunStates:
             self.run_state = run_state
         else:
             self.run_state = ActionRunStates[run_state]
 
-    def set_args(self, args):
+    def set_args(self, args: Union[tuple, list]):
         if type(args) == tuple:
             args = list(args)
         elif type(args) != list:

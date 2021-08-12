@@ -2,13 +2,11 @@ from typing import List
 
 import misli
 from misli.change import Change, ChangeTypes
-from misli.helpers import get_new_id, find_many_by_props
-from misli.helpers import find_one_by_props
+from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
+from misli import get_logger, gui
 
 import pamet
 from pamet.entities import Page, Note
-
-from misli import get_logger, gui
 
 log = get_logger(__name__)
 

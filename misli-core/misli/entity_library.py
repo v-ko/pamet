@@ -24,7 +24,6 @@ def get_entity_class_by_name(entity_class_name):
 
 def from_dict(self_dict: dict):
     """Construct an entity given its state as a dict"""
-    # TODO: move this to the entity library
 
     self_id = self_dict.pop('id', '')
     obj_type = self_dict.pop('obj_type')
