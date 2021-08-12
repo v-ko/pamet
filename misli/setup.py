@@ -5,7 +5,7 @@ with open("../README.md", "r") as fh:
 
 setuptools.setup(
     name="misli",
-    version="4.0.0.a1",
+    version="0.1.0",
     author="Petko Ditchev",
     author_email="pditchev@gmail.com",
     # description="An application for organizing thoughts, notes and projects",
