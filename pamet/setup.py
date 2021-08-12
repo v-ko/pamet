@@ -2,7 +2,7 @@ import setuptools
 
 setuptools.setup(
     name="pamet",
-    version="0.0.1",
+    version="4.0.0.pre-alpha1",
     packages=setuptools.find_packages(),
-    scripts=['bin/pamet', 'bin/pamet-debug']
+    console_scripts=['bin/pamet', 'bin/pamet-debug']
 )
