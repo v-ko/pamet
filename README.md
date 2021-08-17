@@ -9,10 +9,21 @@ An app for organizing thoughts and notes
 ## Current state
 A rewrite, using the technologies outlined in the Misli module, is ongoing. Currently the app is in pre-alpha (if even that). The purpuse of this stage is to get some feedback on the overall architecture and the code so far. Feature wise there's only note resizing, moving and editing ATM. The immediate goal is to reach feature parity with misli v3 and then add new functionality.
 
-## Installation
-Currently only the setuptools install from source is possible (there are plans for proper packaging)
+### Usage
+- Double click to create a new note
+- Click to select
+- Long-press to initiate move
+- Ctrl or shift to select multiple notes
+- Ctrl+Shift to drag-select multiple notes
+* Selected notes get moved together and resized to the same size
+* No manual saving is required
 
-1. Get the code with `git clone https://github.com/petko10/misli.git`
+To reiterate - a LOT of the functionality is missing, so the demo as of now serves just to showcase the technical aspects of the project. Also the tests aren't updated (and there are other loose ends too).
+
+## Installation
+Currently only the setuptools install from source is possible (there are plans for proper packaging). Requires Python 3.8 or higher.
+
+1. Get the code with `git clone https://github.com/fusion-a/misli.git`
 
 2. Install the python packages:
     * Enter the `misli` folder and run `python setup.py develop` in the console
@@ -35,6 +46,7 @@ You can build the app with QtCreator, using the project file in `misli3-cpp/misl
 ---------------------
 - Map-like navigation
 - Changing note size, position and color
+- Multiple note files (called "pages" in the new version)
 - Note file hyperlinking (via "link notes")
 - Real-time detection of file changes (useful if you're using some type of file synchronization)
 - Adding images

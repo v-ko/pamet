@@ -1160,14 +1160,14 @@ p, li { white-space: pre-wrap; }
         <source>Misli - an application for organizing thoughts and notes
 
 Bugs, suggestions and everything else at:
-https://github.com/petko10/misli
+https://github.com/fusion-a/misli
 Author: Petko Ditchev
 Contact: pditchev@gmail.com
 Version: </source>
         <translation>Мисли - приложение за организиране на записки и ...мисли ;)
 
 За бъгове, предложения и всичко останало:
-https://github.com/petko10/misli
+https://github.com/fusion-a/misli
 Автор: Петко Дичев
 Контакт: pditchev@gmail.com
 Версия: </translation>
