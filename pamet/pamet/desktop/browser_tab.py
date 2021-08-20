@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from PySide2.QtWidgets import QVBoxLayout, QWidget
-from PySide2.QtCore import Qt
+from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
 
 from misli import Entity, register_entity, gui
 from misli.gui.base_view import View

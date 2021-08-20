@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from PySide2.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
+from PySide6.QtGui import QFont
 
 import misli
 from misli import Entity, register_entity

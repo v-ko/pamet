@@ -1,5 +1,5 @@
 from typing import Callable
-from PySide2.QtCore import QTimer
+from PySide6.QtCore import QTimer
 from misli.main_loop import MainLoop
 
 

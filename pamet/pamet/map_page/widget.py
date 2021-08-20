@@ -1,12 +1,12 @@
 import time
 
-from PySide2.QtWidgets import QWidget, QShortcut
-from PySide2.QtCore import Qt, QPoint, QTimer, QRectF
-from PySide2.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
-from PySide2.QtGui import QKeySequence
+from PySide6.QtWidgets import QWidget
+from PySide6.QtCore import Qt, QPoint, QTimer, QRectF, QPointF, QRect
+from PySide6.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
+from PySide6.QtGui import QKeySequence, QShortcut
 
 import misli
-from misli.basic_classes import Point2D, Rectangle
+from misli.basic_classes import Point2D, Rectangle, Color
 from misli.gui.base_view import View
 from misli.gui.view_library import register_view_class
 
@@ -61,6 +61,29 @@ class MapPageViewWidget(QWidget, MapPageView):
         # Setup shortcuts
         delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
         delete_shortcut.activated.connect(self.handle_delete_shortcut)
+
+        color_notes_blue = QShortcut(QKeySequence('1'), self)
+        color_notes_blue.activated.connect(
+            lambda: usecases.color_selected_notes(
+                self.id, color=[0, 0, 1, 1], background_color=[0, 0, 1, 0.1]))
+        color_notes_green = QShortcut(QKeySequence('2'), self)
+        color_notes_green.activated.connect(
+            lambda: usecases.color_selected_notes(
+                self.id,
+                color=[0, 0.64, 0.235, 1],
+                background_color=[0, 1, 0, 0.1]))
+        color_notes_red = QShortcut(QKeySequence('3'), self)
+        color_notes_red.activated.connect(
+            lambda: usecases.color_selected_notes(
+                self.id, color=[1, 0, 0, 1], background_color=[1, 0, 0, 0.1]))
+        color_notes_gray = QShortcut(QKeySequence('4'), self)
+        color_notes_gray.activated.connect(
+            lambda: usecases.color_selected_notes(
+                self.id, color=[0, 0, 0, 1], background_color=[0, 0, 0, 0.1]))
+        remove_note_background = QShortcut(QKeySequence('5'), self)
+        remove_note_background.activated.connect(
+            lambda: usecases.color_selected_notes(
+                self.id, background_color=[0, 0, 0, 0]))
 
         select_all_shortcut = QShortcut(
             QKeySequence(Qt.CTRL + Qt.Key_A), self)
@@ -137,6 +160,7 @@ class MapPageViewWidget(QWidget, MapPageView):
     def _render_image_cache_for_child(
             self, child: View, display_rect: Rectangle):
         painter = QPainter()
+
         cache_rect = image_cache_rect_unprojected(display_rect)
         nv_cache = self.note_view_cache(child.id)
 
@@ -149,7 +173,7 @@ class MapPageViewWidget(QWidget, MapPageView):
 
         painter.begin(render_img)
 
-        # For historical purpuses: drawing on the cache image needs to be
+        # Drawing on the cache image needs to be
         # done with an offset = display_rect.x() % 1 otherwise there will be
         # visual artefats at the boundaries of adjacent notes.
         # RIP a few more hours of tracing those.
@@ -282,7 +306,8 @@ class MapPageViewWidget(QWidget, MapPageView):
                 image_cache_memory_allocations += 1
                 cache_rect = image_cache_rect_unprojected(display_rect)
 
-                render_img = QImage(cache_rect.size(), QImage.Format_ARGB32)
+                render_img = QImage(
+                    cache_rect.size(), QImage.Format_ARGB32_Premultiplied)
                 nv_cache.image_cache = render_img
                 nv_cache.should_reallocate_image_cache = False
 
@@ -332,6 +357,31 @@ class MapPageViewWidget(QWidget, MapPageView):
             cache_rect = image_cache_rect_unprojected(display_rect)
             painter.drawImage(cache_rect, render_img)
 
+            # Load test
+            # for i in range(10):
+            #     painter.drawImage(QRect(cache_rect.topLeft() + QPoint(i*50,i*50), cache_rect.size()) , render_img)
+
+            # Draw directly from the command cache to the page
+            # (several times slower)
+            # painter.save()
+            # painter.translate(cache_rect.topLeft())
+            # painter.scale(
+            #     self.viewport.height_scale_factor(),
+            #     self.viewport.height_scale_factor())
+            # nv_cache.pcommand_cache.play(painter)
+            # # Load test
+            # for i in range(10):
+            #     painter.drawPicture(i*50,i*50, nv_cache.pcommand_cache)
+            # painter.restore()
+
+            # # Test text
+            # painter.save()
+            # font = painter.font()
+            # font.setPointSizeF(20 * self.viewport.height_scale_factor())
+            # painter.setFont(font)
+            # painter.drawText(cache_rect.topLeft() + QPoint(0, 0.5), 'Test')
+
+            painter.restore()
             if self.debug_drawing:
                 painter.save()
                 painter.setPen(Qt.NoPen)
@@ -446,7 +496,7 @@ class MapPageViewWidget(QWidget, MapPageView):
                 Point2D(event.pos().x(), event.pos().y()))
 
     def wheelEvent(self, event):
-        degrees = event.delta() / 8
+        degrees = event.angleDelta().y() / 8
         steps = degrees / 15
 
         self.handle_mouse_scroll(steps)

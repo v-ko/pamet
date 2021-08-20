@@ -13,7 +13,7 @@ Example usage with the NoMainLoop implementation (default):
     # Prints ['Test']
 
 Example usage with Qt:
-    from PySide2.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     import misli
     from misli.gui.desktop import QtMainLoop

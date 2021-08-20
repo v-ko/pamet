@@ -3,7 +3,7 @@ import os
 import json
 from pathlib import Path
 
-from PySide2.QtCore import QStandardPaths
+from PySide6.QtCore import QStandardPaths
 
 from misli import get_logger
 log = get_logger(__name__)

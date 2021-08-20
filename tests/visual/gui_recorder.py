@@ -2,8 +2,8 @@ import os
 import shutil
 import json
 
-from PySide2.QtCore import QPoint
-from PySide2.QtGui import QPixmap, QRegion
+from PySide6.QtCore import QPoint
+from PySide6.QtGui import QPixmap, QRegion
 
 import misli
 from misli import gui

@@ -1,6 +1,6 @@
-from PySide2.QtWidgets import QLabel
-from PySide2.QtGui import QFontMetrics, QTextLayout, QPainter, QColor
-from PySide2.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
+from PySide6.QtWidgets import QLabel
+from PySide6.QtGui import QFontMetrics, QTextLayout, QPainter, QColor, QFont
+from PySide6.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
 from misli.gui.view_library import register_view_class
 from pamet.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING

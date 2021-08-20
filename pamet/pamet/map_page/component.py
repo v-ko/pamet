@@ -12,6 +12,7 @@ from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from pamet.constants import INITIAL_EYE_Z
 from pamet.entities import Note, Page
+from pamet.note_components.text.entity import TextNote
 
 from pamet.note_components import usecases as notes_usecases
 from pamet.map_page import usecases
@@ -308,7 +309,7 @@ class MapPageView(View):
             pos = self.viewport.unproject_point(mouse_pos)
 
             page = self.page
-            note = Note(page_id=page.id, view_class='Text', text='')
+            note = TextNote(page_id=page.id, text='')
             note.x = pos.x()
             note.y = pos.y()
 

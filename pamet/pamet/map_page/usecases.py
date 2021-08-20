@@ -278,3 +278,32 @@ def resize_page(map_page_view_id, width, height):
     map_page_view_model = gui.view_model(map_page_view_id)
     map_page_view_model.geometry.set_size(width, height)
     gui.update_view_model(map_page_view_model)
+
+
+@action('notes.color_selected_notes')
+def color_selected_notes(
+        map_page_view_id: str,
+        color: list = None,
+        background_color: list = None):
+    map_page_view_model = gui.view_model(map_page_view_id)
+
+    for nc_id in map_page_view_model.selected_nc_ids:
+        note = gui.view(nc_id).note
+        # for channel, index in [(r, 0), (g, 1), (b, 2), (bg_alpha, 3)]:
+        #     if channel is None:
+        #         channel = note.color(index)
+        #
+        # r = note.color[0] if r is None else r
+        # g = note.color[0] if g is None else g
+        # b = note.color[0] if b is None else b
+        # bg_alpha = note.color[0] if bg_alpha is None else bg_alpha
+
+        color = color or note.color
+        background_color = background_color or note.background_color
+
+        note.color = color
+        note.background_color = background_color
+        pamet.update_note(note)
+
+    map_page_view_model.selected_nc_ids.clear()
+    misli.gui.update_view_model(map_page_view_model)

@@ -1,6 +1,6 @@
 from .text_note_widget import TextNoteWidget
-from PySide2.QtGui import QPainter
-from PySide2.QtCore import QPointF, QRectF, QSizeF
+from PySide6.QtGui import QPainter
+from PySide6.QtCore import QPointF, QRectF, QSizeF
 
 
 class RedirectNoteWidget(TextNoteWidget):

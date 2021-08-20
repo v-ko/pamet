@@ -1,9 +1,11 @@
 import misli
 from misli import gui
-import pamet
-from misli.basic_classes import Point2D
-from pamet.entities import Note
+from misli.basic_classes import Point2D, Color
 from misli.gui.actions_lib import action
+
+import pamet
+from pamet.entities import Note
+
 
 log = misli.get_logger(__name__)
 

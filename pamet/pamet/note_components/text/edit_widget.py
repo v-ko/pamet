@@ -1,6 +1,6 @@
-from PySide2.QtWidgets import QWidget, QShortcut
-from PySide2.QtGui import QKeySequence
-from PySide2.QtCore import Qt, QRectF, QPointF
+from PySide6.QtWidgets import QWidget
+from PySide6.QtGui import QKeySequence, QShortcut
+from PySide6.QtCore import Qt, QRectF, QPointF
 
 from misli import gui
 from misli.gui.view_library import register_view_class
@@ -51,7 +51,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
     def _handle_ok_click(self):
         text = self.ui.textEdit.toPlainText()
         note = self.note
-        note.text = text
+        note.text = text.strip()
 
         if self.displayed_model.create_mode:
             usecases.finish_creating_note(self.id, note)

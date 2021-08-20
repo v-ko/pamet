@@ -4,6 +4,11 @@ setuptools.setup(
     name="pamet",
     version="4.0.0.pre-alpha1",
     packages=setuptools.find_packages(),
-    console_scripts=['bin/pamet', 'bin/pamet-debug'],
-    install_requires=['PySide2']
+    entry_points={
+        'console_scripts': [
+            'pamet=pamet.desktop.main:main',
+            'pamet-debug=pamet.desktop.main_debug:main',
+        ],
+    },
+    install_requires=['PySide6']
 )

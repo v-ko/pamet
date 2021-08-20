@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from PySide2.QtWidgets import QMainWindow, QPushButton
-from PySide2.QtGui import QIcon
+from PySide6.QtWidgets import QMainWindow, QPushButton
+from PySide6.QtGui import QIcon
 
 from misli import Entity, register_entity
 from misli.gui.base_view import View

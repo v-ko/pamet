@@ -1,5 +1,5 @@
-from PySide2.QtGui import QGuiApplication
-from PySide2.QtCore import Qt
+from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import Qt
 
 
 def control_is_pressed():
