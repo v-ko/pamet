@@ -1,19 +1,30 @@
+from dataclasses import dataclass
+
 from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QFontMetrics, QTextLayout, QPainter, QColor, QFont
 from PySide6.QtCore import QSizeF, Qt, QRect, QRectF, QPointF
 
+from misli import Entity, register_entity
 from misli.gui.view_library import register_view_class
 from pamet.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
 from pamet.note_components.base_note_view import NoteView
+from pamet.entities import Note
 
 from misli import get_logger
 log = get_logger(__name__)
 
 
+@register_entity
+@dataclass
+class NoteViewModel(Entity):
+    note: Note = None
+
+
 @register_view_class(obj_type='TextNote', edit=False)
 class TextNoteViewWidget(QLabel, NoteView):
     def __init__(self, parent_id):
-        NoteView.__init__(self, parent_id=parent_id)
+        NoteView.__init__(
+            self, parent_id=parent_id, initial_model=NoteViewModel())
         QLabel.__init__(self, '')
 
         self.elided_text = []
@@ -31,7 +42,7 @@ class TextNoteViewWidget(QLabel, NoteView):
         palette.setColor(self.foregroundRole(), fg_col)
 
         self.setPalette(palette)
-        self.setGeometry(QRect(*note.rect().to_list()))
+        self.setGeometry(QRect(*note.rect().as_tuple()))
 
         font = self.font()
         # font.setPixelSize(20)

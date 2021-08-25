@@ -3,7 +3,7 @@ from dataclasses import dataclass
 
 from misli.basic_classes import Point2D
 from misli import Entity, register_entity
-from misli.gui.base_view import View
+from pamet.note_components.base_note_view import NoteView
 
 from pamet.entities import Note
 from pamet.note_components import usecases
@@ -17,17 +17,17 @@ class TextNoteEditViewModel(Entity):
     display_position: Point2D = None
 
 
-class TextNoteEditView(View):
+class TextNoteEditView(NoteView):
     def __init__(self, parent_id):
         default_state = TextNoteEditViewModel()
 
-        View.__init__(
+        NoteView.__init__(
             self,
             parent_id=parent_id,
             initial_model=default_state)
 
     @property
-    def note(self):
+    def note(self) -> Note:
         return self.displayed_model.note.copy()
 
     def _handle_esc_shortcut(self):

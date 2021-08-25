@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Tuple
 
 from misli.basic_classes import Point2D
 
@@ -11,7 +11,8 @@ class Rectangle:
         self._h = h
 
     @classmethod
-    def from_points(cls, top_left: Point2D, bottom_right: Point2D):
+    def from_points(
+            cls, top_left: Point2D, bottom_right: Point2D) -> 'Rectangle':
         size = top_left - bottom_right
         x = min(top_left.x(), bottom_right.x())
         y = min(top_left.y(), bottom_right.y())
@@ -19,11 +20,10 @@ class Rectangle:
         return cls(x, y, w, h)
 
     def __repr__(self):
-        return ('<Rectangle x=%s y=%s width=%s height=%s ' %
-                tuple(self.to_list()))
+        return ('<Rectangle x=%s y=%s width=%s height=%s ' % self.as_tuple())
 
     def __eq__(self, other: 'Rectangle'):
-        return self.to_list() == other.to_list()
+        return self.as_tuple() == other.as_tuple()
 
     def x(self) -> float:
         return self._x
@@ -98,7 +98,7 @@ class Rectangle:
         return ((self.x() < point.x() < self.right()) and
                 (self.y() < point.y() < self.bottom()))
 
-    def to_list(self) -> list:
+    def as_tuple(self) -> Tuple[float, float, float, float]:
         """Returns a list with the rectangle parameters ([x, y, w, h])
         """
-        return [self._x, self._y, self._w, self._h]
+        return (self._x, self._y, self._w, self._h)

@@ -1,3 +1,4 @@
+from typing import Tuple
 import math
 
 
@@ -7,37 +8,35 @@ class Point2D:
         self._y = y
 
     @classmethod
-    def from_coords(cls, coords: list):
+    def from_coords(cls, coords: Tuple[float, float]) -> 'Point2D':
         if len(coords) != 2:
             raise ValueError
 
-        x = coords[0]
-        y = coords[1]
-
+        x, y = coords
         return cls(x, y)
 
     def __repr__(self):
         return '<Point x=%s y=%s>' % (self.x(), self.y())
 
-    def __add__(self, other: 'Point2D'):
+    def __add__(self, other: 'Point2D') -> 'Point2D':
         return Point2D(self.x() + other.x(), self.y() + other.y())
 
-    def __sub__(self, other: 'Point2D'):
+    def __sub__(self, other: 'Point2D') -> 'Point2D':
         return Point2D(self.x() - other.x(), self.y() - other.y())
 
-    def __truediv__(self, k):
+    def __truediv__(self, k) -> 'Point2D':
         return Point2D(self.x() / k, self.y() / k)
 
-    def x(self):
+    def x(self) -> float:
         return self._x
 
-    def y(self):
+    def y(self) -> float:
         return self._y
 
-    def to_list(self):
-        return [self._x, self._y]
+    def as_tuple(self) -> Tuple[float, float]:
+        return (self._x, self._y)
 
-    def distance_to(self, point: 'Point2D'):
+    def distance_to(self, point: 'Point2D') -> float:
         distance = math.sqrt(
             (self.x() - point.x())**2 + (self.y() - point.y())**2)
         return distance

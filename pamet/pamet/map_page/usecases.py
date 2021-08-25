@@ -32,11 +32,11 @@ def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point2D):
 
     unprojected_delta = (
         mouse_delta / map_page_view_model.viewport.height_scale_factor())
-    new_viewport_center = (map_page_view_model.viewport_position_on_press
-                           + unprojected_delta)
+    new_viewport_center: Point2D = (
+            map_page_view_model.viewport_position_on_press + unprojected_delta)
 
     change_viewport_center(
-        map_page_view_id, new_viewport_center.to_list())
+        map_page_view_id, new_viewport_center.as_tuple())
 
 
 @action('map_page.change_viewport_center')

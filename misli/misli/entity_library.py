@@ -1,7 +1,9 @@
+from typing import Any
+
 entity_library = {}
 
 
-def register_entity(entity_class):
+def register_entity(entity_class: Any):
     """A class decorator to register entities in the entity library for the
     purposes of serialization and deserialization.
 
@@ -18,11 +20,11 @@ def register_entity(entity_class):
     return entity_class
 
 
-def get_entity_class_by_name(entity_class_name):
+def get_entity_class_by_name(entity_class_name: str):
     return entity_library[entity_class_name]
 
 
-def from_dict(self_dict: dict):
+def from_dict(self_dict: dict) -> 'Entity':
     """Construct an entity given its state as a dict"""
 
     self_id = self_dict.pop('id', '')

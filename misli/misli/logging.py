@@ -23,7 +23,7 @@ function_call_stack_per_thread = defaultdict(list)
 logging.basicConfig(level=LOGGING_LEVEL)
 
 
-def get_trace_decorator(logger_name: str):
+def _get_trace_decorator(logger_name: str):
     def trace_decorator(func: Callable):
         # Wrap the function only at DEBUG level
         if LOGGING_LEVEL != logging.DEBUG:
@@ -71,7 +71,7 @@ def get_trace_decorator(logger_name: str):
 class Logger:
     def __init__(self, name: str):
         self.py_logger = logging.getLogger(name)
-        self.traced = get_trace_decorator(name)
+        self.traced = _get_trace_decorator(name)
 
     def critical(self, *args, **kwargs):
         self.py_logger.critical(*args, **kwargs)

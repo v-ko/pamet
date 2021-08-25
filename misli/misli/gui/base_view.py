@@ -44,11 +44,11 @@ class View:
         return '<%s id=%s>' % (type(self).__name__, self.id)
 
     @property
-    def id(self):
+    def id(self) -> str:
         return self._id
 
     @property
-    def displayed_model(self):
+    def displayed_model(self) -> Entity:
         model = gui.displayed_view_model(self.id)
         if not model or model.id != self.id:
             raise Exception('Could not retrieve view model for view %s' % self)
@@ -64,8 +64,8 @@ class View:
             children_updated: list):
         pass
 
-    def child(self, child_id: str):
+    def child(self, child_id: str) -> View:
         return gui.view(child_id)
 
-    def get_children(self):
+    def get_children(self) -> List[View]:
         return gui.view_children(self.id)

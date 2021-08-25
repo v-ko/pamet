@@ -1,6 +1,7 @@
+from typing import Union
+
 from dataclasses import dataclass, fields, field
 from misli.entity_library import register_entity, from_dict
-
 
 @register_entity
 @dataclass
@@ -34,7 +35,7 @@ class Entity:
     def __post_init__(self):
         self.obj_type = type(self).__name__
 
-    def gid(self):
+    def gid(self) -> Union[str, tuple]:
         """Returns the global id of the entity. This function can be
         overwritten to return e.g. a tuple of values like
         (self.page_id, self.id)
@@ -44,7 +45,7 @@ class Entity:
     def __copy__(self):
         return self.copy()
 
-    def copy(self):
+    def copy(self) -> 'Entity':
         return from_dict(self.asdict())
 
     def asdict(self) -> dict:

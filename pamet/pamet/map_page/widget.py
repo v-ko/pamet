@@ -232,7 +232,7 @@ class MapPageViewWidget(QWidget, MapPageView):
 
         for line in all_lines:
             p1, p2 = line
-            points = [*p1.to_list(), *p2.to_list()]
+            points = [*p1.as_tuple(), *p2.as_tuple()]
             painter.drawLine(*points)
 
     def _visible_display_rects_by_child_id(self):
@@ -252,7 +252,7 @@ class MapPageViewWidget(QWidget, MapPageView):
 
             unprojected_rect = self.viewport.project_rect(nt_rect)
             display_rects_by_child_id[child.id] = QRectF(
-                *unprojected_rect.to_list())
+                *unprojected_rect.as_tuple())
 
         return display_rects_by_child_id
 

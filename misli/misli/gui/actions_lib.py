@@ -102,10 +102,10 @@ class Action:
         return ('<Action name=%s run_state=%s id=%s>' %
                 (self.name, self.run_state.name, self.id))
 
-    def copy(self):
+    def copy(self) -> 'Action':
         return Action(**vars(self))
 
-    def asdict(self):
+    def asdict(self) -> dict:
         self_dict = vars(self)
         self_dict['run_state'] = self.run_state.name
         return self_dict

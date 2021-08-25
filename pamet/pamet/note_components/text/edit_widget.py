@@ -6,6 +6,7 @@ from misli import gui
 from misli.gui.view_library import register_view_class
 
 from pamet.note_components.text.edit_view import TextNoteEditView
+from pamet.note_components.text.edit_view import TextNoteEditViewModel
 from pamet.note_components.text.ui_edit_widget import Ui_TextNoteEditViewWidget
 
 from pamet.note_components import usecases
@@ -32,9 +33,10 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.update()
 
     def update(self):
-        log.info('EditComponent update')
-        display_rect = QRectF(*self.note.rect().to_list())
-        display_rect.moveCenter(QPointF(*self.displayed_model.display_position.to_list()))
+        model: TextNoteEditViewModel = self.displayed_model
+        display_rect = QRectF(*self.note.rect().as_tuple())
+        display_rect.moveCenter(
+            QPointF(*model.display_position.as_tuple()))
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
@@ -49,11 +51,12 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.show()
 
     def _handle_ok_click(self):
+        model: TextNoteEditViewModel = self.displayed_model
         text = self.ui.textEdit.toPlainText()
         note = self.note
         note.text = text.strip()
 
-        if self.displayed_model.create_mode:
+        if model.create_mode:
             usecases.finish_creating_note(self.id, note)
         else:
             usecases.finish_editing_note(self.id, note)

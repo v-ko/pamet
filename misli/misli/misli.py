@@ -37,12 +37,12 @@ it's expected that the subscribed callables are light, since the main purpose
 of misli is GUI rendering and blocking the main loop would cause freezing.
 """
 
-from typing import Callable, Union
+from typing import Callable, Union, List
 from collections import defaultdict
 from enum import Enum
 from copy import deepcopy
 
-from misli.main_loop import NoMainLoop
+from misli.main_loop import MainLoop, NoMainLoop
 from misli import get_logger
 
 
@@ -53,7 +53,7 @@ _main_loop = NoMainLoop()
 
 
 @log.traced
-def set_main_loop(main_loop):
+def set_main_loop(main_loop: MainLoop):
     """Swap the main loop that the module uses. That's needed in order to make
     the GUI swappable (and most frameworks have their own mechanisms).
     """
@@ -61,7 +61,7 @@ def set_main_loop(main_loop):
     _main_loop = main_loop
 
 
-def main_loop():
+def main_loop() -> MainLoop:
     """Get the main loop object"""
     return _main_loop
 
@@ -124,7 +124,7 @@ class Subscription:
     #     return cls(handler, SubscriptionTypes.ENTITY, channel, entity_id)
 
 
-def channels():
+def channels() -> List[str]:
     """Get the registered channels list"""
     return list(_message_stacks.keys())
 

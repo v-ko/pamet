@@ -34,17 +34,17 @@ class Change:
             raise Exception('Changes can only carry Entities or at least '
                             'objects with an "id" attribute')
 
-    def asdict(self):
+    def asdict(self) -> dict:
         return vars(self)
 
     @classmethod
-    def CREATE(cls, state):
+    def CREATE(cls, state) -> 'Change':
         """Convenience method for constructing a Change with type CREATE"""
         return cls(
             _type=ChangeTypes.CREATE, old_state={}, new_state=state)
 
     @classmethod
-    def UPDATE(cls, old_state, new_state):
+    def UPDATE(cls, old_state, new_state) -> 'Change':
         """Convenience method for constructing a Change with type UPDATE"""
         return cls(
             _type=ChangeTypes.UPDATE,
@@ -52,12 +52,12 @@ class Change:
             new_state=new_state)
 
     @classmethod
-    def DELETE(cls, old_state):
+    def DELETE(cls, old_state) -> 'Change':
         """Convenience method for constructing a Change with type DELETE"""
         return cls(
             _type=ChangeTypes.DELETE, old_state=old_state, new_state={})
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<Change type=%s>' % self.type
 
     def is_create(self) -> bool:

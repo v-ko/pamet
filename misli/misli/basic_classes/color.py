@@ -1,3 +1,6 @@
+from typing import Tuple
+
+
 class Color:
     def __init__(self, r: float, g: float, b: float, a: float):
         """Accepts normalized RGBA channel values (i.e. in the interval [0, 1])
@@ -19,14 +22,14 @@ class Color:
         self._b = b
         self._a = a
 
-    def to_uint8_rgba_list(self):
+    def to_uint8_rgba_list(self) -> Tuple[float, float, float, float]:
         """Convert to a list of uint values (handy for initializing Qt QColor)
 
         Returns:
             [type]: A list of uint8 (in the interval [0, 255]) channel values
         """
-        return [c * 255 for c in self.to_list()]
+        return tuple([c * 255 for c in self.as_tuple()])
 
-    def to_list(self):
+    def as_tuple(self) -> Tuple[float, float, float, float]:
         """Returns a RGBA list (normalized values)"""
-        return [self._r, self._g, self._b, self._a]
+        return (self._r, self._g, self._b, self._a)
