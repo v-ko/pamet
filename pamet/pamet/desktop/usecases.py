@@ -24,7 +24,7 @@ def new_browser_window_ensure_page():
 
 @action('desktop.new_browser_window')
 def new_browser_window(page_id: str):
-    app = gui.find_view(class_name='DesktopApp')
+    app = gui.find_views(class_name='DesktopApp')[0]
 
     window_view_class = gui.view_library.get_view_class('BrowserWindowView')
     window = window_view_class(parent_id=app.id)

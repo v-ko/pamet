@@ -53,7 +53,7 @@ class Entity:
         self_dict = {f.name: getattr(self, f.name) for f in fields(self)}
 
         for key, val in self_dict.items():
-            if type(val) in [list, dict]:
+            if isinstance(val, (list, dict)):
                 val = val.copy()
 
             self_dict[key] = val

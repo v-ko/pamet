@@ -85,15 +85,15 @@ class Action:
         self.duration = duration
 
     def set_run_state(self, run_state: Union[ActionRunStates, str]):
-        if type(run_state) == ActionRunStates:
+        if isinstance(run_state, ActionRunStates):
             self.run_state = run_state
         else:
             self.run_state = ActionRunStates[run_state]
 
     def set_args(self, args: Union[tuple, list]):
-        if type(args) == tuple:
+        if isinstance(args, tuple):
             args = list(args)
-        elif type(args) != list:
+        elif not isinstance(args, list):
             raise ValueError
 
         self.args = args

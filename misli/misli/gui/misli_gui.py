@@ -157,25 +157,45 @@ def views() -> List[View]:
 
 
 @log.traced
-def find_views(**props):
-    """Get all views which have attribute/value pairs matching the supplied
-    keyword arguments
+def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
+    """Get all views with the given class name that have attributes with values
+    that fulfill the filter.
+
+    Args:
+        class_name (str, optional): If specified - only the views with a class
+            with the given name are returned.
+        filter (dict, optional): Key/value pairs that must be present as
+            attribute/values in the view to include it in the results.
+
+    Returns:
+        List[View]: [description]
     """
-    return find_many_by_props(_views, **props)
+    filter_dict = filter_dict or {}
 
-
-@log.traced
-def find_view(class_name: str = '', **props):
-    """Find a single view by class name or by matching its attributes by the
-    supplied keyword arguments"""
     if class_name:
         found = [v for view_id, v in _views.items()
                  if type(v).__name__ == class_name]
         if not found:
-            return None
-        return found[0]
+            return []
+
+        return find_one_by_props(found, **filter_dict)
+
     else:
-        return find_one_by_props(_views, **props)
+        return find_many_by_props(_views, **filter_dict)
+
+
+# @log.traced
+# def find_view(class_name: str = '', **props):
+#     """Find a single view by class name or by matching its attributes by the
+#     supplied keyword arguments"""
+#     if class_name:
+#         found = [v for view_id, v in _views.items()
+#                  if type(v).__name__ == class_name]
+#         if not found:
+#             return None
+#         return found[0]
+#     else:
+#         return find_one_by_props(_views, **props)
 
 
 @log.traced

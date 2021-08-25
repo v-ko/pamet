@@ -8,7 +8,7 @@ def backup_page_hackily(page_path: Union[str, Path]):
     Saves the page in a page_name/hacky_backup folder with an id as a added
     file suffix.
     """
-    if type(page_path) != Path:
+    if not isinstance(page_path, Path):
         page_path = Path(page_path)
 
     LATEST = "__latest__"
