@@ -309,7 +309,7 @@ class MapPageView(View):
             pos = self.viewport.unproject_point(mouse_pos)
 
             page = self.page
-            note = TextNote(page_id=page.id, text='')
+            note = TextNote(page_id=page.id)
             note.x = pos.x()
             note.y = pos.y()
 

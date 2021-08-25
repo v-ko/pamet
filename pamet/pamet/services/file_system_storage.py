@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
 
-from misli import entity_library, Entity
+from misli import Entity
 from misli.basic_classes import Point2D
 
 from pamet.note_components.text.entity import TextNote

@@ -12,6 +12,7 @@ TEXT = 'text'
 @dataclass
 class TextNote(Note):
     def __post_init__(self):
+        Note.__post_init__(self)
         if TEXT not in self.content:
             self.text = ''
 
