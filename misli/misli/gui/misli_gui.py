@@ -178,7 +178,7 @@ def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
         if not found:
             return []
 
-        return find_one_by_props(found, **filter_dict)
+        return find_many_by_props(found, **filter_dict)
 
     else:
         return find_many_by_props(_views, **filter_dict)
