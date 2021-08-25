@@ -380,8 +380,8 @@ class MapPageViewWidget(QWidget, MapPageView):
             # font.setPointSizeF(20 * self.viewport.height_scale_factor())
             # painter.setFont(font)
             # painter.drawText(cache_rect.topLeft() + QPoint(0, 0.5), 'Test')
+            # painter.restore()
 
-            painter.restore()
             if self.debug_drawing:
                 painter.save()
                 painter.setPen(Qt.NoPen)
