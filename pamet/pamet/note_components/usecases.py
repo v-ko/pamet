@@ -1,6 +1,6 @@
 import misli
-from misli import gui
-from misli.basic_classes import Point2D, Color
+from misli import gui, Entity
+from misli.basic_classes import Point2D
 from misli.gui.actions_lib import action
 
 import pamet
@@ -15,7 +15,7 @@ def create_new_note(
         tab_view_id: str, position_coords: list, note_state: dict):
 
     position = Point2D.from_coords(position_coords)
-    note = misli.entity_library.from_dict(note_state)
+    note = Entity.from_dict(note_state)
 
     # edit_view = gui.create_view(
     #     'TextEdit', tab_view.id)

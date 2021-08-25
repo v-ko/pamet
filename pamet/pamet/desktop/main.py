@@ -38,7 +38,7 @@ def main():
         return
 
     for page_id in fs_repo.page_ids():
-        page, notes = fs_repo.page_with_notes(page_id)
+        page, notes = fs_repo.get_page_and_notes(page_id)
         pamet.load_page(page, notes)
 
     # pamet.set_repo(fs_repo, 'all')

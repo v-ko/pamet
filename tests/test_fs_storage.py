@@ -21,7 +21,7 @@ def test_fs_repo_CRUD(fs_repo):
     fs_repo.create_page(page, [])
 
     assert fs_repo.page_ids() == [page.id]
-    test_page, notes = fs_repo.page_with_notes(page.id)
+    test_page, notes = fs_repo.get_page_and_notes(page.id)
     note_states = [n.state() for n in notes]
     assert (test_page.state(), note_states) == (page.state(), [])
 
@@ -29,7 +29,7 @@ def test_fs_repo_CRUD(fs_repo):
     pamet.add_note(note)
     fs_repo.update_page(page, [note])
 
-    test_page, test_notes = fs_repo.page_with_notes(page.id)
+    test_page, test_notes = fs_repo.get_page_and_notes(page.id)
     note_states = [n.state() for n in test_notes]
     assert (test_page.state(), note_states) == (page.state(), [note.state()])
 

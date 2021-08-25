@@ -22,17 +22,3 @@ def register_entity(entity_class: Any):
 
 def get_entity_class_by_name(entity_class_name: str):
     return entity_library[entity_class_name]
-
-
-def from_dict(self_dict: dict) -> 'Entity':
-    """Construct an entity given its state as a dict"""
-
-    self_id = self_dict.pop('id', '')
-    obj_type = self_dict.pop('obj_type')
-
-    cls = get_entity_class_by_name(obj_type)
-
-    instance = cls(**self_dict)
-    instance.id = self_id
-    instance.obj_type = obj_type
-    return instance

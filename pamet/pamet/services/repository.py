@@ -1,10 +1,11 @@
-from misli import entity_library
+from typing import List
+
+from misli import Entity
 from misli.change import ChangeTypes, Change
+from misli import get_logger
 
 import pamet
-from pamet.entities import Page
 
-from misli import get_logger
 log = get_logger(__name__)
 
 
@@ -13,53 +14,71 @@ class Repository:
         self.path = ''
         self._pages = {}
 
-    def create_page(self, page, notes):
-        raise NotImplementedError
-
     def page_ids(self):
         raise NotImplementedError
 
-    def page_with_notes(self, page_id):
+    def create_page(self, page, notes):
         raise NotImplementedError
 
-    def update_page(self, page_state):
+    def get_page_and_notes(self, page_id):
+        raise NotImplementedError
+
+    def update_page(self, page, notes):
         raise NotImplementedError
 
     def delete_page(self, page_id):
         raise NotImplementedError
 
-    def save_changes(self, changes):
-        pages_for_update = {}  # {id: True}
+    def save_changes(self, changes: List[Change]):
+        """Applies the received changes to the objects in the repository.
 
-        savable_changes = [ChangeTypes.CREATE,
-                           ChangeTypes.DELETE,
-                           ChangeTypes.UPDATE]
+        Changes are applied in order and grouped only if consiquent changes
+        refer to the same page.
 
-        for change_dict in changes:
+        Args:
+            changes (List[Change]): The list of changes to be applied
+
+        Raises:
+            NotImplementedError: If the save behavior for some object in the
+            changes is undefined
+        """
+        page_id_for_aggregate_update = None
+
+        def flush_aggregate_update():
+            if not page_id_for_aggregate_update:
+                return
+            page = pamet.page(page_id_for_aggregate_update)
+            notes = pamet.notes(page.id)
+            self.update_page(page, notes)
+
+        while changes:
+            change_dict = changes.pop(0)
             change = Change(**change_dict)
-            last_state = change.last_state()
+            entity = Entity.from_dict(change.last_state())
 
-            if 'page_id' in last_state:
-                if change.type in savable_changes:
-                    pages_for_update[last_state['page_id']] = True
-
-            elif last_state['obj_type'] == 'MapPage':
+            if entity.obj_type in ['MapPage']:  # Pages
                 if change.type == ChangeTypes.CREATE:
-                    self.create_page(entity_library.from_dict(last_state), [])
+                    flush_aggregate_update()
+                    self.create_page(entity, [])
 
                 elif change.type == ChangeTypes.UPDATE:
-                    pages_for_update[last_state['id']] = True
+                    if entity.id != page_id_for_aggregate_update:
+                        flush_aggregate_update()
+                        page_id_for_aggregate_update = entity.id
 
                 elif change.type == ChangeTypes.DELETE:
-                    self.delete_page(last_state['id'])
+                    flush_aggregate_update()
+                    self.delete_page(entity.id)
+
+            elif hasattr(entity, 'page_id'):  # If it's a page child, e.g. note
+                if entity.page_id != page_id_for_aggregate_update:
+                    flush_aggregate_update()
+                    page_id_for_aggregate_update = entity.page_id
 
             else:
                 log.error('Saving changes for objects of type "%s" is not'
                           'implemented. Change: %s' %
-                          (last_state['obj_type'], change_dict))
+                          (entity.obj_type, change_dict))
                 raise NotImplementedError
 
-        for page_id, _ in pages_for_update.items():
-            page = pamet.page(page_id)
-            notes = pamet.notes(page.id)
-            self.update_page(page, notes)
+        flush_aggregate_update()

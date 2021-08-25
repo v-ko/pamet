@@ -2,6 +2,7 @@ from typing import Generator, Any
 
 import random
 import uuid
+from datetime import datetime
 
 
 def get_new_id() -> str:
@@ -48,3 +49,11 @@ def find_one_by_props(item_list: [list, dict], **props) -> Any:
         return None
 
     return items_found[0]
+
+
+def datetime_from_string(datetime_string: str) -> datetime:
+    return datetime.fromisoformat(datetime_string)
+
+
+def datetime_to_string(date_time: datetime) -> str:
+    return date_time.astimezone().isoformat()

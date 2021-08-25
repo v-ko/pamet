@@ -1,9 +1,10 @@
 from typing import List
+from datetime import datetime
 
 import misli
 from misli.change import Change, ChangeTypes
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
-from misli import get_logger, gui
+from misli import get_logger, gui, Entity
 
 import pamet
 from pamet.entities import Page, Note
@@ -149,7 +150,9 @@ def create_note(**props):
 
     props['id'] = get_new_id()
 
-    _note = misli.entity_library.from_dict(props)
+    _note = Entity.from_dict(props)
+    _note.time_created = datetime.now()
+    _note.time_modified = datetime.now()
     add_note(_note)
     return _note
 
@@ -204,8 +207,13 @@ def update_note(_note):
         return
 
     old_note = note(_note.page_id, _note.id)
+
+    if old_note.content != _note.content:
+        _note.time_modified = datetime.now()
+
     old_state = old_note.asdict()
     new_state = _note.asdict()
+
     _note_indices[_note.page_id][_note.id].replace(**new_state)
 
     change = Change(ChangeTypes.UPDATE, old_state, new_state)
@@ -250,7 +258,6 @@ def create_and_bind_note_view(page_view_id, _note):
 
 @log.traced
 def create_and_bind_edit_view(tab_view_id, _note):
-
     edit_class = misli.gui.view_library.get_view_class(
         obj_type=_note.obj_type, edit=True)
     edit_view = edit_class(parent_id=tab_view_id)
@@ -273,7 +280,7 @@ def update_views_for_page_changes(changes: List[dict]):
     for page_change_dict in changes:
         page_change = Change(**page_change_dict)
         page_state = page_change.last_state()
-        _page = misli.entity_library.from_dict(page_state)
+        _page = Entity.from_dict(page_state)
 
         if page_change.is_update():
 
@@ -298,7 +305,7 @@ def update_views_for_page_changes(changes: List[dict]):
 def update_views_for_note_changes(changes: List[dict]):
     for note_change_dict in changes:
         note_change = Change(**note_change_dict)
-        _note = misli.entity_library.from_dict(note_change.last_state())
+        _note = Entity.from_dict(note_change.last_state())
 
         if note_change.is_create():
             _page = pamet.page(_note.page_id)

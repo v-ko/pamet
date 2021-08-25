@@ -1,9 +1,11 @@
 import os
 import json
-import random
-import string
+from pathlib import Path
+from datetime import datetime
+from dataclasses import dataclass
 
-from misli import entity_library
+from misli import entity_library, Entity
+from misli.basic_classes import Point2D
 
 from pamet.note_components.text.entity import TextNote
 from pamet.services.hacky_backups import backup_page_hackily
@@ -20,37 +22,10 @@ class FSStorageRepository(Repository):
     def __init__(self, path):
         Repository.__init__(self)
 
-        self.path = path
+        self.path = Path(path)
         self._page_ids = []
 
         self._process_legacy_pages()
-
-    def _process_legacy_pages(self):
-        for file in os.scandir(self.path):
-
-            if self.is_v4_page(file.path):
-                pass
-
-            elif file.path.endswith('.json'):
-                page_state = self.convert_v3_to_v4(file.path)
-
-                if not page_state:
-                    log.warning('Empty page state for legacy page %s' %
-                                file.name)
-                    continue
-
-                note_states = page_state.pop('note_states', [])
-                notes = [entity_library.from_dict(ns)
-                         for nid, ns in note_states.items()]
-                self.create_page(entity_library.from_dict(page_state), notes)
-
-                backup_path = file.path + '.backup'
-                os.rename(file.path, backup_path)
-                log.info('Loaded v3 page %s and backed it up as %s' %
-                         (file.name, backup_path))
-
-            else:
-                log.warning('Untracked file in the repo: %s' % file.name)
 
     def _path_for_page(self, page_id):
         name = page_id + V4_FILE_EXT
@@ -106,7 +81,7 @@ class FSStorageRepository(Repository):
 
         return page_ids
 
-    def page_with_notes(self, page_id):
+    def get_page_and_notes(self, page_id):
         path = self._path_for_page(page_id)
 
         try:
@@ -129,10 +104,12 @@ class FSStorageRepository(Repository):
             # TODO: remove for alpha
             ns.pop('view_class', '')
             ns['obj_type'] = 'TextNote'
+            if 'text' in ns:
+                ns['_text'] = ns.pop('text')
 
-            notes.append(entity_library.from_dict(ns))
+            notes.append(Entity.from_dict(ns))
 
-        return entity_library.from_dict(page_state), notes
+        return Entity.from_dict(page_state), notes
 
     def update_page(self, page, notes):
         page_state = page.asdict()
@@ -175,7 +152,7 @@ class FSStorageRepository(Repository):
 
         return version
 
-    def convert_v3_to_v4(self, json_path):
+    def _convert_v3_to_v4(self, json_path):
         # V3 example: {"notes": [
         # {"bg_col": [0,0,1,0.1],
         #     "font_size": 1,
@@ -209,29 +186,18 @@ class FSStorageRepository(Repository):
 
             nt['page_id'] = name
 
-        for nt in notes:
-            if RANDOMIZE_TEXT:
-                text = nt['text']
-                words = text.split()
-
-                for i, word in enumerate(words):
-                    new_word = []
-                    for ch in word:
-                        new_word.append(random.choice(string.ascii_letters))
-
-                    words[i] = ''.join(new_word)
-                text = ' '.join(words)
-                # print(text)
-                nt['text'] = text
-
         for i, nt in enumerate(notes):
             nt['id'] = str(nt['id'])
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
-            nt['_x'] = nt.pop('x')
-            nt['_y'] = nt.pop('y')
-            nt['_width'] = nt.pop('width')
-            nt['_height'] = nt.pop('height')
+            nt['x'] = nt.pop('x')
+            nt['y'] = nt.pop('y')
+            nt['width'] = nt.pop('width')
+            nt['height'] = nt.pop('height')
+            nt['time_created'] = datetime.strptime(
+                nt.pop('t_made'), '%m.%d.%Y %H:%M:%S')
+            nt['time_modified'] = datetime.strptime(
+                nt.pop('t_mod'), '%m.%d.%Y %H:%M:%S')
 
             # Redirect notes
             if nt['text'].startswith('this_note_points_to:'):
@@ -244,7 +210,7 @@ class FSStorageRepository(Repository):
                 nt['obj_type'] = 'Text'
 
             # Remove unimplemented attributes to avoid errors
-            note = TextNote()
+            note = TextNote(*nt)
             new_state = {}
             for key in nt:
                 if hasattr(note, key):
@@ -263,3 +229,155 @@ class FSStorageRepository(Repository):
         json_object['note_states'] = note_states
 
         return json_object
+
+    def _convert_v2_to_v4(self, file_path):
+        # Example:
+        # [79367]
+        # txt=this_note_points_to:Програмиране
+        # x=-7
+        # y=-4.5
+        # z=0
+        # a=9
+        # b=2.5
+        # font_size=1
+        # t_made=6.10.2019 14:1:12
+        # t_mod=6.10.2019 14:1:12
+        # txt_col=0;0;1;1
+        # bg_col=0;0;1;0.100008
+        # l_id=
+        # l_txt=
+        # l_CP_x=
+        # l_CP_y=
+        # tags=
+
+        # Ignored fields: font_size, z (unused)
+
+        with open(file_path) as misl_file:
+            misl_file_string = misl_file.read()
+
+        is_displayed_first_on_startup = False
+        is_a_timeline_notefile = False
+
+        # Clear the windows standart junk
+        misl_file_string = misl_file_string.replace('\r', '')
+        lines = [ln for ln in misl_file_string.split('\n') if ln]  # Skip empty
+
+        lines_left = []
+        for line in lines:
+            if line.startswith('#'):  # Skip comments
+                continue
+
+            if line.startswith('is_displayed_first_on_startup'):
+                is_displayed_first_on_startup = True
+                continue
+
+            elif line.startswith('is_a_timeline_note_file'):
+                is_a_timeline_notefile = True
+
+            lines_left.append(line)
+
+        @dataclass
+        class Arrow:
+            source_id: str
+            target_id: str
+            control_point: Point2D
+
+        # Extract groups
+        notes = {}
+        current_note_id = None
+        arrows = []  # source, target, control_point
+
+        for line in lines_left:
+            if line.startswith('[') and line.endswith(']'):
+                current_note_id = line[1:-1]
+                continue
+
+            [key, value] = line.split('=', 1)
+
+            if key == 'txt':
+                value = value.replace('\\n', '\n')
+            elif key in ['txt_col', 'bg_col']:
+                value = [float(channel) for channel in value.split(';')]
+            elif key in ['l_id', 'l_CP_x', 'l_CP_y']:
+                value = value.split(';')
+
+            notes[current_note_id][key] = value
+
+        for note_id, nt in notes.items():
+            # Pop unused values
+            nt.pop('font_size', '')
+            nt.pop('z', '')
+
+            nt['id'] = int(note_id)
+            nt['color'] = nt.pop('txt_col')
+            nt['background_color'] = nt.pop('bg_col')
+            nt['x'] = float(nt.pop('x'))
+            nt['y'] = float(nt.pop('y'))
+            nt['width'] = float(nt.pop('a'))
+            nt['height'] = float(nt.pop('b'))
+            nt['text'] = nt.pop('txt')
+            nt['time_created'] = datetime.strptime(
+                nt.pop('t_made'), '%m.%d.%Y %H:%M:%S')
+            nt['time_modified'] = datetime.strptime(
+                nt.pop('t_mod'), '%m.%d.%Y %H:%M:%S')
+            # nt['tags'] unchanged
+
+            # Process arrows (formerly named links)
+            control_points = []
+            if 'l_CP_x' in nt and 'l_CP_y' in nt:
+                for cp_x, cp_y in zip(nt['l_CP_x'], nt['l_CP_y']):
+                    control_points.append(Point2D(cp_x, cp_y))
+            else:
+                control_points = None
+
+            for arrow_idx, target_id in enumerate(nt['l_id']):
+                if control_points:
+                    control_point = control_points[arrow_idx]
+                else:
+                    control_point = None
+
+                arrows.append(Arrow(nt['id'], target_id, control_point))
+
+    def _process_legacy_pages(self):
+        legacy_pages = []
+        backup_path = self.path / '__legacy_pages_backup__'
+
+        for file in os.scandir(self.path):
+            if self.is_v4_page(file.path):
+                continue
+
+            try:
+                if file.path.endswith('.misl'):
+                    page_state = self.convert_v2_to_v4(file.path)
+
+                elif file.path.endswith('.json'):
+                    page_state = self._convert_v3_to_v4(file.path)
+
+                else:
+                    log.warning('Untracked file in the repo: %s' % file.name)
+                    continue
+            except Exception as e:
+                log.error(f'Exception raised when processing legacy page '
+                          f'{file.path}: {e}')
+                continue
+
+            if not page_state:
+                log.warning('Empty page state for legacy page %s' %
+                            file.name)
+                continue
+
+            note_states = page_state.pop('note_states', [])
+            notes = [Entity.from_dict(ns)
+                     for nid, ns in note_states.items()]
+
+            self.create_page(Entity.from_dict(page_state), notes)
+            legacy_pages.append(Path(file.path))
+
+        if legacy_pages:
+            backup_path.mkdir(parents=True, exist_ok=True)
+
+        for page_path in legacy_pages:
+            page_backup_path = backup_path / (page_path.name + '.backup')
+            page_path.rename(page_backup_path)
+            log.info('Loaded legacy page %s and backed it up as %s' %
+                     (page_path, page_backup_path))
