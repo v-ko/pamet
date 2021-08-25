@@ -15,6 +15,8 @@ A rewrite, using the technologies outlined in the Misli module, is ongoing. Curr
 - Long-press to initiate move
 - Ctrl or shift to select multiple notes
 - Ctrl+Shift to drag-select multiple notes
+- Drag the lower right corner of a note to resize it
+- Buttons 1,2,3,4 change the note color. 5 removes the background
 * Selected notes get moved together and resized to the same size
 * No manual saving is required
 
@@ -30,7 +32,7 @@ Currently only the setuptools install from source is possible (there are plans f
     * Enter the `pamet` folder and do the same
 
 Now you should be able to run `pamet` and `pamet-debug` from the console. They both start the app, but the latter prints verbose logging (and could be a bit slower).
-
+*On Windows you might need to take note of the reported install path and add it to your PATH environment variable
 Currently the setup is not tested on Windows, so if there's a problem - do post an issue on github, I'll try to be prompt in helping out.
 
 ### Uninstall
