@@ -12,4 +12,4 @@ class NoteView(View):
 
     @property
     def note(self) -> Note:
-        return self.displayed_model.note.copy()
+        return self.model.note.copy()

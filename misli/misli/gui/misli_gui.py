@@ -98,6 +98,26 @@ def view(id: str) -> Union[View, None]:
     return _views[id]
 
 
+def old_view_model(view_id: str) -> Union[Entity, None]:
+    """Get a copy of the view model corresponding to the view with the given id.
+
+    This function returns a copy of the view model that was last dispatched to
+    the view. I.e. if any actions have made changes since then - they will not
+    be present in the old ViewModel as returned by this method.
+
+    Args:
+        view_id (str): The id of the view model (same as its view)
+
+    Returns:
+        Entity: A copy of the view model (should be a subclass of Entity). If
+        there's no model found for that id - the function returns None.
+    """
+    if view_id not in _old_view_models:
+        return None
+    _view_model = _old_view_models[view_id]
+    return _view_model.copy()
+
+
 def view_model(view_id: str) -> Union[Entity, None]:
     """Get a copy of the view model corresponding to the view with the given id.
 
@@ -105,7 +125,7 @@ def view_model(view_id: str) -> Union[Entity, None]:
     but not yet passed to the View.
 
     Args:
-        view_id (str): The id of the view for which we want the view model
+        view_id (str): The id of the view model (same as its view)
 
     Returns:
         Entity: A copy of the view model (should be a subclass of Entity). If
@@ -126,11 +146,11 @@ def displayed_view_model(view_id: str) -> Union[Entity, None]:
     will not yet be reflected in the model returned by this function.
 
     Args:
-        view_id (str): The id for which we want the last displayed view model
+        view_id (str): The id of the view model (same as its view)
 
     Returns:
-        Union[Entity, None]: Returns the last displayed view model or None if
-        there's no model for this view_id.
+        Entity: A copy of the view model (should be a subclass of Entity). If
+        there's no model found for that id - the function returns None.
     """
     if view_id not in _displayed_view_models:
         return None
@@ -168,7 +188,7 @@ def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
             attribute/values in the view to include it in the results.
 
     Returns:
-        List[View]: [description]
+        List[View]: A list of Views
     """
     filter_dict = filter_dict or {}
 
@@ -208,7 +228,7 @@ def update_view_model(new_model):
         properties. It's identified by its id (so that must be intact).
     """
     _view: View = view(new_model.id)
-    old_model = _view.displayed_model
+    old_model = _view.model
     _view_models[_view.id] = new_model
 
     if _view.id not in _old_view_models:
@@ -251,10 +271,8 @@ def _update_views():
     child_changes_per_parent_id = defaultdict(lambda: ([], [], []))
 
     for _view in _updated_views:
-        old_model = _old_view_models[_view.id]
-        new_model = view_model(_view.id)
-        _displayed_view_models[_view.id] = new_model
-        _view.handle_model_update(old_model, new_model)
+        _displayed_view_models[_view.id] = view_model(_view.id)
+        _view.handle_model_update()
 
         if _view.parent_id:
             child_changes_per_parent_id[_view.parent_id][2].append(

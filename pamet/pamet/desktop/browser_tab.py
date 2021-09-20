@@ -33,10 +33,12 @@ class BrowserTabView(QWidget, View):
         # Widget config
         self.setLayout(QVBoxLayout())
 
-    def handle_model_update(self, old_state, new_state):
-        if old_state.page_view_id != new_state.page_view_id:
-            if new_state.page_view_id:
-                self.switch_to_page_view(new_state.page_view_id)
+    def handle_model_update(self):
+        new_model = self.model
+
+        if self.old_model.page_view_id != new_model.page_view_id:
+            if new_model.page_view_id:
+                self.switch_to_page_view(new_model.page_view_id)
 
             else:
                 raise Exception('Empty page_view_id passed')

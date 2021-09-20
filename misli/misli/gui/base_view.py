@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Union
+from typing import Union, List
 
 from misli.helpers import get_new_id
 from misli import Entity, gui
@@ -48,13 +48,20 @@ class View:
         return self._id
 
     @property
-    def displayed_model(self) -> Entity:
+    def model(self) -> Entity:
         model = gui.displayed_view_model(self.id)
         if not model or model.id != self.id:
             raise Exception('Could not retrieve view model for view %s' % self)
         return model
 
-    def handle_model_update(self, old_model, new_model):
+    @property
+    def old_model(self) -> Entity:
+        model = gui.old_view_model(self.id)
+        if not model:
+            raise Exception('Could not retrieve view model for view %s' % self)
+        return model
+
+    def handle_model_update(self):
         pass
 
     def handle_child_changes(

@@ -29,11 +29,11 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.ui.ok_button.clicked.connect(self._handle_ok_click)
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
 
-    def handle_model_update(self, old_state, new_state):
+    def handle_model_update(self):
         self.update()
 
     def update(self):
-        model: TextNoteEditViewModel = self.displayed_model
+        model: TextNoteEditViewModel = self.model
         display_rect = QRectF(*self.note.rect().as_tuple())
         display_rect.moveCenter(
             QPointF(*model.display_position.as_tuple()))
@@ -51,7 +51,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.show()
 
     def _handle_ok_click(self):
-        model: TextNoteEditViewModel = self.displayed_model
+        model: TextNoteEditViewModel = self.model
         text = self.ui.textEdit.toPlainText()
         note = self.note
         note.text = text.strip()

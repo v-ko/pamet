@@ -40,7 +40,7 @@ class BrowserWindowView(QMainWindow, View):
 
     def handle_child_changes(self, added, removed, updated):
         for child in added:
-            self.ui.tabWidget.addTab(child, child.displayed_model.name)
+            self.ui.tabWidget.addTab(child, child.model.name)
 
         for child in removed:
             tab_idx = self.ui.tabWidget.indexOf(child)
@@ -51,7 +51,7 @@ class BrowserWindowView(QMainWindow, View):
 
     def handle_child_updated(self, child):
         tab_idx = self.ui.tabWidget.indexOf(child)
-        self.ui.tabWidget.setTabText(tab_idx, child.displayed_model.name)
+        self.ui.tabWidget.setTabText(tab_idx, child.model.name)
 
     def handle_tab_changed(self, index: int):
         self.ui.tabWidget.widget(0).update()
