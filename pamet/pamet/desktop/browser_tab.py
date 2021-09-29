@@ -15,6 +15,7 @@ from pamet.note_components import usecases
 class BrowserTabViewState(Entity):
     name: str = ''
     page_view_id: str = None
+    edit_view_id: str = None
 
 
 @register_view_class
@@ -28,7 +29,6 @@ class BrowserTabView(QWidget, View):
         )
 
         self.page_view = None
-        self._edit_view = None
 
         # Widget config
         self.setLayout(QVBoxLayout())
@@ -53,20 +53,13 @@ class BrowserTabView(QWidget, View):
     def add_child(self, child):
         # If we're adding an edit component
         if type(child) in gui.view_library.get_view_classes(edit=True):
-
-            # Abort any ongoing editing
-            if self._edit_view:
-                usecases.abort_editing_note(self._edit_view.id)
-
             # Setup the editing component
-            self._edit_view = child
             child.setParent(self)
             child.setWindowFlag(Qt.Sheet, True)
             child.show()
 
     def remove_child(self, child):
         if type(child) in gui.view_library.get_view_classes(edit=True):
-            self._edit_view = None
             child.close()
 
     def switch_to_page_view(self, page_view_id):

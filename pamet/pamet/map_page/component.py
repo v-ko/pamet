@@ -59,7 +59,6 @@ class MapPageViewModel(Entity):
 
     def __post_init__(self):
         Entity.__post_init__(self)
-        self.modes = MapPageMode
         self.viewport = Viewport(self)
 
     def mode(self):
@@ -69,22 +68,22 @@ class MapPageViewModel(Entity):
                      self.note_drag_active)
 
         if not modes_sum:
-            return self.modes.NONE
+            return MapPageMode.NONE
 
         elif modes_sum > 1:
             raise Exception('More than one mode activated')
 
         if self.drag_navigation_active:
-            return self.modes.DRAG_NAVIGATION
+            return MapPageMode.DRAG_NAVIGATION
 
         elif self.drag_select_active:
-            return self.modes.DRAG_SELECT
+            return MapPageMode.DRAG_SELECT
 
         elif self.note_resize_active:
-            return self.modes.NOTE_RESIZE
+            return MapPageMode.NOTE_RESIZE
 
         elif self.note_drag_active:
-            return self.modes.NOTE_DRAG
+            return MapPageMode.NOTE_DRAG
 
 
 class MapPageView(View):
@@ -241,7 +240,7 @@ class MapPageView(View):
             usecases.stop_note_drag(
                 self.id, state.selected_nc_ids, pos_delta.as_tuple())
 
-        elif mode == state.modes.DRAG_NAVIGATION:
+        elif mode == MapPageMode.DRAG_NAVIGATION:
             usecases.stop_drag_navigation(self.id)
 
     def _new_note_size_on_resize(self, new_mouse_pos: Point2D) -> Point2D:
@@ -268,26 +267,26 @@ class MapPageView(View):
         mode = state.mode()
         delta = self._mouse_position_on_left_press - mouse_pos
 
-        if mode == state.modes.NONE:
+        if mode == MapPageMode.NONE:
             if self._left_mouse_is_pressed:
                 usecases.start_mouse_drag_navigation(
                     self.id, self._mouse_position_on_left_press, delta)
 
-        if mode == state.modes.DRAG_SELECT:
+        if mode == MapPageMode.DRAG_SELECT:
             self._handle_move_on_drag_select(mouse_pos)
 
-        elif mode == state.modes.NOTE_RESIZE:
+        elif mode == MapPageMode.NOTE_RESIZE:
             new_size = self._new_note_size_on_resize(mouse_pos)
             usecases.resize_note_views(
                 self.id, new_size.as_tuple(), state.selected_nc_ids)
 
-        elif mode == state.modes.NOTE_DRAG:
+        elif mode == MapPageMode.NOTE_DRAG:
             pos_delta = mouse_pos - self._mouse_position_on_left_press
             pos_delta /= self.viewport.height_scale_factor()
             usecases.note_drag_nc_position_update(
                 self.id, state.selected_nc_ids, pos_delta.as_tuple())
 
-        elif mode == state.modes.DRAG_NAVIGATION:
+        elif mode == MapPageMode.DRAG_NAVIGATION:
             usecases.mouse_drag_navigation_move(self.id, delta)
 
     def handle_mouse_scroll(self, steps: int):

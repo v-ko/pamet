@@ -17,11 +17,15 @@ def create_new_note(
     position = Point2D.from_coords(position_coords)
     note = Entity.from_dict(note_state)
 
-    # edit_view = gui.create_view(
-    #     'TextEdit', tab_view.id)
+    # Check if there's an open edit window and abort it if so
+    tab_state = gui.view_model(tab_view_id)
+    if tab_state.edit_view_id:
+        abort_editing_note(tab_state.edit_view_id)
+
     edit_view_class = gui.view_library.get_view_class(
         obj_type='TextNote', edit=True)
     edit_view = edit_view_class(parent_id=tab_view_id)
+    tab_state.edit_view_id = edit_view.id
 
     edit_view_model = gui.view_model(edit_view.id)
     edit_view_model.note = note
@@ -29,6 +33,7 @@ def create_new_note(
     edit_view_model.create_mode = True
 
     gui.update_view_model(edit_view_model)
+    gui.update_view_model(tab_state)
 
 
 @action('notes.finish_creating_note')
@@ -46,13 +51,18 @@ def start_editing_note(
     note = gui.view(note_component_id).note
     position = Point2D.from_coords(position_coords)
 
-    edit_view = pamet.create_and_bind_edit_view(
-        tab_view_id, note)
+    # Check if there's an open edit window and abort it if so
+    tab_state = gui.view_model(tab_view_id)
+    if tab_state.edit_view_id:
+        abort_editing_note(tab_state.edit_view_id)
 
+    edit_view = pamet.create_and_bind_edit_view(tab_view_id, note)
+    tab_state.edit_view_id = edit_view.id
     edit_view_model = gui.view_model(edit_view.id)
     edit_view_model.display_position = position
 
     gui.update_view_model(edit_view_model)
+    gui.update_view_model(tab_state)
 
 
 @action('notes.finish_editing_note')
@@ -68,4 +78,8 @@ def finish_editing_note(edit_view_id: str, note: Note):
 @action('notes.abort_editing_note')
 def abort_editing_note(edit_view_id: str):
     edit_view = gui.view(edit_view_id)
+    tab_state = gui.view_model(edit_view.parent_id)
+    tab_state.edit_view_id = None
+
     gui.remove_view(edit_view)
+    gui.update_view_model(tab_state)

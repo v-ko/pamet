@@ -32,7 +32,6 @@ class View:
         Args:
             parent_id (str): The parent id. Can be none if this view is a root
             initial_model (Entity): The view model should be an Entity subclass
-             and
         """
         self._id = get_new_id()  # Generate the ViewModel.id(==View.id)
         initial_model.id = self.id
