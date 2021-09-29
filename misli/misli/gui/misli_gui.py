@@ -2,6 +2,7 @@ from typing import Callable, Union, List
 from collections import defaultdict
 import time
 import random
+from contextlib import contextmanager
 
 import misli
 from misli.logging import BColors
@@ -29,6 +30,26 @@ _view_states = {}
 _previous_view_states = {}
 _displayed_view_states = {}
 
+_action_context_stack = []
+
+
+@contextmanager
+def action_context(action):
+    _action_context_stack.append(action)
+    yield None
+
+    # If it's a root action - propagate the state changes to the views (async)
+    _action_context_stack.pop()
+    if not _action_context_stack:
+        misli.call_delayed(_update_views, 0)
+
+
+def ensure_context():
+    if not _action_context_stack:
+        raise Exception(
+            'State changes can only happen in functions decorated with the '
+            'misli.gui.actions_library.action decorator')
+
 
 # Action channel interface
 def push_action(action: Action):
@@ -36,8 +57,8 @@ def push_action(action: Action):
     called by the action decorator.
     """
     args_str = ', '.join([str(a) for a in action.args])
-    kwargs_str = ', '.join(['%s=%s' % (k, v)
-                            for k, v in action.kwargs.items()])
+    kwargs_str = ', '.join(
+        ['%s=%s' % (k, v) for k, v in action.kwargs.items()])
 
     green = BColors.OKGREEN
     end = BColors.ENDC
@@ -65,6 +86,7 @@ def add_view(_view: View, initial_state):
     """Register a view instance in misli.gui. Should only be called in
     View.__init__.
     """
+    ensure_context()
     _views[_view.id] = _view
     _views_per_parent[_view.id] = []
     _view_states[_view.id] = initial_state
@@ -193,8 +215,10 @@ def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
     filter_dict = filter_dict or {}
 
     if class_name:
-        found = [v for view_id, v in _views.items()
-                 if type(v).__name__ == class_name]
+        found = [
+            v for view_id, v in _views.items()
+            if type(v).__name__ == class_name
+        ]
         if not found:
             return []
 
@@ -227,6 +251,7 @@ def update_state(new_state):
         new_state (view model, inherits Entity): the model with updated
         properties. It's identified by its id (so that must be intact).
     """
+    ensure_context()
     _view: View = view(new_state.id)
     previous_state = _view.state
     _view_states[_view.id] = new_state
@@ -247,6 +272,7 @@ def remove_view(_view: View):
     Raises:
         Exception: If the view provided is not registered with misli.gui
     """
+    ensure_context()
     _views_per_parent.pop(_view.id)
     _views.pop(_view.id)
 
@@ -258,8 +284,6 @@ def remove_view(_view: View):
 
         _views_per_parent[_view.parent_id].remove(_view)
         _removed_views_per_parent[_view.parent_id].append(_view)
-
-    misli.call_delayed(_update_views, 0)
 
 
 # @log.traced
@@ -275,8 +299,7 @@ def _update_views():
         _view.handle_state_update()
 
         if _view.parent_id:
-            child_changes_per_parent_id[_view.parent_id][2].append(
-                _view)
+            child_changes_per_parent_id[_view.parent_id][2].append(_view)
 
     for parent_id, added in _added_views_per_parent.items():
         child_changes_per_parent_id[parent_id][0].extend(added)

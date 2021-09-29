@@ -275,7 +275,7 @@ def create_and_bind_edit_view(tab_view_id, _note):
 # They might go into a reducer-like pattern (configured in main() ) but
 # that should happen when needed and not earlier
 
-@log.traced
+@gui.action('update_views_for_page_changes')
 def update_views_for_page_changes(changes: List[dict]):
     for page_change_dict in changes:
         page_change = Change(**page_change_dict)
@@ -301,7 +301,7 @@ def update_views_for_page_changes(changes: List[dict]):
             pass
 
 
-@log.traced
+@gui.action('update_views_for_note_changes')
 def update_views_for_note_changes(changes: List[dict]):
     for note_change_dict in changes:
         note_change = Change(**note_change_dict)

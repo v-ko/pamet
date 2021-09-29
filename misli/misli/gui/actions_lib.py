@@ -6,8 +6,8 @@ from enum import Enum
 import misli
 from misli import gui
 from misli.helpers import get_new_id
-log = misli.get_logger(__name__)
 
+log = misli.get_logger(__name__)
 
 ACTIONS = {}
 _actions_stack = []
@@ -25,22 +25,36 @@ def action(name: str):
         name (str): The name of the action (domain-like naming convention, e.g.
          'context.action_name')
     """
-    def decorator_action(func):
+    if not name or not isinstance(name, str):
+        raise Exception(
+            'Please add the action name as an argument to the decorator. '
+            'E.g. @action(\'action_name\')')
 
+    def decorator_action(func):
         @functools.wraps(func)
         def wrapper_action(*args, **kwargs):
 
-            _action = Action(
-                name, ActionRunStates.STARTED, args=list(args), kwargs=kwargs)
+            _action = Action(name,
+                             ActionRunStates.STARTED,
+                             args=list(args),
+                             kwargs=kwargs)
 
             gui.push_action(_action)
 
-            # Call the actual function
-            func(*args, **kwargs)
+            # We get an action context (i.e. push this action on the stack)
+            # Mainly in order to handle action nesting and do view updates
+            # only after the completion of the top-level(=root) action.
+            # That way redundant GUI rendering is avoided inside an action that
+            # makes multiple update_state calls and/or invokes other actions
+            with gui.action_context(_action):
+                # Call the actual function
+                return_val = func(*args, **kwargs)
 
             _action.duration = time.time() - _action.start_time
             _action.run_state = ActionRunStates.FINISHED
             gui.push_action(_action.copy())
+
+            return return_val
 
         if name in ACTIONS:
             raise Exception(f'An action with the name {name} is already'
@@ -49,6 +63,7 @@ def action(name: str):
         ACTIONS[name] = wrapper_action
 
         return wrapper_action
+
     return decorator_action
 
 
@@ -61,15 +76,14 @@ class Action:
     """Mostly functions as a data class to carry the action state, args, kwargs
      and profiling info.
     """
-    def __init__(
-            self,
-            name,
-            run_state=ActionRunStates.STARTED,
-            args=None,
-            kwargs=None,
-            id=None,
-            start_time=None,
-            duration=-1):
+    def __init__(self,
+                 name,
+                 run_state=ActionRunStates.STARTED,
+                 args=None,
+                 kwargs=None,
+                 id=None,
+                 start_time=None,
+                 duration=-1):
 
         self.name = name
         self.run_state = None

@@ -14,6 +14,11 @@ log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
+@misli.gui.action('create_desktop_app')
+def create_desktop_app():
+    return DesktopApp()
+
+
 def main():
     misli.line_spacing_in_pixels = 20
     config = get_config()
@@ -47,7 +52,7 @@ def main():
     misli.subscribe(pamet.PAGES_CHANNEL, fs_repo.save_changes)
     misli.subscribe(pamet.ALL_NOTES_CHANNEL, fs_repo.save_changes)
 
-    desktop_app = DesktopApp()
+    desktop_app = create_desktop_app()
     misli.call_delayed(new_browser_window_ensure_page, 0)
 
     return desktop_app.exec_()
