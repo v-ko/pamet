@@ -230,9 +230,9 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
         obj_type=_page.obj_type)
     page_view = page_view_class(parent_id=parent_id)
 
-    page_view_model = gui.view_model(page_view.id)
-    page_view_model.page = _page
-    gui.update_view_model(page_view_model)
+    page_view_state = gui.view_state(page_view.id)
+    page_view_state.page = _page
+    gui.update_state(page_view_state)
 
     binder.map_entity_to_view(_page.gid(), page_view.id)
 
@@ -248,9 +248,9 @@ def create_and_bind_note_view(page_view_id, _note):
         obj_type=_note.obj_type, edit=False)
     note_view = note_view_class(parent_id=page_view_id)
 
-    note_view_model = gui.view_model(note_view.id)
-    note_view_model.note = _note
-    gui.update_view_model(note_view_model)
+    note_view_state = gui.view_state(note_view.id)
+    note_view_state.note = _note
+    gui.update_state(note_view_state)
 
     binder.map_entity_to_view(_note.gid(), note_view.id)
     return note_view
@@ -262,9 +262,9 @@ def create_and_bind_edit_view(tab_view_id, _note):
         obj_type=_note.obj_type, edit=True)
     edit_view = edit_class(parent_id=tab_view_id)
 
-    edit_view_model = gui.view_model(edit_view.id)
-    edit_view_model.note = _note
-    gui.update_view_model(edit_view_model)
+    edit_view_state = gui.view_state(edit_view.id)
+    edit_view_state.note = _note
+    gui.update_state(edit_view_state)
 
     binder.map_entity_to_view(_note.gid(), edit_view.id)
 
@@ -286,9 +286,9 @@ def update_views_for_page_changes(changes: List[dict]):
 
             page_views = binder.views_mapped_to_entity(_page.gid())
             for pc in page_views:
-                pcs = gui.view_model(pc.id)
+                pcs = gui.view_state(pc.id)
                 pcs.page = _page
-                gui.update_view_model(pc.id)
+                gui.update_state(pc.id)
 
         elif page_change.is_delete():
             page_views = binder.views_mapped_to_entity(_page.gid())
@@ -319,9 +319,9 @@ def update_views_for_note_changes(changes: List[dict]):
             note_views = binder.views_mapped_to_entity(_note.gid())
 
             for nc in note_views:
-                ncs = gui.view_model(nc.id)
+                ncs = gui.view_state(nc.id)
                 ncs.note = _note
-                gui.update_view_model(ncs)
+                gui.update_state(ncs)
 
         elif note_change.type == ChangeTypes.DELETE:
             note_views = binder.views_mapped_to_entity(_note.gid())

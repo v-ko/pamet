@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QMainWindow, QPushButton
 from PySide6.QtGui import QIcon
 
 from misli import Entity, register_entity
-from misli.gui.base_view import View
+from misli.gui.view import View
 from misli.gui.view_library import register_view_class
 from pamet.desktop import usecases
 
@@ -40,7 +40,7 @@ class BrowserWindowView(QMainWindow, View):
 
     def handle_child_changes(self, added, removed, updated):
         for child in added:
-            self.ui.tabWidget.addTab(child, child.model.name)
+            self.ui.tabWidget.addTab(child, child.state.name)
 
         for child in removed:
             tab_idx = self.ui.tabWidget.indexOf(child)
@@ -51,7 +51,7 @@ class BrowserWindowView(QMainWindow, View):
 
     def handle_child_updated(self, child):
         tab_idx = self.ui.tabWidget.indexOf(child)
-        self.ui.tabWidget.setTabText(tab_idx, child.model.name)
+        self.ui.tabWidget.setTabText(tab_idx, child.state.name)
 
     def handle_tab_changed(self, index: int):
         self.ui.tabWidget.widget(0).update()

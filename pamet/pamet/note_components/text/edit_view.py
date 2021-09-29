@@ -28,7 +28,7 @@ class TextNoteEditView(NoteView):
 
     @property
     def note(self) -> Note:
-        return self.model.note.copy()
+        return self.state.note.copy()
 
     def _handle_esc_shortcut(self):
         usecases.abort_editing_note(self.id)

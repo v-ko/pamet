@@ -21,8 +21,8 @@ class NoteViewModel(Entity):
     note: Note = None
 
 
-@register_view_class(obj_type='TextNote', edit=False)
-class TextNoteViewWidget(QLabel, NoteView):
+@register_view_class(obj_type='AnchorNote', edit=False)
+class AnchorViewWidget(QLabel, NoteView):
     def __init__(self, parent_id):
         NoteView.__init__(
             self, parent_id=parent_id, initial_model=NoteViewModel())
@@ -46,18 +46,8 @@ class TextNoteViewWidget(QLabel, NoteView):
         self.setGeometry(QRect(*note.rect().as_tuple()))
 
         font = self.font()
-        # font.setPixelSize(20)
-        # font.setPointSizeF(note_props['font_size'] * font.pointSizeF())
         font.setPointSizeF(14)
         self.setFont(font)
-
-        # font_metrics = QFontMetrics(self.font())
-        # print('Font ascent', font_metrics.ascent())
-        # print('Font descent', font_metrics.descent())
-        # print('Font height', font_metrics.height())
-        # print('Font leading', font_metrics.leading())
-        # print('Font lineSpacing', font_metrics.lineSpacing())
-        # print('Font pointSizeF', self.font().pointSizeF())
 
         if '\n' in note.text:
             self._alignment = Qt.AlignLeft
@@ -65,11 +55,6 @@ class TextNoteViewWidget(QLabel, NoteView):
             self._alignment = Qt.AlignHCenter
 
         self._elided_text_layout = elide_text(note.text, self.rect(), font)
-
-        # self.setText('<p style="line-height:%s%%;margin-top:-5px;margin-right
-        # :5px;margin-bottom:5px">%s</p>' %
-        #      (100*20/float(font_metrics.lineSpacing()), _elided_text_layout))
-        # self.setText(elided_text)
 
     def paintEvent(self, event):
         if not self._elided_text_layout:
@@ -80,4 +65,9 @@ class TextNoteViewWidget(QLabel, NoteView):
 
         draw_text_lines(
             painter, self._elided_text_layout, self._alignment, self.rect())
+        pen = painter.pen()
+        pen.setCosmetic(True)
+        painter.setPen(pen)
+
+        painter.drawRect(self.rect())
         painter.end()

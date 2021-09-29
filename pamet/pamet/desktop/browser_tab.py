@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 
 from misli import Entity, register_entity, gui
-from misli.gui.base_view import View
+from misli.gui.view import View
 from misli.gui.view_library import register_view_class
 
 from pamet.note_components import usecases
@@ -33,10 +33,10 @@ class BrowserTabView(QWidget, View):
         # Widget config
         self.setLayout(QVBoxLayout())
 
-    def handle_model_update(self):
-        new_model = self.model
+    def handle_state_update(self):
+        new_model = self.state
 
-        if self.old_model.page_view_id != new_model.page_view_id:
+        if self.previous_state.page_view_id != new_model.page_view_id:
             if new_model.page_view_id:
                 self.switch_to_page_view(new_model.page_view_id)
 

@@ -7,7 +7,7 @@ from PySide6.QtGui import QKeySequence, QShortcut
 
 import misli
 from misli.basic_classes import Point2D, Rectangle, Color
-from misli.gui.base_view import View
+from misli.gui.view import View
 from misli.gui.view_library import register_view_class
 
 from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
@@ -112,14 +112,14 @@ class MapPageViewWidget(QWidget, MapPageView):
     def delete_note_view_cache(self, note_view_id):
         del self._cache_per_nc_id[note_view_id]
 
-    def handle_model_update(self):
-        old_model = self.old_model
-        new_model = self.model
+    def handle_state_update(self):
+        previous_state = self.previous_state
+        new_model = self.state
 
-        if old_model.viewport_center != new_model.viewport_center:
+        if previous_state.viewport_center != new_model.viewport_center:
             pass
 
-        if old_model.viewport_height != new_model.viewport_height:
+        if previous_state.viewport_height != new_model.viewport_height:
             # Invalidate image_cache for all children
             for child in self.get_children():
                 nv_cache = self.note_view_cache(child.id)
@@ -260,7 +260,7 @@ class MapPageViewWidget(QWidget, MapPageView):
         return display_rects_by_child_id
 
     def paintEvent(self, event):
-        model = self.model
+        model = self.state
         self._paint_event_count += 1
         paint_t0 = time.time()
 

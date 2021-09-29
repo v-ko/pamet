@@ -20,7 +20,7 @@ class View:
       changes several views - those changes will be cached and then pushed
       as a batch of updates to the Views).
       Each view that wants to receive updates should implement the
-      handle_model_update(self, old_model, new_model) method. And if the view
+      handle_model_update(self, previous_state, new_model) method. And if the view
       manages it's children it will implement the handle_child_changes method,
        which is invoked by misli.gui on each relevant view update with three
     arguments: children_added, chidren_removed and children_updated.
@@ -47,20 +47,20 @@ class View:
         return self._id
 
     @property
-    def model(self) -> Entity:
-        model = gui.displayed_view_model(self.id)
+    def state(self) -> Entity:
+        model = gui.displayed_view_state(self.id)
         if not model or model.id != self.id:
             raise Exception('Could not retrieve view model for view %s' % self)
         return model
 
     @property
-    def old_model(self) -> Entity:
-        model = gui.old_view_model(self.id)
+    def previous_state(self) -> Entity:
+        model = gui.previous_view_state(self.id)
         if not model:
             raise Exception('Could not retrieve view model for view %s' % self)
         return model
 
-    def handle_model_update(self):
+    def handle_state_update(self):
         pass
 
     def handle_child_changes(

@@ -1,4 +1,4 @@
-from misli.gui.base_view import View
+from misli.gui.view import View
 from pamet.entities import Note
 
 
@@ -12,4 +12,4 @@ class NoteView(View):
 
     @property
     def note(self) -> Note:
-        return self.model.note.copy()
+        return self.state.note.copy()

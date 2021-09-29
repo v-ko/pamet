@@ -55,11 +55,11 @@ def tab_go_to_page(tab_component_id, page_id):
     page_view = pamet.create_and_bind_page_view(
         page.id, parent_id=tab_component_id)
 
-    page_view_model = gui.view_model(page_view.id)
-    page_view_model.page = page
+    page_view_state = gui.view_state(page_view.id)
+    page_view_state.page = page
 
-    tab_view_model = gui.view_model(tab_component_id)
-    tab_view_model.page_view_id = page_view.id
+    tab_view_state = gui.view_state(tab_component_id)
+    tab_view_state.page_view_id = page_view.id
 
-    gui.update_view_model(tab_view_model)
-    gui.update_view_model(page_view_model)
+    gui.update_state(tab_view_state)
+    gui.update_state(page_view_state)

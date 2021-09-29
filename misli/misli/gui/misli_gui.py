@@ -9,7 +9,7 @@ from misli.entity import Entity
 from misli.helpers import find_many_by_props, find_one_by_props
 
 from .actions_lib import Action
-from .base_view import View
+from .view import View
 
 log = misli.get_logger(__name__)
 
@@ -25,9 +25,9 @@ _added_views_per_parent = defaultdict(list)
 _removed_views_per_parent = defaultdict(list)
 _updated_views = set()
 
-_view_models = {}
-_old_view_models = {}
-_displayed_view_models = {}
+_view_states = {}
+_previous_view_states = {}
+_displayed_view_states = {}
 
 
 # Action channel interface
@@ -61,14 +61,14 @@ def on_action(handler: Callable):
     misli.subscribe(ACTIONS_CHANNEL, handler)
 
 
-def add_view(_view: View, initial_model):
+def add_view(_view: View, initial_state):
     """Register a view instance in misli.gui. Should only be called in
     View.__init__.
     """
     _views[_view.id] = _view
     _views_per_parent[_view.id] = []
-    _view_models[_view.id] = initial_model
-    _displayed_view_models[_view.id] = initial_model
+    _view_states[_view.id] = initial_state
+    _displayed_view_states[_view.id] = initial_state
 
     if _view.parent_id:
         if _view.parent_id not in _views_per_parent:
@@ -98,7 +98,7 @@ def view(id: str) -> Union[View, None]:
     return _views[id]
 
 
-def old_view_model(view_id: str) -> Union[Entity, None]:
+def previous_view_state(view_id: str) -> Union[Entity, None]:
     """Get a copy of the view model corresponding to the view with the given id.
 
     This function returns a copy of the view model that was last dispatched to
@@ -112,13 +112,13 @@ def old_view_model(view_id: str) -> Union[Entity, None]:
         Entity: A copy of the view model (should be a subclass of Entity). If
         there's no model found for that id - the function returns None.
     """
-    if view_id not in _old_view_models:
+    if view_id not in _previous_view_states:
         return None
-    _view_model = _old_view_models[view_id]
-    return _view_model.copy()
+    _view_state = _previous_view_states[view_id]
+    return _view_state.copy()
 
 
-def view_model(view_id: str) -> Union[Entity, None]:
+def view_state(view_id: str) -> Union[Entity, None]:
     """Get a copy of the view model corresponding to the view with the given id.
 
     Mind that if we're in the middle of a user action this model can be updated,
@@ -131,13 +131,13 @@ def view_model(view_id: str) -> Union[Entity, None]:
         Entity: A copy of the view model (should be a subclass of Entity). If
         there's no model found for that id - the function returns None.
     """
-    if view_id not in _view_models:
+    if view_id not in _view_states:
         return None
-    _view_model = _view_models[view_id]
-    return _view_model.copy()
+    _view_state = _view_states[view_id]
+    return _view_state.copy()
 
 
-def displayed_view_model(view_id: str) -> Union[Entity, None]:
+def displayed_view_state(view_id: str) -> Union[Entity, None]:
     """Get the last displayed view model for the view with id == view_id.
 
     This is the last copy of the view model that has been passed to the View
@@ -152,10 +152,10 @@ def displayed_view_model(view_id: str) -> Union[Entity, None]:
         Entity: A copy of the view model (should be a subclass of Entity). If
         there's no model found for that id - the function returns None.
     """
-    if view_id not in _displayed_view_models:
+    if view_id not in _displayed_view_states:
         return None
-    _view_model = _displayed_view_models[view_id]
-    return _view_model.copy()
+    _view_state = _displayed_view_states[view_id]
+    return _view_state.copy()
 
 
 def view_children(view_id: str) -> List[View]:
@@ -219,20 +219,20 @@ def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
 
 
 @log.traced
-def update_view_model(new_model):
+def update_state(new_state):
     """Replace the view model with an updated one. A view update will be
     invoked as a next task on the main loop.
 
     Args:
-        new_model (view model, inherits Entity): the model with updated
+        new_state (view model, inherits Entity): the model with updated
         properties. It's identified by its id (so that must be intact).
     """
-    _view: View = view(new_model.id)
-    old_model = _view.model
-    _view_models[_view.id] = new_model
+    _view: View = view(new_state.id)
+    previous_state = _view.state
+    _view_states[_view.id] = new_state
 
-    if _view.id not in _old_view_models:
-        _old_view_models[_view.id] = old_model
+    if _view.id not in _previous_view_states:
+        _previous_view_states[_view.id] = previous_state
 
     _updated_views.add(_view)
     misli.call_delayed(_update_views, 0)
@@ -271,8 +271,8 @@ def _update_views():
     child_changes_per_parent_id = defaultdict(lambda: ([], [], []))
 
     for _view in _updated_views:
-        _displayed_view_models[_view.id] = view_model(_view.id)
-        _view.handle_model_update()
+        _displayed_view_states[_view.id] = view_state(_view.id)
+        _view.handle_state_update()
 
         if _view.parent_id:
             child_changes_per_parent_id[_view.parent_id][2].append(
@@ -287,7 +287,7 @@ def _update_views():
     _updated_views.clear()
     _added_views_per_parent.clear()
     _removed_views_per_parent.clear()
-    _old_view_models.clear()
+    _previous_view_states.clear()
 
     for view_id, changes in child_changes_per_parent_id.items():
         _view = view(view_id)
