@@ -1,5 +1,5 @@
 from typing import List, Union
-from dataclasses import dataclass, field
+from dataclasses import field
 from datetime import datetime
 
 from misli import get_logger
@@ -15,7 +15,6 @@ log = get_logger(__name__)
 
 
 @register_entity
-@dataclass
 class Note(Entity):
     page_id: str = ''
     _x: float = 0

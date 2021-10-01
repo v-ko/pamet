@@ -1,6 +1,6 @@
 from typing import Callable
 from PySide6.QtCore import QTimer
-from misli.main_loop import MainLoop
+from misli.pubsub.main_loop import MainLoop
 
 
 class QtMainLoop(MainLoop):

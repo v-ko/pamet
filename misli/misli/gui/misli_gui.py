@@ -6,18 +6,26 @@ from contextlib import contextmanager
 
 import misli
 from misli.logging import BColors
-from misli.entity import Entity
-from misli.helpers import find_many_by_props, find_one_by_props
+from misli.entity_library.entity import Entity
+from misli.helpers import find_many_by_props
 
-from .actions_lib import Action
-from .view import View
+from .actions_library import Action, execute_action
+from misli.gui.view_library.view import View
 
 log = misli.get_logger(__name__)
 
-ACTIONS_CHANNEL = '__ACTIONS__'
-COMPONENTS_CHANNEL = '__COMPONENTS__'
-misli.add_channel(ACTIONS_CHANNEL)
-misli.add_channel(COMPONENTS_CHANNEL)
+ACTIONS_QUEUE_CHANNEL = '__ACTIONS_QUEUE__'
+ACTIONS_LOG_CHANNEL = '__ACTIONS_LOG__'
+misli.add_channel(ACTIONS_QUEUE_CHANNEL)
+misli.add_channel(ACTIONS_LOG_CHANNEL)
+
+
+def execute_action_queue(actions: List[Action]):
+    for action in actions:
+        execute_action(action)
+
+
+misli.subscribe(ACTIONS_QUEUE_CHANNEL, execute_action_queue)
 
 _views = {}
 _views_per_parent = {}
@@ -31,6 +39,11 @@ _previous_view_states = {}
 _displayed_view_states = {}
 
 _action_context_stack = []
+_view_and_parent_update_ongoing = False
+
+
+def view_and_parent_update_ongoing():
+    return _view_and_parent_update_ongoing
 
 
 @contextmanager
@@ -52,7 +65,7 @@ def ensure_context():
 
 
 # Action channel interface
-def push_action(action: Action):
+def log_action_state(action: Action):
     """Push an action to the actions channel and handle logging. Should only be
     called by the action decorator.
     """
@@ -67,11 +80,11 @@ def push_action(action: Action):
         'Action %s%s %s%s ARGS=*(%s) KWARGS=**{%s}' %
         (green, action.run_state.name, action.name, end, args_str, kwargs_str))
 
-    misli.dispatch(action, ACTIONS_CHANNEL)
+    misli.dispatch(action, ACTIONS_LOG_CHANNEL)
 
 
 @log.traced
-def on_action(handler: Callable):
+def on_action_logged(handler: Callable):
     """Register a callback to the actions channel. It will be called before and
     after each action call. It's used for user interaction recording.
 
@@ -79,7 +92,7 @@ def on_action(handler: Callable):
         handler (Callable): The callable to be invoked on each new message on
         the channel
     """
-    misli.subscribe(ACTIONS_CHANNEL, handler)
+    misli.subscribe(ACTIONS_LOG_CHANNEL, handler)
 
 
 def add_view(_view: View, initial_state):
@@ -222,10 +235,10 @@ def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
         if not found:
             return []
 
-        return find_many_by_props(found, **filter_dict)
+        return list(find_many_by_props(found, **filter_dict))
 
     else:
-        return find_many_by_props(_views, **filter_dict)
+        return list(find_many_by_props(_views, **filter_dict))
 
 
 # @log.traced
@@ -288,9 +301,12 @@ def remove_view(_view: View):
 
 # @log.traced
 def _update_views():
-    """An internal function that relays the view model changes to the views
+    """An internal function that relays the view state changes to the views
     once the user action logic has completed exectution.
     """
+    global _view_and_parent_update_ongoing
+    _view_and_parent_update_ongoing = True  # Restricts action invokation
+
     # (added, removed, updated)
     child_changes_per_parent_id = defaultdict(lambda: ([], [], []))
 
@@ -316,9 +332,11 @@ def _update_views():
         _view = view(view_id)
         _view.handle_child_changes(*changes)
 
+    _view_and_parent_update_ongoing = False
+
 
 # ----------------Various---------------------
-def set_reproducible_ids(enabled):
+def set_reproducible_ids(enabled: bool):
     """When testing - use non-random ids"""
     if enabled:
         random.seed(0)
@@ -334,11 +352,11 @@ class EntityToViewMapping:
         self._view_ids_by_entity_id = defaultdict(list)
         self._entity_id_by_view_id = {}
 
-    def map_entity_to_view(self, entity_gid, view_id):
+    def map(self, entity_gid, view_id):
         self._view_ids_by_entity_id[entity_gid].append(view_id)
         self._entity_id_by_view_id[view_id] = entity_gid
 
-    def unmap_entity_from_view(self, entity_gid, view_id):
+    def unmap(self, entity_gid, view_id):
         if view_id not in self._entity_id_by_view_id:
             raise Exception('Cannot unregister component that is not '
                             'registered ' % view_id)
@@ -346,14 +364,14 @@ class EntityToViewMapping:
         self._view_ids_by_entity_id[entity_gid].remove(view_id)
         del self._entity_id_by_view_id[view_id]
 
-    def views_mapped_to_entity(self, entity_gid):
+    def views_for(self, entity_gid):
         component_ids = self._view_ids_by_entity_id[entity_gid]
 
         components = []
         for component_id in component_ids:
             component = view(component_id)
             if not component:
-                self.unmap_entity_from_view(entity_gid, component_id)
+                self.unmap(entity_gid, component_id)
                 continue
 
             components.append(component)

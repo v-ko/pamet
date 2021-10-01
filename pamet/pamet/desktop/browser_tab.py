@@ -3,29 +3,27 @@ from dataclasses import dataclass
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 
-from misli import Entity, register_entity, gui
-from misli.gui.view import View
-from misli.gui.view_library import register_view_class
+from misli import gui
+from misli.gui import ViewState, register_view_state_type
+from misli.gui.view_library.view import View
+from misli.gui.view_library import register_view_type
 
-from pamet.note_components import usecases
 
-
-@register_entity
-@dataclass
-class BrowserTabViewState(Entity):
+@register_view_state_type
+class BrowserTabViewState(ViewState):
     name: str = ''
     page_view_id: str = None
     edit_view_id: str = None
 
 
-@register_view_class
+@register_view_type
 class BrowserTabView(QWidget, View):
     def __init__(self, parent_id):
         QWidget.__init__(self)
         View.__init__(
             self,
             parent_id=parent_id,
-            initial_model=BrowserTabViewState()
+            initial_state=BrowserTabViewState()
         )
 
         self.page_view = None

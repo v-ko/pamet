@@ -3,9 +3,9 @@ from dataclasses import dataclass, field
 
 import misli
 
-from misli import Entity, register_entity
+from misli.gui import ViewState, register_view_state_type
 from misli.basic_classes import Point2D, Rectangle
-from misli.gui.view import View
+from misli.gui.view_library.view import View
 
 from pamet.constants import RESIZE_CIRCLE_RADIUS
 from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
@@ -29,9 +29,8 @@ class MapPageMode(Enum):
     NOTE_DRAG = 4
 
 
-@register_entity
-@dataclass
-class MapPageViewModel(Entity):
+@register_view_state_type
+class MapPageViewState(ViewState):
     page: Page = None
 
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
@@ -58,7 +57,7 @@ class MapPageViewModel(Entity):
     note_drag_active: bool = False
 
     def __post_init__(self):
-        Entity.__post_init__(self)
+        ViewState.__post_init__(self)
         self.viewport = Viewport(self)
 
     def mode(self):
@@ -88,7 +87,7 @@ class MapPageViewModel(Entity):
 
 class MapPageView(View):
     def __init__(self, parent_id: str):
-        default_state = MapPageViewModel(
+        default_state = MapPageViewState(
             page=Page(),
             selected_nc_ids=set(),
             viewport_position_on_press=Point2D(0, 0),
@@ -104,7 +103,7 @@ class MapPageView(View):
         View.__init__(
             self,
             parent_id,
-            initial_model=default_state)
+            initial_state=default_state)
 
         self._left_mouse_is_pressed = False
         self._mouse_position_on_left_press = Point2D(0, 0)
@@ -223,7 +222,7 @@ class MapPageView(View):
     def handle_left_mouse_release(self, mouse_pos: Point2D):
         self._left_mouse_is_pressed = False
 
-        state: MapPageViewModel = self.state
+        state: MapPageViewState = self.state
         mode = state.mode()
 
         if state.drag_select_active:

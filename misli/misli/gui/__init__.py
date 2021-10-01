@@ -34,5 +34,7 @@ TODO: Example on a simple View + View Model
 """
 
 from .misli_gui import *
-from .actions_lib import action
-from .view import View
+from .actions_library import action
+from .view_library import register_view_type
+from .view_library.view import View
+from .view_library.view_state import ViewState, register_view_state_type

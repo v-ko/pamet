@@ -1,4 +1,5 @@
 from typing import Any
+from dataclasses import dataclass
 
 entity_library = {}
 
@@ -10,6 +11,9 @@ def register_entity(entity_class: Any):
     Raises:
         Exception: on duplicate registration
     """
+    # Apply the dataclass decorator manually
+    entity_class = dataclass(entity_class)
+
     entity_class_name = entity_class.__name__
 
     if entity_class_name in entity_library:

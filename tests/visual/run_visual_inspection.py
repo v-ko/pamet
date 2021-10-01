@@ -24,13 +24,13 @@ def run_recording(file_for_replay, output_folder, replay_speed):
     misli_gui.set_reproducible_ids(True)
 
     recorder = MisliGuiRecorder('BrowserWindowView')
-    misli.gui.on_action(recorder.handle_action_channel)
+    misli.gui.on_action_logged(recorder.handle_action_channel)
 
     replay = MisliGuiReplay(file_for_replay)
     replay.speed = replay_speed
 
     misli.on_change(update_components_from_changes)
-    misli.gui.on_action(replay.queue_next_action)
+    misli.gui.on_action_logged(replay.queue_next_action)
 
     # desktop_app = misli.gui.create_view('DesktopApp', parent_id='')
 

@@ -1,13 +1,13 @@
-from misli.gui.view import View
+from misli.gui.view_library.view import View
 from pamet.entities import Note
 
 
 class NoteView(View):
-    def __init__(self, parent_id: str, initial_model):
+    def __init__(self, parent_id: str, initial_state):
         View.__init__(
             self,
             parent_id=parent_id,
-            initial_model=initial_model
+            initial_state=initial_state
         )
 
     @property

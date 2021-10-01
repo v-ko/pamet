@@ -4,7 +4,7 @@ _view_metadata_by_class_name = {}
 CLASS_NAME = 'class_name'
 
 
-def register_view_class(_cls=None, **view_metadata):
+def register_view_type(_cls=None, **view_metadata):
     """Register a view in the library. The metadata can be used later for
     querying the view library. It can not include a 'class_name', since that's
     automatically added to the metadata on registration.

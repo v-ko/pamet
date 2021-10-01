@@ -25,19 +25,19 @@ class View:
        which is invoked by misli.gui on each relevant view update with three
     arguments: children_added, chidren_removed and children_updated.
     """
-    def __init__(self, parent_id: Union[str, None], initial_model: Entity):
+    def __init__(self, parent_id: Union[str, None], initial_state: Entity):
         """Registers the View instance in misli.gui, so that model and child
         updates are received accordingly.
 
         Args:
             parent_id (str): The parent id. Can be none if this view is a root
-            initial_model (Entity): The view model should be an Entity subclass
+            initial_state (Entity): The view model should be an Entity subclass
         """
         self._id = get_new_id()  # Generate the ViewModel.id(==View.id)
-        initial_model.id = self.id
+        initial_state.id = self.id
         self.parent_id = parent_id
 
-        gui.add_view(self, initial_model)
+        gui.add_view(self, initial_state)
 
     def __repr__(self):
         return '<%s id=%s>' % (type(self).__name__, self.id)

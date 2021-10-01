@@ -1,7 +1,7 @@
 from typing import List
 
 from misli import Entity
-from misli.change import ChangeTypes, Change
+from misli.basic_classes.change import ChangeTypes, Change
 from misli import get_logger
 
 import pamet

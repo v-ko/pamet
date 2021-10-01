@@ -42,7 +42,7 @@ from collections import defaultdict
 from enum import Enum
 from copy import deepcopy
 
-from misli.main_loop import MainLoop, NoMainLoop
+from misli.pubsub.main_loop import MainLoop, NoMainLoop
 from misli import get_logger
 
 
@@ -83,7 +83,7 @@ def call_delayed(
     args = args or []
     kwargs = kwargs or {}
 
-    log.debug('Will call %s delayed with %s secs' % (callback.__name__, delay))
+    # log.debug('Will call %s delayed with %s secs' % (callback.__name__, delay))
     _main_loop.call_delayed(callback, delay, args, kwargs)
 
 
@@ -241,7 +241,7 @@ def dispatch(message: object, channel_name: str):
     call_delayed(_invoke_handlers, 0)
 
 
-@log.traced
+# @log.traced
 def _invoke_handlers():
     """Handle the dispatched messages, by invoking all relevant handlers.
     Gets queued on the main loop with each dispatch.

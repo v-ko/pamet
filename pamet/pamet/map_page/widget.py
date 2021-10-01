@@ -1,14 +1,14 @@
 import time
 
 from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import Qt, QPoint, QTimer, QRectF, QPointF, QRect
+from PySide6.QtCore import Qt, QPoint, QTimer, QRectF
 from PySide6.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
 
 import misli
-from misli.basic_classes import Point2D, Rectangle, Color
-from misli.gui.view import View
-from misli.gui.view_library import register_view_class
+from misli.basic_classes import Point2D, Rectangle
+from misli.gui.view_library.view import View
+from misli.gui.view_library import register_view_type
 
 from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from pamet.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
@@ -46,7 +46,7 @@ def image_cache_rect_unprojected(display_rect: Rectangle):
     return cache_rect
 
 
-@register_view_class(obj_type='MapPage')
+@register_view_type(obj_type='MapPage')
 class MapPageViewWidget(QWidget, MapPageView):
     def __init__(self, parent_id):
         QWidget.__init__(self)

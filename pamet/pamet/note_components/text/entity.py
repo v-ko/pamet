@@ -9,7 +9,6 @@ TEXT = 'text'
 
 
 @register_entity
-@dataclass
 class TextNote(Note):
     def __post_init__(self):
         Note.__post_init__(self)

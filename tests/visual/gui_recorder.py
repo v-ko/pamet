@@ -8,7 +8,7 @@ from PySide6.QtGui import QPixmap, QRegion
 import misli
 from misli import gui
 
-from misli.gui.actions_lib import Action
+from misli.gui.actions_library import Action
 from .constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
 
 log = misli.get_logger(__name__)

@@ -41,12 +41,12 @@ def main():
     misli.on_change(update_components_from_changes)
 
     controller = MisliGuiRecorder('BrowserWindowView', ignored_actions_list)
-    misli.gui.on_action(controller.handle_action_channel)
+    misli.gui.on_action_logged(controller.handle_action_channel)
 
     if file_for_replay:
         replay = MisliGuiReplay(file_for_replay)
         replay.speed = replay_speed
-        misli.gui.on_action(replay.queue_next_action)
+        misli.gui.on_action_logged(replay.queue_next_action)
 
     desktop_app_class = pamet.view_library.get_view_class('BrowserWindowView')
     desktop_app = desktop_app_class(parent_id='')

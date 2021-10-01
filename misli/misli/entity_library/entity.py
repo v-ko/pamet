@@ -1,13 +1,12 @@
 from typing import Union
 from datetime import datetime
-from dataclasses import dataclass, fields, field
+from dataclasses import fields, field
 
 from misli.entity_library import register_entity, get_entity_class_by_name
 from misli.helpers import datetime_to_string
 
 
 @register_entity
-@dataclass
 class Entity:
     """The base class for entities. Provides several convenience methods for
     conversions to and from dict, copying and attribute updates (via replace())

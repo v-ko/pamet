@@ -1,7 +1,7 @@
 import misli
 from misli import gui, Entity
 from misli.basic_classes import Point2D
-from misli.gui.actions_lib import action
+from misli.gui.actions_library import action
 
 import pamet
 from pamet.entities import Note
@@ -56,7 +56,7 @@ def start_editing_note(
     if tab_state.edit_view_id:
         abort_editing_note(tab_state.edit_view_id)
 
-    edit_view = pamet.create_and_bind_edit_view(tab_view_id, note)
+    edit_view = pamet.gui.create_and_bind_edit_view(tab_view_id, note)
     tab_state.edit_view_id = edit_view.id
     edit_view_state = gui.view_state(edit_view.id)
     edit_view_state.display_position = position

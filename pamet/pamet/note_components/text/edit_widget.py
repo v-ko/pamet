@@ -3,10 +3,10 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import Qt, QRectF, QPointF
 
 from misli import gui
-from misli.gui.view_library import register_view_class
+from misli.gui.view_library import register_view_type
 
 from pamet.note_components.text.edit_view import TextNoteEditView
-from pamet.note_components.text.edit_view import TextNoteEditViewModel
+from pamet.note_components.text.edit_view import TextNoteEditViewState
 from pamet.note_components.text.ui_edit_widget import Ui_TextNoteEditViewWidget
 
 from pamet.note_components import usecases
@@ -15,7 +15,7 @@ import misli
 log = misli.get_logger(__name__)
 
 
-@register_view_class(obj_type='TextNote', edit=True)
+@register_view_type(obj_type='TextNote', edit=True)
 class TextNoteEditViewWidget(QWidget, TextNoteEditView):
     def __init__(self, parent_id):
         TextNoteEditView.__init__(self, parent_id)
@@ -33,7 +33,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.update()
 
     def update(self):
-        model: TextNoteEditViewModel = self.state
+        model: TextNoteEditViewState = self.state
         display_rect = QRectF(*self.note.rect().as_tuple())
         display_rect.moveCenter(
             QPointF(*model.display_position.as_tuple()))
@@ -51,7 +51,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.show()
 
     def _handle_ok_click(self):
-        model: TextNoteEditViewModel = self.state
+        model: TextNoteEditViewState = self.state
         text = self.ui.textEdit.toPlainText()
         note = self.note
         note.text = text.strip()
