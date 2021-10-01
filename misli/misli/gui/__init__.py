@@ -32,9 +32,11 @@ and enforces the avoidance of endless nested callbacks.
 
 TODO: Example on a simple View + View Model
 """
-
 from .misli_gui import *
 from .actions_library import action
 from .view_library import register_view_type
 from .view_library.view import View
 from .view_library.view_state import ViewState, register_view_state_type
+from .model_to_view_binder.actions import update_views_from_entity_changes
+
+on_entity_changes(update_views_from_entity_changes)

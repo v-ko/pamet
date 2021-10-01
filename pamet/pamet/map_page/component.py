@@ -17,6 +17,7 @@ from pamet.note_components.text.entity import TextNote
 from pamet.note_components import usecases as notes_usecases
 from pamet.map_page import usecases
 from pamet.map_page.viewport import Viewport
+from pamet.map_page.entity import MapPage
 
 log = misli.get_logger(__name__)
 
@@ -31,8 +32,6 @@ class MapPageMode(Enum):
 
 @register_view_state_type
 class MapPageViewState(ViewState):
-    page: Page = None
-
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
     viewport_center: Point2D = Point2D(0, 0)
     viewport_height: float = INITIAL_EYE_Z
@@ -59,6 +58,17 @@ class MapPageViewState(ViewState):
     def __post_init__(self):
         ViewState.__post_init__(self)
         self.viewport = Viewport(self)
+
+        if not self.mapped_entity:
+            self.mapped_entity = MapPage()
+
+    @property
+    def page(self):
+        return self.mapped_entity
+
+    @page.setter
+    def page(self, new_page):
+        self.mapped_entity = new_page
 
     def mode(self):
         modes_sum = (self.drag_navigation_active +
@@ -88,7 +98,6 @@ class MapPageViewState(ViewState):
 class MapPageView(View):
     def __init__(self, parent_id: str):
         default_state = MapPageViewState(
-            page=Page(),
             selected_nc_ids=set(),
             viewport_position_on_press=Point2D(0, 0),
             drag_navigation_active=False,

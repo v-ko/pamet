@@ -60,9 +60,10 @@ class Entity:
         obj_type = self_dict.pop('obj_type')
 
         cls = get_entity_class_by_name(obj_type)
-        # Props with a leading underscore in their name have setters/getters and
-        # Property methods can't be invoked by the dataclass at init time
-        # (it's a long story)
+        # Props with a leading underscore in their name have setters/getters
+        # but property methods can't be invoked by the dataclass at init time
+        # That's why we separate them and then set them via the property setter
+        # (which happens in Entity.replace)
         private_props = {p: self_dict.pop(p) for p in list(self_dict.keys())
                          if p.startswith('_')}
 
@@ -96,3 +97,10 @@ class Entity:
 
             else:
                 setattr(self, key, val)
+
+    @property
+    def parent_gid(self):
+        """Implement this to return the parent id. It's used in the
+        Entity-to-View mapping mechanisms.
+        """
+        return None

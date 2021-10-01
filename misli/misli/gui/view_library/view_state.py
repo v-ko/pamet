@@ -1,4 +1,5 @@
 from typing import Any
+# from dataclasses import field
 
 from misli import Entity
 from misli import register_entity
@@ -8,5 +9,6 @@ def register_view_state_type(view_state_class: Any):
     return register_entity(view_state_class)
 
 
+@register_view_state_type
 class ViewState(Entity):
-    pass
+    mapped_entity: Entity = None

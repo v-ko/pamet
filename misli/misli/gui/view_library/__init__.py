@@ -1,22 +1,31 @@
 _views_by_class_name = {}
 _view_metadata_by_class_name = {}
 
-CLASS_NAME = 'class_name'
+CLASS_NAME_STR = 'class_name'
+PRIORITY_STR = 'priority'
 
 
-def register_view_type(_cls=None, **view_metadata):
+def register_view_type(_cls=None, priority: int = 0, **view_metadata):
     """Register a view in the library. The metadata can be used later for
     querying the view library. It can not include a 'class_name', since that's
-    automatically added to the metadata on registration.
+    automatically added to the metadata on registration. The metadata should
+    be unique for each class.
     """
 
-    if CLASS_NAME in view_metadata:
+    if CLASS_NAME_STR in view_metadata:
         raise Exception('view_metadata cannot include a \'class_name\'.'
                         ' That\'s inferred by calling type(cls)')
 
     def view_registration_decorator(cls):
         class_name = cls.__name__
-        view_metadata[CLASS_NAME] = class_name
+        view_metadata[CLASS_NAME_STR] = class_name
+        view_metadata[PRIORITY_STR] = priority
+
+        for name, meta in _view_metadata_by_class_name.items():
+            if meta == view_metadata:
+                raise Exception(
+                    f'A view class already exists with the following '
+                    f'metadata: {view_metadata}')
 
         _views_by_class_name[class_name] = cls
         _view_metadata_by_class_name[class_name] = view_metadata
@@ -34,8 +43,9 @@ def get_view_classes(**metadata_filter) -> list:
 
     Keyword arguments:
         Each key/value pair in the kwargs has to match a respective pair
-        in the metadata that a view is registered with, so that view is
-         included in the list that get_views returns.
+        in the metadata that a view is registered with, in order for the view
+        to be included in the output. I.e. the filter must be a subset of the
+        metadata the view is registered with.
 
     Returns:
         list: The matching view classes
@@ -43,12 +53,16 @@ def get_view_classes(**metadata_filter) -> list:
 
     metas_found = []
 
+    # Get the metadata dicts for the classes matching the given filter
     for class_name, meta in _view_metadata_by_class_name.items():
         if metadata_filter.items() <= meta.items():  # True if is subset
             metas_found.append(meta)
 
-    vcs_found = [_views_by_class_name[meta[CLASS_NAME]] for meta in metas_found]
-    return vcs_found
+    # Sort the results by priority and return the respective classes
+    metas_found = sorted(metas_found,
+                         key=lambda x: x[PRIORITY_STR],
+                         reverse=True)
+    return [_views_by_class_name[meta[CLASS_NAME_STR]] for meta in metas_found]
 
 
 def get_view_class(class_name: str = '', **metadata_filter):
@@ -66,12 +80,12 @@ def get_view_class(class_name: str = '', **metadata_filter):
     """
 
     if class_name:
-        metadata_filter[CLASS_NAME] = class_name
+        metadata_filter[CLASS_NAME_STR] = class_name
 
     views_found = get_view_classes(**metadata_filter)
 
-    if len(views_found) != 1:
-        raise Exception(f'!=1 views found for metadata_filter: '
+    if not views_found:
+        raise Exception(f'No views found for metadata_filter: '
                         f'{metadata_filter}: {views_found}')
 
     return views_found[0]

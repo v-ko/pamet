@@ -3,6 +3,7 @@ import signal
 
 import misli
 from misli.gui.qt_main_loop import QtMainLoop
+from misli.gui import ENTITY_CHANGE_CHANNEL
 
 import pamet
 from pamet.desktop.app import DesktopApp
@@ -49,8 +50,7 @@ def main():
     # pamet.set_repo(fs_repo, 'all')
     misli.set_main_loop(QtMainLoop())
 
-    misli.subscribe(pamet.PAGES_CHANNEL, fs_repo.save_changes)
-    misli.subscribe(pamet.ALL_NOTES_CHANNEL, fs_repo.save_changes)
+    misli.subscribe(ENTITY_CHANGE_CHANNEL, fs_repo.save_changes)
 
     desktop_app = create_desktop_app()
     misli.call_delayed(new_browser_window_ensure_page, 0)

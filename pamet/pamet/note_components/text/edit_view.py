@@ -2,17 +2,16 @@ from dataclasses import dataclass
 
 
 from misli.basic_classes import Point2D
-from misli.gui import ViewState, register_view_state_type
-from pamet.note_components.base_note_view import NoteView
+from misli.gui import register_view_state_type
+from pamet.note_components.base_note_view import NoteView, NoteViewState
 
 from pamet.entities import Note
 from pamet.note_components import usecases
 
 
 @register_view_state_type
-class TextNoteEditViewState(ViewState):
+class TextNoteEditViewState(NoteViewState):
     create_mode: bool = False
-    note: Note = None
     display_position: Point2D = None
 
 

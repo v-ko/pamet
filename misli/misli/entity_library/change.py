@@ -1,5 +1,7 @@
 from enum import Enum
 
+from misli.entity_library.entity import Entity
+
 
 class ChangeTypes(Enum):
     CREATE = 1
@@ -9,13 +11,13 @@ class ChangeTypes(Enum):
 
 class Change:
     """An object representing a change in the entity state. It holds the old
-     and the new states (as dicts) as well as the change type.
+     and the new states (as entities) as well as the change type.
     """
     def __init__(
             self,
             type: ChangeTypes,
-            old_state: dict = None,
-            new_state: dict = None):
+            old_state: Entity = None,
+            new_state: Entity = None):
         """Construct a change object. When the change is of type CREATE or
         DELETE - the old_state or new_state respectively should naturally be
         omitted.
@@ -24,41 +26,41 @@ class Change:
             Exception: Missing id attribute of either entity state.
         """
         self.type = type
-        self.old_state = old_state or {}
-        self.new_state = new_state or {}
+        self.old_state = old_state
+        self.new_state = new_state
 
         if not (self.old_state or self.new_state):
             raise ValueError('Both old and new state are None.')
 
-        if 'id' not in self.last_state():
-            raise Exception('Changes can only carry Entities or at least '
-                            'objects with an "id" attribute')
-
     def asdict(self) -> dict:
-        return vars(self)
+        return dict(
+            type=str(self.type),
+            old_state=self.old_state.asdict() if self.old_state else None,
+            new_state=self.new_state.asdict() if self.new_state else None,
+        )
 
     @classmethod
-    def CREATE(cls, state) -> 'Change':
+    def CREATE(cls, state: Entity) -> 'Change':
         """Convenience method for constructing a Change with type CREATE"""
         return cls(
-            _type=ChangeTypes.CREATE, old_state={}, new_state=state)
+            type=ChangeTypes.CREATE, new_state=state)
 
     @classmethod
-    def UPDATE(cls, old_state, new_state) -> 'Change':
+    def UPDATE(cls, old_state: Entity, new_state: Entity) -> 'Change':
         """Convenience method for constructing a Change with type UPDATE"""
         return cls(
-            _type=ChangeTypes.UPDATE,
+            type=ChangeTypes.UPDATE,
             old_state=old_state,
             new_state=new_state)
 
     @classmethod
-    def DELETE(cls, old_state) -> 'Change':
+    def DELETE(cls, old_state: Entity) -> 'Change':
         """Convenience method for constructing a Change with type DELETE"""
         return cls(
-            _type=ChangeTypes.DELETE, old_state=old_state, new_state={})
+            type=ChangeTypes.DELETE, old_state=old_state)
 
     def __repr__(self) -> str:
-        return '<Change type=%s>' % self.type
+        return f'<Change type={self.type}>'
 
     def is_create(self) -> bool:
         return self.type == ChangeTypes.CREATE
@@ -69,7 +71,7 @@ class Change:
     def is_delete(self) -> bool:
         return self.type == ChangeTypes.DELETE
 
-    def last_state(self) -> dict:
+    def last_state(self) -> Entity:
         """Returns the latest available state.
 
         Returns:

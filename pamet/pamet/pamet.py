@@ -1,20 +1,21 @@
 from datetime import datetime
 
 import misli
-from misli.basic_classes.change import Change, ChangeTypes
+from misli.entity_library.change import Change, ChangeTypes
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 from misli import get_logger, Entity
+from misli.gui import ENTITY_CHANGE_CHANNEL
 
 from pamet.entities import Page, Note
 
 log = get_logger(__name__)
 
-PAGES_CHANNEL = '__page_changes__'
-ALL_NOTES_CHANNEL = '__all_notes_channel__'
+# PAGES_CHANNEL = '__page_changes__'
+# ENTITY_CHANGE_CHANNEL = '__all_notes_channel__'
 
-
-def NOTES_CHANNEL(page_id):
-    return '__notes_changes__%s' % page_id
+#
+# def NOTES_CHANNEL(page_id):
+#     return '__notes_changes__%s' % page_id
 
 
 _repo = None
@@ -22,8 +23,8 @@ _pages = {}
 _note_indices = {}
 
 
-misli.add_channel(PAGES_CHANNEL)
-misli.add_channel(ALL_NOTES_CHANNEL)
+# misli.add_channel(PAGES_CHANNEL)
+# misli.add_channel(ENTITY_CHANGE_CHANNEL)
 
 # @log.traced
 # def repo():
@@ -49,12 +50,12 @@ def init_note_index_and_channel(_page, _notes: list = None):
         _note_indices[_page.id][n.id] = n
 
     # For convenience make a per-page channel for notes updates
-    misli.add_channel(NOTES_CHANNEL(_page.id))
+    # misli.add_channel(NOTES_CHANNEL(_page.id))
 
 
 def remove_note_index_and_channel(page_id):
     del _note_indices[page_id]
-    misli.remove_channel(NOTES_CHANNEL(page_id))
+    # misli.remove_channel(NOTES_CHANNEL(page_id))
 
 
 @log.traced
@@ -66,9 +67,9 @@ def add_page(_page, _notes: list = None):
         _page.id = get_new_id()
 
     load_page(_page, _notes)
-    change = Change(
-        ChangeTypes.CREATE, old_state={}, new_state=_page.asdict())
-    misli.dispatch(change.asdict(), PAGES_CHANNEL)
+    change = Change.CREATE(state=_page)
+    # misli.dispatch(change, PAGES_CHANNEL)
+    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
 
 
 @log.traced
@@ -115,12 +116,13 @@ def update_page(**page_state):
         log.error('Cannot update missing page %s' % page_state['id'])
         return
 
-    old_state = _page.asdict()
+    old_state = _page
     _page.replace(**page_state)
     _pages[_page.id] = _page
 
-    change = Change(ChangeTypes.UPDATE, old_state, _page.asdict())
-    misli.dispatch(change.asdict(), PAGES_CHANNEL)
+    change = Change.UPDATE(old_state, _page)
+    # misli.dispatch(change, PAGES_CHANNEL)
+    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
 
 
 # @log.traced
@@ -163,9 +165,9 @@ def add_note(_note):
     _page = page(_note.page_id)
     _note_indices[_page.id][_note.id] = _note
 
-    change = Change(ChangeTypes.CREATE, {}, _note.asdict())
-    misli.dispatch(change.asdict(), ALL_NOTES_CHANNEL)
-    misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))
+    change = Change.CREATE(_note)
+    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
+    # misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))
 
 
 def note(page_id: str, note_id: str):
@@ -191,9 +193,9 @@ def delete_note(_note: Note):
 
     del _note_indices[_note.page_id][_note.id]
 
-    change = Change(ChangeTypes.DELETE, _note.asdict(), {})
-    misli.dispatch(change.asdict(), ALL_NOTES_CHANNEL)
-    misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))
+    change = Change.DELETE(_note)
+    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
+    # misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))
 
 
 @log.traced
@@ -208,11 +210,8 @@ def update_note(_note):
     if old_note.content != _note.content:
         _note.time_modified = datetime.now()
 
-    old_state = old_note.asdict()
-    new_state = _note.asdict()
+    _note_indices[_note.page_id][_note.id].replace(**_note.asdict())
 
-    _note_indices[_note.page_id][_note.id].replace(**new_state)
-
-    change = Change(ChangeTypes.UPDATE, old_state, new_state)
-    misli.dispatch(change.asdict(), ALL_NOTES_CHANNEL)
-    misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))
+    change = Change.UPDATE(old_note, _note)
+    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
+    # misli.dispatch(change.asdict(), NOTES_CHANNEL(_note.page_id))

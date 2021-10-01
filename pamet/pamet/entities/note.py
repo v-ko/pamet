@@ -38,6 +38,9 @@ class Note(Entity):
     def gid(self):
         return self.page_id, self.id
 
+    def parent_gid(self):
+        return self.page_id
+
     def rect(self) -> Rectangle:
         return Rectangle(self.x, self.y, self.width, self.height)
 

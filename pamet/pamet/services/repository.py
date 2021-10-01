@@ -1,7 +1,7 @@
 from typing import List
 
 from misli import Entity
-from misli.basic_classes.change import ChangeTypes, Change
+from misli.entity_library.change import ChangeTypes, Change
 from misli import get_logger
 
 import pamet
@@ -52,21 +52,20 @@ class Repository:
             self.update_page(page, notes)
 
         while changes:
-            change_dict = changes.pop(0)
-            change = Change(**change_dict)
-            entity = Entity.from_dict(change.last_state())
+            change = changes.pop(0)
+            entity = change.last_state()
 
             if entity.obj_type in ['MapPage']:  # Pages
-                if change.type == ChangeTypes.CREATE:
+                if change.is_create():
                     flush_aggregate_update()
                     self.create_page(entity, [])
 
-                elif change.type == ChangeTypes.UPDATE:
+                elif change.is_update():
                     if entity.id != page_id_for_aggregate_update:
                         flush_aggregate_update()
                         page_id_for_aggregate_update = entity.id
 
-                elif change.type == ChangeTypes.DELETE:
+                elif change.is_delete():
                     flush_aggregate_update()
                     self.delete_page(entity.id)
 
@@ -78,7 +77,7 @@ class Repository:
             else:
                 log.error('Saving changes for objects of type "%s" is not'
                           'implemented. Change: %s' %
-                          (entity.obj_type, change_dict))
+                          (entity.obj_type, change))
                 raise NotImplementedError
 
         flush_aggregate_update()

@@ -4,6 +4,9 @@ from typing import Union, List
 from misli.helpers import get_new_id
 from misli import Entity, gui
 from misli import get_logger
+
+from .view_state import ViewState
+
 log = get_logger(__name__)
 
 
@@ -47,7 +50,7 @@ class View:
         return self._id
 
     @property
-    def state(self) -> Entity:
+    def state(self) -> ViewState:
         model = gui.displayed_view_state(self.id)
         if not model or model.id != self.id:
             raise Exception('Could not retrieve view model for view %s' % self)
@@ -65,9 +68,9 @@ class View:
 
     def handle_child_changes(
             self,
-            children_added: list,
-            children_removed: list,
-            children_updated: list):
+            children_added: List[View],
+            children_removed: List[View],
+            children_updated: List[View]):
         pass
 
     def child(self, child_id: str) -> View:
