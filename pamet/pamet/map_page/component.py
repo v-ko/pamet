@@ -56,7 +56,6 @@ class MapPageViewState(ViewState):
     note_drag_active: bool = False
 
     def __post_init__(self):
-        ViewState.__post_init__(self)
         self.viewport = Viewport(self)
 
         if not self.mapped_entity:

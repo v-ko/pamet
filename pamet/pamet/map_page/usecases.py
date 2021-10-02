@@ -229,7 +229,7 @@ def start_note_drag(
     gui.update_state(map_page_view_state)
 
 
-# @action('map_page.note_drag_nc_position_update')
+@action('map_page.note_drag_nc_position_update')
 def note_drag_nc_position_update(
         map_page_view_id: str, nc_ids: list, delta: list):
 

@@ -2,42 +2,41 @@ from typing import Union
 from datetime import datetime
 from dataclasses import fields, field
 
-from misli.entity_library import register_entity, get_entity_class_by_name
+from misli import entity_library
 from misli.helpers import datetime_to_string
 
 
-@register_entity
+@entity_library.register_entity_type
 class Entity:
     """The base class for entities. Provides several convenience methods for
     conversions to and from dict, copying and attribute updates (via replace())
 
-    All entity subclasses should be decorated with register_entity and
-    dataclass (from the dataclasses standard lib) like so:
+    All entity subclasses should be decorated with register_entity_type like so:
 
-        from dataclasses import dataclass
-        from misli.entity_library import register_entity
+        from misli.entity_library import register_entity_type
 
-        @register_entity
-        @dataclass
+        @register_entity_type
         class EntitySubclass:
             ...
 
     Dataclasses provides a nice syntax for attribute declaration (check out
-    the python documentation), while the register_entity decorator registers
-    the new subclass for the purposes of serialization.
+    the python documentation), while the register_entity_type decorator
+    registers the new subclass for the purposes of serialization.
 
-    On construction (in __post_init__) the obj_type attribute gets populated
-    with the name of the class. That's relevant for the (de/)serialization.
     The __init__ is used by dataclass, so in order to do stuff upon
-    construction you need to reimplement __post_init__ and be sure to call
-    the Entity.__post_init__ method in it.
+    construction you need to reimplement __post_init__.
+
+    If you want to use computed properties declared via @property you should
+    declare the dataclass attributes with a leading underscore and the methods
+    without it. See the register_entity_type docs for an example.
     """
 
-    id: str = field(init=False, default='')
-    obj_type: str = field(init=False, default='')
+    id: str = ''
+    _obj_type: str = field(init=False, default='')
 
-    def __post_init__(self):
-        self.obj_type = type(self).__name__
+    @property
+    def obj_type(self):
+        return type(self).__name__
 
     def gid(self) -> Union[str, tuple]:
         """Returns the global id of the entity. This function can be
@@ -50,28 +49,7 @@ class Entity:
         return self.copy()
 
     def copy(self) -> 'Entity':
-        return Entity.from_dict(self.asdict())
-
-    @staticmethod
-    def from_dict(self_dict: dict) -> 'Entity':
-        """Construct an entity given its state as a dict"""
-
-        self_id = self_dict.pop('id', '')
-        obj_type = self_dict.pop('obj_type')
-
-        cls = get_entity_class_by_name(obj_type)
-        # Props with a leading underscore in their name have setters/getters
-        # but property methods can't be invoked by the dataclass at init time
-        # That's why we separate them and then set them via the property setter
-        # (which happens in Entity.replace)
-        private_props = {p: self_dict.pop(p) for p in list(self_dict.keys())
-                         if p.startswith('_')}
-
-        instance = cls(**self_dict)
-        instance.replace(**private_props)
-        instance.id = self_id
-        instance.obj_type = obj_type
-        return instance
+        return entity_library.from_dict(self.asdict())
 
     def asdict(self) -> dict:
         """Return the entity properties as a dict"""
@@ -89,14 +67,9 @@ class Entity:
 
     def replace(self, **changes):
         """Update entity properties using keyword arguments"""
+        changes.pop('obj_type')
         for key, val in changes.items():
-            # Apply property changes through the setters
-            if key.startswith('_'):
-                prop_name = key[1:]
-                setattr(self, prop_name, val)
-
-            else:
-                setattr(self, key, val)
+            setattr(self, key, val)
 
     @property
     def parent_gid(self):

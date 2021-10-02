@@ -1,7 +1,8 @@
 from datetime import datetime
 
 import misli
-from misli.entity_library.change import Change, ChangeTypes
+from misli import entity_library
+from misli.entity_library.change import Change
 from misli.helpers import get_new_id, find_many_by_props, find_one_by_props
 from misli import get_logger, Entity
 from misli.gui import ENTITY_CHANGE_CHANNEL
@@ -9,13 +10,6 @@ from misli.gui import ENTITY_CHANGE_CHANNEL
 from pamet.entities import Page, Note
 
 log = get_logger(__name__)
-
-# PAGES_CHANNEL = '__page_changes__'
-# ENTITY_CHANGE_CHANNEL = '__all_notes_channel__'
-
-#
-# def NOTES_CHANNEL(page_id):
-#     return '__notes_changes__%s' % page_id
 
 
 _repo = None
@@ -149,7 +143,7 @@ def create_note(**props):
 
     props['id'] = get_new_id()
 
-    _note = Entity.from_dict(props)
+    _note = entity_library.from_dict(props)
     _note.time_created = datetime.now()
     _note.time_modified = datetime.now()
     add_note(_note)

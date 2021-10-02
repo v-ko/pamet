@@ -1,5 +1,5 @@
 import misli
-from misli import gui, Entity
+from misli import gui, entity_library
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
 
@@ -15,7 +15,7 @@ def create_new_note(
         tab_view_id: str, position_coords: list, note_state: dict):
 
     position = Point2D.from_coords(position_coords)
-    note = Entity.from_dict(note_state)
+    note = entity_library.from_dict(note_state)
 
     # Check if there's an open edit window and abort it if so
     tab_state = gui.view_state(tab_view_id)

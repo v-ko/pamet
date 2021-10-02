@@ -3,7 +3,7 @@ from dataclasses import field
 from datetime import datetime
 
 from misli import get_logger
-from misli import Entity, register_entity
+from misli import Entity, register_entity_type
 from misli.helpers import datetime_from_string
 from misli.basic_classes import Point2D, Rectangle, Color
 from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
@@ -14,7 +14,7 @@ from pamet.helpers import snap_to_grid
 log = get_logger(__name__)
 
 
-@register_entity
+@register_entity_type
 class Note(Entity):
     page_id: str = ''
     _x: float = 0

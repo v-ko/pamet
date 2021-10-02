@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
 
-from misli import Entity
+from misli import entity_library
 from misli.basic_classes import Point2D
 
 from pamet.note_components.text.entity import TextNote
@@ -94,22 +94,12 @@ class FSStorageRepository(Repository):
 
         note_states = page_state.pop('note_states', [])
 
-        # TODO: remove for alpha
-        page_state.pop('view_class', '')
-
         notes = []
 
         for ns in note_states:
+            notes.append(entity_library.from_dict(ns))
 
-            # TODO: remove for alpha
-            ns.pop('view_class', '')
-            ns['obj_type'] = 'TextNote'
-            if 'text' in ns:
-                ns['_text'] = ns.pop('text')
-
-            notes.append(Entity.from_dict(ns))
-
-        return Entity.from_dict(page_state), notes
+        return entity_library.from_dict(page_state), notes
 
     def update_page(self, page, notes):
         page_state = page.asdict()
@@ -367,10 +357,10 @@ class FSStorageRepository(Repository):
                 continue
 
             note_states = page_state.pop('note_states', [])
-            notes = [Entity.from_dict(ns)
+            notes = [entity_library.from_dict(ns)
                      for nid, ns in note_states.items()]
 
-            self.create_page(Entity.from_dict(page_state), notes)
+            self.create_page(entity_library.from_dict(page_state), notes)
             legacy_pages.append(Path(file.path))
 
         if legacy_pages:
