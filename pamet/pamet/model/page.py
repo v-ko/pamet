@@ -1,8 +1,8 @@
 import misli
-from misli import Entity, register_entity_type
+from misli import Entity, wrap_and_register_entity_type
 
 
-@register_entity_type
+@wrap_and_register_entity_type
 class Page(Entity):
     _name: str = ''
 

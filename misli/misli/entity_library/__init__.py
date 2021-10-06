@@ -76,7 +76,7 @@ def _apply_dataclass_and_process_properties(entity_class):
     return entity_class
 
 
-def register_entity_type(entity_class: Any):
+def wrap_and_register_entity_type(entity_class: Any):
     """A class decorator to register entities in the entity library for the
     purposes of serialization and deserialization. It applies the dataclass
     decorator.

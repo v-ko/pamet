@@ -2,14 +2,14 @@ from dataclasses import dataclass, field
 from PySide6.QtWidgets import QMainWindow, QPushButton
 from PySide6.QtGui import QIcon
 
-from misli.gui import ViewState, register_view_state_type
+from misli.gui import ViewState, wrap_and_register_view_state_type
 from misli.gui import View, register_view_type
 from pamet.desktop import usecases
 
 from .ui_browser_window import Ui_BrowserWindow
 
 
-@register_view_state_type
+@wrap_and_register_view_state_type
 class BrowserWindowViewState(ViewState):
     name: str = ''
     app_id: str = None

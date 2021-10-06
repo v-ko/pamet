@@ -6,7 +6,7 @@ from misli import entity_library
 from misli.helpers import datetime_to_string, get_new_id
 
 
-@entity_library.register_entity_type
+@entity_library.wrap_and_register_entity_type
 class Entity:
     """The base class for entities. Provides several convenience methods for
     conversions to and from dict, copying and attribute updates (via replace())

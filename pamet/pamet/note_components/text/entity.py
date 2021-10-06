@@ -1,12 +1,12 @@
 from misli import get_logger
-from misli import register_entity_type
+from misli import wrap_and_register_entity_type
 from pamet.model.note import Note
 log = get_logger(__name__)
 
 TEXT = 'text'
 
 
-@register_entity_type
+@wrap_and_register_entity_type
 class TextNote(Note):
     def __post_init__(self):
         if TEXT not in self.content:

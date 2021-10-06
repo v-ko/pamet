@@ -195,16 +195,9 @@ class FSStorageRepository(Repository):
             log.error('Exception %s while loading page' % e, path)
             return None
 
-        # TODO REMOVE
-        page_state['type_name'] = page_state.pop('obj_type')
-
         note_states = page_state.pop('note_states', [])
         notes = []
         for ns in note_states:
-
-            # TODO REMOVE
-            ns['type_name'] = ns.pop('obj_type')
-
             notes.append(entity_library.from_dict(ns))
 
         return entity_library.from_dict(page_state), notes

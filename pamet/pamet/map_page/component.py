@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 
 import misli
 
-from misli.gui import ViewState, register_view_state_type
+from misli.gui import ViewState, wrap_and_register_view_state_type
 from misli.basic_classes import Point2D, Rectangle
 from misli.gui.view_library.view import View
 
@@ -30,7 +30,7 @@ class MapPageMode(Enum):
     NOTE_DRAG = 4
 
 
-@register_view_state_type
+@wrap_and_register_view_state_type
 class MapPageViewState(ViewState):
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
     viewport_center: Point2D = Point2D(0, 0)

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from PySide6.QtWidgets import QApplication
 
 import misli
-from misli.gui import ViewState, register_view_state_type
+from misli.gui import ViewState, wrap_and_register_view_state_type
 from misli.gui.view_library import register_view_type
 from misli.gui.view_library.view import View
 
@@ -12,7 +12,7 @@ from pamet.constants import DESKTOP_APP_VERSION
 log = misli.get_logger(__name__)
 
 
-@register_view_state_type
+@wrap_and_register_view_state_type
 class DesktopAppViewState(ViewState):
     pass
 
