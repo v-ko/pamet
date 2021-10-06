@@ -1,2 +1,2 @@
-from .entities import Page
-from .pamet import *
+from .model import *
+from . import gui

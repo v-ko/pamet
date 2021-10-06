@@ -11,7 +11,7 @@ from pamet.constants import RESIZE_CIRCLE_RADIUS
 from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from pamet.constants import INITIAL_EYE_Z
-from pamet.entities import Note, Page
+from pamet.model import Note
 from pamet.note_components.text.entity import TextNote
 
 from pamet.note_components import usecases as notes_usecases

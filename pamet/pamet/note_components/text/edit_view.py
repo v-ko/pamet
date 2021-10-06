@@ -5,7 +5,7 @@ from misli.basic_classes import Point2D
 from misli.gui import register_view_state_type
 from pamet.note_components.base_note_view import NoteView, NoteViewState
 
-from pamet.entities import Note
+from pamet.model import Note
 from pamet.note_components import usecases
 
 

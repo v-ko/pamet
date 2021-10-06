@@ -1,17 +1,23 @@
+from typing import List
 import os
 import json
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass
+from collections import defaultdict
 
-from misli import entity_library
+import misli
+from misli import entity_library, Entity
+from misli.helpers import find_many_by_props
 from misli.basic_classes import Point2D
 
+from pamet import Page, Note
 from pamet.note_components.text.entity import TextNote
 from pamet.services.hacky_backups import backup_page_hackily
 from .repository import Repository
 
 from misli import get_logger
+
 log = get_logger(__name__)
 
 RANDOMIZE_TEXT = False
@@ -19,16 +25,23 @@ V4_FILE_EXT = '.misl.json'
 
 
 class FSStorageRepository(Repository):
+    '''This class has all entities cached at all times'''
     def __init__(self, path):
         Repository.__init__(self)
 
         self.path = Path(path)
         self._page_ids = []
 
+        self._entity_cache = {}
+        self._entity_cache_by_parent = defaultdict(list)
+
+        self.upserted_pages = set()
+        self.removed_pages = set()
+
         self._process_legacy_pages()
 
-    def _path_for_page(self, page_id):
-        name = page_id + V4_FILE_EXT
+    def _path_for_page(self, page_name):
+        name = page_name + V4_FILE_EXT
         return os.path.join(self.path, name)
 
     @classmethod
@@ -40,7 +53,7 @@ class FSStorageRepository(Repository):
         return cls(path)
 
     @classmethod
-    def create(cls, path):
+    def new(cls, path):
         if os.path.exists(path):
             if os.listdir(path):
                 log.error('Cannot create repository in non-empty folder %s' %
@@ -50,39 +63,129 @@ class FSStorageRepository(Repository):
         os.makedirs(path, exist_ok=True)
         return cls(path)
 
+    def upsert_to_cache(self, entity: Entity):
+        self._entity_cache[entity.gid()] = entity
+        if entity.parent_gid():
+            self._entity_cache_by_parent[entity.parent_gid()].append(
+                entity.gid())
+
+    def remove_from_cache(self, entity: Entity):
+        self._entity_cache.pop(entity.gid(), None)
+        if entity.parent_gid():
+            self._entity_cache_by_parent[entity.parent_gid()].remove(
+                entity.gid())
+
+    def insert(self, entities: List[Entity]):
+        for entity in entities:
+            if entity.gid() in self._entity_cache:
+                raise Exception(
+                    'Cannot insert {entity}, since it already exists')
+
+            self.upsert_to_cache(entity)
+            if isinstance(entity, Page):
+                self.upserted_pages.add(entity.gid())
+            elif isinstance(entity, Note):
+                self.upserted_pages.add(entity.parent_gid())
+
+        misli.call_delayed(self.write_to_disk, 0)
+
+    def remove(self, entities: List[Entity]):
+        for entity in entities:
+            if entity.gid() not in self._entity_cache:
+                raise Exception(f'Cannot remove missing {entity}')
+
+            self.remove_from_cache(entity)
+            if isinstance(entity, Page):
+                self.removed_pages.add(entity.gid())
+            elif isinstance(entity, Note):
+                self.upserted_pages.add(entity.parent_gid())
+
+        misli.call_delayed(self.write_to_disk, 0)
+
+    def update(self, entities: List[Entity]):
+        for entity in entities:
+            if entity.gid() not in self._entity_cache:
+                raise Exception('Cannot update missing {entity}')
+
+            self.upsert_to_cache(entity)
+            if isinstance(entity, Page):
+                self.upserted_pages.add(entity.gid())
+            elif isinstance(entity, Note):
+                self.upserted_pages.add(entity.parent_gid())
+
+        misli.call_delayed(self.write_to_disk, 0)
+
+    def find(self, **filter):
+        # If searching by gid - there will be only one unique result (if any)
+        if 'gid' in filter:
+            gid = filter.get('gid')
+            result = self._entity_cache.get(gid, None)
+            return [result] if result else []
+
+        # If searching by parent_gid - use the index to do it efficiently
+        elif 'parent_gid' in filter:
+            parent_gid = filter.pop('parent_gid')
+            found = self._entity_cache_by_parent.get(parent_gid, [])
+            found_entities = [self._entity_cache[gid] for gid in found]
+            if not filter:
+                return found_entities
+            else:
+                return find_many_by_props(found_entities, **filter)
+        else:
+            # Do a search in all entities
+            return find_many_by_props(self._entity_cache, **filter)
+
+    def write_to_disk(self):
+        if self.upserted_pages.intersection(self.removed_pages):
+            raise Exception('A page is both marked for upsert and removal.')
+
+        for page_gid in self.upserted_pages:
+            page = misli.find_one(gid=page_gid)
+            if os.path.exists(self._path_for_page(page.name)):
+                self.update_page(page, page.notes())
+            else:
+                self.create_page(page, page.notes())
+
+        for page_gid in self.removed_pages:
+            page = misli.find_one(gid=page_gid)
+            self.delete_page(page)
+
+        self.upserted_pages.clear()
+        self.removed_pages.clear()
+
     def create_page(self, page, notes):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
-        path = self._path_for_page(page.id)
+        path = self._path_for_page(page.name)
         try:
             if os.path.exists(path):
                 log.error('Cannot create page. File already exists %s' % path)
                 return
 
             with open(path, 'w') as pf:
-                json.dump(page_state, pf)
+                json.dump(page_state, pf, ensure_ascii=False)
 
         except Exception as e:
             log.error('Exception while creating page at %s: %s' % (path, e))
 
-    def page_ids(self):
-        page_ids = []
+    def page_names(self):
+        page_names = []
 
         for file in os.scandir(self.path):
             if self.is_v4_page(file.path):
-                page_id = file.name[:-len(V4_FILE_EXT)]  # Strip extension
+                page_name = file.name[:-len(V4_FILE_EXT)]  # Strip extension
 
-                if not page_id:
+                if not page_name:
                     log.warning('Page with no id at %s' % file.path)
                     continue
 
-                page_ids.append(page_id)
+                page_names.append(page_name)
 
-        return page_ids
+        return page_names
 
-    def get_page_and_notes(self, page_id):
-        path = self._path_for_page(page_id)
+    def get_page_and_notes(self, page_name):
+        path = self._path_for_page(page_name)
 
         try:
             with open(path) as pf:
@@ -105,7 +208,7 @@ class FSStorageRepository(Repository):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
-        path = self._path_for_page(page.id)
+        path = self._path_for_page(page.name)
         if os.path.exists(path):
             backup_page_hackily(path)
         else:
@@ -113,10 +216,10 @@ class FSStorageRepository(Repository):
                         ' it.' % path)
 
         with open(path, 'w') as pf:
-            json.dump(page_state, pf)
+            json.dump(page_state, pf, ensure_ascii=False)
 
-    def delete_page(self, page_id):
-        path = self._path_for_page(page_id)
+    def delete_page(self, page):
+        path = self._path_for_page(page.name)
 
         if os.path.exists(path):
             os.remove(path)
@@ -184,10 +287,10 @@ class FSStorageRepository(Repository):
             nt['y'] = nt.pop('y')
             nt['width'] = nt.pop('width')
             nt['height'] = nt.pop('height')
-            nt['time_created'] = datetime.strptime(
-                nt.pop('t_made'), '%m.%d.%Y %H:%M:%S')
-            nt['time_modified'] = datetime.strptime(
-                nt.pop('t_mod'), '%m.%d.%Y %H:%M:%S')
+            nt['time_created'] = datetime.strptime(nt.pop('t_made'),
+                                                   '%m.%d.%Y %H:%M:%S')
+            nt['time_modified'] = datetime.strptime(nt.pop('t_mod'),
+                                                    '%m.%d.%Y %H:%M:%S')
 
             # Redirect notes
             if nt['text'].startswith('this_note_points_to:'):
@@ -306,10 +409,10 @@ class FSStorageRepository(Repository):
             nt['width'] = float(nt.pop('a'))
             nt['height'] = float(nt.pop('b'))
             nt['text'] = nt.pop('txt')
-            nt['time_created'] = datetime.strptime(
-                nt.pop('t_made'), '%m.%d.%Y %H:%M:%S')
-            nt['time_modified'] = datetime.strptime(
-                nt.pop('t_mod'), '%m.%d.%Y %H:%M:%S')
+            nt['time_created'] = datetime.strptime(nt.pop('t_made'),
+                                                   '%m.%d.%Y %H:%M:%S')
+            nt['time_modified'] = datetime.strptime(nt.pop('t_mod'),
+                                                    '%m.%d.%Y %H:%M:%S')
             # nt['tags'] unchanged
 
             # Process arrows (formerly named links)
@@ -352,13 +455,14 @@ class FSStorageRepository(Repository):
                 continue
 
             if not page_state:
-                log.warning('Empty page state for legacy page %s' %
-                            file.name)
+                log.warning('Empty page state for legacy page %s' % file.name)
                 continue
 
             note_states = page_state.pop('note_states', [])
-            notes = [entity_library.from_dict(ns)
-                     for nid, ns in note_states.items()]
+            notes = [
+                entity_library.from_dict(ns)
+                for nid, ns in note_states.items()
+            ]
 
             self.create_page(entity_library.from_dict(page_state), notes)
             legacy_pages.append(Path(file.path))

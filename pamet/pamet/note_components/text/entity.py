@@ -1,8 +1,6 @@
-from dataclasses import dataclass
-
 from misli import get_logger
 from misli import register_entity_type
-from pamet.entities.note import Note
+from pamet.model.note import Note
 log = get_logger(__name__)
 
 TEXT = 'text'

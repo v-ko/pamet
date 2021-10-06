@@ -1,10 +1,13 @@
+import datetime
+
 import misli
 from misli import gui, entity_library
+from misli.helpers import get_new_id
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
 
 import pamet
-from pamet.entities import Note
+from pamet.model import Note
 
 
 log = misli.get_logger(__name__)
@@ -38,11 +41,15 @@ def create_new_note(
 
 @action('notes.finish_creating_note')
 def finish_creating_note(edit_view_id: str, note: Note):
-    edit_view = gui.view(edit_view_id)
-
     pamet.create_note(**note.asdict())
-    gui.remove_view(edit_view)
 
+    edit_view = gui.view(edit_view_id)
+    tab_view = gui.view(edit_view.parent_id)
+    tab_state = tab_view.state
+    tab_state.edit_view_id = None
+
+    gui.remove_view(edit_view)
+    gui.update_state(tab_state)
 
 @action('notes.start_editing_note')
 def start_editing_note(
@@ -68,10 +75,13 @@ def start_editing_note(
 @action('notes.finish_editing_note')
 def finish_editing_note(edit_view_id: str, note: Note):
     edit_view = gui.view(edit_view_id)
+    tab_view = gui.view(edit_view.parent_id)
+    tab_state = tab_view.state
+    tab_state.edit_view_id = None
 
     pamet.update_note(note)
     gui.remove_view(edit_view)
-
+    gui.update_state(tab_state)
     # autosize_note(note_component_id)
 
 

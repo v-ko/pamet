@@ -37,20 +37,22 @@ def main():
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path)
     else:
-        fs_repo = FSStorageRepository.create(repo_path)
+        fs_repo = FSStorageRepository.new(repo_path)
 
     if not fs_repo:
         log.error('Error initializing repository. Exiting.')
         return
 
-    for page_id in fs_repo.page_ids():
-        page, notes = fs_repo.get_page_and_notes(page_id)
-        pamet.load_page(page, notes)
+    for page_name in fs_repo.page_names():
+        page, notes = fs_repo.get_page_and_notes(page_name)
+        fs_repo.upsert_to_cache(page)
+        for note in notes:
+            fs_repo.upsert_to_cache(note)
 
-    # pamet.set_repo(fs_repo, 'all')
+    misli.set_repo(fs_repo, 'all')
     misli.set_main_loop(QtMainLoop())
 
-    misli.subscribe(ENTITY_CHANGE_CHANNEL, fs_repo.save_changes)
+    # misli.subscribe(ENTITY_CHANGE_CHANNEL, fs_repo.save_changes)
 
     desktop_app = create_desktop_app()
     misli.call_delayed(new_browser_window_ensure_page, 0)

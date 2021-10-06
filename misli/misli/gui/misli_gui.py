@@ -10,7 +10,7 @@ from misli.logging import BColors
 from misli.helpers import find_many_by_props
 
 from .actions_library import Action, execute_action
-from .view_library.view import View
+from .view_library.view import View, ViewState
 from .model_to_view_binder.entity_to_view_mapper import EntityToViewMapping
 
 log = misli.get_logger(__name__)
@@ -56,7 +56,7 @@ def action_context(action):
     _action_context_stack.append(action)
     yield None
 
-    # If it's a root action - propagate the state changes to the _ (async)
+    # If it's a root action - propagate the state changes to the views (async)
     _action_context_stack.pop()
     if not _action_context_stack:
         misli.call_delayed(_update_views, 0)
@@ -67,6 +67,10 @@ def ensure_context():
         raise Exception(
             'State changes can only happen in functions decorated with the '
             'misli.gui.actions_library.action decorator')
+
+
+# def broadcast_change(change: Change):
+#     misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
 
 
 # Action channel interface
@@ -241,8 +245,8 @@ def view_children(view_id: str) -> List[View]:
 
 
 @log.traced
-def _() -> List[View]:
-    """Get all view instances registered with misli.gui."""
+def views() -> List[View]:
+    """Get all view instances registered in misli.gui"""
     return [c for c_id, c in _views.items()]
 
 
@@ -291,7 +295,7 @@ def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
 
 
 @log.traced
-def update_state(new_state):
+def update_state(new_state: ViewState):
     """Replace the view model with an updated one. A view update will be
     invoked as a next task on the main loop.
 
@@ -300,6 +304,9 @@ def update_state(new_state):
         properties. It's identified by its id (so that must be intact).
     """
     ensure_context()
+    if not isinstance(new_state, ViewState):
+        raise Exception('Expected a ViewState')
+
     _view: View = view(new_state.id)
     previous_state = _view.state
     _view_states[_view.id] = new_state

@@ -3,7 +3,7 @@ from datetime import datetime
 from dataclasses import fields, field
 
 from misli import entity_library
-from misli.helpers import datetime_to_string
+from misli.helpers import datetime_to_string, get_new_id
 
 
 @entity_library.register_entity_type
@@ -31,7 +31,7 @@ class Entity:
     without it. See the register_entity_type docs for an example.
     """
 
-    id: str = ''
+    id: str = field(default_factory=get_new_id)
     _obj_type: str = field(init=False, default='')
 
     @property
@@ -71,7 +71,6 @@ class Entity:
         for key, val in changes.items():
             setattr(self, key, val)
 
-    @property
     def parent_gid(self):
         """Implement this to return the parent id. It's used in the
         Entity-to-View mapping mechanisms.

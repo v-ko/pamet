@@ -17,7 +17,7 @@ def find_many_by_props(
     matching the provided keyword arguments (key==attr_name and val==attr_val)
     """
     if isinstance(item_list, dict):
-        item_list = [val for key, val in item_list.items()]
+        item_list = item_list.values()
 
     elif isinstance(item_list, list):
         pass

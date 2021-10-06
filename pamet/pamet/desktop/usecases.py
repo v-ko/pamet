@@ -2,7 +2,6 @@ from misli import gui
 from misli.gui.actions_library import action
 
 import pamet
-from pamet import gui as pamet_gui
 from pamet.map_page.entity import MapPage
 from pamet.desktop.config import get_config
 
@@ -16,7 +15,7 @@ def new_browser_window_ensure_page():
     pages = pamet.pages()
     if not pages:
         page = MapPage(name='notes')
-        pamet.add_page(page, _notes=[])
+        pamet.add_page(page)
     else:
         page = pages[0]
 

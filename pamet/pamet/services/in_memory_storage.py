@@ -1,4 +1,4 @@
-from pamet.entities import Page
+from pamet.model import Page
 from .repository import Repository
 
 from misli import get_logger
@@ -16,7 +16,7 @@ class InMemoryRepository(Repository):
         page = Page(**page_state)
         self._pages[page.id] = page
 
-    def page_ids(self):
+    def page_names(self):
         return list(self._pages.keys())
 
     def page_state(self, page_id):

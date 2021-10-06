@@ -10,7 +10,7 @@ REPO_PATH = './tmp_mock_repo'
 
 @pytest.fixture()
 def fs_repo():
-    fs_repo = FSStorageRepository.create(REPO_PATH)
+    fs_repo = FSStorageRepository.new(REPO_PATH)
     yield fs_repo
 
     shutil.rmtree(REPO_PATH)
@@ -20,7 +20,7 @@ def test_fs_repo_CRUD(fs_repo):
     page = Page(id='test_page')
     fs_repo.create_page(page, [])
 
-    assert fs_repo.page_ids() == [page.id]
+    assert fs_repo.page_names() == [page.id]
     test_page, notes = fs_repo.get_page_and_notes(page.id)
     note_states = [n.state() for n in notes]
     assert (test_page.state(), note_states) == (page.state(), [])
@@ -35,4 +35,4 @@ def test_fs_repo_CRUD(fs_repo):
 
     fs_repo.delete_page(page.id)
 
-    assert fs_repo.page_ids() == []
+    assert fs_repo.page_names() == []

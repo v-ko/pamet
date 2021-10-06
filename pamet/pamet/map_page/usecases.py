@@ -5,7 +5,7 @@ import pamet
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
 
-from pamet.entities import Note
+from pamet.model import Note
 
 log = misli.get_logger(__name__)
 
