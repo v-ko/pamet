@@ -120,8 +120,8 @@ def get_entity_class_by_name(entity_class_name: str):
 
 def from_dict(self_dict: dict) -> 'Entity':
     """Construct an entity given its state as a dict"""
-    obj_type = self_dict.pop('obj_type')
-    cls = get_entity_class_by_name(obj_type)
+    type_name = self_dict.pop('type_name')
+    cls = get_entity_class_by_name(type_name)
 
     instance = cls(**self_dict)
     return instance

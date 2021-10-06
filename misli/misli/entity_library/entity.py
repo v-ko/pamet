@@ -32,10 +32,10 @@ class Entity:
     """
 
     id: str = field(default_factory=get_new_id)
-    _obj_type: str = field(init=False, default='')
+    _type_name: str = field(init=False, default='')
 
     @property
-    def obj_type(self):
+    def type_name(self):
         return type(self).__name__
 
     def gid(self) -> Union[str, tuple]:
@@ -67,7 +67,6 @@ class Entity:
 
     def replace(self, **changes):
         """Update entity properties using keyword arguments"""
-        changes.pop('obj_type')
         for key, val in changes.items():
             setattr(self, key, val)
 

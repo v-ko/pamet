@@ -15,7 +15,8 @@ def update_views_from_entity_changes(changes: List[Change]):
             for parent_view in parent_views:
                 gui.create_view(
                     parent_view.id,
-                    view_class_metadata_filter=dict(obj_type=entity.obj_type),
+                    view_class_metadata_filter=dict(
+                        entity_type=entity.type_name),
                     mapped_entity=entity)
 
         elif change.is_update():

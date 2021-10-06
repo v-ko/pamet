@@ -13,7 +13,7 @@ log = get_logger(__name__)
 # -------------Pages CRUD-------------
 @log.traced
 def pages():
-    return misli.find(obj_type='MapPage')
+    return misli.find(type_name='MapPage')
 
 
 def page(page_id: str):
@@ -22,13 +22,13 @@ def page(page_id: str):
 
 @log.traced
 def find_pages(**props):
-    props['obj_type'] = 'MapPage'
+    props['type_name'] = 'MapPage'
     return misli.find(**props)
 
 
 @log.traced
 def find_page(**props):
-    props['obj_type'] = 'MapPage'
+    props['type_name'] = 'MapPage'
     return misli.find_one(**props)
 
 
@@ -50,7 +50,7 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
     _page = page(page_id)
     page_view = misli.gui.create_view(
         parent_id,
-        view_class_metadata_filter=dict(obj_type=_page.obj_type),
+        view_class_metadata_filter=dict(entity_type=_page.type_name),
         mapped_entity=_page)
 
     for _note in _page.notes():
@@ -63,7 +63,7 @@ def create_and_bind_page_view(page_id: str, parent_id: str):
 def create_and_bind_note_view(page_view_id, _note):
     note_view = misli.gui.create_view(
         parent_id=page_view_id,
-        view_class_metadata_filter=dict(obj_type=_note.obj_type),
+        view_class_metadata_filter=dict(entity_type=_note.type_name),
         mapped_entity=_note)
 
     return note_view
@@ -73,7 +73,7 @@ def create_and_bind_note_view(page_view_id, _note):
 def create_and_bind_edit_view(tab_view_id, _note):
     edit_view = misli.gui.create_view(
         parent_id=tab_view_id,
-        view_class_metadata_filter=dict(obj_type=_note.obj_type, edit=True),
+        view_class_metadata_filter=dict(entity_type=_note.type_name, edit=True),
         mapped_entity=_note)
 
     return edit_view

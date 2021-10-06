@@ -13,7 +13,7 @@ from misli import get_logger
 log = get_logger(__name__)
 
 
-@register_view_type(priority=1, obj_type='TextNote', edit=False)
+@register_view_type(priority=1, entity_type='TextNote', edit=False)
 class TextNoteViewWidget(QLabel, NoteView):
     def __init__(self, parent_id):
         NoteView.__init__(

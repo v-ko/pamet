@@ -26,7 +26,7 @@ def create_new_note(
         abort_editing_note(tab_state.edit_view_id)
 
     edit_view_class = gui.view_library.get_view_class(
-        obj_type='TextNote', edit=True)
+        entity_type='TextNote', edit=True)
     edit_view = edit_view_class(parent_id=tab_view_id)
     tab_state.edit_view_id = edit_view.id
 

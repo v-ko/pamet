@@ -195,11 +195,16 @@ class FSStorageRepository(Repository):
             log.error('Exception %s while loading page' % e, path)
             return None
 
+        # TODO REMOVE
+        page_state['type_name'] = page_state.pop('obj_type')
+
         note_states = page_state.pop('note_states', [])
-
         notes = []
-
         for ns in note_states:
+
+            # TODO REMOVE
+            ns['type_name'] = ns.pop('obj_type')
+
             notes.append(entity_library.from_dict(ns))
 
         return entity_library.from_dict(page_state), notes
@@ -296,11 +301,11 @@ class FSStorageRepository(Repository):
             if nt['text'].startswith('this_note_points_to:'):
                 nt['href'] = nt['text'].split(':', 1)[1]
                 nt['text'] = nt['href']
-                nt['obj_type'] = 'Text'
-                # nt['obj_type'] = 'Redirect'
+                nt['type_name'] = 'Text'
+                # nt['type_name'] = 'Redirect'
 
             else:
-                nt['obj_type'] = 'Text'
+                nt['type_name'] = 'Text'
 
             # Remove unimplemented attributes to avoid errors
             note = TextNote(*nt)
@@ -318,7 +323,7 @@ class FSStorageRepository(Repository):
 
         note_states = {n['id']: n for n in json_object.pop('notes')}
 
-        json_object['obj_type'] = 'MapPage'
+        json_object['type_name'] = 'MapPage'
         json_object['note_states'] = note_states
 
         return json_object

@@ -20,7 +20,7 @@ class NoteViewState(ViewState):
     note: Note = None
 
 
-@register_view_type(obj_type='AnchorNote', edit=False)
+@register_view_type(entity_type='AnchorNote', edit=False)
 class AnchorViewWidget(QLabel, NoteView):
     def __init__(self, parent_id):
         NoteView.__init__(

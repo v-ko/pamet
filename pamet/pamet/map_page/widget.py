@@ -46,7 +46,7 @@ def image_cache_rect_unprojected(display_rect: Rectangle):
     return cache_rect
 
 
-@register_view_type(obj_type='MapPage')
+@register_view_type(entity_type='MapPage')
 class MapPageViewWidget(QWidget, MapPageView):
     def __init__(self, parent_id):
         QWidget.__init__(self)

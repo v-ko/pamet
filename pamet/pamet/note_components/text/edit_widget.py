@@ -15,7 +15,7 @@ import misli
 log = misli.get_logger(__name__)
 
 
-@register_view_type(obj_type='TextNote', edit=True)
+@register_view_type(entity_type='TextNote', edit=True)
 class TextNoteEditViewWidget(QWidget, TextNoteEditView):
     def __init__(self, parent_id):
         TextNoteEditView.__init__(self, parent_id)
