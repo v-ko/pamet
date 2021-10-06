@@ -86,9 +86,11 @@ def wrap_and_register_entity_type(entity_class: Any):
     methods with the same name (without an underscore) and the dataclass will
     use them. This is something the dataclasses lib does not handle by default.
     For example:
+    from misli import wrap_and_register_entity_type, Entity
 
-    @register_entity_type
+    @wrap_and_register_entity_type
     class Vehicle(Entity):
+        wipers: int = 2
         _wheels: int = 5
 
         @property
@@ -98,6 +100,11 @@ def wrap_and_register_entity_type(entity_class: Any):
         @wheels.setter
         def wheels(self, num_wheels):
             self._wheels = num_wheels // 2 * 2  # Reduce to an even number
+
+    vehicle = Vehicle()
+    vehicle.wheels = 9
+    print(vehicle.asdict())
+    # returns {'id': '4ad8f283', 'type_name': 'Vehicle', 'wipers': 2, 'wheels': 8}
 
     Raises:
         Exception: on duplicate registration

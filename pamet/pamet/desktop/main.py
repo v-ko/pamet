@@ -43,16 +43,8 @@ def main():
         log.error('Error initializing repository. Exiting.')
         return
 
-    for page_name in fs_repo.page_names():
-        page, notes = fs_repo.get_page_and_notes(page_name)
-        fs_repo.upsert_to_cache(page)
-        for note in notes:
-            fs_repo.upsert_to_cache(note)
-
-    misli.set_repo(fs_repo, 'all')
+    misli.set_repo(fs_repo)
     misli.set_main_loop(QtMainLoop())
-
-    # misli.subscribe(ENTITY_CHANGE_CHANNEL, fs_repo.save_changes)
 
     desktop_app = create_desktop_app()
     misli.call_delayed(new_browser_window_ensure_page, 0)

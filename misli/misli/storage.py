@@ -16,7 +16,7 @@ def repo():
 
 
 @log.traced
-def set_repo(repo, updates_channel: str):
+def set_repo(repo):
     global _repo
     log.info('Setting repo to %s' % repo.path)
 

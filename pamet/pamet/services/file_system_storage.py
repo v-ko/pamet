@@ -40,6 +40,14 @@ class FSStorageRepository(Repository):
 
         self._process_legacy_pages()
 
+        # Load all pages in cache
+
+        for page_name in self.page_names():
+            page, notes = self.get_page_and_notes(page_name)
+            self.upsert_to_cache(page)
+            for note in notes:
+                self.upsert_to_cache(note)
+
     def _path_for_page(self, page_name):
         name = page_name + V4_FILE_EXT
         return os.path.join(self.path, name)
