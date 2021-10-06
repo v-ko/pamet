@@ -1,6 +1,5 @@
 from typing import Any
-from dataclasses import dataclass, MISSING
-
+from dataclasses import dataclass, MISSING, Field
 
 entity_library = {}
 
@@ -57,12 +56,22 @@ def _apply_dataclass_and_process_properties(entity_class):
     # Apply the dataclass decorator manually
     entity_class = dataclass(entity_class)
 
-    # Replace the property attributes with the property objects
     for prop in processed_props:
-        if not prop.property_object:
-            continue
+        # Replace the property attributes with the property objects
+        if prop.property_object:
+            setattr(entity_class, prop.name, prop.property_object)
 
-        setattr(entity_class, prop.name, prop.property_object)
+        # Set the default value to the private var (with leading underscore)
+        # if one has been specified (as it might be used by the property methods)
+        if prop.default_value is not MISSING:
+            # If the attribute is defined with dataclass.field() - get the
+            # default value from there
+            if isinstance(prop.default_value, Field):
+                default_val = prop.default_value.default
+            else:
+                default_val = prop.default_value
+
+            setattr(entity_class, '_' + prop.name, default_val)
 
     return entity_class
 

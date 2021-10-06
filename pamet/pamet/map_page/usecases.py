@@ -162,7 +162,7 @@ def delete_selected_notes(map_page_view_id: str):
 
     for nc_id in map_page_view_state.selected_nc_ids:
         ncs = gui.view_state(nc_id)
-        pamet.delete_note(ncs.note)
+        misli.remove(ncs.note)
 
 
 @action('map_page.start_notes_resize')
@@ -197,11 +197,12 @@ def resize_note_views(
 
 @action('map_page.resize_notes')
 def resize_notes(new_size: list, page_id: str, note_ids: list):
+    page = pamet.page(page_id)
     for note_id in note_ids:
-        note = pamet.note(page_id, note_id)
+        note = page.note(note_id)
 
         note.set_size(new_size)
-        pamet.update_note(note)
+        misli.update(note)
 
 
 @action('map_page.stop_notes_resize')
@@ -237,7 +238,7 @@ def note_drag_nc_position_update(
 
     for nc_id in nc_ids:
         ncs = gui.view_state(nc_id)
-        note = pamet.note(ncs.note.page_id, ncs.note.id)
+        note = misli.find_one(gid=ncs.note.gid())
 
         ncs.note.x = note.x + d.x()
         ncs.note.y = note.y + d.y()
@@ -252,12 +253,12 @@ def stop_note_drag(map_page_view_id: str, nc_ids: list, delta: list):
     d = Point2D(*delta)
     for nc_id in nc_ids:
         ncs = gui.view_state(nc_id)
-        note = pamet.note(ncs.note.page_id, ncs.note.id)
+        note = misli.find_one(gid=ncs.note.gid())
 
         note.x += d.x()
         note.y += d.y()
 
-        pamet.update_note(note)
+        misli.update(note)
 
     map_page_view_state.note_drag_active = False
     gui.update_state(map_page_view_state)
@@ -303,7 +304,7 @@ def color_selected_notes(
 
         note.color = color
         note.background_color = background_color
-        pamet.update_note(note)
+        misli.update(note)
 
     map_page_view_state.selected_nc_ids.clear()
     misli.gui.update_state(map_page_view_state)

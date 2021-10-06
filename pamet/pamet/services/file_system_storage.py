@@ -33,7 +33,7 @@ class FSStorageRepository(Repository):
         self._page_ids = []
 
         self._entity_cache = {}
-        self._entity_cache_by_parent = defaultdict(list)
+        self._entity_cache_by_parent = defaultdict(set)
 
         self.upserted_pages = set()
         self.removed_pages = set()
@@ -66,7 +66,7 @@ class FSStorageRepository(Repository):
     def upsert_to_cache(self, entity: Entity):
         self._entity_cache[entity.gid()] = entity
         if entity.parent_gid():
-            self._entity_cache_by_parent[entity.parent_gid()].append(
+            self._entity_cache_by_parent[entity.parent_gid()].add(
                 entity.gid())
 
     def remove_from_cache(self, entity: Entity):

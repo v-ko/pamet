@@ -25,7 +25,7 @@ class Note(Entity):
         default_factory=lambda: DEFAULT_COLOR)
     background_color: tuple = field(
         default_factory=lambda: DEFAULT_BG_COLOR)
-    content: dict = field(default_factory=dict)
+    _content: dict = field(default_factory=dict)
     _time_created: datetime = field(
         default_factory=lambda: datetime.fromtimestamp(0))
     _time_modified: datetime = field(
@@ -40,6 +40,18 @@ class Note(Entity):
 
     def parent_gid(self):
         return self.page_id
+
+    @property
+    def content(self):
+        return self._content
+
+    @content.setter
+    def content(self, new_content):
+        if new_content == self._content:
+            return
+
+        self.time_modified = datetime.now()
+        self._content = new_content
 
     def rect(self) -> Rectangle:
         return Rectangle(self.x, self.y, self.width, self.height)

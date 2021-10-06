@@ -26,7 +26,7 @@ def test_fs_repo_CRUD(fs_repo):
     assert (test_page.state(), note_states) == (page.state(), [])
 
     note = Note(page_id=page.id, text='test text')
-    pamet.add_note(note)
+    misli.insert(note)
     fs_repo.update_page(page, [note])
 
     test_page, test_notes = fs_repo.get_page_and_notes(page.id)

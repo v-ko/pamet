@@ -51,6 +51,7 @@ def finish_creating_note(edit_view_id: str, note: Note):
     gui.remove_view(edit_view)
     gui.update_state(tab_state)
 
+
 @action('notes.start_editing_note')
 def start_editing_note(
         tab_view_id: str, note_component_id: str, position_coords: list):
@@ -63,7 +64,7 @@ def start_editing_note(
     if tab_state.edit_view_id:
         abort_editing_note(tab_state.edit_view_id)
 
-    edit_view = pamet.gui.create_and_bind_edit_view(tab_view_id, note)
+    edit_view = pamet.create_and_bind_edit_view(tab_view_id, note)
     tab_state.edit_view_id = edit_view.id
     edit_view_state = gui.view_state(edit_view.id)
     edit_view_state.display_position = position
@@ -79,7 +80,7 @@ def finish_editing_note(edit_view_id: str, note: Note):
     tab_state = tab_view.state
     tab_state.edit_view_id = None
 
-    pamet.update_note(note)
+    misli.update(note)
     gui.remove_view(edit_view)
     gui.update_state(tab_state)
     # autosize_note(note_component_id)

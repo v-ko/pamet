@@ -1,3 +1,4 @@
+import misli
 from misli import gui
 from misli.gui.actions_library import action
 
@@ -12,10 +13,10 @@ def new_browser_window_ensure_page():
     if 'home_page_id' in desktop_config:
         raise NotImplementedError()  # Load from id/url
 
-    pages = pamet.pages()
+    pages = list(pamet.pages())
     if not pages:
         page = MapPage(name='notes')
-        pamet.add_page(page)
+        misli.insert(page)
     else:
         page = pages[0]
 
@@ -52,7 +53,7 @@ def new_browser_tab(browser_window_id: str, page_id: str):
 @action('tab_go_to_page')
 def tab_go_to_page(tab_component_id, page_id):
     page = pamet.page(page_id)
-    page_view = pamet.gui.create_and_bind_page_view(
+    page_view = pamet.create_and_bind_page_view(
         page.id, parent_id=tab_component_id)
 
     page_view_state = gui.view_state(page_view.id)

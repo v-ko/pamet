@@ -36,18 +36,13 @@ class View:
             parent_id (str): The parent id. Can be none if this view is a root
             initial_state (Entity): The view model should be an Entity subclass
         """
-        self._id = get_new_id()  # Generate the ViewModel.id(==View.id)
-        initial_state.id = self.id
+        self.id = initial_state.id
         self.parent_id = parent_id
 
         gui.add_view(self, initial_state)
 
     def __repr__(self):
         return '<%s id=%s>' % (type(self).__name__, self.id)
-
-    @property
-    def id(self) -> str:
-        return self._id
 
     @property
     def state(self) -> ViewState:
