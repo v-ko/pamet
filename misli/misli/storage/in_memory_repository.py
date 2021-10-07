@@ -1,5 +1,5 @@
 from pamet.model import Page
-from .repository import Repository
+from misli.storage.repository import Repository
 
 from misli import get_logger
 log = get_logger(__name__)

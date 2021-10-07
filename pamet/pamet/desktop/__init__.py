@@ -1,3 +1,5 @@
 from pamet.desktop.app import DesktopApp
-from pamet.desktop.browser_window import BrowserWindowView
-from pamet.desktop.browser_tab import BrowserTabView
+
+# Force view registration
+from pamet.views.map_page.widget import MapPageViewWidget
+from pamet.views.note.text.widget import TextNoteViewWidget

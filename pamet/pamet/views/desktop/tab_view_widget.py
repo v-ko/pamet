@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 from PySide6.QtCore import Qt
 
@@ -17,7 +15,7 @@ class BrowserTabViewState(ViewState):
 
 
 @register_view_type
-class BrowserTabView(QWidget, View):
+class BrowserTabViewWidget(QWidget, View):
     def __init__(self, parent_id):
         QWidget.__init__(self)
         View.__init__(

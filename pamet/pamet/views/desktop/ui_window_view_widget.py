@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'browser_window.ui'
+## Form generated from reading UI file 'window_view_widget.ui'
 ##
 ## Created by: Qt User Interface Compiler version 5.15.2
 ##

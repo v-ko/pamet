@@ -1,12 +1,9 @@
-from dataclasses import dataclass
-
-
 from misli.basic_classes import Point2D
 from misli.gui import wrap_and_register_view_state_type
-from pamet.note_components.base_note_view import NoteView, NoteViewState
+from pamet.views.note.base_note_view import NoteView, NoteViewState
 
 from pamet.model import Note
-from pamet.note_components import usecases
+from pamet.actions import note
 
 
 @wrap_and_register_view_state_type
@@ -29,4 +26,4 @@ class TextNoteEditView(NoteView):
         return self.state.note.copy()
 
     def _handle_esc_shortcut(self):
-        usecases.abort_editing_note(self.id)
+        note.abort_editing_note(self.id)

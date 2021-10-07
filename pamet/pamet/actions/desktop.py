@@ -3,8 +3,10 @@ from misli import gui
 from misli.gui.actions_library import action
 
 import pamet
-from pamet.map_page.entity import MapPage
+from pamet.model.map_page import MapPage
 from pamet.desktop.config import get_config
+from pamet.views.desktop.window_view_widget import BrowserWindowView
+from pamet.views.desktop.tab_view_widget import BrowserTabViewWidget
 
 
 @action('desktop.new_browser_window_ensure_page')
@@ -25,10 +27,8 @@ def new_browser_window_ensure_page():
 
 @action('desktop.new_browser_window')
 def new_browser_window(page_id: str):
-    app = list(gui.find_views(class_name='DesktopApp'))[0]
-
-    window_view_class = gui.view_library.get_view_class('BrowserWindowView')
-    window = window_view_class(parent_id=app.id)
+    window: BrowserWindowView = gui.create_view(
+        parent_id=None, view_class_name=BrowserWindowView.__name__)
 
     new_browser_tab(window.id, page_id)
 
@@ -41,11 +41,8 @@ def close_browser_window(browser_window_id: str):
 
 @action('desktop.new_browser_tab')
 def new_browser_tab(browser_window_id: str, page_id: str):
-    # tab_view = gui.create_view(
-    #     obj_class='BrowserTab', parent_id=browser_window_id)
-
-    tab_view_class = gui.view_library.get_view_class('BrowserTabView')
-    tab_view = tab_view_class(parent_id=browser_window_id)
+    tab_view: BrowserTabViewWidget = gui.create_view(
+        parent_id=browser_window_id, view_class_name=BrowserTabViewWidget.__name__)
 
     tab_go_to_page(tab_view.id, page_id)
 

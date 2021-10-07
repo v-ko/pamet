@@ -138,7 +138,7 @@ def create_view(parent_id,
                 view_class_name: str = '',
                 view_class_metadata_filter: dict = None,
                 mapped_entity: Entity = None):
-    # state_update_dict = state_update_dict or {}
+    view_class_metadata_filter = view_class_metadata_filter or {}
     view_class = misli.gui.view_library.get_view_class(
         view_class_name, **view_class_metadata_filter)
     _view: View = view_class(parent_id=parent_id)
@@ -172,7 +172,7 @@ def view(id: str) -> Union[View, None]:
     return _views[id]
 
 
-def previous_view_state(view_id: str) -> Union[Entity, None]:
+def previous_view_state(view_id: str) -> Union[ViewState, None]:
     """Get a copy of the view model corresponding to the view with the given id.
 
     This function returns a copy of the view model that was last dispatched to
@@ -192,7 +192,7 @@ def previous_view_state(view_id: str) -> Union[Entity, None]:
     return _view_state.copy()
 
 
-def view_state(view_id: str) -> Union[Entity, None]:
+def view_state(view_id: str) -> Union[ViewState, None]:
     """Get a copy of the view model corresponding to the view with the given id.
 
     Mind that if we're in the middle of a user action this model can be updated,
@@ -211,7 +211,7 @@ def view_state(view_id: str) -> Union[Entity, None]:
     return _view_state.copy()
 
 
-def displayed_view_state(view_id: str) -> Union[Entity, None]:
+def displayed_view_state(view_id: str) -> Union[ViewState, None]:
     """Get the last displayed view model for the view with id == view_id.
 
     This is the last copy of the view model that has been passed to the View

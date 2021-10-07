@@ -1,5 +1,5 @@
 from enum import Enum
-from dataclasses import dataclass, field
+from dataclasses import field
 
 import misli
 
@@ -12,12 +12,11 @@ from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from pamet.constants import INITIAL_EYE_Z
 from pamet.model import Note
-from pamet.note_components.text.entity import TextNote
+from pamet.model.text_note import TextNote
 
-from pamet.note_components import usecases as notes_usecases
-from pamet.map_page import usecases
-from pamet.map_page.viewport import Viewport
-from pamet.map_page.entity import MapPage
+from pamet.actions import map_page, note as notes_usecases
+from pamet.views.map_page.viewport import Viewport
+from pamet.model.map_page import MapPage
 
 log = misli.get_logger(__name__)
 
@@ -157,11 +156,7 @@ class MapPageView(View):
         return intersecting[0]
 
     def resize_circle_intersect(self, position: Point2D):
-        state = self.state
         for nc in self.get_children():
-            if nc.id not in state.selected_nc_ids:
-                continue
-
             unprojected_pos = self.viewport.unproject_point(position)
             resize_circle_center = nc.note.rect().bottom_right()
 
@@ -170,7 +165,7 @@ class MapPageView(View):
                 return nc
 
     def handle_delete_shortcut(self):
-        usecases.delete_selected_notes(self.id)
+        map_page.delete_selected_notes(self.id)
 
     def handle_left_mouse_long_press(self, mouse_pos: Point2D):
         if self.state.note_resize_active:
@@ -178,7 +173,7 @@ class MapPageView(View):
 
         ncs_under_mouse = self.get_note_views_at(mouse_pos)
         if ncs_under_mouse:
-            usecases.start_note_drag(self.id, mouse_pos.as_tuple())
+            map_page.start_note_drag(self.id, mouse_pos.as_tuple())
 
     def handle_left_mouse_press(self, mouse_pos: Point2D):
         self._mouse_position_on_left_press = mouse_pos
@@ -195,13 +190,13 @@ class MapPageView(View):
         resize_nc = self.resize_circle_intersect(mouse_pos)
 
         if ctrl_pressed and shift_pressed:
-            usecases.start_drag_select(self.id, mouse_pos.as_tuple())
+            map_page.start_drag_select(self.id, mouse_pos.as_tuple())
             return
 
         if ctrl_pressed:
             if nc_under_mouse:
                 nc_selected = nc_under_mouse.id in self.state.selected_nc_ids
-                usecases.update_note_selections(
+                map_page.update_note_selections(
                     self.id, {nc_under_mouse.id: not nc_selected})
 
         # Clear selection (or reduce it to the note under the mouse)
@@ -209,20 +204,20 @@ class MapPageView(View):
             if resize_nc:
                 nc_under_mouse = resize_nc
 
-            usecases.clear_note_selection(self.id)
+            map_page.clear_note_selection(self.id)
 
             if nc_under_mouse:
-                usecases.update_note_selections(
+                map_page.update_note_selections(
                     self.id, {nc_under_mouse.id: True})
 
         # Check for resize initiation
         if resize_nc:
             if resize_nc.id not in self.state.selected_nc_ids:
-                usecases.update_note_selections(self.id, {resize_nc.id: True})
+                map_page.update_note_selections(self.id, {resize_nc.id: True})
 
             resize_circle_center = resize_nc.note.rect().bottom_right()
             rcc_projected = self.viewport.project_point(resize_circle_center)
-            usecases.start_notes_resize(
+            map_page.start_notes_resize(
                 self.id, resize_nc.note, mouse_pos, rcc_projected)
 
             return
@@ -234,21 +229,21 @@ class MapPageView(View):
         mode = state.mode()
 
         if state.drag_select_active:
-            usecases.stop_drag_select(self.id)
+            map_page.stop_drag_select(self.id)
 
         elif state.note_resize_active:
             new_size = self._new_note_size_on_resize(mouse_pos)
-            usecases.stop_notes_resize(
+            map_page.stop_notes_resize(
                 self.id, new_size, state.selected_nc_ids)
 
         elif state.note_drag_active:
             pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
             pos_delta /= self.viewport.height_scale_factor()
-            usecases.stop_note_drag(
+            map_page.stop_note_drag(
                 self.id, state.selected_nc_ids, pos_delta.as_tuple())
 
         elif mode == MapPageMode.DRAG_NAVIGATION:
-            usecases.stop_drag_navigation(self.id)
+            map_page.stop_drag_navigation(self.id)
 
     def _new_note_size_on_resize(self, new_mouse_pos: Point2D) -> Point2D:
         mouse_delta = new_mouse_pos - self.state.note_resize_click_position
@@ -266,7 +261,7 @@ class MapPageView(View):
         ncs_in_selection = self.get_note_views_in_area(selection_rect)
         drag_selected_nc_ids = [nc.id for nc in ncs_in_selection]
 
-        usecases.update_drag_select(
+        map_page.update_drag_select(
             self.id, selection_rect.as_tuple(), drag_selected_nc_ids)
 
     def handle_mouse_move(self, mouse_pos: Point2D):
@@ -276,7 +271,7 @@ class MapPageView(View):
 
         if mode == MapPageMode.NONE:
             if self._left_mouse_is_pressed:
-                usecases.start_mouse_drag_navigation(
+                map_page.start_mouse_drag_navigation(
                     self.id, self._mouse_position_on_left_press, delta)
 
         if mode == MapPageMode.DRAG_SELECT:
@@ -284,17 +279,17 @@ class MapPageView(View):
 
         elif mode == MapPageMode.NOTE_RESIZE:
             new_size = self._new_note_size_on_resize(mouse_pos)
-            usecases.resize_note_views(
+            map_page.resize_note_views(
                 self.id, new_size.as_tuple(), state.selected_nc_ids)
 
         elif mode == MapPageMode.NOTE_DRAG:
             pos_delta = mouse_pos - self._mouse_position_on_left_press
             pos_delta /= self.viewport.height_scale_factor()
-            usecases.note_drag_nc_position_update(
+            map_page.note_drag_nc_position_update(
                 self.id, state.selected_nc_ids, pos_delta.as_tuple())
 
         elif mode == MapPageMode.DRAG_NAVIGATION:
-            usecases.mouse_drag_navigation_move(self.id, delta)
+            map_page.mouse_drag_navigation_move(self.id, delta)
 
     def handle_mouse_scroll(self, steps: int):
         delta = MOVE_SPEED * steps
@@ -303,7 +298,7 @@ class MapPageView(View):
         new_height = max(MIN_HEIGHT_SCALE,
                          min(current_height - delta, MAX_HEIGHT_SCALE))
 
-        usecases.set_viewport_height(self.id, new_height)
+        map_page.set_viewport_height(self.id, new_height)
 
     def handle_left_mouse_double_click(self, mouse_pos: Point2D):
         nc = self.get_note_view_at(mouse_pos)
@@ -323,4 +318,4 @@ class MapPageView(View):
                 self.parent_id, mouse_pos.as_tuple(), note.asdict())
 
     def handle_resize_event(self, width, height):
-        usecases.resize_page(self.id, width, height)
+        map_page.resize_page(self.id, width, height)

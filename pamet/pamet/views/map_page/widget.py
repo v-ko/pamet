@@ -14,8 +14,8 @@ from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from pamet.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
 from pamet.constants import LONG_PRESS_TIMEOUT
 
-from pamet.map_page import usecases
-from pamet.map_page.component import MapPageView
+from pamet.actions import map_page
+from pamet.views.map_page.view import MapPageView
 
 log = misli.get_logger(__name__)
 
@@ -64,31 +64,31 @@ class MapPageViewWidget(QWidget, MapPageView):
 
         color_notes_blue = QShortcut(QKeySequence('1'), self)
         color_notes_blue.activated.connect(
-            lambda: usecases.color_selected_notes(
+            lambda: map_page.color_selected_notes(
                 self.id, color=[0, 0, 1, 1], background_color=[0, 0, 1, 0.1]))
         color_notes_green = QShortcut(QKeySequence('2'), self)
         color_notes_green.activated.connect(
-            lambda: usecases.color_selected_notes(
+            lambda: map_page.color_selected_notes(
                 self.id,
                 color=[0, 0.64, 0.235, 1],
                 background_color=[0, 1, 0, 0.1]))
         color_notes_red = QShortcut(QKeySequence('3'), self)
         color_notes_red.activated.connect(
-            lambda: usecases.color_selected_notes(
+            lambda: map_page.color_selected_notes(
                 self.id, color=[1, 0, 0, 1], background_color=[1, 0, 0, 0.1]))
         color_notes_gray = QShortcut(QKeySequence('4'), self)
         color_notes_gray.activated.connect(
-            lambda: usecases.color_selected_notes(
+            lambda: map_page.color_selected_notes(
                 self.id, color=[0, 0, 0, 1], background_color=[0, 0, 0, 0.1]))
         remove_note_background = QShortcut(QKeySequence('5'), self)
         remove_note_background.activated.connect(
-            lambda: usecases.color_selected_notes(
+            lambda: map_page.color_selected_notes(
                 self.id, background_color=[0, 0, 0, 0]))
 
         select_all_shortcut = QShortcut(
             QKeySequence(Qt.CTRL + Qt.Key_A), self)
         select_all_shortcut.activated.connect(
-            lambda: usecases.select_all_notes(self.id))
+            lambda: map_page.select_all_notes(self.id))
 
         # Widget config
         pal = self.palette()

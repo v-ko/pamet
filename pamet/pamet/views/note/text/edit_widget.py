@@ -5,11 +5,9 @@ from PySide6.QtCore import Qt, QRectF, QPointF
 from misli import gui
 from misli.gui.view_library import register_view_type
 
-from pamet.note_components.text.edit_view import TextNoteEditView
-from pamet.note_components.text.edit_view import TextNoteEditViewState
-from pamet.note_components.text.ui_edit_widget import Ui_TextNoteEditViewWidget
-
-from pamet.note_components import usecases
+from pamet.note_components.text import TextNoteEditView
+from pamet.note_components.text import TextNoteEditViewState
+from pamet.note_components.text import Ui_TextNoteEditViewWidget
 
 import misli
 log = misli.get_logger(__name__)
@@ -57,6 +55,6 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         note.text = text.strip()
 
         if model.create_mode:
-            usecases.finish_creating_note(self.id, note)
+            note.finish_creating_note(self.id, note)
         else:
-            usecases.finish_editing_note(self.id, note)
+            note.finish_editing_note(self.id, note)

@@ -1,2 +1,0 @@
-from pamet.note_components.text.widget import TextNoteViewWidget
-from pamet.note_components.text.edit_widget import TextNoteEditViewWidget

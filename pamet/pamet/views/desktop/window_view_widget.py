@@ -1,12 +1,12 @@
-from dataclasses import dataclass, field
+from dataclasses import field
 from PySide6.QtWidgets import QMainWindow, QPushButton
 from PySide6.QtGui import QIcon
 
 from misli.gui import ViewState, wrap_and_register_view_state_type
 from misli.gui import View, register_view_type
-from pamet.desktop import usecases
+from pamet.actions import desktop
 
-from .ui_browser_window import Ui_BrowserWindow
+from pamet.views.desktop.ui_window_view_widget import Ui_BrowserWindow
 
 
 @wrap_and_register_view_state_type
@@ -57,4 +57,4 @@ class BrowserWindowView(QMainWindow, View):
         pass
 
     def closeEvent(self, close_event):
-        usecases.close_browser_window(self.id)
+        desktop.close_browser_window(self.id)

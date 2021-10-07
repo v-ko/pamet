@@ -2,7 +2,7 @@ from typing import List, Union
 
 import misli
 from misli import Entity, Change
-from pamet.services.repository import Repository
+from misli.storage.repository import Repository
 from misli.gui import ENTITY_CHANGE_CHANNEL
 
 log = misli.get_logger(__name__)
