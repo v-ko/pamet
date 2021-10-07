@@ -202,6 +202,9 @@ class FSStorageRepository(Repository):
             log.error('Exception %s while loading page' % e, path)
             return None
 
+        # TODO REMOVE
+        page_state['type_name'] = 'Page'
+
         note_states = page_state.pop('note_states', [])
         notes = []
         for ns in note_states:

@@ -3,7 +3,7 @@ from misli import gui
 from misli.gui.actions_library import action
 
 import pamet
-from pamet.model.map_page import MapPage
+from pamet.model import Page
 from pamet.desktop.config import get_config
 from pamet.views.desktop.window_view_widget import BrowserWindowView
 from pamet.views.desktop.tab_view_widget import BrowserTabViewWidget
@@ -17,7 +17,7 @@ def new_browser_window_ensure_page():
 
     pages = list(pamet.pages())
     if not pages:
-        page = MapPage(name='notes')
+        page = Page(name='notes')
         misli.insert(page)
     else:
         page = pages[0]
@@ -49,7 +49,7 @@ def new_browser_tab(browser_window_id: str, page_id: str):
 
 @action('tab_go_to_page')
 def tab_go_to_page(tab_component_id, page_id):
-    page = pamet.page(page_id)
+    page = pamet.page(gid=page_id)
     page_view = pamet.create_and_bind_page_view(
         page.id, parent_id=tab_component_id)
 
@@ -58,6 +58,12 @@ def tab_go_to_page(tab_component_id, page_id):
 
     tab_view_state = gui.view_state(tab_component_id)
     tab_view_state.page_view_id = page_view.id
+    tab_view_state.name = page.name
 
     gui.update_state(tab_view_state)
     gui.update_state(page_view_state)
+
+
+@action('tab_go_to_default_page')
+def tab_go_to_default_page(tab_component_id):
+    pass

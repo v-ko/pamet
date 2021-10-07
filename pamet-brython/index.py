@@ -23,7 +23,7 @@ def main():
     misli.insert(id='test_page')
     misli.insert(
         page_id='test_page', text='Test that shit out')
-    print(pamet.page('test_page').notes()[0].asdict())
+    print(pamet.page(gid='test_page').notes()[0].asdict())
 
 
 if __name__ == '__main__':

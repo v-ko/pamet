@@ -14,6 +14,7 @@ from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from pamet.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
 from pamet.constants import LONG_PRESS_TIMEOUT
 
+from pamet.model import Page
 from pamet.actions import map_page
 from pamet.views.map_page.view import MapPageView
 
@@ -46,7 +47,7 @@ def image_cache_rect_unprojected(display_rect: Rectangle):
     return cache_rect
 
 
-@register_view_type(entity_type='MapPage')
+@register_view_type(entity_type=Page.__name__)
 class MapPageViewWidget(QWidget, MapPageView):
     def __init__(self, parent_id):
         QWidget.__init__(self)

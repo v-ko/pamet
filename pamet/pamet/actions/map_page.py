@@ -197,7 +197,7 @@ def resize_note_views(
 
 @action('map_page.resize_notes')
 def resize_notes(new_size: list, page_id: str, note_ids: list):
-    page = pamet.page(page_id)
+    page = pamet.page(gid=page_id)
     for note_id in note_ids:
         note = page.note(note_id)
 

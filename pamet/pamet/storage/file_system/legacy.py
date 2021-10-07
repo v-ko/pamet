@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from misli.basic_classes import Point2D
+from pamet.model import Page
 from pamet.model.text_note import TextNote
 
 
@@ -79,7 +80,7 @@ def _convert_v3_to_v4(json_path):
 
     note_states = {n['id']: n for n in json_object.pop('notes')}
 
-    json_object['type_name'] = 'MapPage'
+    json_object['type_name'] = Page.__name__
     json_object['note_states'] = note_states
 
     return json_object

@@ -11,12 +11,11 @@ from pamet.constants import RESIZE_CIRCLE_RADIUS
 from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from pamet.constants import INITIAL_EYE_Z
-from pamet.model import Note
+from pamet.model import Note, Page
 from pamet.model.text_note import TextNote
 
 from pamet.actions import map_page, note as notes_usecases
 from pamet.views.map_page.viewport import Viewport
-from pamet.model.map_page import MapPage
 
 log = misli.get_logger(__name__)
 
@@ -58,7 +57,7 @@ class MapPageViewState(ViewState):
         self.viewport = Viewport(self)
 
         if not self.mapped_entity:
-            self.mapped_entity = MapPage()
+            self.mapped_entity = Page()
 
     @property
     def page(self):

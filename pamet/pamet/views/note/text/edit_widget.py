@@ -2,14 +2,13 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import Qt, QRectF, QPointF
 
-from misli import gui
-from misli.gui.view_library import register_view_type
-
-from pamet.note_components.text import TextNoteEditView
-from pamet.note_components.text import TextNoteEditViewState
-from pamet.note_components.text import Ui_TextNoteEditViewWidget
-
 import misli
+from misli.gui.view_library import register_view_type
+from pamet.actions import note as note_actions
+from pamet.views.note.text.edit_view import TextNoteEditView
+from pamet.views.note.text.edit_view import TextNoteEditViewState
+from pamet.views.note.text.ui_edit_widget import Ui_TextNoteEditViewWidget
+
 log = misli.get_logger(__name__)
 
 
@@ -39,7 +38,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
 
-        tab_component = gui.view(self.parent_id)
+        tab_component = misli.gui.view(self.parent_id)
 
         top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
         display_rect.moveTopLeft(top_left)
@@ -55,6 +54,6 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         note.text = text.strip()
 
         if model.create_mode:
-            note.finish_creating_note(self.id, note)
+            note_actions.finish_creating_note(self.id, note)
         else:
-            note.finish_editing_note(self.id, note)
+            note_actions.finish_editing_note(self.id, note)

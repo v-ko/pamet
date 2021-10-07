@@ -12,24 +12,15 @@ log = get_logger(__name__)
 
 # -------------Pages CRUD-------------
 @log.traced
-def pages():
-    return misli.find(type_name='MapPage')
-
-
-def page(page_id: str):
-    return misli.find_one(gid=page_id)
+def pages(**filter):
+    filter['type_name'] = Page.__name__
+    return misli.find(**filter)
 
 
 @log.traced
-def find_pages(**props):
-    props['type_name'] = 'MapPage'
-    return misli.find(**props)
-
-
-@log.traced
-def find_page(**props):
-    props['type_name'] = 'MapPage'
-    return misli.find_one(**props)
+def page(**filter):
+    filter['type_name'] = Page.__name__
+    return misli.find_one(**filter)
 
 
 # -------------Notes CRUD-------------
@@ -47,7 +38,7 @@ def create_note(**props):
 # GUI helpers
 @log.traced
 def create_and_bind_page_view(page_id: str, parent_id: str):
-    _page = page(page_id)
+    _page = page(gid=page_id)
     page_view = misli.gui.create_view(
         parent_id,
         view_class_metadata_filter=dict(entity_type=_page.type_name),
