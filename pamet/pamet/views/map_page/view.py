@@ -8,7 +8,7 @@ from misli.basic_classes import Point2D, Rectangle
 from misli.gui.view_library.view import View
 
 from pamet.constants import RESIZE_CIRCLE_RADIUS
-from pamet.desktop.helpers import control_is_pressed, shift_is_pressed
+from pamet.desktop_app.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 from pamet.constants import INITIAL_EYE_Z
 from pamet.model import Note, Page

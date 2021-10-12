@@ -1,7 +1,6 @@
 from __future__ import annotations
 from typing import Union, List
 
-from misli.helpers import get_new_id
 from misli import Entity, gui
 from misli import get_logger
 
@@ -28,7 +27,9 @@ class View:
        which is invoked by misli.gui on each relevant view update with three
     arguments: children_added, chidren_removed and children_updated.
     """
-    def __init__(self, parent_id: Union[str, None], initial_state: Entity):
+    def __init__(self,
+                 parent_id: Union[str, None],
+                 initial_state: Entity = None):
         """Registers the View instance in misli.gui, so that model and child
         updates are received accordingly.
 
@@ -36,6 +37,9 @@ class View:
             parent_id (str): The parent id. Can be none if this view is a root
             initial_state (Entity): The view model should be an Entity subclass
         """
+        if not initial_state:
+            initial_state = ViewState()
+
         self.id = initial_state.id
         self.parent_id = parent_id
 
@@ -46,10 +50,10 @@ class View:
 
     @property
     def state(self) -> ViewState:
-        model = gui.displayed_view_state(self.id)
-        if not model or model.id != self.id:
-            raise Exception('Could not retrieve view model for view %s' % self)
-        return model
+        state = gui.displayed_view_state(self.id)
+        if not state or state.id != self.id:
+            raise Exception('Could not retrieve view state for view %s' % self)
+        return state
 
     @property
     def previous_state(self) -> Entity:
@@ -61,11 +65,9 @@ class View:
     def handle_state_update(self):
         pass
 
-    def handle_child_changes(
-            self,
-            children_added: List[View],
-            children_removed: List[View],
-            children_updated: List[View]):
+    def handle_child_changes(self, children_added: List[View],
+                             children_removed: List[View],
+                             children_updated: List[View]):
         pass
 
     def child(self, child_id: str) -> View:

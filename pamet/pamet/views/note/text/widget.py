@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, QRect
 
 from misli.gui.view_library import register_view_type
 from pamet.views.note.base_note_view import NoteView, NoteViewState
-from pamet.desktop.helpers import elide_text, draw_text_lines
+from pamet.desktop_app.helpers import elide_text, draw_text_lines
 
 
 from misli import get_logger

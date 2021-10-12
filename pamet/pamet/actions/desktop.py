@@ -4,12 +4,12 @@ from misli.gui.actions_library import action
 
 import pamet
 from pamet.model import Page
-from pamet.desktop.config import get_config
+from pamet.desktop_app.config import get_config
 from pamet.views.desktop.window_view_widget import BrowserWindowView
 from pamet.views.desktop.tab_view_widget import BrowserTabViewWidget
 
 
-@action('desktop.new_browser_window_ensure_page')
+@action('desktop_app.new_browser_window_ensure_page')
 def new_browser_window_ensure_page():
     desktop_config = get_config()
     if 'home_page_id' in desktop_config:
@@ -25,7 +25,7 @@ def new_browser_window_ensure_page():
     new_browser_window(page.id)
 
 
-@action('desktop.new_browser_window')
+@action('desktop_app.new_browser_window')
 def new_browser_window(page_id: str):
     window: BrowserWindowView = gui.create_view(
         parent_id=None, view_class_name=BrowserWindowView.__name__)
@@ -33,13 +33,13 @@ def new_browser_window(page_id: str):
     new_browser_tab(window.id, page_id)
 
 
-@action('desktop.close_browser_window')
+@action('desktop_app.close_browser_window')
 def close_browser_window(browser_window_id: str):
     browser_window = gui.view(browser_window_id)
     gui.remove_view(browser_window)
 
 
-@action('desktop.new_browser_tab')
+@action('desktop_app.new_browser_tab')
 def new_browser_tab(browser_window_id: str, page_id: str):
     tab_view: BrowserTabViewWidget = gui.create_view(
         parent_id=browser_window_id, view_class_name=BrowserTabViewWidget.__name__)

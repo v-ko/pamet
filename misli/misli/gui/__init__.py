@@ -38,5 +38,6 @@ from .view_library import register_view_type
 from .view_library.view import View
 from .view_library.view_state import ViewState, wrap_and_register_view_state_type
 from .model_to_view_binder.actions import update_views_from_entity_changes
-
+from .commands_library.command import Command
+from .commands_library import command
 on_entity_changes(update_views_from_entity_changes)

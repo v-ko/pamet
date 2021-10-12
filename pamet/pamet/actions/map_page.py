@@ -4,8 +4,9 @@ import pamet
 
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
-
+from misli.gui.views.context_menu.widget import ContextMenuWidget
 from pamet.model import Note
+from pamet import commands
 
 log = misli.get_logger(__name__)
 
@@ -290,14 +291,6 @@ def color_selected_notes(
 
     for nc_id in map_page_view_state.selected_nc_ids:
         note = gui.view(nc_id).note
-        # for channel, index in [(r, 0), (g, 1), (b, 2), (bg_alpha, 3)]:
-        #     if channel is None:
-        #         channel = note.color(index)
-        #
-        # r = note.color[0] if r is None else r
-        # g = note.color[0] if g is None else g
-        # b = note.color[0] if b is None else b
-        # bg_alpha = note.color[0] if bg_alpha is None else bg_alpha
 
         color = color or note.color
         background_color = background_color or note.background_color
@@ -308,3 +301,12 @@ def color_selected_notes(
 
     map_page_view_state.selected_nc_ids.clear()
     misli.gui.update_state(map_page_view_state)
+
+
+@action('map_page.open_context_menu')
+def open_context_menu(page_view_id: str, position: Point2D):
+    entries = {
+        'New note': commands.create_new_note
+    }
+    context_menu = ContextMenuWidget(page_view_id, entries, position)
+    # Add is called in the constructor

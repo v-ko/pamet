@@ -23,6 +23,11 @@ misli.add_channel(ACTIONS_LOG_CHANNEL)
 misli.add_channel(ENTITY_CHANGE_CHANNEL)
 
 
+def configure_for_qt():
+    from .qt_main_loop import QtMainLoop
+    misli.set_main_loop(QtMainLoop())
+
+
 def execute_action_queue(actions: List[Action]):
     for action in actions:
         execute_action(action)
@@ -67,10 +72,6 @@ def ensure_context():
         raise Exception(
             'State changes can only happen in functions decorated with the '
             'misli.gui.actions_library.action decorator')
-
-
-# def broadcast_change(change: Change):
-#     misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
 
 
 # Action channel interface

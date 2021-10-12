@@ -1,4 +1,4 @@
-from pamet.desktop.app import DesktopApp
+from pamet.desktop_app.app import DesktopApp
 
 # Force view registration
 from pamet.views.map_page.widget import MapPageViewWidget

@@ -4,8 +4,8 @@ import signal
 import misli
 from misli.gui.qt_main_loop import QtMainLoop
 
-from pamet.desktop.app import DesktopApp
-from pamet.desktop.config import get_config
+from pamet.desktop_app.app import DesktopApp
+from pamet.desktop_app.config import get_config
 from pamet.storage import FSStorageRepository
 from pamet.actions.desktop import new_browser_window_ensure_page
 

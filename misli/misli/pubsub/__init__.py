@@ -16,7 +16,7 @@ Example usage with Qt:
     from PySide6.QtWidgets import QApplication
 
     import misli
-    from misli.gui.desktop import QtMainLoop
+    from misli.gui.desktop_app import QtMainLoop
 
     app = QApplication()
     misli.set_main_loop(QtMainLoop())

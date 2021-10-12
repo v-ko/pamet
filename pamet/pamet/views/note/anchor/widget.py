@@ -6,7 +6,7 @@ from misli.gui import ViewState, wrap_and_register_view_state_type
 from misli.gui.view_library import register_view_type
 from pamet.views.note.base_note_view import NoteView
 from pamet.model import Note
-from pamet.desktop.helpers import elide_text, draw_text_lines
+from pamet.desktop_app.helpers import elide_text, draw_text_lines
 
 
 from misli import get_logger

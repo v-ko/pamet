@@ -6,8 +6,8 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     entry_points={
         'console_scripts': [
-            'pamet=pamet.desktop.main:main',
-            'pamet-debug=pamet.desktop.main_debug:main',
+            'pamet=pamet.desktop_app.main:main',
+            'pamet-debug=pamet.desktop_app.main_debug:main',
         ],
     },
     install_requires=['PySide6']

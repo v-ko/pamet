@@ -63,8 +63,11 @@ class Action:
         self.args = args
 
     def __repr__(self):
-        return ('<Action name=%s run_state=%s id=%s>' %
-                (self.name, self.run_state.name, self.id))
+        string = (f'<Action name={self.name} run_state={self.run_state.name} '
+                  f'id={self.id}')
+        if self.duration != -1:
+            string += f'duration={self.duration:.2f}'
+        return string + '>'
 
     def copy(self) -> 'Action':
         return Action(**self.asdict())
