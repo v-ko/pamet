@@ -9,7 +9,7 @@ from misli import Entity, Change
 from misli.logging import BColors
 from misli.helpers import find_many_by_props
 
-from .actions_library import Action, execute_action
+from .actions_library import Action, execute_action, name_for_wrapped_function
 from .view_library.view import View, ViewState
 from .model_to_view_binder.entity_to_view_mapper import EntityToViewMapping
 
@@ -18,14 +18,18 @@ log = misli.get_logger(__name__)
 ACTIONS_QUEUE_CHANNEL = '__ACTIONS_QUEUE__'
 ACTIONS_LOG_CHANNEL = '__ACTIONS_LOG__'
 ENTITY_CHANGE_CHANNEL = '__ENTITY_CHANGES__'
+
 misli.add_channel(ACTIONS_QUEUE_CHANNEL)
 misli.add_channel(ACTIONS_LOG_CHANNEL)
 misli.add_channel(ENTITY_CHANGE_CHANNEL)
 
+STATE_CHANGE_BY_ID_CHANNEL = '__STATE_CHANGES_BY_ID__'
+STATE_CHANGE_BY_PARENT_CHANNEL = '__STATE_CHANGES_BY_PARENT__'
 
-def configure_for_qt():
-    from .qt_main_loop import QtMainLoop
-    misli.set_main_loop(QtMainLoop())
+misli.add_channel(STATE_CHANGE_BY_ID_CHANNEL,
+                  index_key=lambda x: x.last_state().id)
+misli.add_channel(STATE_CHANGE_BY_PARENT_CHANNEL,
+                  index_key=lambda x: x.last_state().parent_id)
 
 
 def execute_action_queue(actions: List[Action]):
@@ -41,6 +45,9 @@ _views_per_parent = {}
 _added_views_per_parent = defaultdict(list)
 _removed_views_per_parent = defaultdict(list)
 _updated_views = set()
+_added_views = set()
+_removed_views = set()
+_last_updates_removed_views = {}
 
 _view_states = {}
 _previous_view_states = {}
@@ -49,11 +56,29 @@ _displayed_view_states = {}
 _action_context_stack = []
 _view_and_parent_update_ongoing = False
 
+_util_provider = None
 mapping = EntityToViewMapping()
+
+
+def util_provider():
+    return _util_provider
+
+
+def set_util_provider(provider):
+    global _util_provider
+    _util_provider = provider
 
 
 def view_and_parent_update_ongoing():
     return _view_and_parent_update_ongoing
+
+
+@contextmanager
+def lock_actions():
+    global _view_and_parent_update_ongoing
+    _view_and_parent_update_ongoing = True
+    yield None
+    _view_and_parent_update_ongoing = False
 
 
 @contextmanager
@@ -64,7 +89,7 @@ def action_context(action):
     # If it's a root action - propagate the state changes to the views (async)
     _action_context_stack.pop()
     if not _action_context_stack:
-        misli.call_delayed(_update_views, 0)
+        misli.call_delayed(_dipatch_state_changes, 0)
 
 
 def ensure_context():
@@ -85,10 +110,11 @@ def log_action_state(action: Action):
 
     green = BColors.OKGREEN
     end = BColors.ENDC
-
-    log.info(
-        'Action %s%s %s%s ARGS=*(%s) KWARGS=**{%s}' %
-        (green, action.run_state.name, action.name, end, args_str, kwargs_str))
+    msg = (f'Action {green}{action.run_state.name} {action.name}{end} '
+           f'ARGS=*({args_str}) KWARGS=**{{{kwargs_str}}}')
+    if action.duration != -1:
+        msg += f' time={action.duration * 1000:.2f}ms'
+    log.info(msg)
 
     misli.dispatch(action, ACTIONS_LOG_CHANNEL)
 
@@ -105,8 +131,15 @@ def on_actions_logged(handler: Callable):
     misli.subscribe(ACTIONS_LOG_CHANNEL, handler)
 
 
+def queue_action(action_func, args=None, kwargs=None):
+    action = Action(name_for_wrapped_function(action_func))
+    action.args = args or []
+    action.kwargs = kwargs or {}
+    misli.dispatch(action, ACTIONS_QUEUE_CHANNEL)
+
+
 def publish_entity_change(change: Change):
-    misli.dispatch(ENTITY_CHANGE_CHANNEL, change)
+    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
 
 
 def on_entity_changes(handler: Callable):
@@ -121,7 +154,8 @@ def add_view(_view: View, initial_state):
     _views[_view.id] = _view
     _views_per_parent[_view.id] = []
     _view_states[_view.id] = initial_state
-    _displayed_view_states[_view.id] = initial_state
+    # _displayed_view_states[_view.id] = initial_state
+    _added_views.add(_view)
 
     if _view.parent_id:
         if _view.parent_id not in _views_per_parent:
@@ -132,22 +166,30 @@ def add_view(_view: View, initial_state):
         _added_views_per_parent[_view.parent_id].append(_view)
         _views_per_parent[_view.parent_id].append(_view)
 
-    misli.call_delayed(_update_views, 0)
+    _view.subscribtions.append(
+        misli.subscribe(STATE_CHANGE_BY_ID_CHANNEL,
+                        _view._handle_state_changes,
+                        index_val=initial_state.gid()))
+
+    _view.subscribtions.append(
+        misli.subscribe(STATE_CHANGE_BY_PARENT_CHANNEL,
+                        _view._handle_children_state_changes,
+                        index_val=initial_state.gid()))
+
+    misli.call_delayed(_dipatch_state_changes, 0)
 
 
 def create_view(parent_id,
                 view_class_name: str = '',
                 view_class_metadata_filter: dict = None,
                 mapped_entity: Entity = None):
+
     view_class_metadata_filter = view_class_metadata_filter or {}
     view_class = misli.gui.view_library.get_view_class(
         view_class_name, **view_class_metadata_filter)
     _view: View = view_class(parent_id=parent_id)
+    add_view(_view, _view.state)
     _view_state = _view.state
-
-    # # Update the view state with the supplied initial data
-    # for key, val in state_update_dict.items():
-    #     setattr(_view_state, key, val)
 
     if mapped_entity:
         _view_state.mapped_entity = mapped_entity.copy()
@@ -173,6 +215,10 @@ def view(id: str) -> Union[View, None]:
     return _views[id]
 
 
+def removed_view(view_id):
+    return _last_updates_removed_views[view_id]
+
+
 def previous_view_state(view_id: str) -> Union[ViewState, None]:
     """Get a copy of the view model corresponding to the view with the given id.
 
@@ -188,7 +234,7 @@ def previous_view_state(view_id: str) -> Union[ViewState, None]:
         there's no model found for that id - the function returns None.
     """
     if view_id not in _previous_view_states:
-        return None
+        return view(view_id)
     _view_state = _previous_view_states[view_id]
     return _view_state.copy()
 
@@ -227,10 +273,7 @@ def displayed_view_state(view_id: str) -> Union[ViewState, None]:
         Entity: A copy of the view model (should be a subclass of Entity). If
         there's no model found for that id - the function returns None.
     """
-    if view_id not in _displayed_view_states:
-        return None
-    _view_state = _displayed_view_states[view_id]
-    return _view_state.copy()
+    return view(view_id).state
 
 
 def view_children(view_id: str) -> List[View]:
@@ -316,7 +359,7 @@ def update_state(new_state: ViewState):
         _previous_view_states[_view.id] = previous_state
 
     _updated_views.add(_view)
-    misli.call_delayed(_update_views, 0)
+    misli.call_delayed(_dipatch_state_changes, 0)
 
 
 def remove_view(_view: View):
@@ -329,8 +372,16 @@ def remove_view(_view: View):
         Exception: If the view provided is not registered with misli.gui
     """
     ensure_context()
+
+    for child in _view.get_children():
+        remove_view(child)
+
+    for sub_id in _view.subscribtions:
+        misli.unsubscribe(sub_id)
+
     _views_per_parent.pop(_view.id)
     _views.pop(_view.id)
+    _removed_views.add(_view)
 
     if _view.parent_id:
         if _view.parent_id not in _views_per_parent:
@@ -339,43 +390,49 @@ def remove_view(_view: View):
                 _view.parent_id)
 
         _views_per_parent[_view.parent_id].remove(_view)
-        _removed_views_per_parent[_view.parent_id].append(_view)
 
 
 # @log.traced
-def _update_views():
-    """An internal function that relays the view state changes to the views
-    once the user action logic has completed exectution.
-    """
-    global _view_and_parent_update_ongoing
-    _view_and_parent_update_ongoing = True  # Restricts action invokation
+def _dipatch_state_changes():
+    global _removed_views
+    global _last_updates_removed_views
 
-    # (added, removed, updated)
-    child_changes_per_parent_id = defaultdict(lambda: ([], [], []))
+    for _view in _added_views:
+        # If the view happens to have been removed later in the same action
+        if _view.id not in _views:
+            continue
+        elif _view in _removed_views:
+            _removed_views.remove(_view)
+
+        misli.dispatch(Change.CREATE(view_state(_view.id)),
+                       STATE_CHANGE_BY_ID_CHANNEL)
+        misli.dispatch(Change.CREATE(view_state(_view.id)),
+                       STATE_CHANGE_BY_PARENT_CHANNEL)
 
     for _view in _updated_views:
-        _displayed_view_states[_view.id] = view_state(_view.id)
-        _view.handle_state_update()
+        # If the view is removed after an update - skip it
+        if _view.id not in _views:
+            continue
+        misli.dispatch(
+            Change.UPDATE(previous_view_state(_view.id), view_state(_view.id)),
+            STATE_CHANGE_BY_ID_CHANNEL)
+        misli.dispatch(
+            Change.UPDATE(previous_view_state(_view.id), view_state(_view.id)),
+            STATE_CHANGE_BY_PARENT_CHANNEL)
 
-        if _view.parent_id:
-            child_changes_per_parent_id[_view.parent_id][2].append(_view)
-
-    for parent_id, added in _added_views_per_parent.items():
-        child_changes_per_parent_id[parent_id][0].extend(added)
-
-    for parent_id, removed in _removed_views_per_parent.items():
-        child_changes_per_parent_id[parent_id][1].extend(removed)
+    for _view in _removed_views:
+        misli.dispatch(Change.DELETE(view_state(_view.id)),
+                       STATE_CHANGE_BY_ID_CHANNEL)
+        misli.dispatch(Change.DELETE(view_state(_view.id)),
+                       STATE_CHANGE_BY_PARENT_CHANNEL)
 
     _updated_views.clear()
-    _added_views_per_parent.clear()
-    _removed_views_per_parent.clear()
+    _added_views.clear()
     _previous_view_states.clear()
 
-    for view_id, changes in child_changes_per_parent_id.items():
-        _view = view(view_id)
-        _view.handle_child_changes(*changes)
-
-    _view_and_parent_update_ongoing = False
+    for _view in _removed_views:
+        _last_updates_removed_views[_view.id] = _view
+    _removed_views.clear()
 
 
 # ----------------Various---------------------

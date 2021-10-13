@@ -113,7 +113,7 @@ class MapPageViewWidget(QWidget, MapPageView):
     def delete_note_view_cache(self, note_view_id):
         del self._cache_per_nc_id[note_view_id]
 
-    def handle_state_update(self):
+    def on_state_update(self):
         previous_state = self.previous_state
         new_model = self.state
 
@@ -129,25 +129,21 @@ class MapPageViewWidget(QWidget, MapPageView):
 
         self.update()
 
-    @log.traced
-    def handle_child_changes(self, added, removed, updated):
-        for note_view in added:
-            note_view.setHidden(True)
-
-        for note_view in removed:
-            self.delete_note_view_cache(note_view.id)
-
-        for note_view in updated:
-            nv_cache = self.note_view_cache(note_view.id)
-            nv_cache.should_rebuild_pcommand_cache = True
-            nv_cache.should_reallocate_image_cache = True
-            nv_cache.should_rerender_image_cache = True
-
+    def on_child_updated(self, child):
+        self.__children[child.id] = child
+        child.setHidden(True)
         self.update()
 
-    def add_child(self, note_view):
-        self.__children[note_view.id] = note_view
-        note_view.setHidden(True)
+    def on_child_updated(self, child):
+        nv_cache = self.note_view_cache(child.id)
+        nv_cache.should_rebuild_pcommand_cache = True
+        nv_cache.should_reallocate_image_cache = True
+        nv_cache.should_rerender_image_cache = True
+        self.update()
+
+    def on_child_removed(self, child):
+        self.delete_note_view_cache(child.id)
+        self.update()
 
     def prep_command_cache_for_child(self, child):
         # In order to be pixel perfect - relay through QPicture

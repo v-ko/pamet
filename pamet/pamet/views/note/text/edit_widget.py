@@ -26,7 +26,9 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.ui.ok_button.clicked.connect(self._handle_ok_click)
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
 
-    def handle_state_update(self):
+        self.show()
+
+    def on_state_update(self):
         self.update()
 
     def update(self):

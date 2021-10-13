@@ -37,14 +37,14 @@ it's expected that the subscribed callables are light, since the main purpose
 of misli is GUI rendering and blocking the main loop would cause freezing.
 """
 
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Any
 from collections import defaultdict
 from enum import Enum
 from copy import deepcopy
+from dataclasses import MISSING
 
 from misli.pubsub.main_loop import MainLoop, NoMainLoop
 from misli import get_logger
-
 
 log = get_logger(__name__)
 
@@ -66,11 +66,10 @@ def main_loop() -> MainLoop:
     return _main_loop
 
 
-def call_delayed(
-        callback: Callable,
-        delay: float = 0,
-        args: list = None,
-        kwargs: dict = None):
+def call_delayed(callback: Callable,
+                 delay: float = 0,
+                 args: list = None,
+                 kwargs: dict = None):
     """Call a function with a delay on the main loop.
 
     Args:
@@ -83,22 +82,13 @@ def call_delayed(
     args = args or []
     kwargs = kwargs or {}
 
-    # log.debug('Will call %s delayed with %s secs' % (callback.__name__, delay))
     _main_loop.call_delayed(callback, delay, args, kwargs)
 
 
 # --------------Dispatcher related-------------------
 _subscriptions = {}  # by id
-_channel_subscriptions = defaultdict(list)  # Per channel lists
-
-# The implementation of per entity subscribtions is commented out, since it
-# turned out to be redundant for the time being and no testing was done.
-# Otherwise the idea was to reduce lookup overhead for channels with a lot of
-# subscriptions.
-# _per_entity_subscriptions = defaultdict(list)  # [(channel, entity_id)] = list
-
-_message_stacks = {}
-_subscription_keys_by_id = dict
+_channels = {}
+_invoke_queued = False
 
 
 class SubscriptionTypes(Enum):
@@ -108,29 +98,75 @@ class SubscriptionTypes(Enum):
 
 
 class Subscription:
-    def __init__(self, handler, sub_type, channel, entity_id):
+    def __init__(self, handler, channel_name, filter_val: Any = MISSING):
         self.id = id(self)
         self.handler = handler
-        self.type = sub_type
-        self.channel = channel
-        self.entity_id = entity_id
-
-    # @classmethod
-    # def channel_type(cls, channel, handler):
-    #     return cls(handler, SubscriptionTypes.CHANNEL, channel, None)
-
-    # @classmethod
-    # def entity_type(cls, channel, entity_id, handler):
-    #     return cls(handler, SubscriptionTypes.ENTITY, channel, entity_id)
+        self.channel_name = channel_name
+        self.filter_val = filter_val
 
 
-def channels() -> List[str]:
+class Channel:
+    def __init__(self, name: str, index_key: Callable = None):
+        self.name = name
+        self.index_key = index_key
+        self.message_stack = []
+        self.subscribtions = {}
+
+        if index_key:
+            self.index = defaultdict(list)
+
+    def push(self, message):
+        if self.index_key:
+            self.index[self.index_key(message)].append(message)
+
+        self.message_stack.append(message)
+
+    def add_subscribtion(self, subscribtion):
+        if subscribtion.handler in self.subscribtions:
+            raise Exception(
+                f'Handler {subscribtion.handler} already added to channel '
+                f'{self.name}')
+
+        self.subscribtions[subscribtion.handler] = subscribtion
+
+    def remove_subscribtion(self, subscribtion):
+        if subscribtion.handler not in self.subscribtions:
+            raise Exception(
+                f'Cannot unsubscribe missing handler {subscribtion.handler}'
+                f' in channel {self.name}')
+
+        self.subscribtions.pop(subscribtion.handler)
+
+    def notify_subscribers(self):
+        if not self.message_stack:
+            return
+
+        if self.index_key:
+            for handler, sub in self.subscribtions.items():
+                if sub.filter_val is MISSING:
+                    handler(deepcopy(self.message_stack))
+                    continue
+
+                messages = self.index.pop(sub.filter_val, [])
+                if not messages:
+                    continue
+                handler(deepcopy(messages))
+
+            self.index.clear()
+        else:
+            for handler, sub in self.subscribtions.items():
+                handler(deepcopy(self.message_stack))
+
+        self.message_stack.clear()
+
+
+def channel_names() -> List[str]:
     """Get the registered channels list"""
-    return list(_message_stacks.keys())
+    return list(_channels)
 
 
 @log.traced
-def add_channel(channel_name: str):
+def add_channel(channel_name: str, index_key: Callable = None):
     """Register a new channel
 
     Args:
@@ -140,9 +176,9 @@ def add_channel(channel_name: str):
         Exception: If a channel with this name already exists
     """
 
-    if channel_name in _message_stacks:
-        raise Exception('Channel already exists')
-    _message_stacks[channel_name] = []
+    if channel_name in _channels:
+        raise Exception('A channel with this name already exists')
+    _channels[channel_name] = Channel(channel_name, index_key)
 
 
 @log.traced
@@ -155,15 +191,14 @@ def remove_channel(channel_name: str):
     Raises:
         Exception: When trying to remove a non-existent channel
     """
-    if channel_name not in _message_stacks:
+    if channel_name not in _channels:
         raise Exception('Trying to delete non-existent channel')
 
-    del _message_stacks[channel_name]
+    del _channels[channel_name]
 
 
 # Channel interface
-@log.traced
-def subscribe(channel_name: str, handler: Callable):
+def subscribe(channel_name: str, handler: Callable, index_val: Any = MISSING):
     """Subscribe a function to be invoked for every message on the channel.
 
     Args:
@@ -177,28 +212,15 @@ def subscribe(channel_name: str, handler: Callable):
     Returns:
         [type]: [description]
     """
-    if channel_name not in channels():
+    if channel_name not in channel_names():
         raise Exception('No such channel')
 
-    if handler in _channel_subscriptions[channel_name]:
-        raise Exception('Handler %s already added to channel %s' %
-                        (handler, channel_name))
+    sub = Subscription(handler, channel_name, index_val)
 
-    sub = Subscription(handler, SubscriptionTypes.CHANNEL, channel_name, None)
-
-    _channel_subscriptions[channel_name].append(handler)
+    _channels[channel_name].add_subscribtion(sub)
     _subscriptions[sub.id] = sub
 
     return sub.id
-
-
-# def subscribe_to_entity(channel, entity_id, handler):
-#     sub = Subscription.entity_type(channel, entity_id, handler)
-#
-#     _per_entity_subscriptions[(channel, entity_id)].append(handler)
-#     _subscriptions[sub.id] = sub
-#
-#     return sub.id
 
 
 def subscription(subscription_id: str) -> Union[Subscription, None]:
@@ -209,7 +231,6 @@ def subscription(subscription_id: str) -> Union[Subscription, None]:
     return _subscriptions[subscription_id]
 
 
-@log.traced
 def unsubscribe(subscription_id):
     """Deactivate the subscription with the specified id"""
     sub = subscription(subscription_id)
@@ -217,28 +238,26 @@ def unsubscribe(subscription_id):
         raise Exception('Cannot unsubscribe missing subscription with id %s' %
                         subscription_id)
 
-    if sub.type == SubscriptionTypes.CHANNEL:
-        _channel_subscriptions[sub.channel].remove(sub.handler)
-
-    # elif sub.type == SubscriptionTypes.ENTITY:
-    #     _per_entity_subscriptions[(sub.channel, sub.entity_id)].remove(
-    #         sub.handler)
-
-    _subscriptions[sub.id].remove(sub)
+    _channels[sub.channel_name].remove_subscribtion(sub)
+    _subscriptions.pop(sub.id)
 
 
 # @log.traced
 def dispatch(message: object, channel_name: str):
+    # TODO: Should be message or list of messages?
     """Dispatch a message on the specified channel.
 
     Args:
         message (object): The message to be dispatched
         channel (str): The name of the channel to be used
     """
+    # global _invoke_queued
     log.info('DISPATCH on "%s": %s' % (channel_name, message))
 
-    _message_stacks[channel_name].append(message)
+    _channels[channel_name].push(message)
+    # if not _invoke_queued:
     call_delayed(_invoke_handlers, 0)
+        # _invoke_queued = True
 
 
 # @log.traced
@@ -246,22 +265,8 @@ def _invoke_handlers():
     """Handle the dispatched messages, by invoking all relevant handlers.
     Gets queued on the main loop with each dispatch.
     """
-    for channel, messages in _message_stacks.items():
-        if not _message_stacks[channel]:
-            continue
+    global _invoke_queued
+    _invoke_queued = False
 
-        # Send the messages to the per-channel subscribers
-        for handler in _channel_subscriptions[channel]:
-            handler([deepcopy(m) for m in messages])
-
-        # # Send the messages to the per-entity subscribers
-        # for message in messages:
-        #     change = Change(**message)
-        #     entity_id = change.last_state()['id']
-        #
-        #     per_entity_key = (channel, entity_id)
-        #     if per_entity_key in _per_entity_subscriptions:
-        #         for handler in _per_entity_subscriptions[per_entity_key]:
-        #             handler(message.copy())
-
-        _message_stacks[channel].clear()
+    for channel_name, channel in _channels.items():
+        channel.notify_subscribers()

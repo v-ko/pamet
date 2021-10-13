@@ -36,6 +36,6 @@ def main():
     misli.set_main_loop(QtMainLoop())
 
     desktop_app = DesktopApp()
-    misli.call_delayed(new_browser_window_ensure_page, 0)
+    misli.gui.queue_action(new_browser_window_ensure_page)
 
     return desktop_app.exec_()

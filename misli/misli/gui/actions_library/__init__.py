@@ -7,17 +7,22 @@ from misli import gui
 
 log = misli.get_logger(__name__)
 
-_actions = set()
+_actions_by_name = {}
+_names_by_wrapped_func = {}
 _unwrapped_action_funcs_by_name = {}
 _actions_stack = []
 
 
 def is_registered(action_function: Callable):
-    return action_function in _actions
+    return action_function in _names_by_wrapped_func
 
 
 def unwrapped_action_function(action_name: str):
     return _unwrapped_action_funcs_by_name[action_name]
+
+
+def name_for_wrapped_function(function: Callable):
+    return _names_by_wrapped_func[function]
 
 
 from misli.gui.actions_library.action import Action, ActionRunStates
@@ -79,7 +84,8 @@ def action(name: str):
             raise Exception(f'An action with the name {name} is already'
                             f' registered')
 
-        _actions.add(wrapper_action)
+        _actions_by_name[name] = wrapper_action
+        _names_by_wrapped_func[wrapper_action] = name
         _unwrapped_action_funcs_by_name[name] = func
 
         return wrapper_action

@@ -31,8 +31,9 @@ class Action:
         self.run_state = None
         self.set_run_state(run_state)
 
-        self.args = []
-        self.set_args(args)
+        self.args = args or []
+        if not isinstance(self.args, list):
+            self.args = list(self.args)
 
         self.kwargs = kwargs or {}
 
@@ -53,14 +54,6 @@ class Action:
             self.run_state = run_state
         else:
             self.run_state = ActionRunStates[run_state]
-
-    def set_args(self, args: Union[tuple, list]):
-        if isinstance(args, tuple):
-            args = list(args)
-        elif not isinstance(args, list):
-            raise ValueError
-
-        self.args = args
 
     def __repr__(self):
         string = (f'<Action name={self.name} run_state={self.run_state.name} '

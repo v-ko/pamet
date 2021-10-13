@@ -29,7 +29,7 @@ class View:
     """
     def __init__(self,
                  parent_id: Union[str, None],
-                 initial_state: Entity = None):
+                 initial_state: ViewState = None):
         """Registers the View instance in misli.gui, so that model and child
         updates are received accordingly.
 
@@ -42,32 +42,59 @@ class View:
 
         self.id = initial_state.id
         self.parent_id = parent_id
+        initial_state.parent_id = parent_id  # TODO: make pretty
+        self.subscribtions = []
 
-        gui.add_view(self, initial_state)
+        self.__state = initial_state
+        self.__previous_state = None
 
     def __repr__(self):
         return '<%s id=%s>' % (type(self).__name__, self.id)
 
     @property
     def state(self) -> ViewState:
-        state = gui.displayed_view_state(self.id)
-        if not state or state.id != self.id:
-            raise Exception('Could not retrieve view state for view %s' % self)
-        return state
+        return self.__state.copy()
 
     @property
-    def previous_state(self) -> Entity:
-        model = gui.previous_view_state(self.id)
-        if not model:
-            raise Exception('Could not retrieve view model for view %s' % self)
-        return model
+    def previous_state(self) -> ViewState:
+        if not self.__previous_state:
+            return None
+        return self.__previous_state.copy()
 
-    def handle_state_update(self):
+    @log.traced
+    def _handle_state_changes(self, changes):
+        with gui.lock_actions():
+            for change in changes:
+                if change.is_update():
+                    self.__previous_state = self.__state
+                    self.__state = change.last_state()
+                    self.on_state_update()
+
+    @log.traced
+    def _handle_children_state_changes(self, changes):
+        with gui.lock_actions():
+            for change in changes:
+                if change.is_create():
+                    self.on_child_added(change.last_state().view())
+
+                if change.is_update():
+                    self.on_child_updated(change.last_state().view())
+
+                elif change.is_delete():
+                    self.on_child_removed(
+                        misli.gui.removed_view(change.last_state().id))
+
+    # TODO: да стане mount child?
+    def on_child_added(self, child):
+        gui.util_provider().mount_view(child)
+
+    def on_child_updated(self, child):
         pass
 
-    def handle_child_changes(self, children_added: List[View],
-                             children_removed: List[View],
-                             children_updated: List[View]):
+    def on_child_removed(self, child):
+        gui.util_provider().unmount_view(child)
+
+    def on_state_update(self):
         pass
 
     def child(self, child_id: str) -> View:

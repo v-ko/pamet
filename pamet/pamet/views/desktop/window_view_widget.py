@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QMainWindow, QPushButton
 from PySide6.QtGui import QIcon
 
 from misli.gui import ViewState, wrap_and_register_view_state_type
-from misli.gui import View, register_view_type
+from misli.gui import View, register_view_type, view
 from pamet.actions import desktop
 
 from pamet.views.desktop.ui_window_view_widget import Ui_BrowserWindow
@@ -13,7 +13,6 @@ from pamet.views.desktop.ui_window_view_widget import Ui_BrowserWindow
 class BrowserWindowViewState(ViewState):
     name: str = ''
     app_id: str = None
-    tab_ids: set = field(default_factory=set)
 
 
 @register_view_type
@@ -38,17 +37,16 @@ class BrowserWindowView(QMainWindow, View):
 
         self.showMaximized()
 
-    def handle_child_changes(self, added, removed, updated):
-        for child in added:
-            self.ui.tabWidget.addTab(child, child.state.name)
+    def on_child_added(self, child):
+        self.ui.tabWidget.addTab(child, child.state.name)
 
-        for child in removed:
-            tab_idx = self.ui.tabWidget.indexOf(child)
-            self.ui.tabWidget.removeTab(tab_idx)
+    def on_child_updated(self, child):
+        tab_idx = self.ui.tabWidget.indexOf(child)
+        self.ui.tabWidget.setTabText(tab_idx, child.state.name)
 
-        for child in updated:
-            tab_idx = self.ui.tabWidget.indexOf(child)
-            self.ui.tabWidget.setTabText(tab_idx, child.state.name)
+    def on_child_removed(self, child):
+        tab_idx = self.ui.tabWidget.indexOf(child)
+        self.ui.tabWidget.removeTab(tab_idx)
 
     def handle_tab_changed(self, index: int):
         self.ui.tabWidget.widget(index).update()

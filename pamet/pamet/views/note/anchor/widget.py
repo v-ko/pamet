@@ -29,7 +29,7 @@ class AnchorViewWidget(QLabel, NoteView):
         self._alignment = Qt.AlignHCenter
         self.setMargin(0)
 
-    def handle_state_update(self):
+    def on_state_update(self):
         note = self.note
         palette = self.palette()
 

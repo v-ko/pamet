@@ -19,9 +19,15 @@ def create_new_note(tab_view_id: str, position_coords: list, note_state: dict):
     if tab_state.edit_view_id:
         abort_editing_note(tab_state.edit_view_id)
 
-    edit_view_class = gui.view_library.get_view_class(entity_type='TextNote',
-                                                      edit=True)
-    edit_view = edit_view_class(parent_id=tab_view_id)
+    # edit_view_class = gui.view_library.get_view_class(entity_type='TextNote',
+    #                                                   edit=True)
+    edit_view = misli.gui.create_view(
+        parent_id=tab_view_id,
+        view_class_metadata_filter=dict(entity_type='TextNote', edit=True),
+        mapped_entity=note
+    )
+    # edit_view = edit_view_class(parent_id=tab_view_id)
+    # misli.gui.add_view(edit_view)
     tab_state.edit_view_id = edit_view.id
 
     edit_view_state = gui.view_state(edit_view.id)
