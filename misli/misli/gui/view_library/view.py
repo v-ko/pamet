@@ -82,7 +82,7 @@ class View:
 
                 elif change.is_delete():
                     self.on_child_removed(
-                        misli.gui.removed_view(change.last_state().id))
+                        gui.removed_view(change.last_state().id))
 
     # TODO: да стане mount child?
     def on_child_added(self, child):

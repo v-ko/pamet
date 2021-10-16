@@ -146,6 +146,7 @@ def on_entity_changes(handler: Callable):
     misli.subscribe(ENTITY_CHANGE_CHANNEL, handler)
 
 
+@log.traced
 def add_view(_view: View, initial_state):
     """Register a view instance in misli.gui. Should only be called in
     View.__init__.
@@ -169,16 +170,17 @@ def add_view(_view: View, initial_state):
     _view.subscribtions.append(
         misli.subscribe(STATE_CHANGE_BY_ID_CHANNEL,
                         _view._handle_state_changes,
-                        index_val=initial_state.gid()))
+                        index_val=initial_state.id))
 
     _view.subscribtions.append(
         misli.subscribe(STATE_CHANGE_BY_PARENT_CHANNEL,
                         _view._handle_children_state_changes,
-                        index_val=initial_state.gid()))
+                        index_val=initial_state.id))
 
     misli.call_delayed(_dipatch_state_changes, 0)
 
 
+@log.traced
 def create_view(parent_id,
                 view_class_name: str = '',
                 view_class_metadata_filter: dict = None,
@@ -362,6 +364,7 @@ def update_state(new_state: ViewState):
     misli.call_delayed(_dipatch_state_changes, 0)
 
 
+@log.traced
 def remove_view(_view: View):
     """Remove a view from the GUI tree. It's parent will be notified.
 

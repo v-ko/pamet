@@ -60,7 +60,7 @@ def _get_trace_decorator(logger_name: str):
             if popped_name != name:
                 raise Exception('Stack continuity error')
 
-            log.debug('%sEND: %s RETURNED=%s' % (indent, name_str, result))
+            log.debug('%sEND : %s RETURNED=%s' % (indent, name_str, result))
 
             return result
 

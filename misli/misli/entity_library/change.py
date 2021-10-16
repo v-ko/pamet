@@ -60,7 +60,8 @@ class Change:
             type=ChangeTypes.DELETE, old_state=old_state)
 
     def __repr__(self) -> str:
-        return f'<Change type={self.type}>'
+        return (f'<Change type={self.type} old_state={self.old_state} '
+                f'new_state={self.new_state}>')
 
     def is_create(self) -> bool:
         return self.type == ChangeTypes.CREATE
