@@ -12,6 +12,3 @@ def configure_for_qt():
     from misli.gui.utils.qt_widgets.provider import QtWidgetsUtilProvider
     set_main_loop(QtMainLoop())
     gui.set_util_provider(QtWidgetsUtilProvider())
-
-
-configure_for_qt()

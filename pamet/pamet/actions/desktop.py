@@ -5,8 +5,8 @@ from misli.gui.actions_library import action
 import pamet
 from pamet.model import Page
 from pamet.desktop_app.config import get_config
-from pamet.views.desktop.window_view_widget import BrowserWindowView
-from pamet.views.desktop.tab_view_widget import BrowserTabViewWidget
+from pamet.views.window.window_view_widget import BrowserWindowViewWidget
+from pamet.views.tab.widget import BrowserTabViewWidget
 
 
 @action('desktop_app.new_browser_window_ensure_page')
@@ -27,8 +27,8 @@ def new_browser_window_ensure_page():
 
 @action('desktop_app.new_browser_window')
 def new_browser_window(page_id: str):
-    window: BrowserWindowView = gui.create_view(
-        parent_id=None, view_class_name=BrowserWindowView.__name__)
+    window: BrowserWindowViewWidget = gui.create_view(
+        parent_id=None, view_class_name=BrowserWindowViewWidget.__name__)
 
     new_browser_tab(window.id, page_id)
 

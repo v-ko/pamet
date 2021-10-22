@@ -22,7 +22,7 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.ui.setupUi(self)
 
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
-
+        esc_shortcut.setContext(Qt.ApplicationShortcut)
         self.ui.ok_button.clicked.connect(self._handle_ok_click)
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
 

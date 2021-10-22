@@ -32,12 +32,30 @@ and enforces the avoidance of endless nested callbacks.
 
 TODO: Example on a simple View + View Model
 """
+import misli
 from .misli_gui import *
 from .actions_library import action
 from .view_library import register_view_type
 from .view_library.view import View
-from .view_library.view_state import ViewState, wrap_and_register_view_state_type
+from .view_library.view_state import ViewState
+from .view_library.view_state import wrap_and_register_view_state_type
 from .model_to_view_binder.actions import update_views_from_entity_changes
 from .commands_library.command import Command
 from .commands_library import command
+from . import key_binding_manager
+from .key_binding_manager import KeyBinding
+from .context import Context
+
+context = Context()
+
 on_entity_changes(update_views_from_entity_changes)
+
+# Handle the root view mounting and unmounting (otherwise handled in the parent
+# View.on_child_added/on_child_removed for the views which have a parent)
+misli.subscribe(STATE_CHANGE_BY_PARENT_CHANNEL,
+                key_binding_manager.handle_root_view_changes,
+                index_val=None)
+# Every time a root view (with None parent_id) is changed - apply key bindings
+misli.subscribe(STATE_CHANGE_BY_PARENT_CHANNEL,
+                handle_root_view_mounting,
+                index_val=None)

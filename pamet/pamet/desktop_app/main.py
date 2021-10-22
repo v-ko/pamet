@@ -1,9 +1,11 @@
 import os
 import signal
 
-import misli
-from misli.gui.qt_main_loop import QtMainLoop
+from PySide6.QtWidgets import QWidget
 
+import misli
+
+from pamet import default_key_bindings
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import get_config
 from pamet.storage import FSStorageRepository
@@ -33,9 +35,12 @@ def main():
         fs_repo = FSStorageRepository.new(repo_path)
 
     misli.set_repo(fs_repo)
-    misli.set_main_loop(QtMainLoop())
 
     desktop_app = DesktopApp()
-    misli.gui.queue_action(new_browser_window_ensure_page)
 
+    # desktop_app.processEvents()
+
+    misli.configure_for_qt()
+    misli.gui.key_binding_manager.apply_config(default_key_bindings)
+    misli.gui.queue_action(new_browser_window_ensure_page)
     return desktop_app.exec_()

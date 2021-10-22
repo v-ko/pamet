@@ -12,10 +12,8 @@ log = misli.get_logger(__name__)
 
 
 @action('map_page.start_mouse_drag_navigation')
-def start_mouse_drag_navigation(
-        map_page_view_id: str,
-        mouse_position: Point2D,
-        first_delta: Point2D):
+def start_mouse_drag_navigation(map_page_view_id: str, mouse_position: Point2D,
+                                first_delta: Point2D):
 
     map_page_view_state = gui.view_state(map_page_view_id)
 
@@ -31,18 +29,17 @@ def start_mouse_drag_navigation(
 def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point2D):
     map_page_view_state = gui.view_state(map_page_view_id)
 
-    unprojected_delta = (
-        mouse_delta / map_page_view_state.viewport.height_scale_factor())
+    unprojected_delta = (mouse_delta /
+                         map_page_view_state.viewport.height_scale_factor())
     new_viewport_center: Point2D = (
-            map_page_view_state.viewport_position_on_press + unprojected_delta)
+        map_page_view_state.viewport_position_on_press + unprojected_delta)
 
-    change_viewport_center(
-        map_page_view_id, new_viewport_center.as_tuple())
+    change_viewport_center(map_page_view_id, new_viewport_center.as_tuple())
 
 
 @action('map_page.change_viewport_center')
-def change_viewport_center(
-        map_page_view_id: str, new_viewport_center: Point2D):
+def change_viewport_center(map_page_view_id: str,
+                           new_viewport_center: Point2D):
 
     map_page_view_state = gui.view_state(map_page_view_id)
 
@@ -51,8 +48,7 @@ def change_viewport_center(
 
 
 @action('map_page.stop_drag_navigation')
-def stop_drag_navigation(
-        map_page_view_id: str):
+def stop_drag_navigation(map_page_view_id: str):
 
     map_page_view_state = gui.view_state(map_page_view_id)
     map_page_view_state.drag_navigation_active = False
@@ -60,8 +56,8 @@ def stop_drag_navigation(
 
 
 @action('map_page.update_note_selections')
-def update_note_selections(
-        map_page_view_id: str, selection_updates_by_note_id: dict):
+def update_note_selections(map_page_view_id: str,
+                           selection_updates_by_note_id: dict):
 
     map_page_view_state = gui.view_state(map_page_view_id)
 
@@ -118,16 +114,16 @@ def set_viewport_height(map_page_view_id: str, new_height: float):
 def start_drag_select(map_page_view_id: str, position: Point2D):
     map_page_view_state = gui.view_state(map_page_view_id)
 
-    map_page_view_state.mouse_position_on_drag_select_start = Point2D(*position)
+    map_page_view_state.mouse_position_on_drag_select_start = Point2D(
+        *position)
     map_page_view_state.drag_select_active = True
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.update_drag_select')
-def update_drag_select(
-        map_page_view_id: str,
-        rect_props: list,
-        drag_selected_nc_ids: list = None):
+def update_drag_select(map_page_view_id: str,
+                       rect_props: list,
+                       drag_selected_nc_ids: list = None):
 
     map_page_view_state = gui.view_state(map_page_view_id)
 
@@ -167,11 +163,9 @@ def delete_selected_notes(map_page_view_id: str):
 
 
 @action('map_page.start_notes_resize')
-def start_notes_resize(
-        map_page_view_id: str,
-        main_note: Note,
-        mouse_position: Point2D,
-        resize_circle_center_projected: Point2D):
+def start_notes_resize(map_page_view_id: str, main_note: Note,
+                       mouse_position: Point2D,
+                       resize_circle_center_projected: Point2D):
 
     map_page_view_state = gui.view_state(map_page_view_id)
 
@@ -185,8 +179,7 @@ def start_notes_resize(
 
 
 @action('map_page.resize_note_views')
-def resize_note_views(
-        map_page_view_id: str, new_size: list, nc_ids: list):
+def resize_note_views(map_page_view_id: str, new_size: list, nc_ids: list):
 
     for nc_id in nc_ids:
         ncs = gui.view_state(nc_id)
@@ -207,8 +200,7 @@ def resize_notes(new_size: list, page_id: str, note_ids: list):
 
 
 @action('map_page.stop_notes_resize')
-def stop_notes_resize(
-        map_page_view_id: str, new_size: list, nc_ids: list):
+def stop_notes_resize(map_page_view_id: str, new_size: list, nc_ids: list):
 
     map_page_view_state = gui.view_state(map_page_view_id)
     map_page_view_state.note_resize_active = False
@@ -221,19 +213,17 @@ def stop_notes_resize(
 
 
 @action('map_page.start_note_drag')
-def start_note_drag(
-        map_page_view_id: str, mouse_pos: list):
+def start_note_drag(map_page_view_id: str, mouse_pos: list):
 
     map_page_view_state = gui.view_state(map_page_view_id)
-    map_page_view_state.mouse_position_on_note_drag_start = Point2D(
-        *mouse_pos)
+    map_page_view_state.mouse_position_on_note_drag_start = Point2D(*mouse_pos)
     map_page_view_state.note_drag_active = True
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.note_drag_nc_position_update')
-def note_drag_nc_position_update(
-        map_page_view_id: str, nc_ids: list, delta: list):
+def note_drag_nc_position_update(map_page_view_id: str, nc_ids: list,
+                                 delta: list):
 
     d = Point2D(*delta)
 
@@ -283,10 +273,9 @@ def resize_page(map_page_view_id, width, height):
 
 
 @action('notes.color_selected_notes')
-def color_selected_notes(
-        map_page_view_id: str,
-        color: list = None,
-        background_color: list = None):
+def color_selected_notes(map_page_view_id: str,
+                         color: list = None,
+                         background_color: list = None):
     map_page_view_state = gui.view_state(map_page_view_id)
 
     for nc_id in map_page_view_state.selected_nc_ids:
@@ -304,9 +293,6 @@ def color_selected_notes(
 
 
 @action('map_page.open_context_menu')
-def open_context_menu(page_view_id: str, position: Point2D):
-    entries = {
-        'New note': commands.create_new_note
-    }
-    context_menu = ContextMenuWidget(page_view_id, entries, position)
-    # Add is called in the constructor
+def open_context_menu(tab_view_id: str, entries: dict):
+    context_menu = ContextMenuWidget(tab_view_id, entries)
+    misli.gui.add_view(context_menu)

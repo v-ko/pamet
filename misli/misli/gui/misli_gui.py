@@ -1,4 +1,4 @@
-from typing import Callable, Union, List
+from typing import Callable, Union, List, Any
 from collections import defaultdict
 import time
 import random
@@ -40,10 +40,8 @@ def execute_action_queue(actions: List[Action]):
 misli.subscribe(ACTIONS_QUEUE_CHANNEL, execute_action_queue)
 
 _views = {}
-_views_per_parent = {}
+_views_per_parent = {None: []}
 
-_added_views_per_parent = defaultdict(list)
-_removed_views_per_parent = defaultdict(list)
 _updated_views = set()
 _added_views = set()
 _removed_views = set()
@@ -147,25 +145,23 @@ def on_entity_changes(handler: Callable):
 
 
 @log.traced
-def add_view(_view: View, initial_state):
+def add_view(_view: View):
     """Register a view instance in misli.gui. Should only be called in
     View.__init__.
     """
     ensure_context()
+    initial_state = _view.state
     _views[_view.id] = _view
     _views_per_parent[_view.id] = []
     _view_states[_view.id] = initial_state
-    # _displayed_view_states[_view.id] = initial_state
+    # _displayed_view_states[_view.id] = initial_state  # That's in the view
     _added_views.add(_view)
+    _views_per_parent[_view.parent_id].append(_view)
 
-    if _view.parent_id:
-        if _view.parent_id not in _views_per_parent:
-            raise Exception(
-                'Cannot add component with missing parent with id: %s' %
-                _view.parent_id)
-
-        _added_views_per_parent[_view.parent_id].append(_view)
-        _views_per_parent[_view.parent_id].append(_view)
+    if _view.parent_id and (_view.parent_id not in _views_per_parent):
+        raise Exception(
+            'Cannot add component with missing parent with id: %s' %
+            _view.parent_id)
 
     _view.subscribtions.append(
         misli.subscribe(STATE_CHANGE_BY_ID_CHANNEL,
@@ -190,7 +186,7 @@ def create_view(parent_id,
     view_class = misli.gui.view_library.get_view_class(
         view_class_name, **view_class_metadata_filter)
     _view: View = view_class(parent_id=parent_id)
-    add_view(_view, _view.state)
+    add_view(_view)
     _view_state = _view.state
 
     if mapped_entity:
@@ -287,43 +283,39 @@ def view_children(view_id: str) -> List[View]:
     Returns:
         List[View]: A list of _
     """
-    return _views_per_parent[view_id]
+    return _views_per_parent[view_id].copy()
 
 
 @log.traced
 def views() -> List[View]:
     """Get all view instances registered in misli.gui"""
-    return [c for c_id, c in _views.items()]
+    return list(_views.values())
 
 
 @log.traced
-def find_views(class_name: str = None, filter_dict: dict = None) -> List[View]:
-    """Get all views with the given class name that have attributes with values
-    that fulfill the filter.
+def find_views(**filter) -> List[View]:
+    type_name = filter.pop('type_name', None)
+    # type = ...
+    parent_id = filter.pop('parent_id', None)
 
-    Args:
-        class_name (str, optional): If specified - only the views with a class
-            with the given name are returned.
-        filter (dict, optional): Key/value pairs that must be present as
-            attribute/values in the view to include it in the results.
+    found = _views.copy()
 
-    Returns:
-        List[View]: A list of Views
-    """
-    filter_dict = filter_dict or {}
+    if parent_id:
+        found = view_children(parent_id)
 
-    if class_name:
+    if type_name:
         found = [
             v for view_id, v in _views.items()
-            if type(v).__name__ == class_name
+            if type(v).__name__ == type_name
         ]
         if not found:
             return []
 
-        return list(find_many_by_props(found, **filter_dict))
+    if filter:
+        return list(find_many_by_props(found, **filter))
 
-    else:
-        return list(find_many_by_props(_views, **filter_dict))
+    return found
+
 
 
 # @log.traced
@@ -445,3 +437,39 @@ def set_reproducible_ids(enabled: bool):
         random.seed(0)
     else:
         random.seed(time.time())
+
+
+def focused_view() -> Union[View, None]:
+    return _util_provider.focused_view()
+
+
+def focused_view_or_parent(view_type: Any = None):
+    _focused_view = focused_view()
+
+    if not _focused_view:
+        return None
+
+    if not view_type:
+        return _focused_view
+
+    if isinstance(_focused_view, view_type):
+        return _focused_view
+
+    while _focused_view.parent_id:
+        _focused_view = view(_focused_view.parent_id)
+        if isinstance(_focused_view, view_type):
+            return _focused_view
+
+    # If we went up to the top level view and it's not of the view_type
+    if not isinstance(_focused_view, view_type):
+        return None
+
+    return _focused_view
+
+
+def handle_root_view_mounting(changes):
+    for change in changes:
+        if change.is_create():
+            _util_provider.mount_view(change.last_state().view())
+        elif change.is_delete():
+            _util_provider.unmount_view(change.last_state().view())

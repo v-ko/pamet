@@ -37,6 +37,9 @@ class Rectangle:
     def height(self) -> float:
         return self._h
 
+    def size(self) -> Point2D:
+        return Point2D(self._w, self._h)
+
     def set_size(self, width, height):
         self._w = width
         self._h = height
@@ -64,6 +67,9 @@ class Rectangle:
 
     def bottom_left(self) -> Point2D:
         return Point2D(self.left(), self.bottom())
+
+    def center(self) -> Point2D:
+        return self.top_left() + self.size() / 2
 
     def intersection(self, other: 'Rectangle') -> Union['Rectangle', None]:
         """Calculate the intersection of two rectangles

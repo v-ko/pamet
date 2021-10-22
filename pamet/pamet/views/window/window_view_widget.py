@@ -1,39 +1,24 @@
-from dataclasses import field
 from PySide6.QtWidgets import QMainWindow, QPushButton
 from PySide6.QtGui import QIcon
 
-from misli.gui import ViewState, wrap_and_register_view_state_type
-from misli.gui import View, register_view_type, view
+from misli.gui import register_view_type
 from pamet.actions import desktop
-
-from pamet.views.desktop.ui_window_view_widget import Ui_BrowserWindow
-
-
-@wrap_and_register_view_state_type
-class BrowserWindowViewState(ViewState):
-    name: str = ''
-    app_id: str = None
+from pamet.views.window.ui_window_view_widget import Ui_BrowserWindow
+from pamet.views.window.view import BrowserWindowView
 
 
 @register_view_type
-class BrowserWindowView(QMainWindow, View):
+class BrowserWindowViewWidget(QMainWindow, BrowserWindowView):
     def __init__(self, parent_id):
         QMainWindow.__init__(self)
-        View.__init__(
-            self,
-            parent_id=parent_id,
-            initial_state=BrowserWindowViewState()
-        )
-
-        self._tabs = {}  # By id
+        BrowserWindowView.__init__(self, parent_id)
 
         self.ui = Ui_BrowserWindow()
         self.ui.setupUi(self)
 
         self.menuButton = QPushButton(QIcon.fromTheme('menu'), '')
         self.ui.tabWidget.setCornerWidget(self.menuButton)
-        self.ui.tabWidget.currentChanged.connect(
-            self.handle_tab_changed)
+        self.ui.tabWidget.currentChanged.connect(self.handle_tab_changed)
 
         self.showMaximized()
 

@@ -18,10 +18,8 @@ def find_many_by_props(
     """
     if isinstance(item_list, dict):
         item_list = item_list.values()
-
     elif isinstance(item_list, list):
         pass
-
     else:
         raise ValueError
 

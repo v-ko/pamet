@@ -8,9 +8,14 @@ log = misli.get_logger(__name__)
 _commands = {}
 
 
-def command(title: str, default_shortcut: str):
+def command(title: str, name: str = ''):
     def decorator(function: Callable):
-        _command = Command(function, title, default_shortcut)
+        if not name:
+            fname = function.__name__
+        else:
+            fname = name
+
+        _command = Command(function, title, fname)
         _commands[function] = _command
         return _command
     return decorator

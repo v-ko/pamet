@@ -5,34 +5,43 @@ from misli.gui.actions_library import action
 
 import pamet
 from pamet.model import Note
+from pamet.model.text_note import TextNote
+
 
 log = misli.get_logger(__name__)
 
 
 @action('notes.create_new_note')
-def create_new_note(tab_view_id: str, position_coords: list, note_state: dict):
-    position = Point2D.from_coords(position_coords)
-    note = entity_library.from_dict(note_state)
-
+def create_new_note(page_view_id: str, mouse_position: Point2D):
     # Check if there's an open edit window and abort it if so
-    tab_state = gui.view_state(tab_view_id)
+    page_view = gui.view(page_view_id)
+    tab_state = gui.view_state(page_view.parent_id)
     if tab_state.edit_view_id:
         abort_editing_note(tab_state.edit_view_id)
 
-    # edit_view_class = gui.view_library.get_view_class(entity_type='TextNote',
-    #                                                   edit=True)
+    # If the mouse is on the page - make the note on its position.
+    # Else: make it in the center of the viewport
+    geometry = page_view.get_geometry()
+    if not geometry.contains(mouse_position):
+        mouse_position = geometry.center()
+
+    # Create the note
+    position = page_view.viewport.unproject_point(mouse_position)
+    note = TextNote(page_id=page_view.page.id)
+    note.x = position.x()
+    note.y = position.y()
+
+    # Create the edit view and update its and the tabs states
     edit_view = misli.gui.create_view(
-        parent_id=tab_view_id,
+        parent_id=tab_state.id,
         view_class_metadata_filter=dict(entity_type='TextNote', edit=True),
         mapped_entity=note
     )
-    # edit_view = edit_view_class(parent_id=tab_view_id)
-    # misli.gui.add_view(edit_view)
     tab_state.edit_view_id = edit_view.id
 
     edit_view_state = gui.view_state(edit_view.id)
     edit_view_state.note = note
-    edit_view_state.display_position = position
+    edit_view_state.display_position = mouse_position
     edit_view_state.create_mode = True
 
     gui.update_state(edit_view_state)
@@ -54,10 +63,9 @@ def finish_creating_note(edit_view_id: str, note: Note):
 
 @action('notes.start_editing_note')
 def start_editing_note(tab_view_id: str, note_component_id: str,
-                       position_coords: list):
+                       position: Point2D):
 
     note = gui.view(note_component_id).note
-    position = Point2D.from_coords(position_coords)
 
     # Check if there's an open edit window and abort it if so
     tab_state = gui.view_state(tab_view_id)

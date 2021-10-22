@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import Union, List
 
-from misli import Entity, gui
-from misli import get_logger
+from misli import gui, get_logger
+from misli.basic_classes import Rectangle, Point2D
 
 from .view_state import ViewState
 
@@ -37,19 +37,24 @@ class View:
             parent_id (str): The parent id. Can be none if this view is a root
             initial_state (Entity): The view model should be an Entity subclass
         """
-        if not initial_state:
-            initial_state = ViewState()
-
-        self.id = initial_state.id
-        self.parent_id = parent_id
-        initial_state.parent_id = parent_id  # TODO: make pretty
         self.subscribtions = []
 
+        if not initial_state:
+            initial_state = ViewState()
+        initial_state.parent_id = parent_id
         self.__state = initial_state
         self.__previous_state = None
 
     def __repr__(self):
         return '<%s id=%s>' % (type(self).__name__, self.id)
+
+    @property
+    def id(self):
+        return self.__state.id
+
+    @property
+    def parent_id(self):
+        return self.__state.parent_id
 
     @property
     def state(self) -> ViewState:
@@ -102,3 +107,19 @@ class View:
 
     def get_children(self) -> List[View]:
         return gui.view_children(self.id)
+
+    def map_from_global(self, position: Point2D):
+        return gui.util_provider().map_from_global(self, position)
+
+    def map_to_global(self, position: Point2D):
+        return gui.util_provider().map_to_global(self, position)
+
+    def mouse_position(self):
+        global_pos = gui.util_provider().mouse_position()
+        return self.map_from_global(global_pos)
+
+    def get_geometry(self):
+        return gui.util_provider().view_geometry(self)
+
+    def set_focus(self):
+        gui.util_provider().set_focus(self)
