@@ -18,4 +18,4 @@ class BrowserTabView(View):
         )
 
     def page_view(self):
-        return gui.view(self.state.page_view_id)
+        return gui.view(self.state().page_view_id)

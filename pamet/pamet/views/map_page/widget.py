@@ -114,8 +114,8 @@ class MapPageViewWidget(QWidget, MapPageView):
         del self._cache_per_nc_id[note_view_id]
 
     def on_state_update(self):
-        previous_state = self.previous_state
-        new_model = self.state
+        previous_state = self.previous_state()
+        new_model = self.state()
 
         if previous_state.viewport_center != new_model.viewport_center:
             pass
@@ -257,7 +257,7 @@ class MapPageViewWidget(QWidget, MapPageView):
         return display_rects_by_child_id
 
     def paintEvent(self, event):
-        model = self.state
+        model = self.state()
         self._paint_event_count += 1
         paint_t0 = time.time()
 

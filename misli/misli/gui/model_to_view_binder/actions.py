@@ -23,7 +23,7 @@ def update_views_from_entity_changes(changes: List[Change]):
             _views = gui.mapping.views_for(entity.gid())
 
             for _view in _views:
-                view_state = _view.state
+                view_state = _view.state()
                 view_state.mapped_entity = entity
                 gui.update_state(view_state)
 

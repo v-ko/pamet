@@ -4,8 +4,8 @@ import misli
 from misli import entity_library
 from misli import get_logger
 
-from .page import Page  # So that they're accessible from the module
 from .note import Note
+from .page import Page  # So that they're accessible from the module
 
 log = get_logger(__name__)
 

@@ -90,6 +90,12 @@ class Note(Entity):
         self.width = new_size.x()
         self.height = new_size.y()
 
+    def set_rect(self, new_rect: Rectangle):
+        self.x = new_rect.x()
+        self.y = new_rect.y()
+        self.width = new_rect.width()
+        self.height = new_rect.height()
+
     @property
     def x(self) -> float:
         return self._x

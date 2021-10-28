@@ -17,10 +17,10 @@ class BrowserTabViewWidget(QWidget, BrowserTabView):
         self.setLayout(QVBoxLayout())
 
     def on_state_update(self):
-        new_model = self.state
+        new_model = self.state()
 
         if not self.page_view() or \
-                (self.previous_state.page_view_id != new_model.page_view_id):
+                (self.previous_state().page_view_id != new_model.page_view_id):
             if new_model.page_view_id:
                 self.switch_to_page_view(new_model.page_view_id)
 

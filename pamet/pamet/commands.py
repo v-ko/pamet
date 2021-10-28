@@ -7,21 +7,25 @@ from pamet import actions
 log = get_logger(__name__)
 
 
-@command(title='Create new note')
-def create_new_note():
+def current_tab_and_page_views():
     tab = pamet.views.current_tab()
     if not tab:
-        log.error('No tab open, cannot create a new note')
-        return
+        raise Exception('There\'s no open tab.')
 
     page_view = tab.page_view()
     if not page_view:
-        log.error('No page view, cannot create a new note')
-        return
+        raise Exception('No page view.')
 
+    return tab, page_view
+
+
+@command(title='Create new note')
+def create_new_note():
+    tab, page_view = current_tab_and_page_views()
     actions.note.create_new_note(page_view.id, page_view.mouse_position())
 
 
 @command(title='Create new page')
 def create_new_page():
-    pass
+    tab, page_view = current_tab_and_page_views()
+    actions.tab.create_new_page(tab.id, page_view.mouse_position())

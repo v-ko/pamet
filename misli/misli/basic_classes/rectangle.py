@@ -44,6 +44,13 @@ class Rectangle:
         self._w = width
         self._h = height
 
+    def move_top_left(self, point: Point2D):
+        self._x = point.x()
+        self._y = point.y()
+
+    def move_center(self, new_center: Point2D):
+        self.move_top_left(new_center - self.size() / 2)
+
     def top(self) -> float:
         return self._y
 

@@ -1,5 +1,4 @@
 from typing import Callable, Union, List, Any
-from collections import defaultdict
 import time
 import random
 from contextlib import contextmanager
@@ -90,8 +89,12 @@ def action_context(action):
         misli.call_delayed(_dipatch_state_changes, 0)
 
 
+def is_in_action():
+    return bool(_action_context_stack)
+
+
 def ensure_context():
-    if not _action_context_stack:
+    if not is_in_action():
         raise Exception(
             'State changes can only happen in functions decorated with the '
             'misli.gui.actions_library.action decorator')
@@ -129,7 +132,7 @@ def on_actions_logged(handler: Callable):
     misli.subscribe(ACTIONS_LOG_CHANNEL, handler)
 
 
-def queue_action(action_func, args=None, kwargs=None):
+def queue_action(action_func, args: list = None, kwargs: dict = None):
     action = Action(name_for_wrapped_function(action_func))
     action.args = args or []
     action.kwargs = kwargs or {}
@@ -146,15 +149,11 @@ def on_entity_changes(handler: Callable):
 
 @log.traced
 def add_view(_view: View):
-    """Register a view instance in misli.gui. Should only be called in
-    View.__init__.
-    """
     ensure_context()
-    initial_state = _view.state
+    initial_state = _view._View__state
     _views[_view.id] = _view
     _views_per_parent[_view.id] = []
     _view_states[_view.id] = initial_state
-    # _displayed_view_states[_view.id] = initial_state  # That's in the view
     _added_views.add(_view)
     _views_per_parent[_view.parent_id].append(_view)
 
@@ -187,7 +186,7 @@ def create_view(parent_id,
         view_class_name, **view_class_metadata_filter)
     _view: View = view_class(parent_id=parent_id)
     add_view(_view)
-    _view_state = _view.state
+    _view_state = _view.state()
 
     if mapped_entity:
         _view_state.mapped_entity = mapped_entity.copy()
@@ -271,7 +270,7 @@ def displayed_view_state(view_id: str) -> Union[ViewState, None]:
         Entity: A copy of the view model (should be a subclass of Entity). If
         there's no model found for that id - the function returns None.
     """
-    return view(view_id).state
+    return view(view_id)._View__state
 
 
 def view_children(view_id: str) -> List[View]:
@@ -346,7 +345,7 @@ def update_state(new_state: ViewState):
         raise Exception('Expected a ViewState')
 
     _view: View = view(new_state.id)
-    previous_state = _view.state
+    previous_state = _view.state()
     _view_states[_view.id] = new_state
 
     if _view.id not in _previous_view_states:

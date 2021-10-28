@@ -29,4 +29,4 @@ class NoteView(View):
 
     @property
     def note(self) -> Note:
-        return self.state.note.copy()
+        return self.state().note.copy()

@@ -5,11 +5,11 @@ from PySide6.QtWidgets import QWidget
 
 import misli
 
+import pamet
 from pamet import default_key_bindings
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import get_config
 from pamet.storage import FSStorageRepository
-from pamet.actions.desktop import new_browser_window_ensure_page
 
 log = misli.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
@@ -42,5 +42,9 @@ def main():
 
     misli.configure_for_qt()
     misli.gui.key_binding_manager.apply_config(default_key_bindings)
-    misli.gui.queue_action(new_browser_window_ensure_page)
+
+    start_page = pamet.actions.other.get_or_create_default_page()
+    misli.gui.queue_action(pamet.actions.window.new_browser_window,
+                           args=[start_page.id])
+
     return desktop_app.exec_()

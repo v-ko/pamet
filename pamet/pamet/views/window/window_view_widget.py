@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QMainWindow, QPushButton
 from PySide6.QtGui import QIcon
 
 from misli.gui import register_view_type
-from pamet.actions import desktop
+from pamet.actions import window
 from pamet.views.window.ui_window_view_widget import Ui_BrowserWindow
 from pamet.views.window.view import BrowserWindowView
 
@@ -23,11 +23,11 @@ class BrowserWindowViewWidget(QMainWindow, BrowserWindowView):
         self.showMaximized()
 
     def on_child_added(self, child):
-        self.ui.tabWidget.addTab(child, child.state.name)
+        self.ui.tabWidget.addTab(child, child.state().name)
 
     def on_child_updated(self, child):
         tab_idx = self.ui.tabWidget.indexOf(child)
-        self.ui.tabWidget.setTabText(tab_idx, child.state.name)
+        self.ui.tabWidget.setTabText(tab_idx, child.state().name)
 
     def on_child_removed(self, child):
         tab_idx = self.ui.tabWidget.indexOf(child)
@@ -40,4 +40,4 @@ class BrowserWindowViewWidget(QMainWindow, BrowserWindowView):
         pass
 
     def closeEvent(self, close_event):
-        desktop.close_browser_window(self.id)
+        window.close_browser_window(self.id)

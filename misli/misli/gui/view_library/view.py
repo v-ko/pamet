@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Union, List
 
+import misli.gui
 from misli import gui, get_logger
 from misli.basic_classes import Rectangle, Point2D
 
@@ -56,11 +57,15 @@ class View:
     def parent_id(self):
         return self.__state.parent_id
 
-    @property
     def state(self) -> ViewState:
+        if misli.gui.is_in_action():
+            # While executing actions - states changes are buffered
+            return misli.gui.view_state(self.id)
+
+        # When not in an action we return the state applied to the view
+        # This is equivalent to misli.gui.displayed_state()
         return self.__state.copy()
 
-    @property
     def previous_state(self) -> ViewState:
         if not self.__previous_state:
             return None

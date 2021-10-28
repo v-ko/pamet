@@ -32,10 +32,10 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.update()
 
     def update(self):
-        model: TextNoteEditViewState = self.state
+        state: TextNoteEditViewState = self.state()
         display_rect = QRectF(*self.note.rect().as_tuple())
         display_rect.moveCenter(
-            QPointF(*model.display_position.as_tuple()))
+            QPointF(*state.display_position.as_tuple()))
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
@@ -50,12 +50,12 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.show()
 
     def _handle_ok_click(self):
-        model: TextNoteEditViewState = self.state
+        state: TextNoteEditViewState = self.state()
         text = self.ui.textEdit.toPlainText()
         note = self.note
         note.text = text.strip()
 
-        if model.create_mode:
+        if state.create_mode:
             note_actions.finish_creating_note(self.id, note)
         else:
             note_actions.finish_editing_note(self.id, note)

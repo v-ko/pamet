@@ -54,7 +54,7 @@ def finish_creating_note(edit_view_id: str, note: Note):
 
     edit_view = gui.view(edit_view_id)
     tab_view = gui.view(edit_view.parent_id)
-    tab_state = tab_view.state
+    tab_state = tab_view.state()
     tab_state.edit_view_id = None
 
     gui.remove_view(edit_view)
@@ -85,7 +85,7 @@ def start_editing_note(tab_view_id: str, note_component_id: str,
 def finish_editing_note(edit_view_id: str, note: Note):
     edit_view = gui.view(edit_view_id)
     tab_view = gui.view(edit_view.parent_id)
-    tab_state = tab_view.state
+    tab_state = tab_view.state()
     tab_state.edit_view_id = None
 
     misli.update(note)
