@@ -1,3 +1,4 @@
+from dataclasses import field
 from misli import get_logger
 from misli import wrap_and_register_entity_type
 from pamet.model.note import Note

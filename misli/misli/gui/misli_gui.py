@@ -16,11 +16,9 @@ log = misli.get_logger(__name__)
 
 ACTIONS_QUEUE_CHANNEL = '__ACTIONS_QUEUE__'
 ACTIONS_LOG_CHANNEL = '__ACTIONS_LOG__'
-ENTITY_CHANGE_CHANNEL = '__ENTITY_CHANGES__'
 
 misli.add_channel(ACTIONS_QUEUE_CHANNEL)
 misli.add_channel(ACTIONS_LOG_CHANNEL)
-misli.add_channel(ENTITY_CHANGE_CHANNEL)
 
 STATE_CHANGE_BY_ID_CHANNEL = '__STATE_CHANGES_BY_ID__'
 STATE_CHANGE_BY_PARENT_CHANNEL = '__STATE_CHANGES_BY_PARENT__'
@@ -139,14 +137,6 @@ def queue_action(action_func, args: list = None, kwargs: dict = None):
     misli.dispatch(action, ACTIONS_QUEUE_CHANNEL)
 
 
-def publish_entity_change(change: Change):
-    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
-
-
-def on_entity_changes(handler: Callable):
-    misli.subscribe(ENTITY_CHANGE_CHANNEL, handler)
-
-
 @log.traced
 def add_view(_view: View):
     ensure_context()
@@ -179,12 +169,15 @@ def add_view(_view: View):
 def create_view(parent_id,
                 view_class_name: str = '',
                 view_class_metadata_filter: dict = None,
-                mapped_entity: Entity = None):
-
+                mapped_entity: Entity = None,
+                init_kwargs: dict = None):
+    init_kwargs = init_kwargs or {}
     view_class_metadata_filter = view_class_metadata_filter or {}
+
     view_class = misli.gui.view_library.get_view_class(
         view_class_name, **view_class_metadata_filter)
-    _view: View = view_class(parent_id=parent_id)
+    _view: View = view_class(parent_id=parent_id, **init_kwargs)
+
     add_view(_view)
     _view_state = _view.state()
 

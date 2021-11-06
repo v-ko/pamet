@@ -1,3 +1,4 @@
+import misli
 from misli.gui import ViewState, wrap_and_register_view_state_type
 from misli.gui import View, register_view_type
 
@@ -16,3 +17,6 @@ class BrowserWindowView(View):
             parent_id=parent_id,
             initial_state=BrowserWindowViewState()
         )
+
+    def current_tab(self):
+        raise NotImplementedError

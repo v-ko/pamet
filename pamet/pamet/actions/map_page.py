@@ -4,9 +4,10 @@ import pamet
 
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
-from misli.gui.views.context_menu.widget import ContextMenuWidget
-from pamet.model import Note
-from pamet import commands
+from pamet.model import Note, Page
+from pamet.actions import tab as tab_actions
+from pamet.helpers import generate_default_page_id
+
 
 log = misli.get_logger(__name__)
 
@@ -294,5 +295,61 @@ def color_selected_notes(map_page_view_id: str,
 
 @action('map_page.open_context_menu')
 def open_context_menu(tab_view_id: str, entries: dict):
-    context_menu = ContextMenuWidget(tab_view_id, entries)
-    misli.gui.add_view(context_menu)
+    misli.gui.create_view(tab_view_id,
+                          view_class_metadata_filter=dict(name='ContextMenu'),
+                          init_kwargs=dict(entries=entries))
+
+
+@action('map_page.open_page_properties')
+def open_page_properties(tab_view_id: str, page: Page):
+    tab_state = misli.gui.view_state(tab_view_id)
+    properties_view = misli.gui.create_view(parent_id=tab_state.id,
+                                            view_class_metadata_filter=dict(
+                                                entity_type=Page.__name__,
+                                                page_edit=True),
+                                            mapped_entity=page)
+
+    tab_state.right_sidebar_view_id = properties_view.id
+    tab_state.right_sidebar_visible = True
+    tab_state.page_properties_open = True
+
+    misli.gui.update_state(tab_state)
+
+
+@action('map_page.save_page_properties')
+def save_page_properties(page: Page):
+    misli.update(page)
+
+
+@action('map_page.close_page_properties')
+def close_page_properties(properties_view_id: str):
+    properties_view = misli.gui.view(properties_view_id)
+    tab = properties_view.get_parent()
+    tab_state = tab.state()
+    tab_state.right_sidebar_visible = False
+    tab_state.right_sidebar_view_id = None
+    tab_state.page_properties_open = False
+
+    misli.gui.remove_view(properties_view)
+    misli.gui.update_state(tab_state)
+
+
+@action('map_page.delete_page')
+def delete_page(tab_view_id, page):
+    misli.delete(page)
+    if not list(pamet.pages()):
+        misli.gui.create_view(
+            parent_id=tab_view_id,
+            view_class_metadata_filter=dict(name='MessageBox'),
+            init_kwargs=dict(title='Info',
+                             text=('You deleted the last page. '
+                                   'A blank one has been created for you')))
+
+    new_page = Page(name=generate_default_page_id())
+    tab_actions.tab_go_to_page(tab_view_id, new_page.id)
+    open_page_properties(tab_view_id, new_page)
+
+    tab_state = misli.gui.view_state(tab_view_id)
+    properties_state = misli.gui.view_state(tab_state.right_sidebar_view_id)
+    properties_state.focused_prop = 'name'
+    misli.gui.update_state(properties_state)

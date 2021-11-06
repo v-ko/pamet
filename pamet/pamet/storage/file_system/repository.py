@@ -5,7 +5,7 @@ from pathlib import Path
 from collections import defaultdict
 
 import misli
-from misli import entity_library, Entity
+from misli import entity_library, Entity, Change
 from misli.helpers import find_many_by_props
 from misli.storage.repository import Repository
 
@@ -79,45 +79,54 @@ class FSStorageRepository(Repository):
             self._entity_cache_by_parent[entity.parent_gid()].remove(
                 entity.gid())
 
+    def insert_one(self, entity):
+        if entity.gid() in self._entity_cache:
+            raise Exception(
+                'Cannot insert {entity}, since it already exists')
+
+        self.upsert_to_cache(entity)
+        if isinstance(entity, Page):
+            self.upserted_pages.add(entity.gid())
+        elif isinstance(entity, Note):
+            self.upserted_pages.add(entity.parent_gid())
+
     def insert(self, entities: List[Entity]):
         for entity in entities:
-            if entity.gid() in self._entity_cache:
-                raise Exception(
-                    'Cannot insert {entity}, since it already exists')
-
-            self.upsert_to_cache(entity)
-            if isinstance(entity, Page):
-                self.upserted_pages.add(entity.gid())
-            elif isinstance(entity, Note):
-                self.upserted_pages.add(entity.parent_gid())
+            self.insert_one(entity)
 
         # Async to allow for grouping of all calls within an e.g. action
         misli.call_delayed(self.write_to_disk, 0)
+
+    def remove_one(self, entity):
+        if entity.gid() not in self._entity_cache:
+            raise Exception(f'Cannot remove missing {entity}')
+
+        self.remove_from_cache(entity)
+        if isinstance(entity, Page):
+            self.removed_pages.add(entity.gid())
+        elif isinstance(entity, Note):
+            self.upserted_pages.add(entity.parent_gid())
 
     def remove(self, entities: List[Entity]):
         for entity in entities:
-            if entity.gid() not in self._entity_cache:
-                raise Exception(f'Cannot remove missing {entity}')
-
-            self.remove_from_cache(entity)
-            if isinstance(entity, Page):
-                self.removed_pages.add(entity.gid())
-            elif isinstance(entity, Note):
-                self.upserted_pages.add(entity.parent_gid())
+            self.remove_one(entity)
 
         # Async to allow for grouping of all calls within an e.g. action
         misli.call_delayed(self.write_to_disk, 0)
 
+    def update_one(self, entity):
+        if entity.gid() not in self._entity_cache:
+            raise Exception('Cannot update missing {entity}')
+
+        self.upsert_to_cache(entity)
+        if isinstance(entity, Page):
+            self.upserted_pages.add(entity.gid())
+        elif isinstance(entity, Note):
+            self.upserted_pages.add(entity.parent_gid())
+
     def update(self, entities: List[Entity]):
         for entity in entities:
-            if entity.gid() not in self._entity_cache:
-                raise Exception('Cannot update missing {entity}')
-
-            self.upsert_to_cache(entity)
-            if isinstance(entity, Page):
-                self.upserted_pages.add(entity.gid())
-            elif isinstance(entity, Note):
-                self.upserted_pages.add(entity.parent_gid())
+            self.update_one(entity)
 
         # Async to allow for grouping of all calls within an e.g. action
         misli.call_delayed(self.write_to_disk, 0)
@@ -202,8 +211,8 @@ class FSStorageRepository(Repository):
             log.error('Exception %s while loading page' % e, path)
             return None
 
-        # TODO REMOVE
-        page_state['type_name'] = 'Page'
+        # # TODO REMOVE
+        # page_state['name'] = page_state.get('id')
 
         note_states = page_state.pop('note_states', [])
         notes = []
@@ -216,18 +225,17 @@ class FSStorageRepository(Repository):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
-        path = self._path_for_page(page.name)
+        path = self._path_for_page(page.id)
         if os.path.exists(path):
             backup_page_hackily(path)
         else:
-            log.warning('[update_page] Page at %s was missing. Will create'
-                        ' it.' % path)
+            log.error(f'[update_page] Page at {path} was missing.')
 
         with open(path, 'w') as pf:
             json.dump(page_state, pf, ensure_ascii=False)
 
     def delete_page(self, page):
-        path = self._path_for_page(page.name)
+        path = self._path_for_page(page.id)
 
         if os.path.exists(path):
             os.remove(path)
@@ -261,9 +269,12 @@ class FSStorageRepository(Repository):
             if self.is_v4_page(file.path):
                 continue
 
+            if os.path.isdir(file.path):
+                continue
+
             try:
                 if file.path.endswith('.misl'):
-                    page_state = self.convert_v2_to_v4(file.path)
+                    page_state = _convert_v2_to_v4(file.path)
 
                 elif file.path.endswith('.json'):
                     page_state = _convert_v3_to_v4(file.path)
@@ -297,3 +308,13 @@ class FSStorageRepository(Repository):
             page_path.rename(page_backup_path)
             log.info('Loaded legacy page %s and backed it up as %s' %
                      (page_path, page_backup_path))
+
+    def save_changes(self, changes: List[Change]):
+        for change in changes:
+            if change.is_create():
+                self.insert_one(change.last_state())
+            elif change.is_delete():
+                self.remove_one(change.last_state())
+            elif change.is_update():
+                self.update_one(change.last_state())
+        misli.call_delayed(self.write_to_disk, 0)

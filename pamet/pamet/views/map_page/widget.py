@@ -115,12 +115,12 @@ class MapPageViewWidget(QWidget, MapPageView):
 
     def on_state_update(self):
         previous_state = self.previous_state()
-        new_model = self.state()
+        new_state = self.state()
 
-        if previous_state.viewport_center != new_model.viewport_center:
+        if previous_state.viewport_center != new_state.viewport_center:
             pass
 
-        if previous_state.viewport_height != new_model.viewport_height:
+        if previous_state.viewport_height != new_state.viewport_height:
             # Invalidate image_cache for all children
             for child in self.get_children():
                 nv_cache = self.note_view_cache(child.id)

@@ -41,6 +41,7 @@ def main():
     # desktop_app.processEvents()
 
     misli.configure_for_qt()
+    pamet.configure_for_qt()
     misli.gui.key_binding_manager.apply_config(default_key_bindings)
 
     start_page = pamet.actions.other.get_or_create_default_page()

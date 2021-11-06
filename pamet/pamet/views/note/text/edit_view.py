@@ -3,7 +3,7 @@ from misli.gui import wrap_and_register_view_state_type
 from pamet.views.note.base_note_view import NoteView, NoteViewState
 
 from pamet.model import Note
-from pamet.actions import note
+from pamet.actions import note as note_actions
 
 
 @wrap_and_register_view_state_type
@@ -26,4 +26,4 @@ class TextNoteEditView(NoteView):
         return self.state().note.copy()
 
     def _handle_esc_shortcut(self):
-        note.abort_editing_note(self.id)
+        note_actions.abort_editing_note(self.id)

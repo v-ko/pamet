@@ -1,7 +1,7 @@
 from typing import Callable
 
 import misli
-from misli import action
+from misli.gui import action
 from misli.gui import View
 
 

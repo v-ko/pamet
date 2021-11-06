@@ -3,7 +3,7 @@ from typing import Union, List
 
 import misli.gui
 from misli import gui, get_logger
-from misli.basic_classes import Rectangle, Point2D
+from misli.basic_classes import Point2D
 
 from .view_state import ViewState
 
@@ -112,6 +112,9 @@ class View:
 
     def get_children(self) -> List[View]:
         return gui.view_children(self.id)
+
+    def get_parent(self) -> Union[View, None]:
+        return misli.gui.view(self.parent_id)
 
     def map_from_global(self, position: Point2D):
         return gui.util_provider().map_from_global(self, position)

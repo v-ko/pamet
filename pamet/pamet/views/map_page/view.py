@@ -169,6 +169,7 @@ class MapPageView(View):
 
         ncs_under_mouse = self.get_note_views_at(mouse_pos)
         if ncs_under_mouse:
+            # if
             map_page_actions.start_note_drag(self.id, mouse_pos.as_tuple())
 
     def handle_left_mouse_press(self, mouse_pos: Point2D):

@@ -22,7 +22,6 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.ui.setupUi(self)
 
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
-        esc_shortcut.setContext(Qt.ApplicationShortcut)
         self.ui.ok_button.clicked.connect(self._handle_ok_click)
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
 
@@ -50,12 +49,10 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         self.show()
 
     def _handle_ok_click(self):
-        state: TextNoteEditViewState = self.state()
-        text = self.ui.textEdit.toPlainText()
         note = self.note
-        note.text = text.strip()
+        note.text = self.ui.textEdit.toPlainText().strip()
 
-        if state.create_mode:
+        if self.state().create_mode:
             note_actions.finish_creating_note(self.id, note)
         else:
             note_actions.finish_editing_note(self.id, note)

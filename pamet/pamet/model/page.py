@@ -4,18 +4,18 @@ from misli import Entity, wrap_and_register_entity_type
 
 @wrap_and_register_entity_type
 class Page(Entity):
-    _name: str = ''  # TODO: remove. for simplicity is key. gid=(user,repo,id)
+    _name: str = ''
 
     @property
     def name(self):
-        return self.id
+        return self._name
 
     @name.setter
     def name(self, new_name):
-        self.id = new_name
+        self._name = new_name
 
     def __repr__(self):
-        return f'<Page id={self.id}>'
+        return f'<Page id={self.id} name={self.name}>'
 
     def notes(self):
         return misli.find(parent_gid=self.gid())

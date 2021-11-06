@@ -48,7 +48,7 @@ from .context import Context
 
 context = Context()
 
-on_entity_changes(update_views_from_entity_changes)
+misli.on_entity_changes(update_views_from_entity_changes)
 
 # Handle the root view mounting and unmounting (otherwise handled in the parent
 # View.on_child_added/on_child_removed for the views which have a parent)

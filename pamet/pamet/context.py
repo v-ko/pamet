@@ -18,11 +18,11 @@ def page_focus():
     return isinstance(focused_view, map_page.view.MapPageView)
 
 
-# def focused_view_type():
-#     print('IN FOCUS VIEW TYPE')
-#     return type(misli.gui.focused_view()).__name__
+def in_page_properties():
+    curr_tab = pamet.views.current_tab()
+    return curr_tab.state().page_properties_open
 
 
 context.add_callable('editingNote', editing_note)
 context.add_callable('pageFocus', page_focus)
-# context['focusedViewType'] = property(focused_view_type)
+context.add_callable('inPageProperties', in_page_properties)

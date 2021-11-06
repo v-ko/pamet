@@ -19,10 +19,13 @@ def add_entries(menu, entries):
             menu.addMenu(submenu)
         else:
             binding = first_key_binding_for_command(command)
-            menu.addAction(name, command, QKeySequence(binding.key))
+            if binding:
+                menu.addAction(name, command, QKeySequence(binding.key))
+            else:
+                menu.addAction(name, command)
 
 
-@register_view_type
+@register_view_type(name='ContextMenu')
 class ContextMenuWidget(ContextMenuView, QMenu):
     def __init__(self, parent_id: str,
                  entries: dict[str, Union[Command, dict]]):
