@@ -7,7 +7,6 @@ import pamet
 from pamet.model import Note
 from pamet.model.text_note import TextNote
 
-
 log = misli.get_logger(__name__)
 
 
@@ -32,11 +31,10 @@ def create_new_note(page_view_id: str, mouse_position: Point2D):
     note.y = position.y()
 
     # Create the edit view and update its and the tabs states
-    edit_view = misli.gui.create_view(
-        parent_id=tab_state.id,
-        view_class_metadata_filter=dict(entity_type='TextNote', edit=True),
-        mapped_entity=note
-    )
+    edit_view = misli.gui.create_view(parent_id=tab_state.id,
+                                      view_class_metadata_filter=dict(
+                                          entity_type='TextNote', edit=True),
+                                      mapped_entity=note)
     tab_state.edit_view_id = edit_view.id
 
     edit_view_state = gui.view_state(edit_view.id)
@@ -62,15 +60,14 @@ def finish_creating_note(edit_view_id: str, note: Note):
 
 
 @action('notes.start_editing_note')
-def start_editing_note(tab_view_id: str, note_component_id: str,
-                       position: Point2D):
-
-    note = gui.view(note_component_id).note
-
+def start_editing_note(tab_view_id: str, note: Note):
     # Check if there's an open edit window and abort it if so
     tab_state = gui.view_state(tab_view_id)
     if tab_state.edit_view_id:
         abort_editing_note(tab_state.edit_view_id)
+
+    page_view_state = misli.gui.view_state(tab_state.page_view_id)
+    position = page_view_state.viewport.project_point(note.rect().center())
 
     edit_view = pamet.create_and_bind_edit_view(tab_view_id, note)
     tab_state.edit_view_id = edit_view.id

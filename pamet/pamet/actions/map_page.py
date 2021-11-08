@@ -217,6 +217,10 @@ def stop_notes_resize(map_page_view_id: str, new_size: list, nc_ids: list):
 def start_note_drag(map_page_view_id: str, mouse_pos: list):
 
     map_page_view_state = gui.view_state(map_page_view_id)
+    if map_page_view_state.drag_select_active:
+        stop_drag_select(map_page_view_id)
+
+    map_page_view_state = gui.view_state(map_page_view_id)
     map_page_view_state.mouse_position_on_note_drag_start = Point2D(*mouse_pos)
     map_page_view_state.note_drag_active = True
     gui.update_state(map_page_view_state)

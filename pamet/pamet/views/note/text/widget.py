@@ -12,7 +12,7 @@ log = get_logger(__name__)
 
 
 @register_view_type(priority=1, entity_type='TextNote', edit=False)
-class TextNoteViewWidget(QLabel, NoteView):
+class TextNoteWidget(QLabel, NoteView):
     def __init__(self, parent_id):
         NoteView.__init__(
             self, parent_id=parent_id, initial_state=NoteViewState())

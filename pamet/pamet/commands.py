@@ -1,12 +1,15 @@
+from typing import Tuple
+
 import misli
 from misli.gui import command
+
 import pamet
 from pamet import actions
 
 log = misli.get_logger(__name__)
 
 
-def current_tab_and_page_views():
+def current_tab_and_page_views() -> Tuple:
     tab = pamet.views.current_tab()
     if not tab:
         raise Exception('There\'s no open tab.')
@@ -50,4 +53,9 @@ def open_page_properties():
 @command(title='Edit selected note')
 def edit_selected_notes():
     tab, page_view = current_tab_and_page_views()
-    actions.note.start_editing_note(tab.id, )
+    selected_nc_ids = page_view.state().selected_nc_ids
+    if not selected_nc_ids:
+        return
+
+    note_component = misli.gui.view(next(iter(selected_nc_ids)))
+    actions.note.start_editing_note(tab.id, note_component.note)

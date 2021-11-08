@@ -314,8 +314,7 @@ class MapPageView(View):
         note_view = self.get_note_view_at(mouse_pos)
 
         if note_view:
-            note_actions.start_editing_note(self.parent_id, note_view.id,
-                                            mouse_pos)
+            note_actions.start_editing_note(self.parent_id, note_view.note)
         else:
             note_actions.create_new_note(self.id, mouse_pos)
 
