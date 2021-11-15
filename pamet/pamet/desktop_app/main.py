@@ -4,6 +4,7 @@ import signal
 from PySide6.QtWidgets import QWidget
 
 import misli
+from misli.gui.model_to_view_binder.actions import update_views_from_entity_changes
 
 import pamet
 from pamet import default_key_bindings
@@ -43,6 +44,7 @@ def main():
     misli.configure_for_qt()
     pamet.configure_for_qt()
     misli.gui.key_binding_manager.apply_config(default_key_bindings)
+    misli.on_entity_changes(update_views_from_entity_changes)
 
     start_page = pamet.actions.other.get_or_create_default_page()
     misli.gui.queue_action(pamet.actions.window.new_browser_window,

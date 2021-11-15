@@ -1,9 +1,5 @@
 #!/usr/bin/env python
-
-from misli_debug import set_logging_level, LoggingLevels
-set_logging_level(LoggingLevels.DEBUG)
-
-from pamet.desktop_app.main import main
+from pamet.desktop_app.main_debug import main
 
 
 if __name__ == '__main__':

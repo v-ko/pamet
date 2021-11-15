@@ -48,8 +48,6 @@ from .context import Context
 
 context = Context()
 
-misli.on_entity_changes(update_views_from_entity_changes)
-
 # Handle the root view mounting and unmounting (otherwise handled in the parent
 # View.on_child_added/on_child_removed for the views which have a parent)
 misli.subscribe(STATE_CHANGE_BY_PARENT_CHANNEL,
