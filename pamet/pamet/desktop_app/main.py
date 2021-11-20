@@ -1,8 +1,6 @@
 import os
 import signal
 
-from PySide6.QtWidgets import QWidget
-
 import misli
 from misli.gui.model_to_view_binder.actions import update_views_from_entity_changes
 
@@ -36,17 +34,18 @@ def main():
         fs_repo = FSStorageRepository.new(repo_path)
 
     misli.set_repo(fs_repo)
-
-    desktop_app = DesktopApp()
-
-    # desktop_app.processEvents()
-
     misli.configure_for_qt()
     pamet.configure_for_qt()
+
     misli.gui.key_binding_manager.apply_config(default_key_bindings)
     misli.on_entity_changes(update_views_from_entity_changes)
 
-    start_page = pamet.actions.other.get_or_create_default_page()
+    desktop_app = DesktopApp()
+
+    start_page = pamet.helpers.get_default_page()
+    if not start_page:
+        start_page = pamet.actions.other.create_default_page()
+
     misli.gui.queue_action(pamet.actions.window.new_browser_window,
                            args=[start_page.id])
 

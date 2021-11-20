@@ -27,4 +27,5 @@ class LoggingLevels(Enum):
 
 
 def set_logging_level(level: LoggingLevels):
+    print(f'Setting logging level to {level}')
     os.environ['MISLI_LOGGING_LEVEL'] = level.name

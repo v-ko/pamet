@@ -46,4 +46,3 @@ class ContextMenuWidget(ContextMenuView, QMenu):
 
     def hiding(self):
         ContextMenuView.close(self)
-        print('HIDING')

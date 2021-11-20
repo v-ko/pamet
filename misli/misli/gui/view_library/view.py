@@ -128,6 +128,3 @@ class View:
 
     def get_geometry(self):
         return gui.util_provider().view_geometry(self)
-
-    def set_focus(self):
-        gui.util_provider().set_focus(self)

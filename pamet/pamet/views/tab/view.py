@@ -6,7 +6,7 @@ MIN_TAB_WIDTH = SIDEBAR_WIDTH * 1.1
 
 
 @wrap_and_register_view_state_type
-class BrowserTabViewState(ViewState):
+class TabViewState(ViewState):
     name: str = ''
     page_view_id: str = None
     edit_view_id: str = None
@@ -15,12 +15,12 @@ class BrowserTabViewState(ViewState):
     page_properties_open: bool = False
 
 
-class BrowserTabView(View):
+class TabView(View):
     def __init__(self, parent_id):
         View.__init__(
             self,
             parent_id=parent_id,
-            initial_state=BrowserTabViewState()
+            initial_state=TabViewState()
         )
 
     def page_view(self):

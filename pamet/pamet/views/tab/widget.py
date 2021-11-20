@@ -8,14 +8,14 @@ from misli.gui.view_library import register_view_type
 
 from pamet.views.map_page.view import MapPageView
 
-from .view import BrowserTabView, SIDEBAR_WIDTH, MIN_TAB_WIDTH
+from .view import TabView, SIDEBAR_WIDTH, MIN_TAB_WIDTH
 
 
 @register_view_type
-class BrowserTabWidget(QWidget, BrowserTabView):
+class TabWidget(QWidget, TabView):
     def __init__(self, parent_id):
         QWidget.__init__(self)
-        BrowserTabView.__init__(self, parent_id)
+        TabView.__init__(self, parent_id)
 
         self_rect = self.geometry()
         self.right_sidebar = QWidget(self)
@@ -101,4 +101,4 @@ class BrowserTabWidget(QWidget, BrowserTabView):
         self._page_view = new_page_view
         self.layout().addWidget(new_page_view)
         # Must be visible to accept focus, so queue on the main loop
-        misli.call_delayed(new_page_view.set_focus)
+        misli.call_delayed(new_page_view.setFocus)

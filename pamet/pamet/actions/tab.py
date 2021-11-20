@@ -3,10 +3,10 @@ from misli.gui import action
 from misli.basic_classes import Point2D
 
 import pamet
-from pamet.views.tab.view import BrowserTabView
+from pamet.views.tab.view import TabView
 from pamet.model import Page
 from pamet.model.text_note import TextNote
-from pamet.helpers import generate_default_page_id
+from pamet.helpers import generate_page_name
 from pamet.actions import map_page as map_page_actions
 
 
@@ -35,10 +35,10 @@ def tab_go_to_default_page(tab_component_id):
 @action('page.create_and_link_page')
 def create_new_page(tab_view_id: str, mouse_position: Point2D):
     # This action assumes there's a page opened
-    tab: BrowserTabView = misli.gui.view(tab_view_id)
+    tab: TabView = misli.gui.view(tab_view_id)
     page_view = tab.page_view()
     parent_page = page_view.page
-    new_name = generate_default_page_id()
+    new_name = generate_page_name()
     new_page = Page(name=new_name)
     misli.insert(new_page)
 

@@ -82,6 +82,9 @@ def call_delayed(callback: Callable,
     args = args or []
     kwargs = kwargs or {}
 
+    if not callback:
+        raise Exception('Callback cannot be None')
+
     _main_loop.call_delayed(callback, delay, args, kwargs)
 
 

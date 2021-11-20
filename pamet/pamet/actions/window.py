@@ -2,7 +2,7 @@ from misli import gui
 from misli.gui.actions_library import action
 
 from pamet.views.window.widget import BrowserWindowWidget
-from pamet.views.tab.widget import BrowserTabWidget
+from pamet.views.tab.widget import TabWidget
 from pamet.actions import tab as tab_actions
 from pamet import commands
 
@@ -23,9 +23,9 @@ def close_browser_window(browser_window_id: str):
 
 @action('desktop_app.new_browser_tab')
 def new_browser_tab(browser_window_id: str, page_id: str):
-    tab_view: BrowserTabWidget = gui.create_view(
+    tab_view: TabWidget = gui.create_view(
         parent_id=browser_window_id,
-        view_class_name=BrowserTabWidget.__name__)
+        view_class_name=TabWidget.__name__)
 
     tab_actions.tab_go_to_page(tab_view.id, page_id)
 

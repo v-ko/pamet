@@ -35,6 +35,7 @@ class FSStorageRepository(Repository):
 
         self.upserted_pages = set()
         self.removed_pages = set()
+        self.pages_for_write_removal = {}
 
         self._process_legacy_pages()
 
@@ -104,6 +105,7 @@ class FSStorageRepository(Repository):
         self.remove_from_cache(entity)
         if isinstance(entity, Page):
             self.removed_pages.add(entity.gid())
+            self.pages_for_write_removal[entity.gid()] = entity
         elif isinstance(entity, Note):
             self.upserted_pages.add(entity.parent_gid())
 
@@ -163,7 +165,7 @@ class FSStorageRepository(Repository):
                 self.create_page(page, page.notes())
 
         for page_gid in self.removed_pages:
-            page = misli.find_one(gid=page_gid)
+            page = self.pages_for_write_removal.pop(page_gid)
             self.delete_page(page)
 
         self.upserted_pages.clear()

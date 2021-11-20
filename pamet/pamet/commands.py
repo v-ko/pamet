@@ -47,7 +47,7 @@ def save_page_properties():
 @command(title='Open page properties')
 def open_page_properties():
     tab, page_view = current_tab_and_page_views()
-    actions.map_page.open_page_properties(tab.id, page_view.page)
+    actions.map_page.open_page_properties(tab.id)
 
 
 @command(title='Edit selected note')

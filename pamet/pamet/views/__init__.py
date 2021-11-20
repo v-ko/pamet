@@ -1,5 +1,5 @@
 import misli
-from pamet.views.tab.view import BrowserTabView
+from pamet.views.tab.view import TabView
 from pamet.views.window.view import BrowserWindowView
 
 

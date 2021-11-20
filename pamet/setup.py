@@ -10,5 +10,5 @@ setuptools.setup(
             'pamet-debug=pamet.desktop_app.main_debug:main',
         ],
     },
-    install_requires=['PySide6', 'misli']
+    install_requires=['PySide6', 'misli', 'misli_debug']
 )

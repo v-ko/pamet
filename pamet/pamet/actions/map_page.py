@@ -6,8 +6,8 @@ from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
-from pamet.helpers import generate_default_page_id
-
+from pamet.views.map_page.view import MapPageViewState
+from pamet.views.tab.view import TabViewState
 
 log = misli.get_logger(__name__)
 
@@ -305,13 +305,20 @@ def open_context_menu(tab_view_id: str, entries: dict):
 
 
 @action('map_page.open_page_properties')
-def open_page_properties(tab_view_id: str, page: Page):
-    tab_state = misli.gui.view_state(tab_view_id)
+def open_page_properties(tab_view_id: str, focused_prop: str = None):
+    tab_state: TabViewState = misli.gui.view_state(tab_view_id)
+    page_view_state: MapPageViewState = misli.gui.view_state(
+        tab_state.page_view_id)
     properties_view = misli.gui.create_view(parent_id=tab_state.id,
                                             view_class_metadata_filter=dict(
                                                 entity_type=Page.__name__,
                                                 page_edit=True),
-                                            mapped_entity=page)
+                                            mapped_entity=page_view_state.page)
+
+    if focused_prop:
+        properties_view_state = misli.gui.view_state(properties_view)
+        properties_view_state.focused_prop = focused_prop
+        misli.gui.update_state(properties_view_state)
 
     tab_state.right_sidebar_view_id = properties_view.id
     tab_state.right_sidebar_visible = True
@@ -340,20 +347,16 @@ def close_page_properties(properties_view_id: str):
 
 @action('map_page.delete_page')
 def delete_page(tab_view_id, page):
-    misli.delete(page)
-    if not list(pamet.pages()):
+    misli.remove(page)
+    next_page = pamet.helpers.get_default_page()
+    if not next_page:
         misli.gui.create_view(
             parent_id=tab_view_id,
             view_class_metadata_filter=dict(name='MessageBox'),
             init_kwargs=dict(title='Info',
                              text=('You deleted the last page. '
                                    'A blank one has been created for you')))
+        next_page = pamet.actions.other.create_default_page()
+    tab_actions.tab_go_to_page(tab_view_id, next_page.id)
 
-    new_page = Page(name=generate_default_page_id())
-    tab_actions.tab_go_to_page(tab_view_id, new_page.id)
-    open_page_properties(tab_view_id, new_page)
 
-    tab_state = misli.gui.view_state(tab_view_id)
-    properties_state = misli.gui.view_state(tab_state.right_sidebar_view_id)
-    properties_state.focused_prop = 'name'
-    misli.gui.update_state(properties_state)
