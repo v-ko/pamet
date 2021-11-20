@@ -50,7 +50,7 @@ def call(command_and_args: list, cwd: str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--misli_module_path', default='../../pubsub.py/misli')
+    parser.add_argument('--misli_module_path', default='../../misli/misli')
     parser.add_argument('--web_shell_path', default='../')
     parser.add_argument('--build_dir', default='../../builds/web_shell')
     parser.add_argument(
