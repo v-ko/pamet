@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>563</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <widget class="QTextEdit" name="leftLabelsTextEdit">
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QLabel" name="imageDisplayLabel">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="rightLabelsTextEdit">
+        <property name="maximumSize">
+         <size>
+          <width>200</width>
+          <height>16777215</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QPushButton" name="previousButton">
+        <property name="text">
+         <string>Previous</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="nextButton">
+        <property name="text">
+         <string>Next</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

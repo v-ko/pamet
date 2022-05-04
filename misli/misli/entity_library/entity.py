@@ -1,12 +1,12 @@
 from typing import Union
 from datetime import datetime
-from dataclasses import fields, field
+from dataclasses import fields, field, replace
 
 from misli import entity_library
 from misli.helpers import datetime_to_string, get_new_id
 
 
-@entity_library.wrap_and_register_entity_type
+@entity_library.entity_type
 class Entity:
     """The base class for entities. Provides several convenience methods for
     conversions to and from dict, copying and attribute updates (via replace())
@@ -32,11 +32,18 @@ class Entity:
     """
 
     id: str = field(default_factory=get_new_id)
-    _type_name: str = field(init=False, default='')
 
-    @property
-    def type_name(self):
-        return type(self).__name__
+    def __eq__(self, other: 'Entity') -> bool:
+        if not other:
+            return False
+        return self.id == other.id
+        # return self.asdict() == other.asdict()
+
+    def __copy__(self):
+        return self.copy()
+
+    def copy(self) -> 'Entity':
+        return replace(self, **self.asdict())
 
     def gid(self) -> Union[str, tuple]:
         """Returns the global id of the entity. This function can be
@@ -44,12 +51,6 @@ class Entity:
         (self.page_id, self.id)
         """
         return self.id
-
-    def __copy__(self):
-        return self.copy()
-
-    def copy(self) -> 'Entity':
-        return entity_library.from_dict(self.asdict())
 
     def asdict(self) -> dict:
         """Return the entity properties as a dict"""
@@ -59,10 +60,13 @@ class Entity:
         for key, val in self_dict.items():
             if isinstance(val, (list, dict)):
                 val = val.copy()
+                self_dict[key] = val
             elif isinstance(val, datetime):
                 val = datetime_to_string(val)
+                self_dict[key] = val
 
-            self_dict[key] = val
+        # self_dict['type_name'] = type(self).__name__
+
         return self_dict
 
     def replace(self, **changes):
@@ -71,7 +75,6 @@ class Entity:
             setattr(self, key, val)
 
     def parent_gid(self):
-        """Implement this to return the parent id. It's used in the
-        Entity-to-View mapping mechanisms.
+        """Implement this to return the parent global id
         """
         return None

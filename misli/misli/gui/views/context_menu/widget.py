@@ -5,9 +5,7 @@ from PySide6.QtCore import QPoint
 
 import misli
 from misli.gui.key_binding_manager import first_key_binding_for_command
-from misli.gui import register_view_type, Command
-
-from .view import ContextMenuView
+from misli.gui import Command
 
 
 def add_entries(menu, entries):
@@ -25,12 +23,9 @@ def add_entries(menu, entries):
                 menu.addAction(name, command)
 
 
-@register_view_type(name='ContextMenu')
-class ContextMenuWidget(ContextMenuView, QMenu):
-    def __init__(self, parent_id: str,
+class ContextMenuWidget(QMenu):
+    def __init__(self, parent: str,
                  entries: dict[str, Union[Command, dict]]):
-        ContextMenuView.__init__(self, parent_id, entries)
-        parent = misli.gui.view(parent_id)
         QMenu.__init__(self, parent)
 
         add_entries(self, entries)
@@ -40,9 +35,12 @@ class ContextMenuWidget(ContextMenuView, QMenu):
         # This should probably be done via a state update
         misli.call_delayed(self.popup_on_mouse_pos, 0)
 
+    def close(self):
+        self.deleteLater()
+
     def popup_on_mouse_pos(self):
         position = misli.gui.util_provider().mouse_position()
         self.popup(QPoint(*position.as_tuple()))
 
     def hiding(self):
-        ContextMenuView.close(self)
+        self.close()

@@ -37,10 +37,11 @@ it's expected that the subscribed callables are light, since the main purpose
 of misli is GUI rendering and blocking the main loop would cause freezing.
 """
 
+from operator import index
 from typing import Callable, Union, List, Any
 from collections import defaultdict
 from enum import Enum
-from copy import deepcopy
+from copy import copy
 from dataclasses import MISSING
 
 from misli.pubsub.main_loop import MainLoop, NoMainLoop
@@ -91,7 +92,6 @@ def call_delayed(callback: Callable,
 # --------------Dispatcher related-------------------
 _subscriptions = {}  # by id
 _channels = {}
-_invoke_queued = False
 
 
 class SubscriptionTypes(Enum):
@@ -101,6 +101,7 @@ class SubscriptionTypes(Enum):
 
 
 class Subscription:
+
     def __init__(self, handler, channel_name, filter_val: Any = MISSING):
         self.id = id(self)
         self.handler = handler
@@ -109,20 +110,34 @@ class Subscription:
 
 
 class Channel:
+
     def __init__(self, name: str, index_key: Callable = None):
         self.name = name
         self.index_key = index_key
         self.message_stack = []
         self.subscribtions = {}
 
-        if index_key:
-            self.index = defaultdict(list)
+        # if index_key:
+        self.index = defaultdict(list)
 
+        if name in _channels:
+            raise Exception('A channel with this name already exists')
+        _channels[name] = self
+
+    def __repr__(self):
+        return f'<Channel name={self.name}>'
+
+    # @log.traced
     def push(self, message):
         if self.index_key:
             self.index[self.index_key(message)].append(message)
 
         self.message_stack.append(message)
+        call_delayed(_invoke_handlers, 0)
+
+    @log.traced
+    def subscribe(self, handler, index_val=None):
+        return subscribe(self.name, handler=handler, index_val=index_val)
 
     def add_subscribtion(self, subscribtion):
         if subscribtion.handler in self.subscribtions:
@@ -144,23 +159,23 @@ class Channel:
         if not self.message_stack:
             return
 
-        if self.index_key:
-            for handler, sub in self.subscribtions.items():
-                if sub.filter_val is MISSING:
-                    handler(deepcopy(self.message_stack))
-                    continue
+        # Iterate over a copy of the subscriptions, since an additional handler
+        # can get added while executing the present handlers
+        for handler, sub in copy(self.subscribtions).items():
+            # If the channel is not indexed or the subscriber does not filter
+            # messages using the index - notify for all messages
+            if not self.index_key or sub.filter_val is MISSING:
+                messages = self.message_stack
+            else:
+                messages = self.index.get(sub.filter_val, [])
 
-                messages = self.index.pop(sub.filter_val, [])
-                if not messages:
-                    continue
-                handler(deepcopy(messages))
-
-            self.index.clear()
-        else:
-            for handler, sub in self.subscribtions.items():
-                handler(deepcopy(self.message_stack))
+            for message in messages:
+                # log.info(f'Calling {handler=} for {message=} on'
+                #          f' channel_name={sub.channel_name}')
+                handler(message)
 
         self.message_stack.clear()
+        self.index.clear()
 
 
 def channel_names() -> List[str]:
@@ -178,10 +193,7 @@ def add_channel(channel_name: str, index_key: Callable = None):
     Raises:
         Exception: If a channel with this name already exists
     """
-
-    if channel_name in _channels:
-        raise Exception('A channel with this name already exists')
-    _channels[channel_name] = Channel(channel_name, index_key)
+    return Channel(channel_name, index_key)
 
 
 @log.traced
@@ -234,6 +246,7 @@ def subscription(subscription_id: str) -> Union[Subscription, None]:
     return _subscriptions[subscription_id]
 
 
+@log.traced
 def unsubscribe(subscription_id):
     """Deactivate the subscription with the specified id"""
     sub = subscription(subscription_id)
@@ -245,22 +258,16 @@ def unsubscribe(subscription_id):
     _subscriptions.pop(sub.id)
 
 
-# @log.traced
 def dispatch(message: object, channel_name: str):
-    # TODO: Should be message or list of messages?
     """Dispatch a message on the specified channel.
 
     Args:
         message (object): The message to be dispatched
         channel (str): The name of the channel to be used
     """
-    # global _invoke_queued
     log.info('DISPATCH on "%s": %s' % (channel_name, message))
 
     _channels[channel_name].push(message)
-    # if not _invoke_queued:
-    call_delayed(_invoke_handlers, 0)
-        # _invoke_queued = True
 
 
 # @log.traced
@@ -268,8 +275,5 @@ def _invoke_handlers():
     """Handle the dispatched messages, by invoking all relevant handlers.
     Gets queued on the main loop with each dispatch.
     """
-    global _invoke_queued
-    _invoke_queued = False
-
     for channel_name, channel in _channels.items():
         channel.notify_subscribers()

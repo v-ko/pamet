@@ -7,11 +7,11 @@ from misli.gui import View
 
 class InputDialogView(View):
     def __init__(self,
-                 parent_id: str,
+                 parent: str,
                  text: str,
                  result_callback: Callable,
                  default_value=None):
-        View.__init__(self, parent_id)
+        View.__init__(self, parent)
         self.result_callback = result_callback
 
     @action('InputDialogView.finish_input')

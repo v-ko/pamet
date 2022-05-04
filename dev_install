@@ -19,7 +19,7 @@ def main():
         if 'setup.py' not in files:
             continue
 
-        command = ['pip', 'install', '-e', root]
+        command = ['pip', 'install', '--upgrade', '-e', root]
         print('Invoking %s' % command)
         result = subprocess.run(command)
 

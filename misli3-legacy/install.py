@@ -76,9 +76,9 @@ def main():
     # Desktop entry
     desktop_entry = os.path.abspath(
         os.path.join(SOURCE_PATH, 'other/misli.desktop'))
-    apply(desktop_entry, os.path.join(LOCAL_APPS, 'misli.desktop_app'))
+    apply(desktop_entry, os.path.join(LOCAL_APPS, 'misli.desktop'))
 
-    os.system('update-desktop_app-database ~/.local/share/applications')
+    os.system('update-desktop-database ~/.local/share/applications')
 
 
 if __name__ == '__main__':

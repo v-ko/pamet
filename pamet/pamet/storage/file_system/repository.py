@@ -1,3 +1,4 @@
+from copy import copy
 from typing import List
 import os
 import json
@@ -6,10 +7,12 @@ from collections import defaultdict
 
 import misli
 from misli import entity_library, Entity, Change
-from misli.helpers import find_many_by_props
+# from misli.gui.view_library import TYPE_NAME
+from misli.helpers import find_many_by_props, test
 from misli.storage.repository import Repository
+import pamet
 
-from pamet import Page, Note
+from pamet.model import Page, Note
 
 from .hacky_backups import backup_page_hackily
 from .legacy import _convert_v2_to_v4, _convert_v3_to_v4
@@ -24,6 +27,7 @@ V4_FILE_EXT = '.misl.json'
 
 class FSStorageRepository(Repository):
     """File system storage. This class has all entities cached at all times"""
+
     def __init__(self, path):
         Repository.__init__(self)
 
@@ -71,8 +75,7 @@ class FSStorageRepository(Repository):
     def upsert_to_cache(self, entity: Entity):
         self._entity_cache[entity.gid()] = entity
         if entity.parent_gid():
-            self._entity_cache_by_parent[entity.parent_gid()].add(
-                entity.gid())
+            self._entity_cache_by_parent[entity.parent_gid()].add(entity.gid())
 
     def remove_from_cache(self, entity: Entity):
         self._entity_cache.pop(entity.gid(), None)
@@ -82,8 +85,7 @@ class FSStorageRepository(Repository):
 
     def insert_one(self, entity):
         if entity.gid() in self._entity_cache:
-            raise Exception(
-                'Cannot insert {entity}, since it already exists')
+            raise Exception('Cannot insert {entity}, since it already exists')
 
         self.upsert_to_cache(entity)
         if isinstance(entity, Page):
@@ -138,7 +140,7 @@ class FSStorageRepository(Repository):
         if 'gid' in filter:
             gid = filter.get('gid')
             result = self._entity_cache.get(gid, None)
-            return [result] if result else []
+            yield from [result] if result else []
 
         # If searching by parent_gid - use the index to do it efficiently
         elif 'parent_gid' in filter:
@@ -146,12 +148,19 @@ class FSStorageRepository(Repository):
             found = self._entity_cache_by_parent.get(parent_gid, [])
             found_entities = [self._entity_cache[gid] for gid in found]
             if not filter:
-                return found_entities
+                yield from found_entities
             else:
-                return find_many_by_props(found_entities, **filter)
+                yield from find_many_by_props(found_entities, **filter)
         else:
-            # Do a search in all entities
-            return find_many_by_props(self._entity_cache, **filter)
+            search_set = self._entity_cache.values()
+            if 'type_name' in filter:
+                type_name = filter.pop('type_name')
+                search_set = [
+                    ent for gid, ent in self._entity_cache.items()
+                    if type(ent).__name__ == type_name
+                ]
+            found = list(find_many_by_props(search_set, **filter))
+            yield from found
 
     def write_to_disk(self):
         if self.upserted_pages.intersection(self.removed_pages):
@@ -215,13 +224,28 @@ class FSStorageRepository(Repository):
 
         # # TODO REMOVE
         # page_state['name'] = page_state.get('id')
+        page_state.pop('type_name', '')  # Refactoring fixes
 
         note_states = page_state.pop('note_states', [])
         notes = []
         for ns in note_states:
-            notes.append(entity_library.from_dict(ns))
 
-        return entity_library.from_dict(page_state), notes
+            ns.pop('type_name', '')  # Refactoring fixes
+            if 'x' in ns: # Refactoring fixes
+                x = ns.pop('x')
+                y = ns.pop('y')
+                width = ns.pop('width')
+                height = ns.pop('height')
+                ns['geometry'] = [x, y, width, height]
+
+            if 'time_created' in ns:
+                ns['created'] = ns.pop('time_created')
+                ns['modified'] = ns.pop('time_modified')
+
+            type_name = pamet.note_type_from_props(ns).__name__
+            notes.append(entity_library.from_dict(type_name, ns))
+
+        return entity_library.from_dict(Page.__name__, page_state), notes
 
     def update_page(self, page, notes):
         page_state = page.asdict()
@@ -294,12 +318,15 @@ class FSStorageRepository(Repository):
                 continue
 
             note_states = page_state.pop('note_states', [])
-            notes = [
-                entity_library.from_dict(ns)
-                for nid, ns in note_states.items()
-            ]
+            notes = []
+            for nid, ns in note_states.items():
+                print('dsa')
+                # ns['type_name'] = 'TextNote'
+                type_name = pamet.note_type_from_props(ns).__name__
+                notes.append(entity_library.from_dict(type_name, ns))
 
-            self.create_page(entity_library.from_dict(page_state), notes)
+            self.create_page(
+                entity_library.from_dict(Page.__name__, page_state), notes)
             legacy_pages.append(Path(file.path))
 
         if legacy_pages:

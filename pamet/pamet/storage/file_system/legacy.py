@@ -60,11 +60,11 @@ def _convert_v3_to_v4(json_path):
         if nt['text'].startswith('this_note_points_to:'):
             nt['href'] = nt['text'].split(':', 1)[1]
             nt['text'] = nt['href']
-            nt['type_name'] = 'Text'
-            # nt['type_name'] = 'Redirect'
+        #     nt['type_name'] = 'Text'
+        #     # nt['type_name'] = 'Redirect'
 
-        else:
-            nt['type_name'] = 'Text'
+        # else:
+        #     nt['type_name'] = 'Text'
 
         # Remove unimplemented attributes to avoid errors
         note = TextNote(*nt)
@@ -82,7 +82,7 @@ def _convert_v3_to_v4(json_path):
 
     note_states = {n['id']: n for n in json_object.pop('notes')}
 
-    json_object['type_name'] = Page.__name__
+    # json_object['type_name'] = Page.__name__
     json_object['note_states'] = note_states
 
     return json_object

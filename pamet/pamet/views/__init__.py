@@ -1,11 +1,10 @@
-import misli
-from pamet.views.tab.view import TabView
-from pamet.views.window.view import BrowserWindowView
+from PySide6.QtWidgets import QApplication
+from pamet.views.tab.widget import TabWidget
 
 
-def current_window() -> BrowserWindowView:
-    return misli.gui.focused_view_or_parent(view_type=BrowserWindowView)
+def current_window():
+    return QApplication.activeWindow()
 
 
-def current_tab():
+def current_tab() -> TabWidget:
     return current_window().current_tab()

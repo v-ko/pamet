@@ -1,3 +1,5 @@
+from dataclasses import field
+
 from PySide6.QtWidgets import QApplication
 
 import misli

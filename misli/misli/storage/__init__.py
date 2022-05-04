@@ -1,3 +1,4 @@
+from copy import copy
 from typing import List, Union, Callable
 
 import misli
@@ -7,22 +8,16 @@ from misli.storage.repository import Repository
 log = misli.get_logger(__name__)
 
 _repo: Repository = None
-_repo_subscription_id = None
-
-ENTITY_CHANGE_CHANNEL = '__ENTITY_CHANGES__'
-ENTITY_CHANGE_BY_ID_CHANNEL = '__ENTITY_CHANGES_BY_ID__'
-misli.add_channel(ENTITY_CHANGE_CHANNEL)
-misli.add_channel(ENTITY_CHANGE_BY_ID_CHANNEL,
-                  index_key=lambda x: x.last_state().id)
 
 
 def publish_entity_change(change: Change):
-    misli.dispatch(change, ENTITY_CHANGE_CHANNEL)
-    misli.dispatch(change, ENTITY_CHANGE_BY_ID_CHANNEL)
+    misli.channels.entity_changes.push(change)
+    misli.channels.entity_changes_by_id.push(change)
+    misli.channels.entity_changes_by_parent_gid.push(change)
 
 
 def on_entity_changes(handler: Callable):
-    misli.subscribe(ENTITY_CHANGE_CHANNEL, handler)
+    misli.channels.entity_changes.subscribe(handler)
 
 
 @log.traced
@@ -33,16 +28,9 @@ def repo():
 @log.traced
 def set_repo(repo):
     global _repo
-    global _repo_subscription_id
 
     log.info('Setting repo to %s' % repo.path)
-
-    if _repo_subscription_id:
-        misli.unsubscribe(_repo_subscription_id)
-
     _repo = repo
-    _repo_subscription_id = misli.subscribe(ENTITY_CHANGE_CHANNEL,
-                                            repo.save_changes)
 
 
 def insert(entity_or_batch: Union[Entity, List[Entity]]):
@@ -50,6 +38,7 @@ def insert(entity_or_batch: Union[Entity, List[Entity]]):
     if not isinstance(entity_or_batch, list):
         batch = [entity_or_batch]
 
+    _repo.insert(batch)
     for entity in batch:
         change = Change.CREATE(entity)
         publish_entity_change(change)
@@ -60,6 +49,7 @@ def remove(entity_or_batch: Union[Entity, List[Entity]]):
     if not isinstance(entity_or_batch, list):
         batch = [entity_or_batch]
 
+    _repo.remove(batch)
     for entity in batch:
         change = Change.DELETE(entity)
         publish_entity_change(change)
@@ -70,26 +60,27 @@ def update(entity_or_batch: Union[Entity, List[Entity]]):
     if not isinstance(entity_or_batch, list):
         batch = [entity_or_batch]
 
-    # changes = []
+    _repo.update(batch)
     for entity in batch:
         old_state = find_one(gid=entity.gid())
         if not old_state:
             raise Exception(f'Cannot update missing entity {entity}')
 
-        # changes.append(Change.UPDATE(old_state, entity))
         change = Change.UPDATE(old_state, entity)
-
-        # for change in changes:
         publish_entity_change(change)
 
 
 def find(**filter):
-    return _repo.find(**filter)
+    results = []
+    for item in _repo.find(**filter):
+        results.append(copy(item))
+    return results
 
 
 def find_one(**filter):
-    found = list(_repo.find(**filter))
-    if found:
-        return found[0]
-    else:
-        return None
+    found = _repo.find(**filter)
+
+    for f in found:
+        return copy(f)
+
+    return None

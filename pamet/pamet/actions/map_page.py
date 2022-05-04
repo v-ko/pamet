@@ -4,10 +4,13 @@ import pamet
 
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
+from pamet.helpers import snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
+from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
 from pamet.views.map_page.view import MapPageViewState
-from pamet.views.tab.view import TabViewState
+from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.tab.widget import TabViewState
 
 log = misli.get_logger(__name__)
 
@@ -173,25 +176,23 @@ def start_notes_resize(map_page_view_id: str, main_note: Note,
     map_page_view_state.note_resize_delta_from_note_edge = (
         resize_circle_center_projected - mouse_position)
     map_page_view_state.note_resize_click_position = mouse_position
-    map_page_view_state.note_resize_main_note = main_note
+    map_page_view_state.note_resize_main_note = main_note.copy()
 
     map_page_view_state.note_resize_active = True
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.resize_note_views')
-def resize_note_views(map_page_view_id: str, new_size: list, nc_ids: list):
-
+def resize_note_views(new_size: Point2D, nc_ids: list):
     for nc_id in nc_ids:
         ncs = gui.view_state(nc_id)
-        note = ncs.note
 
-        note.set_size(Point2D(*new_size))  # Here size restrictions are applied
+        ncs.set_size(new_size)
         gui.update_state(ncs)
 
 
 @action('map_page.resize_notes')
-def resize_notes(new_size: list, page_id: str, note_ids: list):
+def resize_notes(new_size: Point2D, page_id: str, note_ids: list):
     page = pamet.page(gid=page_id)
     for note_id in note_ids:
         note = page.note(note_id)
@@ -207,7 +208,7 @@ def stop_notes_resize(map_page_view_id: str, new_size: list, nc_ids: list):
     map_page_view_state.note_resize_active = False
 
     page = map_page_view_state.page
-    note_ids = [gui.view(nc_id).note.id for nc_id in nc_ids]
+    note_ids = [gui.view_state(nc_id).note.id for nc_id in nc_ids]
     resize_notes(new_size, page.id, note_ids)
 
     gui.update_state(map_page_view_state)
@@ -215,7 +216,6 @@ def stop_notes_resize(map_page_view_id: str, new_size: list, nc_ids: list):
 
 @action('map_page.start_note_drag')
 def start_note_drag(map_page_view_id: str, mouse_pos: list):
-
     map_page_view_state = gui.view_state(map_page_view_id)
     if map_page_view_state.drag_select_active:
         stop_drag_select(map_page_view_id)
@@ -227,17 +227,13 @@ def start_note_drag(map_page_view_id: str, mouse_pos: list):
 
 
 @action('map_page.note_drag_nc_position_update')
-def note_drag_nc_position_update(map_page_view_id: str, nc_ids: list,
-                                 delta: list):
-
-    d = Point2D(*delta)
-
+def note_drag_nc_position_update(nc_ids: list, delta: Point2D):
     for nc_id in nc_ids:
-        ncs = gui.view_state(nc_id)
-        note = misli.find_one(gid=ncs.note.gid())
+        ncs: NoteViewState = gui.view_state(nc_id)
 
-        ncs.note.x = note.x + d.x()
-        ncs.note.y = note.y + d.y()
+        rect = ncs.note.rect()
+        rect.move_top_left(snap_to_grid(rect.top_left() + delta))
+        ncs.set_rect(rect)
 
         gui.update_state(ncs)
 
@@ -283,8 +279,8 @@ def color_selected_notes(map_page_view_id: str,
                          background_color: list = None):
     map_page_view_state = gui.view_state(map_page_view_id)
 
-    for nc_id in map_page_view_state.selected_nc_ids:
-        note = gui.view(nc_id).note
+    for note_view_id in map_page_view_state.selected_nc_ids:
+        note = gui.view_state(note_view_id).note
 
         color = color or note.color
         background_color = background_color or note.background_color
@@ -297,30 +293,20 @@ def color_selected_notes(map_page_view_id: str,
     misli.gui.update_state(map_page_view_state)
 
 
-@action('map_page.open_context_menu')
-def open_context_menu(tab_view_id: str, entries: dict):
-    misli.gui.create_view(tab_view_id,
-                          view_class_metadata_filter=dict(name='ContextMenu'),
-                          init_kwargs=dict(entries=entries))
-
-
 @action('map_page.open_page_properties')
-def open_page_properties(tab_view_id: str, focused_prop: str = None):
-    tab_state: TabViewState = misli.gui.view_state(tab_view_id)
-    page_view_state: MapPageViewState = misli.gui.view_state(
-        tab_state.page_view_id)
-    properties_view = misli.gui.create_view(parent_id=tab_state.id,
-                                            view_class_metadata_filter=dict(
-                                                entity_type=Page.__name__,
-                                                page_edit=True),
-                                            mapped_entity=page_view_state.page)
+def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
+    page_view_state = tab_state.page_view_state
+
+    properties_view_state = MapPagePropertiesViewState(
+        page_id=page_view_state.page.id)
+
+    misli.gui.add_state(properties_view_state)
 
     if focused_prop:
-        properties_view_state = misli.gui.view_state(properties_view)
         properties_view_state.focused_prop = focused_prop
         misli.gui.update_state(properties_view_state)
 
-    tab_state.right_sidebar_view_id = properties_view.id
+    tab_state.right_sidebar_state = properties_view_state
     tab_state.right_sidebar_visible = True
     tab_state.page_properties_open = True
 
@@ -333,30 +319,24 @@ def save_page_properties(page: Page):
 
 
 @action('map_page.close_page_properties')
-def close_page_properties(properties_view_id: str):
-    properties_view = misli.gui.view(properties_view_id)
-    tab = properties_view.get_parent()
-    tab_state = tab.state()
+def close_page_properties(tab_state: TabViewState):
     tab_state.right_sidebar_visible = False
     tab_state.right_sidebar_view_id = None
     tab_state.page_properties_open = False
 
-    misli.gui.remove_view(properties_view)
     misli.gui.update_state(tab_state)
 
 
 @action('map_page.delete_page')
-def delete_page(tab_view_id, page):
+def delete_page(tab_view_state, page):
     misli.remove(page)
     next_page = pamet.helpers.get_default_page()
     if not next_page:
         misli.gui.create_view(
-            parent_id=tab_view_id,
+            parentdsdid=tab_view_state,
             view_class_metadata_filter=dict(name='MessageBox'),
             init_kwargs=dict(title='Info',
                              text=('You deleted the last page. '
                                    'A blank one has been created for you')))
         next_page = pamet.actions.other.create_default_page()
-    tab_actions.tab_go_to_page(tab_view_id, next_page.id)
-
-
+    tab_actions.tab_go_to_page(tab_view_state, next_page)

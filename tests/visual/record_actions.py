@@ -7,7 +7,7 @@ import misli
 from misli.gui import update_components_from_changes
 from pamet import usecases
 import pamet
-from misli.gui.qt_main_loop import QtMainLoop
+from misli.gui.utils.qt_widgets.qt_main_loop import QtMainLoop
 
 from .gui_recorder import MisliGuiRecorder
 from .gui_replay import MisliGuiReplay
@@ -49,7 +49,7 @@ def main():
         misli.gui.on_action_logged(replay.queue_next_action)
 
     desktop_app_class = pamet.view_library.get_view_class('BrowserWindowView')
-    desktop_app = desktop_app_class(parent_id='')
+    desktop_app = desktop_app_class(parent=None)
 
     if file_for_replay:
         replay.queue_next_action()

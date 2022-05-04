@@ -1,9 +1,7 @@
 from __future__ import annotations
-from typing import Union, List
 
-import misli.gui
 from misli import gui, get_logger
-from misli.basic_classes import Point2D
+from misli.entity_library.change import Change
 
 from .view_state import ViewState
 
@@ -29,21 +27,21 @@ class View:
     arguments: children_added, chidren_removed and children_updated.
     """
     def __init__(self,
-                 parent_id: Union[str, None],
                  initial_state: ViewState = None):
         """Registers the View instance in misli.gui, so that model and child
         updates are received accordingly.
 
         Args:
-            parent_id (str): The parent id. Can be none if this view is a root
+            parent (str): The parent id. Can be none if this view is a root
             initial_state (Entity): The view model should be an Entity subclass
         """
         self.subscribtions = []
 
         if not initial_state:
             initial_state = ViewState()
-        initial_state.parent_id = parent_id
-        self.__state = initial_state
+        # if parent:
+        #     initial_state.parent_id = parent.id
+        self._state = initial_state
         self.__previous_state = None
 
     def __repr__(self):
@@ -51,80 +49,18 @@ class View:
 
     @property
     def id(self):
-        return self.__state.id
-
-    @property
-    def parent_id(self):
-        return self.__state.parent_id
+        return self._state.id
 
     def state(self) -> ViewState:
-        if misli.gui.is_in_action():
-            # While executing actions - states changes are buffered
-            return misli.gui.view_state(self.id)
-
-        # When not in an action we return the state applied to the view
-        # This is equivalent to misli.gui.displayed_state()
-        return self.__state.copy()
+        return self._state
 
     def previous_state(self) -> ViewState:
         if not self.__previous_state:
             return None
         return self.__previous_state.copy()
 
-    @log.traced
-    def _handle_state_changes(self, changes):
-        with gui.lock_actions():
-            for change in changes:
-                if change.is_update():
-                    self.__previous_state = self.__state
-                    self.__state = change.last_state()
-                    self.on_state_update()
-
-    @log.traced
-    def _handle_children_state_changes(self, changes):
-        with gui.lock_actions():
-            for change in changes:
-                if change.is_create():
-                    self.on_child_added(change.last_state().view())
-
-                if change.is_update():
-                    self.on_child_updated(change.last_state().view())
-
-                elif change.is_delete():
-                    self.on_child_removed(
-                        gui.removed_view(change.last_state().id))
-
-    # TODO: да стане mount child?
-    def on_child_added(self, child):
-        gui.util_provider().mount_view(child)
-
-    def on_child_updated(self, child):
-        pass
-
-    def on_child_removed(self, child):
-        gui.util_provider().unmount_view(child)
-
-    def on_state_update(self):
+    def on_state_change(self, change: Change):
         pass
 
     def child(self, child_id: str) -> View:
         return gui.view(child_id)
-
-    def get_children(self) -> List[View]:
-        return gui.view_children(self.id)
-
-    def get_parent(self) -> Union[View, None]:
-        return misli.gui.view(self.parent_id)
-
-    def map_from_global(self, position: Point2D):
-        return gui.util_provider().map_from_global(self, position)
-
-    def map_to_global(self, position: Point2D):
-        return gui.util_provider().map_to_global(self, position)
-
-    def mouse_position(self):
-        global_pos = gui.util_provider().mouse_position()
-        return self.map_from_global(global_pos)
-
-    def get_geometry(self):
-        return gui.util_provider().view_geometry(self)

@@ -304,7 +304,7 @@ void Note::drawNote(QPainter &painter)
 {
     QFont font = painter.font();
     QPen pen = painter.pen();
-    font.setFamily("Halvetica");
+    font.setFamily("Helvetica");
     font.setHintingPreference(QFont::PreferNoHinting);
 
     QRectF imageRect = rect();
