@@ -116,11 +116,11 @@ The architecture has these mechanisms:
 
 The GUI is composed by components in a hierarchy. Each of them consists of a View, a View-Model and possibly actions/usecases.
 
-**ViewModels** are dataclasses that define the properties of the corresponding View. They can be changed only through the `misli_gui.update_view_model(view_model)` method. The latter queues an update to the View on the main loop. That means several ViewModel updates called by a user action will be merged and dispatched as a single view-update event.
+**ViewStates** are dataclasses that define the properties of the corresponding View. They can be changed only through the `misli_gui.update_state(view_model)` method. The latter queues an update to the View on the main loop. That means several ViewState updates called by a user action will be merged and dispatched as a single view-update event.
 
-**Views** receive user input and display a part of the GUI. The visual representation of the View should rely mostly on the ViewModel (though having some local state is possible). The View class has 2 virtual functions: to handle ViewModel changes and to handle children changes (added/removed/updated). Upon user input the View should call actions.
+**Views** receive user input and display a part of the GUI. The visual representation of the View should rely mostly on the ViewState (though having some local state is possible). The View class has 2 virtual functions: to handle ViewState changes and to handle children changes (added/removed/updated). Upon user input the View should call actions.
 
-**Actions** are functions, which define the GUI behavior in response to user interactions. They are defined with a decorator, which enables record/replay of action calls and produces better logging. All of the View-Model changes should happen in actions. They are anologous to an action + reducer in redux. They are executed synchronously on the main loop (and can be nested) but the changes they make to the View-Models are cached and sent to the Views (to update the GUI) as a separate task on the main loop (to avoid rendering overhead in some cases).
+**Actions** are functions, which define the GUI behavior in response to user interactions. They are defined with a decorator, which enables record/replay of action calls and produces better logging. All of the ViewState changes should happen in actions. They are anologous to an action + reducer in redux. They are executed synchronously on the main loop (and can be nested) but the changes they make to the ViewStates are cached and sent to the Views (to update the GUI) as a separate task on the main loop (to avoid rendering overhead in some cases).
 
 Some examples for minimal apps using this architecture will come, but for now take a look at the codebase of Pamet.
 
