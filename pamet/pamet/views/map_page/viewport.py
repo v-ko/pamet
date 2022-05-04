@@ -2,7 +2,7 @@ import misli
 from misli.basic_classes import Point2D, Rectangle
 
 
-class Viewport(object):
+class Viewport:
     def __init__(self, _map_page_view_state):
         self._map_page_view_state = _map_page_view_state
 

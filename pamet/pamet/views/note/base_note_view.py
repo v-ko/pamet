@@ -1,32 +1,32 @@
+from dataclasses import field
+import misli
+from misli.basic_classes.rectangle import Rectangle
 from misli.gui.view_library.view import View
-from misli.gui import ViewState, wrap_and_register_view_state_type
+from misli.gui import ViewState, view_state_type
 
 from pamet.model import Note
 
 
-@wrap_and_register_view_state_type
-class NoteViewState(ViewState):
+@view_state_type
+class NoteViewState(ViewState, Note):
+    note_gid: str = ''
+
     def __post_init__(self):
-        if not self.mapped_entity:
-            self.mapped_entity = Note()
+        if not self.note_gid:
+            raise Exception('All note views should have a mapped note.')
 
     @property
     def note(self):
-        return self.mapped_entity
-
-    @note.setter
-    def note(self, new_note):
-        self.mapped_entity = new_note
+        return misli.find_one(gid=self.note_gid)
 
 
 class NoteView(View):
-    def __init__(self, parent_id: str, initial_state):
+    def __init__(self, parent: str, initial_state):
         View.__init__(
             self,
-            parent_id=parent_id,
+            parent=parent,
             initial_state=initial_state
         )
 
-    @property
-    def note(self) -> Note:
-        return self.state().note.copy()
+        if not initial_state.note:
+            raise Exception('Is this usecase acceptable or a bug?')

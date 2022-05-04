@@ -56,7 +56,7 @@ class Action:
             self.run_state = ActionRunStates[run_state]
 
     def __repr__(self):
-        string = (f'<Action name={self.name} run_state={self.run_state.name} '
+        string = (f'<Action name={self.name} run_state={self.run_state} '
                   f'id={self.id}')
         if self.duration != -1:
             string += f'duration={self.duration:.2f}'

@@ -3,13 +3,13 @@ from misli import Entity
 
 
 class Repository:
-    def insert(self, entity_or_batch: Union[Entity, List[Entity]]):
+    def insert(self, batch: List[Entity]):
         raise NotImplementedError
 
-    def remove(self, entity_or_batch: Union[Entity, List[Entity]]):
+    def remove(self, batch: List[Entity]):
         raise NotImplementedError
 
-    def update(self, entity_or_batch: Union[Entity, List[Entity]]):
+    def update(self, batch: List[Entity]):
         raise NotImplementedError
 
     def find(self, **filter):

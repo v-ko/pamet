@@ -2,16 +2,22 @@ import os
 import signal
 
 import misli
-from misli.gui.model_to_view_binder.actions import update_views_from_entity_changes
+from misli.gui import channels
+from misli.gui.actions_library import action
 
 import pamet
+from pamet.actions import window as window_actions
+from pamet.actions import other as other_actions
 from pamet import default_key_bindings
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import get_config
 from pamet.storage import FSStorageRepository
+from pamet.views.window.widget import WindowWidget
 
 log = misli.get_logger(__name__)
-signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+# @action('main.create_window')
+# def create_window():
 
 
 def main():
@@ -37,16 +43,24 @@ def main():
     misli.configure_for_qt()
     pamet.configure_for_qt()
 
-    misli.gui.key_binding_manager.apply_config(default_key_bindings)
-    misli.on_entity_changes(update_views_from_entity_changes)
+    # Debug
+    channels.state_changes_by_id.subscribe(
+        lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
     desktop_app = DesktopApp()
 
     start_page = pamet.helpers.get_default_page()
     if not start_page:
-        start_page = pamet.actions.other.create_default_page()
+        start_page = other_actions.create_default_page()
 
-    misli.gui.queue_action(pamet.actions.window.new_browser_window,
-                           args=[start_page.id])
+    window_state = window_actions.new_browser_window()
+    window = WindowWidget(initial_state=window_state)
+    window.showMaximized()
 
-    return desktop_app.exec_()
+    misli.call_delayed(window_actions.new_browser_tab,
+                       args=[window_state, start_page])
+    return desktop_app.exec()
+
+
+if __name__ == '__main__':
+    main()

@@ -1,9 +1,11 @@
+from typing import List, Union
+from misli.basic_classes.point2d import Point2D
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.desktop_app.config import get_config
 
 
-def snap_to_grid(x):
+def snap_to_grid(x: Union[float, Point2D]) -> Union[float, Point2D]:
     return round(x / ALIGNMENT_GRID_UNIT) * ALIGNMENT_GRID_UNIT
 
 

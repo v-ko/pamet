@@ -3,35 +3,31 @@ from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt
 
-import misli
-from misli.gui.key_binding_manager import first_key_binding_for_command
-from misli.gui import ViewState, wrap_and_register_view_state_type
-from misli.gui import View, register_view_type
+from misli.gui import ViewState, view_state_type
+from misli.gui.view_library.view import View
 
 import pamet
-from pamet.model import Page
-from pamet.actions import map_page as map_page_actions
-from pamet.commands import save_page_properties
+from pamet import actions
 
 
-@wrap_and_register_view_state_type
+@view_state_type
 class MapPagePropertiesViewState(ViewState):
-    focused_prop: str = None
+    focused_prop: str = ''
+    page_id: str = ''
 
     @property
     def page(self):
-        return self.mapped_entity
+        return pamet.page(id=self.page_id)
 
 
-@register_view_type(priority=-1, entity_type=Page.__name__, page_edit=True)
 class MapPagePropertiesWidget(QWidget, View):
-    def __init__(self, parent_id):
-        parent = misli.gui.view(parent_id)
-        QWidget.__init__(self, parent=parent)
+    def __init__(self, tab_widget, initial_state):
+        QWidget.__init__(self, parent=tab_widget)
         View.__init__(self,
-                      parent_id,
-                      initial_state=MapPagePropertiesViewState())
+                      tab_widget,
+                      initial_state=initial_state)
 
+        self.tab_widget = tab_widget
         self.name_line_edit = QLineEdit('', self)
         self.name_line_edit.textChanged.connect(
             self._handle_name_line_edit_text_changed)
@@ -43,15 +39,17 @@ class MapPagePropertiesWidget(QWidget, View):
 
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         esc_shortcut.activated.connect(
-            lambda: map_page_actions.close_page_properties(self.id))
+            lambda: actions.map_page.close_page_properties(
+                self.tab_widget.state()))
 
-        binding = first_key_binding_for_command(save_page_properties)
-        self.save_button = QPushButton(f'Save ({binding.key})')
+        # binding = first_key_binding_for_command(save_page_properties)
+        # self.save_button = QPushButton(f'Save ({binding.key})')
+        self.save_button = QPushButton('Save (Ctrl+S)')
         # self.save_button.setEnabled(False)
         self.save_button.clicked.connect(self._handle_save_button_click)
         self.delete_button = QPushButton(f'Delete page')
         self.delete_button.clicked.connect(
-            lambda: map_page_actions.delete_page(self.parent_id,
+            lambda: actions.map_page.delete_page(self.tab_widget.state(),
                                                  self.state().page))
         self.delete_button.setStyleSheet('QButton {background-color: red;}')
 
@@ -81,8 +79,8 @@ class MapPagePropertiesWidget(QWidget, View):
         state = self.state()
         page = state.page
         page.name = self.name_line_edit.text()
-        map_page_actions.save_page_properties(page)
-        map_page_actions.close_page_properties(self.id)
+        actions.map_page.save_page_properties(page)
+        actions.map_page.close_page_properties(self.tab_widget.state())
 
     def _handle_name_line_edit_text_changed(self, new_text):
         # Check if the id is available and valid

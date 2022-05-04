@@ -16,22 +16,6 @@ class QtWidgetsUtilProvider(BaseUtilitiesProvider):
         super().__init__()
         self._shortcuts = {}
 
-        # self.root_widgets = []
-        # self._shortcuts_per_root_widget = defaultdict(list)
-
-    def mount_view(self, view):
-        parent = gui.view(view.parent_id)
-        if parent and parent != view.parent():
-            view.setParent(parent)
-
-            # view.setParent(self.root_widget, Qt.Window)
-            # view.show()
-            # # self.root_widget.hide()
-            # return
-
-    def unmount_view(self, view):
-        view.deleteLater()
-
     def add_key_binding(self, view, key_binding):
         shortcut = QShortcut(QKeySequence(key_binding.key), view)
         # shortcut.setContext(Qt.ApplicationShortcut)

@@ -23,14 +23,12 @@ def current_tab_and_page_views() -> Tuple:
 
 @command(title='Create new note')
 def create_new_note():
-    tab, page_view = current_tab_and_page_views()
-    actions.note.create_new_note(page_view.id, page_view.mouse_position())
+    pamet.views.current_window().current_tab().create_new_note_command()
 
 
 @command(title='Create new page')
 def create_new_page():
-    tab, page_view = current_tab_and_page_views()
-    actions.tab.create_new_page(tab.id, page_view.mouse_position())
+    pamet.views.current_window().current_tab().create_new_page_command()
 
 
 @command(title='Save page properties')
@@ -47,7 +45,7 @@ def save_page_properties():
 @command(title='Open page properties')
 def open_page_properties():
     tab, page_view = current_tab_and_page_views()
-    actions.map_page.open_page_properties(tab.id)
+    actions.map_page.open_page_properties(tab.state())
 
 
 @command(title='Edit selected note')
@@ -57,5 +55,5 @@ def edit_selected_notes():
     if not selected_nc_ids:
         return
 
-    note_component = misli.gui.view(next(iter(selected_nc_ids)))
-    actions.note.start_editing_note(tab.id, note_component.note)
+    note_component = misli.gui.view(selected_nc_ids[0])
+    actions.note.start_editing_note(tab.id, note_component.note())

@@ -1,19 +1,23 @@
+from __future__ import annotations
+from dataclasses import field
 from typing import Any
-# from dataclasses import field
 
 from misli import Entity
-from misli import wrap_and_register_entity_type
+from misli import entity_type
 from misli import gui
 
 
-def wrap_and_register_view_state_type(view_state_class: Any):
-    return wrap_and_register_entity_type(view_state_class)
+def view_state_type(view_state_class: Any):
+    return entity_type(view_state_class)
 
 
-@wrap_and_register_view_state_type
+@view_state_type
 class ViewState(Entity):
-    mapped_entity: Entity = None
-    parent_id: str = None
+    backup: ViewState = field(default=None, repr=False)
 
-    def view(self):
-        return gui.view(self.id)
+    def __setattr__(self, attr_name, value):
+        if not gui.is_in_action():
+            raise Exception('View states can be modified only in actions')
+            return
+
+        Entity.__setattr__(self, attr_name, value)

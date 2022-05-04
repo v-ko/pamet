@@ -1,4 +1,4 @@
-from typing import Generator, Any
+from typing import Generator, Any, List, Union
 
 import random
 import uuid
@@ -11,8 +11,13 @@ def get_new_id() -> str:
     return guid
 
 
+def test(item_list: Union[list, dict], **props):
+    print('bla')
+    yield from ['bla', 2]
+
+
 def find_many_by_props(
-        item_list: [list, dict], **props) -> Generator[Any, None, None]:
+        item_list: Union[list, dict], **props) -> Generator[Any, None, None]:
     """Filter a list or dict and return only objets which have attributes
     matching the provided keyword arguments (key==attr_name and val==attr_val)
     """

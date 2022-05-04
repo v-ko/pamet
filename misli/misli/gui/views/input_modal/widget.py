@@ -3,20 +3,20 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QInputDialog
 
 import misli
-from misli.gui import register_view_type
+# from misli.gui import register_view_type
 from .view import InputDialogView
 
 
-@register_view_type
+# @register_view_type
 class InputDialogWidget(InputDialogView, QInputDialog):
     def __init__(self,
-                 parent_id: str,
+                 parent: str,
                  text: str,
                  result_callback: Callable,
                  default_value=None):
-        parent = misli.gui.view(parent_id)
+        parent = misli.gui.view(parent.id)
         InputDialogView.__init__(self,
-                                 parent_id,
+                                 parent,
                                  '',
                                  text,
                                  result_callback)

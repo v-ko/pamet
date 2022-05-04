@@ -1,15 +1,17 @@
 from dataclasses import field
+from datetime import datetime
 from misli import get_logger
-from misli import wrap_and_register_entity_type
+from misli import entity_type
 from pamet.model.note import Note
 log = get_logger(__name__)
 
 TEXT = 'text'
 
 
-@wrap_and_register_entity_type
+@entity_type
 class TextNote(Note):
     def __post_init__(self):
+        # super().__post_init__()
         if TEXT not in self.content:
             self.text = ''
 
@@ -19,4 +21,7 @@ class TextNote(Note):
 
     @text.setter
     def text(self, new_text):
+        if TEXT in self.content and self.content[TEXT] == new_text:
+            return
+
         self.content[TEXT] = new_text

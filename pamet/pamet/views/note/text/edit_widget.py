@@ -3,20 +3,22 @@ from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtCore import Qt, QRectF, QPointF
 
 import misli
-from misli.gui.view_library import register_view_type
+from misli.gui.utils.qt_widgets.qtview import QtView
 from pamet.actions import note as note_actions
-from pamet.views.note.text.edit_view import TextNoteEditView
+from pamet.model.note import Note
 from pamet.views.note.text.edit_view import TextNoteEditViewState
 from pamet.views.note.text.ui_edit_widget import Ui_TextNoteEditViewWidget
 
 log = misli.get_logger(__name__)
 
 
-@register_view_type(entity_type='TextNote', edit=True)
-class TextNoteEditViewWidget(QWidget, TextNoteEditView):
-    def __init__(self, parent_id):
-        TextNoteEditView.__init__(self, parent_id)
-        QWidget.__init__(self)
+class TextNoteEditWidget(QWidget, QtView):
+    def __init__(self, parent, initial_state):
+        QWidget.__init__(self, parent=parent)
+        QtView.__init__(self,
+                        parent=parent,
+                        initial_state=initial_state,
+                        on_state_change=self.on_state_change)
 
         self.ui = Ui_TextNoteEditViewWidget()
         self.ui.setupUi(self)
@@ -27,19 +29,26 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
 
         self.show()
 
-    def on_state_update(self):
-        self.update()
+    @property
+    def note(self) -> Note:
+        return self.state().note.copy()
 
-    def update(self):
-        state: TextNoteEditViewState = self.state()
-        display_rect = QRectF(*self.note.rect().as_tuple())
+    def _handle_esc_shortcut(self):
+        note_actions.abort_editing_note(self.parent().state())
+
+    def on_state_change(self, change):
+        state: TextNoteEditViewState = change.last_state()
+        if not state.note:
+            return
+
+        display_rect = QRectF(*state.note.rect().as_tuple())
         display_rect.moveCenter(
             QPointF(*state.display_position.as_tuple()))
 
         height = display_rect.height() + self.ui.ok_button.height()
         display_rect.setHeight(height)
 
-        tab_component = misli.gui.view(self.parent_id)
+        tab_component = self.parent()
 
         top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
         display_rect.moveTopLeft(top_left)
@@ -53,6 +62,6 @@ class TextNoteEditViewWidget(QWidget, TextNoteEditView):
         note.text = self.ui.textEdit.toPlainText().strip()
 
         if self.state().create_mode:
-            note_actions.finish_creating_note(self.id, note)
+            note_actions.finish_creating_note(self.parent().state(), note)
         else:
-            note_actions.finish_editing_note(self.id, note)
+            note_actions.finish_editing_note(self.parent().state(), note)

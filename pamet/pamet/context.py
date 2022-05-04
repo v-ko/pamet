@@ -7,7 +7,7 @@ from pamet.views import map_page
 
 def editing_note():
     tab = pamet.views.current_tab()
-    if tab and tab.edit_view_id:
+    if tab and tab.edit_view_state:
         return True
     return False
 

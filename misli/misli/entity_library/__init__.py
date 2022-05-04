@@ -13,6 +13,8 @@ class Property:
 
 
 def _apply_dataclass_and_process_properties(entity_class):
+    '''was used to integrate properties into the dataclass. But it was a messy
+    solution'''
     marked_props = [
         ann for ann in entity_class.__annotations__ if ann.startswith('_')
     ]
@@ -76,7 +78,7 @@ def _apply_dataclass_and_process_properties(entity_class):
     return entity_class
 
 
-def wrap_and_register_entity_type(entity_class: Any):
+def entity_type(entity_class: Any):
     """A class decorator to register entities in the entity library for the
     purposes of serialization and deserialization. It applies the dataclass
     decorator.
@@ -109,7 +111,9 @@ def wrap_and_register_entity_type(entity_class: Any):
     Raises:
         Exception: on duplicate registration
     """
-    entity_class = _apply_dataclass_and_process_properties(entity_class)
+    # entity_class = _apply_dataclass_and_process_properties(entity_class)
+
+    entity_class = dataclass(entity_class)
 
     # Register the entity class
     entity_class_name = entity_class.__name__
@@ -125,10 +129,10 @@ def get_entity_class_by_name(entity_class_name: str):
     return entity_library[entity_class_name]
 
 
-def from_dict(self_dict: dict) -> 'Entity':
+def from_dict(type_name: str, entity_dict: dict) -> 'Entity':
     """Construct an entity given its state as a dict"""
-    type_name = self_dict.pop('type_name')
+    # type_name = entity_dict.pop('type_name')
     cls = get_entity_class_by_name(type_name)
 
-    instance = cls(**self_dict)
+    instance = cls(**entity_dict)
     return instance

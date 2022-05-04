@@ -49,7 +49,7 @@ class KeyBinding:
         self.command = command
 
         if isinstance(view_type, str):
-            view_type = misli.gui.view_library.get_view_class(
+            view_type = misli.gui.view_library.get_view_type(
                 class_name=view_type)
         self.view_type = view_type
 
@@ -82,14 +82,14 @@ def add_key_binding(key_binding):
 
     _bindings.add(key_binding)
     _bindings_per_command[key_binding.command].append(key_binding)
-    for view in misli.gui.find_views(parent_id=None):
+    for view in misli.gui.find_views(parent=None):
         misli.gui.util_provider().add_key_binding(view, key_binding)
 
 
 def remove_key_binding(key_binding):
     _bindings.remove(key_binding)
     _bindings_per_command[key_binding.command].remove(key_binding)
-    for view in misli.gui.find_views(parent_id=None):
+    for view in misli.gui.find_views(parent=None):
         misli.gui.util_provider().remove_key_binding(view, key_binding)
 
 

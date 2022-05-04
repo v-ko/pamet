@@ -15,7 +15,9 @@ def create_default_page():
     page = Page(name=generate_page_name())
     misli.insert(page)
 
-    help_link_note = TextNote(parent_id=page.id, text='Mock help note')
+    help_link_note = TextNote(page_id=page.id)
+    help_link_note.text = 'Mock help note'
+
     rect = help_link_note.rect()
     rect.move_center(Point2D(0, 0))
     help_link_note.set_rect(rect)

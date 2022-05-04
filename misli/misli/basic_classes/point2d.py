@@ -3,17 +3,9 @@ import math
 
 
 class Point2D:
-    def __init__(self, x: float, y: float):
+    def __init__(self, x: float = 0, y: float = 0):
         self._x = x
         self._y = y
-
-    @classmethod
-    def from_coords(cls, coords: Tuple[float, float]) -> 'Point2D':
-        if len(coords) != 2:
-            raise ValueError
-
-        x, y = coords
-        return cls(x, y)
 
     def __repr__(self):
         return '<Point x=%s y=%s>' % (self.x(), self.y())
@@ -26,6 +18,15 @@ class Point2D:
 
     def __truediv__(self, k) -> 'Point2D':
         return Point2D(self.x() / k, self.y() / k)
+
+    def __round__(self):
+        return Point2D(round(self.x()), round(self.y()))
+
+    def __mul__(self, k):
+        return Point2D(self.x() * k, self.y() * k)
+
+    def __rmul__(self, k):
+        return self.__mul__(k)
 
     def x(self) -> float:
         return self._x

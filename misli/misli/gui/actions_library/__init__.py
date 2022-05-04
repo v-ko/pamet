@@ -10,7 +10,6 @@ log = misli.get_logger(__name__)
 _actions_by_name = {}
 _names_by_wrapped_func = {}
 _unwrapped_action_funcs_by_name = {}
-_actions_stack = []
 
 
 def is_registered(action_function: Callable):

@@ -26,7 +26,7 @@
 #define MOVE_FUNC_TIMEOUT 300 //milisecs to hold the mouse on a note to move it
 #define MAX_UNDO_STEPS 100 //should be memory consumption based
 #define INITIAL_EYE_Z 90 //default height of the viewpoint
-#define NOTE_SPACING 0.2
+#define NOTE_SPACING 0.02
 #define RESIZE_CIRCLE_RADIUS 1
 #define ALIGNMENT_LINE_LENGTH 6
 #define A_TO_B_NOTE_SIZE_RATIO 5

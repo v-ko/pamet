@@ -47,8 +47,7 @@ def _get_trace_decorator(logger_name: str):
             indent = ' ' * 4 * (stack_depth - 1)
 
             args_string = ', '.join([str(a) for a in args])
-            kwargs_string = ', '.join(['%s=%s' % (k, v)
-                                      for k, v in kwargs.items()])
+            kwargs_string = ', '.join([f'{k}={v}' for k, v in kwargs.items()])
 
             log.debug('%sCALL: %s ARGS=*(%s) KWARGS=**{%s}' %
                       (indent, name_str, args_string, kwargs_string),

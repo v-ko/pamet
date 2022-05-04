@@ -41,7 +41,7 @@ CanvasWidget::CanvasWidget(MisliWindow *misliWindow_, NoteFile *nf) :
     contextMenu = new QMenu(this);
 
     infoLabel = new QLabel(this);
-    infoLabel->setFont(QFont("Halvetica",15));
+    infoLabel->setFont(QFont("Helvetica", 15));
 
     //Setting the timer for the move_func
     move_func_timeout = new QTimer(this);

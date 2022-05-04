@@ -1,29 +1,20 @@
 from misli.basic_classes import Point2D
-from misli.gui import wrap_and_register_view_state_type
+from misli.gui import view_state_type
+from pamet.model.note import Note
+from pamet.model.text_note import TextNote
 from pamet.views.note.base_note_view import NoteView, NoteViewState
 
-from pamet.model import Note
-from pamet.actions import note as note_actions
 
-
-@wrap_and_register_view_state_type
-class TextNoteEditViewState(NoteViewState):
+@view_state_type
+class TextNoteEditViewState(NoteViewState, TextNote):
+    edited_note: Note = None
     create_mode: bool = False
     display_position: Point2D = None
 
-
-class TextNoteEditView(NoteView):
-    def __init__(self, parent_id):
-        default_state = TextNoteEditViewState()
-
-        NoteView.__init__(
-            self,
-            parent_id=parent_id,
-            initial_state=default_state)
+    def __post_init__(self):
+        self.note_gid = self.edited_note.gid()
+        super().__post_init__()
 
     @property
-    def note(self) -> Note:
-        return self.state().note.copy()
-
-    def _handle_esc_shortcut(self):
-        note_actions.abort_editing_note(self.id)
+    def note(self):
+        return self.edited_note.copy()
