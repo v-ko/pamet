@@ -163,7 +163,7 @@ def delete_selected_notes(map_page_view_id: str):
 
     for nc_id in map_page_view_state.selected_nc_ids:
         ncs = gui.view_state(nc_id)
-        misli.remove(ncs.note)
+        pamet.remove_note(ncs.note)
 
 
 @action('map_page.start_notes_resize')
@@ -198,7 +198,7 @@ def resize_notes(new_size: Point2D, page_id: str, note_ids: list):
         note = page.note(note_id)
 
         note.set_size(new_size)
-        misli.update(note)
+        pamet.update_note(note)
 
 
 @action('map_page.stop_notes_resize')
@@ -245,12 +245,12 @@ def stop_note_drag(map_page_view_id: str, nc_ids: list, delta: list):
     d = Point2D(*delta)
     for nc_id in nc_ids:
         ncs = gui.view_state(nc_id)
-        note = misli.find_one(gid=ncs.note.gid())
+        note = pamet.find_one(gid=ncs.note.gid())
 
         note.x += d.x()
         note.y += d.y()
 
-        misli.update(note)
+        pamet.update_note(note)
 
     map_page_view_state.note_drag_active = False
     gui.update_state(map_page_view_state)
@@ -287,7 +287,7 @@ def color_selected_notes(map_page_view_id: str,
 
         note.color = color
         note.background_color = background_color
-        misli.update(note)
+        pamet.update_note(note)
 
     map_page_view_state.selected_nc_ids.clear()
     misli.gui.update_state(map_page_view_state)
@@ -315,28 +315,28 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
 
 @action('map_page.save_page_properties')
 def save_page_properties(page: Page):
-    misli.update(page)
+    pamet.update_note(page)
 
 
-@action('map_page.close_page_properties')
-def close_page_properties(tab_state: TabViewState):
-    tab_state.right_sidebar_visible = False
-    tab_state.right_sidebar_view_id = None
-    tab_state.page_properties_open = False
+# @action('map_page.close_page_properties')
+# def close_page_properties(tab_state: TabViewState):
+#     tab_state.right_sidebar_visible = False
+#     tab_state.right_sidebar_view_id = None
 
-    misli.gui.update_state(tab_state)
+#     misli.gui.update_state(tab_state)
 
 
 @action('map_page.delete_page')
 def delete_page(tab_view_state, page):
-    misli.remove(page)
+    pamet.remove_page(page)
     next_page = pamet.helpers.get_default_page()
     if not next_page:
-        misli.gui.create_view(
-            parentdsdid=tab_view_state,
-            view_class_metadata_filter=dict(name='MessageBox'),
-            init_kwargs=dict(title='Info',
-                             text=('You deleted the last page. '
-                                   'A blank one has been created for you')))
+        raise NotImplementedError
+        # misli.gui.create_view(
+        #     parentdsdid=tab_view_state,
+        #     view_class_metadata_filter=dict(name='MessageBox'),
+        #     init_kwargs=dict(title='Info',
+        #                      text=('You deleted the last page. '
+        #                            'A blank one has been created for you')))
         next_page = pamet.actions.other.create_default_page()
     tab_actions.tab_go_to_page(tab_view_state, next_page)

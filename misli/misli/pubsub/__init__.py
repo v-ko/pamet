@@ -129,11 +129,22 @@ class Channel:
 
     # @log.traced
     def push(self, message):
-        if self.index_key:
-            self.index[self.index_key(message)].append(message)
+        log.info('^^PUSH^^ on "%s": %s' % (self.name, message))
 
-        self.message_stack.append(message)
-        call_delayed(_invoke_handlers, 0)
+        # if self.index_key:
+        #     self.index[self.index_key(message)].append(message)
+
+        # self.message_stack.append(message)
+        # call_delayed(_invoke_handlers, 0)
+
+        for handler, sub in self.subscribtions.items():
+            if self.index_key and sub.filter_val is not MISSING:
+                if self.index_key(message) != sub.filter_val:
+                    continue
+
+            log.info(f'Queueing {handler=} for {message=} on'
+                        f' channel_name={sub.channel_name}')
+            call_delayed(handler, 0, args=[message])
 
     @log.traced
     def subscribe(self, handler, index_val=None):
@@ -170,8 +181,8 @@ class Channel:
                 messages = self.index.get(sub.filter_val, [])
 
             for message in messages:
-                # log.info(f'Calling {handler=} for {message=} on'
-                #          f' channel_name={sub.channel_name}')
+                log.info(f'Calling {handler=} for {message=} on'
+                         f' channel_name={sub.channel_name}')
                 handler(message)
 
         self.message_stack.clear()
@@ -265,8 +276,6 @@ def dispatch(message: object, channel_name: str):
         message (object): The message to be dispatched
         channel (str): The name of the channel to be used
     """
-    log.info('DISPATCH on "%s": %s' % (channel_name, message))
-
     _channels[channel_name].push(message)
 
 

@@ -3,9 +3,9 @@ from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Qt, QRect
 
 from misli.gui import ViewState, view_state_type
-from misli.gui.view_library import register_view_type
+from pamet import register_note_view_type
+from pamet.model.anchor_note import AnchorNote
 from pamet.views.note.base_note_view import NoteView
-from pamet.model import Note
 from pamet.desktop_app.helpers import elide_text, draw_text_lines
 
 
@@ -14,10 +14,13 @@ log = get_logger(__name__)
 
 
 @view_state_type
-class AnchorViewState(ViewState):
-    note: Note = None
+class AnchorViewState(ViewState, AnchorNote):
+    pass
 
 
+@register_note_view_type(state_type=AnchorViewState,
+                         note_type=AnchorNote,
+                         edit=False)
 class AnchorViewWidget(QLabel, NoteView):
     def __init__(self, parent):
         NoteView.__init__(

@@ -1,37 +1,82 @@
-from pamet.model import Page
+from collections import defaultdict
+from typing import List
+from misli.entity_library.change import Change
+from misli.entity_library.entity import Entity
+from misli.helpers import find_many_by_props
 from misli.storage.repository import Repository
-
-from misli import get_logger
-log = get_logger(__name__)
 
 
 class InMemoryRepository(Repository):
+
     def __init__(self):
-        Repository.__init__(self)
+        super().__init__()
+        self._entity_cache = {}
+        self._entity_cache_by_parent = defaultdict(set)
 
-        self._pages = {}
-        self.path = 'in-memory'
+    def upsert_to_cache(self, entity: Entity):
+        self._entity_cache[entity.gid()] = entity
+        if entity.parent_gid():
+            self._entity_cache_by_parent[entity.parent_gid()].add(entity.gid())
 
-    def create_page(self, **page_state):
-        page = Page(**page_state)
-        self._pages[page.id] = page
+    def insert_one(self, entity: Entity) -> Change:
+        if entity.gid() in self._entity_cache:
+            raise Exception(
+                'Cannot insert {entity}, since it already exists')
 
-    def page_names(self):
-        return list(self._pages.keys())
+        self.upsert_to_cache(entity)
+        return Change.CREATE(entity)
 
-    def page_state(self, page_id):
-        if page_id not in self._pages:
-            return None
+    def insert(self, batch: List[Entity]):
+        return [self.insert_one(entity) for entity in batch]
 
-        return self._pages[page_id].asdict()
+    def remove_one(self, entity: Entity) -> Change:
+        old_entity = self._entity_cache.pop(entity.gid(), None)
+        if not old_entity:
+            raise Exception(f'Cannot remove missing {entity}')
 
-    def update_page(self, page_state):
-        page = Page(**page_state)
-        self._pages[page.id] = page
+        if old_entity.parent_gid():
+            self._entity_cache_by_parent[old_entity.parent_gid()].remove(
+                old_entity.gid())
 
-    def delete_page(self, page_id):
-        if page_id in self._pages:
-            del self._pages[page_id]
+        return Change.DELETE(old_entity)
 
+    def remove(self, batch: List[Entity]):
+        return [self.remove_one(entity) for entity in batch]
+
+    def update_one(self, entity: Entity) -> Change:
+        old_entity = self._entity_cache.pop(entity.gid(), None)
+        if not old_entity:
+            raise Exception('Cannot update missing {entity}')
+
+        self.upsert_to_cache(entity)
+        return Change.UPDATE(old_entity, entity)
+
+    def update(self, batch: List[Entity]):
+        return [self.update_one(entity) for entity in batch]
+
+    def find(self, **filter):
+        # If searching by gid - there will be only one unique result (if any)
+        if 'gid' in filter:
+            gid = filter.get('gid')
+            result = self._entity_cache.get(gid, None)
+            yield from [result] if result else []
+
+        # If searching by parent_gid - use the index to do it efficiently
+        elif 'parent_gid' in filter:
+            parent_gid = filter.pop('parent_gid')
+            found = self._entity_cache_by_parent.get(parent_gid, [])
+            found_entities = [self._entity_cache[gid] for gid in found]
+            if not filter:
+                yield from found_entities
+            else:
+                yield from find_many_by_props(found_entities, **filter)
         else:
-            log.error('Cannot delete missing page %s' % page_id)
+            search_set = self._entity_cache.values()
+            if 'type_name' in filter:
+                type_name = filter.pop('type_name')
+                search_set = [
+                    ent for gid, ent in self._entity_cache.items()
+                    if type(ent).__name__ == type_name
+                ]
+            found = list(find_many_by_props(search_set, **filter))
+            yield from found

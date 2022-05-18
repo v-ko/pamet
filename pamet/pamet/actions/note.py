@@ -63,7 +63,7 @@ def start_editing_note(tab_view_state: tab_widget.TabViewState, note: Note):
 
 @action('notes.finish_editing_note')
 def finish_editing_note(tab_state: tab_widget.TabViewState, note: Note):
-    misli.update(note)
+    pamet.update_note(note)
     gui.remove_state(tab_state.edit_view_state)
     tab_state.edit_view_state = None
     gui.update_state(tab_state)

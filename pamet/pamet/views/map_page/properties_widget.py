@@ -2,8 +2,10 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget, QLineEdit, QLabel
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt
+from misli.entity_library.change import Change
 
 from misli.gui import ViewState, view_state_type
+from misli.gui.utils.qt_widgets.qtview import QtView
 from misli.gui.view_library.view import View
 
 import pamet
@@ -20,12 +22,13 @@ class MapPagePropertiesViewState(ViewState):
         return pamet.page(id=self.page_id)
 
 
-class MapPagePropertiesWidget(QWidget, View):
+class MapPagePropertiesWidget(QWidget, QtView):
+
     def __init__(self, tab_widget, initial_state):
         QWidget.__init__(self, parent=tab_widget)
-        View.__init__(self,
-                      tab_widget,
-                      initial_state=initial_state)
+        QtView.__init__(self,
+                        initial_state=initial_state,
+                        on_state_change=self.on_state_change)
 
         self.tab_widget = tab_widget
         self.name_line_edit = QLineEdit('', self)
@@ -39,8 +42,7 @@ class MapPagePropertiesWidget(QWidget, View):
 
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         esc_shortcut.activated.connect(
-            lambda: actions.map_page.close_page_properties(
-                self.tab_widget.state()))
+            lambda: actions.tab.close_right_sidebar(self.tab_widget.state()))
 
         # binding = first_key_binding_for_command(save_page_properties)
         # self.save_button = QPushButton(f'Save ({binding.key})')
@@ -48,9 +50,7 @@ class MapPagePropertiesWidget(QWidget, View):
         # self.save_button.setEnabled(False)
         self.save_button.clicked.connect(self._handle_save_button_click)
         self.delete_button = QPushButton(f'Delete page')
-        self.delete_button.clicked.connect(
-            lambda: actions.map_page.delete_page(self.tab_widget.state(),
-                                                 self.state().page))
+        self.delete_button.clicked.connect(self._handle_delete_button_click)
         self.delete_button.setStyleSheet('QButton {background-color: red;}')
 
         layout = QVBoxLayout()
@@ -62,25 +62,28 @@ class MapPagePropertiesWidget(QWidget, View):
         layout.addWidget(self.delete_button)
         self.setLayout(layout)
 
-    def on_state_update(self):
+    def on_state_change(self, change: Change):
         # Fill the prop fields with the respective values
-        state = self.state()
-        previous_state = self.previous_state()
-        page = state.page
-        if previous_state.page != state.page:
-            self.name_line_edit.setText(page.name)
+        if change.updated.page_id:
+            self.name_line_edit.setText(self.state().page.name)
 
         # Apply the field focus when specified
-        if previous_state.focused_prop != state.focused_prop:
+        if change.updated.focused_prop:
             if self.state().focused_prop == 'name':
                 self.name_line_edit.selectAll()
+
+    def _handle_delete_button_click(self):
+
+        actions.map_page.delete_page(self.tab_widget.state(),
+                                     self.state().page)
+        actions.tab.close_right_sidebar(self.tab_widget.state())
 
     def _handle_save_button_click(self):
         state = self.state()
         page = state.page
         page.name = self.name_line_edit.text()
         actions.map_page.save_page_properties(page)
-        actions.map_page.close_page_properties(self.tab_widget.state())
+        actions.tab.close_right_sidebar(self.tab_widget.state())
 
     def _handle_name_line_edit_text_changed(self, new_text):
         # Check if the id is available and valid

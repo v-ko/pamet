@@ -1,9 +1,10 @@
 from __future__ import annotations
-from os import stat
 
-from misli.gui.view_library import view
+# from misli.gui.view_library import view
+from .model import page, pages, create_note, set_sync_repo, set_async_repo
+from .model import find, find_one, insert_note, insert_page, update_note
+from .model import update_page, remove_note, remove_page
 from pamet.model.text_note import TextNote
-from .model import page, pages, create_note
 
 # from misli.gui import KeyBinding
 from pamet.views.note.base_note_view import NoteViewState

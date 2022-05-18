@@ -1,18 +1,16 @@
-from collections import defaultdict
-from typing import Callable, Union, List, Any
+from os import stat_result
+from typing import Callable
 import time
 import random
 from contextlib import contextmanager
 
 import misli
-# import pamet
 from misli import Change
-from misli.gui.state_aggregator import StateAggregator
+from misli.change_aggregator import ChangeAggregator
 from misli.logging import BColors
-from misli.helpers import find_many_by_props
 
 from .actions_library import Action, execute_action, name_for_wrapped_function
-from .view_library.view import View, ViewState
+from .view_library.view import ViewState
 from misli.gui import channels
 
 log = misli.get_logger(__name__)
@@ -29,8 +27,10 @@ misli.add_channel(ACTIONS_LOG_CHANNEL)
 
 misli.subscribe(ACTIONS_QUEUE_CHANNEL, execute_action)
 
-_state_aggregator = StateAggregator(channels.raw_state_changes,
-                                    channels.completed_root_actions)
+_state_aggregator = ChangeAggregator(
+    input_channel=channels.raw_state_changes,
+    release_trigger_channel=channels.completed_root_actions,
+    output_channel=channels.state_changes_by_id)
 
 _view_states = {}
 
@@ -122,11 +122,16 @@ def queue_action(action_func, args: list = None, kwargs: dict = None):
     misli.dispatch(action, ACTIONS_QUEUE_CHANNEL)
 
 
+_state_backups = {}
+
+
 @log.traced
 def add_state(state_: ViewState):
     ensure_context()
+    state_._added = True
     _view_states[state_.id] = state_
-    state_.backup = state_.copy()
+    _state_backups[state_.id] = state_.copy()
+    # state_.backup = state_.copy()
     channels.raw_state_changes.push(Change.CREATE(state_))
 
 
@@ -140,8 +145,17 @@ def update_state(state_: ViewState):
     if state_.id not in _view_states:
         raise Exception('Cannot update a state which has not been added.')
 
-    channels.raw_state_changes.push(Change.UPDATE(state_.backup, state_))
-    state_.backup = state_.copy()
+    channels.raw_state_changes.push(
+        Change.UPDATE(_state_backups[state_.id], state_))
+
+    if (state_._version + 1) <= _view_states[state_.id]._version:
+        raise Exception('You\'re using an old state. This object has already '
+                        'been updated')
+
+    _state_backups[state_.id] = state_.copy()
+    state_._version += 1
+    _view_states[state_.id] = state_
+    # state_.backup = state_.copy()
 
 
 @log.traced

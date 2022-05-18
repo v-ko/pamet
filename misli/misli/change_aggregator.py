@@ -1,22 +1,39 @@
 from misli import Change, logging
-from misli.gui import channels
+from misli.gui.actions_library import action
 
 log = logging.get_logger(__name__)
 
 
-class StateAggregator:
-    def __init__(self, input_channel, output_channel):
+class ChangeAggregator:
+    """
+    Merges the changes passed to the input_channel and when a message is
+    received on the release_trigger_channel - pushes all accumulated changes
+    to the output_channel or changeset_output_channel (or both if set).
+    The difference between the latter two is that on the changeset channel
+    all of the changes are sent as a list as a single message.
+    """
+    def __init__(
+            self,
+            input_channel,
+            release_trigger_channel,
+            output_channel=None,
+            changeset_output_channel=None):
+
         self.added = {}
         self.update_old_states = {}
         self.update_last_states = {}
         self.removed = {}
+        self.input_channel = input_channel
+        self.release_trigger_channel = release_trigger_channel
+        self.output_channel = output_channel
+        self.changeset_output_channel = changeset_output_channel
 
         self.raw_sub_id = input_channel.subscribe(
-            self.handle_state_changes)
-        self.actions_sub_id = output_channel.subscribe(
+            self.handle_change)
+        self.actions_sub_id = release_trigger_channel.subscribe(
             self.release_aggregated_changes)
 
-    def handle_state_changes(self, change: Change):
+    def handle_change(self, change: Change):
         '''Parses the recieved changes and reduces them to a single change per
         view state (identified by its id).
 
@@ -59,17 +76,31 @@ class StateAggregator:
             self.removed[state_.id] = state_
 
     def release_aggregated_changes(self, completed_actions):
+        changes = []
         for state_id, state_ in self.added.items():
-            channels.state_changes_by_id.push(Change.CREATE(state_))
+            changes.append(Change.CREATE(state_))
 
         for state_id, state_ in self.update_old_states.items():
-            channels.state_changes_by_id.push(
+            changes.append(
                 Change.UPDATE(state_, self.update_last_states[state_id]))
 
         for state_id, state_ in self.removed.items():
-            channels.state_changes_by_id.push(Change.DELETE(state_))
+            changes.append(Change.DELETE(state_))
 
         self.added.clear()
         self.update_old_states.clear()
         self.update_last_states.clear()
         self.removed.clear()
+
+        if not changes:
+            log.info('RELEASE_AGGREGATED_CHANGES: No changes')
+            return
+
+        log.info('RELEASE_AGGREGATED_CHANGES:')
+
+        if self.output_channel:
+            for change in changes:
+                self.output_channel.push(change)
+
+        if self.changeset_output_channel:
+            self.changeset_output_channel.push(changes)

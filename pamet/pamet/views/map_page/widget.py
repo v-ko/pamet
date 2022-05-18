@@ -55,7 +55,9 @@ class MapPageWidget(QWidget, MapPageView):
 
     def __init__(self, parent, initial_state: MapPageViewState):
         QWidget.__init__(self, parent=parent)
-        MapPageView.__init__(self, initial_state)
+        MapPageView.__init__(self, parent, initial_state)
+
+        self.tab_widget = parent
 
         # Local variables
         self._cache_per_nc_id = {}
@@ -112,10 +114,10 @@ class MapPageWidget(QWidget, MapPageView):
         self.subscribtion_ids = []
         self.nw_subscribtions = {}  # by note widget
         self.subscribtion_ids.append(
-            misli.channels.entity_changes_by_id.subscribe(
+            pamet.channels.entity_changes_by_id.subscribe(
                 self.handle_page_change, index_val=self.state().page.id))
         self.subscribtion_ids.append(
-            misli.channels.entity_changes_by_parent_gid.subscribe(
+            pamet.channels.entity_changes_by_parent_gid.subscribe(
                 self.handle_note_change, index_val=self.state().page.id))
 
         self.destroyed.connect(self.unsubscribe_all)
@@ -131,13 +133,13 @@ class MapPageWidget(QWidget, MapPageView):
         yield from self.note_widgets()
 
     def on_state_change(self, change: Change):
-        state = change.last_state()
+        # state = change.last_state()
 
-        if change.updated.name:
-            # Fix the tab text when changing the page name
-            window = self.parent().parent_window
-            self_idx = window.ui.tabBarWidget.indexOf(self)
-            window.ui.tabBarWidget.setTabText(self_idx, state.name)
+        # if change.updated.name:
+        #     # Fix the tab text when changing the page name
+        #     window = self.tab_widget.parent_window
+        #     self_idx = window.ui.tabBarWidget.indexOf(self)
+        #     window.ui.tabBarWidget.setTabText(self_idx, state.name)
 
         if change.updated.viewport_height:
             # Invalidate image_cache for all children
@@ -196,7 +198,7 @@ class MapPageWidget(QWidget, MapPageView):
             misli.gui.update_state(state)
 
         elif change.is_delete():
-            nv_states = filter(lambda x: x.note == note,
+            nv_states = filter(lambda x: x.note_gid == note.gid(),
                                state.note_view_states)
             for nv_state in nv_states:  # Should be len==1
                 misli.gui.remove_state(nv_state)

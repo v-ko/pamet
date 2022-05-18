@@ -1,4 +1,5 @@
 from __future__ import annotations
+from copy import copy
 from enum import Enum
 from time import time
 from typing import Any, Generator, Iterable
@@ -80,7 +81,7 @@ class Updated:
 
         else:  # is_update()
             if not hasattr(self.change.old_state, key):
-                raise AttributeError
+                raise Exception
 
             if getattr(self.change.old_state, key) != \
                     getattr(self.change.new_state, key):
@@ -130,19 +131,19 @@ class Change:
     @classmethod
     def CREATE(cls, state: Entity) -> 'Change':
         """Convenience method for constructing a Change with type CREATE"""
-        return cls(type=ChangeTypes.CREATE, new_state=state)
+        return cls(type=ChangeTypes.CREATE, new_state=copy(state))
 
     @classmethod
     def UPDATE(cls, old_state: Entity, new_state: Entity) -> 'Change':
         """Convenience method for constructing a Change with type UPDATE"""
         return cls(type=ChangeTypes.UPDATE,
-                   old_state=old_state,
-                   new_state=new_state)
+                   old_state=copy(old_state),
+                   new_state=copy(new_state))
 
     @classmethod
     def DELETE(cls, old_state: Entity) -> 'Change':
         """Convenience method for constructing a Change with type DELETE"""
-        return cls(type=ChangeTypes.DELETE, old_state=old_state)
+        return cls(type=ChangeTypes.DELETE, old_state=copy(old_state))
 
     def __repr__(self) -> str:
         return (f'<Change type={self.type} {id(self)=} '

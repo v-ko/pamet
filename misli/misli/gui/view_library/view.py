@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from misli import gui, get_logger
+import misli
 from misli.entity_library.change import Change
 
 from .view_state import ViewState
@@ -41,23 +42,24 @@ class View:
             initial_state = ViewState()
         # if parent:
         #     initial_state.parent_id = parent.id
-        self._state = initial_state
-        self.__previous_state = None
+        # self._state = initial_state
+        self._state_id = initial_state.id
 
     def __repr__(self):
         return '<%s id=%s>' % (type(self).__name__, self.id)
 
     @property
     def id(self):
-        return self._state.id
+        # return self._state.id
+        return self._state_id
 
     def state(self) -> ViewState:
-        return self._state
+        return misli.gui.view_state(self._state_id)
 
-    def previous_state(self) -> ViewState:
-        if not self.__previous_state:
-            return None
-        return self.__previous_state.copy()
+    # def previous_state(self) -> ViewState:
+    #     if not self.__previous_state:
+    #         return None
+    #     return self.__previous_state.copy()
 
     def on_state_change(self, change: Change):
         pass

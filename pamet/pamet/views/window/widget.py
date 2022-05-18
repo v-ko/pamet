@@ -18,7 +18,11 @@ from misli.gui import ViewState, view_state_type
 class WindowViewState(ViewState):
     title: str = ''
     current_tab_id: str = ''
-    tab_states: list = field(default_factory=list, repr=False)
+    tab_states: list = field(default_factory=list)
+
+    def __repr__(self) -> str:
+        return (f'<WindowViewState title={self.title} {self.current_tab_id=}'
+                f' {len(self.tab_states)=}>')
 
 
 class WindowWidget(QMainWindow, View):
@@ -26,9 +30,8 @@ class WindowWidget(QMainWindow, View):
     def __init__(self, initial_state):
         QMainWindow.__init__(self)
         QtView.__init__(self,
-                        parent=None,
                         initial_state=initial_state,
-                        on_state_change=self.handle_state_change)
+                        on_state_change=self.on_state_change)
 
         self.ui = Ui_BrowserWindow()
         self.ui.setupUi(self)
@@ -48,13 +51,13 @@ class WindowWidget(QMainWindow, View):
         context_menu = ContextMenuWidget(self, entries=entries)
         context_menu.popup_on_mouse_pos()
 
-    def handle_state_change(self, change: Change):
+    def on_state_change(self, change: Change):
         if change.updated.title:
             self.setWindowTitle(change.last_state().title)
 
         for tab_state in change.added.tab_states:
             tab = TabWidget(parent=self, initial_state=tab_state)
-            self.ui.tabBarWidget.addTab(tab, tab_state.name)
+            self.ui.tabBarWidget.addTab(tab, tab_state.title)
             self.tab_widgets[tab_state.id] = tab
 
         for tab_state in change.removed.tab_states:

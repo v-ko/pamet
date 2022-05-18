@@ -33,6 +33,14 @@ class Entity:
 
     id: str = field(default_factory=get_new_id)
 
+    def __setattr__(self, key, value):
+        # TODO: optimize those checks or do them only when debugging.
+        # It's a huge overhead
+        field_names = [f.name for f in fields(self)]
+        if not hasattr(self, key) and key not in field_names:
+            raise Exception('Cannot set missing attribute')
+        object.__setattr__(self, key, value)
+
     def __eq__(self, other: 'Entity') -> bool:
         if not other:
             return False
@@ -43,7 +51,10 @@ class Entity:
         return self.copy()
 
     def copy(self) -> 'Entity':
-        return replace(self, **self.asdict())
+        # return replace(self)
+        # return replace(self, **self.asdict())
+        self_copy = type(self)(**self.asdict())
+        return self_copy
 
     def gid(self) -> Union[str, tuple]:
         """Returns the global id of the entity. This function can be
@@ -55,7 +66,8 @@ class Entity:
     def asdict(self) -> dict:
         """Return the entity properties as a dict"""
         # The dataclasses.asdict recurses and that's not what we want
-        self_dict = {f.name: getattr(self, f.name) for f in fields(self)}
+        self_dict = {f.name: getattr(self, f.name) for f in fields(self)
+                     if f.repr}
 
         for key, val in self_dict.items():
             if isinstance(val, (list, dict)):

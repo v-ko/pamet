@@ -13,11 +13,13 @@ def view_state_type(view_state_class: Any):
 
 @view_state_type
 class ViewState(Entity):
-    backup: ViewState = field(default=None, repr=False)
+    _added: bool = field(default=False, repr=False)
+    _version: int = field(default=0, repr=False)
+    # backup: ViewState = field(default=None, repr=False)
 
     def __setattr__(self, attr_name, value):
-        if not gui.is_in_action():
+        if self._added and not gui.is_in_action():
             raise Exception('View states can be modified only in actions')
-            return
+            # return
 
         Entity.__setattr__(self, attr_name, value)

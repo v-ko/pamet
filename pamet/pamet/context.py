@@ -18,9 +18,9 @@ def page_focus():
     return isinstance(focused_view, map_page.view.MapPageView)
 
 
-def in_page_properties():
-    curr_tab = pamet.views.current_tab()
-    return curr_tab.state().page_properties_open
+# def in_page_properties():
+#     curr_tab = pamet.views.current_tab()
+#     return curr_tab.state().page_properties_open
 
 
 def notes_selected():

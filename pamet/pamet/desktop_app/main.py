@@ -1,16 +1,14 @@
 import os
-import signal
 
 import misli
 from misli.gui import channels
-from misli.gui.actions_library import action
 
 import pamet
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
-from pamet import default_key_bindings
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import get_config
+from pamet.persistence_manager import PersistenceManager
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
 
@@ -35,11 +33,12 @@ def main():
     #         os.remove(f.path)
 
     if os.path.exists(repo_path):
-        fs_repo = FSStorageRepository.open(repo_path)
+        fs_repo = FSStorageRepository.open(repo_path,
+                                           queue_save_on_change=True)
     else:
-        fs_repo = FSStorageRepository.new(repo_path)
+        fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
-    misli.set_repo(fs_repo)
+    pamet.set_sync_repo(fs_repo)
     misli.configure_for_qt()
     pamet.configure_for_qt()
 

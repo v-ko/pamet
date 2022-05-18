@@ -27,7 +27,6 @@ class TextNoteWidget(QLabel, QtView):
     def __init__(self, parent, initial_state):
         QLabel.__init__(self, parent=parent)
         QtView.__init__(self,
-                        parent=parent,
                         initial_state=initial_state,
                         on_state_change=self.on_state_change)
 

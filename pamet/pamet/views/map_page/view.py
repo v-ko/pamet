@@ -34,10 +34,9 @@ class MapPageMode(Enum):
 
 
 @view_state_type
-class MapPageViewState(ViewState):
+class MapPageViewState(ViewState, Viewport):
     page_id: str = ''
-    note_view_states: List[NoteViewState] = field(default_factory=list,
-                                                  repr=False)
+    note_view_states: List[NoteViewState] = field(default_factory=list)
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
     viewport_center: Point2D = field(default_factory=Point2D)
     viewport_height: float = INITIAL_EYE_Z
@@ -62,12 +61,20 @@ class MapPageViewState(ViewState):
 
     note_drag_active: bool = False
 
-    def __post_init__(self):
-        self.viewport = Viewport(self)
+    # def __post_init__(self):
+    #     self.viewport = Viewport(self)
+
+    def __repr__(self):
+        return (f'<MapPageViewState page_id={self.page_id}'
+                f' {len(self.note_view_states)=}>')
 
     @property
-    def name(self):
-        return self.page.name
+    def viewport(self):
+        return self
+
+    # @property
+    # def name(self):
+    #     return self.page.name
 
     @property
     def page(self):
@@ -98,10 +105,12 @@ class MapPageViewState(ViewState):
 
 class MapPageView(View):
 
-    def __init__(self, initial_state):
+    def __init__(self, parent, initial_state):
+        super().__init__(initial_state=initial_state)
         self._state = initial_state
         self._left_mouse_is_pressed = False
         self._mouse_position_on_left_press = Point2D(0, 0)
+        self.parent_tab = parent
 
     def get_children(self) -> List[View]:
         raise NotImplementedError
@@ -109,8 +118,9 @@ class MapPageView(View):
     @action('MapPageView.handle_page_change')
     def handle_page_change(self, change: Change):
         if change.updated.name:
-            self.state().name = change.last_state().name
-            misli.gui.update_state(self.state())
+            tab_state = self.tab_widget.state()
+            tab_state.title = change.last_state().name
+            misli.gui.update_state(tab_state)
 
     @property
     def page(self):
@@ -312,10 +322,10 @@ class MapPageView(View):
         note_view = self.get_note_view_at(mouse_pos)
 
         if note_view:
-            actions.note.start_editing_note(self.parent().state(),
+            actions.note.start_editing_note(self.parent_tab.state(),
                                             note_view.state().note)
         else:
-            actions.note.create_new_note(self.parent().state(), mouse_pos)
+            actions.note.create_new_note(self.parent_tab.state(), mouse_pos)
 
     def handle_resize_event(self, width, height):
         actions.map_page.resize_page(self.id, width, height)

@@ -1,86 +1,87 @@
-from copy import copy
-from typing import List, Union, Callable
+# from copy import copy
+# from typing import List, Union
 
-import misli
-from misli import Entity, Change
-from misli.storage.repository import Repository
+# import misli
+# from misli import Entity, Change
+# from misli.storage.in_memory_repository import InMemoryRepository
+# from misli.storage.repository import Repository
 
-log = misli.get_logger(__name__)
+# log = misli.get_logger(__name__)
 
-_repo: Repository = None
-
-
-def publish_entity_change(change: Change):
-    misli.channels.entity_changes.push(change)
-    misli.channels.entity_changes_by_id.push(change)
-    misli.channels.entity_changes_by_parent_gid.push(change)
+# _repo: Repository = InMemoryRepository()
 
 
-def on_entity_changes(handler: Callable):
-    misli.channels.entity_changes.subscribe(handler)
+# def publish_entity_change(change: Change):
+#     pamet.channels.entity_changes.push(change)
+#     pamet.channels.entity_changes_by_id.push(change)
+#     pamet.channels.entity_changes_by_parent_gid.push(change)
 
 
-@log.traced
-def repo():
-    return _repo
+# @log.traced
+# def repo():
+#     return _repo
 
 
-@log.traced
-def set_repo(repo):
-    global _repo
+# @log.traced
+# def set_repo(repo):
+#     global _repo
 
-    log.info('Setting repo to %s' % repo.path)
-    _repo = repo
-
-
-def insert(entity_or_batch: Union[Entity, List[Entity]]):
-    batch = entity_or_batch
-    if not isinstance(entity_or_batch, list):
-        batch = [entity_or_batch]
-
-    _repo.insert(batch)
-    for entity in batch:
-        change = Change.CREATE(entity)
-        publish_entity_change(change)
+#     log.info('Setting repo to %s' % repo.path)
+#     _repo = repo
 
 
-def remove(entity_or_batch: Union[Entity, List[Entity]]):
-    batch = entity_or_batch
-    if not isinstance(entity_or_batch, list):
-        batch = [entity_or_batch]
+# def insert(entity_or_batch: Union[Entity, List[Entity]]):
+#     batch = entity_or_batch
+#     if not isinstance(entity_or_batch, list):
+#         batch = [entity_or_batch]
 
-    _repo.remove(batch)
-    for entity in batch:
-        change = Change.DELETE(entity)
-        publish_entity_change(change)
-
-
-def update(entity_or_batch: Union[Entity, List[Entity]]):
-    batch = entity_or_batch
-    if not isinstance(entity_or_batch, list):
-        batch = [entity_or_batch]
-
-    _repo.update(batch)
-    for entity in batch:
-        old_state = find_one(gid=entity.gid())
-        if not old_state:
-            raise Exception(f'Cannot update missing entity {entity}')
-
-        change = Change.UPDATE(old_state, entity)
-        publish_entity_change(change)
+#     _repo.insert(batch)
+#     for entity in batch:
+#         change = Change.CREATE(entity)
+#         publish_entity_change(change)
 
 
-def find(**filter):
-    results = []
-    for item in _repo.find(**filter):
-        results.append(copy(item))
-    return results
+# def remove(entity_or_batch: Union[Entity, List[Entity]]):
+#     if not entity_or_batch:
+#         raise Exception('Cannot delete a falsy object.')
+
+#     batch = entity_or_batch
+#     if not isinstance(entity_or_batch, list):
+#         batch = [entity_or_batch]
+
+#     _repo.remove(batch)
+#     for entity in batch:
+#         change = Change.DELETE(entity)
+#         publish_entity_change(change)
 
 
-def find_one(**filter):
-    found = _repo.find(**filter)
+# def update(entity_or_batch: Union[Entity, List[Entity]]):
+#     batch = entity_or_batch
+#     if not isinstance(entity_or_batch, list):
+#         batch = [entity_or_batch]
 
-    for f in found:
-        return copy(f)
+#     for entity in batch:
+#         old_state = find_one(gid=entity.gid())
+#         if not old_state:
+#             raise Exception(f'Cannot update missing entity {entity}')
 
-    return None
+#         change = Change.UPDATE(old_state, entity)
+#         publish_entity_change(change)
+
+#     _repo.update(batch)
+
+
+# def find(**filter):
+#     results = []
+#     for item in _repo.find(**filter):
+#         results.append(copy(item))
+#     return results
+
+
+# def find_one(**filter):
+#     found = _repo.find(**filter)
+
+#     for f in found:
+#         return f
+
+#     return None

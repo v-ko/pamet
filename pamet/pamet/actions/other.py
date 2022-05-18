@@ -1,6 +1,6 @@
-import misli
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
+import pamet
 
 from pamet.helpers import generate_page_name
 from pamet.model import Page
@@ -13,7 +13,7 @@ def create_default_page():
     # possibly with a "double-click to open link"
 
     page = Page(name=generate_page_name())
-    misli.insert(page)
+    pamet.insert_page(page)
 
     help_link_note = TextNote(page_id=page.id)
     help_link_note.text = 'Mock help note'
@@ -21,6 +21,6 @@ def create_default_page():
     rect = help_link_note.rect()
     rect.move_center(Point2D(0, 0))
     help_link_note.set_rect(rect)
-    misli.insert(help_link_note)
+    pamet.insert_note(help_link_note)
 
     return page

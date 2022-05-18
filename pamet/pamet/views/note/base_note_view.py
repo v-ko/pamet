@@ -1,8 +1,6 @@
-from dataclasses import field
-import misli
-from misli.basic_classes.rectangle import Rectangle
 from misli.gui.view_library.view import View
 from misli.gui import ViewState, view_state_type
+import pamet
 
 from pamet.model import Note
 
@@ -17,7 +15,7 @@ class NoteViewState(ViewState, Note):
 
     @property
     def note(self):
-        return misli.find_one(gid=self.note_gid)
+        return pamet.find_one(gid=self.note_gid)
 
 
 class NoteView(View):

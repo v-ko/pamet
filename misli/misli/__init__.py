@@ -3,9 +3,6 @@ from misli.entity_library import entity_type
 from misli.entity_library.entity import Entity
 from misli.entity_library.change import Change, ChangeTypes
 from .pubsub import *
-from . import channels
-from misli.storage import set_repo, insert, remove, update, find, find_one
-from misli.storage import publish_entity_change, on_entity_changes
 from . import gui
 
 

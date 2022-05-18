@@ -1,7 +1,7 @@
 from dataclasses import field
 
 from PySide6.QtGui import QShortcut, QKeySequence
-from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
 
 import misli
@@ -13,6 +13,7 @@ from pamet import actions
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
 from pamet.views.map_page.widget import MapPageWidget
+from pamet.views.tab.ui_widget import Ui_TabMainWidget
 
 from ..note.text.edit_widget import TextNoteEditWidget
 
@@ -27,12 +28,15 @@ MIN_TAB_WIDTH = SIDEBAR_WIDTH * 1.1
 @view_state_type
 class TabViewState(ViewState):
     title: str = ''
-    page_view_state: MapPageViewState = field(default=None, repr=False)
+    page_view_state: MapPageViewState = field(default=None)
     edit_view_state: ViewState = None
     creating_note: Note = None
     right_sidebar_state: ViewState = None
     right_sidebar_visible: bool = False
     page_properties_open: bool = False
+
+    def __repr__(self) -> str:
+        return (f'<TabViewState title={self.title}>')
 
 
 # @register_view_type
@@ -47,15 +51,8 @@ class TabWidget(QWidget, View):
         # the window as a parent
         self.parent_window = parent
 
-        self_rect = self.geometry()
-        self.right_sidebar = QWidget(self)
-        self.right_sidebar.setLayout(QVBoxLayout())
-        self.right_sidebar.setAutoFillBackground(True)
-        right_sidebar_rect = self.right_sidebar.geometry()
-        right_sidebar_rect.setWidth(SIDEBAR_WIDTH)
-        right_sidebar_rect.setHeight(self_rect.height())
-        right_sidebar_rect.setTopRight(self_rect.topRight())
-        self.right_sidebar.setGeometry(right_sidebar_rect)
+        self.ui = Ui_TabMainWidget()
+        self.ui.setupUi(self)
 
         self._page_view = None
         self._page_subscription_id = None
@@ -68,22 +65,17 @@ class TabWidget(QWidget, View):
         new_page_shortcut = QShortcut(QKeySequence('ctrl+N'), self)
         new_page_shortcut.activated.connect(self.create_new_page_command)
 
-        # Widget config
-        self.setMinimumWidth(MIN_TAB_WIDTH)
-        self.setLayout(QVBoxLayout())
+        self.ui.rightSidebarCloseButton.clicked.connect(
+            lambda: actions.tab.close_right_sidebar(self.state()))
+        # TODO: same for the left
+
+        self.ui.commandLineEdit.hide()
+        self.ui.leftSidebarContainer.hide()
 
         # The state should be managed by the window
         qt_widgets.bind_and_apply_state(self,
                                         initial_state,
                                         on_state_change=self.on_state_change)
-
-    def resizeEvent(self, event):
-        # Update the sidebar position
-        self_rect = self.geometry()
-        right_sidebar_rect = self.right_sidebar.geometry()
-        right_sidebar_rect.moveTopRight(self_rect.topRight())
-        right_sidebar_rect.setHeight(self_rect.height())
-        self.right_sidebar.setGeometry(right_sidebar_rect)
 
     def page_view(self):
         return self._page_view
@@ -93,24 +85,30 @@ class TabWidget(QWidget, View):
         if change.updated.page_view_state or not self.page_view():
             self.switch_to_page_view(state.page_view_state)
 
+        if change.updated.title:
+            self_idx = self.parent_window.ui.tabBarWidget.indexOf(self)
+            self.parent_window.ui.tabBarWidget.setTabText(
+                self_idx, state.title)
+
         if change.updated.right_sidebar_state:
             if self._right_sidebar_widget:
-                self.right_sidebar.layout().removeWidget(
+                self.ui.rightSidebarContainer.layout().removeWidget(
                     self._right_sidebar_widget)
                 self._right_sidebar_widget.deleteLater()
+                self._right_sidebar_widget = None
 
             if state.right_sidebar_state:
                 new_widget = MapPagePropertiesWidget(
                     self, initial_state=state.right_sidebar_state)
                 self._right_sidebar_widget = new_widget
-                self.right_sidebar.layout().addWidget(new_widget)
+                self.ui.rightSidebarContainer.layout().addWidget(new_widget)
 
         if change.updated.right_sidebar_visible:
             if state.right_sidebar_visible:
-                self.right_sidebar.show()
-                self.right_sidebar.raise_()
+                self.ui.rightSidebarContainer.show()
+                self.ui.rightSidebarContainer.raise_()
             else:
-                self.right_sidebar.hide()
+                self.ui.rightSidebarContainer.hide()
 
         if change.updated.edit_view_state:
             if self.edit_view:
@@ -127,14 +125,15 @@ class TabWidget(QWidget, View):
 
     def switch_to_page_view(self, page_view_state):
         if self._page_view:
-            self.layout().removeWidget(self._page_view)
+            self.ui.centralContainer.layout().removeWidget(self._page_view)
 
         if not page_view_state:
             return
 
-        new_page_view = MapPageWidget(self, initial_state=page_view_state)
+        new_page_view = MapPageWidget(parent=self,
+                                      initial_state=page_view_state)
         self._page_view = new_page_view
-        self.layout().addWidget(new_page_view)
+        self.ui.centralContainer.layout().addWidget(new_page_view)
         # Must be visible to accept focus, so queue on the main loop
         misli.call_delayed(new_page_view.setFocus)
 

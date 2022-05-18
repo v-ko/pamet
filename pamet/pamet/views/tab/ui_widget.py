@@ -15,74 +15,82 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QFont, QFontDatabase, QGradient, QIcon,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QMainWindow,
-    QMenuBar, QPushButton, QSizePolicy, QStatusBar,
-    QTextEdit, QVBoxLayout, QWidget)
+from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLineEdit, QPushButton,
+    QSizePolicy, QVBoxLayout, QWidget)
 
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        if not MainWindow.objectName():
-            MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(800, 563)
-        self.centralwidget = QWidget(MainWindow)
-        self.centralwidget.setObjectName(u"centralwidget")
-        self.verticalLayout = QVBoxLayout(self.centralwidget)
-        self.verticalLayout.setObjectName(u"verticalLayout")
-        self.horizontalLayout = QHBoxLayout()
+class Ui_TabMainWidget(object):
+    def setupUi(self, TabMainWidget):
+        if not TabMainWidget.objectName():
+            TabMainWidget.setObjectName(u"TabMainWidget")
+        TabMainWidget.resize(1019, 625)
+        self.horizontalLayout = QHBoxLayout(TabMainWidget)
+        self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.leftLabelsTextEdit = QTextEdit(self.centralwidget)
-        self.leftLabelsTextEdit.setObjectName(u"leftLabelsTextEdit")
-        self.leftLabelsTextEdit.setMaximumSize(QSize(200, 16777215))
+        self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
+        self.leftSidebarContainer = QWidget(TabMainWidget)
+        self.leftSidebarContainer.setObjectName(u"leftSidebarContainer")
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(5)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.leftSidebarContainer.sizePolicy().hasHeightForWidth())
+        self.leftSidebarContainer.setSizePolicy(sizePolicy)
+        self.leftSidebarContainer.setMinimumSize(QSize(100, 0))
+        self.verticalLayout = QVBoxLayout(self.leftSidebarContainer)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.leftSidebarCloseButton = QPushButton(self.leftSidebarContainer)
+        self.leftSidebarCloseButton.setObjectName(u"leftSidebarCloseButton")
 
-        self.horizontalLayout.addWidget(self.leftLabelsTextEdit)
-
-        self.imageDisplayLabel = QLabel(self.centralwidget)
-        self.imageDisplayLabel.setObjectName(u"imageDisplayLabel")
-
-        self.horizontalLayout.addWidget(self.imageDisplayLabel)
-
-        self.rightLabelsTextEdit = QTextEdit(self.centralwidget)
-        self.rightLabelsTextEdit.setObjectName(u"rightLabelsTextEdit")
-        self.rightLabelsTextEdit.setMaximumSize(QSize(200, 16777215))
-
-        self.horizontalLayout.addWidget(self.rightLabelsTextEdit)
-
-
-        self.verticalLayout.addLayout(self.horizontalLayout)
-
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.previousButton = QPushButton(self.centralwidget)
-        self.previousButton.setObjectName(u"previousButton")
-
-        self.horizontalLayout_2.addWidget(self.previousButton)
-
-        self.nextButton = QPushButton(self.centralwidget)
-        self.nextButton.setObjectName(u"nextButton")
-
-        self.horizontalLayout_2.addWidget(self.nextButton)
+        self.verticalLayout.addWidget(self.leftSidebarCloseButton)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_2)
+        self.horizontalLayout.addWidget(self.leftSidebarContainer)
 
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QMenuBar(MainWindow)
-        self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 21))
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QStatusBar(MainWindow)
-        self.statusbar.setObjectName(u"statusbar")
-        MainWindow.setStatusBar(self.statusbar)
+        self.centralContainer = QWidget(TabMainWidget)
+        self.centralContainer.setObjectName(u"centralContainer")
+        sizePolicy1 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy1.setHorizontalStretch(30)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.centralContainer.sizePolicy().hasHeightForWidth())
+        self.centralContainer.setSizePolicy(sizePolicy1)
+        self.verticalLayout_3 = QVBoxLayout(self.centralContainer)
+        self.verticalLayout_3.setSpacing(6)
+        self.verticalLayout_3.setObjectName(u"verticalLayout_3")
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
+        self.commandLineEdit = QLineEdit(self.centralContainer)
+        self.commandLineEdit.setObjectName(u"commandLineEdit")
 
-        self.retranslateUi(MainWindow)
+        self.verticalLayout_3.addWidget(self.commandLineEdit)
 
-        QMetaObject.connectSlotsByName(MainWindow)
+
+        self.horizontalLayout.addWidget(self.centralContainer)
+
+        self.rightSidebarContainer = QWidget(TabMainWidget)
+        self.rightSidebarContainer.setObjectName(u"rightSidebarContainer")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Preferred)
+        sizePolicy2.setHorizontalStretch(5)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.rightSidebarContainer.sizePolicy().hasHeightForWidth())
+        self.rightSidebarContainer.setSizePolicy(sizePolicy2)
+        self.rightSidebarContainer.setMinimumSize(QSize(100, 0))
+        self.verticalLayout_2 = QVBoxLayout(self.rightSidebarContainer)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.rightSidebarCloseButton = QPushButton(self.rightSidebarContainer)
+        self.rightSidebarCloseButton.setObjectName(u"rightSidebarCloseButton")
+
+        self.verticalLayout_2.addWidget(self.rightSidebarCloseButton)
+
+
+        self.horizontalLayout.addWidget(self.rightSidebarContainer)
+
+
+        self.retranslateUi(TabMainWidget)
+
+        QMetaObject.connectSlotsByName(TabMainWidget)
     # setupUi
 
-    def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.imageDisplayLabel.setText("")
-        self.previousButton.setText(QCoreApplication.translate("MainWindow", u"Previous", None))
-        self.nextButton.setText(QCoreApplication.translate("MainWindow", u"Next", None))
+    def retranslateUi(self, TabMainWidget):
+        TabMainWidget.setWindowTitle(QCoreApplication.translate("TabMainWidget", u"Form", None))
+        self.leftSidebarCloseButton.setText(QCoreApplication.translate("TabMainWidget", u"<", None))
+        self.rightSidebarCloseButton.setText(QCoreApplication.translate("TabMainWidget", u">", None))
     # retranslateUi
 

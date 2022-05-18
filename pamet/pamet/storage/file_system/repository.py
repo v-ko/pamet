@@ -1,4 +1,5 @@
 from copy import copy
+import time
 from typing import List
 import os
 import json
@@ -7,8 +8,8 @@ from collections import defaultdict
 
 import misli
 from misli import entity_library, Entity, Change
-# from misli.gui.view_library import TYPE_NAME
-from misli.helpers import find_many_by_props, test
+from misli.helpers import find_many_by_props
+from misli.pubsub import Channel
 from misli.storage.repository import Repository
 import pamet
 
@@ -28,11 +29,14 @@ V4_FILE_EXT = '.misl.json'
 class FSStorageRepository(Repository):
     """File system storage. This class has all entities cached at all times"""
 
-    def __init__(self, path):
+    def __init__(self, path, queue_save_on_change=False):
         Repository.__init__(self)
 
         self.path = Path(path)
+        self.queue_save_on_change = queue_save_on_change
         self._page_ids = []
+
+        self._save_channel: Channel = None
 
         self._entity_cache = {}
         self._entity_cache_by_parent = defaultdict(set)
@@ -44,33 +48,59 @@ class FSStorageRepository(Repository):
         self._process_legacy_pages()
 
         # Load all pages in cache
-
         for page_name in self.page_names():
             page, notes = self.get_page_and_notes(page_name)
+
+            # Check if the page is saved under the right name
+            if page_name != page.name:  # If not - fix it by re-saving
+                old_path = self._path_for_page(page_name)
+                old_path.unlink()
+                self.create_page(page, notes)
+                log.error(f'Bad page name. Deleted {old_path} and saved the '
+                          f'page {page.name} anew.')
+
+            # Check for dupicates
+            page_duplicates = self.find(gid=page.gid())
+            for page_duplicate in page_duplicates:
+                dup_path = self._path_for_page(page_duplicate.name)
+                page_mtime = self._path_for_page(page.name)
+
+                if dup_path.stat().st_mtime <= page_mtime.stat().st_mtime:
+                    self.remove_from_cache(page_duplicate)
+
+                    backup_path = dup_path.with_suffix('.backup')
+                    dup_path.rename(backup_path)
+                    log.error(f'Found duplicate page "{page_duplicate.name} '
+                              f'in the repo. Backed it up as {backup_path}')
+
+            # Add the entities to the in-memory cache
             self.upsert_to_cache(page)
             for note in notes:
                 self.upsert_to_cache(note)
 
-    def _path_for_page(self, page_name):
+    def _path_for_page(self, page_name) -> Path:
         name = page_name + V4_FILE_EXT
-        return os.path.join(self.path, name)
+        return self.path / name
 
     @classmethod
-    def open(cls, path):
+    def open(cls, path, **kwargs):
         if not os.path.exists(path) or not os.path.isdir(path):
             raise Exception('Bad path. Cannot create repository for', path)
 
-        return cls(path)
+        return cls(path, **kwargs)
 
     @classmethod
-    def new(cls, path):
+    def new(cls, path, **kwargs):
         if os.path.exists(path):
             if os.listdir(path):
                 raise Exception(
                     f'Cannot create repository in non-empty folder {path}')
 
         os.makedirs(path, exist_ok=True)
-        return cls(path)
+        return cls(path, **kwargs)
+
+    def set_save_channel(self, save_channel):
+        self._save_channel = save_channel
 
     def upsert_to_cache(self, entity: Entity):
         self._entity_cache[entity.gid()] = entity
@@ -93,6 +123,11 @@ class FSStorageRepository(Repository):
         elif isinstance(entity, Note):
             self.upserted_pages.add(entity.parent_gid())
 
+        if self.queue_save_on_change:
+            misli.call_delayed(self.write_to_disk, 0)
+
+        return Change.CREATE(entity)
+
     def insert(self, entities: List[Entity]):
         for entity in entities:
             self.insert_one(entity)
@@ -111,6 +146,11 @@ class FSStorageRepository(Repository):
         elif isinstance(entity, Note):
             self.upserted_pages.add(entity.parent_gid())
 
+        if self.queue_save_on_change:
+            misli.call_delayed(self.write_to_disk, 0)
+
+        return Change.DELETE(entity)
+
     def remove(self, entities: List[Entity]):
         for entity in entities:
             self.remove_one(entity)
@@ -119,7 +159,8 @@ class FSStorageRepository(Repository):
         misli.call_delayed(self.write_to_disk, 0)
 
     def update_one(self, entity):
-        if entity.gid() not in self._entity_cache:
+        old_state = self._entity_cache.pop(entity.gid(), None)
+        if not old_state:
             raise Exception('Cannot update missing {entity}')
 
         self.upsert_to_cache(entity)
@@ -127,6 +168,11 @@ class FSStorageRepository(Repository):
             self.upserted_pages.add(entity.gid())
         elif isinstance(entity, Note):
             self.upserted_pages.add(entity.parent_gid())
+
+        if self.queue_save_on_change:
+            misli.call_delayed(self.write_to_disk, 0)
+
+        return Change.UPDATE(old_state, entity)
 
     def update(self, entities: List[Entity]):
         for entity in entities:
@@ -162,12 +208,31 @@ class FSStorageRepository(Repository):
             found = list(find_many_by_props(search_set, **filter))
             yield from found
 
+    def _try_to_save(self, changes: List[Change]):
+        try:
+            for change in changes:
+                if change.is_create():
+                    self.insert_one(change.last_state())
+                elif change.is_delete():
+                    self.remove_one(change.last_state())
+                elif change.is_update():
+                    self.update_one(change.last_state())
+
+            self.write_to_disk(changes)
+        except Exception as e:
+            # Here I could handle exceptions silently, retry, show in GUI, etc
+            raise e
+        # else:
+        #     if self._save_channel:
+        #         self._save_channel.push(changes)
+
     def write_to_disk(self):
         if self.upserted_pages.intersection(self.removed_pages):
             raise Exception('A page is both marked for upsert and removal.')
 
         for page_gid in self.upserted_pages:
-            page = misli.find_one(gid=page_gid)
+            page = pamet.find_one(gid=page_gid)
+
             if os.path.exists(self._path_for_page(page.name)):
                 self.update_page(page, page.notes())
             else:
@@ -231,7 +296,7 @@ class FSStorageRepository(Repository):
         for ns in note_states:
 
             ns.pop('type_name', '')  # Refactoring fixes
-            if 'x' in ns: # Refactoring fixes
+            if 'x' in ns:  # Refactoring fixes
                 x = ns.pop('x')
                 y = ns.pop('y')
                 width = ns.pop('width')
@@ -251,7 +316,7 @@ class FSStorageRepository(Repository):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
-        path = self._path_for_page(page.id)
+        path = self._path_for_page(page.name)
         if os.path.exists(path):
             backup_page_hackily(path)
         else:
@@ -261,7 +326,7 @@ class FSStorageRepository(Repository):
             json.dump(page_state, pf, ensure_ascii=False)
 
     def delete_page(self, page):
-        path = self._path_for_page(page.id)
+        path = self._path_for_page(page.name)
 
         if os.path.exists(path):
             os.remove(path)
@@ -339,11 +404,11 @@ class FSStorageRepository(Repository):
                      (page_path, page_backup_path))
 
     def save_changes(self, changes: List[Change]):
-        for change in changes:
-            if change.is_create():
-                self.insert_one(change.last_state())
-            elif change.is_delete():
-                self.remove_one(change.last_state())
-            elif change.is_update():
-                self.update_one(change.last_state())
-        misli.call_delayed(self.write_to_disk, 0)
+        # TODO: At some point this should become async to avoid freezes
+        t0 = time.time()
+        self._try_to_save(changes)
+
+        # If there's a big save lag log a warining
+        if time.time() - t0 > 0.03:
+            log.warning('The save time was above 30ms. Maybe it\'s time to '
+                        'implement the async IO')

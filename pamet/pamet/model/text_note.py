@@ -13,7 +13,7 @@ class TextNote(Note):
     def __post_init__(self):
         # super().__post_init__()
         if TEXT not in self.content:
-            self.text = ''
+            self.content[TEXT] = ''
 
     @property
     def text(self) -> str:

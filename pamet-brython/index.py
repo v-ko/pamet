@@ -20,8 +20,8 @@ def main():
 
     misli.set_main_loop(JSMainLoop())
     print('test')
-    misli.insert(id='test_page')
-    misli.insert(
+    pamet.insert(id='test_page')
+    pamet.insert(
         page_id='test_page', text='Test that shit out')
     print(pamet.page(gid='test_page').notes()[0].asdict())
 
