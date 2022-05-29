@@ -1,4 +1,3 @@
-from os import stat_result
 from typing import Callable
 import time
 import random

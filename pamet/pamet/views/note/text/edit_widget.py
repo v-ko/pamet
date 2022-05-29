@@ -1,66 +1,79 @@
-from PySide6.QtWidgets import QWidget
-from PySide6.QtGui import QKeySequence, QShortcut
-from PySide6.QtCore import Qt, QRectF, QPointF
+from __future__ import annotations
+from PySide6.QtCore import QRectF, QPointF, QSize, QPoint
+from PySide6.QtWidgets import QTextEdit
 
 import misli
 from misli.gui.utils.qt_widgets.qtview import QtView
-from pamet.actions import note as note_actions
-from pamet.model.note import Note
-from pamet.views.note.text.edit_view import TextNoteEditViewState
-from pamet.views.note.text.ui_edit_widget import Ui_TextNoteEditViewWidget
+from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
+from pamet.views.note.base_edit.view_state import NoteEditViewState
+from pamet.views.note.base_edit.widget import BaseNoteEditWidget
+
 
 log = misli.get_logger(__name__)
 
 
-class TextNoteEditWidget(QWidget, QtView):
-    def __init__(self, parent, initial_state):
-        QWidget.__init__(self, parent=parent)
+class TextNoteEditWidget(BaseNoteEditWidget, QtView):
+
+    def __init__(self, parent, initial_state: NoteEditViewState):
+        super().__init__(parent, initial_state)
         QtView.__init__(self,
                         initial_state=initial_state,
                         on_state_change=self.on_state_change)
 
-        self.ui = Ui_TextNoteEditViewWidget()
-        self.ui.setupUi(self)
+        self.text_edit: QTextEdit = QTextEdit(parent=self)
 
-        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
-        self.ui.ok_button.clicked.connect(self._handle_ok_click)
-        esc_shortcut.activated.connect(self._handle_esc_shortcut)
+        # There's some shitty detail in the QTextEdit implementation where
+        # there's a hidden min-height in some scroll area abstraction or
+        # whatever. Does not warrant the time to debug ATM
 
-        self.show()
+        # self.text_edit.setFixedHeight(MIN_NOTE_HEIGHT)
+        # self.text_edit.setMinimumHeight(MIN_NOTE_HEIGHT)
+        # self.text_edit.setMaximumHeight(100)
+        # self.text_edit.setContentsMargins(0,0,0,0)
+        # self.text_edit.setFixedSize(QSize(MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT))
+        # self.text_edit.resize(QSize(MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT))
+        # self.text_edit.setSizePolicy()
 
-    @property
-    def note(self) -> Note:
-        return self.state().note.copy()
+        self.ui.centralAreaWidget.layout().addWidget(self.text_edit)
+        self.text_edit.textChanged.connect(self.on_text_change)
 
-    def _handle_esc_shortcut(self):
-        note_actions.abort_editing_note(self.parent().state())
+        self.text_edit.setPlainText(initial_state.note.text)
+        # self.text_edit.setFocus()
+
+    # This shouldn't be specified explicitly IMO, but I couldn't find the bug
+    def focusInEvent(self, event) -> None:
+        # print(self.focusPolicy())  -> NoFocus. So why does it not give focus
+        # to the text edit automatically.. ?
+        self.text_edit.setFocus()
 
     def on_state_change(self, change):
-        state: TextNoteEditViewState = change.last_state()
+        state: NoteEditViewState = change.last_state()
         if not state.note:
             return
 
-        display_rect = QRectF(*state.note.rect().as_tuple())
-        display_rect.moveCenter(
-            QPointF(*state.display_position.as_tuple()))
+        # if change.is_create():
 
-        height = display_rect.height() + self.ui.ok_button.height()
-        display_rect.setHeight(height)
 
-        tab_component = self.parent()
 
-        top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
-        display_rect.moveTopLeft(top_left)
+        # display_rect = QRectF(*state.note.rect().as_tuple())
+        # display_rect.moveCenter(
+        #     QPointF(*state.display_position.as_tuple()))
 
-        self.setGeometry(display_rect.toRect())
-        self.ui.textEdit.setPlainText(self.note.text)
-        self.show()
+        # display_rect = QRectF(*state.note.rect().as_tuple())
+        # display_rect.moveCenter(QPointF(*state.display_position.as_tuple()))
 
-    def _handle_ok_click(self):
-        note = self.note
-        note.text = self.ui.textEdit.toPlainText().strip()
+        # height = display_rect.height() + self.ui.saveButton.height()
+        # display_rect.setHeight(height)
 
-        if self.state().create_mode:
-            note_actions.finish_creating_note(self.parent().state(), note)
-        else:
-            note_actions.finish_editing_note(self.parent().state(), note)
+        # tab_component = self.parent()
+
+        # top_left = tab_component.mapToGlobal(display_rect.topLeft().toPoint())
+        # display_rect.moveTopLeft(top_left)
+
+        # self.text_edit.setGeometry(display_rect.toRect())
+        # self.setGeometry(display_rect.toRect())
+
+        # self.show()
+
+    def on_text_change(self):
+        self.state().edited_note.text = self.text_edit.toPlainText()

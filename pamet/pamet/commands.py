@@ -57,3 +57,14 @@ def edit_selected_notes():
 
     note_component = misli.gui.view(selected_nc_ids[0])
     actions.note.start_editing_note(tab.id, note_component.note())
+
+
+@command(title='Show all commands')
+def open_command_palette():
+    actions.window.open_command_view(pamet.views.current_window().state(),
+                                     prefix='>')
+
+
+@command(title='Go to file')
+def open_command_palette_go_to_file():
+    actions.window.open_command_view(pamet.views.current_window().state())

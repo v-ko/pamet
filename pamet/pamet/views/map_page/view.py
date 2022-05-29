@@ -68,9 +68,9 @@ class MapPageViewState(ViewState, Viewport):
         return (f'<MapPageViewState page_id={self.page_id}'
                 f' {len(self.note_view_states)=}>')
 
-    @property
-    def viewport(self):
-        return self
+    # @property
+    # def viewport(self):
+    #     return self
 
     # @property
     # def name(self):
@@ -131,7 +131,7 @@ class MapPageView(View):
         return self.state().viewport
 
     def get_note_views_in_area(self, rect: Rectangle):
-        unprojected_rect = self.viewport.unproject_rect(rect)
+        unprojected_rect = self.state().unproject_rect(rect)
         intersecting = []
 
         for child in self.get_children():
@@ -141,7 +141,7 @@ class MapPageView(View):
         return intersecting
 
     def get_note_views_at(self, position: Point2D):
-        unprojected_mouse_pos = self.viewport.unproject_point(position)
+        unprojected_mouse_pos = self.state().unproject_point(position)
         intersecting = []
 
         for child in self.get_children():
@@ -159,7 +159,7 @@ class MapPageView(View):
 
     def resize_circle_intersect(self, position: Point2D):
         for nc in self.get_children():
-            unprojected_pos = self.viewport.unproject_point(position)
+            unprojected_pos = self.state().unproject_point(position)
             resize_circle_center = nc.state().rect().bottom_right()
 
             distance = resize_circle_center.distance_to(unprojected_pos)
@@ -219,7 +219,7 @@ class MapPageView(View):
                     self.id, {resize_nc.id: True})
 
             resize_circle_center = resize_nc.state().rect().bottom_right()
-            rcc_projected = self.viewport.project_point(resize_circle_center)
+            rcc_projected = self.state().project_point(resize_circle_center)
             actions.map_page.start_notes_resize(self.id,
                                                 resize_nc.state().note,
                                                 mouse_pos, rcc_projected)
@@ -255,7 +255,7 @@ class MapPageView(View):
 
         elif state.note_drag_active:
             pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
-            pos_delta /= self.viewport.height_scale_factor()
+            pos_delta /= self.height_scale_factor()
             actions.map_page.stop_note_drag(self.id, state.selected_nc_ids,
                                             pos_delta.as_tuple())
 
@@ -267,7 +267,7 @@ class MapPageView(View):
         size_delta = mouse_delta - self.state(
         ).note_resize_delta_from_note_edge
 
-        size_delta = size_delta / self.viewport.height_scale_factor()
+        size_delta = size_delta / self.state().height_scale_factor()
         new_size = self.state().note_resize_main_note.size() + size_delta
 
         return new_size
@@ -302,7 +302,7 @@ class MapPageView(View):
         elif mode == MapPageMode.NOTE_DRAG:
             pos_delta = mouse_pos - self._mouse_position_on_left_press
             print(f'{self._mouse_position_on_left_press=}')
-            pos_delta /= self.viewport.height_scale_factor()
+            pos_delta /= self.state().height_scale_factor()
             actions.map_page.note_drag_nc_position_update(
                 state.selected_nc_ids, pos_delta)
 

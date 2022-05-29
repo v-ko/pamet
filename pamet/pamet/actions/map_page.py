@@ -34,7 +34,7 @@ def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point2D):
     map_page_view_state = gui.view_state(map_page_view_id)
 
     unprojected_delta = (mouse_delta /
-                         map_page_view_state.viewport.height_scale_factor())
+                         map_page_view_state.height_scale_factor())
     new_viewport_center: Point2D = (
         map_page_view_state.viewport_position_on_press + unprojected_delta)
 

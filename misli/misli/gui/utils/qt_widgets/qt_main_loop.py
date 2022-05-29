@@ -1,6 +1,7 @@
 from typing import Callable
 from PySide6.QtCore import QTimer
 from misli.pubsub.main_loop import MainLoop
+from numpy import isin
 
 
 class QtMainLoop(MainLoop):
@@ -13,4 +14,8 @@ class QtMainLoop(MainLoop):
 
         args = args or []
         kwargs = kwargs or {}
+
+        if not isinstance(callback, Callable):
+            raise Exception
+
         QTimer.singleShot(delay * 1000, lambda: callback(*args, **kwargs))

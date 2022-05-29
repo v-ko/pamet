@@ -1,6 +1,6 @@
 from datetime import datetime
 from site import execsitecustomize
-from typing import List
+from typing import Generator, List, Union
 import misli
 from misli.change_aggregator import ChangeAggregator
 from misli.entity_library.change import Change
@@ -91,12 +91,12 @@ def find_one(**filter):
 
 
 # -------------Pages CRUD-------------
-def pages(**filter):
+def pages(**filter) -> Generator[Page, None, None]:
     filter['type_name'] = Page.__name__
     return _sync_repo.find(**filter)
 
 
-def page(**filter):
+def page(**filter) -> Union[Page, None]:
     filter['type_name'] = Page.__name__
     return _sync_repo.find_one(**filter)
 

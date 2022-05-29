@@ -58,6 +58,9 @@ def main():
 
     misli.call_delayed(window_actions.new_browser_tab,
                        args=[window_state, start_page])
+
+    desktop_app.focusChanged.connect(
+        lambda w1, w2: print(f'Focus changed from {w1} to {w2}'))
     return desktop_app.exec()
 
 

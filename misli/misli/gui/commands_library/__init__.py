@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Callable, List
 
 import misli
 from .command import Command
@@ -19,3 +19,7 @@ def command(title: str, name: str = ''):
         _commands[function] = _command
         return _command
     return decorator
+
+
+def commands() -> List[Command]:
+    yield from _commands.values()

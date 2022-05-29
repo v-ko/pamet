@@ -77,7 +77,7 @@ class TabWidget(QWidget, View):
                                         initial_state,
                                         on_state_change=self.on_state_change)
 
-    def page_view(self):
+    def page_view(self) -> MapPageViewState:
         return self._page_view
 
     def on_state_change(self, change: Change):
@@ -122,6 +122,7 @@ class TabWidget(QWidget, View):
                 self.edit_view.setParent(self)
                 self.edit_view.setWindowFlag(Qt.Sheet, True)
                 self.edit_view.show()
+                self.edit_view.setFocus()
 
     def switch_to_page_view(self, page_view_state):
         if self._page_view:

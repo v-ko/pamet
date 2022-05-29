@@ -177,7 +177,7 @@ class MapPageWidget(QWidget, MapPageView):
         self.update()
 
     def remove_note_widget(self, note_widget):
-        nw_id = note_widget.state().id
+        nw_id = note_widget.id
         self.delete_note_view_cache(nw_id)
         misli.unsubscribe(self.nw_subscribtions[note_widget])
         note_widget = self._note_widgets.pop(nw_id)
@@ -269,7 +269,7 @@ class MapPageWidget(QWidget, MapPageView):
         draw_point_x = display_rect.x() - cache_rect.x()
         draw_point_y = display_rect.y() - cache_rect.y()
 
-        scale_factor = self.viewport.height_scale_factor()
+        scale_factor = self.state().height_scale_factor()
 
         painter.translate(draw_point_x, draw_point_y)
         painter.scale(scale_factor, scale_factor)
@@ -323,7 +323,8 @@ class MapPageWidget(QWidget, MapPageView):
                                   self.rect().y(),
                                   self.rect().width(),
                                   self.rect().height())
-        unprojected_viewport = self.viewport.unproject_rect(viewport_rect)
+        self_state = self.state()
+        unprojected_viewport = self_state.unproject_rect(viewport_rect)
 
         display_rects_by_child_id = {}  # {nc_id: rect}
         for note_widget in self.note_widgets():
@@ -332,7 +333,7 @@ class MapPageWidget(QWidget, MapPageView):
             if not nt_rect.intersects(unprojected_viewport):
                 continue
 
-            unprojected_rect = self.viewport.project_rect(nt_rect)
+            unprojected_rect = self_state.project_rect(nt_rect)
             display_rects_by_child_id[note_widget.id] = QRectF(
                 *unprojected_rect.as_tuple())
 
@@ -448,8 +449,8 @@ class MapPageWidget(QWidget, MapPageView):
             # painter.save()
             # painter.translate(cache_rect.topLeft())
             # painter.scale(
-            #     self.viewport.height_scale_factor(),
-            #     self.viewport.height_scale_factor())
+            #     self.height_scale_factor(),
+            #     self.height_scale_factor())
             # nv_cache.pcommand_cache.play(painter)
             # # Load test
             # for i in range(10):
@@ -459,7 +460,7 @@ class MapPageWidget(QWidget, MapPageView):
             # # Test text
             # painter.save()
             # font = painter.font()
-            # font.setPointSizeF(20 * self.viewport.height_scale_factor())
+            # font.setPointSizeF(20 * self.height_scale_factor())
             # painter.setFont(font)
             # painter.drawText(cache_rect.topLeft() + QPoint(0, 0.5), 'Test')
             # painter.restore()
@@ -481,7 +482,7 @@ class MapPageWidget(QWidget, MapPageView):
                 # Draw the resize circle
                 center = display_rect.bottomRight()
                 radius = RESIZE_CIRCLE_RADIUS
-                radius *= self.viewport.height_scale_factor()
+                radius *= self.state().height_scale_factor()
 
                 circle_fill_color = QColor(nt_main_color)
                 circle_fill_color.setAlpha(60)

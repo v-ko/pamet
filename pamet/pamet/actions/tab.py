@@ -47,7 +47,7 @@ def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
 
     # Create a link to the new page at the mouse position or center
     # (in the old one)
-    note_position = current_page_state.viewport.project_point(mouse_position)
+    note_position = current_page_state.project_point(mouse_position)
     # TODO: finish this
     link_note = TextNote(page_id=new_page.id, content={'text': 'Mock link'})
     link_note.x = note_position.x()
