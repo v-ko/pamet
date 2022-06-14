@@ -1,16 +1,13 @@
-from curses import window
-from PySide6.QtCore import Qt, qIsFinite
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QFocusEvent, QKeyEvent, QKeySequence, QResizeEvent, QShortcut
 from PySide6.QtWidgets import QListWidgetItem, QWidget
+from misli.gui.view_library.view import View
 import pamet
-from sqlalchemy import func
 
 from thefuzz import process
 
 from misli.gui.commands_library import commands
-from misli.gui.utils.qt_widgets.qtview import QtView
 from misli.gui.view_library.view_state import ViewState, view_state_type
-from pamet import actions
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 from .ui_widget import Ui_CommandPaletteWidget
@@ -21,11 +18,11 @@ class CommandPaletteViewState(ViewState):
     line_edit_text: str = ''
 
 
-class CommandPaletteWidget(QWidget, QtView):
+class CommandPaletteWidget(QWidget, View):
 
     def __init__(self, parent, initial_state: CommandPaletteViewState):
-        super().__init__(parent)
-        QtView.__init__(self, initial_state)
+        QWidget.__init__(self, parent)
+        View.__init__(self, initial_state)
 
         self.ui = Ui_CommandPaletteWidget()
         self.ui.setupUi(self)
@@ -66,10 +63,6 @@ class CommandPaletteWidget(QWidget, QtView):
         self.adjustSize()
         return super().resizeEvent(event)
 
-    # def _reduce_height_to_fit_results(self):
-
-    # def _update_entries(self, new_items):
-
     def _handle_text_change(self, new_text: str):
         self.ui.suggestionsListWidget.clear()
 
@@ -92,9 +85,14 @@ class CommandPaletteWidget(QWidget, QtView):
                                       choices=choices_dict,
                                       limit=None)
 
+            tab = self.parent().current_tab()
+            current_page = tab.state().page_view_state.page
+
             for name, score, page_id in results:
+                if page_id == current_page.id:
+                    continue
+
                 item = QListWidgetItem(name)
-                tab = self.parent().current_tab()
                 page = pamet.page(id=page_id).copy()
                 if not tab:
                     item.setData(Qt.UserRole,

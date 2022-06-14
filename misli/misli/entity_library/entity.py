@@ -64,7 +64,7 @@ class Entity:
         return self.id
 
     def asdict(self) -> dict:
-        """Return the entity properties as a dict"""
+        """Return the entity fields as a dict"""
         # The dataclasses.asdict recurses and that's not what we want
         self_dict = {f.name: getattr(self, f.name) for f in fields(self)
                      if f.repr}
@@ -76,8 +76,6 @@ class Entity:
             elif isinstance(val, datetime):
                 val = datetime_to_string(val)
                 self_dict[key] = val
-
-        # self_dict['type_name'] = type(self).__name__
 
         return self_dict
 

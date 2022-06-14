@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import List, Union
 from dataclasses import field
 from datetime import datetime
@@ -28,9 +30,20 @@ class Note(Entity):
     modified: datetime = field(
         default_factory=lambda: datetime.fromtimestamp(0))
     tags: List[str] = field(default_factory=list)
+    type_name: str = ''
 
     def __repr__(self):
         return '<Note id=%s>' % self.id
+
+    def __post_init__(self):
+        self.type_name = type(self).__name__
+        if not self.page_id:
+            raise Exception
+
+    def asdict(self):
+        self_dict = super().asdict()
+        self_dict['type_name'] = type(self).__name__
+        return self_dict
 
     def gid(self):
         return self.page_id, self.id

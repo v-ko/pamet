@@ -1,7 +1,7 @@
 from copy import copy
 from enum import Enum
 from dataclasses import field
-from typing import List
+from typing import List, Union
 
 import misli
 from misli.basic_classes import Point2D, Rectangle
@@ -19,6 +19,7 @@ from pamet.constants import INITIAL_EYE_Z
 from pamet.model import Note
 
 from pamet import actions
+from pamet.model.text_note import TextNote
 from pamet.views.map_page.viewport import Viewport
 from pamet.views.note.base_note_view import NoteViewState
 
@@ -135,7 +136,7 @@ class MapPageView(View):
         intersecting = []
 
         for child in self.get_children():
-            if child.state().note.rect().intersects(unprojected_rect):
+            if child.state().rect().intersects(unprojected_rect):
                 intersecting.append(child)
 
         return intersecting
@@ -150,7 +151,7 @@ class MapPageView(View):
 
         return intersecting
 
-    def get_note_view_at(self, position: Point2D):
+    def get_note_view_at(self, position: Point2D) -> Union[View, None]:
         intersecting = self.get_note_views_at(position)
         if not intersecting:
             return None
@@ -167,7 +168,7 @@ class MapPageView(View):
                 return nc
 
     def handle_delete_shortcut(self):
-        actions.map_page.delete_selected_notes(self.id)
+        actions.map_page.delete_selected_notes(self.state())
 
     def handle_left_mouse_long_press(self, mouse_pos: Point2D):
         if self.state().note_resize_active:
@@ -221,23 +222,10 @@ class MapPageView(View):
             resize_circle_center = resize_nc.state().rect().bottom_right()
             rcc_projected = self.state().project_point(resize_circle_center)
             actions.map_page.start_notes_resize(self.id,
-                                                resize_nc.state().note,
+                                                resize_nc.state().get_note(),
                                                 mouse_pos, rcc_projected)
 
             return
-
-    def handle_right_mouse_press(self, position):
-        ncs_under_mouse = self.get_note_views_at(position)
-        if ncs_under_mouse:
-            pass
-
-        menu_entries = {
-            'New note': pamet.commands.create_new_note,
-            'New page': pamet.commands.create_new_page,
-        }
-        # Open the context menu with the tab as its parent
-        context_menu = ContextMenuWidget(self.parent(), entries=menu_entries)
-        context_menu.popup_on_mouse_pos()
 
     def handle_left_mouse_release(self, mouse_pos: Point2D):
         self._left_mouse_is_pressed = False
@@ -255,7 +243,7 @@ class MapPageView(View):
 
         elif state.note_drag_active:
             pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
-            pos_delta /= self.height_scale_factor()
+            pos_delta /= self.state().height_scale_factor()
             actions.map_page.stop_note_drag(self.id, state.selected_nc_ids,
                                             pos_delta.as_tuple())
 
@@ -318,14 +306,21 @@ class MapPageView(View):
 
         actions.map_page.set_viewport_height(self.id, new_height)
 
-    def handle_left_mouse_double_click(self, mouse_pos: Point2D):
+    def left_mouse_double_click_event(self, mouse_pos: Point2D):
         note_view = self.get_note_view_at(mouse_pos)
 
         if note_view:
-            actions.note.start_editing_note(self.parent_tab.state(),
-                                            note_view.state().note)
+            # Map the mouse position on the note and call its virtual method
+            note_rect: Rectangle = note_view.state().get_note().rect()
+            mouse_pos_unproj = self.state().unproject_point(mouse_pos)
+            relative_pos = note_rect.top_left() - mouse_pos_unproj
+            note_view.left_mouse_double_click_event(relative_pos)
         else:
-            actions.note.create_new_note(self.parent_tab.state(), mouse_pos)
+            note_pos = self.state().unproject_point(mouse_pos)
+            note = TextNote(page_id=self.state().page_id)
+            note.x = note_pos.x()
+            note.y = note_pos.y()
+            actions.note.create_new_note(self.parent_tab.state(), note)
 
     def handle_resize_event(self, width, height):
         actions.map_page.resize_page(self.id, width, height)

@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-from misli import gui, get_logger
 import misli
-from misli.entity_library.change import Change
-
 from .view_state import ViewState
 
-log = get_logger(__name__)
+log = misli.get_logger(__name__)
 
 
 class View:
@@ -36,13 +33,8 @@ class View:
             parent (str): The parent id. Can be none if this view is a root
             initial_state (Entity): The view model should be an Entity subclass
         """
-        self.subscribtions = []
-
         if not initial_state:
             initial_state = ViewState()
-        # if parent:
-        #     initial_state.parent_id = parent.id
-        # self._state = initial_state
         self._state_id = initial_state.id
 
     def __repr__(self):
@@ -50,19 +42,7 @@ class View:
 
     @property
     def id(self):
-        # return self._state.id
         return self._state_id
 
     def state(self) -> ViewState:
         return misli.gui.view_state(self._state_id)
-
-    # def previous_state(self) -> ViewState:
-    #     if not self.__previous_state:
-    #         return None
-    #     return self.__previous_state.copy()
-
-    def on_state_change(self, change: Change):
-        pass
-
-    def child(self, child_id: str) -> View:
-        return gui.view(child_id)

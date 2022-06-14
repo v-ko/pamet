@@ -1,11 +1,10 @@
 from dataclasses import field
-from PySide6.QtCore import QSize, Qt
 
 from PySide6.QtWidgets import QMainWindow, QPushButton, QWidget
 from PySide6.QtGui import QIcon, QKeySequence, QResizeEvent, QShortcut
 
 from misli.entity_library.change import Change
-from misli.gui.utils.qt_widgets.qtview import QtView
+from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.view_library.view import View
 from misli.gui.views.context_menu.widget import ContextMenuWidget
 from pamet import commands
@@ -39,11 +38,7 @@ class WindowWidget(QMainWindow, View):
 
     def __init__(self, initial_state):
         QMainWindow.__init__(self)
-        QtView.__init__(
-            self,
-            initial_state=initial_state,
-            on_state_change=self.on_state_change,
-        )
+        View.__init__(self, initial_state)
 
         self.ui = Ui_BrowserWindow()
         self.ui.setupUi(self)
@@ -67,6 +62,8 @@ class WindowWidget(QMainWindow, View):
         go_to_file_shortcut = QShortcut(QKeySequence('ctrl+P'), self)
         go_to_file_shortcut.activated.connect(
             commands.open_command_palette_go_to_file)
+
+        bind_and_apply_state(self, initial_state, self.on_state_change)
 
     def open_main_menu(self):
         entries = {'Page properties': commands.open_page_properties}
@@ -142,4 +139,3 @@ class WindowWidget(QMainWindow, View):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         self._update_command_widget_geometry()
-        # return super().resizeEvent(event)

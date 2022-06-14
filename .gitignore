@@ -13,6 +13,7 @@ __pycache__
 .pytest_cache
 *.code-workspace
 .vscode
+.VSCodeCounter
 .qt_for_python
 
 # Exclude tmp stuff (visual tests ATM)

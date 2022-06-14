@@ -14,6 +14,21 @@
    <string>BaseNoteEditWidget</string>
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="leftMargin">
+    <number>0</number>
+   </property>
+   <property name="topMargin">
+    <number>0</number>
+   </property>
+   <property name="rightMargin">
+    <number>0</number>
+   </property>
+   <property name="bottomMargin">
+    <number>0</number>
+   </property>
    <item>
     <layout class="QHBoxLayout" name="topLayout">
      <property name="leftMargin">
@@ -42,7 +57,20 @@
       </spacer>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="toolbarLayout"/>
+      <layout class="QHBoxLayout" name="toolbarLayout">
+       <property name="leftMargin">
+        <number>6</number>
+       </property>
+       <property name="topMargin">
+        <number>6</number>
+       </property>
+       <property name="rightMargin">
+        <number>6</number>
+       </property>
+       <property name="bottomMargin">
+        <number>6</number>
+       </property>
+      </layout>
      </item>
      <item>
       <spacer name="horizontalSpacer_2">
@@ -72,7 +100,7 @@
        <number>6</number>
       </property>
       <property name="leftMargin">
-       <number>8</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
        <number>0</number>
@@ -103,17 +131,20 @@
      </item>
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_4">
-       <property name="leftMargin">
+       <property name="spacing">
         <number>9</number>
+       </property>
+       <property name="leftMargin">
+        <number>6</number>
        </property>
        <property name="topMargin">
-        <number>9</number>
+        <number>6</number>
        </property>
        <property name="rightMargin">
-        <number>9</number>
+        <number>6</number>
        </property>
        <property name="bottomMargin">
-        <number>9</number>
+        <number>6</number>
        </property>
        <item>
         <widget class="QPushButton" name="pushButton">

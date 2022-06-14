@@ -1,16 +1,20 @@
+from __future__ import annotations
+from typing import List
+
 import misli
 from misli import gui
 import pamet
 
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
+from pamet.actions.note import abort_editing_note, create_new_note, finish_creating_note, finish_editing_note, start_editing_note
 from pamet.helpers import snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
 from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
 from pamet.views.map_page.view import MapPageViewState
+from pamet.views.note.base_edit.view_state import NoteEditViewState
 from pamet.views.note.base_note_view import NoteViewState
-from pamet.views.tab.widget import TabViewState
 
 log = misli.get_logger(__name__)
 
@@ -158,12 +162,14 @@ def stop_drag_select(map_page_view_id: str):
 
 
 @action('map_page.delete_selected_notes')
-def delete_selected_notes(map_page_view_id: str):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
+def delete_selected_notes(map_page_view_state: MapPageViewState):
     for nc_id in map_page_view_state.selected_nc_ids:
         ncs = gui.view_state(nc_id)
-        pamet.remove_note(ncs.note)
+        # if not ncs:
+        pamet.remove_note(ncs.get_note())
+
+    map_page_view_state.selected_nc_ids.clear()
+    misli.gui.update_state(map_page_view_state)
 
 
 @action('map_page.start_notes_resize')
@@ -192,11 +198,8 @@ def resize_note_views(new_size: Point2D, nc_ids: list):
 
 
 @action('map_page.resize_notes')
-def resize_notes(new_size: Point2D, page_id: str, note_ids: list):
-    page = pamet.page(gid=page_id)
-    for note_id in note_ids:
-        note = page.note(note_id)
-
+def resize_notes(new_size: Point2D, notes: List[Note]):
+    for note in notes:
         note.set_size(new_size)
         pamet.update_note(note)
 
@@ -207,9 +210,9 @@ def stop_notes_resize(map_page_view_id: str, new_size: list, nc_ids: list):
     map_page_view_state = gui.view_state(map_page_view_id)
     map_page_view_state.note_resize_active = False
 
-    page = map_page_view_state.page
-    note_ids = [gui.view_state(nc_id).note.id for nc_id in nc_ids]
-    resize_notes(new_size, page.id, note_ids)
+    # page = map_page_view_state.page
+    notes = [gui.view_state(nc_id).get_note() for nc_id in nc_ids]
+    resize_notes(new_size, notes)
 
     gui.update_state(map_page_view_state)
 
@@ -231,7 +234,7 @@ def note_drag_nc_position_update(nc_ids: list, delta: Point2D):
     for nc_id in nc_ids:
         ncs: NoteViewState = gui.view_state(nc_id)
 
-        rect = ncs.note.rect()
+        rect = ncs.get_note().rect()
         rect.move_top_left(snap_to_grid(rect.top_left() + delta))
         ncs.set_rect(rect)
 
@@ -245,7 +248,7 @@ def stop_note_drag(map_page_view_id: str, nc_ids: list, delta: list):
     d = Point2D(*delta)
     for nc_id in nc_ids:
         ncs = gui.view_state(nc_id)
-        note = pamet.find_one(gid=ncs.note.gid())
+        note = ncs.get_note()
 
         note.x += d.x()
         note.y += d.y()
@@ -315,7 +318,7 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
 
 @action('map_page.save_page_properties')
 def save_page_properties(page: Page):
-    pamet.update_note(page)
+    pamet.update_page(page)
 
 
 # @action('map_page.close_page_properties')
@@ -340,3 +343,40 @@ def delete_page(tab_view_state, page):
         #                            'A blank one has been created for you')))
         next_page = pamet.actions.other.create_default_page()
     tab_actions.tab_go_to_page(tab_view_state, next_page)
+
+
+@action('map_page.switch_note_type')
+def switch_note_type(tab_state: TabViewState, note: Note):
+    if tab_state.edit_view_state.create_mode:
+        abort_editing_note(tab_state)
+        create_new_note(tab_state, note)
+    else:
+        finish_editing_note(tab_state, note)
+        start_editing_note(tab_state, note)
+
+
+@action('map_page.handle_note_added')
+def handle_note_added(page_view_state: MapPageViewState, note: Note):
+    ViewType = pamet.note_view_type(note_type_name=type(note).__name__,
+                                    edit=False)
+    StateType = pamet.note_state_type_by_view(ViewType.__name__)
+    nv_state = StateType(**note.asdict(), note_gid=note.gid())
+    misli.gui.add_state(nv_state)
+    page_view_state.note_view_states.append(nv_state)
+    misli.gui.update_state(page_view_state)
+
+
+@action('map_page.handle_note_removed')
+def handle_note_removed(page_view_state: MapPageViewState, note: Note):
+    nv_states = filter(lambda x: x.note_gid == note.gid(),
+                       page_view_state.note_view_states)
+    for nv_state in nv_states:  # Should be len==1
+        misli.gui.remove_state(nv_state)
+        page_view_state.note_view_states.remove(nv_state)
+    misli.gui.update_state(page_view_state)
+
+
+@action('map_page.handle_note_updated')
+def handle_note_updated(note_view_state: NoteViewState, note: Note):
+    note_view_state.replace(**note.asdict())
+    misli.gui.update_state(note_view_state)

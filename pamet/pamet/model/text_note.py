@@ -11,7 +11,7 @@ TEXT = 'text'
 @entity_type
 class TextNote(Note):
     def __post_init__(self):
-        # super().__post_init__()
+        super().__post_init__()
         if TEXT not in self.content:
             self.content[TEXT] = ''
 
@@ -21,7 +21,4 @@ class TextNote(Note):
 
     @text.setter
     def text(self, new_text):
-        if TEXT in self.content and self.content[TEXT] == new_text:
-            return
-
         self.content[TEXT] = new_text

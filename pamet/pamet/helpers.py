@@ -2,7 +2,7 @@ from typing import List, Union
 from misli.basic_classes.point2d import Point2D
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT
-from pamet.desktop_app.config import get_config
+# from pamet.desktop_app.config import get_config
 
 
 def snap_to_grid(x: Union[float, Point2D]) -> Union[float, Point2D]:
@@ -22,9 +22,9 @@ def generate_page_name() -> str:
 
 
 def get_default_page():
-    desktop_config = get_config()
-    if 'home_page_id' in desktop_config:
-        raise NotImplementedError()  # TODO: Load from id/url
+    # desktop_config = get_config()
+    # if 'home_page_id' in desktop_config:
+    #     raise NotImplementedError()  # TODO: Load from id/url
 
     pages = list(pamet.pages())
     if not pages:

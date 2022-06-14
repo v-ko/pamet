@@ -1,12 +1,16 @@
 from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Qt, QRect
+from misli.basic_classes.point2d import Point2D
+from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.utils.qt_widgets.qtview import QtView
+from misli.gui.view_library.view import View
 from misli.gui.view_library.view_state import view_state_type
 
 from pamet import register_note_view_type
+from pamet.actions import note as note_actions
 from pamet.model.text_note import TextNote
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base_note_view import NoteView, NoteViewState
 from pamet.desktop_app.helpers import elide_text, draw_text_lines
 
 from misli import get_logger
@@ -22,17 +26,20 @@ class TextNoteViewState(NoteViewState, TextNote):
 @register_note_view_type(state_type=TextNoteViewState,
                          note_type=TextNote,
                          edit=False)
-class TextNoteWidget(QLabel, QtView):
-
+class TextNoteWidget(QLabel, NoteView):
     def __init__(self, parent, initial_state):
         QLabel.__init__(self, parent=parent)
-        QtView.__init__(self,
-                        initial_state=initial_state,
-                        on_state_change=self.on_state_change)
+        NoteView.__init__(self, initial_state=initial_state)
 
         self._elided_text_layout = []
         self._alignment = Qt.AlignHCenter
         self.setMargin(0)
+
+        bind_and_apply_state(self, initial_state, self.on_state_change)
+
+    def left_mouse_double_click_event(self, position: Point2D):
+        note_actions.start_editing_note(self.parent().parent_tab.state(),
+                                        self.state().get_note())
 
     def on_state_change(self, change):
         nv_state = change.last_state()
@@ -48,12 +55,10 @@ class TextNoteWidget(QLabel, QtView):
 
             self.setPalette(palette)
 
-        geometry_updated = change.updated.geometry
-        if geometry_updated:
-            # self.setGeometry(QRect(*note.rect().as_tuple()))
+        if change.updated.geometry:
             self.setGeometry(QRect(*nv_state.geometry))
 
-        if change.updated.text or geometry_updated:
+        if change.updated.text or change.updated.geometry:
             font = self.font()
             # font.setPixelSize(20)
             # font.setPointSizeF(note_props['font_size'] * font.pointSizeF())
@@ -80,8 +85,6 @@ class TextNoteWidget(QLabel, QtView):
             # :5px;margin-bottom:5px">%s</p>' %
             #      (100*20/float(font_metrics.lineSpacing()), _elided_text_layout))
             # self.setText(elided_text)
-
-        self.parent().on_child_updated(self)  # TODO: optimize
 
     def paintEvent(self, event):
         if not self._elided_text_layout:

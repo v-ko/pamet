@@ -38,7 +38,7 @@ of misli is GUI rendering and blocking the main loop would cause freezing.
 """
 
 from operator import index
-from typing import Callable, Union, List, Any
+from typing import Callable, Dict, Union, List, Any
 from collections import defaultdict
 from enum import Enum
 from copy import copy
@@ -102,20 +102,24 @@ class SubscriptionTypes(Enum):
 
 class Subscription:
 
-    def __init__(self, handler, channel_name, filter_val: Any = MISSING):
+    def __init__(self, handler, channel_name, index_val: Any = MISSING):
         self.id = id(self)
         self.handler = handler
         self.channel_name = channel_name
-        self.filter_val = filter_val
+        self.index_val = index_val
 
 
 class Channel:
 
-    def __init__(self, name: str, index_key: Callable = None):
+    def __init__(self,
+                 name: str,
+                 index_key: Callable = None,
+                 filter_key: Callable = None):
         self.name = name
         self.index_key = index_key
+        self.filter_key = filter_key
         self.message_stack = []
-        self.subscribtions = {}
+        self.subscribtions: Dict[Callable, Subscription] = {}
 
         # if index_key:
         self.index = defaultdict(list)
@@ -129,6 +133,13 @@ class Channel:
 
     # @log.traced
     def push(self, message):
+        if self.filter_key:
+            # Remove this exception to test
+            raise Exception(
+                'This mechanism is not tested. It might just work though')
+            if not self.filter_key(message):
+                return
+
         log.info('^^PUSH^^ on "%s": %s' % (self.name, message))
 
         # if self.index_key:
@@ -138,16 +149,16 @@ class Channel:
         # call_delayed(_invoke_handlers, 0)
 
         for handler, sub in self.subscribtions.items():
-            if self.index_key and sub.filter_val is not MISSING:
-                if self.index_key(message) != sub.filter_val:
+            if self.index_key and sub.index_val is not MISSING:
+                if self.index_key(message) != sub.index_val:
                     continue
 
             log.info(f'Queueing {handler=} for {message=} on'
-                        f' channel_name={sub.channel_name}')
+                     f' channel_name={sub.channel_name}')
             call_delayed(handler, 0, args=[message])
 
     @log.traced
-    def subscribe(self, handler, index_val=None):
+    def subscribe(self, handler, index_val: Any = MISSING):
         return subscribe(self.name, handler=handler, index_val=index_val)
 
     def add_subscribtion(self, subscribtion):

@@ -12,7 +12,7 @@ import pamet
 from pamet import channels
 from misli import entity_library
 from misli import get_logger
-from pamet.persistence_manager import PersistenceManager
+# from pamet.persistence_manager import PersistenceManager
 
 from .note import Note
 from .page import Page  # So that they're accessible from the module
@@ -20,14 +20,14 @@ from .page import Page  # So that they're accessible from the module
 log = get_logger(__name__)
 
 _sync_repo: Repository = InMemoryRepository()
-_persistence_manager = PersistenceManager
+# _persistence_manager = PersistenceManager()
 
 raw_entity_changes = Channel('__RAW_ENTITY_CHANGES__')
 
 entity_change_aggregator = ChangeAggregator(
     input_channel=raw_entity_changes,
     release_trigger_channel=misli.gui.channels.completed_root_actions,
-    changeset_output_channel=channels.entity_changesets_per_TLA)
+    changeset_output_channel=channels.entity_change_sets_per_TLA)
 
 
 # Chain the entity changes channels
@@ -35,9 +35,10 @@ def unwrap_changeset(changeset: List[Change]):
     for change in changeset:
         channels.entity_changes_by_id.push(change)
         channels.entity_changes_by_parent_gid.push(change)
+        # channels.page_changes.push(change)
 
 
-channels.entity_changesets_per_TLA.subscribe(unwrap_changeset)
+channels.entity_change_sets_per_TLA.subscribe(unwrap_changeset)
 
 
 def sync_repo():
@@ -139,8 +140,11 @@ def insert_note(note_: Note):
 
 def update_note(note_: Note):
     old_note = _sync_repo.find_one(gid=note_.gid())
+    if not old_note:
+        raise Exception('Can not update missing note')
+
     if note_.content != old_note.content:
-        note_.time_modified = datetime.now_()
+        note_.time_modified = datetime.now()
     change = _sync_repo.update_one(note_)
     raw_entity_changes.push(change)
 

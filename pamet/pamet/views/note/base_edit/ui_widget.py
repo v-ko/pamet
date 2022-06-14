@@ -24,7 +24,9 @@ class Ui_BaseNoteEditWidget(object):
             BaseNoteEditWidget.setObjectName(u"BaseNoteEditWidget")
         BaseNoteEditWidget.resize(640, 480)
         self.verticalLayout = QVBoxLayout(BaseNoteEditWidget)
+        self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")
+        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.topLayout = QHBoxLayout()
         self.topLayout.setObjectName(u"topLayout")
         self.topLayout.setContentsMargins(0, 0, 0, 0)
@@ -34,6 +36,7 @@ class Ui_BaseNoteEditWidget(object):
 
         self.toolbarLayout = QHBoxLayout()
         self.toolbarLayout.setObjectName(u"toolbarLayout")
+        self.toolbarLayout.setContentsMargins(6, 6, 6, 6)
 
         self.topLayout.addLayout(self.toolbarLayout)
 
@@ -54,7 +57,7 @@ class Ui_BaseNoteEditWidget(object):
         self.verticalLayout_3 = QVBoxLayout(self.centralAreaWidget)
         self.verticalLayout_3.setSpacing(6)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
-        self.verticalLayout_3.setContentsMargins(8, 0, 0, 0)
+        self.verticalLayout_3.setContentsMargins(0, 0, 0, 0)
 
         self.verticalLayout.addWidget(self.centralAreaWidget)
 
@@ -65,8 +68,9 @@ class Ui_BaseNoteEditWidget(object):
         self.bottomLayout.addItem(self.horizontalSpacer_3)
 
         self.horizontalLayout_4 = QHBoxLayout()
+        self.horizontalLayout_4.setSpacing(9)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
-        self.horizontalLayout_4.setContentsMargins(9, 9, 9, 9)
+        self.horizontalLayout_4.setContentsMargins(6, 6, 6, 6)
         self.pushButton = QPushButton(BaseNoteEditWidget)
         self.pushButton.setObjectName(u"pushButton")
 

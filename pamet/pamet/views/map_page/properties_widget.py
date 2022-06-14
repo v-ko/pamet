@@ -5,6 +5,7 @@ from PySide6.QtCore import Qt
 from misli.entity_library.change import Change
 
 from misli.gui import ViewState, view_state_type
+from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.utils.qt_widgets.qtview import QtView
 from misli.gui.view_library.view import View
 
@@ -22,14 +23,11 @@ class MapPagePropertiesViewState(ViewState):
         return pamet.page(id=self.page_id)
 
 
-class MapPagePropertiesWidget(QWidget, QtView):
+class MapPagePropertiesWidget(QWidget, View):
 
     def __init__(self, tab_widget, initial_state):
         QWidget.__init__(self, parent=tab_widget)
-        QtView.__init__(self,
-                        initial_state=initial_state,
-                        on_state_change=self.on_state_change)
-
+        View.__init__(self, initial_state=initial_state)
         self.tab_widget = tab_widget
         self.name_line_edit = QLineEdit('', self)
         self.name_line_edit.textChanged.connect(
@@ -61,6 +59,8 @@ class MapPagePropertiesWidget(QWidget, QtView):
         layout.addStretch()
         layout.addWidget(self.delete_button)
         self.setLayout(layout)
+
+        bind_and_apply_state(self, initial_state, self.on_state_change)
 
     def on_state_change(self, change: Change):
         # Fill the prop fields with the respective values

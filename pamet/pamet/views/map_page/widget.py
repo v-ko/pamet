@@ -11,6 +11,8 @@ from misli.basic_classes import Point2D, Rectangle
 from misli.gui.actions_library import action
 from misli.gui.utils import qt_widgets
 from misli.gui.view_library.view import View
+from misli.gui.views.context_menu.widget import ContextMenuWidget
+from pamet import commands
 
 from pamet.constants import MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
 from pamet.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
@@ -18,6 +20,7 @@ from pamet.constants import LONG_PRESS_TIMEOUT
 
 import pamet
 from pamet import actions
+from pamet.actions import map_page as map_page_actions
 from pamet.views.map_page.view import MapPageView, MapPageViewState
 
 from misli.entity_library.change import Change
@@ -95,7 +98,9 @@ class MapPageWidget(QWidget, MapPageView):
         select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_A), self)
         select_all_shortcut.activated.connect(
             lambda: actions.map_page.select_all_notes(self.id))
-
+        edit_note_shortcut = QShortcut(QKeySequence(Qt.Key_E), self)
+        edit_note_shortcut.activated.connect(
+            lambda: commands.edit_selected_notes())
         # Widget config
         pal = self.palette()
         pal.setColor(pal.Window, Qt.white)
@@ -105,10 +110,6 @@ class MapPageWidget(QWidget, MapPageView):
         self.setFocusPolicy(Qt.ClickFocus)
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)
-
-        qt_widgets.bind_and_apply_state(self,
-                                        initial_state,
-                                        on_state_change=self.on_state_change)
 
         # Subscribe to note changes
         self.subscribtion_ids = []
@@ -121,6 +122,10 @@ class MapPageWidget(QWidget, MapPageView):
                 self.handle_note_change, index_val=self.state().page.id))
 
         self.destroyed.connect(self.unsubscribe_all)
+
+        qt_widgets.bind_and_apply_state(self,
+                                        initial_state,
+                                        on_state_change=self.on_state_change)
 
     def unsubscribe_all(self):
         for sid in self.subscribtion_ids:
@@ -161,56 +166,53 @@ class MapPageWidget(QWidget, MapPageView):
     def add_note_widget(self, nv_state):
         ViewType = pamet.note_view_type_by_state(type(nv_state).__name__)
         note_widget = ViewType(parent=self, initial_state=nv_state)
+        note_widget.hide()
         self._note_widgets[nv_state.id] = note_widget
 
         sid = misli.gui.channels.state_changes_by_id.subscribe(
-            lambda change: self.on_child_updated(change.last_state()),
+            lambda change: self.handle_child_state_update(change),
             index_val=note_widget.id)
         self.nw_subscribtions[note_widget] = sid
-        # self.update()
+        # misli.call_delayed(self.on_child_updated, 0, args=[note_widget])
 
-    def on_child_updated(self, note_view):
-        nv_cache = self.note_view_cache(note_view.id)
+    def handle_child_state_update(self, change: Change):
+        if change.is_update():
+            note = change.last_state()
+            note_widget = self.note_widget_by_note_id(note.gid())
+            self.on_child_updated(note_widget.state())
+
+    def on_child_updated(self, note_widget):
+        nv_cache = self.note_view_cache(note_widget.id)
         nv_cache.should_rebuild_pcommand_cache = True
         nv_cache.should_rerender_image_cache = True
         nv_cache.should_reallocate_image_cache = True
         self.update()
 
     def remove_note_widget(self, note_widget):
-        nw_id = note_widget.id
-        self.delete_note_view_cache(nw_id)
+        nw_state_id = note_widget.id
+        self.delete_note_view_cache(nw_state_id)
         misli.unsubscribe(self.nw_subscribtions[note_widget])
-        note_widget = self._note_widgets.pop(nw_id)
+        note_widget = self._note_widgets.pop(nw_state_id)
         note_widget.deleteLater()
         # self.update()
 
-    @action('MapPageView.handle_note_change')
     def handle_note_change(self, change: Change):
         state = self.state()
         note = change.last_state()
         if change.is_create():
-            ViewType = pamet.note_view_type(note_type_name=type(note).__name__,
-                                            edit=False)
-            StateType = pamet.note_state_type_by_view(ViewType.__name__)
-            nv_state = StateType(**note.asdict(), note_gid=note.gid())
-            misli.gui.add_state(nv_state)
-            state.note_view_states.append(nv_state)
-            misli.gui.update_state(state)
+            map_page_actions.handle_note_added(state, note)
 
         elif change.is_delete():
-            nv_states = filter(lambda x: x.note_gid == note.gid(),
-                               state.note_view_states)
-            for nv_state in nv_states:  # Should be len==1
-                misli.gui.remove_state(nv_state)
-                state.note_view_states.remove(nv_state)
-            misli.gui.update_state(state)
+            map_page_actions.handle_note_removed(state, note)
 
         else:  # Updated
-            note_widget = self.note_widget_by_note_id(note.id)
-            nv_state = note_widget.state()
-            nv_state.replace(**note.asdict())
-            misli.gui.update_state(nv_state)
-            self.on_child_updated(note_widget)
+            if change.updated.type_name:
+                map_page_actions.handle_note_removed(state, note)
+                map_page_actions.handle_note_added(state, note)
+                return
+
+            note_widget = self.note_widget_by_note_id(note.gid())
+            map_page_actions.handle_note_updated(note_widget.state(), note)
 
     def note_view_cache(self, note_view_id):
         if note_view_id not in self._cache_per_nc_id:
@@ -228,9 +230,9 @@ class MapPageWidget(QWidget, MapPageView):
     def note_widget(self, state_id):
         return self._note_widgets[state_id]
 
-    def note_widget_by_note_id(self, note_id):
-        for nw_id, note_widget in self._note_widgets.items():
-            if note_widget.state().note.id == note_id:
+    def note_widget_by_note_id(self, note_gid):
+        for nw_state_id, note_widget in self._note_widgets.items():
+            if note_widget.state().note_gid == note_gid:
                 return note_widget
 
     def prep_command_cache_for_child(self, child):
@@ -575,7 +577,7 @@ class MapPageWidget(QWidget, MapPageView):
 
     def mouseDoubleClickEvent(self, event):
         if event.button() is Qt.LeftButton:
-            self.handle_left_mouse_double_click(
+            self.left_mouse_double_click_event(
                 Point2D(event.pos().x(),
                         event.pos().y()))
 
@@ -588,3 +590,17 @@ class MapPageWidget(QWidget, MapPageView):
     def resizeEvent(self, event):
         self.update()
         self.handle_resize_event(event.size().width(), event.size().height())
+
+    def handle_right_mouse_press(self, position):
+        ncs_under_mouse = self.get_note_views_at(position)
+        menu_entries = {}
+        if ncs_under_mouse:
+            menu_entries['Edit note'] = pamet.commands.edit_selected_notes
+        else:
+            menu_entries['New note'] = pamet.commands.create_new_note
+
+        menu_entries['New page'] = pamet.commands.create_new_page
+
+        # Open the context menu with the tab as its parent
+        context_menu = ContextMenuWidget(self.parent(), entries=menu_entries)
+        context_menu.popup_on_mouse_pos()

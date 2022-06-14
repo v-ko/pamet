@@ -55,8 +55,9 @@ def edit_selected_notes():
     if not selected_nc_ids:
         return
 
-    note_component = misli.gui.view(selected_nc_ids[0])
-    actions.note.start_editing_note(tab.id, note_component.note())
+    for note_view_id in selected_nc_ids:
+        note_state = misli.gui.view_state(note_view_id)
+        actions.note.start_editing_note(tab.state(), note_state.get_note())
 
 
 @command(title='Show all commands')

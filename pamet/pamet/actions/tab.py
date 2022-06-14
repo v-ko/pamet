@@ -1,10 +1,10 @@
+from __future__ import annotations
 import misli
 from misli.gui import action
 from misli.basic_classes import Point2D
 
 import pamet
 from pamet.views.map_page.view import MapPageViewState
-from pamet.views.tab.widget import TabViewState
 from pamet.model import Page
 from pamet.model.text_note import TextNote
 from pamet.helpers import generate_page_name

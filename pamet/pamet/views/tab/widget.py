@@ -9,7 +9,8 @@ from misli.basic_classes.point2d import Point2D
 from misli.entity_library.change import Change
 from misli.gui.utils import qt_widgets
 from misli.gui.view_library.view import View
-from pamet import actions
+from pamet import actions, note_view_type_by_state
+from pamet.model.text_note import TextNote
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
 from pamet.views.map_page.widget import MapPageWidget
@@ -117,7 +118,9 @@ class TabWidget(QWidget, View):
                 self.edit_view = None
 
             if state.edit_view_state:
-                self.edit_view = TextNoteEditWidget(
+                EditViewType = note_view_type_by_state(
+                    type(state.edit_view_state).__name__)
+                self.edit_view = EditViewType(
                     parent=self, initial_state=state.edit_view_state)
                 self.edit_view.setParent(self)
                 self.edit_view.setWindowFlag(Qt.Sheet, True)
@@ -149,7 +152,11 @@ class TabWidget(QWidget, View):
             edit_window_pos = page_widget.geometry().center()
 
         edit_window_pos = Point2D(edit_window_pos.x(), edit_window_pos.y())
-        actions.note.create_new_note(self.state(), edit_window_pos)
+        note_pos = page_widget.state().unproject_point(edit_window_pos)
+        new_note = TextNote(page_id=page_widget.state().page_id)
+        new_note.x = note_pos.x()
+        new_note.y = note_pos.y()
+        actions.note.create_new_note(self.state(), new_note)
 
     def create_new_page_command(self):
         mouse_pos = self.cursor().pos()

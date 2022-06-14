@@ -287,14 +287,10 @@ class FSStorageRepository(Repository):
             return None
 
         # # TODO REMOVE
-        # page_state['name'] = page_state.get('id')
-        page_state.pop('type_name', '')  # Refactoring fixes
-
         note_states = page_state.pop('note_states', [])
         notes = []
         for ns in note_states:
 
-            ns.pop('type_name', '')  # Refactoring fixes
             if 'x' in ns:  # Refactoring fixes
                 x = ns.pop('x')
                 y = ns.pop('y')
@@ -311,7 +307,7 @@ class FSStorageRepository(Repository):
 
         return entity_library.from_dict(Page.__name__, page_state), notes
 
-    def update_page(self, page, notes):
+    def update_page(self, page, notes: List[Note]):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
