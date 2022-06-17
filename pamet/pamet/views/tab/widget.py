@@ -16,8 +16,6 @@ from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 from pamet.views.map_page.widget import MapPageWidget
 from pamet.views.tab.ui_widget import Ui_TabMainWidget
 
-from ..note.text.edit_widget import TextNoteEditWidget
-
 from misli.gui import ViewState, view_state_type
 from pamet.model import Note
 from pamet.views.map_page.view import MapPageViewState
@@ -130,6 +128,7 @@ class TabWidget(QWidget, View):
     def switch_to_page_view(self, page_view_state):
         if self._page_view:
             self.ui.centralContainer.layout().removeWidget(self._page_view)
+            self._page_view.deleteLater()
 
         if not page_view_state:
             return

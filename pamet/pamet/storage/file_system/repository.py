@@ -1,18 +1,18 @@
 import time
-from typing import List
+from typing import Dict, Generator, List
 import os
 import json
 from pathlib import Path
-from collections import defaultdict
 
 import misli
 from misli import entity_library, Entity, Change
-from misli.helpers import find_many_by_props
 from misli.pubsub import Channel
+from misli.storage.in_memory_repository import InMemoryRepository
 from misli.storage.repository import Repository
 import pamet
 
 from pamet.model import Page, Note
+from slugify import slugify
 
 from .hacky_backups import backup_page_hackily
 from .legacy import _convert_v2_to_v4, _convert_v3_to_v4
@@ -37,8 +37,8 @@ class FSStorageRepository(Repository):
 
         self._save_channel: Channel = None
 
-        self._entity_cache = {}
-        self._entity_cache_by_parent = defaultdict(set)
+        self.in_memory_repo = InMemoryRepository()
+        self.page_paths_by_id: Dict[str, Path] = {}
 
         self.upserted_pages = set()
         self.removed_pages = set()
@@ -47,38 +47,54 @@ class FSStorageRepository(Repository):
         self._process_legacy_pages()
 
         # Load all pages in cache
-        for page_name in self.page_names():
-            page, notes = self.get_page_and_notes(page_name)
+        for page_path in self.page_paths():
+            try:
+                page, notes = self.get_page_and_notes(page_path)  #@IgnoreException
+            except Exception as e:
+                log.error(
+                    f'Exception raised while loading page {page_path}: {e}')
+                continue
 
             # Check if the page is saved under the right name
-            if page_name != page.name:  # If not - fix it by re-saving
-                old_path = self._path_for_page(page_name)
-                old_path.unlink()
+            inferred_path = self.path_for_page(page)
+            if page_path != inferred_path:  # If not - fix it by re-saving
+                page_path.unlink()
                 self.create_page(page, notes)
-                log.error(f'Bad page name. Deleted {old_path} and saved the '
+                log.error(f'Bad page name. Deleted {page_path} and saved the '
                           f'page {page.name} anew.')
 
             # Check for dupicates
             page_duplicates = self.find(gid=page.gid())
             for page_duplicate in page_duplicates:
-                dup_path = self._path_for_page(page_duplicate.name)
-                page_mtime = self._path_for_page(page.name)
+                dup_path = self.path_for_page(page_duplicate)
 
-                if dup_path.stat().st_mtime <= page_mtime.stat().st_mtime:
-                    self.remove_from_cache(page_duplicate)
-
+                if dup_path.stat().st_mtime <= page_path.stat().st_mtime:
+                    # If the page that's older is loaded
+                    self.in_memory_repo.remove_one(page_duplicate)
                     backup_path = dup_path.with_suffix('.backup')
                     dup_path.rename(backup_path)
                     log.error(f'Found duplicate page "{page_duplicate.name} '
-                              f'in the repo. Backed it up as {backup_path}')
+                            f'in the repo. Backed it up as {backup_path}')
+                else:
+                    # If the page, currently processed in the upper loop
+                    # is older
+                    backup_path = page_path.with_suffix('.backup')
+                    dup_path.rename(backup_path)
+                    log.error(f'Found duplicate page "{page_duplicate.name} '
+                            f'in the repo. Backed it up as {backup_path}')
+                    break
 
             # Add the entities to the in-memory cache
             self.upsert_to_cache(page)
             for note in notes:
                 self.upsert_to_cache(note)
 
-    def _path_for_page(self, page_name) -> Path:
-        name = page_name + V4_FILE_EXT
+            # Save the path corresponding to the id in order to handle renames
+            self.page_paths_by_id[page.id] = self.path_for_page(page)
+
+    def path_for_page(self, page) -> Path:
+        slug = slugify(page.name, separator='_' , max_length=100)
+        name = f'{slug}-{page.id}{V4_FILE_EXT}'
         return self.path / name
 
     @classmethod
@@ -102,20 +118,9 @@ class FSStorageRepository(Repository):
         self._save_channel = save_channel
 
     def upsert_to_cache(self, entity: Entity):
-        self._entity_cache[entity.gid()] = entity
-        if entity.parent_gid():
-            self._entity_cache_by_parent[entity.parent_gid()].add(entity.gid())
-
-    def remove_from_cache(self, entity: Entity):
-        self._entity_cache.pop(entity.gid(), None)
-        if entity.parent_gid():
-            self._entity_cache_by_parent[entity.parent_gid()].remove(
-                entity.gid())
+        self.in_memory_repo.upsert_to_cache(entity)
 
     def insert_one(self, entity):
-        if entity.gid() in self._entity_cache:
-            raise Exception('Cannot insert {entity}, since it already exists')
-
         self.upsert_to_cache(entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
@@ -135,10 +140,7 @@ class FSStorageRepository(Repository):
         misli.call_delayed(self.write_to_disk, 0)
 
     def remove_one(self, entity):
-        if entity.gid() not in self._entity_cache:
-            raise Exception(f'Cannot remove missing {entity}')
-
-        self.remove_from_cache(entity)
+        self.in_memory_repo.remove_one(entity)
         if isinstance(entity, Page):
             self.removed_pages.add(entity.gid())
             self.pages_for_write_removal[entity.gid()] = entity
@@ -158,10 +160,7 @@ class FSStorageRepository(Repository):
         misli.call_delayed(self.write_to_disk, 0)
 
     def update_one(self, entity):
-        old_state = self._entity_cache.pop(entity.gid(), None)
-        if not old_state:
-            raise Exception('Cannot update missing {entity}')
-
+        change = self.in_memory_repo.update_one(entity)
         self.upsert_to_cache(entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
@@ -171,7 +170,7 @@ class FSStorageRepository(Repository):
         if self.queue_save_on_change:
             misli.call_delayed(self.write_to_disk, 0)
 
-        return Change.UPDATE(old_state, entity)
+        return change
 
     def update(self, entities: List[Entity]):
         for entity in entities:
@@ -181,31 +180,7 @@ class FSStorageRepository(Repository):
         misli.call_delayed(self.write_to_disk, 0)
 
     def find(self, **filter):
-        # If searching by gid - there will be only one unique result (if any)
-        if 'gid' in filter:
-            gid = filter.get('gid')
-            result = self._entity_cache.get(gid, None)
-            yield from [result] if result else []
-
-        # If searching by parent_gid - use the index to do it efficiently
-        elif 'parent_gid' in filter:
-            parent_gid = filter.pop('parent_gid')
-            found = self._entity_cache_by_parent.get(parent_gid, [])
-            found_entities = [self._entity_cache[gid] for gid in found]
-            if not filter:
-                yield from found_entities
-            else:
-                yield from find_many_by_props(found_entities, **filter)
-        else:
-            search_set = self._entity_cache.values()
-            if 'type_name' in filter:
-                type_name = filter.pop('type_name')
-                search_set = [
-                    ent for gid, ent in self._entity_cache.items()
-                    if type(ent).__name__ == type_name
-                ]
-            found = list(find_many_by_props(search_set, **filter))
-            yield from found
+        yield from self.in_memory_repo.find(**filter)
 
     def _try_to_save(self, changes: List[Change]):
         try:
@@ -232,7 +207,7 @@ class FSStorageRepository(Repository):
         for page_gid in self.upserted_pages:
             page = pamet.find_one(gid=page_gid)
 
-            if os.path.exists(self._path_for_page(page.name)):
+            if page.id in self.page_paths_by_id:
                 self.update_page(page, page.notes())
             else:
                 self.create_page(page, page.notes())
@@ -248,7 +223,7 @@ class FSStorageRepository(Repository):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
-        path = self._path_for_page(page.name)
+        path = self.path_for_page(page)
         try:
             if os.path.exists(path):
                 log.error('Cannot create page. File already exists %s' % path)
@@ -257,36 +232,27 @@ class FSStorageRepository(Repository):
             with open(path, 'w') as pf:
                 json.dump(page_state, pf, ensure_ascii=False)
 
+            self.page_paths_by_id[page.id] = path
+
         except Exception as e:
             log.error('Exception while creating page at %s: %s' % (path, e))
 
-    def page_names(self):
-        page_names = []
-
+    def page_paths(self) -> Generator[Path, None, None]:
         for file in os.scandir(self.path):
             if self.is_v4_page(file.path):
-                page_name = file.name[:-len(V4_FILE_EXT)]  # Strip extension
+                yield Path(file.path)
 
-                if not page_name:
-                    log.warning('Page with no id at %s' % file.path)
-                    continue
-
-                page_names.append(page_name)
-
-        return page_names
-
-    def get_page_and_notes(self, page_name):
-        path = self._path_for_page(page_name)
-
+    def get_page_and_notes(self, json_file_path):
         try:
-            with open(path) as pf:
+            with open(json_file_path) as pf:
                 page_state = json.load(pf)
 
         except Exception as e:
-            log.error('Exception %s while loading page' % e, path)
+            log.error('Exception %s while loading page' % e, json_file_path)
             return None
 
         # # TODO REMOVE
+        page_state.pop('type_name', None)
         note_states = page_state.pop('note_states', [])
         notes = []
         for ns in note_states:
@@ -311,8 +277,19 @@ class FSStorageRepository(Repository):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
 
-        path = self._path_for_page(page.name)
-        if os.path.exists(path):
+        saved_path = self.page_paths_by_id[page.id]
+        path = self.path_for_page(page)
+
+        # If the paths differ - the page has been renamed and the file should
+        # be moved
+        if saved_path != path and saved_path.exists():
+            log.debug(f'Page renamed, moving file {saved_path} to {path}.')
+            if path.exists():
+                raise Exception('This should have been handlet at init time')
+            saved_path.rename(path)
+            self.page_paths_by_id[page.id] = path
+
+        if path.exists():
             backup_page_hackily(path)
         else:
             log.error(f'[update_page] Page at {path} was missing.')
@@ -321,7 +298,7 @@ class FSStorageRepository(Repository):
             json.dump(page_state, pf, ensure_ascii=False)
 
     def delete_page(self, page):
-        path = self._path_for_page(page.name)
+        path = self.page_paths_by_id.pop(page.id)
 
         if os.path.exists(path):
             os.remove(path)

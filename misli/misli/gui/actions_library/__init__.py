@@ -74,7 +74,7 @@ def action(name: str):
             if misli.gui.view_and_parent_update_ongoing():
                 log.debug(f'Cannot invoke an action while updating the views.'
                           f' Queueing {_action} on the main loop.')
-                misli.dispatch(_action, gui.ACTIONS_QUEUE_CHANNEL)
+                gui.actions_queue_channel.push(_action)
                 return
 
             return execute_action(_action)

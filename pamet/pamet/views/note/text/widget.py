@@ -31,6 +31,10 @@ class TextNoteWidget(QLabel, NoteView):
         QLabel.__init__(self, parent=parent)
         NoteView.__init__(self, initial_state=initial_state)
 
+        font = self.font()
+        font.setPointSizeF(14)
+        self.setFont(font)
+
         self._elided_text_layout = []
         self._alignment = Qt.AlignHCenter
         self.setMargin(0)

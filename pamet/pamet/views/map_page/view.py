@@ -116,13 +116,6 @@ class MapPageView(View):
     def get_children(self) -> List[View]:
         raise NotImplementedError
 
-    @action('MapPageView.handle_page_change')
-    def handle_page_change(self, change: Change):
-        if change.updated.name:
-            tab_state = self.tab_widget.state()
-            tab_state.title = change.last_state().name
-            misli.gui.update_state(tab_state)
-
     @property
     def page(self):
         return self.state().page.copy()
@@ -200,24 +193,24 @@ class MapPageView(View):
             if nc_under_mouse:
                 nc_selected = nc_under_mouse.id in self.state().selected_nc_ids
                 actions.map_page.update_note_selections(
-                    self.id, {nc_under_mouse.id: not nc_selected})
+                    self.state(), {nc_under_mouse.id: not nc_selected})
 
         # Clear selection (or reduce it to the note under the mouse)
         if not ctrl_pressed and not shift_pressed:
             if resize_nc:
                 nc_under_mouse = resize_nc
 
-            actions.map_page.clear_note_selection(self.id)
+            actions.map_page.clear_note_selection(self.state())
 
             if nc_under_mouse:
                 actions.map_page.update_note_selections(
-                    self.id, {nc_under_mouse.id: True})
+                    self.state(), {nc_under_mouse.id: True})
 
         # Check for resize initiation
         if resize_nc:
             if resize_nc.id not in self.state().selected_nc_ids:
                 actions.map_page.update_note_selections(
-                    self.id, {resize_nc.id: True})
+                    self.state(), {resize_nc.id: True})
 
             resize_circle_center = resize_nc.state().rect().bottom_right()
             rcc_projected = self.state().project_point(resize_circle_center)

@@ -24,7 +24,6 @@ class AnchorNote(TextNote):
 
     @url.setter
     def url(self, new_url: str):
-
         self.content[URL] = new_url
 
     @property
@@ -52,3 +51,9 @@ class AnchorNote(TextNote):
         else:
             # A search for imported public/shared pages should be done here
             return None
+
+    def is_external_link(self) -> bool:
+        return self.parsed_url.scheme in ['http', 'https', '']
+
+    def is_internal_link(self) -> bool:
+        return self.parsed_url.scheme == 'pamet'

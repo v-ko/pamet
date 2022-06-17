@@ -7,6 +7,7 @@ import misli
 from misli import Change
 from misli.change_aggregator import ChangeAggregator
 from misli.logging import BColors
+from misli.pubsub import Channel
 
 from .actions_library import Action, execute_action, name_for_wrapped_function
 from .view_library.view import ViewState
@@ -14,17 +15,14 @@ from misli.gui import channels
 
 log = misli.get_logger(__name__)
 
-ACTIONS_QUEUE_CHANNEL = '__ACTIONS_QUEUE__'
-ACTIONS_LOG_CHANNEL = '__ACTIONS_LOG__'
-
-misli.add_channel(ACTIONS_QUEUE_CHANNEL)
-misli.add_channel(ACTIONS_LOG_CHANNEL)
+actions_queue_channel = Channel('__ACTIONS_QUEUE__')
+actions_log_channel = Channel('__ACTIONS_LOG__')
 
 # def execute_action_queue(actions: List[Action]):
 #     for action in actions:
 #         execute_action(action)
 
-misli.subscribe(ACTIONS_QUEUE_CHANNEL, execute_action)
+actions_queue_channel.subscribe(execute_action)
 
 _state_aggregator = ChangeAggregator(
     input_channel=channels.raw_state_changes,
@@ -32,6 +30,7 @@ _state_aggregator = ChangeAggregator(
     output_channel=channels.state_changes_by_id)
 
 _view_states = {}
+_state_backups = {}
 
 _action_context_stack = []
 _view_and_parent_update_ongoing = False
@@ -99,7 +98,7 @@ def log_action_state(action: Action):
         msg += f' time={action.duration * 1000:.2f}ms'
     log.info(msg)
 
-    misli.dispatch(action, ACTIONS_LOG_CHANNEL)
+    actions_log_channel.push(action)
 
 
 @log.traced
@@ -111,17 +110,14 @@ def on_actions_logged(handler: Callable):
         handler (Callable): The callable to be invoked on each new message on
         the channel
     """
-    misli.subscribe(ACTIONS_LOG_CHANNEL, handler)
+    actions_log_channel.subscribe(handler)
 
 
 def queue_action(action_func, args: list = None, kwargs: dict = None):
     action = Action(name_for_wrapped_function(action_func))
     action.args = args or []
     action.kwargs = kwargs or {}
-    misli.dispatch(action, ACTIONS_QUEUE_CHANNEL)
-
-
-_state_backups = {}
+    actions_queue_channel.push(action)
 
 
 @log.traced
@@ -144,8 +140,8 @@ def update_state(state_: ViewState):
     if state_.id not in _view_states:
         raise Exception('Cannot update a state which has not been added.')
 
-    channels.raw_state_changes.push(
-        Change.UPDATE(_state_backups[state_.id], state_))
+    change = Change.UPDATE(_state_backups[state_.id], state_)
+    channels.raw_state_changes.push(change)
 
     if (state_._version + 1) <= _view_states[state_.id]._version:
         raise Exception('You\'re using an old state. This object has already '

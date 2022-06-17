@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from urllib.parse import urlparse
 from PySide6.QtWidgets import QCompleter, QPushButton
 
 import misli
@@ -80,7 +79,7 @@ class AnchorEditWidget(BaseNoteEditWidget, View):
         url_field = self.props_widget.ui.urlLineEdit.text()
         self.edited_note.url = url_field
 
-        # If there's no scheme it's probably free text (or a web linkk)
+        # If there's no scheme it's probably an internal page (or a web link)
         if not self.edited_note.parsed_url.scheme:
             # We check if it happens to be the name of a note page
             page_by_name = None
@@ -124,7 +123,6 @@ class AnchorEditWidget(BaseNoteEditWidget, View):
     def handle_link_button_toggled(self, checked):
         if checked:
             raise Exception('Should only be unchecked in a text note edit')
-        # note = self.edited_note
         note_dict = self.edited_note.asdict()
         note = TextNote(**note_dict)
 

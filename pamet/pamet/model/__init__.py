@@ -1,5 +1,5 @@
+from copy import copy
 from datetime import datetime
-from site import execsitecustomize
 from typing import Generator, List, Union
 import misli
 from misli.change_aggregator import ChangeAggregator
@@ -77,11 +77,6 @@ def set_async_repo(repo: Repository):
     # Here the persistence manager should be connected to the entityTLA channel
 
 
-# def publish_entity_change(change: Change):
-#     pamet.channels.entity_changes_by_id.push(change)
-#     pamet.channels.entity_changes_by_parent_gid.push(change)
-
-
 # ------------Finds-----------------
 def find(**filter):
     yield from _sync_repo.find(**filter)
@@ -99,7 +94,7 @@ def pages(**filter) -> Generator[Page, None, None]:
 
 def page(**filter) -> Union[Page, None]:
     filter['type_name'] = Page.__name__
-    return _sync_repo.find_one(**filter)
+    return copy(_sync_repo.find_one(**filter))
 
 
 def insert_page(page_: Page):

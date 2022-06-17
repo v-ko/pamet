@@ -8,7 +8,6 @@ from PySide6.QtGui import QKeySequence, QShortcut
 
 import misli
 from misli.basic_classes import Point2D, Rectangle
-from misli.gui.actions_library import action
 from misli.gui.utils import qt_widgets
 from misli.gui.view_library.view import View
 from misli.gui.views.context_menu.widget import ContextMenuWidget
@@ -75,32 +74,39 @@ class MapPageWidget(QWidget, MapPageView):
 
         color_notes_blue = QShortcut(QKeySequence('1'), self)
         color_notes_blue.activated.connect(
-            lambda: actions.map_page.color_selected_notes(
-                self.id, color=[0, 0, 1, 1], background_color=[0, 0, 1, 0.1]))
+            lambda: actions.map_page.color_selected_notes(self.state(),
+                                                          color=[0, 0, 1, 1],
+                                                          background_color=
+                                                          [0, 0, 1, 0.1]))
         color_notes_green = QShortcut(QKeySequence('2'), self)
         color_notes_green.activated.connect(
             lambda: actions.map_page.color_selected_notes(
-                self.id,
+                self.state(),
                 color=[0, 0.64, 0.235, 1],
                 background_color=[0, 1, 0, 0.1]))
         color_notes_red = QShortcut(QKeySequence('3'), self)
         color_notes_red.activated.connect(
-            lambda: actions.map_page.color_selected_notes(
-                self.id, color=[1, 0, 0, 1], background_color=[1, 0, 0, 0.1]))
+            lambda: actions.map_page.color_selected_notes(self.state(),
+                                                          color=[1, 0, 0, 1],
+                                                          background_color=
+                                                          [1, 0, 0, 0.1]))
         color_notes_gray = QShortcut(QKeySequence('4'), self)
         color_notes_gray.activated.connect(
-            lambda: actions.map_page.color_selected_notes(
-                self.id, color=[0, 0, 0, 1], background_color=[0, 0, 0, 0.1]))
+            lambda: actions.map_page.color_selected_notes(self.state(),
+                                                          color=[0, 0, 0, 1],
+                                                          background_color=
+                                                          [0, 0, 0, 0.1]))
         remove_note_background = QShortcut(QKeySequence('5'), self)
         remove_note_background.activated.connect(
             lambda: actions.map_page.color_selected_notes(
-                self.id, background_color=[0, 0, 0, 0]))
+                self.state(), background_color=[0, 0, 0, 0]))
         select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_A), self)
         select_all_shortcut.activated.connect(
             lambda: actions.map_page.select_all_notes(self.id))
-        edit_note_shortcut = QShortcut(QKeySequence(Qt.Key_E), self)
-        edit_note_shortcut.activated.connect(
-            lambda: commands.edit_selected_notes())
+        edit_note_shortcut = QShortcut(QKeySequence(Qt.Key_E), self,
+                                       commands.edit_selected_notes)
+        edit_note_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_E), self,
+                                       commands.open_page_properties)
         # Widget config
         pal = self.palette()
         pal.setColor(pal.Window, Qt.white)
@@ -111,41 +117,39 @@ class MapPageWidget(QWidget, MapPageView):
         self.setAcceptDrops(True)
         self.setAutoFillBackground(True)
 
-        # Subscribe to note changes
-        self.subscribtion_ids = []
+        self.subscriptions = []
         self.nw_subscribtions = {}  # by note widget
-        self.subscribtion_ids.append(
+        # Subscribe to the page changes
+        self.subscriptions.append(
             pamet.channels.entity_changes_by_id.subscribe(
                 self.handle_page_change, index_val=self.state().page.id))
-        self.subscribtion_ids.append(
+        # Subscribe to note changes
+        self.subscriptions.append(
             pamet.channels.entity_changes_by_parent_gid.subscribe(
                 self.handle_note_change, index_val=self.state().page.id))
 
-        self.destroyed.connect(self.unsubscribe_all)
+        self.destroyed.connect(lambda: self.unsubscribe_all())
 
         qt_widgets.bind_and_apply_state(self,
                                         initial_state,
                                         on_state_change=self.on_state_change)
 
-    def unsubscribe_all(self):
-        for sid in self.subscribtion_ids:
-            misli.unsubscribe(sid)
+    def handle_page_change(self, change: Change):
+        if change.updated.name:
+            map_page_actions.handle_page_name_updated(self.tab_widget.state(),
+                                                      change.last_state())
 
-        for nw, sid in self.nw_subscribtions.items():
-            misli.unsubscribe(sid)
+    def unsubscribe_all(self):
+        for subscription in self.subscriptions:
+            subscription.unsubscribe()
+
+        for nw, subscription in self.nw_subscribtions.items():
+            subscription.unsubscribe()
 
     def get_children(self) -> List[View]:
         yield from self.note_widgets()
 
     def on_state_change(self, change: Change):
-        # state = change.last_state()
-
-        # if change.updated.name:
-        #     # Fix the tab text when changing the page name
-        #     window = self.tab_widget.parent_window
-        #     self_idx = window.ui.tabBarWidget.indexOf(self)
-        #     window.ui.tabBarWidget.setTabText(self_idx, state.name)
-
         if change.updated.viewport_height:
             # Invalidate image_cache for all children
             for child in self.children():
@@ -169,10 +173,10 @@ class MapPageWidget(QWidget, MapPageView):
         note_widget.hide()
         self._note_widgets[nv_state.id] = note_widget
 
-        sid = misli.gui.channels.state_changes_by_id.subscribe(
+        subscription = misli.gui.channels.state_changes_by_id.subscribe(
             lambda change: self.handle_child_state_update(change),
             index_val=note_widget.id)
-        self.nw_subscribtions[note_widget] = sid
+        self.nw_subscribtions[note_widget] = subscription
         # misli.call_delayed(self.on_child_updated, 0, args=[note_widget])
 
     def handle_child_state_update(self, change: Change):
@@ -191,7 +195,8 @@ class MapPageWidget(QWidget, MapPageView):
     def remove_note_widget(self, note_widget):
         nw_state_id = note_widget.id
         self.delete_note_view_cache(nw_state_id)
-        misli.unsubscribe(self.nw_subscribtions[note_widget])
+        subscription = self.nw_subscribtions.pop(note_widget)
+        subscription.unsubscribe()
         note_widget = self._note_widgets.pop(nw_state_id)
         note_widget.deleteLater()
         # self.update()
@@ -595,6 +600,9 @@ class MapPageWidget(QWidget, MapPageView):
         ncs_under_mouse = self.get_note_views_at(position)
         menu_entries = {}
         if ncs_under_mouse:
+            map_page_actions.update_note_selections(
+                self.state(), {nv.id: True
+                               for nv in ncs_under_mouse})
             menu_entries['Edit note'] = pamet.commands.edit_selected_notes
         else:
             menu_entries['New note'] = pamet.commands.create_new_note

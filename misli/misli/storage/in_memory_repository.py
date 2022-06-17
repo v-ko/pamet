@@ -54,7 +54,7 @@ class InMemoryRepository(Repository):
     def update(self, batch: List[Entity]):
         return [self.update_one(entity) for entity in batch]
 
-    def find(self, **filter):
+    def find_cached(self, **filter):
         # If searching by gid - there will be only one unique result (if any)
         if 'gid' in filter:
             gid = filter.get('gid')
@@ -80,3 +80,6 @@ class InMemoryRepository(Repository):
                 ]
             found = list(find_many_by_props(search_set, **filter))
             yield from found
+
+    def find(self, **filter):
+        yield from (entity.copy() for entity in self.find_cached(**filter))

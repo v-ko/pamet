@@ -80,9 +80,9 @@ class ChangeAggregator:
         for state_id, state_ in self.added.items():
             changes.append(Change.CREATE(state_))
 
-        for state_id, state_ in self.update_old_states.items():
+        for state_id, old_state in self.update_old_states.items():
             changes.append(
-                Change.UPDATE(state_, self.update_last_states[state_id]))
+                Change.UPDATE(old_state, self.update_last_states[state_id]))
 
         for state_id, state_ in self.removed.items():
             changes.append(Change.DELETE(state_))

@@ -6,6 +6,7 @@ from misli.gui.actions_library import action
 
 import pamet
 from pamet.model import Note
+from pamet.views.note.anchor.widget import AnchorViewState
 from pamet.views.tab import widget as tab_widget
 
 log = misli.get_logger(__name__)
@@ -45,7 +46,6 @@ def start_editing_note(tab_view_state: tab_widget.TabViewState, note: Note):
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
     edit_view_state = EditViewType(
-        # create_mode=False,
         note_gid=note.gid())
     edit_view_state.update_from_note(note)
     tab_view_state.edit_view_state = edit_view_state
@@ -67,3 +67,9 @@ def finish_editing_note(tab_state: tab_widget.TabViewState, note: Note):
 def abort_editing_note(tab_state: tab_widget.TabViewState):
     tab_state.edit_view_state = None
     gui.update_state(tab_state)
+
+
+@action('note.apply_page_change_to_anchor_view')
+def apply_page_change_to_anchor_view(anchor_view_state: AnchorViewState):
+    anchor_view_state.update_link_validity()
+    misli.gui.update_state(anchor_view_state)

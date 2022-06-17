@@ -16,6 +16,9 @@ class NoteViewState(ViewState, Note):
         if not self.note_gid:
             raise Exception('All note views should have a mapped note.')
 
+    def update_from_note(self, note: Note):
+        self.replace(**note.asdict())
+
     def get_note(self):
         note = pamet.find_one(gid=self.note_gid)
         if note:

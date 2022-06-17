@@ -1,7 +1,7 @@
 from __future__ import annotations
+
 from copy import copy
 from enum import Enum
-from time import time
 from typing import Any, Generator, Iterable
 
 from misli import get_logger
@@ -16,7 +16,7 @@ class DiffTypes(Enum):
 
 
 class Diff:
-    def __init__(self, change: 'Change', type: DiffTypes):
+    def __init__(self, change: Change, type: DiffTypes):
         self.change = change
         self.type = type
 
@@ -129,19 +129,19 @@ class Change:
         )
 
     @classmethod
-    def CREATE(cls, state: Entity) -> 'Change':
+    def CREATE(cls, state: Entity) -> Change:
         """Convenience method for constructing a Change with type CREATE"""
         return cls(type=ChangeTypes.CREATE, new_state=copy(state))
 
     @classmethod
-    def UPDATE(cls, old_state: Entity, new_state: Entity) -> 'Change':
+    def UPDATE(cls, old_state: Entity, new_state: Entity) -> Change:
         """Convenience method for constructing a Change with type UPDATE"""
         return cls(type=ChangeTypes.UPDATE,
                    old_state=copy(old_state),
                    new_state=copy(new_state))
 
     @classmethod
-    def DELETE(cls, old_state: Entity) -> 'Change':
+    def DELETE(cls, old_state: Entity) -> Change:
         """Convenience method for constructing a Change with type DELETE"""
         return cls(type=ChangeTypes.DELETE, old_state=copy(old_state))
 

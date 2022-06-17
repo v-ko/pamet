@@ -7,7 +7,8 @@ import pamet
 
 from misli.basic_classes import Point2D
 from misli.gui.actions_library import action
-from pamet.actions.note import abort_editing_note, create_new_note, finish_creating_note, finish_editing_note, start_editing_note
+from pamet.actions.note import abort_editing_note, create_new_note
+from pamet.actions.note import finish_editing_note, start_editing_note
 from pamet.helpers import snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
@@ -64,10 +65,8 @@ def stop_drag_navigation(map_page_view_id: str):
 
 
 @action('map_page.update_note_selections')
-def update_note_selections(map_page_view_id: str,
+def update_note_selections(map_page_view_state: MapPageViewState,
                            selection_updates_by_note_id: dict):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
 
     if not selection_updates_by_note_id:
         return
@@ -96,9 +95,7 @@ def update_note_selections(map_page_view_id: str,
 
 
 @action('map_page.clear_note_selection')
-def clear_note_selection(map_page_view_id: str):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
+def clear_note_selection(map_page_view_state: str):
     selection_updates = {}
     for sc_id in map_page_view_state.selected_nc_ids:
         selection_updates[sc_id] = False
@@ -106,7 +103,7 @@ def clear_note_selection(map_page_view_id: str):
     if not selection_updates:
         return
 
-    update_note_selections(map_page_view_id, selection_updates)
+    update_note_selections(map_page_view_state, selection_updates)
 
 
 @action('map_page.set_viewport_height')
@@ -277,13 +274,11 @@ def resize_page(map_page_view_id, width, height):
 
 
 @action('notes.color_selected_notes')
-def color_selected_notes(map_page_view_id: str,
+def color_selected_notes(map_page_view_state: str,
                          color: list = None,
                          background_color: list = None):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
     for note_view_id in map_page_view_state.selected_nc_ids:
-        note = gui.view_state(note_view_id).note
+        note = gui.view_state(note_view_id).get_note()
 
         color = color or note.color
         background_color = background_color or note.background_color
@@ -378,5 +373,11 @@ def handle_note_removed(page_view_state: MapPageViewState, note: Note):
 
 @action('map_page.handle_note_updated')
 def handle_note_updated(note_view_state: NoteViewState, note: Note):
-    note_view_state.replace(**note.asdict())
+    note_view_state.update_from_note(note)
     misli.gui.update_state(note_view_state)
+
+
+@action('map_page.handle_page_name_updated')
+def handle_page_name_updated(tab_view_state: TabViewState, page: Page):
+    tab_view_state.title = page.name
+    misli.gui.update_state(tab_view_state)

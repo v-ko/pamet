@@ -41,12 +41,14 @@ class MapPagePropertiesWidget(QWidget, View):
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         esc_shortcut.activated.connect(
             lambda: actions.tab.close_right_sidebar(self.tab_widget.state()))
+        self.save_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S), self)
+        self.save_shortcut.activated.connect(self._save_page)
 
         # binding = first_key_binding_for_command(save_page_properties)
         # self.save_button = QPushButton(f'Save ({binding.key})')
         self.save_button = QPushButton('Save (Ctrl+S)')
         # self.save_button.setEnabled(False)
-        self.save_button.clicked.connect(self._handle_save_button_click)
+        self.save_button.clicked.connect(self._save_page)
         self.delete_button = QPushButton(f'Delete page')
         self.delete_button.clicked.connect(self._handle_delete_button_click)
         self.delete_button.setStyleSheet('QButton {background-color: red;}')
@@ -78,7 +80,7 @@ class MapPagePropertiesWidget(QWidget, View):
                                      self.state().page)
         actions.tab.close_right_sidebar(self.tab_widget.state())
 
-    def _handle_save_button_click(self):
+    def _save_page(self):
         state = self.state()
         page = state.page
         page.name = self.name_line_edit.text()
@@ -93,11 +95,20 @@ class MapPagePropertiesWidget(QWidget, View):
             self.save_button.setEnabled(True)
             return
 
-        if pamet.page(name=new_text):
+        if not new_text:
+            self.name_warning_label.setText('The page name can not be empty')
+            self.name_warning_label.show()
+            self.save_button.setEnabled(False)
+            self.save_shortcut.setEnabled(False)
+            return
+
+        elif pamet.page(name=new_text):
             self.name_warning_label.setText('Name already taken')
             self.name_warning_label.show()
             self.save_button.setEnabled(False)
+            self.save_shortcut.setEnabled(False)
             return
 
         self.save_button.setEnabled(True)
+        self.save_shortcut.setEnabled(True)
         self.name_warning_label.hide()
