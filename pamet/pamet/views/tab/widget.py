@@ -10,6 +10,7 @@ from misli.entity_library.change import Change
 from misli.gui.utils import qt_widgets
 from misli.gui.view_library.view import View
 from pamet import actions, note_view_type_by_state
+from pamet.actions import tab as tab_actions
 from pamet.model.text_note import TextNote
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
@@ -65,7 +66,7 @@ class TabWidget(QWidget, View):
         new_page_shortcut.activated.connect(self.create_new_page_command)
 
         self.ui.rightSidebarCloseButton.clicked.connect(
-            lambda: actions.tab.close_right_sidebar(self.state()))
+            lambda: tab_actions.close_right_sidebar(self.state()))
         # TODO: same for the left
 
         self.ui.commandLineEdit.hide()
@@ -160,4 +161,4 @@ class TabWidget(QWidget, View):
     def create_new_page_command(self):
         mouse_pos = self.cursor().pos()
         edit_window_pos = Point2D(mouse_pos.x(), mouse_pos.y())
-        actions.tab.create_new_page(self.state(), edit_window_pos)
+        tab_actions.create_new_page(self.state(), edit_window_pos)

@@ -3,14 +3,14 @@ from typing import Tuple
 import misli
 from misli.gui import command
 
-import pamet
 from pamet import actions
+from pamet.gui_helpers import current_window, current_tab
 
 log = misli.get_logger(__name__)
 
 
 def current_tab_and_page_views() -> Tuple:
-    tab = pamet.views.current_tab()
+    tab = current_tab()
     if not tab:
         raise Exception('There\'s no open tab.')
 
@@ -23,12 +23,12 @@ def current_tab_and_page_views() -> Tuple:
 
 @command(title='Create new note')
 def create_new_note():
-    pamet.views.current_window().current_tab().create_new_note_command()
+    current_window().current_tab().create_new_note_command()
 
 
 @command(title='Create new page')
 def create_new_page():
-    pamet.views.current_window().current_tab().create_new_page_command()
+    current_window().current_tab().create_new_page_command()
 
 
 @command(title='Save page properties')
@@ -62,10 +62,10 @@ def edit_selected_notes():
 
 @command(title='Show all commands')
 def open_command_palette():
-    actions.window.open_command_view(pamet.views.current_window().state(),
+    actions.window.open_command_view(current_window().state(),
                                      prefix='>')
 
 
 @command(title='Go to file')
 def open_command_palette_go_to_file():
-    actions.window.open_command_view(pamet.views.current_window().state())
+    actions.window.open_command_view(current_window().state())
