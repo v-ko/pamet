@@ -3,8 +3,6 @@ from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Qt, QRect
 from misli.basic_classes.point2d import Point2D
 from misli.gui.utils.qt_widgets import bind_and_apply_state
-from misli.gui.utils.qt_widgets.qtview import QtView
-from misli.gui.view_library.view import View
 from misli.gui.view_library.view_state import view_state_type
 
 from pamet import register_note_view_type

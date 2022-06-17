@@ -1,11 +1,10 @@
 from copy import copy
-from PySide6.QtGui import QBrush, QDesktopServices, QPainter, QColor, QPainterPath, QPalette, QPolygon
+from PySide6.QtGui import QDesktopServices, QPainter, QColor, QPainterPath, QPalette, QPolygon
 from PySide6.QtCore import QPoint, QSize, QUrl, Qt, QRect
 from misli.basic_classes.point2d import Point2D
 from misli.entity_library.change import Change
 from misli.gui.view_library.view_state import view_state_type
 from misli.pubsub import Subscription
-from numpy import poly
 
 from pamet import channels, register_note_view_type
 from pamet.actions import tab as tab_actions
@@ -13,7 +12,6 @@ from pamet.actions import note as note_actions
 from pamet.model.anchor_note import AnchorNote
 from pamet.views.note.base_note_view import NoteViewState
 from pamet.desktop_app.helpers import elide_text, draw_text_lines
-from pamet.desktop_app import link_icon
 
 from misli import get_logger
 from pamet.views.note.text.widget import TextNoteWidget
@@ -107,23 +105,24 @@ class AnchorWidget(TextNoteWidget):
         if change.updated.geometry:
             self.setGeometry(QRect(*state.geometry))
 
-        if change.updated.text or change.updated.geometry:
+        if change.updated.text or \
+                change.updated.geometry or \
+                change.updated.cached_link_page_name:
             if '\n' in state.text:
                 self._alignment = Qt.AlignLeft
             else:
                 self._alignment = Qt.AlignHCenter
 
-            # If there's a valid internal link - the text is the page's name
-            if not state.valid_internal_link:
+            if state.valid_internal_link:
+                self._elided_text_layout = elide_text(
+                    state.cached_link_page_name, self.rect(), self.font())
+            else:
                 self._elided_text_layout = elide_text(state.text, self.rect(),
                                                       self.font())
 
         if change.updated.cached_link_page_name:
-            linked_page = self.state().linked_page()
             if state.cached_link_page_name:
-                self._elided_text_layout = elide_text(
-                    state.cached_link_page_name, self.rect(), self.font())
-                self.connect_to_page_changes(linked_page)
+                self.connect_to_page_changes(self.state().linked_page())
             else:
                 self.disconnect_from_page_changes()
 

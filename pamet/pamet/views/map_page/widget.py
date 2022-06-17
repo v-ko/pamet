@@ -185,8 +185,8 @@ class MapPageWidget(QWidget, MapPageView):
             note_widget = self.note_widget_by_note_id(note.gid())
             self.on_child_updated(note_widget.state())
 
-    def on_child_updated(self, note_widget):
-        nv_cache = self.note_view_cache(note_widget.id)
+    def on_child_updated(self, note_view_state):
+        nv_cache = self.note_view_cache(note_view_state.id)
         nv_cache.should_rebuild_pcommand_cache = True
         nv_cache.should_rerender_image_cache = True
         nv_cache.should_reallocate_image_cache = True
