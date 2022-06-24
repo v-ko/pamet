@@ -12,6 +12,7 @@ from misli.storage.repository import Repository
 import pamet
 
 from pamet.model import Page, Note
+from pamet.model.arrow import BEZIER_CUBIC, DEFAULT_LINE_THICKNESS, Arrow
 from slugify import slugify
 
 from .hacky_backups import backup_page_hackily
@@ -49,7 +50,8 @@ class FSStorageRepository(Repository):
         # Load all pages in cache
         for page_path in self.page_paths():
             try:
-                page, notes = self.get_page_and_notes(page_path)  #@IgnoreException
+                page, notes, arrows = self.get_entities_from_json(
+                    page_path)  #@IgnoreException
             except Exception as e:
                 log.error(
                     f'Exception raised while loading page {page_path}: {e}')
@@ -59,7 +61,7 @@ class FSStorageRepository(Repository):
             inferred_path = self.path_for_page(page)
             if page_path != inferred_path:  # If not - fix it by re-saving
                 page_path.unlink()
-                self.create_page(page, notes)
+                self.create_page(page, notes, arrows)
                 log.error(f'Bad page name. Deleted {page_path} and saved the '
                           f'page {page.name} anew.')
 
@@ -74,26 +76,28 @@ class FSStorageRepository(Repository):
                     backup_path = dup_path.with_suffix('.backup')
                     dup_path.rename(backup_path)
                     log.error(f'Found duplicate page "{page_duplicate.name} '
-                            f'in the repo. Backed it up as {backup_path}')
+                              f'in the repo. Backed it up as {backup_path}')
                 else:
                     # If the page, currently processed in the upper loop
                     # is older
                     backup_path = page_path.with_suffix('.backup')
                     dup_path.rename(backup_path)
                     log.error(f'Found duplicate page "{page_duplicate.name} '
-                            f'in the repo. Backed it up as {backup_path}')
+                              f'in the repo. Backed it up as {backup_path}')
                     break
 
             # Add the entities to the in-memory cache
             self.upsert_to_cache(page)
             for note in notes:
                 self.upsert_to_cache(note)
+            for arrow in arrows:
+                self.upsert_to_cache(arrow)
 
             # Save the path corresponding to the id in order to handle renames
             self.page_paths_by_id[page.id] = self.path_for_page(page)
 
     def path_for_page(self, page) -> Path:
-        slug = slugify(page.name, separator='_' , max_length=100)
+        slug = slugify(page.name, separator='_', max_length=100)
         name = f'{slug}-{page.id}{V4_FILE_EXT}'
         return self.path / name
 
@@ -120,11 +124,11 @@ class FSStorageRepository(Repository):
     def upsert_to_cache(self, entity: Entity):
         self.in_memory_repo.upsert_to_cache(entity)
 
-    def insert_one(self, entity):
+    def insert_one(self, entity: Entity):
         self.upsert_to_cache(entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
-        elif isinstance(entity, Note):
+        elif isinstance(entity, (Note, Arrow)):
             self.upserted_pages.add(entity.parent_gid())
 
         if self.queue_save_on_change:
@@ -144,7 +148,7 @@ class FSStorageRepository(Repository):
         if isinstance(entity, Page):
             self.removed_pages.add(entity.gid())
             self.pages_for_write_removal[entity.gid()] = entity
-        elif isinstance(entity, Note):
+        elif isinstance(entity, (Note, Arrow)):
             self.upserted_pages.add(entity.parent_gid())
 
         if self.queue_save_on_change:
@@ -164,7 +168,7 @@ class FSStorageRepository(Repository):
         self.upsert_to_cache(entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
-        elif isinstance(entity, Note):
+        elif isinstance(entity, (Note, Arrow)):
             self.upserted_pages.add(entity.parent_gid())
 
         if self.queue_save_on_change:
@@ -208,9 +212,9 @@ class FSStorageRepository(Repository):
             page = pamet.find_one(gid=page_gid)
 
             if page.id in self.page_paths_by_id:
-                self.update_page(page, page.notes())
+                self.update_page(page, page.notes(), page.arrows())
             else:
-                self.create_page(page, page.notes())
+                self.create_page(page, page.notes(), page.arrows())
 
         for page_gid in self.removed_pages:
             page = self.pages_for_write_removal.pop(page_gid)
@@ -219,9 +223,81 @@ class FSStorageRepository(Repository):
         self.upserted_pages.clear()
         self.removed_pages.clear()
 
-    def create_page(self, page, notes):
+    def page_paths(self) -> Generator[Path, None, None]:
+        for file in os.scandir(self.path):
+            if self.is_v4_page(file.path):
+                yield Path(file.path)
+
+    def get_entities_from_json(self, json_file_path):
+        try:
+            with open(json_file_path) as pf:
+                page_state = json.load(pf)
+
+        except Exception as e:
+            log.error('Exception %s while loading page' % e, json_file_path)
+            return None
+
+        # # TODO REMOVE
+        page_state.pop('type_name', None)
+        note_states = page_state.pop('note_states', [])
+        arrow_states = page_state.pop('arrow_states', [])
+
+        notes = []
+        for ns in note_states:
+            if 'x' in ns:  # Refactoring fixes
+                x = ns.pop('x')
+                y = ns.pop('y')
+                width = ns.pop('width')
+                height = ns.pop('height')
+                ns['geometry'] = [x, y, width, height]
+
+            if 'time_created' in ns:
+                ns['created'] = ns.pop('time_created')
+                ns['modified'] = ns.pop('time_modified')
+
+            note_type = pamet.note_type_from_props(ns)
+            if not note_type:
+                log.error(f'Could not get note type (in {json_file_path}) '
+                          f'for the following note: {ns}')
+                continue
+            notes.append(entity_library.from_dict(note_type.__name__, ns))
+
+        arrows = []
+        for arrow_state in arrow_states:
+            # REMOVE vvv
+            arrow_state.pop('background_color', None)
+            if 'mid_point_coords' not in arrow_state:
+                arrow_state['mid_point_coords'] = arrow_state.pop('mid_points')
+            if 'head_coords' not in arrow_state:
+                arrow_state['head_coords'] = arrow_state.pop('head_point')
+            if 'tail_coords' not in arrow_state:
+                arrow_state['tail_coords'] = arrow_state.pop('tail_point')
+
+            try:
+                arrow = entity_library.from_dict(Arrow.__name__, arrow_state)
+            except Exception as e:
+                log.error(f'Exception {e} raised while parsing arrow '
+                          f'{arrow_state} from file {json_file_path}')
+                continue
+
+            #REMOVE vv
+            if not arrow.line_function_name:
+                arrow.line_function_name = BEZIER_CUBIC
+            arrow.line_thickness = DEFAULT_LINE_THICKNESS
+
+            arrows.append(arrow)
+
+        page = entity_library.from_dict(Page.__name__, page_state)
+        return page, notes, arrows
+
+    def entities_to_json(self, page, notes, arrows):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
+        page_state['arrow_states'] = [a.asdict() for a in arrows]
+        return page_state
+
+    def create_page(self, page: Page, notes: List[Note], arrows: List[Arrow]):
+        page_state = self.entities_to_json(page, notes, arrows)
 
         path = self.path_for_page(page)
         try:
@@ -237,45 +313,8 @@ class FSStorageRepository(Repository):
         except Exception as e:
             log.error('Exception while creating page at %s: %s' % (path, e))
 
-    def page_paths(self) -> Generator[Path, None, None]:
-        for file in os.scandir(self.path):
-            if self.is_v4_page(file.path):
-                yield Path(file.path)
-
-    def get_page_and_notes(self, json_file_path):
-        try:
-            with open(json_file_path) as pf:
-                page_state = json.load(pf)
-
-        except Exception as e:
-            log.error('Exception %s while loading page' % e, json_file_path)
-            return None
-
-        # # TODO REMOVE
-        page_state.pop('type_name', None)
-        note_states = page_state.pop('note_states', [])
-        notes = []
-        for ns in note_states:
-
-            if 'x' in ns:  # Refactoring fixes
-                x = ns.pop('x')
-                y = ns.pop('y')
-                width = ns.pop('width')
-                height = ns.pop('height')
-                ns['geometry'] = [x, y, width, height]
-
-            if 'time_created' in ns:
-                ns['created'] = ns.pop('time_created')
-                ns['modified'] = ns.pop('time_modified')
-
-            type_name = pamet.note_type_from_props(ns).__name__
-            notes.append(entity_library.from_dict(type_name, ns))
-
-        return entity_library.from_dict(Page.__name__, page_state), notes
-
-    def update_page(self, page, notes: List[Note]):
-        page_state = page.asdict()
-        page_state['note_states'] = [n.asdict() for n in notes]
+    def update_page(self, page: Page, notes: List[Note], arrows: List[Arrow]):
+        page_state = self.entities_to_json(page, notes, arrows)
 
         saved_path = self.page_paths_by_id[page.id]
         path = self.path_for_page(page)

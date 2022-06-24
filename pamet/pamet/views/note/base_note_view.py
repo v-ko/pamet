@@ -20,9 +20,7 @@ class NoteViewState(ViewState, Note):
         self.replace(**note.asdict())
 
     def get_note(self):
-        note = pamet.find_one(gid=self.note_gid)
-        if note:
-            return note.copy()
+        return pamet.find_one(gid=self.note_gid)
 
 
 class NoteView(View):
@@ -33,9 +31,6 @@ class NoteView(View):
             self,
             initial_state=initial_state
         )
-
-        # if not initial_state.note:
-        #     raise Exception('Is this usecase acceptable or a bug?')
 
     def left_mouse_double_click_event(self, position: Point2D):
         raise NotImplementedError

@@ -1,5 +1,6 @@
 from typing import Generator, Any, List, Union
 
+from collections.abc import Iterable
 import random
 import uuid
 from datetime import datetime
@@ -23,7 +24,7 @@ def find_many_by_props(
     """
     if isinstance(item_list, dict):
         item_list = item_list.values()
-    elif isinstance(item_list, list):
+    elif isinstance(item_list, Iterable):
         pass
     else:
         raise ValueError

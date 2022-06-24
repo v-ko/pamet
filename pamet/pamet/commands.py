@@ -4,6 +4,10 @@ import misli
 from misli.gui import command
 
 from pamet import actions
+from pamet.actions import note as note_actions
+from pamet.actions import map_page as map_page_actions
+from pamet.actions import window as window_actions
+
 from pamet.gui_helpers import current_window, current_tab
 
 log = misli.get_logger(__name__)
@@ -38,34 +42,41 @@ def save_page_properties():
         tab.state().right_sidebar_view_id)
     page = properties_view_state.page
     page.name = properties_view_state.name_line_edit_text
-    actions.map_page.save_page_properties(page)
-    actions.map_page.close_page_properties(properties_view_state.id)
+    map_page_actions.save_page_properties(page)
+    map_page_actions.close_page_properties(properties_view_state.id)
 
 
 @command(title='Open page properties')
 def open_page_properties():
     tab, page_view = current_tab_and_page_views()
-    actions.map_page.open_page_properties(tab.state())
+    map_page_actions.open_page_properties(tab.state())
 
 
 @command(title='Edit selected note')
 def edit_selected_notes():
     tab, page_view = current_tab_and_page_views()
-    selected_nc_ids = page_view.state().selected_nc_ids
-    if not selected_nc_ids:
+    selected_child_ids = page_view.state().selected_child_ids
+    if not selected_child_ids:
         return
 
-    for note_view_id in selected_nc_ids:
+    for note_view_id in selected_child_ids:
         note_state = misli.gui.view_state(note_view_id)
-        actions.note.start_editing_note(tab.state(), note_state.get_note())
+        note_actions.start_editing_note(tab.state(), note_state.get_note())
 
 
 @command(title='Show all commands')
 def open_command_palette():
-    actions.window.open_command_view(current_window().state(),
+    window_actions.open_command_view(current_window().state(),
                                      prefix='>')
 
 
 @command(title='Go to file')
 def open_command_palette_go_to_file():
-    actions.window.open_command_view(current_window().state())
+    window_actions.open_command_view(current_window().state())
+
+
+@command(title='Create an arrow')
+def start_arrow_creation():
+    tab, page_view = current_tab_and_page_views()
+
+    map_page_actions.start_arrow_creation(page_view.state())

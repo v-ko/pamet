@@ -45,4 +45,8 @@ class View:
         return self._state_id
 
     def state(self) -> ViewState:
-        return misli.gui.view_state(self._state_id)
+        if misli.gui.view_state_exists(self._state_id):
+            self_state = misli.gui.view_state(self._state_id)
+        else:
+            self_state = misli.gui.get_state_backup(self._state_id)
+        return self_state

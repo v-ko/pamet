@@ -5,9 +5,9 @@ from misli.basic_classes import Point2D
 
 import pamet
 from pamet.model.anchor_note import AnchorNote
-from pamet.views.map_page.view import MapPageViewState
+from pamet.views.arrow.widget import ArrowViewState
+from pamet.views.map_page.state import MapPageViewState
 from pamet.model import Page
-from pamet.model.text_note import TextNote
 from pamet.helpers import generate_page_name
 from pamet.actions import map_page as map_page_actions
 
@@ -25,16 +25,17 @@ def tab_go_to_page(tab_state: TabViewState, page: Page):
         page_view_state.note_view_states.append(note_view_state)
         misli.gui.add_state(note_view_state)
 
+    for arrow in page.arrows():
+        arrow_view_state = ArrowViewState(**arrow.asdict(),
+                                          arrow_gid=arrow.gid())
+        page_view_state.arrow_view_states.append(arrow_view_state)
+        misli.gui.add_state(arrow_view_state)
+
     tab_state.page_view_state = page_view_state
     tab_state.title = page.name
 
     misli.gui.update_state(tab_state)
     misli.gui.update_state(page_view_state)
-
-
-@action('tab_go_to_default_page')
-def tab_go_to_default_page(tab_component_id):
-    pass
 
 
 @action('page.create_and_link_page')

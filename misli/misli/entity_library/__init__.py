@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass, MISSING, Field
 
@@ -129,7 +130,7 @@ def get_entity_class_by_name(entity_class_name: str):
     return entity_library[entity_class_name]
 
 
-def from_dict(type_name: str, entity_dict: dict) -> 'Entity':
+def from_dict(type_name: str, entity_dict: dict) -> Entity:
     """Construct an entity given its state as a dict"""
     # type_name = entity_dict.pop('type_name')
     cls = get_entity_class_by_name(type_name)

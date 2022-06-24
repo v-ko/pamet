@@ -10,6 +10,7 @@ from misli.entity_library import get_entity_class_by_name
 from .model import page, pages, create_note, set_sync_repo, set_async_repo
 from .model import find, find_one, insert_note, insert_page, update_note
 from .model import update_page, remove_note, remove_page
+from .model import insert_arrow, remove_arrow, update_arrow
 from pamet.model.text_note import TextNote
 
 from misli import get_logger
@@ -90,10 +91,9 @@ def note_type_from_props(props):
     try:
         note_type = get_entity_class_by_name(props['type_name'])  #@IgnoreException
     except Exception:
-        note_type = TextNote
+        return None
 
     return note_type
-
 
 def resource_path(subpath: Union[str, Path]):
     resource_dir_path = Path(__file__).parent / 'resources'

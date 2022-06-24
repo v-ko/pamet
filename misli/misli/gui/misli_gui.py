@@ -126,12 +126,19 @@ def add_state(state_: ViewState):
     state_._added = True
     _view_states[state_.id] = state_
     _state_backups[state_.id] = state_.copy()
-    # state_.backup = state_.copy()
     channels.raw_state_changes.push(Change.CREATE(state_))
+
+
+def view_state_exists(view_id: str) -> bool:
+    return view_id in _view_states
 
 
 def view_state(view_id):
     return _view_states[view_id]
+
+
+def get_state_backup(view_id: str):
+    return _state_backups[view_id]
 
 
 @log.traced
@@ -150,7 +157,6 @@ def update_state(state_: ViewState):
     _state_backups[state_.id] = state_.copy()
     state_._version += 1
     _view_states[state_.id] = state_
-    # state_.backup = state_.copy()
 
 
 @log.traced

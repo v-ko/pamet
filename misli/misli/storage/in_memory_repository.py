@@ -62,24 +62,23 @@ class InMemoryRepository(Repository):
             yield from [result] if result else []
 
         # If searching by parent_gid - use the index to do it efficiently
-        elif 'parent_gid' in filter:
+        if 'parent_gid' in filter:
             parent_gid = filter.pop('parent_gid')
             found = self._entity_cache_by_parent.get(parent_gid, [])
-            found_entities = [self._entity_cache[gid] for gid in found]
-            if not filter:
-                yield from found_entities
-            else:
-                yield from find_many_by_props(found_entities, **filter)
+            search_set = (self._entity_cache[gid] for gid in found)
         else:
             search_set = self._entity_cache.values()
-            if 'type_name' in filter:
-                type_name = filter.pop('type_name')
-                search_set = [
-                    ent for gid, ent in self._entity_cache.items()
-                    if type(ent).__name__ == type_name
-                ]
-            found = list(find_many_by_props(search_set, **filter))
-            yield from found
+
+        # Searching by type_name is a special case
+        if 'type_name' in filter:
+            type_name = filter.pop('type_name')
+            search_set = (
+                ent for ent in search_set
+                if type(ent).__name__ == type_name
+            )
+        if filter:
+            search_set = find_many_by_props(search_set, **filter)
+        yield from search_set
 
     def find(self, **filter):
         yield from (entity.copy() for entity in self.find_cached(**filter))

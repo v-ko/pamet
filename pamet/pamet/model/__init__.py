@@ -12,6 +12,7 @@ import pamet
 from pamet import channels
 from misli import entity_library
 from misli import get_logger
+from pamet.model.arrow import Arrow
 # from pamet.persistence_manager import PersistenceManager
 
 from .note import Note
@@ -146,4 +147,24 @@ def update_note(note_: Note):
 
 def remove_note(note_: Note):
     change = _sync_repo.remove_one(note_)
+    raw_entity_changes.push(change)
+
+
+# -------------Arrow CRUD-------------
+def insert_arrow(arrow_: Arrow):
+    change = _sync_repo.insert_one(arrow_)
+    raw_entity_changes.push(change)
+
+
+def update_arrow(arrow_: Arrow):
+    old_arrow = _sync_repo.find_one(gid=arrow_.gid())
+    if not old_arrow:
+        raise Exception('Can not update missing arrow')
+
+    change = _sync_repo.update_one(arrow_)
+    raw_entity_changes.push(change)
+
+
+def remove_arrow(arrow_: Arrow):
+    change = _sync_repo.remove_one(arrow_)
     raw_entity_changes.push(change)

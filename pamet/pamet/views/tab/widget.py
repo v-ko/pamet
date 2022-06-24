@@ -19,7 +19,7 @@ from pamet.views.tab.ui_widget import Ui_TabMainWidget
 
 from misli.gui import ViewState, view_state_type
 from pamet.model import Note
-from pamet.views.map_page.view import MapPageViewState
+from pamet.views.map_page.state import MapPageViewState
 
 SIDEBAR_WIDTH = 300
 MIN_TAB_WIDTH = SIDEBAR_WIDTH * 1.1

@@ -1,6 +1,6 @@
 from typing import Union
 from datetime import datetime
-from dataclasses import fields, field, replace
+from dataclasses import fields, field
 
 from misli import entity_library
 from misli.helpers import datetime_to_string, get_new_id
@@ -80,7 +80,7 @@ class Entity:
         return self_dict
 
     def replace(self, **changes):
-        """Update entity properties using keyword arguments"""
+        """Update entity fields using keyword arguments"""
         for key, val in changes.items():
             setattr(self, key, val)
 

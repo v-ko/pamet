@@ -1,8 +1,12 @@
 from __future__ import annotations
+from copy import copy
+from dataclasses import fields
 from typing import List
 
 import misli
 from misli import gui
+from misli.entity_library.entity import Entity
+from numpy import isin
 import pamet
 
 from misli.basic_classes import Point2D
@@ -12,75 +16,72 @@ from pamet.actions.note import finish_editing_note, start_editing_note
 from pamet.helpers import snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
+from pamet.model.arrow import Arrow
+from pamet.views.arrow.widget import ArrowView, ArrowViewState
 from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
-from pamet.views.map_page.view import MapPageViewState
+from pamet.views.map_page.state import MapPageViewState, MapPageMode
 from pamet.views.note.base_edit.view_state import NoteEditViewState
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base_note_view import NoteView, NoteViewState
 
 log = misli.get_logger(__name__)
 
 
 @action('map_page.start_mouse_drag_navigation')
-def start_mouse_drag_navigation(map_page_view_id: str, mouse_position: Point2D,
-                                first_delta: Point2D):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
-
-    map_page_view_state.drag_navigation_active = True
+def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
+                                mouse_position: Point2D, first_delta: Point2D):
+    map_page_view_state.set_mode(MapPageMode.DRAG_NAVIGATION)
+    # map_page_view_state.drag_navigation_active = True
     map_page_view_state.drag_navigation_start_position = mouse_position
     map_page_view_state.viewport_position_on_press = \
         map_page_view_state.viewport_center
 
     gui.update_state(map_page_view_state)
-    mouse_drag_navigation_move(map_page_view_id, first_delta)
+    mouse_drag_navigation_move(map_page_view_state, first_delta)
 
 
-def mouse_drag_navigation_move(map_page_view_id: str, mouse_delta: Point2D):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
+def mouse_drag_navigation_move(map_page_view_state: MapPageViewState,
+                               mouse_delta: Point2D):
     unprojected_delta = (mouse_delta /
                          map_page_view_state.height_scale_factor())
     new_viewport_center: Point2D = (
         map_page_view_state.viewport_position_on_press + unprojected_delta)
 
-    change_viewport_center(map_page_view_id, new_viewport_center.as_tuple())
+    change_viewport_center(map_page_view_state, new_viewport_center.as_tuple())
 
 
 @action('map_page.change_viewport_center')
-def change_viewport_center(map_page_view_id: str,
+def change_viewport_center(map_page_view_state: MapPageViewState,
                            new_viewport_center: Point2D):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
 
     map_page_view_state.viewport_center = Point2D(*new_viewport_center)
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.stop_drag_navigation')
-def stop_drag_navigation(map_page_view_id: str):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
-    map_page_view_state.drag_navigation_active = False
+def stop_drag_navigation(map_page_view_state: MapPageViewState):
+    # map_page_view_state.drag_navigation_active = False
+    map_page_view_state.set_mode(MapPageMode.NONE)
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.update_note_selections')
-def update_note_selections(map_page_view_state: MapPageViewState,
-                           selection_updates_by_note_id: dict):
+def update_child_selections(map_page_view_state: MapPageViewState,
+                            selection_updates_by_child_id: dict):
 
-    if not selection_updates_by_note_id:
+    if not selection_updates_by_child_id:
         return
 
     selection_update_count = 0
+    for child_id, selected in selection_updates_by_child_id.items():
 
-    for note_id, selected in selection_updates_by_note_id.items():
-
-        if note_id in map_page_view_state.selected_nc_ids and not selected:
-            map_page_view_state.selected_nc_ids.remove(note_id)
+        if (child_id in map_page_view_state.selected_child_ids
+                and not selected):
+            map_page_view_state.selected_child_ids.remove(child_id)
             selection_update_count += 1
 
-        elif note_id not in map_page_view_state.selected_nc_ids and selected:
-            map_page_view_state.selected_nc_ids.add(note_id)
+        elif (child_id not in map_page_view_state.selected_child_ids
+              and selected):
+            map_page_view_state.selected_child_ids.add(child_id)
             selection_update_count += 1
 
         else:
@@ -91,24 +92,24 @@ def update_note_selections(map_page_view_state: MapPageViewState,
         # log.info('Updated %s selections' % selection_update_count)
     else:
         log.info('No selections updated out of %s' %
-                 selection_updates_by_note_id)
+                 selection_updates_by_child_id)
 
 
 @action('map_page.clear_note_selection')
 def clear_note_selection(map_page_view_state: str):
     selection_updates = {}
-    for sc_id in map_page_view_state.selected_nc_ids:
-        selection_updates[sc_id] = False
+    for selected_child in map_page_view_state.selected_child_ids:
+        selection_updates[selected_child] = False
 
     if not selection_updates:
         return
 
-    update_note_selections(map_page_view_state, selection_updates)
+    update_child_selections(map_page_view_state, selection_updates)
 
 
 @action('map_page.set_viewport_height')
-def set_viewport_height(map_page_view_id: str, new_height: float):
-    map_page_view_state = gui.view_state(map_page_view_id)
+def set_viewport_height(map_page_view_state: MapPageViewState,
+                        new_height: float):
     map_page_view_state.viewport_height = new_height
 
     gui.update_state(map_page_view_state)
@@ -116,143 +117,161 @@ def set_viewport_height(map_page_view_id: str, new_height: float):
 
 
 @action('map_page.start_drag_select')
-def start_drag_select(map_page_view_id: str, position: Point2D):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
+def start_drag_select(map_page_view_state: MapPageViewState,
+                      position: Point2D):
+    map_page_view_state.set_mode(MapPageMode.DRAG_SELECT)
     map_page_view_state.mouse_position_on_drag_select_start = Point2D(
         *position)
-    map_page_view_state.drag_select_active = True
+
+    # map_page_view_state.drag_select_active = True
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.update_drag_select')
-def update_drag_select(map_page_view_id: str,
+def update_drag_select(map_page_view_state: MapPageViewState,
                        rect_props: list,
-                       drag_selected_nc_ids: list = None):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
-
-    if drag_selected_nc_ids is None:
-        drag_selected_nc_ids = []
+                       drag_selected_child_ids: list = None):
+    if drag_selected_child_ids is None:
+        drag_selected_child_ids = []
 
     map_page_view_state.drag_select_rect_props = rect_props
-    map_page_view_state.drag_selected_nc_ids.clear()
+    map_page_view_state.drag_selected_child_ids.clear()
 
-    for nc_id in drag_selected_nc_ids:
-        if nc_id not in map_page_view_state.drag_selected_nc_ids:
-            map_page_view_state.drag_selected_nc_ids.append(nc_id)
+    for nc_id in drag_selected_child_ids:
+        if nc_id not in map_page_view_state.drag_selected_child_ids:
+            map_page_view_state.drag_selected_child_ids.append(nc_id)
 
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.stop_drag_select')
-def stop_drag_select(map_page_view_id: str):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
-    map_page_view_state.drag_select_active = False
-    map_page_view_state.selected_nc_ids.update(
-        map_page_view_state.drag_selected_nc_ids)
-    map_page_view_state.drag_selected_nc_ids.clear()
-    map_page_view_state.drag_select_rect_props = [0, 0, 0, 0]
+def stop_drag_select(map_page_view_state: MapPageViewState):
+    map_page_view_state.selected_child_ids.update(
+        map_page_view_state.drag_selected_child_ids)
+    map_page_view_state.clear_mode()
 
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.delete_selected_notes')
 def delete_selected_notes(map_page_view_state: MapPageViewState):
-    for nc_id in map_page_view_state.selected_nc_ids:
-        ncs = gui.view_state(nc_id)
-        # if not ncs:
-        pamet.remove_note(ncs.get_note())
+    arrow_gids_for_removal = set()
 
-    map_page_view_state.selected_nc_ids.clear()
+    # Delete the notes and store the arrows in the list
+    for nc_id in map_page_view_state.selected_child_ids:
+        child_state = gui.view_state(nc_id)
+        if isinstance(child_state, NoteViewState):
+            pamet.remove_note(child_state.get_note())
+        elif isinstance(child_state, ArrowViewState):
+            arrow_gids_for_removal.add(child_state.arrow_gid)
+        else:
+            raise Exception('Unexpected state type')
+
+    # Mark for removal the arrows that are anchored on any of the seleced notes
+    for arrow_state in map_page_view_state.arrow_view_states:
+        if ((arrow_state.tail_note_id and arrow_state.tail_note_id
+             in map_page_view_state.selected_child_ids)
+                or (arrow_state.head_note_id and arrow_state.head_note_id
+                    in map_page_view_state.selected_child_ids)):
+            arrow_gids_for_removal.add(arrow_state.arrow_gid)
+
+    # Delete the arrows
+    for arrow_gid in arrow_gids_for_removal:
+        pamet.remove_arrow(pamet.find_one(gid=arrow_gid))
+
+    map_page_view_state.selected_child_ids.clear()
     misli.gui.update_state(map_page_view_state)
 
 
 @action('map_page.start_notes_resize')
-def start_notes_resize(map_page_view_id: str, main_note: Note,
+def start_notes_resize(map_page_view_state: MapPageViewState, main_note: Note,
                        mouse_position: Point2D,
                        resize_circle_center_projected: Point2D):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
-
+    map_page_view_state.set_mode(MapPageMode.NOTE_RESIZE)
     map_page_view_state.note_resize_delta_from_note_edge = (
         resize_circle_center_projected - mouse_position)
     map_page_view_state.note_resize_click_position = mouse_position
     map_page_view_state.note_resize_main_note = main_note.copy()
 
-    map_page_view_state.note_resize_active = True
+    for child_id in map_page_view_state.selected_child_ids:
+        child_state = misli.gui.view_state(child_id)
+        if isinstance(child_state, NoteViewState):
+            map_page_view_state.note_resize_states.append(child_state)
+
+    # map_page_view_state.note_resize_active = True
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.resize_note_views')
-def resize_note_views(new_size: Point2D, nc_ids: list):
-    for nc_id in nc_ids:
-        ncs = gui.view_state(nc_id)
-
+def resize_note_views(map_page_view_state: MapPageViewState,
+                      new_size: Point2D):
+    for ncs in map_page_view_state.note_resize_states:
         ncs.set_size(new_size)
         gui.update_state(ncs)
 
 
-@action('map_page.resize_notes')
-def resize_notes(new_size: Point2D, notes: List[Note]):
-    for note in notes:
+@action('map_page.finish_notes_resize')
+def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
+    for note_state in map_page_view_state.note_resize_states:
+        note = note_state.get_note()
         note.set_size(new_size)
         pamet.update_note(note)
-
-
-@action('map_page.stop_notes_resize')
-def stop_notes_resize(map_page_view_id: str, new_size: list, nc_ids: list):
-
-    map_page_view_state = gui.view_state(map_page_view_id)
-    map_page_view_state.note_resize_active = False
-
-    # page = map_page_view_state.page
-    notes = [gui.view_state(nc_id).get_note() for nc_id in nc_ids]
-    resize_notes(new_size, notes)
+    map_page_view_state.clear_mode()
 
     gui.update_state(map_page_view_state)
 
 
-@action('map_page.start_note_drag')
-def start_note_drag(map_page_view_id: str, mouse_pos: list):
-    map_page_view_state = gui.view_state(map_page_view_id)
-    if map_page_view_state.drag_select_active:
-        stop_drag_select(map_page_view_id)
-
-    map_page_view_state = gui.view_state(map_page_view_id)
+@action('map_page.start_child_move')
+def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: list):
+    map_page_view_state.set_mode(MapPageMode.NOTE_MOVE)
     map_page_view_state.mouse_position_on_note_drag_start = Point2D(*mouse_pos)
-    map_page_view_state.note_drag_active = True
+    for cid in map_page_view_state.selected_child_ids:
+        child_state = misli.gui.view_state(cid)
+        if isinstance(child_state, ArrowViewState):
+            map_page_view_state.moved_arrow_states.append(child_state)
+        elif isinstance(child_state, NoteViewState):
+            map_page_view_state.moved_note_states.append(child_state)
+        else:
+            raise Exception('Unexpected state type')
+
     gui.update_state(map_page_view_state)
 
 
-@action('map_page.note_drag_nc_position_update')
-def note_drag_nc_position_update(nc_ids: list, delta: Point2D):
-    for nc_id in nc_ids:
-        ncs: NoteViewState = gui.view_state(nc_id)
-
-        rect = ncs.get_note().rect()
+@action('map_page.moved_child_view_update')
+def moved_child_view_update(map_page_view_state: MapPageViewState,
+                            delta: Point2D):
+    for note_state in map_page_view_state.moved_note_states:
+        rect = note_state.get_note().rect()
         rect.move_top_left(snap_to_grid(rect.top_left() + delta))
-        ncs.set_rect(rect)
+        note_state.set_rect(rect)
+        gui.update_state(note_state)
 
-        gui.update_state(ncs)
+    for arrow_state in map_page_view_state.moved_arrow_states:
+        arrow = arrow_state.get_arrow()
+        if arrow.tail_point:
+            arrow_state.tail_point = snap_to_grid(arrow.tail_point + delta)
+        if arrow.head_point:
+            arrow_state.head_point = snap_to_grid(arrow.head_point + delta)
+        gui.update_state(arrow_state)
 
 
-@action('map_page.stop_note_drag')
-def stop_note_drag(map_page_view_id: str, nc_ids: list, delta: list):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
-    d = Point2D(*delta)
-    for nc_id in nc_ids:
-        ncs = gui.view_state(nc_id)
-        note = ncs.get_note()
-
-        note.x += d.x()
-        note.y += d.y()
-
+@action('map_page.finish_child_move')
+def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
+    for note_state in map_page_view_state.moved_note_states:
+        note = note_state.get_note()
+        note.x = snap_to_grid(note.x + delta.x())
+        note.y = snap_to_grid(note.y + delta.y())
         pamet.update_note(note)
 
-    map_page_view_state.note_drag_active = False
+    for arrow_state in map_page_view_state.moved_arrow_states:
+        arrow = arrow_state.get_arrow()
+        if arrow.tail_point:
+            arrow.tail_point = snap_to_grid(arrow.tail_point + delta)
+        if arrow.head_point:
+            arrow.head_point = snap_to_grid(arrow.head_point + delta)
+        pamet.update_arrow(arrow)
+
+    map_page_view_state.clear_mode()
     gui.update_state(map_page_view_state)
 
 
@@ -261,7 +280,7 @@ def select_all_notes(map_page_view_id):
     map_page_view_state = gui.view_state(map_page_view_id)
 
     for nc in gui.view_children(map_page_view_id):
-        map_page_view_state.selected_nc_ids.add(nc.id)
+        map_page_view_state.selected_child_ids.add(nc.id)
 
     gui.update_state(map_page_view_state)
 
@@ -277,7 +296,7 @@ def resize_page(map_page_view_id, width, height):
 def color_selected_notes(map_page_view_state: str,
                          color: list = None,
                          background_color: list = None):
-    for note_view_id in map_page_view_state.selected_nc_ids:
+    for note_view_id in map_page_view_state.selected_child_ids:
         note = gui.view_state(note_view_id).get_note()
 
         color = color or note.color
@@ -287,7 +306,7 @@ def color_selected_notes(map_page_view_state: str,
         note.background_color = background_color
         pamet.update_note(note)
 
-    map_page_view_state.selected_nc_ids.clear()
+    map_page_view_state.selected_child_ids.clear()
     misli.gui.update_state(map_page_view_state)
 
 
@@ -350,34 +369,155 @@ def switch_note_type(tab_state: TabViewState, note: Note):
         start_editing_note(tab_state, note)
 
 
-@action('map_page.handle_note_added')
-def handle_note_added(page_view_state: MapPageViewState, note: Note):
-    ViewType = pamet.note_view_type(note_type_name=type(note).__name__,
-                                    edit=False)
-    StateType = pamet.note_state_type_by_view(ViewType.__name__)
-    nv_state = StateType(**note.asdict(), note_gid=note.gid())
-    misli.gui.add_state(nv_state)
-    page_view_state.note_view_states.append(nv_state)
+@action('map_page.handle_child_added')
+def handle_child_added(page_view_state: MapPageViewState, child: Entity):
+    if isinstance(child, Note):
+        ViewType = pamet.note_view_type(note_type_name=type(child).__name__,
+                                        edit=False)
+        StateType = pamet.note_state_type_by_view(ViewType.__name__)
+        nv_state = StateType(**child.asdict(), note_gid=child.gid())
+        misli.gui.add_state(nv_state)
+        page_view_state.note_view_states.append(nv_state)
+    elif isinstance(child, Arrow):
+        arrow_view_state = ArrowViewState(**child.asdict(),
+                                          arrow_gid=child.gid())
+        misli.gui.add_state(arrow_view_state)
+        page_view_state.arrow_view_states.append(arrow_view_state)
+
     misli.gui.update_state(page_view_state)
 
 
-@action('map_page.handle_note_removed')
-def handle_note_removed(page_view_state: MapPageViewState, note: Note):
-    nv_states = filter(lambda x: x.note_gid == note.gid(),
-                       page_view_state.note_view_states)
-    for nv_state in nv_states:  # Should be len==1
-        misli.gui.remove_state(nv_state)
-        page_view_state.note_view_states.remove(nv_state)
+@action('map_page.handle_child_removed')
+def handle_child_removed(page_view_state: MapPageViewState, child: Entity):
+    if isinstance(child, Note):
+        nv_states = filter(lambda x: x.note_gid == child.gid(),
+                           page_view_state.note_view_states)
+        for nv_state in nv_states:  # Should be len==1
+            misli.gui.remove_state(nv_state)
+            page_view_state.note_view_states.remove(nv_state)
+    elif isinstance(child, Arrow):
+        av_states = filter(lambda x: x.arrow_gid == child.gid(),
+                           page_view_state.arrow_view_states)
+        for nv_state in av_states:  # Should be len==1
+            misli.gui.remove_state(nv_state)
+            page_view_state.arrow_view_states.remove(nv_state)
+
     misli.gui.update_state(page_view_state)
 
 
-@action('map_page.handle_note_updated')
-def handle_note_updated(note_view_state: NoteViewState, note: Note):
-    note_view_state.update_from_note(note)
-    misli.gui.update_state(note_view_state)
+@action('map_page.handle_child_updated')
+def handle_child_updated(child_view_state: NoteViewState, child: Note):
+    if isinstance(child, Note):
+        child_view_state.update_from_note(child)
+    elif isinstance(child, Arrow):
+        child_view_state.update_from_arrow(child)
+    misli.gui.update_state(child_view_state)
 
 
 @action('map_page.handle_page_name_updated')
 def handle_page_name_updated(tab_view_state: TabViewState, page: Page):
     tab_view_state.title = page.name
     misli.gui.update_state(tab_view_state)
+
+
+@action('map_page.start_arrow_creation')
+def start_arrow_creation(map_page_view_state: MapPageViewState):
+    av_state = ArrowViewState(page_id=map_page_view_state.page_id)
+    misli.gui.add_state(av_state)
+
+    map_page_view_state.set_mode(MapPageMode.CREATE_ARROW)
+    map_page_view_state.new_arrow_view_states.append(av_state)
+    misli.gui.update_state(map_page_view_state)
+
+
+@action('map_page.abort_special_mode')
+def abort_special_mode(map_page_view_state: MapPageViewState):
+    # Reset the manipulated views
+    for note_state in map_page_view_state.moved_note_states:
+        note_state.update_from_note(note_state.get_note())
+        misli.gui.update_state(note_state)
+
+    for arrow_state in map_page_view_state.moved_arrow_states:
+        arrow_state.update_from_arrow(arrow_state.get_arrow())
+        misli.gui.update_state(arrow_state)
+
+    for note_state in map_page_view_state.note_resize_states:
+        note_state.update_from_note(note_state.get_note())
+        misli.gui.update_state(note_state)
+
+    map_page_view_state.clear_mode()
+    misli.gui.update_state(map_page_view_state)
+
+
+@action('map_page.place_arrow_tail')
+def place_arrow_tail(arrow_view_state: ArrowViewState,
+                     real_pos: Point2D,
+                     anchor: str = None):
+    if anchor:
+        arrow_view_state.tail_anchor = anchor
+    else:
+        arrow_view_state.tail_point = real_pos
+
+    misli.gui.update_state(arrow_view_state)
+
+
+@action('map_page.place_arrow_head')
+def place_arrow_head(arrow_view_state: ArrowViewState,
+                     real_pos: Point2D,
+                     anchor: str = None):
+    if anchor:
+        arrow_view_state.head_anchor = anchor
+    else:
+        arrow_view_state.head_point = real_pos
+
+    misli.gui.update_state(arrow_view_state)
+
+
+@action('map_page.arrow_creation_click')
+def arrow_creation_click(map_page_view_state: MapPageViewState,
+                         real_pos: Point2D,
+                         anchor: str = None):
+    # arrow_vs = ArrowViewState()
+    should_finish = False
+
+    for arrow_vs in map_page_view_state.new_arrow_view_states:
+        if not (arrow_vs.tail_anchor or arrow_vs.tail_point):
+            place_arrow_tail(arrow_vs, real_pos, anchor)
+            if should_finish:
+                raise Exception(
+                    'Some of the arrows have tails while others don\'t')
+        else:
+            place_arrow_head(arrow_vs, real_pos, anchor)
+            should_finish = True
+
+    if should_finish:
+        finish_arrow_creation(map_page_view_state)
+
+
+@action('map_page.arrow_creation_move')
+def arrow_creation_move(map_page_view_state, real_pos):
+    for av_state in map_page_view_state.new_arrow_view_states:
+        place_arrow_head(av_state, real_pos)
+
+
+@action('map_page.finish_arrow_creation')
+def finish_arrow_creation(map_page_view_state):
+    for arrow_vs in map_page_view_state.new_arrow_view_states:
+        # If both ends of the arrow are at the same point - cancel it
+        if arrow_vs.tail_point and arrow_vs.head_point:
+            if arrow_vs.tail_point == arrow_vs.head_point:
+                continue
+        if arrow_vs.tail_anchor and arrow_vs.head_anchor:
+            if arrow_vs.tail_anchor == arrow_vs.head_anchor:
+                continue
+
+        # Get the properties for the new arrow from the view state
+        arrow = Arrow(page_id=arrow_vs.page_id)
+        for field in fields(Arrow):
+            value = getattr(arrow_vs, field.name)
+            setattr(arrow, field.name, value)
+
+        pamet.insert_arrow(arrow)
+
+    map_page_view_state.clear_mode()
+    misli.gui.update_state(map_page_view_state)
