@@ -1,28 +1,44 @@
 from dataclasses import field
+from enum import Enum
 from typing import List
 from misli.basic_classes.color import Color
 from misli.basic_classes.point2d import Point2D
 
 from misli.entity_library import entity_type
 from misli.entity_library.entity import Entity
+import pamet
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 
 BEZIER_CUBIC = 'bezier_cubic'
 DEFAULT_LINE_THICKNESS = 1.5
 
 
+class ArrowAnchorType(Enum):
+    FIXED = 0
+    AUTO = 1
+    MID_LEFT = 2
+    TOP_MID = 3
+    MID_RIGHT = 4
+    BOTTOM_MID = 5
+
+    @classmethod
+    def real_types(cls):
+        yield from [cls.MID_LEFT, cls.TOP_MID, cls.MID_RIGHT, cls.BOTTOM_MID]
+
+
 @entity_type
 class Arrow(Entity):
     page_id: str = ''
-    # not used if anchor/note is set
+
     tail_coords: list = field(default_factory=list)
     tail_note_id: str = None
-    # top bottom left right (ATM). If empty - choose dynamically
-    tail_anchor: str = None
+    tail_anchor: str = ArrowAnchorType.FIXED.name
+
     mid_point_coords: List[list] = field(default_factory=list)
+
     head_coords: list = field(default_factory=list)
     head_note_id: str = None
-    head_anchor: str = None
+    head_anchor: str = ArrowAnchorType.FIXED.name
 
     color: tuple = DEFAULT_COLOR
     # background_color: tuple = DEFAULT_BG_COLOR
@@ -36,24 +52,17 @@ class Arrow(Entity):
         return '<Arrow id=%s>' % self.id
 
     def __post_init__(self):
-        # self.type_name = type(self).__name__
         if not self.page_id:
             raise Exception
-
-        # # Convert the tuples to points
-        # if isinstance(self.tail_point, (tuple, list)):
-        #     self.tail_point = Point2D(*self.tail_point)
-        # if isinstance(self.head_point, (tuple, list)):
-        #     self.head_point = Point2D(*self.head_point)
-        # for idx, mid_point in enumerate(self.mid_points):
-        #     if isinstance(mid_point, (tuple, list)):
-        #         self.mid_points[idx] = Point2D(*mid_point)
 
     def gid(self):
         return self.page_id, self.id
 
     def parent_gid(self):
         return self.page_id
+
+    def get_parent_page(self):
+        return pamet.page(id=self.page_id)
 
     @property
     def tail_point(self) -> Point2D:
@@ -85,27 +94,30 @@ class Arrow(Entity):
     def replace_midpoints(self, midpoint_list: List[Point2D]):
         self.mid_point_coords = [mp.as_tuple() for mp in midpoint_list]
 
-    # def asdict(self):
-    #     self_dict = super().asdict()
-
-    #     # Convert the points to tuples
-    #     for point_name in ['tail_point', 'head_point']:
-    #         point = self_dict[point_name]
-    #         if point:
-    #             self_dict[point_name] = point.as_tuple()
-
-    #     mid_points = self_dict['mid_points']
-    #     for idx, mid_point in enumerate(mid_points):
-    #         mid_points[idx]
-
-    #     self_dict['mid_points'] = [
-    #         point.as_tuple() for point in self_dict['mid_points']
-    #     ]
-
-    #     return self_dict
-
     def get_color(self) -> Color:
         return Color(*self.color)
 
     def set_color(self, color: Color):
         self.color = color.as_tuple()
+
+    @property
+    def tail_anchor_type(self):
+        return ArrowAnchorType[self.tail_anchor]
+
+    @tail_anchor_type.setter
+    def tail_anchor_type(self, new_type: ArrowAnchorType):
+        self.tail_anchor = new_type.name
+
+    @property
+    def head_anchor_type(self):
+        return ArrowAnchorType[self.head_anchor]
+
+    @head_anchor_type.setter
+    def head_anchor_type(self, new_type: ArrowAnchorType):
+        self.head_anchor = new_type.name
+
+    def has_tail_anchor(self):
+        return bool(self.tail_note_id)
+
+    def has_head_anchor(self):
+        return bool(self.head_note_id)

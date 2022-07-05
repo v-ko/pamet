@@ -106,6 +106,9 @@ class Subscription:
         self.channel = channel
         self.index_val = index_val
 
+    def props(self):
+        return self.handler, self.channel, self.index_val
+
     def unsubscribe(self):
         self.channel.remove_subscribtion(self)
 
@@ -119,7 +122,7 @@ class Channel:
         self.index_key = index_key
         self.filter_key = filter_key
         self.message_stack = []
-        self.subscriptions: Dict[Callable, Subscription] = {}
+        self.subscriptions: Dict[tuple, Subscription] = {}  # by id
 
         # if index_key:
         self.index = defaultdict(list)
@@ -139,14 +142,14 @@ class Channel:
 
         log.info('^^PUSH^^ on "%s": %s' % (self.name, message))
 
-        for handler, sub in self.subscriptions.items():
+        for sub_props, sub in self.subscriptions.items():
             if self.index_key and sub.index_val is not MISSING:
                 if self.index_key(message) != sub.index_val:
                     continue
 
-            log.info(f'Queueing {handler=} for {message=} on'
+            log.info(f'Queueing {sub.handler=} for {message=} on'
                      f' channel_name={self.name}')
-            call_delayed(handler, 0, args=[message])
+            call_delayed(sub.handler, 0, args=[message])
 
     # @log.traced
     def subscribe(self, handler: Callable, index_val: Any = MISSING):
@@ -155,20 +158,22 @@ class Channel:
         return sub
 
     def add_subscribtion(self, subscribtion):
-        if subscribtion.handler in self.subscriptions:
+        if subscribtion.props() in self.subscriptions:
             raise Exception(
-                f'Handler {subscribtion.handler} already added to channel '
+                f'Subscription with props {subscribtion.props()} '
+                f'already added to channel '
                 f'{self.name}')
 
-        self.subscriptions[subscribtion.handler] = subscribtion
+        self.subscriptions[subscribtion.props()] = subscribtion
 
     def remove_subscribtion(self, subscribtion):
-        if subscribtion.handler not in self.subscriptions:
+        if subscribtion.props() not in self.subscriptions:
             raise Exception(
-                f'Cannot unsubscribe missing handler {subscribtion.handler}'
+                f'Cannot unsubscribe missing subscription with props'
+                f' {subscribtion.props()}'
                 f' in channel {self.name}')
 
-        self.subscriptions.pop(subscribtion.handler)
+        self.subscriptions.pop(subscribtion.props())
 
     def notify_subscribers(self):
         if not self.message_stack:
@@ -176,7 +181,7 @@ class Channel:
 
         # Iterate over a copy of the subscriptions, since an additional handler
         # can get added while executing the present handlers
-        for handler, sub in copy(self.subscriptions).items():
+        for sub_props, sub in copy(self.subscriptions).items():
             # If the channel is not indexed or the subscriber does not filter
             # messages using the index - notify for all messages
             if not self.index_key or sub.filter_val is MISSING:
@@ -185,9 +190,9 @@ class Channel:
                 messages = self.index.get(sub.filter_val, [])
 
             for message in messages:
-                log.info(f'Calling {handler=} for {message=} on'
+                log.info(f'Calling {sub.handler=} for {message=} on'
                          f' channel_name={sub.channel_name}')
-                handler(message)
+                sub.handler(message)
 
         self.message_stack.clear()
         self.index.clear()

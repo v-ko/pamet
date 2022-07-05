@@ -5,12 +5,13 @@ import misli
 from misli.basic_classes import Point2D, Rectangle
 from misli.gui.view_library.view import View
 
-from pamet.constants import RESIZE_CIRCLE_RADIUS, SELECTOR_RECT_EDGE
+from pamet.constants import ARROW_ANCHOR_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELECTION_RADIUS
 from pamet.desktop_app.helpers import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 
 from pamet import actions
 from pamet.actions import map_page as map_page_actions
+from pamet.model.arrow import ArrowAnchorType
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
@@ -53,26 +54,38 @@ class MapPageView(View):
         return intersecting
 
     def get_note_views_at(
-            self, position: Point2D) -> Generator[NoteView, None, None]:
+            self,
+            position: Point2D,
+            radius: float = 0) -> Generator[NoteView, None, None]:
         unprojected_mouse_pos = self.state().unproject_point(position)
 
         for note_view in self.note_views():
-            if note_view.state().rect().contains(unprojected_mouse_pos):
+            nv_rect = note_view.state().rect()
+            if radius:
+                # Instead of implementing a Rectangle.intersects(circle)
+                # we expand the rectangle to do the same inference
+                nv_rect: Rectangle = copy(nv_rect)
+                nv_rect.set_size(nv_rect.width() + radius * 2,
+                                 nv_rect.height() + radius * 2)
+                nv_rect.move_top_left(nv_rect.top_left() -
+                                      Point2D(radius, radius))
+
+            if nv_rect.contains(unprojected_mouse_pos):
                 yield note_view
 
-    def get_note_view_at(self, position: Point2D) -> Union[NoteView, None]:
-        for note_view in self.get_note_views_at(position):
+    def get_note_view_at(self,
+                         position: Point2D,
+                         radius: float = 0) -> Union[NoteView, None]:
+        for note_view in self.get_note_views_at(position, radius):
             return note_view
         return None
 
     def get_arrow_views_at(
             self, position: Point2D) -> Generator[ArrowView, None, None]:
-        selector_rect = Rectangle(0, 0, SELECTOR_RECT_EDGE, SELECTOR_RECT_EDGE)
-        selector_rect.move_center(position)
-        unprojected_rect = self.state().unproject_rect(selector_rect)
-
+        unprojected_pos = self.state().unproject_point(position)
         for arrow_view in self.arrow_views():
-            if arrow_view.intersects_rect(unprojected_rect):
+            if arrow_view.intersects_circle(unprojected_pos,
+                                            ARROW_SELECTION_RADIUS):
                 yield arrow_view
 
     def get_arrow_view_at(self, position: Point2D) -> Union[ArrowView, None]:
@@ -88,6 +101,30 @@ class MapPageView(View):
             distance = resize_circle_center.distance_to(unprojected_pos)
             if distance <= RESIZE_CIRCLE_RADIUS:
                 return nc
+
+    def arrow_anchor_at(self, position: Point2D):
+        """Returns a tuple (note_id, anchor_type) for the closest anchor"""
+        unprojected_pos = self.state().unproject_point(position)
+
+        # Get the note views close enough to the mouse to show anchors
+        adjacent_note_views = self.get_note_views_at(position,
+                                                     ARROW_ANCHOR_RAIDUS)
+
+        # Get the note, anchor, distance tuples of the intersections
+        intersections = []
+        for note_view in adjacent_note_views:
+            for anchor_type in ArrowAnchorType.real_types():
+                anchor_center = note_view.arrow_anchor(anchor_type)
+                distance = unprojected_pos.distance_to(anchor_center)
+                intersections.append((note_view, anchor_type, distance))
+
+        if not intersections:
+            return None
+
+        # Sort them and return the first
+        intersections = sorted(intersections, key=lambda i: i[2])
+        note_view, anchor_type = intersections[0][:2]
+        return note_view.state().get_note().id, anchor_type
 
     def handle_delete_shortcut(self):
         map_page_actions.delete_selected_notes(self.state())
@@ -129,9 +166,16 @@ class MapPageView(View):
         resize_nv = self.resize_circle_intersect(mouse_pos)
 
         if self.state().mode() == MapPageMode.CREATE_ARROW:
-            # get anchors under mouse
-            mouse_real_pos = self.state().unproject_point(mouse_pos)
-            map_page_actions.arrow_creation_click(self.state(), mouse_real_pos)
+            anchor_props = self.arrow_anchor_at(mouse_pos)
+            if anchor_props:
+                note_id, anchor_type = anchor_props
+                map_page_actions.arrow_creation_click(self.state(),
+                                                      anchor_note_id=note_id,
+                                                      anchor_type=anchor_type)
+            else:
+                mouse_real_pos = self.state().unproject_point(mouse_pos)
+                map_page_actions.arrow_creation_click(
+                    self.state(), fixed_anchor_pos=mouse_real_pos)
             return
 
         if ctrl_pressed and shift_pressed:
@@ -168,8 +212,6 @@ class MapPageView(View):
             map_page_actions.start_notes_resize(self.state(),
                                                 resize_nv.state().get_note(),
                                                 mouse_pos, rcc_projected)
-
-            return
 
     def handle_left_mouse_release(self, mouse_pos: Point2D):
         self._left_mouse_is_pressed = False

@@ -1,12 +1,9 @@
 from __future__ import annotations
-from copy import copy
 from dataclasses import fields
-from typing import List
 
 import misli
 from misli import gui
 from misli.entity_library.entity import Entity
-from numpy import isin
 import pamet
 
 from misli.basic_classes import Point2D
@@ -16,12 +13,11 @@ from pamet.actions.note import finish_editing_note, start_editing_note
 from pamet.helpers import snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
-from pamet.model.arrow import Arrow
-from pamet.views.arrow.widget import ArrowView, ArrowViewState
+from pamet.model.arrow import Arrow, ArrowAnchorType
+from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
-from pamet.views.note.base_edit.view_state import NoteEditViewState
-from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.base_note_view import NoteViewState
 
 log = misli.get_logger(__name__)
 
@@ -157,7 +153,7 @@ def stop_drag_select(map_page_view_state: MapPageViewState):
 def delete_selected_notes(map_page_view_state: MapPageViewState):
     arrow_gids_for_removal = set()
 
-    # Delete the notes and store the arrows in the list
+    # Delete if it's a note and store in the list if it's an arrow
     for nc_id in map_page_view_state.selected_child_ids:
         child_state = gui.view_state(nc_id)
         if isinstance(child_state, NoteViewState):
@@ -451,43 +447,54 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
 
 @action('map_page.place_arrow_tail')
 def place_arrow_tail(arrow_view_state: ArrowViewState,
-                     real_pos: Point2D,
-                     anchor: str = None):
-    if anchor:
-        arrow_view_state.tail_anchor = anchor
+                     fixed_anchor_pos: Point2D,
+                     anchor_note_id: str = None,
+                     anchor_type: ArrowAnchorType = None):
+    if fixed_anchor_pos:
+        arrow_view_state.tail_point = fixed_anchor_pos
+    elif anchor_note_id and anchor_type:
+        arrow_view_state.tail_note_id = anchor_note_id
+        arrow_view_state.tail_anchor_type = anchor_type
     else:
-        arrow_view_state.tail_point = real_pos
+        raise Exception
 
     misli.gui.update_state(arrow_view_state)
 
 
 @action('map_page.place_arrow_head')
 def place_arrow_head(arrow_view_state: ArrowViewState,
-                     real_pos: Point2D,
-                     anchor: str = None):
-    if anchor:
-        arrow_view_state.head_anchor = anchor
+                     fixed_anchor_pos: Point2D,
+                     anchor_note_id: str = None,
+                     anchor_type: ArrowAnchorType = None):
+    if fixed_anchor_pos:
+        arrow_view_state.head_point = fixed_anchor_pos
+    elif anchor_note_id and anchor_type:
+        arrow_view_state.head_note_id = anchor_note_id
+        arrow_view_state.head_anchor_type = anchor_type
     else:
-        arrow_view_state.head_point = real_pos
+        raise Exception
 
     misli.gui.update_state(arrow_view_state)
 
 
 @action('map_page.arrow_creation_click')
 def arrow_creation_click(map_page_view_state: MapPageViewState,
-                         real_pos: Point2D,
-                         anchor: str = None):
-    # arrow_vs = ArrowViewState()
+                         fixed_anchor_pos: Point2D = None,
+                         anchor_note_id: str = None,
+                         anchor_type: ArrowAnchorType = None):
     should_finish = False
 
     for arrow_vs in map_page_view_state.new_arrow_view_states:
-        if not (arrow_vs.tail_anchor or arrow_vs.tail_point):
-            place_arrow_tail(arrow_vs, real_pos, anchor)
+
+        if not (arrow_vs.has_tail_anchor() or arrow_vs.tail_point):
+            place_arrow_tail(arrow_vs, fixed_anchor_pos, anchor_note_id,
+                             anchor_type)
             if should_finish:
                 raise Exception(
                     'Some of the arrows have tails while others don\'t')
         else:
-            place_arrow_head(arrow_vs, real_pos, anchor)
+            place_arrow_head(arrow_vs, fixed_anchor_pos, anchor_note_id,
+                             anchor_type)
             should_finish = True
 
     if should_finish:
@@ -507,8 +514,12 @@ def finish_arrow_creation(map_page_view_state):
         if arrow_vs.tail_point and arrow_vs.head_point:
             if arrow_vs.tail_point == arrow_vs.head_point:
                 continue
-        if arrow_vs.tail_anchor and arrow_vs.head_anchor:
-            if arrow_vs.tail_anchor == arrow_vs.head_anchor:
+
+        # Similarly if both ends are on the same anchor of the same note -
+        # cancel it
+        if arrow_vs.tail_note_id and arrow_vs.head_note_id:
+            if (arrow_vs.tail_note_id == arrow_vs.head_note_id
+                    and arrow_vs.tail_anchor == arrow_vs.head_anchor):
                 continue
 
         # Get the properties for the new arrow from the view state

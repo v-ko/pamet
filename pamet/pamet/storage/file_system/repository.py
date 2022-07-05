@@ -50,8 +50,11 @@ class FSStorageRepository(Repository):
         # Load all pages in cache
         for page_path in self.page_paths():
             try:
-                page, notes, arrows = self.get_entities_from_json(
+                entities = self.get_entities_from_json(
                     page_path)  #@IgnoreException
+                if not entities:
+                    continue
+                page, notes, arrows = entities
             except Exception as e:
                 log.error(
                     f'Exception raised while loading page {page_path}: {e}')
@@ -231,7 +234,7 @@ class FSStorageRepository(Repository):
     def get_entities_from_json(self, json_file_path):
         try:
             with open(json_file_path) as pf:
-                page_state = json.load(pf)
+                page_state = json.load(pf)  #@IgnoreException
 
         except Exception as e:
             log.error('Exception %s while loading page' % e, json_file_path)
@@ -290,32 +293,39 @@ class FSStorageRepository(Repository):
         page = entity_library.from_dict(Page.__name__, page_state)
         return page, notes, arrows
 
-    def entities_to_json(self, page, notes, arrows):
+    def entities_to_json_str(self, page, notes, arrows):
         page_state = page.asdict()
         page_state['note_states'] = [n.asdict() for n in notes]
         page_state['arrow_states'] = [a.asdict() for a in arrows]
-        return page_state
+
+        try:
+            json_str = json.dumps(page_state, ensure_ascii=False)
+        except Exception as e:
+            raise e  # Or log error
+            return None
+
+        return json_str
 
     def create_page(self, page: Page, notes: List[Note], arrows: List[Arrow]):
-        page_state = self.entities_to_json(page, notes, arrows)
-
         path = self.path_for_page(page)
         try:
             if os.path.exists(path):
                 log.error('Cannot create page. File already exists %s' % path)
                 return
 
+            page_json_str = self.entities_to_json_str(page, notes, arrows)
+            if not page_json_str:
+                return
+
             with open(path, 'w') as pf:
-                json.dump(page_state, pf, ensure_ascii=False)
+                pf.write(page_json_str)
 
             self.page_paths_by_id[page.id] = path
 
         except Exception as e:
-            log.error('Exception while creating page at %s: %s' % (path, e))
+            log.error('Exception while writing page at %s: %s' % (path, e))
 
     def update_page(self, page: Page, notes: List[Note], arrows: List[Arrow]):
-        page_state = self.entities_to_json(page, notes, arrows)
-
         saved_path = self.page_paths_by_id[page.id]
         path = self.path_for_page(page)
 
@@ -333,8 +343,12 @@ class FSStorageRepository(Repository):
         else:
             log.error(f'[update_page] Page at {path} was missing.')
 
+        page_json_str = self.entities_to_json_str(page, notes, arrows)
+        if not page_json_str:
+            return
+
         with open(path, 'w') as pf:
-            json.dump(page_state, pf, ensure_ascii=False)
+            pf.write(page_json_str)
 
     def delete_page(self, page):
         path = self.page_paths_by_id.pop(page.id)

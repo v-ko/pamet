@@ -9,7 +9,7 @@ from pamet.constants import INITIAL_EYE_Z
 from pamet.model import Note
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.viewport import Viewport
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base_note_view import NoteView, NoteViewState
 
 
 class MapPageMode(Enum):
@@ -66,32 +66,6 @@ class MapPageViewState(ViewState, Viewport):
     @property
     def page(self):
         return pamet.page(gid=self.page_id)
-
-    # def mode(self):  # TODO: this is not very elegant
-    #     modes_sum = (self.drag_navigation_active + self.drag_select_active +
-    #                  self.note_resize_active + self.note_drag_active +
-    #                  self.arrow_creation_active)
-
-    #     if not modes_sum:
-    #         return MapPageMode.NONE
-
-    #     elif modes_sum > 1:
-    #         raise Exception('More than one mode activated')
-
-    #     if self.drag_navigation_active:
-    #         return MapPageMode.DRAG_NAVIGATION
-
-    #     elif self.drag_select_active:
-    #         return MapPageMode.DRAG_SELECT
-
-    #     elif self.note_resize_active:
-    #         return MapPageMode.NOTE_RESIZE
-
-    #     elif self.note_drag_active:
-    #         return MapPageMode.NOTE_DRAG
-
-    #     elif self.arrow_creation_active:
-    #         return MapPageMode.CREATE_ARROW
 
     def mode(self):
         return MapPageMode(self.special_mode)
