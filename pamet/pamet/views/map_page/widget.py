@@ -1,3 +1,4 @@
+from copy import copy
 import time
 from typing import Dict, List
 
@@ -13,12 +14,13 @@ from misli.gui.view_library.view import View
 from misli.gui.views.context_menu.widget import ContextMenuWidget
 from pamet import commands
 
-from pamet.constants import ARROW_ANCHOR_RAIDUS, MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS
-from pamet.constants import SELECTION_OVERLAY_COLOR, ALIGNMENT_LINE_LENGTH
+from pamet.constants import ARROW_EDGE_RAIDUS, MAX_RENDER_TIME
+from pamet.constants import ALIGNMENT_LINE_LENGTH, RESIZE_CIRCLE_RADIUS
 from pamet.constants import LONG_PRESS_TIMEOUT
 
 import pamet
 from pamet import actions
+from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
@@ -34,8 +36,6 @@ log = misli.get_logger(__name__)
 IMAGE_CACHE_PADDING = 1
 MIN_FULL_CHILD_RENDERS_PER_PAINT_EVENT = 10
 DRAG_SELECT_COLOR = QColor(100, 100, 100, 50)
-selection_overlay_color = QColor(*SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
-selected_arrow_color = QColor(150, 150, 0, 255)
 
 
 class NoteViewCache:
@@ -83,31 +83,31 @@ class MapPageWidget(QWidget, MapPageView):
 
         color_notes_blue = QShortcut(QKeySequence('1'), self)
         color_notes_blue.activated.connect(
-            lambda: actions.map_page.color_selected_notes(self.state(),
-                                                          color=[0, 0, 1, 1],
-                                                          background_color=
-                                                          [0, 0, 1, 0.1]))
+            lambda: actions.map_page.color_selected_children(
+                self.state(),
+                color=[0, 0, 1, 1],
+                background_color=[0, 0, 1, 0.1]))
         color_notes_green = QShortcut(QKeySequence('2'), self)
         color_notes_green.activated.connect(
-            lambda: actions.map_page.color_selected_notes(
+            lambda: actions.map_page.color_selected_children(
                 self.state(),
                 color=[0, 0.64, 0.235, 1],
                 background_color=[0, 1, 0, 0.1]))
         color_notes_red = QShortcut(QKeySequence('3'), self)
         color_notes_red.activated.connect(
-            lambda: actions.map_page.color_selected_notes(self.state(),
-                                                          color=[1, 0, 0, 1],
-                                                          background_color=
-                                                          [1, 0, 0, 0.1]))
+            lambda: actions.map_page.color_selected_children(
+                self.state(),
+                color=[1, 0, 0, 1],
+                background_color=[1, 0, 0, 0.1]))
         color_notes_gray = QShortcut(QKeySequence('4'), self)
         color_notes_gray.activated.connect(
-            lambda: actions.map_page.color_selected_notes(self.state(),
-                                                          color=[0, 0, 0, 1],
-                                                          background_color=
-                                                          [0, 0, 0, 0.1]))
+            lambda: actions.map_page.color_selected_children(
+                self.state(),
+                color=[0, 0, 0, 1],
+                background_color=[0, 0, 0, 0.1]))
         remove_note_background = QShortcut(QKeySequence('5'), self)
         remove_note_background.activated.connect(
-            lambda: actions.map_page.color_selected_notes(
+            lambda: actions.map_page.color_selected_children(
                 self.state(), background_color=[0, 0, 0, 0]))
         select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_A), self)
         select_all_shortcut.activated.connect(
@@ -207,13 +207,13 @@ class MapPageWidget(QWidget, MapPageView):
         self.update()
 
     def add_arrow_widget(self, av_state: ArrowViewState):
+        arrow_widget = ArrowWidget(av_state, self)
+        self._arrow_widgets[av_state.id] = arrow_widget
+
         subscription = misli.gui.channels.state_changes_by_id.subscribe(
             lambda change: self.handle_child_state_update(change),
             index_val=av_state.id)
         self.arrow_view_state_subs_by_state_id[av_state.id] = subscription
-
-        arrow_widget = ArrowWidget(av_state, self)
-        self._arrow_widgets[av_state.id] = arrow_widget
 
     def remove_arrow_widget(self, av_state: ArrowViewState):
         subscription = self.arrow_view_state_subs_by_state_id.pop(av_state.id)
@@ -313,6 +313,9 @@ class MapPageWidget(QWidget, MapPageView):
     def arrow_widgets(self):
         for aw_id, arrow_widget in self._arrow_widgets.items():
             yield arrow_widget
+
+    def arrow_widget(self, state_id: str):
+        return self._arrow_widgets[state_id]
 
     def prep_command_cache_for_child(self, child):
         # In order to be pixel perfect - relay through QPicture
@@ -562,7 +565,7 @@ class MapPageWidget(QWidget, MapPageView):
             # Draw the selection overlay and resize circle for selected notes
             if note_widget.id in state.selected_child_ids:
                 # Draw a yellow selection overlay
-                painter.fillRect(display_rect, selection_overlay_color)
+                painter.fillRect(display_rect, selection_overlay_qcolor)
 
                 # Draw the resize circle
                 center = display_rect.bottomRight()
@@ -596,24 +599,19 @@ class MapPageWidget(QWidget, MapPageView):
         painter.translate(-dx, -dy)
 
         # Draw the arrows
-        pen = painter.pen()
         for arrow_widget in self.arrow_widgets():
-            av_state: ArrowViewState = arrow_widget.state()
-            pen.setColor(QColor(*av_state.get_color().to_uint8_rgba_list()))
-            pen.setWidthF(av_state.line_thickness)
-            painter.setPen(pen)
-            # painter.setBrush(Qt.NoBrush)
-            arrow_widget.render(painter)
+            draw_selection_overlay = False
+            if (arrow_widget.id in state.selected_child_ids
+                    or arrow_widget.id in state.drag_selected_child_ids):
+                draw_selection_overlay = True
 
-        # Draw the arrow selection overlays where needed
-        for arrow_widget in self.arrow_widgets():
-            if (arrow_widget.id not in state.selected_child_ids
-                    and arrow_widget.id not in state.drag_selected_child_ids):
-                continue
-            pen.setColor(selection_overlay_color)
-            pen.setWidthF(5)
-            painter.setPen(pen)
-            arrow_widget.render(painter)
+            draw_control_points = False
+            if state.arrow_with_visible_cps:
+                if state.arrow_with_visible_cps == arrow_widget.state():
+                    draw_control_points = True
+
+            arrow_widget.render(painter, draw_selection_overlay,
+                                draw_control_points)
 
         painter.restore()
         # End of the arrow drawing
@@ -629,18 +627,20 @@ class MapPageWidget(QWidget, MapPageView):
                 if nc_id not in display_rects_by_child_id:
                     continue
                 painter.fillRect(display_rects_by_child_id[nc_id],
-                                 selection_overlay_color)
+                                 selection_overlay_qcolor)
                 # elif nc_id in self._arrow_widgets:
                 # ^^ that gets done while drawing the arrows
 
-        elif state.mode() == MapPageMode.CREATE_ARROW:
+        elif state.mode() in [
+                MapPageMode.CREATE_ARROW, MapPageMode.ARROW_EDGE_DRAG
+        ]:
             # Draw the anchors for the notes under/close to the mouse
             for note_widget in self.get_note_views_at(mouse_pos,
-                                                      ARROW_ANCHOR_RAIDUS):
+                                                      ARROW_EDGE_RAIDUS):
                 for anchor_type in ArrowAnchorType.real_types():
                     arr_anchor_pos = note_widget.arrow_anchor(anchor_type)
                     arr_anchor_pos = state.project_point(arr_anchor_pos)
-                    radius = ARROW_ANCHOR_RAIDUS * state.height_scale_factor()
+                    radius = ARROW_EDGE_RAIDUS * state.height_scale_factor()
                     nw_state = note_widget.state()
 
                     q_anchor_pos = QPointF(*arr_anchor_pos.as_tuple())
@@ -698,13 +698,27 @@ class MapPageWidget(QWidget, MapPageView):
 
     def mousePressEvent(self, event):
         self._mouse_press_position = event.pos()
+        mouse_pos = Point2D(event.pos().x(), event.pos().y())
+        state = self.state()
 
         QTimer.singleShot(LONG_PRESS_TIMEOUT * 1000, self.check_for_long_press)
 
         if event.button() is Qt.LeftButton:
-            self.handle_left_mouse_press(
-                Point2D(event.pos().x(),
-                        event.pos().y()))
+
+            # If there's an arrow selected
+            # check if an arrow edge is under the mouse
+
+            if state.arrow_with_visible_cps:
+                arrow_widget = self.arrow_widget(
+                    state.arrow_with_visible_cps.id)
+
+                edge_under_mouse_idx = arrow_widget.edge_at(mouse_pos)
+                if edge_under_mouse_idx is not None:
+                    map_page_actions.start_arrow_edge_drag(
+                        state, mouse_pos, edge_under_mouse_idx)
+                    return
+
+            self.handle_left_mouse_press(mouse_pos)
 
         elif event.button() is Qt.RightButton:
             self.handle_right_mouse_press(
@@ -718,11 +732,28 @@ class MapPageWidget(QWidget, MapPageView):
                         event.pos().y()))
 
     def mouseMoveEvent(self, event):
+        old_nvs_under_mouse = copy(self._note_views_under_mouse)
         self.handle_mouse_move(Point2D(event.pos().x(), event.pos().y()))
-        self.update()
+
+        if self._note_views_under_mouse != old_nvs_under_mouse:
+            if self.state().mode() == MapPageMode.CREATE_ARROW:
+                self.update()
 
     def mouseDoubleClickEvent(self, event):
+        mouse_pos = Point2D(event.pos().x(), event.pos().y())
+        state = self.state()
+
         if event.button() is Qt.LeftButton:
+            if state.arrow_with_visible_cps:
+                arrow_widget = self.arrow_widget(
+                    state.arrow_with_visible_cps.id)
+
+                edge_under_mouse_idx = arrow_widget.edge_at(mouse_pos)
+                if edge_under_mouse_idx is not None:
+                    map_page_actions.delete_arrow_edge(
+                        state.arrow_with_visible_cps, edge_under_mouse_idx)
+                    return
+
             self.left_mouse_double_click_event(
                 Point2D(event.pos().x(),
                         event.pos().y()))
@@ -738,7 +769,7 @@ class MapPageWidget(QWidget, MapPageView):
         self.handle_resize_event(event.size().width(), event.size().height())
 
     def handle_right_mouse_press(self, position):
-        ncs_under_mouse = self.get_note_views_at(position)
+        ncs_under_mouse = list(self.get_note_views_at(position))
         menu_entries = {}
 
         mode = self.state().mode()

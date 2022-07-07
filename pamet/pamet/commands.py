@@ -9,6 +9,7 @@ from pamet.actions import map_page as map_page_actions
 from pamet.actions import window as window_actions
 
 from pamet.gui_helpers import current_window, current_tab
+from pamet.views.note.base_note_view import NoteViewState
 
 log = misli.get_logger(__name__)
 
@@ -61,6 +62,8 @@ def edit_selected_notes():
 
     for note_view_id in selected_child_ids:
         note_state = misli.gui.view_state(note_view_id)
+        if not isinstance(note_state, NoteViewState):
+            continue
         note_actions.start_editing_note(tab.state(), note_state.get_note())
 
 

@@ -4,6 +4,7 @@ from dataclasses import fields
 import misli
 from misli import gui
 from misli.entity_library.entity import Entity
+from numpy import isin
 import pamet
 
 from misli.basic_classes import Point2D
@@ -83,6 +84,19 @@ def update_child_selections(map_page_view_state: MapPageViewState,
         else:
             log.warning('Redundant entry in selection_updates_by_note_id')
 
+    # If there's only one arrow selected - show its control points
+    single_selected_arrow = None
+    if len(map_page_view_state.selected_child_ids) == 1:
+        (selected_id, ) = map_page_view_state.selected_child_ids
+        for arrow_vs in map_page_view_state.arrow_view_states:
+            if arrow_vs.id == selected_id:
+                single_selected_arrow = arrow_vs
+
+    if single_selected_arrow:
+        map_page_view_state.arrow_with_visible_cps = single_selected_arrow
+    else:
+        map_page_view_state.arrow_with_visible_cps = None
+
     if selection_update_count > 0:
         gui.update_state(map_page_view_state)
         # log.info('Updated %s selections' % selection_update_count)
@@ -92,7 +106,7 @@ def update_child_selections(map_page_view_state: MapPageViewState,
 
 
 @action('map_page.clear_note_selection')
-def clear_note_selection(map_page_view_state: str):
+def clear_child_selection(map_page_view_state: str):
     selection_updates = {}
     for selected_child in map_page_view_state.selected_child_ids:
         selection_updates[selected_child] = False
@@ -126,31 +140,40 @@ def start_drag_select(map_page_view_state: MapPageViewState,
 @action('map_page.update_drag_select')
 def update_drag_select(map_page_view_state: MapPageViewState,
                        rect_props: list,
-                       drag_selected_child_ids: list = None):
+                       drag_selected_child_ids: set = None):
     if drag_selected_child_ids is None:
-        drag_selected_child_ids = []
+        drag_selected_child_ids = set()
 
     map_page_view_state.drag_select_rect_props = rect_props
     map_page_view_state.drag_selected_child_ids.clear()
 
     for nc_id in drag_selected_child_ids:
         if nc_id not in map_page_view_state.drag_selected_child_ids:
-            map_page_view_state.drag_selected_child_ids.append(nc_id)
+            map_page_view_state.drag_selected_child_ids.add(nc_id)
 
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.stop_drag_select')
 def stop_drag_select(map_page_view_state: MapPageViewState):
-    map_page_view_state.selected_child_ids.update(
-        map_page_view_state.drag_selected_child_ids)
+    added_selections = (map_page_view_state.drag_selected_child_ids -
+                        map_page_view_state.selected_child_ids)
+    removed_selections = (map_page_view_state.selected_child_ids -
+                          map_page_view_state.drag_selected_child_ids)
+
+    selection_updates = {child_id: True for child_id in added_selections}
+    selection_updates.update(
+        {child_id: False
+         for child_id in removed_selections})
+
+    update_child_selections(map_page_view_state, selection_updates)
     map_page_view_state.clear_mode()
 
     gui.update_state(map_page_view_state)
 
 
-@action('map_page.delete_selected_notes')
-def delete_selected_notes(map_page_view_state: MapPageViewState):
+@action('map_page.delete_selected_children')
+def delete_selected_children(map_page_view_state: MapPageViewState):
     arrow_gids_for_removal = set()
 
     # Delete if it's a note and store in the list if it's an arrow
@@ -165,9 +188,9 @@ def delete_selected_notes(map_page_view_state: MapPageViewState):
 
     # Mark for removal the arrows that are anchored on any of the seleced notes
     for arrow_state in map_page_view_state.arrow_view_states:
-        if ((arrow_state.tail_note_id and arrow_state.tail_note_id
+        if ((arrow_state.has_tail_anchor() and arrow_state.tail_note_id
              in map_page_view_state.selected_child_ids)
-                or (arrow_state.head_note_id and arrow_state.head_note_id
+                or (arrow_state.has_head_anchor() and arrow_state.head_note_id
                     in map_page_view_state.selected_child_ids)):
             arrow_gids_for_removal.add(arrow_state.arrow_gid)
 
@@ -175,7 +198,7 @@ def delete_selected_notes(map_page_view_state: MapPageViewState):
     for arrow_gid in arrow_gids_for_removal:
         pamet.remove_arrow(pamet.find_one(gid=arrow_gid))
 
-    map_page_view_state.selected_child_ids.clear()
+    clear_child_selection(map_page_view_state)
     misli.gui.update_state(map_page_view_state)
 
 
@@ -288,21 +311,32 @@ def resize_page(map_page_view_id, width, height):
     gui.update_state(map_page_view_state)
 
 
-@action('notes.color_selected_notes')
-def color_selected_notes(map_page_view_state: str,
-                         color: list = None,
-                         background_color: list = None):
+@action('notes.color_selected_children')
+def color_selected_children(map_page_view_state: str,
+                            color: list = None,
+                            background_color: list = None):
     for note_view_id in map_page_view_state.selected_child_ids:
-        note = gui.view_state(note_view_id).get_note()
+        child_vs = gui.view_state(note_view_id)
 
-        color = color or note.color
-        background_color = background_color or note.background_color
+        if isinstance(child_vs, NoteViewState):
+            note = child_vs.get_note()
 
-        note.color = color
-        note.background_color = background_color
-        pamet.update_note(note)
+            color = color or note.color
+            background_color = background_color or note.background_color
 
-    map_page_view_state.selected_child_ids.clear()
+            note.color = color
+            note.background_color = background_color
+            pamet.update_note(note)
+
+        elif isinstance(child_vs, ArrowViewState):
+            arrow = child_vs.get_arrow()
+            color = color or arrow.color
+            arrow.color = color
+            pamet.update_arrow(arrow)
+        else:
+            raise Exception
+
+    clear_child_selection(map_page_view_state)
     misli.gui.update_state(map_page_view_state)
 
 
@@ -429,6 +463,7 @@ def start_arrow_creation(map_page_view_state: MapPageViewState):
 @action('map_page.abort_special_mode')
 def abort_special_mode(map_page_view_state: MapPageViewState):
     # Reset the manipulated views
+    # For child moving
     for note_state in map_page_view_state.moved_note_states:
         note_state.update_from_note(note_state.get_note())
         misli.gui.update_state(note_state)
@@ -437,64 +472,57 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
         arrow_state.update_from_arrow(arrow_state.get_arrow())
         misli.gui.update_state(arrow_state)
 
+    # For note resizing
     for note_state in map_page_view_state.note_resize_states:
         note_state.update_from_note(note_state.get_note())
         misli.gui.update_state(note_state)
+
+    # Restore the arrow view if there was edge dragging
+    if map_page_view_state.mode() == MapPageMode.ARROW_EDGE_DRAG:
+        map_page_view_state.arrow_with_visible_cps.update_from_arrow(
+            map_page_view_state.arrow_with_visible_cps.get_arrow())
 
     map_page_view_state.clear_mode()
     misli.gui.update_state(map_page_view_state)
 
 
-@action('map_page.place_arrow_tail')
-def place_arrow_tail(arrow_view_state: ArrowViewState,
-                     fixed_anchor_pos: Point2D,
-                     anchor_note_id: str = None,
-                     anchor_type: ArrowAnchorType = None):
-    if fixed_anchor_pos:
-        arrow_view_state.tail_point = fixed_anchor_pos
-    elif anchor_note_id and anchor_type:
-        arrow_view_state.tail_note_id = anchor_note_id
-        arrow_view_state.tail_anchor_type = anchor_type
-    else:
-        raise Exception
-
+@action('map_page.place_arrow_view_tail')
+def place_arrow_view_tail(
+        arrow_view_state: ArrowViewState,
+        fixed_pos: Point2D,
+        anchor_note_id: str = None,
+        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+    arrow_view_state.set_tail(fixed_pos, anchor_note_id, anchor_type)
     misli.gui.update_state(arrow_view_state)
 
 
-@action('map_page.place_arrow_head')
-def place_arrow_head(arrow_view_state: ArrowViewState,
-                     fixed_anchor_pos: Point2D,
-                     anchor_note_id: str = None,
-                     anchor_type: ArrowAnchorType = None):
-    if fixed_anchor_pos:
-        arrow_view_state.head_point = fixed_anchor_pos
-    elif anchor_note_id and anchor_type:
-        arrow_view_state.head_note_id = anchor_note_id
-        arrow_view_state.head_anchor_type = anchor_type
-    else:
-        raise Exception
-
+@action('map_page.place_arrow_view_head')
+def place_arrow_view_head(
+        arrow_view_state: ArrowViewState,
+        fixed_pos: Point2D,
+        anchor_note_id: str = None,
+        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+    arrow_view_state.set_head(fixed_pos, anchor_note_id, anchor_type)
     misli.gui.update_state(arrow_view_state)
 
 
 @action('map_page.arrow_creation_click')
 def arrow_creation_click(map_page_view_state: MapPageViewState,
-                         fixed_anchor_pos: Point2D = None,
+                         fixed_pos: Point2D = None,
                          anchor_note_id: str = None,
-                         anchor_type: ArrowAnchorType = None):
+                         anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
     should_finish = False
 
     for arrow_vs in map_page_view_state.new_arrow_view_states:
-
         if not (arrow_vs.has_tail_anchor() or arrow_vs.tail_point):
-            place_arrow_tail(arrow_vs, fixed_anchor_pos, anchor_note_id,
-                             anchor_type)
+            place_arrow_view_tail(arrow_vs, fixed_pos, anchor_note_id,
+                                  anchor_type)
             if should_finish:
                 raise Exception(
                     'Some of the arrows have tails while others don\'t')
         else:
-            place_arrow_head(arrow_vs, fixed_anchor_pos, anchor_note_id,
-                             anchor_type)
+            place_arrow_view_head(arrow_vs, fixed_pos, anchor_note_id,
+                                  anchor_type)
             should_finish = True
 
     if should_finish:
@@ -502,13 +530,16 @@ def arrow_creation_click(map_page_view_state: MapPageViewState,
 
 
 @action('map_page.arrow_creation_move')
-def arrow_creation_move(map_page_view_state, real_pos):
+def arrow_creation_move(map_page_view_state: MapPageViewState,
+                        fixed_pos: Point2D = None,
+                        anchor_note_id: str = None,
+                        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
     for av_state in map_page_view_state.new_arrow_view_states:
-        place_arrow_head(av_state, real_pos)
+        place_arrow_view_head(av_state, fixed_pos)
 
 
 @action('map_page.finish_arrow_creation')
-def finish_arrow_creation(map_page_view_state):
+def finish_arrow_creation(map_page_view_state: MapPageViewState):
     for arrow_vs in map_page_view_state.new_arrow_view_states:
         # If both ends of the arrow are at the same point - cancel it
         if arrow_vs.tail_point and arrow_vs.head_point:
@@ -517,7 +548,7 @@ def finish_arrow_creation(map_page_view_state):
 
         # Similarly if both ends are on the same anchor of the same note -
         # cancel it
-        if arrow_vs.tail_note_id and arrow_vs.head_note_id:
+        if arrow_vs.has_tail_anchor() and arrow_vs.has_head_anchor():
             if (arrow_vs.tail_note_id == arrow_vs.head_note_id
                     and arrow_vs.tail_anchor == arrow_vs.head_anchor):
                 continue
@@ -532,3 +563,90 @@ def finish_arrow_creation(map_page_view_state):
 
     map_page_view_state.clear_mode()
     misli.gui.update_state(map_page_view_state)
+
+
+@action('map_page.start_arrow_edge_drag')
+def start_arrow_edge_drag(map_page_view_state: MapPageViewState,
+                          mouse_pos: Point2D, edge_index: float):
+    map_page_view_state.dragged_edge_index = edge_index
+    map_page_view_state.set_mode(MapPageMode.ARROW_EDGE_DRAG)
+    misli.gui.update_state(map_page_view_state)
+
+
+@action('map_page.arrow_edge_drag_update')
+def arrow_edge_drag_update(
+        map_page_view_state: MapPageViewState,
+        fixed_pos: Point2D = None,
+        anchor_note_id: str = None,
+        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+    arrow_vs: ArrowViewState = map_page_view_state.arrow_with_visible_cps
+
+    if map_page_view_state.dragged_edge_index == 0:
+        place_arrow_view_tail(arrow_vs, fixed_pos, anchor_note_id, anchor_type)
+
+    elif map_page_view_state.dragged_edge_index == arrow_vs.edge_indices()[-1]:
+        place_arrow_view_head(arrow_vs, fixed_pos, anchor_note_id, anchor_type)
+
+    elif map_page_view_state.dragged_edge_index in arrow_vs.edge_indices(
+    ):  # Mid points
+        mid_point_idx = int(map_page_view_state.dragged_edge_index - 1)
+        mid_points = arrow_vs.mid_points
+        mid_points[mid_point_idx] = fixed_pos
+        arrow_vs.replace_midpoints(mid_points)
+
+    else:  # .5 indices, so a potential edge, that we must create
+        arrow = arrow_vs.get_arrow()
+        mid_point_idx = int(map_page_view_state.dragged_edge_index // 1)
+        mid_points = arrow.mid_points
+        mid_points.insert(mid_point_idx, fixed_pos)
+        arrow.replace_midpoints(mid_points)
+
+        arrow_vs.update_from_arrow(arrow)  # Just to be sure
+        pamet.update_arrow(arrow)
+
+        map_page_view_state.dragged_edge_index = 1 + mid_point_idx
+        misli.gui.update_state(map_page_view_state)
+    misli.gui.update_state(arrow_vs)
+
+
+@action('map_page.finish_arrow_edge_drag')
+def finish_arrow_edge_drag(
+        map_page_view_state: MapPageViewState,
+        fixed_pos: Point2D = None,
+        anchor_note_id: str = None,
+        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+    arrow = map_page_view_state.arrow_with_visible_cps.get_arrow()
+
+    if map_page_view_state.dragged_edge_index == 0:
+        arrow.set_tail(fixed_pos, anchor_note_id, anchor_type)
+
+    elif map_page_view_state.dragged_edge_index == arrow.edge_indices()[-1]:
+        arrow.set_head(fixed_pos, anchor_note_id, anchor_type)
+
+    elif map_page_view_state.dragged_edge_index in arrow.edge_indices(
+    ):  # Mid points
+        mid_point_idx = int(map_page_view_state.dragged_edge_index - 1)
+        mid_points = arrow.mid_points
+        mid_points[mid_point_idx] = fixed_pos
+        arrow.replace_midpoints(mid_points)
+
+    else:  # .5 indices, so a potential edge, that we must create
+        raise Exception
+
+    pamet.update_arrow(arrow)
+    map_page_view_state.clear_mode()
+    misli.gui.update_state(map_page_view_state)
+
+
+@action('map_page.delete_control_point')
+def delete_arrow_edge(arrow_view_state: ArrowViewState, edge_index: float):
+    if edge_index == 0 or edge_index == arrow_view_state.edge_indices()[-1]:
+        raise Exception('Cannot remove the tail or head')
+    if edge_index not in arrow_view_state.edge_indices():
+        raise Exception(f'Cannot remove edge with index {edge_index}')
+
+    arrow = arrow_view_state.get_arrow()
+    mid_points = arrow.mid_points
+    mid_points.pop(edge_index - 1)
+    arrow.replace_midpoints(mid_points)
+    pamet.update_arrow(arrow)

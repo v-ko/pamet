@@ -12,7 +12,7 @@ from misli.storage.repository import Repository
 import pamet
 
 from pamet.model import Page, Note
-from pamet.model.arrow import BEZIER_CUBIC, DEFAULT_LINE_THICKNESS, Arrow
+from pamet.model.arrow import BEZIER_CUBIC, DEFAULT_ARROW_THICKNESS, Arrow
 from slugify import slugify
 
 from .hacky_backups import backup_page_hackily
@@ -286,7 +286,7 @@ class FSStorageRepository(Repository):
             #REMOVE vv
             if not arrow.line_function_name:
                 arrow.line_function_name = BEZIER_CUBIC
-            arrow.line_thickness = DEFAULT_LINE_THICKNESS
+            arrow.line_thickness = DEFAULT_ARROW_THICKNESS
 
             arrows.append(arrow)
 

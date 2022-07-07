@@ -9,7 +9,7 @@ from pamet.constants import INITIAL_EYE_Z
 from pamet.model import Note
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.viewport import Viewport
-from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.base_note_view import NoteViewState
 
 
 class MapPageMode(Enum):
@@ -19,6 +19,7 @@ class MapPageMode(Enum):
     NOTE_RESIZE = 3
     NOTE_MOVE = 4
     CREATE_ARROW = 5
+    ARROW_EDGE_DRAG = 6
 
 
 @view_state_type
@@ -41,7 +42,7 @@ class MapPageViewState(ViewState, Viewport):
 
     # Field/drag selection
     mouse_position_on_drag_select_start: Point2D = None
-    drag_selected_child_ids: list = field(default_factory=list)
+    drag_selected_child_ids: set = field(default_factory=set)
     drag_select_rect_props: list = field(default_factory=list)
 
     # Note resize related
@@ -58,6 +59,8 @@ class MapPageViewState(ViewState, Viewport):
 
     # Arrow manipulation related
     new_arrow_view_states: List[ArrowViewState] = field(default_factory=list)
+    arrow_with_visible_cps: ArrowViewState = None
+    dragged_edge_index: float = None
 
     def __repr__(self):
         return (f'<MapPageViewState page_id={self.page_id}'
@@ -79,7 +82,7 @@ class MapPageViewState(ViewState, Viewport):
         self.special_mode = MapPageMode.NONE
         self.drag_navigation_start_position = None
         self.mouse_position_on_drag_select_start = None
-        self.drag_selected_child_ids = []
+        self.drag_selected_child_ids = set()
         self.drag_select_rect_props = []
 
         self.mouse_position_on_note_drag_start = None

@@ -7,10 +7,9 @@ from misli.basic_classes.point2d import Point2D
 from misli.entity_library import entity_type
 from misli.entity_library.entity import Entity
 import pamet
-from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
+from pamet.constants import DEFAULT_ARROW_THICKNESS, DEFAULT_BG_COLOR, DEFAULT_COLOR
 
 BEZIER_CUBIC = 'bezier_cubic'
-DEFAULT_LINE_THICKNESS = 1.5
 
 
 class ArrowAnchorType(Enum):
@@ -43,7 +42,7 @@ class Arrow(Entity):
     color: tuple = DEFAULT_COLOR
     # background_color: tuple = DEFAULT_BG_COLOR
     line_type: str = None
-    line_thickness: float = DEFAULT_LINE_THICKNESS
+    line_thickness: float = DEFAULT_ARROW_THICKNESS
     line_function_name: str = BEZIER_CUBIC
     head_shape: str = None
     tail_shape: str = None
@@ -72,7 +71,10 @@ class Arrow(Entity):
 
     @tail_point.setter
     def tail_point(self, point: Point2D):
-        self.tail_coords = point.as_tuple()
+        if point:
+            self.tail_coords = point.as_tuple()
+        else:
+            self.tail_coords = None
 
     @property
     def head_point(self) -> Point2D:
@@ -82,7 +84,10 @@ class Arrow(Entity):
 
     @head_point.setter
     def head_point(self, point: Point2D):
-        self.head_coords = point.as_tuple()
+        if point:
+            self.head_coords = point.as_tuple()
+        else:
+            self.head_coords = None
 
     @property
     def mid_points(self) -> List[Point2D]:
@@ -121,3 +126,45 @@ class Arrow(Entity):
 
     def has_head_anchor(self):
         return bool(self.head_note_id)
+
+    def edge_indices(self):
+        mid_edge_count = 2 + len(self.mid_points)
+        return list(range(mid_edge_count))
+
+    def potential_edge_indices(self):
+        return [i + 0.5 for i in self.edge_indices()[:-1]]
+
+    def all_edge_indices(self):
+        return sorted(self.edge_indices() + self.potential_edge_indices())
+
+    def set_tail(self,
+                 fixed_pos: Point2D = None,
+                 anchor_note_id: str = None,
+                 anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+        if fixed_pos and anchor_note_id:
+            # The fixed pos is almost always propagated
+            # but if there's an anchor note - it takes precedence
+            fixed_pos = None
+
+        if fixed_pos and anchor_type != ArrowAnchorType.FIXED:
+            raise Exception
+
+        self.tail_point = fixed_pos
+        self.tail_note_id = anchor_note_id
+        self.tail_anchor_type = anchor_type
+
+    def set_head(self,
+                 fixed_pos: Point2D = None,
+                 anchor_note_id: str = None,
+                 anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+        if fixed_pos and anchor_note_id:
+            # The fixed pos is almost always propagated
+            # but if there's an anchor note - it takes precedence
+            fixed_pos = None
+
+        if fixed_pos and anchor_type != ArrowAnchorType.FIXED:
+            raise Exception
+
+        self.head_point = fixed_pos
+        self.head_note_id = anchor_note_id
+        self.head_anchor_type = anchor_type
