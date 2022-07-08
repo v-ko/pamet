@@ -83,3 +83,10 @@ def start_arrow_creation():
     tab, page_view = current_tab_and_page_views()
 
     map_page_actions.start_arrow_creation(page_view.state())
+
+
+@command(title='Autosize selected notes')
+def autosize_selected_notes():
+    tab, page_view = current_tab_and_page_views()
+
+    page_view.autosize_selected_notes()

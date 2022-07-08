@@ -40,9 +40,15 @@ class Rectangle:
     def size(self) -> Point2D:
         return Point2D(self._w, self._h)
 
-    def set_size(self, width, height):
+    def set_size(self, width: float, height: float):
         self._w = width
         self._h = height
+
+    def set_width(self, new_width: float):
+        self._w = new_width
+
+    def set_height(self, new_height: float):
+        self._h = new_height
 
     def move_top_left(self, point: Point2D):
         self._x = point.x()

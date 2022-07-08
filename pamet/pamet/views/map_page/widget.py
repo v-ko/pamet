@@ -30,6 +30,7 @@ from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
 from misli.entity_library.change import Change
 from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.text.widget import TextNoteViewState, TextNoteWidget
 
 log = misli.get_logger(__name__)
 
@@ -111,12 +112,13 @@ class MapPageWidget(QWidget, MapPageView):
                 self.state(), background_color=[0, 0, 0, 0]))
         select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_A), self)
         select_all_shortcut.activated.connect(
-            lambda: actions.map_page.select_all_notes(self.id))
+            lambda: actions.map_page.select_all_notes(self.state()))
         QShortcut(QKeySequence(Qt.Key_E), self, commands.edit_selected_notes)
         QShortcut(QKeySequence(Qt.CTRL + Qt.Key_E), self,
                   commands.open_page_properties)
         QShortcut(QKeySequence(Qt.Key_L), self, commands.start_arrow_creation)
         QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shortcut)
+        QShortcut(QKeySequence(Qt.Key_A), self, self.autosize_selected_notes)
 
         # Widget config
         pal = self.palette()
@@ -803,3 +805,25 @@ class MapPageWidget(QWidget, MapPageView):
     def handle_esc_shortcut(self):
         if self.state().mode() != MapPageMode.NONE:
             map_page_actions.abort_special_mode(self.state())
+
+    def autosize_selected_notes(self):
+        state = self.state()
+        changed_notes = []
+        for child_id in state.selected_child_ids:
+            note_vs = misli.gui.view_state(child_id)
+            if not isinstance(note_vs, TextNoteViewState):
+                continue
+            note_widget: TextNoteWidget = self.note_widget(child_id)
+
+            old_size = note_vs.rect().size()
+            new_size = note_widget.minimal_nonelided_size()
+            if new_size == old_size:
+                continue
+
+            note = note_vs.get_note()
+            rect = note.rect()
+            rect.set_size(*new_size.as_tuple())
+            note.set_rect(rect)
+            changed_notes.append(note)
+
+        map_page_actions.apply_autosize_changes(changed_notes)

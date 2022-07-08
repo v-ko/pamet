@@ -14,14 +14,20 @@ def shift_is_pressed():
     return QGuiApplication.queryKeyboardModifiers() & Qt.ShiftModifier
 
 
-def elide_text(text, rect, font) -> List[Tuple[str, QRectF]]:
+class TextLayout:
+    def __init__(self):
+        self.data = []
+        self.is_elided = False
+
+    def text(self):
+        return '\n'.join([text for text, line in self.data])
+
+
+def elide_text(text, text_rect, font) -> TextLayout:
     font_metrics = QFontMetrics(font)
 
     # Get the needed parameters
     line_spacing = NO_SCALE_LINE_SPACING
-    size = QSizeF(rect.size())
-    size -= QSizeF(2 * NOTE_MARGIN, 2 * NOTE_MARGIN)
-    text_rect = QRectF(QPointF(NOTE_MARGIN, NOTE_MARGIN), size)
 
     # Get the y coordinates of the lines
     line_vpositions = []
@@ -41,14 +47,16 @@ def elide_text(text, rect, font) -> List[Tuple[str, QRectF]]:
         eol_word_indices.append(len(words) - 1)
 
     # Start filling the available lines one by one
-    elided_text = []
+    text_layout = TextLayout()
+    ellide_line_end = False
     word_reached_idx = 0
+    ellipsis_width = font_metrics.boundingRect('...').width()
 
     for line_idx, line_y in enumerate(line_vpositions):
         words_left = words[word_reached_idx:]
 
         # Find the coordinates and dimentions of the line
-        line_rect = QRectF(text_rect)
+        line_rect = QRectF(*text_rect.as_tuple())
         line_rect.moveTop(line_y)
         line_rect.setHeight(line_spacing)
 
@@ -57,44 +65,47 @@ def elide_text(text, rect, font) -> List[Tuple[str, QRectF]]:
         width_left = text_rect.width()
         used_words = 0
 
-        for word_idx, word in enumerate(words_left):
+        for word_idx_on_line, word in enumerate(words_left):
             # Add a leading space except before the first word
-            if word_idx != 0:
+            if word_idx_on_line != 0:
                 word = ' ' + word
+
+            at_the_last_line = line_idx == (len(line_vpositions) - 1)
+            at_last_word = word_idx_on_line == (len(words_left) - 1)
 
             # Get the dimentions of the word if drawn
             word_bbox = font_metrics.boundingRect(word)
 
-            # if there's not enough space for the next word
-            if width_left < word_bbox.width():
-                at_the_last_line = line_idx == (len(line_vpositions) - 1)
-
-                # Elide if the word that's longer than the line (no wrap)
-                # and elide if we're past the end of the last line
-                if at_the_last_line or word_idx == 0:
-                    word = font_metrics.elidedText(
-                        word, Qt.ElideRight, width_left)
-                    # log.info('ELIDED WORD: %s' % word)
-
-                    words_on_line.append(word)
-                    used_words += 1
-                    break
-
-                # If there's more lines available - go to the next
-                else:
-                    break
-
-            # If there's still space on this line
-            else:
+            # There's enough space on the line for the next word
+            if width_left >= word_bbox.width():
                 width_left -= word_bbox.width()
                 words_on_line.append(word)
                 used_words += 1
 
-            if width_left <= 0:  # Just for the case where w == 0 I guess
+            else:  # There's not enough space for the next word
+
+                # If there's no room to add an elided word - ellide the
+                # previous
+                if at_the_last_line and width_left < ellipsis_width:
+                    # words_on_line[-1] = words_on_line[-1]
+                    ellide_line_end = True
+
+                # Elide if we're past the end of the last line
+                # or if it's the first word on the line and it's just too long
+                if at_the_last_line or word_idx_on_line == 0:
+                    word = font_metrics.elidedText(
+                        word, Qt.ElideRight, width_left)
+                    text_layout.is_elided = True
+                    words_on_line.append(word)
+                    used_words += 1
+
+                # Done with this line - break and start the next if any
                 break
 
             # Check if we're on EoL (because of a line break in the text)
-            if (word_reached_idx + word_idx) in eol_word_indices:
+            if (word_reached_idx + word_idx_on_line) in eol_word_indices:
+                if at_the_last_line and not at_last_word:
+                    ellide_line_end = True
                 break
 
         if not words_on_line:
@@ -102,22 +113,31 @@ def elide_text(text, rect, font) -> List[Tuple[str, QRectF]]:
 
         word_reached_idx += used_words
         line_text = ''.join(words_on_line)
-        elided_text.append((line_text, line_rect))
 
-    return elided_text
+        if ellide_line_end:
+            text_layout.is_elided = True
+            if len(line_text) >= 3:
+                line_text = line_text[:-3] + '...'
+            else:
+                line_text = '...'
+
+        text_layout.data.append((line_text, line_rect))
+    pass
+    return text_layout
 
 
 def draw_text_lines(
         painter: QPainter,
         text_layout: List[Tuple[str, QRectF]],
         alignment: Qt.AlignmentFlag,
-        draw_rect: QRect):
-
+        text_rect: QRect):
+    if not text_layout:
+        return
     # Qt configures the fonts with a lot of ascent
     # which makes them appear not properly centered
     hacky_padding = 8
 
-    text_rect_height = draw_rect.height() - 2 * NOTE_MARGIN
+    text_rect_height = text_rect.height()
     first_rect = text_layout[0][1]
     last_rect = text_layout[-1][1]
     text_height = last_rect.bottom() - first_rect.top()

@@ -2,7 +2,7 @@ from copy import copy
 from typing import List, Tuple, Union
 
 import math
-from PySide6.QtCore import QObject, QPointF, QRectF, QSizeF, Qt
+from PySide6.QtCore import QObject, QPointF, QRectF
 from PySide6.QtGui import QColor, QPainter, QPainterPath
 from misli.basic_classes.point2d import Point2D
 from misli.basic_classes.rectangle import Rectangle

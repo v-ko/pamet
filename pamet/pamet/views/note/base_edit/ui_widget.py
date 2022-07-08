@@ -37,6 +37,17 @@ class Ui_BaseNoteEditWidget(object):
         self.toolbarLayout = QHBoxLayout()
         self.toolbarLayout.setObjectName(u"toolbarLayout")
         self.toolbarLayout.setContentsMargins(6, 6, 6, 6)
+        self.devButton = QPushButton(BaseNoteEditWidget)
+        self.devButton.setObjectName(u"devButton")
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.devButton.sizePolicy().hasHeightForWidth())
+        self.devButton.setSizePolicy(sizePolicy)
+        self.devButton.setMinimumSize(QSize(0, 0))
+
+        self.toolbarLayout.addWidget(self.devButton)
+
 
         self.topLayout.addLayout(self.toolbarLayout)
 
@@ -49,11 +60,11 @@ class Ui_BaseNoteEditWidget(object):
 
         self.centralAreaWidget = QWidget(BaseNoteEditWidget)
         self.centralAreaWidget.setObjectName(u"centralAreaWidget")
-        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.centralAreaWidget.sizePolicy().hasHeightForWidth())
-        self.centralAreaWidget.setSizePolicy(sizePolicy)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.MinimumExpanding)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.centralAreaWidget.sizePolicy().hasHeightForWidth())
+        self.centralAreaWidget.setSizePolicy(sizePolicy1)
         self.verticalLayout_3 = QVBoxLayout(self.centralAreaWidget)
         self.verticalLayout_3.setSpacing(6)
         self.verticalLayout_3.setObjectName(u"verticalLayout_3")
@@ -99,6 +110,7 @@ class Ui_BaseNoteEditWidget(object):
 
     def retranslateUi(self, BaseNoteEditWidget):
         BaseNoteEditWidget.setWindowTitle(QCoreApplication.translate("BaseNoteEditWidget", u"BaseNoteEditWidget", None))
+        self.devButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"dev", None))
         self.pushButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Cancel (Esc)", None))
         self.saveButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Save (ctrl+s)", None))
 #if QT_CONFIG(shortcut)

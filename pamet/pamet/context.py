@@ -14,7 +14,6 @@ def editing_note():
 
 def page_focus():
     focused_view = misli.gui.focused_view()
-    print('IN PAGE FOCUS', focused_view)
     return isinstance(focused_view, map_page.view.MapPageView)
 
 

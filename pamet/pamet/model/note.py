@@ -33,7 +33,7 @@ class Note(Entity):
     type_name: str = ''
 
     def __repr__(self):
-        return '<Note id=%s>' % self.id
+        return f'<{type(self).__name__} id={self.id}>'
 
     def __post_init__(self):
         self.type_name = type(self).__name__

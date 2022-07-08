@@ -79,7 +79,7 @@ def _apply_dataclass_and_process_properties(entity_class):
     return entity_class
 
 
-def entity_type(entity_class: Any):
+def entity_type(entity_class: Any, repr: bool = False):
     """A class decorator to register entities in the entity library for the
     purposes of serialization and deserialization. It applies the dataclass
     decorator.
@@ -114,7 +114,7 @@ def entity_type(entity_class: Any):
     """
     # entity_class = _apply_dataclass_and_process_properties(entity_class)
 
-    entity_class = dataclass(entity_class)
+    entity_class = dataclass(entity_class, repr=repr)
 
     # Register the entity class
     entity_class_name = entity_class.__name__

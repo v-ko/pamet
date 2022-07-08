@@ -11,10 +11,16 @@ from misli.basic_classes import Rectangle, Point2D
 from misli.gui.utils.base_provider import BaseUtilitiesProvider
 
 
+# class FontMetrics:
+
+
 class QtWidgetsUtilProvider(BaseUtilitiesProvider):
     def __init__(self):
         super().__init__()
         self._shortcuts = {}
+
+    # def font_metrics(self, font):
+
 
     def add_key_binding(self, view, key_binding):
         shortcut = QShortcut(QKeySequence(key_binding.key), view)

@@ -293,7 +293,6 @@ class MapPageView(View):
 
         elif mode == MapPageMode.NOTE_MOVE:
             pos_delta = mouse_pos - self._mouse_position_on_left_press
-            print(f'{self._mouse_position_on_left_press=}')
             pos_delta /= state.height_scale_factor()
             map_page_actions.moved_child_view_update(state, pos_delta)
 

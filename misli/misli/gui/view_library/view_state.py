@@ -8,7 +8,7 @@ from misli import gui
 
 
 def view_state_type(view_state_class: Any):
-    return entity_type(view_state_class)
+    return entity_type(view_state_class, repr=False)
 
 
 @view_state_type
@@ -23,3 +23,6 @@ class ViewState(Entity):
             # return
 
         Entity.__setattr__(self, attr_name, value)
+
+    def __repr__(self) -> str:
+        return f'{type(self).__name__} id={self.id}'

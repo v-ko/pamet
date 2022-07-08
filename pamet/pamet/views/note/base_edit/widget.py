@@ -1,7 +1,8 @@
 from __future__ import annotations
+import json
 from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QShortcut, QKeySequence
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QMessageBox, QWidget
 
 import misli.entity_library
 from pamet.model.note import Note
@@ -32,6 +33,8 @@ class BaseNoteEditWidget(QWidget):
         esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
         self.ui.saveButton.clicked.connect(self._handle_ok_click)
         esc_shortcut.activated.connect(self._handle_esc_shortcut)
+
+        self.ui.devButton.clicked.connect(self._handle_dev_button_click)
 
         page_view: MapPageWidget = parent.page_view()
         page_view_state = page_view.state()
@@ -66,3 +69,12 @@ class BaseNoteEditWidget(QWidget):
         else:
             note_actions.finish_editing_note(self.parent().state(),
                                              self.edited_note)
+
+    def _handle_dev_button_click(self):
+        note = self.state().get_note()
+        QMessageBox.information(
+            self,
+            'Note info',
+            json.dumps(note.asdict(), indent=4),
+            # buttons=QMessageBox.Ok,
+        )

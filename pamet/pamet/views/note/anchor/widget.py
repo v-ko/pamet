@@ -115,9 +115,10 @@ class AnchorWidget(TextNoteWidget):
 
             if state.valid_internal_link:
                 self._elided_text_layout = elide_text(
-                    state.cached_link_page_name, self.rect(), self.font())
+                    state.cached_link_page_name, self.text_rect(), self.font())
             else:
-                self._elided_text_layout = elide_text(state.text, self.rect(),
+                self._elided_text_layout = elide_text(state.text,
+                                                      self.text_rect(),
                                                       self.font())
 
         if change.updated.cached_link_page_name:
@@ -139,9 +140,8 @@ class AnchorWidget(TextNoteWidget):
         painter = QPainter()
         painter.begin(self)
 
-        if self._elided_text_layout:
-            draw_text_lines(painter, self._elided_text_layout, self._alignment,
-                            self.rect())
+        draw_text_lines(painter, self._elided_text_layout.data,
+                        self._alignment, self.rect())
 
         state: AnchorViewState = self.state()
 

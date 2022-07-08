@@ -410,7 +410,6 @@ class FSStorageRepository(Repository):
             note_states = page_state.pop('note_states', [])
             notes = []
             for nid, ns in note_states.items():
-                print('dsa')
                 # ns['type_name'] = 'TextNote'
                 type_name = pamet.note_type_from_props(ns).__name__
                 notes.append(entity_library.from_dict(type_name, ns))

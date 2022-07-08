@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import fields
+from typing import List
 
 import misli
 from misli import gui
@@ -295,11 +296,9 @@ def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
 
 
 @action('map_page.select_all_notes')
-def select_all_notes(map_page_view_id):
-    map_page_view_state = gui.view_state(map_page_view_id)
-
-    for nc in gui.view_children(map_page_view_id):
-        map_page_view_state.selected_child_ids.add(nc.id)
+def select_all_notes(map_page_view_state: MapPageViewState):
+    for note_vs in map_page_view_state.note_view_states:
+        map_page_view_state.selected_child_ids.add(note_vs.id)
 
     gui.update_state(map_page_view_state)
 
@@ -379,12 +378,6 @@ def delete_page(tab_view_state, page):
     next_page = pamet.helpers.get_default_page()
     if not next_page:
         raise NotImplementedError
-        # misli.gui.create_view(
-        #     parentdsdid=tab_view_state,
-        #     view_class_metadata_filter=dict(name='MessageBox'),
-        #     init_kwargs=dict(title='Info',
-        #                      text=('You deleted the last page. '
-        #                            'A blank one has been created for you')))
         next_page = pamet.actions.other.create_default_page()
     tab_actions.tab_go_to_page(tab_view_state, next_page)
 
@@ -650,3 +643,10 @@ def delete_arrow_edge(arrow_view_state: ArrowViewState, edge_index: float):
     mid_points.pop(edge_index - 1)
     arrow.replace_midpoints(mid_points)
     pamet.update_arrow(arrow)
+
+
+@action('map_page.apply_autosize_changes')
+def apply_autosize_changes(notes: List[Note]):
+    for note in notes:
+        pamet.update_note(note)
+
