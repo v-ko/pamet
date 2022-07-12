@@ -66,8 +66,7 @@ class MapPageViewState(ViewState, Viewport):
         return (f'<MapPageViewState page_id={self.page_id}'
                 f' {len(self.note_view_states)=}>')
 
-    @property
-    def page(self):
+    def get_page(self):
         return pamet.page(gid=self.page_id)
 
     def mode(self):

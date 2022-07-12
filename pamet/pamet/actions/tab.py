@@ -100,7 +100,6 @@ def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
 @action('tab.close_right_sidebar')
 def close_right_sidebar(tab_state: TabViewState):
     # TODO: if tab_state.right_sidebar_state and unsaved shit: push notification
-    tab_state.right_sidebar_visible = False
     tab_state.right_sidebar_state = None
     misli.gui.update_state(tab_state)
 

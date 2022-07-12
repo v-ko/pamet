@@ -117,8 +117,13 @@ class MapPageWidget(QWidget, MapPageView):
         QShortcut(QKeySequence(Qt.CTRL + Qt.Key_E), self,
                   commands.open_page_properties)
         QShortcut(QKeySequence(Qt.Key_L), self, commands.start_arrow_creation)
-        QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shortcut)
+        # QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shortcut,
+        #           Qt.WidgetShortcut)
         QShortcut(QKeySequence(Qt.Key_A), self, self.autosize_selected_notes)
+        QShortcut(QKeySequence('ctrl+Z'), self,
+                  lambda: map_page_actions.undo(self.state()))
+        QShortcut(QKeySequence('ctrl+shift+Z'), self,
+                  lambda: map_page_actions.redo(self.state()))
 
         # Widget config
         pal = self.palette()
@@ -138,11 +143,11 @@ class MapPageWidget(QWidget, MapPageView):
         # Subscribe to the page changes
         self.subscriptions.append(
             pamet.channels.entity_changes_by_id.subscribe(
-                self.handle_page_change, index_val=self.state().page.id))
+                self.handle_page_change, index_val=self.state().page_id))
         # Subscribe to note changes
         self.subscriptions.append(
             pamet.channels.entity_changes_by_parent_gid.subscribe(
-                self.handle_page_child_change, index_val=self.state().page.id))
+                self.handle_page_child_change, index_val=self.state().page_id))
 
         self.destroyed.connect(lambda: self.unsubscribe_all())
 
@@ -213,7 +218,7 @@ class MapPageWidget(QWidget, MapPageView):
         self._arrow_widgets[av_state.id] = arrow_widget
 
         subscription = misli.gui.channels.state_changes_by_id.subscribe(
-            lambda change: self.handle_child_state_update(change),
+            lambda change: self.handle_child_view_state_update(change),
             index_val=av_state.id)
         self.arrow_view_state_subs_by_state_id[av_state.id] = subscription
 
@@ -230,14 +235,31 @@ class MapPageWidget(QWidget, MapPageView):
         self._note_widgets[nv_state.id] = note_widget
 
         subscription = misli.gui.channels.state_changes_by_id.subscribe(
-            lambda change: self.handle_child_state_update(change),
+            lambda change: self.handle_child_view_state_update(change),
             index_val=note_widget.id)
         self.nw_subscribtions[note_widget] = subscription
         # misli.call_delayed(self.on_child_updated, 0, args=[note_widget])
+        self.update()
 
-    def handle_child_state_update(self, change: Change):
+    def remove_note_widget(self, note_widget):
+        nw_state_id = note_widget.id
+        self.delete_note_view_cache(nw_state_id)
+        subscription = self.nw_subscribtions.pop(note_widget)
+        subscription.unsubscribe()
+        note_widget = self._note_widgets.pop(nw_state_id)
+        note_widget.deleteLater()
+        self.update()
+
+    def handle_child_view_state_update(self, change: Change):
+        entity = change.last_state()
         if change.is_update():
-            entity = change.last_state()
+            if isinstance(entity, NoteViewState):
+                note_widget = self.note_widget_by_note_gid(entity.gid())
+                self.on_child_updated(note_widget.state())
+            else:  # If it's an arrow
+                self.update()
+
+        elif change.is_create():
             if isinstance(entity, NoteViewState):
                 note_widget = self.note_widget_by_note_gid(entity.gid())
                 self.on_child_updated(note_widget.state())
@@ -250,15 +272,6 @@ class MapPageWidget(QWidget, MapPageView):
         nv_cache.should_rerender_image_cache = True
         nv_cache.should_reallocate_image_cache = True
         self.update()
-
-    def remove_note_widget(self, note_widget):
-        nw_state_id = note_widget.id
-        self.delete_note_view_cache(nw_state_id)
-        subscription = self.nw_subscribtions.pop(note_widget)
-        subscription.unsubscribe()
-        note_widget = self._note_widgets.pop(nw_state_id)
-        note_widget.deleteLater()
-        # self.update()
 
     def handle_page_child_change(self, change: Change):
         state = self.state()
@@ -827,3 +840,6 @@ class MapPageWidget(QWidget, MapPageView):
             changed_notes.append(note)
 
         map_page_actions.apply_autosize_changes(changed_notes)
+
+    def update_undo_redo_buttons_enabled(self):
+        pass

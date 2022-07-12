@@ -170,3 +170,11 @@ class Change:
             return self.old_state
 
         return self.new_state
+
+    def reversed(self) -> Change:
+        if self.is_create():
+            return Change.DELETE(self.new_state)
+        elif self.is_delete():
+            return Change.CREATE(self.old_state)
+        elif self.is_update:
+            return Change.UPDATE(self.new_state, self.old_state)

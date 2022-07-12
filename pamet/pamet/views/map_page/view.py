@@ -4,6 +4,7 @@ from typing import Generator, List, Union
 import misli
 from misli.basic_classes import Point2D, Rectangle
 from misli.gui.view_library.view import View
+import pamet
 
 from pamet.constants import ARROW_EDGE_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELECTION_RADIUS
 from pamet.desktop_app.helpers import control_is_pressed, shift_is_pressed
@@ -349,3 +350,11 @@ class MapPageView(View):
 
     def handle_resize_event(self, width, height):
         map_page_actions.resize_page(self.id, width, height)
+
+    def undo(self):
+        page = self.state().get_page()
+        pamet.undo_history.back_one_step(page.id)
+
+    def redo(self):
+        page = self.state().get_page()
+        pamet.undo_history.forward_one_step(page.id)

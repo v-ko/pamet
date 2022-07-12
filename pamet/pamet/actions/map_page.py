@@ -344,7 +344,7 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
     page_view_state = tab_state.page_view_state
 
     properties_view_state = MapPagePropertiesViewState(
-        page_id=page_view_state.page.id)
+        page_id=page_view_state.page_id)
 
     misli.gui.add_state(properties_view_state)
 
@@ -353,8 +353,6 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
         misli.gui.update_state(properties_view_state)
 
     tab_state.right_sidebar_state = properties_view_state
-    tab_state.right_sidebar_visible = True
-    tab_state.page_properties_open = True
 
     misli.gui.update_state(tab_state)
 
@@ -362,14 +360,6 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
 @action('map_page.save_page_properties')
 def save_page_properties(page: Page):
     pamet.update_page(page)
-
-
-# @action('map_page.close_page_properties')
-# def close_page_properties(tab_state: TabViewState):
-#     tab_state.right_sidebar_visible = False
-#     tab_state.right_sidebar_view_id = None
-
-#     misli.gui.update_state(tab_state)
 
 
 @action('map_page.delete_page')
@@ -650,3 +640,14 @@ def apply_autosize_changes(notes: List[Note]):
     for note in notes:
         pamet.update_note(note)
 
+
+@action('map_page.undo')
+def undo(map_page_view_state: MapPageViewState):
+    page = map_page_view_state.get_page()
+    pamet.undo_history.back_one_step(page.id)
+
+
+@action('map_page.redo')
+def redo(map_page_view_state: MapPageViewState):
+    page = map_page_view_state.get_page()
+    pamet.undo_history.forward_one_step(page.id)

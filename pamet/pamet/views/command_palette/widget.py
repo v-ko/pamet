@@ -34,11 +34,7 @@ class CommandPaletteWidget(QWidget, View):
 
         self.ui.suggestionsListWidget.itemActivated.connect(
             self._handle_item_activated)
-
-        # Close on Esc shortcut
-        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
-        esc_shortcut.activated.connect(
-            lambda: window_actions.close_command_view(self.parent().state()))
+        # # Close on Esc shortcut - moved to the Window.handle_esc_shortcut
 
         # Do the initial reuslts display
         self._handle_text_change(initial_state.line_edit_text)

@@ -1,4 +1,5 @@
 from dataclasses import field
+from PySide6.QtCore import Qt
 
 from PySide6.QtWidgets import QMainWindow, QPushButton, QWidget
 from PySide6.QtGui import QIcon, QKeySequence, QResizeEvent, QShortcut
@@ -13,6 +14,8 @@ from pamet.views.command_palette.widget import CommandPaletteViewState
 from pamet.views.command_palette.widget import CommandPaletteWidget
 from pamet.views.window.corner_widget.widget import CornerWidget
 from pamet.views.window.ui_widget import Ui_BrowserWindow
+from pamet.actions import window as window_actions
+from pamet.actions import tab as tab_actions
 
 from misli.gui import ViewState, view_state_type
 
@@ -55,10 +58,9 @@ class WindowWidget(QMainWindow, View):
 
         self.ui.tabBarWidget.currentChanged.connect(self.handle_tab_changed)
 
-        open_command_palette_shortcut = QShortcut(QKeySequence('ctrl+shift+P'),
-                                                  self)
-        open_command_palette_shortcut.activated.connect(
-            commands.open_command_palette)
+        QShortcut(QKeySequence('ctrl+shift+P'), self,
+                  commands.open_command_palette)
+        QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shorcut)
 
         go_to_file_shortcut = QShortcut(QKeySequence('ctrl+P'), self)
         go_to_file_shortcut.activated.connect(
@@ -135,3 +137,29 @@ class WindowWidget(QMainWindow, View):
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         self._update_command_widget_geometry()
+
+    def handle_esc_shorcut(self):
+        # We're handling the escape shortcut actions here, since the shortcut
+        # context management in Qt doesn't allow overloading (or there's a bug)
+
+        state = self.state()
+        # Close the command palette if open
+        if state.command_view_state:
+            window_actions.close_command_view(state)
+
+
+        # Propagate to the map page if there's one
+        current_tab = self.current_tab()
+        if not current_tab:
+            return
+
+        tab_state = current_tab.state()
+        # Close sidebars if open
+        if tab_state.right_sidebar_open:
+            tab_actions.close_right_sidebar(tab_state)
+
+        map_page = current_tab.page_view()
+        if not map_page:
+            return
+
+        map_page.handle_esc_shortcut()

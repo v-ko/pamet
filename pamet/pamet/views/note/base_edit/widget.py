@@ -29,10 +29,8 @@ class BaseNoteEditWidget(QWidget):
         self.ui = Ui_BaseNoteEditWidget()
         self.ui.setupUi(self)
 
-        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
+        QShortcut(QKeySequence(Qt.Key_Escape), self, self._handle_esc_shortcut)
         self.ui.saveButton.clicked.connect(self._handle_ok_click)
-        esc_shortcut.activated.connect(self._handle_esc_shortcut)
-
         self.ui.devButton.clicked.connect(self._handle_dev_button_click)
 
         page_view: MapPageWidget = parent.page_view()

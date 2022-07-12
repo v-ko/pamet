@@ -32,9 +32,8 @@ class TabViewState(ViewState):
     page_view_state: MapPageViewState = field(default=None)
     edit_view_state: ViewState = None
     creating_note: Note = None
+
     right_sidebar_state: ViewState = None
-    right_sidebar_visible: bool = False
-    page_properties_open: bool = False
 
     navigation_history: List[str] = field(default_factory=list)
     current_nav_index: int = None
@@ -51,6 +50,10 @@ class TabViewState(ViewState):
 
         self.previous_nav_index = self.current_nav_index
         self.current_nav_index = new_index
+
+    @property
+    def right_sidebar_open(self):
+        return bool(self.right_sidebar_state)
 
 
 # @register_view_type
@@ -117,8 +120,8 @@ class TabWidget(QWidget, View):
                 self._right_sidebar_widget = new_widget
                 self.ui.rightSidebarContainer.layout().addWidget(new_widget)
 
-        if change.updated.right_sidebar_visible:
-            if state.right_sidebar_visible:
+        if change.updated.right_sidebar_open:
+            if state.right_sidebar_open:
                 self.ui.rightSidebarContainer.show()
                 self.ui.rightSidebarContainer.raise_()
             else:

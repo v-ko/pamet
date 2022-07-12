@@ -13,6 +13,7 @@ from pamet import channels
 from misli import entity_library
 from misli import get_logger
 from pamet.model.arrow import Arrow
+from pamet.services.undo import UndoService
 # from pamet.persistence_manager import PersistenceManager
 
 from .note import Note
@@ -29,6 +30,8 @@ entity_change_aggregator = ChangeAggregator(
     input_channel=raw_entity_changes,
     release_trigger_channel=misli.gui.channels.completed_root_actions,
     changeset_output_channel=channels.entity_change_sets_per_TLA)
+
+undo_history = UndoService(channels.entity_change_sets_per_TLA)
 
 
 # Chain the entity changes channels
@@ -167,4 +170,18 @@ def update_arrow(arrow_: Arrow):
 
 def remove_arrow(arrow_: Arrow):
     change = _sync_repo.remove_one(arrow_)
+    raw_entity_changes.push(change)
+
+
+# ------------For changes--------------
+def apply_change(change: Change):
+    last_state = change.last_state()
+
+    if change.is_create():
+        _sync_repo.insert_one(last_state)
+    elif change.is_update():
+        _sync_repo.update_one(last_state)
+    elif change.is_delete():
+        _sync_repo.remove_one(last_state)
+
     raw_entity_changes.push(change)

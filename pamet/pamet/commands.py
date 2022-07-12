@@ -90,3 +90,17 @@ def autosize_selected_notes():
     tab, page_view = current_tab_and_page_views()
 
     page_view.autosize_selected_notes()
+
+
+@command(title='Undo last action')
+def undo():
+    tab, page_view = current_tab_and_page_views()
+
+    map_page_actions.undo(page_view.state())
+
+
+@command(title='Redo last undo')
+def redo():
+    tab, page_view = current_tab_and_page_views()
+
+    map_page_actions.redo(page_view.state())

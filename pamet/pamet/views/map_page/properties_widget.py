@@ -38,11 +38,9 @@ class MapPagePropertiesWidget(QWidget, View):
         self.name_warning_label.setStyleSheet(
             'QLabel {color : red; font-size: 8pt;}')
 
-        esc_shortcut = QShortcut(QKeySequence(Qt.Key_Escape), self)
-        esc_shortcut.activated.connect(
-            lambda: actions.tab.close_right_sidebar(self.tab_widget.state()))
         self.save_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S), self)
         self.save_shortcut.activated.connect(self._save_page)
+        # Esc shortcut handling moved to the Window esc handler
 
         # binding = first_key_binding_for_command(save_page_properties)
         # self.save_button = QPushButton(f'Save ({binding.key})')
