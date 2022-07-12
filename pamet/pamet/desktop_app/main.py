@@ -48,7 +48,7 @@ def main():
 
     desktop_app = DesktopApp()
 
-    start_page = pamet.helpers.get_default_page()
+    start_page = pamet.helpers.get_default_page() or pamet.page()
     if not start_page:
         start_page = other_actions.create_default_page()
 

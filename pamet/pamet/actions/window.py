@@ -26,7 +26,7 @@ def new_browser_tab(window_state: window_widget.WindowViewState, page: str):
     window_state.tab_states.append(tab_state)
     misli.gui.update_state(window_state)
 
-    tab_actions.tab_go_to_page(tab_state, page)
+    tab_actions.go_to_url(tab_state, page.url())
 
 
 @action('window.open_command_view')

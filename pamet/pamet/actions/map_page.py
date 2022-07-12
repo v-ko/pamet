@@ -375,11 +375,11 @@ def save_page_properties(page: Page):
 @action('map_page.delete_page')
 def delete_page(tab_view_state, page):
     pamet.remove_page(page)
-    next_page = pamet.helpers.get_default_page()
+    next_page = pamet.helpers.get_default_page() or pamet.page()
     if not next_page:
         raise NotImplementedError
         next_page = pamet.actions.other.create_default_page()
-    tab_actions.tab_go_to_page(tab_view_state, next_page)
+    tab_actions.go_to_url(tab_view_state, next_page.url())
 
 
 @action('map_page.switch_note_type')
@@ -624,7 +624,7 @@ def finish_arrow_edge_drag(
         arrow.replace_midpoints(mid_points)
 
     else:  # .5 indices, so a potential edge, that we must create
-        raise Exception
+        return
 
     pamet.update_arrow(arrow)
     map_page_view_state.clear_mode()

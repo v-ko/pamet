@@ -1,8 +1,14 @@
+from __future__ import annotations
+from pathlib import Path
+
 from typing import List, Union
+from urllib.parse import ParseResult, urlparse
 from misli.basic_classes.point2d import Point2D
+from misli.logging import get_logger
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT
 # from pamet.desktop_app.config import get_config
+log = get_logger(__name__)
 
 
 def snap_to_grid(x: Union[float, Point2D]) -> Union[float, Point2D]:
@@ -26,10 +32,44 @@ def get_default_page():
     # if 'home_page_id' in desktop_config:
     #     raise NotImplementedError()  # TODO: Load from id/url
 
-    pages = list(pamet.pages())
-    if not pages:
-        return None
-    else:
-        page = pages[0]
+    return None
 
-    return page
+
+class Url:
+    def __init__(self, url: str):
+        self._url = url
+        self._parsed_url = urlparse(url)
+
+    def is_internal(self):
+        return self._parsed_url.scheme == 'pamet'
+
+    def is_external(self):
+        self._parsed_url.scheme in ['http', 'https', '']
+
+    def is_custom_uri(self):
+        return self._parsed_url.scheme not in ['pamet', 'http', 'https', '']
+
+    def get_page(self):
+        if self.is_internal():
+            path = Path(self._parsed_url.path)
+
+            if not path.parent != 'p':
+                log.warning('Invalid url')
+                return None
+
+            return pamet.page(id=path.name)
+        else:
+            # A search for imported public/shared pages should be done here
+            return None
+
+    @property
+    def hostname(self) -> Url:
+        return self._parsed_url.hostname
+
+    @property
+    def netloc(self) -> Url:
+        return self._parsed_url.netloc
+
+    @property
+    def path(self) -> Url:
+        return self._parsed_url.path

@@ -5,7 +5,6 @@ from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 import misli.entity_library
-from pamet.model.note import Note
 from pamet.actions import note as note_actions
 from pamet.views.note.base_edit.view_state import NoteEditViewState
 

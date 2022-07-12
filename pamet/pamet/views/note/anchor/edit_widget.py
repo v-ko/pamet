@@ -7,6 +7,7 @@ from pamet.desktop_app import trash_icon, link_icon
 from misli.gui.view_library.view import View
 from pamet import register_note_view_type
 import pamet
+from pamet.helpers import Url
 from pamet.model.anchor_note import AnchorNote
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
@@ -80,7 +81,8 @@ class AnchorEditWidget(BaseNoteEditWidget, View):
         self.edited_note.url = url_field
 
         # If there's no scheme it's probably an internal page (or a web link)
-        if not self.edited_note.parsed_url.scheme:
+        url = Url(url_field)
+        if not url.scheme:
             # We check if it happens to be the name of a note page
             page_by_name = None
             for page in pamet.pages():
@@ -91,7 +93,7 @@ class AnchorEditWidget(BaseNoteEditWidget, View):
             # If there's a page with that name setup the url accordingly
             if page_by_name:
                 self.decorate_for_internal_url(True)
-                self.edited_note.url = f'pamet:///p/{page_by_name.id}'
+                self.edited_note.url = page_by_name.url()
                 self.props_widget.ui.text_edit.setText(page.name)
             # Else assume it's a web link without a schema
             else:

@@ -81,8 +81,8 @@ class AnchorWidget(TextNoteWidget):
         # If there's a linked page - go to it
         elif state.is_internal_link():
             if state.valid_internal_link:
-                tab_actions.tab_go_to_page(self.parent().tab_widget.state(),
-                                           state.linked_page())
+                tab_actions.go_to_url(self.parent().tab_widget.state(),
+                                      state.linked_page().url())
             else:
                 super().left_mouse_double_click_event(position)
         # IMPLEMENT opening no schema urls (non-page names) and http/https
@@ -115,10 +115,11 @@ class AnchorWidget(TextNoteWidget):
 
             if state.valid_internal_link:
                 self._elided_text_layout = elide_text(
-                    state.cached_link_page_name, self.text_rect(), self.font())
+                    state.cached_link_page_name, state.text_rect(),
+                    self.font())
             else:
                 self._elided_text_layout = elide_text(state.text,
-                                                      self.text_rect(),
+                                                      state.text_rect(),
                                                       self.font())
 
         if change.updated.cached_link_page_name:
@@ -139,11 +140,10 @@ class AnchorWidget(TextNoteWidget):
     def paintEvent(self, event):
         painter = QPainter()
         painter.begin(self)
+        state: AnchorViewState = self.state()
 
         draw_text_lines(painter, self._elided_text_layout.data,
-                        self._alignment, self.rect())
-
-        state: AnchorViewState = self.state()
+                        self._alignment, state.text_rect())
 
         # Draw the border
         pen = painter.pen()

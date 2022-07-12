@@ -24,3 +24,6 @@ class Page(Entity):
 
     def arrow(self, note_id: str):
         return pamet.find_one(gid=(self.gid(), note_id))
+
+    def url(self):
+        return f'pamet:///p/{self.id}'

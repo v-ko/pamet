@@ -11,6 +11,7 @@ from pamet import commands
 from pamet.views.tab.widget import TabWidget
 from pamet.views.command_palette.widget import CommandPaletteViewState
 from pamet.views.command_palette.widget import CommandPaletteWidget
+from pamet.views.window.corner_widget.widget import CornerWidget
 from pamet.views.window.ui_widget import Ui_BrowserWindow
 
 from misli.gui import ViewState, view_state_type
@@ -49,9 +50,9 @@ class WindowWidget(QMainWindow, View):
         self.command_widget: QWidget = None
 
         self.menuButton = QPushButton(QIcon.fromTheme('menu'), '')
-        self.ui.tabBarWidget.setCornerWidget(self.menuButton)
+        self.corner_widget = CornerWidget(self)
+        self.ui.tabBarWidget.setCornerWidget(self.corner_widget)
 
-        self.menuButton.clicked.connect(self.open_main_menu)
         self.ui.tabBarWidget.currentChanged.connect(self.handle_tab_changed)
 
         open_command_palette_shortcut = QShortcut(QKeySequence('ctrl+shift+P'),
@@ -64,11 +65,6 @@ class WindowWidget(QMainWindow, View):
             commands.open_command_palette_go_to_file)
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
-
-    def open_main_menu(self):
-        entries = {'Page properties': commands.open_page_properties}
-        context_menu = ContextMenuWidget(self, entries=entries)
-        context_menu.popup_on_mouse_pos()
 
     def on_state_change(self, change: Change):
         if change.updated.title:

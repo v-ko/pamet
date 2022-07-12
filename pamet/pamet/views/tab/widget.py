@@ -1,4 +1,5 @@
 from dataclasses import field
+from typing import List
 
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QWidget
@@ -35,8 +36,21 @@ class TabViewState(ViewState):
     right_sidebar_visible: bool = False
     page_properties_open: bool = False
 
+    navigation_history: List[str] = field(default_factory=list)
+    current_nav_index: int = None
+    previous_nav_index: int = None
+
     def __repr__(self) -> str:
         return (f'<TabViewState title={self.title}>')
+
+    def set_navigation_index(self, new_index: int):
+        new_index = max(0, min(len(self.navigation_history) - 1, new_index))
+
+        if new_index == self.current_nav_index:
+            return
+
+        self.previous_nav_index = self.current_nav_index
+        self.current_nav_index = new_index
 
 
 # @register_view_type

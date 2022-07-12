@@ -100,8 +100,8 @@ class CommandPaletteWidget(QWidget, View):
                                      self.parent().state(), p))
                 else:
                     item.setData(Qt.UserRole,
-                                 lambda p=page: tab_actions.tab_go_to_page(
-                                     tab.state(), p))
+                                 lambda p=page: tab_actions.go_to_url(
+                                     tab.state(), p.url()))
 
                 self.ui.suggestionsListWidget.addItem(item)
 
