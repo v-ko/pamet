@@ -29,10 +29,11 @@ www
 */web_shell/test
 
 work-log
+brython-work-log
 work-history
 docs
 
-pamet-brython/cordova_app/platforms/
-pamet-brython/cordova_app/plugins/
-pamet-brython/cordova_app/package-lock.json
-pamet-brython/cordova_app/package.json
+pamet_brython/cordova_app/platforms/
+pamet_brython/cordova_app/plugins/
+pamet_brython/cordova_app/package-lock.json
+pamet_brython/cordova_app/package.json
