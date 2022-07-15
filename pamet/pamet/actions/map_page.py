@@ -5,10 +5,9 @@ from typing import List
 import misli
 from misli import gui
 from misli.entity_library.entity import Entity
-from numpy import isin
 import pamet
 
-from misli.basic_classes import Point2D
+from misli.basic_classes import Point2D, Rectangle
 from misli.gui.actions_library import action
 from pamet.actions.note import abort_editing_note, create_new_note
 from pamet.actions.note import finish_editing_note, start_editing_note
@@ -651,3 +650,62 @@ def undo(map_page_view_state: MapPageViewState):
 def redo(map_page_view_state: MapPageViewState):
     page = map_page_view_state.get_page()
     pamet.undo_history.forward_one_step(page.id)
+
+
+@action('copy_selected_notes')
+def copy_selected_notes(map_page_view_state: MapPageViewState,
+                        relative_to: Point2D = None):
+    copied_notes = []
+    positions = []
+    for child_view_id in map_page_view_state.selected_child_ids:
+        child_vs = misli.gui.view_state(child_view_id)
+
+        # If note view - get note and translate position
+        if not isinstance(child_vs, NoteViewState):
+            continue
+
+        note: Note = child_vs.get_note()
+        positions.append(note.rect().top_left())
+        copied_notes.append(note)
+
+    if not copied_notes:
+        return
+
+    # If there is no reference point - get the middle of the group
+    if not relative_to:
+        relative_to = sum(positions) / len(positions)
+
+    # Move the notes relative to the reference point before adding them to the
+    # clipboard (since pasting happens relative to the mouse)
+    for note in copied_notes:
+        rect: Rectangle = note.rect()
+        rect.move_top_left(rect.top_left - relative_to)
+        note.set_rect(rect)
+
+    # If arrow view - get arrow and if not both notes are copied - skip
+    # else translate and add to the list
+    copied_arrows = []
+    for child_view_id in map_page_view_state.selected_child_ids:
+        child_vs = misli.gui.view_state(child_view_id)
+
+        # If note view - get note and translate position
+        if not isinstance(child_vs, ArrowViewState):
+            continue
+
+        arrow: Arrow = child_vs.get_arrow()
+
+        # Check for tail and head notes - if not present - don't copy the arrow
+        if arrow.has_head_anchor():
+            if arrow.head_note_id not in (note.id for note in copied_notes):
+                continue
+        else:  # If it's a fixed pos - translate it relative to relative_to
+            arrow.set_head(fixed_pos=arrow.head_point - relative_to)
+
+        if arrow.has_tail_anchor():
+            if arrow.tail_note_id not in (note.id for note in copied_notes):
+                continue
+        else:
+            arrow.set_tail(fixed_pos=arrow.tail_point - relative_to)
+
+        copied_arrows.append(arrow)
+    pamet.clipboard.set_contents(copied_notes + copied_arrows)

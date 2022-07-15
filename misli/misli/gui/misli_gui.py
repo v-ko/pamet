@@ -38,6 +38,7 @@ _view_and_parent_update_ongoing = False
 _util_provider = None
 
 
+@property
 def util_provider():
     return _util_provider
 
