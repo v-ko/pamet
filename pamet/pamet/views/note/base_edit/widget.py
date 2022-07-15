@@ -69,9 +69,13 @@ class BaseNoteEditWidget(QWidget):
 
     def _handle_dev_button_click(self):
         note = self.state().get_note()
+        if note:
+            note_dict_str = json.dumps(note.asdict(), indent=4)
+        else:
+            note_dict_str = 'Creating new note, no info'
         QMessageBox.information(
             self,
             'Note info',
-            json.dumps(note.asdict(), indent=4),
+            note_dict_str,
             # buttons=QMessageBox.Ok,
         )

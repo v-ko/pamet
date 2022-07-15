@@ -73,3 +73,7 @@ class Url:
     @property
     def path(self) -> Url:
         return self._parsed_url.path
+
+    @property
+    def scheme(self) -> Url:
+        return self._parsed_url.scheme
