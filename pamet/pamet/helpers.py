@@ -40,11 +40,17 @@ class Url:
         self._url = url
         self._parsed_url = urlparse(url)
 
+    def __repr__(self) -> str:
+        return self._url
+
+    def __eq__(self, other: Url) -> bool:
+        return self._url == other._url
+
     def is_internal(self):
         return self._parsed_url.scheme == 'pamet'
 
     def is_external(self):
-        self._parsed_url.scheme in ['http', 'https', '']
+        return self._parsed_url.scheme in ['http', 'https', '']
 
     def is_custom_uri(self):
         return self._parsed_url.scheme not in ['pamet', 'http', 'https', '']
@@ -61,6 +67,9 @@ class Url:
         else:
             # A search for imported public/shared pages should be done here
             return None
+
+    def is_empty(self):
+        return not self._url
 
     @property
     def hostname(self) -> Url:

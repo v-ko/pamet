@@ -6,7 +6,8 @@ from misli.gui.actions_library import action
 
 import pamet
 from pamet.model import Note
-from pamet.views.note.anchor.widget import AnchorViewState
+from pamet.views.note.text.widget import TextNoteViewState
+# from pamet.views.note.anchor.widget import AnchorViewState
 from pamet.views.tab import widget as tab_widget
 
 log = misli.get_logger(__name__)
@@ -70,6 +71,11 @@ def abort_editing_note(tab_state: tab_widget.TabViewState):
 
 
 @action('note.apply_page_change_to_anchor_view')
-def apply_page_change_to_anchor_view(anchor_view_state: AnchorViewState):
-    anchor_view_state.update_link_validity()
-    misli.gui.update_state(anchor_view_state)
+def apply_page_change_to_anchor_view(note_view_state: TextNoteViewState):
+    page = note_view_state.url.get_page()
+    # If it's missing - leave the text, the border will indicate
+    if page:
+        note_view_state.text = page.name
+    else:
+        note_view_state.text += '(removed)'
+    misli.gui.update_state(note_view_state)

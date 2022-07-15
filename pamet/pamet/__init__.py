@@ -35,8 +35,6 @@ def configure_for_qt():
     from pamet.views.map_page.widget import MapPageWidget
     from pamet.views.note.text.widget import TextNoteWidget
     from pamet.views.note.text.edit_widget import TextNoteEditWidget
-    from pamet.views.note.anchor.widget import AnchorWidget
-    from pamet.views.note.anchor.edit_widget import AnchorEditWidget
 
 
 _view_types = {}

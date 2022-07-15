@@ -12,9 +12,11 @@ from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
-from pamet.helpers import snap_to_grid
+from pamet.helpers import Url, snap_to_grid
 
 log = get_logger(__name__)
+
+URL = 'url'
 
 
 @entity_type
@@ -131,3 +133,22 @@ class Note(Entity):
             self.modified = new_dt.replace(microsecond=0)
         else:
             self.modified = datetime_from_string(new_dt)
+
+    @property
+    def url(self) -> Url:
+        try:
+            url = self.content[URL]  #@IgnoreException
+        except KeyError:
+            url = ''
+            self.content[URL] = url
+        return Url(url)
+
+    @url.setter
+    def url(self, new_url: Union[Url, str, None]):
+        if isinstance(new_url, Url):
+            new_url = str(new_url)
+        # If None is passed - remove the URL parameter (may be unnecessary)
+        elif new_url is None:
+            self.content.pop(URL, None)
+            return
+        self.content[URL] = new_url

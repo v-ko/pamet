@@ -6,7 +6,7 @@ from misli.logging import get_logger
 
 import pamet
 from pamet.constants import MAX_NAVIGATION_HISTORY
-from pamet.model.anchor_note import AnchorNote
+from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.state import MapPageViewState
 from pamet.model import Page
@@ -78,14 +78,14 @@ def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
     # Create a link to the new page at the mouse position or center
     # (in the old one)
     note_position = current_page_state.unproject_point(mouse_position)
-    new_page_link = AnchorNote(page_id=new_page.id)
+    new_page_link = TextNote(page_id=new_page.id)
     new_page_link.url = current_page.url()
     new_page_link.x = note_position.x()
     new_page_link.y = note_position.y()
     pamet.insert_note(new_page_link)
 
     # Create a link to "old" page in the new one
-    back_link_note = AnchorNote(page_id=current_page.id)
+    back_link_note = TextNote(page_id=current_page.id)
     back_link_note.url = new_page.url()
     rect = back_link_note.rect()
     rect.move_center(Point2D(0, 0))

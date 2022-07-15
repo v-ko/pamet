@@ -247,7 +247,8 @@ class FSStorageRepository(Repository):
 
         notes = []
         for ns in note_states:
-            if 'x' in ns:  # Refactoring fixes
+            # Refactoring fixes .. REMOVE LATER
+            if 'x' in ns:
                 x = ns.pop('x')
                 y = ns.pop('y')
                 width = ns.pop('width')
@@ -258,6 +259,10 @@ class FSStorageRepository(Repository):
                 ns['created'] = ns.pop('time_created')
                 ns['modified'] = ns.pop('time_modified')
 
+            if ns['type_name'] == 'AnchorNote':
+                ns['type_name'] = 'TextNote'
+            # /ad-hoc fixes
+            
             note_type = pamet.note_type_from_props(ns)
             if not note_type:
                 log.error(f'Could not get note type (in {json_file_path}) '

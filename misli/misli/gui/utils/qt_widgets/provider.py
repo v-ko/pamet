@@ -1,9 +1,6 @@
-from typing import List
-from collections import defaultdict
-
 from PySide6.QtGui import QKeySequence, QShortcut, QCursor
-from PySide6.QtCore import Qt, QPoint
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QPoint
+from PySide6.QtWidgets import QApplication
 
 from misli import gui
 from misli.gui import View
@@ -20,7 +17,6 @@ class QtWidgetsUtilProvider(BaseUtilitiesProvider):
         self._shortcuts = {}
 
     # def font_metrics(self, font):
-
 
     def add_key_binding(self, view, key_binding):
         shortcut = QShortcut(QKeySequence(key_binding.key), view)
