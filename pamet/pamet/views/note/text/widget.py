@@ -25,7 +25,16 @@ log = get_logger(__name__)
 
 @view_state_type
 class TextNoteViewState(NoteViewState, TextNote):
-    pass
+    def text_rect(self,
+                  note_width: float = None,
+                  note_height: float = None) -> Rectangle:
+        if note_width and note_height:
+            size = Point2D(note_width, note_height)
+        else:
+            size = self.rect().size()
+        size -= Point2D(2 * NOTE_MARGIN, 2 * NOTE_MARGIN)
+        return Rectangle(NOTE_MARGIN, NOTE_MARGIN, *size.as_tuple())
+
 
 
 @register_note_view_type(state_type=TextNoteViewState,

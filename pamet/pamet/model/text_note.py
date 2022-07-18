@@ -24,13 +24,3 @@ class TextNote(Note):
     @text.setter
     def text(self, new_text):
         self.content[TEXT] = new_text
-
-    def text_rect(self,
-                  note_width: float = None,
-                  note_height: float = None) -> Rectangle:
-        if note_width and note_height:
-            size = Point2D(note_width, note_height)
-        else:
-            size = self.rect().size()
-        size -= Point2D(2 * NOTE_MARGIN, 2 * NOTE_MARGIN)
-        return Rectangle(NOTE_MARGIN, NOTE_MARGIN, *size.as_tuple())
