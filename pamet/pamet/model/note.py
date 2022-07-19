@@ -8,6 +8,8 @@ from misli import get_logger
 from misli import Entity, entity_type
 from misli.helpers import datetime_from_string
 from misli.basic_classes import Point2D, Rectangle, Color
+
+import pamet
 from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
@@ -52,6 +54,9 @@ class Note(Entity):
 
     def parent_gid(self):
         return self.page_id
+
+    def get_page(self):
+        return pamet.page(id=self.page_id)
 
     def rect(self) -> Rectangle:
         return Rectangle(*self.geometry)

@@ -6,7 +6,6 @@ from misli.gui.actions_library import action
 
 import pamet
 from pamet.model import Note
-from pamet.views.note.text.widget import TextNoteViewState
 # from pamet.views.note.anchor.widget import AnchorViewState
 from pamet.views.tab import widget as tab_widget
 
@@ -14,16 +13,14 @@ log = misli.get_logger(__name__)
 
 
 @action('notes.create_new_note')
-def create_new_note(tab_state: tab_widget.TabViewState,
-                    note: Note):
+def create_new_note(tab_state: tab_widget.TabViewState, note: Note):
     # Check if there's an open edit window and abort it if so
     if tab_state.edit_view_state:
         abort_editing_note(tab_state)
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
-    edit_view_state = EditViewType(
-        note_gid=note.gid(),
-        new_note_dict=note.asdict())
+    edit_view_state = EditViewType(note_gid=note.gid(),
+                                   new_note_dict=note.asdict())
     edit_view_state.update_from_note(note)
 
     tab_state.edit_view_state = edit_view_state
@@ -46,8 +43,7 @@ def start_editing_note(tab_view_state: tab_widget.TabViewState, note: Note):
         abort_editing_note(tab_view_state)
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
-    edit_view_state = EditViewType(
-        note_gid=note.gid())
+    edit_view_state = EditViewType(note_gid=note.gid())
     edit_view_state.update_from_note(note)
     tab_view_state.edit_view_state = edit_view_state
 
@@ -71,7 +67,8 @@ def abort_editing_note(tab_state: tab_widget.TabViewState):
 
 
 @action('note.apply_page_change_to_anchor_view')
-def apply_page_change_to_anchor_view(note_view_state: TextNoteViewState):
+def apply_page_change_to_anchor_view(
+        note_view_state: tab_widget.TextNoteViewState):
     page = note_view_state.url.get_page()
     # If it's missing - leave the text, the border will indicate
     if page:

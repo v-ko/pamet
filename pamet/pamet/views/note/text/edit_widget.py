@@ -1,15 +1,19 @@
 from __future__ import annotations
+from PySide6.QtGui import QCloseEvent
 
-from PySide6.QtWidgets import QCompleter, QPushButton, QTextEdit
+from PySide6.QtWidgets import QCompleter, QPushButton
 
 import misli
 from misli.gui.view_library.view import View
 from pamet import register_note_view_type
 import pamet
-from pamet.desktop_app import trash_icon, link_icon
+from pamet.desktop_app import trash_icon, link_icon, text_icon, image_icon
 from pamet.helpers import Url
+from pamet.model.card_note import CardNote
+from pamet.model.image_note import ImageNote
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
+from pamet.views.image.props_edit.widget import ImagePropsWidget
 from pamet.views.note.anchor.edit_widget import AnchorEditWidgetMixin
 from pamet.views.note.anchor.props_edit.widget import AnchorEditPropsWidget
 from pamet.views.note.base_edit.view_state import NoteEditViewState
@@ -19,70 +23,137 @@ from pamet.views.note.text.props_edit.widget import TextEditPropsWidget
 log = misli.get_logger(__name__)
 
 
-class TextEditViewState(NoteEditViewState, TextNote):
+class CardEditViewState(NoteEditViewState):
     pass
 
 
-@register_note_view_type(state_type=TextEditViewState,
-                         note_type=TextNote,
+@register_note_view_type(state_type=CardEditViewState,
+                         note_type=(TextNote, ImageNote, CardNote),
                          edit=True)
-class TextNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
+class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
 
-    def __init__(self, parent, initial_state: NoteEditViewState):
+    def __init__(self, parent, initial_state: CardEditViewState):
         super().__init__(parent, initial_state)
         View.__init__(self, initial_state=initial_state)
 
         # Add the link props widget
-        self.link_props_widget: AnchorEditPropsWidget = AnchorEditPropsWidget(
-            parent=self)
         self.text_props_widget = TextEditPropsWidget(self)
-        self.text_edit = self.text_props_widget.ui.text_edit  # a shorthand
+        self.image_props_widget = ImagePropsWidget(self)
+        self.link_props_widget = AnchorEditPropsWidget(self)
 
         self.ui.centralAreaWidget.layout().addWidget(self.link_props_widget)
+        self.ui.centralAreaWidget.layout().addWidget(self.image_props_widget)
+        self.ui.centralAreaWidget.layout().addWidget(self.text_props_widget)
 
+        # Setup the link props widget
         self.link_props_widget.ui.pametPageLabel.hide()
         self.link_props_widget.ui.invalidUrlLabel.hide()
         self.link_props_widget.ui.urlLineEdit.textChanged.connect(
             self.on_url_change)
 
-        if initial_state.url.is_empty():
-            self.link_props_widget.hide()
-            self.text_props_widget.ui.get_title_button.hide()
-        else:
-            self.link_props_widget.ui.urlLineEdit.setText(
-                str(initial_state.url))
-
+        # Setup a completer with all the page names except the current one
         self_page = pamet.page(id=initial_state.page_id)
         page_completer = QCompleter(
             (p.name for p in pamet.pages() if p != self_page), parent=self)
         self.link_props_widget.ui.urlLineEdit.setCompleter(page_completer)
 
-        # Setup the text edit props
-        self.ui.centralAreaWidget.layout().addWidget(self.text_props_widget)
+        # Setup the text props widget
         self.text_props_widget.ui.get_title_button.clicked.connect(
             self._update_text_from_url)
-
         self.text_edit.textChanged.connect(self.on_text_change)
-        self.text_edit.setPlainText(initial_state.text)
+
+        if isinstance(self.edited_note, (TextNote, CardNote)):
+            self.text_edit.setPlainText(self.edited_note.text)
 
         # Add toolbar actions
-        link_button = QPushButton(link_icon, '', self)
-        link_button.setCheckable(True)
+        self.text_button = QPushButton(text_icon, '', self)
+        self.text_button.setCheckable(True)
+        self.ui.toolbarLayout.addWidget(self.text_button)
+
+        self.image_button = QPushButton(image_icon, '', self)
+        self.image_button.setCheckable(True)
+        self.ui.toolbarLayout.addWidget(self.image_button)
+
+        self.link_button = QPushButton(link_icon, '', self)
+        self.link_button.setCheckable(True)
+        self.ui.toolbarLayout.addWidget(self.link_button)
+
         trash_button = QPushButton(trash_icon, '', self)
-        self.ui.toolbarLayout.addWidget(link_button)
         self.ui.toolbarLayout.addWidget(trash_button)
-        link_button.toggled.connect(self.handle_link_button_toggled)
+
+        # Setup the buttons according to the type of the edited note
+        if isinstance(self.edited_note, TextNote):
+            self.text_button.setChecked(True)
+            self.image_button.setChecked(False)
+            self.image_props_widget.hide()
+        elif isinstance(self.edited_note, ImageNote):
+            self.text_button.setChecked(False)
+            self.image_button.setChecked(True)
+            self.text_props_widget.hide()
+        elif isinstance(self.edited_note, CardNote):
+            self.text_button.setChecked(True)
+            self.image_button.setChecked(True)
+
+        # Setup the link button and line edit
+        if initial_state.url.is_empty():
+            self.link_props_widget.hide()
+            self.text_props_widget.ui.get_title_button.hide()
+        else:
+            self.link_button.setChecked(True)
+            self.link_props_widget.ui.urlLineEdit.setText(
+                str(initial_state.url))
+
+        self.text_button.toggled.connect(self.handle_text_button_toggled)
+        self.image_button.toggled.connect(self.handle_image_button_toggled)
+        self.link_button.toggled.connect(self.handle_link_button_toggled)
+
+    @property
+    def text_edit(self):
+        return self.text_props_widget.ui.text_edit
 
     # This shouldn't be specified explicitly IMO, but I couldn't find the bug
     def focusInEvent(self, event) -> None:
-        # print(self.focusPolicy())  -> NoFocus. So why does it not give focus
-        # to the text edit automatically.. ?
-        self.text_edit.setFocus()
+        edited_note = self.edited_note
+
+        if not self.edited_note.url.is_empty():
+            self.link_props_widget.ui.urlLineEdit.setFocus()
+        elif isinstance(edited_note, TextNote):
+            self.text_edit.setFocus()
+        elif isinstance(edited_note, ImageNote):
+            self.image_props_widget.ui.urlLineEdit.setFocus()
+        elif isinstance(edited_note, CardNote):
+            self.text_edit.setFocus()
 
     def on_text_change(self):
         self.edited_note.text = self.text_edit.toPlainText()
 
-    def handle_link_button_toggled(self, checked):
+    def update_note_type(self):
+        if self.text_button.isChecked() and self.image_button.isChecked():
+            self.edited_note = CardNote(**self.edited_note.asdict())
+        elif self.text_button.isChecked():
+            self.edited_note = TextNote(**self.edited_note.asdict())
+        elif self.image_button.isChecked():
+            self.edited_note = ImageNote(**self.edited_note.asdict())
+        else:
+            raise Exception
+
+    def handle_text_button_toggled(self, checked: bool):
+        if checked:
+            self.text_props_widget.show()
+            self.update_note_type()
+        else:
+            self.text_props_widget.hide()
+
+    def handle_image_button_toggled(self, checked: bool):
+        if checked:
+            self.image_props_widget.show()
+            self.image_props_widget.ui.urlLineEdit.setFocus()
+
+            if not self.text_edit.toPlainText():
+                self.text_button.setChecked(False)  # This should call the hide
+        self.update_note_type()
+
+    def handle_link_button_toggled(self, checked: bool):
         if checked:
             self.link_props_widget.show()
             self.link_props_widget.ui.urlLineEdit.setFocus()
@@ -136,12 +207,15 @@ class TextNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
         if linked_page:
             self.text_edit.setText(linked_page.name)
 
-        elif self.edited_note.url.is_custom_uri():
+        elif self.edited_note.url.is_custom():
+            # Just copy the URL to the text field
             self.text_edit.setText(
                 self.link_props_widget.ui.urlLineEdit.text())
 
-        else:  # Assume web page note
+        elif self.edited_note.url.is_external():  # Assume web page note
             pass
-            # misli.requests.get(self.edited_note.url,
-            #     on_complete=w
-            # )
+
+    def closeEvent(self, event: QCloseEvent) -> None:
+        if self.image_props_widget._image_download_reply:
+            self.image_props_widget._image_download_reply.abort()
+        return super().closeEvent(event)

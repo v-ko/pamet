@@ -82,10 +82,10 @@ class Ui_BaseNoteEditWidget(object):
         self.horizontalLayout_4.setSpacing(9)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(6, 6, 6, 6)
-        self.pushButton = QPushButton(BaseNoteEditWidget)
-        self.pushButton.setObjectName(u"pushButton")
+        self.cancelButton = QPushButton(BaseNoteEditWidget)
+        self.cancelButton.setObjectName(u"cancelButton")
 
-        self.horizontalLayout_4.addWidget(self.pushButton)
+        self.horizontalLayout_4.addWidget(self.cancelButton)
 
         self.saveButton = QPushButton(BaseNoteEditWidget)
         self.saveButton.setObjectName(u"saveButton")
@@ -111,7 +111,7 @@ class Ui_BaseNoteEditWidget(object):
     def retranslateUi(self, BaseNoteEditWidget):
         BaseNoteEditWidget.setWindowTitle(QCoreApplication.translate("BaseNoteEditWidget", u"BaseNoteEditWidget", None))
         self.devButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"dev", None))
-        self.pushButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Cancel (Esc)", None))
+        self.cancelButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Cancel (Esc)", None))
         self.saveButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Save (ctrl+s)", None))
 #if QT_CONFIG(shortcut)
         self.saveButton.setShortcut(QCoreApplication.translate("BaseNoteEditWidget", u"Ctrl+S", None))

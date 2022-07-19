@@ -16,35 +16,36 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QImage, QKeySequence, QLinearGradient, QPainter,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
-    QSizePolicy, QTextEdit, QVBoxLayout, QWidget)
+    QSizePolicy, QVBoxLayout, QWidget)
 
 class Ui_TextEditPropsWidget(object):
     def setupUi(self, TextEditPropsWidget):
         if not TextEditPropsWidget.objectName():
             TextEditPropsWidget.setObjectName(u"TextEditPropsWidget")
         TextEditPropsWidget.resize(571, 141)
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(TextEditPropsWidget.sizePolicy().hasHeightForWidth())
+        TextEditPropsWidget.setSizePolicy(sizePolicy)
+        TextEditPropsWidget.setMaximumSize(QSize(16777215, 16777215))
         self.verticalLayout = QVBoxLayout(TextEditPropsWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.horizontalLayout_2 = QHBoxLayout()
-        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
-        self.horizontalLayout_2.setContentsMargins(-1, 0, -1, -1)
+        self.helperHorizontalLayout = QHBoxLayout()
+        self.helperHorizontalLayout.setObjectName(u"helperHorizontalLayout")
+        self.helperHorizontalLayout.setContentsMargins(-1, 0, -1, -1)
         self.label = QLabel(TextEditPropsWidget)
         self.label.setObjectName(u"label")
 
-        self.horizontalLayout_2.addWidget(self.label)
+        self.helperHorizontalLayout.addWidget(self.label)
 
         self.get_title_button = QPushButton(TextEditPropsWidget)
         self.get_title_button.setObjectName(u"get_title_button")
 
-        self.horizontalLayout_2.addWidget(self.get_title_button)
+        self.helperHorizontalLayout.addWidget(self.get_title_button)
 
 
-        self.verticalLayout.addLayout(self.horizontalLayout_2)
-
-        self.text_edit = QTextEdit(TextEditPropsWidget)
-        self.text_edit.setObjectName(u"text_edit")
-
-        self.verticalLayout.addWidget(self.text_edit)
+        self.verticalLayout.addLayout(self.helperHorizontalLayout)
 
 
         self.retranslateUi(TextEditPropsWidget)

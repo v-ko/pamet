@@ -32,6 +32,9 @@ class BaseNoteEditWidget(QWidget):
         QShortcut(QKeySequence(Qt.Key_Escape), self, self._handle_esc_shortcut)
         self.ui.saveButton.clicked.connect(self._handle_ok_click)
         self.ui.devButton.clicked.connect(self._handle_dev_button_click)
+        self.ui.cancelButton.clicked.connect(
+            lambda: note_actions.abort_editing_note(self.state())
+        )
 
         page_view: MapPageWidget = parent.page_view()
         page_view_state = page_view.state()

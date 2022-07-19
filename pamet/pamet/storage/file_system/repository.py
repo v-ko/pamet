@@ -262,7 +262,7 @@ class FSStorageRepository(Repository):
             if ns['type_name'] == 'AnchorNote':
                 ns['type_name'] = 'TextNote'
             # /ad-hoc fixes
-            
+
             note_type = pamet.note_type_from_props(ns)
             if not note_type:
                 log.error(f'Could not get note type (in {json_file_path}) '

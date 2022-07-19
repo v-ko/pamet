@@ -254,23 +254,32 @@ class MapPageWidget(QWidget, MapPageView):
         entity = change.last_state()
         if change.is_update():
             if isinstance(entity, NoteViewState):
-                note_widget = self.note_widget_by_note_gid(entity.gid())
-                self.on_child_updated(note_widget.state())
+                self.on_child_updated(change)
             else:  # If it's an arrow
                 self.update()
 
         elif change.is_create():
             if isinstance(entity, NoteViewState):
-                note_widget = self.note_widget_by_note_gid(entity.gid())
-                self.on_child_updated(note_widget.state())
+                self.on_child_updated(change)
             else:  # If it's an arrow
                 self.update()
 
-    def on_child_updated(self, note_view_state):
-        nv_cache = self._note_widget_cache(note_view_state.id)
-        nv_cache.should_rebuild_pcommand_cache = True
-        nv_cache.should_rerender_image_cache = True
-        nv_cache.should_reallocate_image_cache = True
+    def on_child_updated(self, change: Change):
+        if not change.is_update():
+            raise Exception
+
+        nv_cache = self._note_widget_cache(change.new_state.id)
+
+        if change.updated.geometry:
+            if change.old_state.rect().size() != change.new_state.rect().size():
+                nv_cache.should_rebuild_pcommand_cache = True
+                nv_cache.should_reallocate_image_cache = True
+                nv_cache.should_rerender_image_cache = True
+
+        if change.updated.content:
+            nv_cache.should_rebuild_pcommand_cache = True
+            nv_cache.should_rerender_image_cache = True
+
         self.update()
 
     def handle_page_child_change(self, change: Change):

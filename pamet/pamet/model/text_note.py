@@ -1,9 +1,6 @@
 
 from misli import get_logger
 from misli import entity_type
-from misli.basic_classes.point2d import Point2D
-from misli.basic_classes.rectangle import Rectangle
-from pamet.constants import NOTE_MARGIN
 from pamet.model.note import Note
 log = get_logger(__name__)
 
@@ -19,8 +16,13 @@ class TextNote(Note):
 
     @property
     def text(self) -> str:
-        return self.content[TEXT]
+        try:
+            text = self.content[TEXT]
+        except KeyError:
+            text = ''
+            self.content[TEXT] = text
+        return text
 
     @text.setter
-    def text(self, new_text):
+    def text(self, new_text: str):
         self.content[TEXT] = new_text

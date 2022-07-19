@@ -1,8 +1,8 @@
 from copy import copy
-import math
+
 from PySide6.QtWidgets import QLabel
-from PySide6.QtGui import QDesktopServices, QFontMetricsF, QPainter, QColor, QPainterPath, QPalette, QPolygon
-from PySide6.QtCore import QPoint, QPointF, QRectF, QSize, QSizeF, QUrl, Qt, QRect
+from PySide6.QtGui import QPainter, QColor, QPainterPath, QPalette, QPolygon
+from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt, QRect
 from misli.basic_classes.point2d import Point2D
 from misli.basic_classes.rectangle import Rectangle
 from misli.entity_library.change import Change
@@ -11,9 +11,11 @@ from misli.gui.view_library.view_state import view_state_type
 from misli.pubsub import Subscription
 
 from pamet import channels, register_note_view_type
-from pamet.actions import tab as tab_actions
 from pamet.actions import note as note_actions
-from pamet.constants import ALIGNMENT_GRID_UNIT, MAX_AUTOSIZE_HEIGHT, MAX_AUTOSIZE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH, NOTE_MARGIN, PREFERRED_TEXT_NOTE_ASPECT_RATIO
+from pamet.constants import ALIGNMENT_GRID_UNIT, MAX_AUTOSIZE_WIDTH
+from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
+from pamet.constants import NOTE_MARGIN, PREFERRED_TEXT_NOTE_ASPECT_RATIO
+from pamet.helpers import Url
 from pamet.model.text_note import TextNote
 from pamet.views.note.base_note_view import NoteView, NoteViewState
 from pamet.desktop_app.helpers import elide_text, draw_text_lines
@@ -59,31 +61,6 @@ class TextNoteWidget(QLabel, NoteView):
         # If there's a link - we watch for a page rename (and must unsubscribe
         # at destroyed)
         self.destroyed.connect(lambda: self.disconnect_from_page_changes())
-
-    def left_mouse_double_click_event(self, position: Point2D):
-        if not self.state().url:
-            note_actions.start_editing_note(self.parent().parent_tab.state(),
-                                            self.state().get_note())
-        else:
-            self.left_mouse_double_click_with_link(position)
-
-    def left_mouse_double_click_with_link(self, position: Point2D):
-        state = self.state()
-        # If it's a custom schema - just ignore for now (start editing)
-        if state.url.is_custom_uri():
-            super().left_mouse_double_click_event(position)
-
-        # If there's a linked page - go to it
-        elif state.url.is_internal():
-            page = state.url.get_page()
-            if page:
-                tab_actions.go_to_url(self.parent().tab_widget.state(),
-                                      page.url())
-            else:
-                super().left_mouse_double_click_event(position)
-        # IMPLEMENT opening no schema urls (non-page names) and http/https
-        else:
-            QDesktopServices.openUrl(QUrl(str(state.url)))
 
     def on_state_change(self, change):
         state = change.last_state()
@@ -157,7 +134,7 @@ class TextNoteWidget(QLabel, NoteView):
 
         # Draw the border
         pen = painter.pen()
-        url = state.url
+        url: Url = state.url
 
         if url.is_internal():
             if not url.get_page():
