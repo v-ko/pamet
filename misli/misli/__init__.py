@@ -2,7 +2,8 @@ from .logging import get_logger
 from misli.entity_library import entity_type
 from misli.entity_library.entity import Entity
 from misli.entity_library.change import Change, ChangeTypes
-from .pubsub import *
+from .pubsub import set_main_loop, main_loop, call_delayed
+from .pubsub import SubscriptionTypes, Subscription, Channel
 from . import gui
 
 
