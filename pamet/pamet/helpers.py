@@ -35,13 +35,15 @@ def get_default_page():
     return None
 
 
-class Url:
-    def __init__(self, url: str):
+class Url(str):
+    def __init__(self, url: Union[Url, str]):
+        if isinstance(url, Url):
+            url = str(url)
         self._url = url
         self._parsed_url = urlparse(url)
 
     def __repr__(self) -> str:
-        return self._url
+        return str(self._url)
 
     def __eq__(self, other: Url) -> bool:
         return self._url == other._url
@@ -50,23 +52,35 @@ class Url:
         return self._parsed_url.scheme == 'pamet'
 
     def is_external(self):
+        if not str(self._url):
+            return False
         return self._parsed_url.scheme in ['http', 'https', '']
 
-    def is_custom_uri(self):
+    def is_custom(self):
         return self._parsed_url.scheme not in ['pamet', 'http', 'https', '']
 
     def get_page(self):
-        if self.is_internal():
-            path = Path(self._parsed_url.path)
-
-            if not path.parent != 'p':
-                log.warning('Invalid url')
-                return None
-
-            return pamet.page(id=path.name)
-        else:
+        # This method should probably not be in this class
+        if not self.is_internal():
             # A search for imported public/shared pages should be done here
             return None
+
+        path = Path(self._parsed_url.path)
+        parts = path.parts
+        if not parts[1] == 'p' or len(parts) < 3:
+            log.warning('Invalid url')
+            return None
+
+        return pamet.page(id=parts[2])
+
+    def get_media_id(self):
+        path = Path(self._parsed_url.path)
+        parts = path.parts
+        if not parts[1] == 'p' or not parts[3] == 'media' or len(parts) < 5:
+            log.warning('Requested media id for url that has none')
+            return None
+
+        return parts[4]
 
     def is_empty(self):
         return not self._url
