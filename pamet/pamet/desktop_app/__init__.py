@@ -8,3 +8,6 @@ plus_icon = QIcon(str(pamet.resource_path('icons/plus.svg')))
 
 selection_overlay_qcolor = QColor(
     *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
+
+config = get_config()
+media_store = MediaStore(config['media_store_path'])

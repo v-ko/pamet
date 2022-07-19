@@ -19,9 +19,13 @@ if not default_data_folder_path.exists():
     default_data_folder_path.mkdir(parents=True)
 
 config_file_path = default_data_folder_path / 'config.json'
+log.info(f'Using config file at: {config_file_path}')
+
 default_fs_repo_path = default_data_folder_path / 'repo'
+default_media_store_path = default_data_folder_path / 'media_store'
 
 default_config['repository_path'] = str(default_fs_repo_path)
+default_config['media_store_path'] = str(default_media_store_path)
 # default_config['app_intro_dismissed'] = False
 
 
