@@ -13,7 +13,7 @@ from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
-from pamet.views.image.props_edit.widget import ImagePropsWidget
+from pamet.views.note.image.props_edit.widget import ImagePropsWidget
 from pamet.views.note.anchor.edit_widget import AnchorEditWidgetMixin
 from pamet.views.note.anchor.props_edit.widget import AnchorEditPropsWidget
 from pamet.views.note.base_edit.view_state import NoteEditViewState

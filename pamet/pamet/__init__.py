@@ -36,7 +36,7 @@ def configure_for_qt():
     from pamet.views.map_page.widget import MapPageWidget
     from pamet.views.note.text.widget import TextNoteWidget
     from pamet.views.note.text.edit_widget import CardNoteEditWidget
-    from pamet.views.image.widget import ImageNoteWidget
+    from pamet.views.note.image.widget import ImageNoteWidget
 
 
 def resource_path(subpath: Union[str, Path]):
