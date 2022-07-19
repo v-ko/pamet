@@ -84,6 +84,14 @@ class Entity:
         for key, val in changes.items():
             setattr(self, key, val)
 
+    def replace_silent(self, **changes):
+        """Same as replace, but ignores fields that are not present in the
+        dataclass."""
+        for key, val in changes.items():
+            if not hasattr(self, key):
+                continue
+            setattr(self, key, val)
+
     def parent_gid(self):
         """Implement this to return the parent global id
         """
