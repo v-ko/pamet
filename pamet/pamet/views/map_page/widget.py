@@ -30,6 +30,8 @@ from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
 from misli.entity_library.change import Change
 from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.card.widget import CardNoteViewState
+from pamet.views.note.qt_helpers import minimal_nonelided_size
 from pamet.views.note.text.widget import TextNoteViewState, TextNoteWidget
 
 log = misli.get_logger(__name__)
@@ -280,6 +282,10 @@ class MapPageWidget(QWidget, MapPageView):
             nv_cache.should_rebuild_pcommand_cache = True
             nv_cache.should_rerender_image_cache = True
 
+        if change.updated.color or change.updated.background_color:
+            nv_cache.should_rebuild_pcommand_cache = True
+            nv_cache.should_rerender_image_cache = True
+            
         self.update()
 
     def handle_page_child_change(self, change: Change):
@@ -790,7 +796,8 @@ class MapPageWidget(QWidget, MapPageView):
 
     def resizeEvent(self, event):
         self.update()
-        self.handle_resize_event(event.size().width(), event.size().height())
+        new_size = Point2D(event.size().width(), event.size().height())
+        self.handle_resize_event(new_size)
 
     def handle_right_mouse_press(self, position):
         ncs_under_mouse = list(self.get_note_views_at(position))
@@ -833,18 +840,18 @@ class MapPageWidget(QWidget, MapPageView):
         changed_notes = []
         for child_id in state.selected_child_ids:
             note_vs = misli.gui.view_state(child_id)
-            if not isinstance(note_vs, TextNoteViewState):
+            if not isinstance(note_vs, (TextNoteViewState, CardNoteViewState)):
                 continue
             note_widget: TextNoteWidget = self.note_widget(child_id)
 
             old_size = note_vs.rect().size()
-            new_size = note_widget.minimal_nonelided_size()
+            new_size = minimal_nonelided_size(note_widget)
             if new_size == old_size:
                 continue
 
             note = note_vs.get_note()
             rect = note.rect()
-            rect.set_size(*new_size.as_tuple())
+            rect.set_size(new_size)
             note.set_rect(rect)
             changed_notes.append(note)
 

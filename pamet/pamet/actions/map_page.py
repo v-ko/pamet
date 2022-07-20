@@ -225,7 +225,7 @@ def start_notes_resize(map_page_view_state: MapPageViewState, main_note: Note,
 def resize_note_views(map_page_view_state: MapPageViewState,
                       new_size: Point2D):
     for ncs in map_page_view_state.note_resize_states:
-        ncs.set_size(new_size)
+        ncs.set_size(snap_to_grid(new_size))
         gui.update_state(ncs)
 
 
@@ -233,7 +233,7 @@ def resize_note_views(map_page_view_state: MapPageViewState,
 def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
     for note_state in map_page_view_state.note_resize_states:
         note = note_state.get_note()
-        note.set_size(new_size)
+        note.set_size(snap_to_grid(new_size))
         pamet.update_note(note)
     map_page_view_state.clear_mode()
 
@@ -261,7 +261,7 @@ def moved_child_view_update(map_page_view_state: MapPageViewState,
                             delta: Point2D):
     for note_state in map_page_view_state.moved_note_states:
         rect = note_state.get_note().rect()
-        rect.move_top_left(snap_to_grid(rect.top_left() + delta))
+        rect.set_top_left(snap_to_grid(rect.top_left() + delta))
         note_state.set_rect(rect)
         gui.update_state(note_state)
 
@@ -303,9 +303,9 @@ def select_all_notes(map_page_view_state: MapPageViewState):
 
 
 @action('map_page.resize_page')
-def resize_page(map_page_view_id, width, height):
+def resize_page(map_page_view_id, new_size: Point2D):
     map_page_view_state = gui.view_state(map_page_view_id)
-    map_page_view_state.geometry.set_size(width, height)
+    map_page_view_state.geometry.set_size(new_size)
     gui.update_state(map_page_view_state)
 
 

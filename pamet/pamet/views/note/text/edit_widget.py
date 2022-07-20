@@ -137,12 +137,26 @@ class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
         else:
             raise Exception
 
+    def update_note_type_buttons(self):
+        # Should show/hide the widget and if toggled off and the text is not
+        # shown - show it (i.e. revert to basic text note)
+        if not (self.text_button.isChecked() or self.image_button.isChecked()):
+            self.text_button.setChecked(True)
+
+        # Don't allow removing the text if there's no image
+        elif self.text_button.isChecked() and \
+                not self.image_button.isChecked():
+            self.text_button.setEnabled(False)
+        else:
+            self.text_button.setEnabled(True)
+
     def handle_text_button_toggled(self, checked: bool):
         if checked:
             self.text_props_widget.show()
-            self.update_note_type()
         else:
             self.text_props_widget.hide()
+        self.update_note_type_buttons()
+        self.update_note_type()
 
     def handle_image_button_toggled(self, checked: bool):
         if checked:
@@ -151,6 +165,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
 
             if not self.text_edit.toPlainText():
                 self.text_button.setChecked(False)  # This should call the hide
+
+        self.update_note_type_buttons()
         self.update_note_type()
 
     def handle_link_button_toggled(self, checked: bool):

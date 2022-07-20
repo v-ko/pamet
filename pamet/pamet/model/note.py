@@ -14,7 +14,7 @@ from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
-from pamet.helpers import Url, snap_to_grid
+from pamet.helpers import Url
 
 log = get_logger(__name__)
 
@@ -77,7 +77,7 @@ class Note(Entity):
     @width.setter
     def width(self, width: float) -> float:
         width = min(MAX_NOTE_WIDTH, max(width, MIN_NOTE_WIDTH))
-        self.geometry[2] = snap_to_grid(width)
+        self.geometry[2] = width
 
     @property
     def height(self) -> float:
@@ -86,7 +86,7 @@ class Note(Entity):
     @height.setter
     def height(self, height: float):
         height = min(MAX_NOTE_HEIGHT, max(height, MIN_NOTE_HEIGHT))
-        self.geometry[3] = snap_to_grid(height)
+        self.geometry[3] = height
 
     @property
     def x(self) -> float:
@@ -94,7 +94,7 @@ class Note(Entity):
 
     @x.setter
     def x(self, x: float):
-        self.geometry[0] = snap_to_grid(x)
+        self.geometry[0] = x
 
     @property
     def y(self) -> float:
@@ -102,7 +102,7 @@ class Note(Entity):
 
     @y.setter
     def y(self, y: float) -> float:
-        self.geometry[1] = snap_to_grid(y)
+        self.geometry[1] = y
 
     def size(self) -> Point2D:
         return Point2D(self.width, self.height)

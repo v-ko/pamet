@@ -67,10 +67,10 @@ class MapPageView(View):
                 # Instead of implementing a Rectangle.intersects(circle)
                 # we expand the rectangle to do the same inference
                 nv_rect: Rectangle = copy(nv_rect)
-                nv_rect.set_size(nv_rect.width() + radius * 2,
-                                 nv_rect.height() + radius * 2)
-                nv_rect.move_top_left(nv_rect.top_left() -
-                                      Point2D(radius, radius))
+                nv_rect.set_size(nv_rect.size() +
+                                 Point2D(radius * 2, radius * 2))
+                nv_rect.set_top_left(nv_rect.top_left() -
+                                     Point2D(radius, radius))
 
             if nv_rect.contains(unprojected_mouse_pos):
                 yield note_view
@@ -334,7 +334,6 @@ class MapPageView(View):
 
         note_view = self.get_note_view_at(mouse_pos)
 
-
         if note_view:
             # Map the mouse position on the note and call its virtual method
             note_rect: Rectangle = note_view.state().get_note().rect()
@@ -348,8 +347,8 @@ class MapPageView(View):
             note.y = note_pos.y()
             actions.note.create_new_note(self.parent_tab.state(), note)
 
-    def handle_resize_event(self, width, height):
-        map_page_actions.resize_page(self.id, width, height)
+    def handle_resize_event(self, new_size: Point2D):
+        map_page_actions.resize_page(self.id, new_size)
 
     def undo(self):
         page = self.state().get_page()

@@ -1,7 +1,8 @@
 from typing import List, Tuple
 
-from PySide6.QtGui import QGuiApplication, QFontMetrics, QPainter
+from PySide6.QtGui import QFont, QGuiApplication, QFontMetrics, QPainter
 from PySide6.QtCore import Qt, QRectF, QPointF, QSizeF, QRect
+from misli.basic_classes.rectangle import Rectangle
 
 from pamet.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
 
@@ -23,7 +24,7 @@ class TextLayout:
         return '\n'.join([text for text, line in self.data])
 
 
-def elide_text(text, text_rect, font) -> TextLayout:
+def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
     font_metrics = QFontMetrics(font)
 
     # Get the needed parameters
@@ -48,6 +49,12 @@ def elide_text(text, text_rect, font) -> TextLayout:
 
     # Start filling the available lines one by one
     text_layout = TextLayout()
+
+    # In case for some reason the text rect is too small to fit any text
+    if not line_vpositions and text:
+        text_layout.is_elided = True
+        return text_layout
+
     ellide_line_end = False
     word_reached_idx = 0
     ellipsis_width = font_metrics.boundingRect('...').width()
@@ -122,7 +129,6 @@ def elide_text(text, text_rect, font) -> TextLayout:
                 line_text = '...'
 
         text_layout.data.append((line_text, line_rect))
-    pass
     return text_layout
 
 
