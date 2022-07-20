@@ -15,4 +15,4 @@ def configure_for_qt():
     from misli.gui.views.message_box.widget import MessageBoxWidget
 
     set_main_loop(QtMainLoop())
-    gui.set_util_provider(QtWidgetsUtilProvider())
+

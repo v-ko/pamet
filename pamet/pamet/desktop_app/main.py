@@ -39,8 +39,6 @@ def main():
         fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
     pamet.set_sync_repo(fs_repo)
-    misli.configure_for_qt()
-    pamet.configure_for_qt()
 
     # Debug
     channels.state_changes_by_id.subscribe(

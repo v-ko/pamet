@@ -39,7 +39,7 @@ class ContextMenuWidget(QMenu):
         self.deleteLater()
 
     def popup_on_mouse_pos(self):
-        position = misli.gui.util_provider.mouse_position()
+        position = misli.gui.util_provider().mouse_position()
         self.popup(QPoint(*position.as_tuple()))
 
     def hiding(self):

@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import misli
 from misli import Change
 from misli.change_aggregator import ChangeAggregator
+from misli.gui.utils.base_provider import BaseUtilitiesProvider
 from misli.logging import BColors
 from misli.pubsub import Channel
 
@@ -35,15 +36,14 @@ _state_backups = {}
 _action_context_stack = []
 _view_and_parent_update_ongoing = False
 
-_util_provider = None
+_util_provider: BaseUtilitiesProvider = None
 
 
-@property
-def util_provider():
+def util_provider() -> BaseUtilitiesProvider:
     return _util_provider
 
 
-def set_util_provider(provider):
+def set_util_provider(provider: BaseUtilitiesProvider):
     global _util_provider
     _util_provider = provider
 

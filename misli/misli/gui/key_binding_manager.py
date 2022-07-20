@@ -83,14 +83,14 @@ def add_key_binding(key_binding):
     _bindings.add(key_binding)
     _bindings_per_command[key_binding.command].append(key_binding)
     for view in misli.gui.find_views(parent=None):
-        misli.gui.util_provider.add_key_binding(view, key_binding)
+        misli.gui.util_provider().add_key_binding(view, key_binding)
 
 
 def remove_key_binding(key_binding):
     _bindings.remove(key_binding)
     _bindings_per_command[key_binding.command].remove(key_binding)
     for view in misli.gui.find_views(parent=None):
-        misli.gui.util_provider.remove_key_binding(view, key_binding)
+        misli.gui.util_provider().remove_key_binding(view, key_binding)
 
 
 def first_key_binding_for_command(command: Command):
@@ -101,7 +101,7 @@ def first_key_binding_for_command(command: Command):
     return bindings[0]
 
 def apply_config(key_bindings: List[KeyBinding]):
-    if not misli.gui.util_provider:
+    if not misli.gui.util_provider():
         raise Exception('misli.configure* must be called (so the util provider'
                         ' is set) before you can setup shortcuts')
     new_config = set(key_bindings)
@@ -128,4 +128,4 @@ def handle_root_view_changes(changes: List[Change]):
         if change.is_create():
             view = change.last_state().view()
             for binding in _bindings:
-                misli.gui.util_provider.add_key_binding(view, binding)
+                misli.gui.util_provider().add_key_binding(view, binding)
