@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QVBoxLayout, QWidget, QLineEdit, QLabel
+from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QWidget, QLineEdit, QLabel
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt
@@ -18,8 +18,7 @@ class MapPagePropertiesViewState(ViewState):
     focused_prop: str = ''
     page_id: str = ''
 
-    @property
-    def page(self):
+    def get_page(self):
         return pamet.page(id=self.page_id)
 
 
@@ -65,7 +64,7 @@ class MapPagePropertiesWidget(QWidget, View):
     def on_state_change(self, change: Change):
         # Fill the prop fields with the respective values
         if change.updated.page_id:
-            self.name_line_edit.setText(self.state().page.name)
+            self.name_line_edit.setText(self.state().get_page().name)
 
         # Apply the field focus when specified
         if change.updated.focused_prop:
@@ -73,14 +72,16 @@ class MapPagePropertiesWidget(QWidget, View):
                 self.name_line_edit.selectAll()
 
     def _handle_delete_button_click(self):
-
-        actions.map_page.delete_page(self.tab_widget.state(),
-                                     self.state().page)
+        reply = QMessageBox.question(
+            self, 'Delete page', 'Are you sure you want to delete the page?')
+        if reply == QMessageBox.StandardButton.Yes:
+            actions.map_page.delete_page(self.tab_widget.state(),
+                                         self.state().get_page())
         actions.tab.close_right_sidebar(self.tab_widget.state())
 
     def _save_page(self):
         state = self.state()
-        page = state.page
+        page = state.get_page()
         page.name = self.name_line_edit.text()
         actions.map_page.save_page_properties(page)
         actions.tab.close_right_sidebar(self.tab_widget.state())
@@ -88,7 +89,7 @@ class MapPagePropertiesWidget(QWidget, View):
     def _handle_name_line_edit_text_changed(self, new_text):
         # Check if the id is available and valid
         state = self.state()
-        if new_text == state.page.name:
+        if new_text == state.get_page().name:
             self.name_warning_label.hide()
             self.save_button.setEnabled(True)
             return
