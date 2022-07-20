@@ -1,63 +1,21 @@
-
-import os
-import json
 from pathlib import Path
 
 from PySide6.QtCore import QStandardPaths
 
 from misli import get_logger
+from misli.entity_library import entity_type
+from pamet.config import PametConfig
+
 log = get_logger(__name__)
 
-# Това отива в Desktop модула или в самия main
-default_data_path = QStandardPaths.writableLocation(
+user_data_path = QStandardPaths.writableLocation(
     QStandardPaths.GenericDataLocation)
-
-default_config = {}
-
-default_data_folder_path = Path(default_data_path) / 'misli' / 'pamet'
-if not default_data_folder_path.exists():
-    default_data_folder_path.mkdir(parents=True)
-
-config_file_path = default_data_folder_path / 'config.json'
-log.info(f'Using config file at: {config_file_path}')
-
-default_fs_repo_path = default_data_folder_path / 'repo'
-default_media_store_path = default_data_folder_path / 'media_store'
-
-default_config['repository_path'] = str(default_fs_repo_path)
-default_config['media_store_path'] = str(default_media_store_path)
-# default_config['app_intro_dismissed'] = False
+pamet_data_folder_path = Path(user_data_path) / 'pamet'
+pamet_data_folder_path.mkdir(parents=True, exist_ok=True)
 
 
-def _where_empty_set_defaults(config: dict):
-    fixes_applied = False
+@entity_type
+class DesktopConfig(PametConfig):
 
-    for k, v in default_config.items():
-        if k not in config:
-            log.info('Missing key "%s" in config. Setting default "%s"' %
-                     (k, v))
-            config[k] = v
-            fixes_applied = True
-
-    if fixes_applied:
-        save_config(config)
-
-    return config
-
-
-def save_config(config: dict):
-    with open(config_file_path, 'w') as cf:
-        json.dump(config, cf)
-
-
-def get_config():
-    # Load the basic config
-    if not os.path.exists(config_file_path):
-        save_config(default_config)
-        return default_config
-
-    with open(config_file_path) as cf:
-        config = json.load(cf)
-        config = _where_empty_set_defaults(config)
-
-        return config
+    repository_path: str = pamet_data_folder_path / 'repo'
+    media_store_path: str = pamet_data_folder_path / 'media_store'

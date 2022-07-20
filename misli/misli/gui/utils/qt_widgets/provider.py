@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from PySide6.QtGui import QKeySequence, QShortcut, QCursor
 from PySide6.QtCore import QPoint
 from PySide6.QtWidgets import QApplication
@@ -6,17 +8,38 @@ from misli import gui
 from misli.gui import View
 from misli.basic_classes import Rectangle, Point2D
 from misli.gui.utils.base_provider import BaseUtilitiesProvider
+from misli.logging import get_logger
 
+log = get_logger(__name__)
+
+CONFIG_JSON = 'config.json'
 
 # class FontMetrics:
 
 
 class QtWidgetsUtilProvider(BaseUtilitiesProvider):
-    def __init__(self):
+
+    def __init__(self, app_data_folder):
         super().__init__()
         self._shortcuts = {}
+        self._app_data_folder = Path(app_data_folder)
+        self._app_data_folder.mkdir(parents=True, exist_ok=True)
 
     # def font_metrics(self, font):
+
+    def get_config(self) -> dict:
+        config_path = self._app_data_folder / CONFIG_JSON
+        if not config_path.exists():
+            return {}
+
+        with open(config_path) as config_file:
+            config_dict = json.load(config_file)
+            return config_dict
+
+    def set_config(self, updated_config: dict):
+        config_str = json.dumps(updated_config)
+        config_path = self._app_data_folder / CONFIG_JSON
+        config_path.write_text(config_str)
 
     def add_key_binding(self, view, key_binding):
         shortcut = QShortcut(QKeySequence(key_binding.key), view)

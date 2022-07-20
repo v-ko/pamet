@@ -7,7 +7,6 @@ import pamet
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import get_config
 from pamet.persistence_manager import PersistenceManager
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
@@ -20,8 +19,17 @@ log = misli.get_logger(__name__)
 
 def main():
     misli.line_spacing_in_pixels = 20
-    config = get_config()
-    repo_path = config['repository_path']
+    pamet.desktop_app.configure_for_qt()
+
+    # Load the config
+    config = pamet.get_config()
+    # If there's changes after the load it means that some default is not saved
+    # to disk or some other irregularity has been handled by the config class
+    if config.changes_present:
+        pamet.save_config(config)
+
+    # Init the repo
+    repo_path = config.repository_path
     log.info('Using repository: %s' % repo_path)
 
     # # Testing - restore repo changes

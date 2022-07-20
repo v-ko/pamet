@@ -87,10 +87,13 @@ class Entity:
     def replace_silent(self, **changes):
         """Same as replace, but ignores fields that are not present in the
         dataclass."""
+        leftovers = {}
         for key, val in changes.items():
             if not hasattr(self, key):
+                leftovers[key] = val
                 continue
             setattr(self, key, val)
+        return leftovers
 
     def parent_gid(self):
         """Implement this to return the parent global id

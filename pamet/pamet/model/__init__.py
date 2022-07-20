@@ -12,6 +12,7 @@ import pamet
 from pamet import channels
 from misli import entity_library
 from misli import get_logger
+from pamet.desktop_app.config import DesktopConfig
 from pamet.model.arrow import Arrow
 from pamet.services.undo import UndoService
 # from pamet.persistence_manager import PersistenceManager
@@ -185,3 +186,13 @@ def apply_change(change: Change):
         _sync_repo.remove_one(last_state)
 
     raw_entity_changes.push(change)
+
+
+# Config handling
+def get_config() -> DesktopConfig:
+    config_dict = misli.gui.util_provider().get_config()
+    return DesktopConfig.load(config_dict)
+
+
+def save_config(config: DesktopConfig):
+    misli.gui.util_provider().set_config(config.asdict())
