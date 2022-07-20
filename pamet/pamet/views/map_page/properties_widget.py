@@ -6,11 +6,11 @@ from misli.entity_library.change import Change
 
 from misli.gui import ViewState, view_state_type
 from misli.gui.utils.qt_widgets import bind_and_apply_state
-from misli.gui.utils.qt_widgets.qtview import QtView
 from misli.gui.view_library.view import View
 
 import pamet
 from pamet import actions
+from .ui_properties_widget import Ui_MapPagePropertiesWidget
 
 
 @view_state_type
@@ -27,49 +27,44 @@ class MapPagePropertiesWidget(QWidget, View):
     def __init__(self, tab_widget, initial_state):
         QWidget.__init__(self, parent=tab_widget)
         View.__init__(self, initial_state=initial_state)
-        self.tab_widget = tab_widget
-        self.name_line_edit = QLineEdit('', self)
-        self.name_line_edit.textChanged.connect(
-            self._handle_name_line_edit_text_changed)
 
-        self.name_warning_label = QLabel('This should not be visible')
-        self.name_warning_label.hide()
-        self.name_warning_label.setStyleSheet(
+        self.ui = Ui_MapPagePropertiesWidget()
+        self.ui.setupUi(self)
+
+        self.tab_widget = tab_widget
+
+        # Configure the UI
+        # Set the home page check box state
+        config = pamet.get_config()
+        page = initial_state.get_page()
+        if config.home_page_id == page.id:
+            self.ui.setAsHomePageCheckBox.setChecked(True)
+
+        self.ui.nameWarningLabel.hide()
+        self.ui.nameWarningLabel.setStyleSheet(
             'QLabel {color : red; font-size: 8pt;}')
 
-        self.save_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_S), self)
-        self.save_shortcut.activated.connect(self._save_page)
-        # Esc shortcut handling moved to the Window esc handler
+        # Bind UI signals to the appropriate methods
+        self.ui.nameLineEdit.textChanged.connect(
+            self._handle_name_line_edit_text_changed)
 
-        # binding = first_key_binding_for_command(save_page_properties)
-        # self.save_button = QPushButton(f'Save ({binding.key})')
-        self.save_button = QPushButton('Save (Ctrl+S)')
-        # self.save_button.setEnabled(False)
-        self.save_button.clicked.connect(self._save_page)
-        self.delete_button = QPushButton(f'Delete page')
-        self.delete_button.clicked.connect(self._handle_delete_button_click)
-        self.delete_button.setStyleSheet('QButton {background-color: red;}')
-
-        layout = QVBoxLayout()
-        layout.addWidget(QLabel('Name: '))
-        layout.addWidget(self.name_line_edit)
-        layout.addWidget(self.name_warning_label)
-        layout.addWidget(self.save_button)
-        layout.addStretch()
-        layout.addWidget(self.delete_button)
-        self.setLayout(layout)
+        self.ui.saveButton.clicked.connect(self._save_page)
+        self.ui.setAsHomePageCheckBox.toggled.connect(
+            self._handle_home_page_toggle)
+        self.ui.deleteButton.clicked.connect(self._handle_delete_button_click)
+        self.ui.deleteButton.setStyleSheet('QButton {background-color: red;}')
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
 
     def on_state_change(self, change: Change):
         # Fill the prop fields with the respective values
         if change.updated.page_id:
-            self.name_line_edit.setText(self.state().get_page().name)
+            self.ui.nameLineEdit.setText(self.state().get_page().name)
 
         # Apply the field focus when specified
         if change.updated.focused_prop:
             if self.state().focused_prop == 'name':
-                self.name_line_edit.selectAll()
+                self.ui.nameLineEdit.selectAll()
 
     def _handle_delete_button_click(self):
         reply = QMessageBox.question(
@@ -82,7 +77,7 @@ class MapPagePropertiesWidget(QWidget, View):
     def _save_page(self):
         state = self.state()
         page = state.get_page()
-        page.name = self.name_line_edit.text()
+        page.name = self.ui.nameLineEdit.text()
         actions.map_page.save_page_properties(page)
         actions.tab.close_right_sidebar(self.tab_widget.state())
 
@@ -90,24 +85,34 @@ class MapPagePropertiesWidget(QWidget, View):
         # Check if the id is available and valid
         state = self.state()
         if new_text == state.get_page().name:
-            self.name_warning_label.hide()
-            self.save_button.setEnabled(True)
+            self.ui.nameWarningLabel.hide()
+            self.ui.saveButton.setEnabled(True)
             return
 
         if not new_text:
-            self.name_warning_label.setText('The page name can not be empty')
-            self.name_warning_label.show()
-            self.save_button.setEnabled(False)
+            self.ui.nameWarningLabel.setText('The page name can not be empty')
+            self.ui.nameWarningLabel.show()
+            self.ui.saveButton.setEnabled(False)
             self.save_shortcut.setEnabled(False)
             return
 
         elif pamet.page(name=new_text):
-            self.name_warning_label.setText('Name already taken')
-            self.name_warning_label.show()
-            self.save_button.setEnabled(False)
+            self.ui.nameWarningLabel.setText('Name already taken')
+            self.ui.nameWarningLabel.show()
+            self.ui.saveButton.setEnabled(False)
             self.save_shortcut.setEnabled(False)
             return
 
-        self.save_button.setEnabled(True)
+        self.ui.saveButton.setEnabled(True)
         self.save_shortcut.setEnabled(True)
-        self.name_warning_label.hide()
+        self.ui.nameWarningLabel.hide()
+
+    def _handle_home_page_toggle(self, checked: bool):
+        config = pamet.get_config()
+        page = self.state().get_page()
+
+        if checked:
+            config.home_page_id = page.id
+        else:
+            config.home_page_id = None
+        pamet.save_config(config)

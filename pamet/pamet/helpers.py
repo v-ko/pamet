@@ -28,11 +28,8 @@ def generate_page_name() -> str:
 
 
 def get_default_page():
-    # desktop_config = get_config()
-    # if 'home_page_id' in desktop_config:
-    #     raise NotImplementedError()  # TODO: Load from id/url
-
-    return None
+    config = pamet.get_config()
+    return pamet.page(id=config.home_page_id)
 
 
 class Url(str):

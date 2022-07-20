@@ -1,8 +1,8 @@
 from copy import copy
 
 from PySide6.QtWidgets import QLabel
-from PySide6.QtGui import QPainter, QColor, QPainterPath, QPalette, QPolygon
-from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt, QRect
+from PySide6.QtGui import QPainter, QColor
+from PySide6.QtCore import Qt, QRect
 
 from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.view_library.view_state import view_state_type
@@ -11,7 +11,6 @@ from misli.basic_classes.rectangle import Rectangle
 
 from pamet.constants import NOTE_MARGIN
 from pamet import register_note_view_type
-from pamet.helpers import Url
 from pamet.model.text_note import TextNote
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
 from pamet.views.note.base_note_view import NoteView, NoteViewState

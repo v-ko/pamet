@@ -23,7 +23,7 @@ class ImageLabel(QLabel):
         if local_url:
             local_path = Path(local_url.path)
             if local_url.is_internal():
-                local_path = media_store.path_for_internal_uri(local_url)
+                local_path = media_store().path_for_internal_uri(local_url)
 
             if not local_path.exists():
                 self.setText(f'Local path missing: {local_path}')

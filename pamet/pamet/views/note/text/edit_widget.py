@@ -7,7 +7,7 @@ import misli
 from misli.gui.view_library.view import View
 from pamet import register_note_view_type
 import pamet
-from pamet.desktop_app import trash_icon, link_icon, text_icon, image_icon
+from pamet.desktop_app import icons
 from pamet.helpers import Url
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
@@ -66,19 +66,19 @@ class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
             self.text_edit.setPlainText(self.edited_note.text)
 
         # Add toolbar actions
-        self.text_button = QPushButton(text_icon, '', self)
+        self.text_button = QPushButton(icons.text, '', self)
         self.text_button.setCheckable(True)
         self.ui.toolbarLayout.addWidget(self.text_button)
 
-        self.image_button = QPushButton(image_icon, '', self)
+        self.image_button = QPushButton(icons.image, '', self)
         self.image_button.setCheckable(True)
         self.ui.toolbarLayout.addWidget(self.image_button)
 
-        self.link_button = QPushButton(link_icon, '', self)
+        self.link_button = QPushButton(icons.link, '', self)
         self.link_button.setCheckable(True)
         self.ui.toolbarLayout.addWidget(self.link_button)
 
-        trash_button = QPushButton(trash_icon, '', self)
+        trash_button = QPushButton(icons.trash, '', self)
         self.ui.toolbarLayout.addWidget(trash_button)
 
         # Setup the buttons according to the type of the edited note

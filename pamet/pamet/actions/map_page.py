@@ -11,7 +11,7 @@ from misli.basic_classes import Point2D, Rectangle
 from misli.gui.actions_library import action
 from pamet.actions.note import abort_editing_note, create_new_note
 from pamet.actions.note import finish_editing_note, start_editing_note
-from pamet.helpers import snap_to_grid
+from pamet.helpers import Url, snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
 from pamet.model.arrow import Arrow, ArrowAnchorType
@@ -362,9 +362,16 @@ def save_page_properties(page: Page):
 
 
 @action('map_page.delete_page')
-def delete_page(tab_view_state, page):
+def delete_page(tab_view_state: TabViewState, page: Page):
     pamet.remove_page(page)
-    next_page = pamet.helpers.get_default_page() or pamet.page()
+    # Try to go to the last page if any
+    next_page = None
+    if tab_view_state.navigation_history:
+        next_page = Url(tab_view_state.navigation_history[-1]).get_page()
+
+    if not next_page:
+        next_page = pamet.helpers.get_default_page() or pamet.page()
+        
     if not next_page:
         raise NotImplementedError
         next_page = pamet.actions.other.create_default_page()

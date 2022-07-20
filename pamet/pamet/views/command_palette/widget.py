@@ -82,7 +82,7 @@ class CommandPaletteWidget(QWidget, View):
                                       limit=None)
 
             tab = self.parent().current_tab()
-            current_page = tab.state().page_view_state.page
+            current_page = tab.state().page_view_state.get_page()
 
             for name, score, page_id in results:
                 if page_id == current_page.id:

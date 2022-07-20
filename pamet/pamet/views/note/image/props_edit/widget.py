@@ -44,7 +44,7 @@ class ImagePropsWidget(QWidget):
             if local_url:
                 path = local_url.path
                 if local_url.is_internal():
-                    path = media_store.path_for_internal_uri(local_url)
+                    path = media_store().path_for_internal_uri(local_url)
 
                 image = QImage(path)
                 if image.isNull():
@@ -129,7 +129,7 @@ class ImagePropsWidget(QWidget):
             self.update_image_note_and_preview(local_image_url=url,
                                                image=image)
         elif url.is_internal():
-            path = media_store.path_for_internal_uri(url)
+            path = media_store().path_for_internal_uri(url)
             image = QImage(path)
             self.update_image_note_and_preview(path, image)
         elif url.is_external():
@@ -215,7 +215,7 @@ class ImagePropsWidget(QWidget):
                         error='Could not save image to buffer')
                     return
 
-                local_url = media_store.save_blob(
+                local_url = media_store().save_blob(
                     self.edit_widget.state().get_page(), blob, img_format, url)
                 if not local_url:
                     self.update_image_note_and_preview(
