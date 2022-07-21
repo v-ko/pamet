@@ -139,7 +139,8 @@ def from_dict(type_name: str, entity_dict: dict) -> Entity:
     cls = get_entity_class_by_name(type_name)
     instance = cls()
     leftovers = instance.replace_silent(**entity_dict)
-    log.error(f'Leftovers while loading entity '
-              f'(id={entity_dict.get("id", None)}): {leftovers}')
+    if leftovers:
+        log.error(f'Leftovers while loading entity '
+                  f'(id={entity_dict.get("id", None)}): {leftovers}')
     # instance = cls(**entity_dict)
     return instance
