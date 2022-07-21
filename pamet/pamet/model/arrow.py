@@ -6,9 +6,12 @@ from misli.basic_classes.point2d import Point2D
 
 from misli.entity_library import entity_type
 from misli.entity_library.entity import Entity
+from misli.logging import get_logger
+
 import pamet
 from pamet.constants import DEFAULT_ARROW_THICKNESS, DEFAULT_BG_COLOR, DEFAULT_COLOR
 
+log = get_logger(__name__)
 BEZIER_CUBIC = 'bezier_cubic'
 
 
@@ -52,7 +55,7 @@ class Arrow(Entity):
 
     def __post_init__(self):
         if not self.page_id:
-            raise Exception
+            log.warning('Initializing Note without a page_id')
 
     def gid(self):
         return self.page_id, self.id

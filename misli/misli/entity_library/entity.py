@@ -50,6 +50,19 @@ class Entity:
     def __copy__(self):
         return self.copy()
 
+    # @classmethod
+    # def create_silent(cls, **props):
+    #     field_names = [f.name for f in fields(cls) if f.init]
+    #     leftovers = {}
+    #     valid = {}
+    #     for key, value in props.items():
+    #         if key in field_names:
+    #             valid[key] = value
+    #         else:
+    #             leftovers[key] = value
+
+    #     return cls(**valid)
+
     def copy(self) -> 'Entity':
         # return replace(self)
         # return replace(self, **self.asdict())

@@ -2,6 +2,9 @@ from __future__ import annotations
 from typing import Any
 from dataclasses import dataclass, MISSING, Field
 
+from misli.logging import get_logger
+
+log = get_logger(__name__)
 entity_library = {}
 
 
@@ -134,6 +137,9 @@ def from_dict(type_name: str, entity_dict: dict) -> Entity:
     """Construct an entity given its state as a dict"""
     # type_name = entity_dict.pop('type_name')
     cls = get_entity_class_by_name(type_name)
-
-    instance = cls(**entity_dict)
+    instance = cls()
+    leftovers = instance.replace_silent(**entity_dict)
+    log.error(f'Leftovers while loading entity '
+              f'(id={entity_dict.get("id", None)}): {leftovers}')
+    # instance = cls(**entity_dict)
     return instance
