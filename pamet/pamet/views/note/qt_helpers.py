@@ -1,22 +1,35 @@
 from copy import copy
+from typing import Union
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
 from misli.basic_classes.point2d import Point2D
 from misli.basic_classes.rectangle import Rectangle
-from pamet.constants import ALIGNMENT_GRID_UNIT, MAX_AUTOSIZE_WIDTH
+from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH
 from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
+from pamet.desktop_app import default_note_font
 from pamet.desktop_app.helpers import TextLayout, elide_text
 from pamet.helpers import Url
+from pamet.model.card_note import CardNote
+from pamet.model.image_note import ImageNote
+from pamet.model.text_note import TextNote
 
 
-def minimal_nonelided_size(note_widget) -> Point2D:
+def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
     """Do a binary search to get the minimal note size"""
-    state = note_widget.state()
-    text = state.text
+    default_note_size = Point2D(DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT)
+    note_font = default_note_font()
 
+    # If it's an image note - fit to the image (if no image - default size)
+    if type(note) == ImageNote:  # Card inherits Image!, don't use isinstance
+        if note.image_size:
+            return note.image_rect()
+        else:
+            return default_note_size
+
+    text = note.text
     if not text:
-        return Point2D(MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT)
+        return default_note_size
 
     # Start with the largest possible rect
     # test_note = state.get_note()
@@ -37,8 +50,7 @@ def minimal_nonelided_size(note_widget) -> Point2D:
         # test_note.set_rect(
         #     Rectangle(0, 0, test_width_u * unit, test_height_u * unit))
         test_size = Point2D(test_width_u * unit, test_height_u * unit)
-        if elide_text(text, note_widget.text_rect(test_size),
-                      note_widget.font()).is_elided:
+        if elide_text(text, note.text_rect(test_size), note_font).is_elided:
             low_width_bound = test_width_it + 1
         else:
             high_width_bound = test_width_it
@@ -62,13 +74,13 @@ def minimal_nonelided_size(note_widget) -> Point2D:
 
         rect.set_height(rect.height() - unit)
         # test_note.set_rect(rect)
-        text_layout = elide_text(text, note_widget.text_rect(rect.size()),
-                                 note_widget.font())
+        text_layout = elide_text(text, note.text_rect(rect.size()),
+                                 note_font)
 
     # Adjust the width. We check for changes in the text, because
     # even elided text (if it's multi line) can have empty space laterally
-    text_layout = elide_text(text, note_widget.text_rect(rect.size()),
-                             note_widget.font())
+    text_layout = elide_text(text, note.text_rect(rect.size()),
+                             note_font)
     text_before_adjust = text_layout.text()
     text = text_before_adjust
     while rect.width() >= MIN_NOTE_WIDTH and rect.height() >= MIN_NOTE_HEIGHT:
@@ -79,8 +91,8 @@ def minimal_nonelided_size(note_widget) -> Point2D:
 
         rect.set_width(rect.width() - unit)
         # test_note.set_rect(rect)
-        text_layout = elide_text(text, note_widget.text_rect(rect.size()),
-                                 note_widget.font())
+        text_layout = elide_text(text, note.text_rect(rect.size()),
+                                 note_font)
         text = text_layout.text()
 
     return Point2D(width, height)

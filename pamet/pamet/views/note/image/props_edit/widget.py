@@ -1,3 +1,4 @@
+import hashlib
 import io
 from pathlib import Path
 from PIL import Image
@@ -6,6 +7,7 @@ from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QUrl, Qt
 from PySide6.QtGui import QImage, QImageReader, QPixmap, QResizeEvent
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QFileDialog, QWidget
+from misli.basic_classes.point2d import Point2D
 
 from pamet.helpers import Url
 from pamet.desktop_app import media_store
@@ -84,21 +86,25 @@ class ImagePropsWidget(QWidget):
     def update_image_note_and_preview(self,
                                       local_image_url: Url = None,
                                       image: QImage = None,
+                                      md5sum: str = None,
                                       error: str = None):
+        note = self.edit_widget.edited_note
         # Set the note image_url
         url_input = self.ui.urlLineEdit.text()
-        self.edit_widget.edited_note.image_url = url_input
+        note.image_url = url_input
 
         if error:
-            if local_image_url or image:
+            if local_image_url or image or md5sum:
                 raise Exception
-            self.edit_widget.edited_note.local_image_url = None
+            note.local_image_url = None
             self.ui.infoLabel.setText(error)
             self._image_preview = None
             return
 
         self._image_preview = image
-        self.edit_widget.edited_note.local_image_url = local_image_url
+        note.local_image_url = local_image_url
+        note.image_size = Point2D(image.size().width(), image.size().height())
+        note.image_md5 = md5sum
 
         w = self.ui.infoLabel.size().width()
         h = self.ui.infoLabel.size().height()
@@ -120,14 +126,28 @@ class ImagePropsWidget(QWidget):
                 self.update_image_note_and_preview(error='Image is too big')
                 return
 
-            image = QImage(url_path)
+            # Read binary
+            with open(url_path, 'rb')as image_file:
+                image_data = image_file.read()
+
+            # create buffer
+            buffer = QBuffer(QByteArray(image_data))
+            image_reader = QImageReader(buffer)
+            image = image_reader.read()
             if image.isNull():
                 self.update_image_note_and_preview(
                     error='Could not load image')
                 return
+            # check that the bytes object is not empty (DEBUG only)
+            if not image_data:
+                raise Exception
+
+            # get md5
+            md5sum = hashlib.md5(image_data).hexdigest()
 
             self.update_image_note_and_preview(local_image_url=url,
-                                               image=image)
+                                               image=image,
+                                               md5sum=md5sum)
         elif url.is_internal():
             path = media_store().path_for_internal_uri(url)
             image = QImage(path)
@@ -161,18 +181,18 @@ class ImagePropsWidget(QWidget):
                     self._image_download_reply = None
                     return
 
-                q_data = self._image_download_reply.readAll()
-                buffer = QBuffer(q_data)
+                image_qbytearray = self._image_download_reply.readAll()
+                image_data = image_qbytearray.data()
+                buffer = QBuffer(image_qbytearray)
                 image_reader = QImageReader(buffer)
                 img_format = image_reader.format().data().decode('utf-8')
 
                 # If Qt doesn't support the format (e.g. WebP)
-                # try to convert it with Pillow
+                # try to convert it with Pillow to PNG
                 if image_reader.format() not in \
                         image_reader.supportedImageFormats():
 
-                    img_byte_arr = io.BytesIO()
-                    pil_image = Image.open(q_data.data())
+                    pil_image = Image.open(image_data)
 
                     try:  # Probe if Pillow can handle the image
                         pil_image.verify()
@@ -181,6 +201,7 @@ class ImagePropsWidget(QWidget):
                             f'Image format "{img_format}" not supported'))
                         return
 
+                    img_byte_arr = io.BytesIO()
                     pil_image.save(img_byte_arr, 'png')
                     buffer = QBuffer(QByteArray(img_byte_arr.read()))
                     image_reader = QImageReader(buffer)
@@ -222,7 +243,11 @@ class ImagePropsWidget(QWidget):
                         error='Could not save image locally.')
                 else:
                     self.update_image_note_and_preview(
-                        local_image_url=local_url, image=image)
+                        error='Calculating md5sum.')
+                    md5sum = hashlib.md5(image_data).hexdigest()
+
+                    self.update_image_note_and_preview(
+                        local_image_url=local_url, image=image, md5sum=md5sum)
                 self._image_download_reply = None
 
             # def on_error(error_code: QNetworkReply.NetworkError):

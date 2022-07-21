@@ -15,10 +15,16 @@ from pamet.helpers import Url, snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
 from pamet.model.arrow import Arrow, ArrowAnchorType
+from pamet.model.card_note import CardNote
+from pamet.model.image_note import ImageNote
+from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.card.widget import CardNoteViewState
+from pamet.views.note.qt_helpers import minimal_nonelided_size
+from pamet.views.note.text.widget import TextNoteViewState
 
 log = misli.get_logger(__name__)
 
@@ -371,7 +377,7 @@ def delete_page(tab_view_state: TabViewState, page: Page):
 
     if not next_page:
         next_page = pamet.helpers.get_default_page() or pamet.page()
-        
+
     if not next_page:
         raise NotImplementedError
         next_page = pamet.actions.other.create_default_page()
@@ -641,9 +647,26 @@ def delete_arrow_edge(arrow_view_state: ArrowViewState, edge_index: float):
     pamet.update_arrow(arrow)
 
 
-@action('map_page.apply_autosize_changes')
-def apply_autosize_changes(notes: List[Note]):
-    for note in notes:
+@action('map_page.autosize_selected_notes')
+def autosize_selected_notes(map_page_view_state: MapPageViewState):
+    # views.note.qt_helpers.elide_text should be fixed to not use any Qt stuff
+    # in order for this to work on web. The latter only requires abstracting
+    # QFontMetrics.boundingRect (that works for single lines) and elideText
+    # for single words
+    for child_id in map_page_view_state.selected_child_ids:
+        note_vs = misli.gui.view_state(child_id)
+        if not isinstance(note_vs, (TextNote, CardNote, ImageNote)):
+            continue
+
+        note = note_vs.get_note()
+        old_size = note.rect().size()
+        new_size = minimal_nonelided_size(note)
+        if new_size == old_size:
+            continue
+
+        rect = note.rect()
+        rect.set_size(snap_to_grid(new_size))
+        note.set_rect(rect)
         pamet.update_note(note)
 
 

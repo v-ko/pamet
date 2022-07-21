@@ -5,7 +5,9 @@ from misli import gui
 from misli.gui.actions_library import action
 
 import pamet
+from pamet.helpers import snap_to_grid
 from pamet.model import Note
+from pamet.views.note.qt_helpers import minimal_nonelided_size
 # from pamet.views.note.anchor.widget import AnchorViewState
 from pamet.views.tab import widget as tab_widget
 
@@ -31,7 +33,14 @@ def create_new_note(tab_state: tab_widget.TabViewState, note: Note):
 
 @action('notes.finish_creating_note')
 def finish_creating_note(tab_state: tab_widget.TabViewState, note: Note):
-    pamet.create_note(**note.asdict())
+    note = pamet.create_note(**note.asdict())
+
+    # Autosize the note
+    rect = note.rect()
+    rect.set_size(snap_to_grid(minimal_nonelided_size(note)))
+    note.set_rect(rect)
+    pamet.update_note(note)
+
     tab_state.edit_view_state = None
     gui.update_state(tab_state)
 

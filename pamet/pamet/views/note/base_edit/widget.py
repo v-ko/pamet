@@ -33,8 +33,7 @@ class BaseNoteEditWidget(QWidget):
         self.ui.saveButton.clicked.connect(self._handle_ok_click)
         self.ui.devButton.clicked.connect(self._handle_dev_button_click)
         self.ui.cancelButton.clicked.connect(
-            lambda: note_actions.abort_editing_note(self.state())
-        )
+            lambda: note_actions.abort_editing_note(self.state()))
 
         page_view: MapPageWidget = parent.page_view()
         page_view_state = page_view.state()
@@ -64,6 +63,22 @@ class BaseNoteEditWidget(QWidget):
         # note.text = self.ui.textEdit.toPlainText().strip()
 
         if self.state().create_mode:
+            # It's not very elegant, but autosizing should be done here
+            # Otherwise e.g. the image size of each image note should be
+            # a part of the view state. That's not the worst but there were
+            # maybe other details that moved too much state out of the
+            # framework code
+            # if isinstance(self.edited_note, (TextNote, CardNote)):
+            #     # Shrink the note to fit contents
+            #     NoteType = note_view_state_type_for_note(self.edited_note,
+            #                                              edit=False)
+            #     map_page_widget = self.parent().page_view()
+            #     note_widget = map_page_widget.note_widget_by_note_gid(
+            #         self.edited_note.gid())
+            #     rect = self.edited_note.rect()
+            #     rect.set_size(minimal_nonelided_size(note_widget))
+            #     self.edited_note.set_rect(rect)
+
             note_actions.finish_creating_note(self.parent().state(),
                                               self.edited_note)
         else:

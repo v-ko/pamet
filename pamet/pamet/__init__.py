@@ -30,15 +30,3 @@ default_key_bindings = [
 pamet_root = Path(__file__).parent
 extensions_loader = ExtensionsLoader(pamet_root)
 extensions_loader.load_all_recursively(pamet_root / 'model')
-
-
-def resource_path(subpath: Union[str, Path]):
-    resource_dir_path = Path(__file__).parent / 'resources'
-    resource_path = resource_dir_path / Path(subpath)
-
-    if subpath.startswith('/'):
-        subpath = subpath[1:]
-
-    if not resource_path.exists():
-        raise Exception('Resource not found')
-    return resource_path

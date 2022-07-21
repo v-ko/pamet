@@ -29,10 +29,7 @@ from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
 from misli.entity_library.change import Change
-from pamet.views.note.base_note_view import NoteView, NoteViewState
-from pamet.views.note.card.widget import CardNoteViewState
-from pamet.views.note.qt_helpers import minimal_nonelided_size
-from pamet.views.note.text.widget import TextNoteViewState, TextNoteWidget
+from pamet.views.note.base_note_view import NoteViewState
 
 log = misli.get_logger(__name__)
 
@@ -121,7 +118,9 @@ class MapPageWidget(QWidget, MapPageView):
         QShortcut(QKeySequence(Qt.Key_L), self, commands.start_arrow_creation)
         # QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shortcut,
         #           Qt.WidgetShortcut)
-        QShortcut(QKeySequence(Qt.Key_A), self, self.autosize_selected_notes)
+        QShortcut(
+            QKeySequence(Qt.Key_A), self,
+            lambda: map_page_actions.autosize_selected_notes(self.state()))
         QShortcut(QKeySequence('ctrl+Z'), self,
                   lambda: map_page_actions.undo(self.state()))
         QShortcut(QKeySequence('ctrl+shift+Z'), self,
@@ -201,7 +200,11 @@ class MapPageWidget(QWidget, MapPageView):
 
         for nv_state in change.removed.note_view_states:
             note_widget = self.note_widget(nv_state.id)
-            self.remove_note_widget(note_widget)
+            if note_widget:
+                # Don't fail if it's missing. When changing type - we delete
+                # the note widget immediately (in order to avoid it handling
+                # a note type it wasn't supposed to)
+                self.remove_note_widget(note_widget)
 
         for av_state in change.added.arrow_view_states:
             self.add_arrow_widget(av_state)
@@ -273,7 +276,8 @@ class MapPageWidget(QWidget, MapPageView):
         nv_cache = self._note_widget_cache(change.new_state.id)
 
         if change.updated.geometry:
-            if change.old_state.rect().size() != change.new_state.rect().size():
+            if change.old_state.rect().size() != change.new_state.rect().size(
+            ):
                 nv_cache.should_rebuild_pcommand_cache = True
                 nv_cache.should_reallocate_image_cache = True
                 nv_cache.should_rerender_image_cache = True
@@ -285,32 +289,33 @@ class MapPageWidget(QWidget, MapPageView):
         if change.updated.color or change.updated.background_color:
             nv_cache.should_rebuild_pcommand_cache = True
             nv_cache.should_rerender_image_cache = True
-            
+
         self.update()
 
     def handle_page_child_change(self, change: Change):
-        state = self.state()
-        entity = change.last_state()
+        self_state = self.state()
+        child = change.last_state()
         if change.is_create():
-            map_page_actions.handle_child_added(state, entity)
+            map_page_actions.handle_child_added(self_state, child)
 
         elif change.is_delete():
-            map_page_actions.handle_child_removed(state, entity)
+            map_page_actions.handle_child_removed(self_state, child)
 
         else:  # Updated
-            if isinstance(entity, Note):
+            if isinstance(child, Note):
                 if change.updated.type_name:
-                    map_page_actions.handle_child_removed(state, entity)
-                    map_page_actions.handle_child_added(state, entity)
+                    note_widget = self.note_widget_by_note_gid(child.gid())
+                    self.remove_note_widget(note_widget)
+                    map_page_actions.handle_child_removed(self_state, child)
+                    map_page_actions.handle_child_added(self_state, child)
                     return
 
-                child_widget = self.note_widget_by_note_gid(entity.gid())
+                child_widget = self.note_widget_by_note_gid(child.gid())
                 child_widget_state = child_widget.state()
-            elif isinstance(entity, Arrow):
-                child_widget_state = self.arrow_state_by_arrow_gid(
-                    entity.gid())
+            elif isinstance(child, Arrow):
+                child_widget_state = self.arrow_state_by_arrow_gid(child.gid())
 
-            map_page_actions.handle_child_updated(child_widget_state, entity)
+            map_page_actions.handle_child_updated(child_widget_state, child)
 
     def arrow_state_by_arrow_gid(self, arrow_gid: str) -> ArrowViewState:
         for av_state in self.state().arrow_view_states:
@@ -332,7 +337,7 @@ class MapPageWidget(QWidget, MapPageView):
             yield note_widget
 
     def note_widget(self, state_id):
-        return self._note_widgets[state_id]
+        return self._note_widgets.get(state_id, None)
 
     def note_widget_by_note_gid(self, note_gid):
         for nw_state_id, note_widget in self._note_widgets.items():
@@ -834,28 +839,6 @@ class MapPageWidget(QWidget, MapPageView):
     def handle_esc_shortcut(self):
         if self.state().mode() != MapPageMode.NONE:
             map_page_actions.abort_special_mode(self.state())
-
-    def autosize_selected_notes(self):
-        state = self.state()
-        changed_notes = []
-        for child_id in state.selected_child_ids:
-            note_vs = misli.gui.view_state(child_id)
-            if not isinstance(note_vs, (TextNoteViewState, CardNoteViewState)):
-                continue
-            note_widget: TextNoteWidget = self.note_widget(child_id)
-
-            old_size = note_vs.rect().size()
-            new_size = minimal_nonelided_size(note_widget)
-            if new_size == old_size:
-                continue
-
-            note = note_vs.get_note()
-            rect = note.rect()
-            rect.set_size(new_size)
-            note.set_rect(rect)
-            changed_notes.append(note)
-
-        map_page_actions.apply_autosize_changes(changed_notes)
 
     def update_undo_redo_buttons_enabled(self):
         pass

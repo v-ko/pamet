@@ -6,11 +6,8 @@ from PySide6.QtCore import Qt, QRect
 
 from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.view_library.view_state import view_state_type
-from misli.basic_classes.point2d import Point2D
-from misli.basic_classes.rectangle import Rectangle
-
-from pamet.constants import NOTE_MARGIN
 from pamet import register_note_view_type
+from pamet.desktop_app import default_note_font
 from pamet.model.text_note import TextNote
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
 from pamet.views.note.base_note_view import NoteView, NoteViewState
@@ -37,9 +34,7 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
         NoteView.__init__(self, initial_state=initial_state)
         LinkNoteViewMixin.__init__(self)
 
-        font = self.font()
-        font.setPointSizeF(14)
-        self.setFont(font)
+        self.setFont(default_note_font())
 
         self._elided_text_layout = None
         self._alignment = Qt.AlignHCenter
@@ -49,14 +44,6 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
         # If there's a link - we watch for a page rename (and must unsubscribe
         # at destroyed)
         self.destroyed.connect(lambda: self.disconnect_from_page_changes())
-
-    def text_rect(self, for_size: Point2D = None) -> Rectangle:
-        if for_size:
-            size = for_size
-        else:
-            size = self.state().rect().size()
-        size -= Point2D(2 * NOTE_MARGIN, 2 * NOTE_MARGIN)
-        return Rectangle(NOTE_MARGIN, NOTE_MARGIN, *size.as_tuple())
 
     def on_state_change(self, change):
         state = change.last_state()
@@ -103,11 +90,11 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
             url_page = state.url.get_page()
             if url_page:
                 self._elided_text_layout = elide_text(url_page.name,
-                                                      self.text_rect(),
+                                                      state.text_rect(),
                                                       self.font())
             else:
                 self._elided_text_layout = elide_text(state.text,
-                                                      self.text_rect(),
+                                                      state.text_rect(),
                                                       self.font())
 
         if change.updated.url:
@@ -123,6 +110,6 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
 
         draw_text_lines(painter, self._elided_text_layout.data,
                         self._alignment,
-                        self.text_rect())
+                        self.state().text_rect())
         draw_link_decorations(self, painter)
         painter.end()

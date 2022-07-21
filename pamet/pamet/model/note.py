@@ -29,6 +29,7 @@ class Note(Entity):
     color: tuple = field(default_factory=lambda: DEFAULT_COLOR)
     background_color: tuple = field(default_factory=lambda: DEFAULT_BG_COLOR)
     content: dict = field(default_factory=dict)
+    metadata: dict = field(default_factory=dict)
     created: datetime = field(
         default_factory=lambda: datetime.fromtimestamp(0))
     modified: datetime = field(

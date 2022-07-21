@@ -82,17 +82,16 @@ class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
         self.ui.toolbarLayout.addWidget(trash_button)
 
         # Setup the buttons according to the type of the edited note
+        if isinstance(self.edited_note, ImageNote):
+            self.image_button.setChecked(True)
+        else:
+            self.image_props_widget.hide()
+
         if isinstance(self.edited_note, TextNote):
             self.text_button.setChecked(True)
-            self.image_button.setChecked(False)
-            self.image_props_widget.hide()
-        elif isinstance(self.edited_note, ImageNote):
-            self.text_button.setChecked(False)
-            self.image_button.setChecked(True)
+        else:
             self.text_props_widget.hide()
-        elif isinstance(self.edited_note, CardNote):
-            self.text_button.setChecked(True)
-            self.image_button.setChecked(True)
+        # The card note inherits both, so if it's a card - both will be checked
 
         # Setup the link button and line edit
         if initial_state.url.is_empty():
@@ -205,7 +204,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
             if page_by_name:
                 self.decorate_for_internal_url(True)
                 self.edited_note.url = page_by_name.url()
-                self.text_edit.setText(page.name)
+                self.text_edit.setText(page_by_name.name)
+                self.edited_note.text = page_by_name.name
             # Else assume it's a web link without a schema
             else:
                 self.decorate_for_internal_url(False)

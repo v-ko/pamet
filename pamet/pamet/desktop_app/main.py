@@ -19,6 +19,7 @@ log = misli.get_logger(__name__)
 
 def main():
     misli.line_spacing_in_pixels = 20
+    desktop_app = DesktopApp()
     pamet.desktop_app.configure_for_qt()
 
     # Load the config
@@ -52,7 +53,6 @@ def main():
     channels.state_changes_by_id.subscribe(
         lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
-    desktop_app = DesktopApp()
 
     start_page = pamet.helpers.get_default_page() or pamet.page()
     if not start_page:
