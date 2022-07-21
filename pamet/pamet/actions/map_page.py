@@ -248,7 +248,7 @@ def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
 
 @action('map_page.start_child_move')
 def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: list):
-    map_page_view_state.set_mode(MapPageMode.NOTE_MOVE)
+    map_page_view_state.set_mode(MapPageMode.CHILD_MOVE)
     map_page_view_state.mouse_position_on_note_drag_start = Point2D(*mouse_pos)
     for cid in map_page_view_state.selected_child_ids:
         child_state = misli.gui.view_state(cid)
@@ -265,25 +265,42 @@ def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: list):
 @action('map_page.moved_child_view_update')
 def moved_child_view_update(map_page_view_state: MapPageViewState,
                             delta: Point2D):
+    moved_note_ids = []
     for note_state in map_page_view_state.moved_note_states:
-        rect = note_state.get_note().rect()
+        note = note_state.get_note()
+        moved_note_ids.append(note.id)
+        rect = note.rect()
         rect.set_top_left(snap_to_grid(rect.top_left() + delta))
         note_state.set_rect(rect)
         gui.update_state(note_state)
 
     for arrow_state in map_page_view_state.moved_arrow_states:
-        arrow = arrow_state.get_arrow()
+        arrow: Arrow = arrow_state.get_arrow()
         if arrow.tail_point:
-            arrow_state.tail_point = snap_to_grid(arrow.tail_point + delta)
+            arrow_state.tail_point = snap_to_grid(
+                arrow.tail_point + delta)
         if arrow.head_point:
-            arrow_state.head_point = snap_to_grid(arrow.head_point + delta)
+            arrow_state.head_point = snap_to_grid(
+                arrow.head_point + delta)
+
+        tail_moved = arrow.tail_point or arrow.tail_note_id in moved_note_ids
+        head_moved = arrow.head_point or arrow.head_note_id in moved_note_ids
+        if tail_moved and head_moved:
+            mid_points = arrow.mid_points
+            mid_points = [
+                snap_to_grid(mid_point + delta) for mid_point in mid_points
+            ]
+            arrow_state.replace_midpoints(mid_points)
+
         gui.update_state(arrow_state)
 
 
 @action('map_page.finish_child_move')
 def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
+    moved_note_ids = []
     for note_state in map_page_view_state.moved_note_states:
         note = note_state.get_note()
+        moved_note_ids.append(note.id)
         note.x = snap_to_grid(note.x + delta.x())
         note.y = snap_to_grid(note.y + delta.y())
         pamet.update_note(note)
@@ -294,6 +311,15 @@ def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
             arrow.tail_point = snap_to_grid(arrow.tail_point + delta)
         if arrow.head_point:
             arrow.head_point = snap_to_grid(arrow.head_point + delta)
+
+        tail_moved = arrow.tail_point or arrow.tail_note_id in moved_note_ids
+        head_moved = arrow.head_point or arrow.head_note_id in moved_note_ids
+        if tail_moved and head_moved:
+            mid_points = arrow.mid_points
+            mid_points = [
+                snap_to_grid(mid_point + delta) for mid_point in mid_points
+            ]
+            arrow.replace_midpoints(mid_points)
         pamet.update_arrow(arrow)
 
     map_page_view_state.clear_mode()

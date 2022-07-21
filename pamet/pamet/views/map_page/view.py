@@ -227,7 +227,7 @@ class MapPageView(View):
             new_size = self._new_note_size_on_resize(mouse_pos)
             map_page_actions.finish_notes_resize(self.state(), new_size)
 
-        elif mode == MapPageMode.NOTE_MOVE:
+        elif mode == MapPageMode.CHILD_MOVE:
             pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
             pos_delta /= self.state().height_scale_factor()
             map_page_actions.finish_child_move(self.state(), pos_delta)
@@ -292,7 +292,7 @@ class MapPageView(View):
             new_size = self._new_note_size_on_resize(mouse_pos)
             map_page_actions.resize_note_views(state, new_size)
 
-        elif mode == MapPageMode.NOTE_MOVE:
+        elif mode == MapPageMode.CHILD_MOVE:
             pos_delta = mouse_pos - self._mouse_position_on_left_press
             pos_delta /= state.height_scale_factor()
             map_page_actions.moved_child_view_update(state, pos_delta)

@@ -618,7 +618,7 @@ class MapPageWidget(QWidget, MapPageView):
 
             # Draw lines for easier visual alignment
             if state.mode() in [
-                    MapPageMode.NOTE_RESIZE, MapPageMode.NOTE_MOVE
+                    MapPageMode.NOTE_RESIZE, MapPageMode.CHILD_MOVE
             ]:
                 if note_widget.id in state.selected_child_ids:
                     qdr = display_rect

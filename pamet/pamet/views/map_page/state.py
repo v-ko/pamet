@@ -17,7 +17,7 @@ class MapPageMode(Enum):
     DRAG_NAVIGATION = 1
     DRAG_SELECT = 2
     NOTE_RESIZE = 3
-    NOTE_MOVE = 4
+    CHILD_MOVE = 4
     CREATE_ARROW = 5
     ARROW_EDGE_DRAG = 6
 
