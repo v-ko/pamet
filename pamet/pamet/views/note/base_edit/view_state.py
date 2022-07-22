@@ -1,6 +1,6 @@
 from misli.gui import view_state_type
 from pamet.model.note import Note
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base.state import NoteViewState
 
 
 @view_state_type

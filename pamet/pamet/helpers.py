@@ -28,7 +28,7 @@ def generate_page_name() -> str:
 
 
 def get_default_page():
-    config = pamet.get_config()
+    config = pamet.desktop_app.get_config()
     return pamet.page(id=config.home_page_id)
 
 

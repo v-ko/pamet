@@ -16,7 +16,7 @@ from pamet.model.arrow import ArrowAnchorType
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
-from pamet.views.note.base_note_view import NoteView
+from pamet.views.note.base.view import NoteView
 
 log = misli.get_logger(__name__)
 
@@ -116,7 +116,8 @@ class MapPageView(View):
         intersections = []
         for note_view in adjacent_note_views:
             for anchor_type in ArrowAnchorType.real_types():
-                anchor_center = note_view.arrow_anchor(anchor_type)
+                note_vs = note_view.state()
+                anchor_center = note_vs.arrow_anchor(anchor_type)
                 distance = unprojected_pos.distance_to(anchor_center)
                 intersections.append((note_view, anchor_type, distance))
 

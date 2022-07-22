@@ -19,3 +19,8 @@ class DesktopConfig(PametConfig):
 
     repository_path: str = pamet_data_folder_path / 'repo'
     media_store_path: str = pamet_data_folder_path / 'media_store'
+    scripts_folder: str = pamet_data_folder_path / 'scripts'
+    script_templates_folder: str = pamet_data_folder_path / 'script_templates'
+    accepted_script_risks: bool = False
+    run_in_terminal_prefix_posix: str = 'gnome-terminal -- '
+    run_in_terminal_prefix_windows: str = 'powershell -noexit '

@@ -27,8 +27,14 @@ class QtWidgetsUtilProvider(BaseUtilitiesProvider):
 
     # def font_metrics(self, font):
 
+    def app_data_folder(self):
+        return self._app_data_folder
+
+    def config_file_path(self):
+        return self._app_data_folder / CONFIG_JSON
+
     def get_config(self) -> dict:
-        config_path = self._app_data_folder / CONFIG_JSON
+        config_path = self.config_file_path()
         if not config_path.exists():
             return {}
 
@@ -37,7 +43,7 @@ class QtWidgetsUtilProvider(BaseUtilitiesProvider):
             return config_dict
 
     def set_config(self, updated_config: dict):
-        config_str = json.dumps(updated_config)
+        config_str = json.dumps(updated_config, indent=4)
         config_path = self._app_data_folder / CONFIG_JSON
         config_path.write_text(config_str)
 

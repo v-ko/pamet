@@ -1,4 +1,3 @@
-
 from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent
 from PySide6.QtWidgets import QWidget
@@ -8,11 +7,11 @@ from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.view_library.view_state import view_state_type
 from pamet.desktop_app import default_note_font
 from pamet.desktop_app.helpers import draw_text_lines, elide_text
-from pamet.helpers import Url
 from pamet.model.card_note import CardNote
 from pamet.note_view_lib import register_note_view_type
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
-from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.base.view import NoteView
+from ..base.state import NoteViewState
 from pamet.views.note.image.image_label import ImageLabel
 from pamet.views.note.qt_helpers import draw_link_decorations
 
@@ -59,8 +58,8 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
             self.setGeometry(QRect(*state.geometry))
 
         if change.updated.local_image_url:
-            local_url: Url = state.local_image_url
-            self.image_label.update_image_cache(local_url)
+            self.image_label.update_image_cache(state.image_url,
+                                                state.local_image_url)
 
         if change.updated.text or \
                 change.updated.geometry \
@@ -92,7 +91,8 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
         painter.begin(self)
 
         draw_text_lines(painter, self._elided_text_layout.data,
-                        self._alignment, self.state().text_rect())
+                        self._alignment,
+                        self.state().text_rect())
         draw_link_decorations(self, painter)
         # Debug drawing
         # image_rect, text_rect = self.image_and_text_rects()

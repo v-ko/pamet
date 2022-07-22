@@ -1,4 +1,4 @@
-from PySide6.QtCore import QSize, Qt
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap, QResizeEvent
 from PySide6.QtWidgets import QLabel
 from anyio import Path
@@ -19,7 +19,7 @@ class ImageLabel(QLabel):
     def image(self) -> QImage:
         return self._image
 
-    def update_image_cache(self, local_url: Url):
+    def update_image_cache(self, url: Url, local_url: Url):
         if local_url:
             local_path = Path(local_url.path)
             if local_url.is_internal():
@@ -37,8 +37,11 @@ class ImageLabel(QLabel):
                 self.update_pixmap()
 
         else:
-            self.setText(
-                'Image was not properly downloaded. Edit it to try again.')
+            if not url:
+                self.setText('No image chosen')
+            else:
+                self.setText(
+                    'Image was not properly downloaded. Edit it to try again.')
 
     def update_pixmap(self):
         if not self._image:

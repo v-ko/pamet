@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import field
 from enum import Enum
 from typing import List
@@ -9,7 +11,7 @@ from pamet.constants import INITIAL_EYE_Z
 from pamet.model import Note
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.viewport import Viewport
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base.state import NoteViewState
 
 
 class MapPageMode(Enum):

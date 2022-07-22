@@ -1,5 +1,3 @@
-from copy import copy
-
 from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Qt, QRect
@@ -10,7 +8,8 @@ from pamet import register_note_view_type
 from pamet.desktop_app import default_note_font
 from pamet.model.text_note import TextNote
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
-from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.base.view import NoteView
+from pamet.views.note.base.state import NoteViewState
 from pamet.desktop_app.helpers import elide_text, draw_text_lines
 
 from misli import get_logger

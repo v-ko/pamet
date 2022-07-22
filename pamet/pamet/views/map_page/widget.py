@@ -29,7 +29,7 @@ from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
 from misli.entity_library.change import Change
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base.state import NoteViewState
 
 log = misli.get_logger(__name__)
 
@@ -531,14 +531,14 @@ class MapPageWidget(QWidget, MapPageView):
         for child_id, display_rect in display_rects_by_child_id.items():
             note_widget = self.note_widget(child_id)
             nw_cache = self._note_widget_cache(note_widget.id)
-            nw_state = note_widget.state()
+            note_vs = note_widget.state()
 
             render_img = nw_cache.image_cache
 
-            nt_main_color = QColor(*nw_state.get_color().to_uint8_rgba_list())
+            nt_main_color = QColor(*note_vs.get_color().to_uint8_rgba_list())
 
             nt_background_color = QColor(
-                *nw_state.get_background_color().to_uint8_rgba_list())
+                *note_vs.get_background_color().to_uint8_rgba_list())
 
             nt_background_brush = QBrush(nt_background_color, Qt.SolidPattern)
 
@@ -672,18 +672,18 @@ class MapPageWidget(QWidget, MapPageView):
             # Draw the anchors for the notes under/close to the mouse
             for note_widget in self.get_note_views_at(mouse_pos,
                                                       ARROW_EDGE_RAIDUS):
+                note_vs = note_widget.state()
                 for anchor_type in ArrowAnchorType.real_types():
-                    arr_anchor_pos = note_widget.arrow_anchor(anchor_type)
+                    arr_anchor_pos = note_vs.arrow_anchor(anchor_type)
                     arr_anchor_pos = state.project_point(arr_anchor_pos)
                     radius = ARROW_EDGE_RAIDUS * state.height_scale_factor()
-                    nw_state = note_widget.state()
 
                     q_anchor_pos = QPointF(*arr_anchor_pos.as_tuple())
                     nt_main_color = QColor(
-                        *nw_state.get_color().to_uint8_rgba_list())
+                        *note_vs.get_color().to_uint8_rgba_list())
 
                     nt_background_color = QColor(
-                        *nw_state.get_background_color().to_uint8_rgba_list())
+                        *note_vs.get_background_color().to_uint8_rgba_list())
 
                     nt_background_brush = QBrush(nt_background_color,
                                                  Qt.SolidPattern)

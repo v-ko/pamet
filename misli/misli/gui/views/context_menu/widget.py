@@ -1,26 +1,34 @@
-from typing import Union
-from PySide6.QtWidgets import QMenu
+from typing import Callable, Union
+from PySide6.QtWidgets import QLabel, QMenu, QWidgetAction
 from PySide6.QtGui import QKeySequence
-from PySide6.QtCore import QPoint
+from PySide6.QtCore import QPoint, Qt
 
 import misli
 from misli.gui.key_binding_manager import first_key_binding_for_command
 from misli.gui import Command
 
 
-def add_entries(menu, entries):
+def add_entries(menu: QMenu, entries):
     for name, command in entries.items():
         # Nested dicts mean submenus
         if isinstance(command, dict):
             submenu = QMenu(name, menu)
             add_entries(submenu, command)
             menu.addMenu(submenu)
-        else:
+        elif command is None:
+            label_action = QWidgetAction(menu)
+            label = QLabel(name)
+            label.setAlignment(Qt.AlignCenter)
+            label_action.setDefaultWidget(label)
+            menu.addAction(label_action)
+        elif isinstance(command, Callable):
             binding = first_key_binding_for_command(command)
             if binding:
                 menu.addAction(name, command, QKeySequence(binding.key))
             else:
                 menu.addAction(name, command)
+        else:
+            raise Exception
 
 
 class ContextMenuWidget(QMenu):

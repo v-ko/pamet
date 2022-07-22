@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Union
+from typing import Generator, List, Union
 from dataclasses import field
 from datetime import datetime
 
@@ -15,6 +15,7 @@ from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
 from pamet.helpers import Url
+from pamet.model.arrow import Arrow, ArrowAnchorType
 
 log = get_logger(__name__)
 
@@ -142,12 +143,7 @@ class Note(Entity):
 
     @property
     def url(self) -> Url:
-        try:
-            url = self.content[URL]  #@IgnoreException
-        except KeyError:
-            url = ''
-            self.content[URL] = url
-        return Url(url)
+        return Url(self.content.get(URL, ''))
 
     @url.setter
     def url(self, new_url: Union[Url, str, None]):
@@ -158,3 +154,40 @@ class Note(Entity):
             self.content.pop(URL, None)
             return
         self.content[URL] = new_url
+
+    def in_arrows(self) -> Generator[Arrow, None, None]:
+        arrows = pamet.page(id=self.page_id).arrows()
+        for arrow in arrows:
+            if self.id == arrow.head_note_id:
+                yield arrow
+
+    def out_arrows(self) -> Generator[Arrow, None, None]:
+        arrows = pamet.page(id=self.page_id).arrows()
+        for arrow in arrows:
+            if self.id == arrow.tail_note_id:
+                yield arrow
+
+    def connected_arrows(self) -> Generator[Arrow, None, None]:
+        arrows = pamet.page(id=self.page_id).arrows()
+        for arrow in arrows:
+            if self.id == arrow.tail_note_id or self.id == arrow.head_note_id:
+                yield arrow
+
+    def arrow_anchor(self, anchor_type: ArrowAnchorType) -> Point2D:
+        """Returns the center position for a specific arrow anchor.
+
+        Raises: Does not support the ArrowAnchorType.AUTO
+        """
+        rect: Rectangle = self.rect()
+
+        match anchor_type:
+            case ArrowAnchorType.MID_LEFT:
+                return rect.top_left() + Point2D(0, rect.height() / 2)
+            case ArrowAnchorType.TOP_MID:
+                return rect.top_left() + Point2D(rect.width() / 2, 0)
+            case ArrowAnchorType.MID_RIGHT:
+                return rect.top_right() + Point2D(0, rect.height() / 2)
+            case ArrowAnchorType.BOTTOM_MID:
+                return rect.bottom_left() + Point2D(rect.width() / 2)
+            case _:
+                raise Exception

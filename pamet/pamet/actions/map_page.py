@@ -9,8 +9,6 @@ import pamet
 
 from misli.basic_classes import Point2D, Rectangle
 from misli.gui.actions_library import action
-from pamet.actions.note import abort_editing_note, create_new_note
-from pamet.actions.note import finish_editing_note, start_editing_note
 from pamet.helpers import Url, snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
@@ -20,11 +18,9 @@ from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
-from pamet.views.map_page.state import MapPageViewState, MapPageMode
-from pamet.views.note.base_note_view import NoteViewState
-from pamet.views.note.card.widget import CardNoteViewState
+from pamet.views.map_page.state import MapPageMode, MapPageViewState
+from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.qt_helpers import minimal_nonelided_size
-from pamet.views.note.text.widget import TextNoteViewState
 
 log = misli.get_logger(__name__)
 
@@ -178,31 +174,53 @@ def stop_drag_select(map_page_view_state: MapPageViewState):
     gui.update_state(map_page_view_state)
 
 
+@action('map_page.delete_notes_and_connected_arrows')
+def delete_notes_and_connected_arrows(notes: List[Note]):
+    note_ids = []
+    page_id = None
+    for note in notes:
+        note_ids.append(note.id)
+        if not page_id:
+            page_id = note.page_id
+        elif page_id != note.page_id:
+            raise Exception
+
+    arrows_for_deletion = []
+    for arrow in pamet.page(id=note.page_id).arrows():
+        if (arrow.tail_note_id and arrow.tail_note_id in note_ids) or\
+                (arrow.head_note_id and arrow.head_note_id in note_ids):
+            arrows_for_deletion.append(arrow)
+
+    for arrow in arrows_for_deletion:
+        pamet.remove_arrow(arrow)
+
+    for note in notes:
+        pamet.remove_note(note)
+
+
 @action('map_page.delete_selected_children')
 def delete_selected_children(map_page_view_state: MapPageViewState):
-    arrow_gids_for_removal = set()
-
-    # Delete if it's a note and store in the list if it's an arrow
+    # Parse the ids into lists for removal
+    arrow_gids_for_removal = []
+    notes_for_removal = []
     for nc_id in map_page_view_state.selected_child_ids:
         child_state = gui.view_state(nc_id)
         if isinstance(child_state, NoteViewState):
-            pamet.remove_note(child_state.get_note())
+            note = child_state.get_note()
+            notes_for_removal.append(note)
         elif isinstance(child_state, ArrowViewState):
-            arrow_gids_for_removal.add(child_state.arrow_gid)
+            arrow_gids_for_removal.append(child_state.arrow_gid)
         else:
             raise Exception('Unexpected state type')
 
-    # Mark for removal the arrows that are anchored on any of the seleced notes
-    for arrow_state in map_page_view_state.arrow_view_states:
-        if ((arrow_state.has_tail_anchor() and arrow_state.tail_note_id
-             in map_page_view_state.selected_child_ids)
-                or (arrow_state.has_head_anchor() and arrow_state.head_note_id
-                    in map_page_view_state.selected_child_ids)):
-            arrow_gids_for_removal.add(arrow_state.arrow_gid)
+    delete_notes_and_connected_arrows(notes_for_removal)
 
     # Delete the arrows
     for arrow_gid in arrow_gids_for_removal:
-        pamet.remove_arrow(pamet.find_one(gid=arrow_gid))
+        arrow = pamet.find_one(gid=arrow_gid)
+        if not arrow:  # May've been removed with the notes
+            continue
+        pamet.remove_arrow(arrow)
 
     clear_child_selection(map_page_view_state)
     misli.gui.update_state(map_page_view_state)
@@ -277,11 +295,9 @@ def moved_child_view_update(map_page_view_state: MapPageViewState,
     for arrow_state in map_page_view_state.moved_arrow_states:
         arrow: Arrow = arrow_state.get_arrow()
         if arrow.tail_point:
-            arrow_state.tail_point = snap_to_grid(
-                arrow.tail_point + delta)
+            arrow_state.tail_point = snap_to_grid(arrow.tail_point + delta)
         if arrow.head_point:
-            arrow_state.head_point = snap_to_grid(
-                arrow.head_point + delta)
+            arrow_state.head_point = snap_to_grid(arrow.head_point + delta)
 
         tail_moved = arrow.tail_point or arrow.tail_note_id in moved_note_ids
         head_moved = arrow.head_point or arrow.head_note_id in moved_note_ids
@@ -408,16 +424,6 @@ def delete_page(tab_view_state: TabViewState, page: Page):
         raise NotImplementedError
         next_page = pamet.actions.other.create_default_page()
     tab_actions.go_to_url(tab_view_state, next_page.url())
-
-
-@action('map_page.switch_note_type')
-def switch_note_type(tab_state: TabViewState, note: Note):
-    if tab_state.edit_view_state.create_mode:
-        abort_editing_note(tab_state)
-        create_new_note(tab_state, note)
-    else:
-        finish_editing_note(tab_state, note)
-        start_editing_note(tab_state, note)
 
 
 @action('map_page.handle_child_added')
@@ -575,11 +581,7 @@ def finish_arrow_creation(map_page_view_state: MapPageViewState):
                 continue
 
         # Get the properties for the new arrow from the view state
-        arrow = Arrow(page_id=arrow_vs.page_id)
-        for field in fields(Arrow):
-            value = getattr(arrow_vs, field.name)
-            setattr(arrow, field.name, value)
-
+        arrow = Arrow.create_silent(**arrow_vs.asdict())
         pamet.insert_arrow(arrow)
 
     map_page_view_state.clear_mode()

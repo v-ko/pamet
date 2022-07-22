@@ -72,8 +72,8 @@ class ImagePropsWidget(QWidget):
             self.handle_open_file_button_click)
 
     def handle_open_file_button_click(self):
-        file_path = QFileDialog.getOpenFileName()
-        self.ui.urlLineEdit.setText(file_path[0])
+        file_path, _ = QFileDialog.getOpenFileName()
+        self.ui.urlLineEdit.setText(file_path)
 
     def resizeEvent(self, event: QResizeEvent) -> None:
         if self._image_preview and \

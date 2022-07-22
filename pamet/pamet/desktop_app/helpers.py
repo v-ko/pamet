@@ -1,10 +1,22 @@
-from typing import List, Tuple
+from typing import List, Tuple, Union
+from pathlib import Path
+import shutil
 
-from PySide6.QtGui import QFont, QGuiApplication, QFontMetrics, QPainter
-from PySide6.QtCore import Qt, QRectF, QPointF, QSizeF, QRect
+from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, QPainter
+from PySide6.QtCore import Qt, QRectF, QRect
+
+import misli
 from misli.basic_classes.rectangle import Rectangle
+from misli.gui.utils.qt_widgets.provider import QtWidgetsUtilProvider
+from misli.logging import get_logger
 
-from pamet.constants import NOTE_MARGIN, NO_SCALE_LINE_SPACING
+import pamet
+from pamet.constants import NO_SCALE_LINE_SPACING
+from pamet import desktop_app
+from pamet.desktop_app.config import DesktopConfig, pamet_data_folder_path
+from pamet.services.media_store import MediaStore
+
+log = get_logger(__name__)
 
 
 def control_is_pressed():
@@ -160,3 +172,82 @@ def draw_text_lines(
         # print(after_rect)
         # painter.drawRect(line_rect)
         # painter.drawRect(after_rect)
+
+
+def resource_path(subpath: Union[str, Path]):
+    resource_dir_path = Path(__file__).parent.parent / 'resources'
+    resource_path = resource_dir_path / Path(subpath)
+
+    if subpath.startswith('/'):
+        subpath = subpath[1:]
+
+    if not resource_path.exists():
+        raise Exception('Resource not found')
+    return resource_path
+
+
+def copy_script_templates(overwrite: bool = False):
+    config = pamet.desktop_app.get_config()
+    templates_folder: Path = Path(config.script_templates_folder)
+    templates_folder.mkdir(parents=True, exist_ok=True)
+    source_folder = resource_path('script_templates')
+
+    for source_file in source_folder.iterdir():
+        target_path = templates_folder / source_file.name
+        if target_path.exists() and not overwrite:
+            continue
+
+        shutil.copy(source_file, target_path)
+
+
+def configure_for_qt():
+    global _media_store, _default_note_font
+
+    # Force view registration (should be handled by the ExtensionManager)
+    from pamet.views.map_page.widget import MapPageWidget
+    from pamet.views.note.text.widget import TextNoteWidget
+    from pamet.views.note.text.edit_widget import CardNoteEditWidget
+    from pamet.views.note.image.widget import ImageNoteWidget
+    from pamet.views.note.card.widget import CardNoteWidget
+    from pamet.views.note.script.widget import ScriptNoteWidget
+    from pamet.views.note.script.edit_widget import ScriptNoteEditWidget
+
+    misli.configure_for_qt()
+
+    log.info(f'Using data folder: {pamet_data_folder_path}')
+    util_provider = QtWidgetsUtilProvider(pamet_data_folder_path)
+    misli.gui.set_util_provider(util_provider)
+
+    config: DesktopConfig = desktop_app.get_config()
+    if config.changes_present():
+        desktop_app.save_config(config)
+
+    copy_script_templates()
+
+    desktop_app.set_media_store(MediaStore(config.media_store_path))
+    desktop_app.icons.load_all()
+
+    _font_id = QFontDatabase.addApplicationFont(
+        str(resource_path('fonts/OpenSans-VariableFont_wdth,wght.ttf')))
+    _font_family = QFontDatabase.applicationFontFamilies(_font_id)[0]
+    _default_note_font = QFont(_font_family)
+    _default_note_font.setPointSizeF(14)
+    desktop_app.set_default_note_font(_default_note_font)
+
+
+# def get_scripts_permission():
+#     # Warn of the risks from scripts
+#     warning_text = '''!!!WARNING!!!
+
+#     Executings scripts may harm your system. Do not run code that you do
+#     not understand or trust the authors of.
+
+#     Do you know what you're doing?
+#     '''
+#     if not config.accepted_script_risks:
+#         reply = QMessageBox.question(
+#             self, 'Scripts warning', warning_text)
+#         if reply == QMessageBox.StandardButton.Yes:
+#             config.accepted_script_risks = True
+#             save_config(config)
+#         else:

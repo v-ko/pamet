@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Union
 
 from misli.extensions_loader import ExtensionsLoader
 from misli.logging import get_logger
@@ -8,7 +7,6 @@ from .model import find, find_one, insert_note, insert_page, update_note
 from .model import update_page, remove_note, remove_page
 from .model import insert_arrow, remove_arrow, update_arrow
 from .model import apply_change, undo_history
-from .model import get_config, save_config
 
 from .note_view_lib import register_note_view_type, note_view_type
 from .note_view_lib import note_view_type_by_state, note_state_type_by_view

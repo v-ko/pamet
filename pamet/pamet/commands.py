@@ -3,13 +3,12 @@ from typing import Tuple
 import misli
 from misli.gui import command
 
-from pamet import actions
 from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
 from pamet.actions import window as window_actions
 
 from pamet.gui_helpers import current_window, current_tab
-from pamet.views.note.base_note_view import NoteViewState
+from pamet.views.note.base.state import NoteViewState
 
 log = misli.get_logger(__name__)
 

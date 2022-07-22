@@ -10,6 +10,7 @@ from misli.gui.view_library.view import View
 
 import pamet
 from pamet import actions
+from pamet.desktop_app import get_config
 from .ui_properties_widget import Ui_MapPagePropertiesWidget
 
 
@@ -35,7 +36,7 @@ class MapPagePropertiesWidget(QWidget, View):
 
         # Configure the UI
         # Set the home page check box state
-        config = pamet.get_config()
+        config = get_config()
         page = initial_state.get_page()
         if config.home_page_id == page.id:
             self.ui.setAsHomePageCheckBox.setChecked(True)
@@ -108,7 +109,7 @@ class MapPagePropertiesWidget(QWidget, View):
         self.ui.nameWarningLabel.hide()
 
     def _handle_home_page_toggle(self, checked: bool):
-        config = pamet.get_config()
+        config = get_config()
         page = self.state().get_page()
 
         if checked:

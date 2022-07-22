@@ -1,9 +1,11 @@
 from __future__ import annotations
+from misli import entity_library
 
 from misli.entity_library import get_entity_class_by_name
+from misli.entity_library.entity import Entity
 
-_view_types = {}
-_edit_view_types = {}
+_view_types_by_note_type_name = {}
+_edit_view_types_by_note_type_name = {}
 _all_by_state_type_name = {}
 _states_by_view_type_name = {}
 
@@ -19,14 +21,14 @@ def register_note_view_type(state_type, note_type, edit):
     def view_registration_decorator(cls):
         if edit:
             for note_type_name in note_type_names:
-                if note_type_name in _edit_view_types:
+                if note_type_name in _edit_view_types_by_note_type_name:
                     raise Exception('Class already registered (edit)')
-                _edit_view_types[note_type_name] = cls
+                _edit_view_types_by_note_type_name[note_type_name] = cls
         else:
             for note_type_name in note_type_names:
-                if note_type_name in _view_types:
+                if note_type_name in _view_types_by_note_type_name:
                     raise Exception('Class already registered')
-                _view_types[note_type_name] = cls
+                _view_types_by_note_type_name[note_type_name] = cls
 
         _all_by_state_type_name[state_type_name] = cls
         _states_by_view_type_name[cls.__name__] = state_type
@@ -37,9 +39,9 @@ def register_note_view_type(state_type, note_type, edit):
 
 def note_view_type(note_type_name, edit=False) -> NoteViewState:
     if edit:
-        return _edit_view_types[note_type_name]
+        return _edit_view_types_by_note_type_name[note_type_name]
     else:
-        return _view_types[note_type_name]
+        return _view_types_by_note_type_name[note_type_name]
 
 
 def note_view_type_by_state(state_type_name):
@@ -64,3 +66,11 @@ def note_type_from_props(props):
         return None
 
     return note_type
+
+
+def note_types_with_assiciated_views() -> Entity:
+    note_types = []
+    for note_type_name in _view_types_by_note_type_name:
+        note_type = entity_library.get_entity_class_by_name(note_type_name)
+        note_types.append(note_type)
+    return note_types

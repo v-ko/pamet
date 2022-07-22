@@ -2,19 +2,26 @@ from __future__ import annotations
 import json
 from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QShortcut, QKeySequence
-from PySide6.QtWidgets import QMessageBox, QWidget
+from PySide6.QtWidgets import QMessageBox, QPushButton, QWidget
 
 import misli.entity_library
+from misli.gui.view_library.view import View
+from misli.gui.views.context_menu.widget import ContextMenuWidget
 from pamet.actions import note as note_actions
+from pamet.note_view_lib import note_types_with_assiciated_views
+from pamet.views.map_page.widget import MapPageWidget
 from pamet.views.note.base_edit.view_state import NoteEditViewState
+from pamet.desktop_app import icons
 
 from .ui_widget import Ui_BaseNoteEditWidget
 
 
-class BaseNoteEditWidget(QWidget):
+class BaseNoteEditWidget(QWidget, View):
 
     def __init__(self, parent: TabWidget, initial_state: NoteEditViewState):
         QWidget.__init__(self, parent=parent)
+        View.__init__(self, initial_state=initial_state)
+        self.tab_widget: TabWidget = parent
 
         if initial_state.new_note_dict:
             type_name = initial_state.new_note_dict.pop('type_name')
@@ -29,20 +36,32 @@ class BaseNoteEditWidget(QWidget):
         self.ui = Ui_BaseNoteEditWidget()
         self.ui.setupUi(self)
 
+        trash_button = QPushButton(icons.trash, '', self)
+        self.ui.toolbarLayout.addWidget(trash_button)
+
+        self.switch_type_button = QPushButton(icons.more, '', self)
+        self.ui.toolbarLayout.addWidget(self.switch_type_button)
+
         QShortcut(QKeySequence(Qt.Key_Escape), self, self._handle_esc_shortcut)
         self.ui.saveButton.clicked.connect(self._handle_ok_click)
         self.ui.devButton.clicked.connect(self._handle_dev_button_click)
         self.ui.cancelButton.clicked.connect(
-            lambda: note_actions.abort_editing_note(self.state()))
+            lambda: note_actions.abort_editing_note(self.tab_widget.state()))
+        trash_button.clicked.connect(
+            lambda: note_actions.abort_editing_and_delete_note(self.tab_widget.
+                                                               state()))
+        self.switch_type_button.clicked.connect(
+            self._show_the_type_switch_menu)
 
         page_view: MapPageWidget = parent.page_view()
         page_view_state = page_view.state()
 
+        # Center the widget over the note being edited with a size possibly
+        # the same as the notes unscaled size
         size = initial_state.rect().size()
         center = page_view_state.project_point(initial_state.rect().center())
         center = page_view.mapToGlobal(QPoint(*center.as_tuple()))
 
-        # Center the widget on the note with a size
         self_rect = self.geometry()
         delta_y = self.ui.bottomLayout.geometry().size().height()
         delta_y += self.ui.topLayout.geometry().size().height()
@@ -52,37 +71,15 @@ class BaseNoteEditWidget(QWidget):
         self_rect.moveCenter(center)
         self.setGeometry(self_rect)
 
-    # @property
-    # def note(self) -> Note:
-    #     return self.state().note.copy()
-
     def _handle_esc_shortcut(self):
-        note_actions.abort_editing_note(self.parent().state())
+        note_actions.abort_editing_note(self.tab_widget.state())
 
     def _handle_ok_click(self):
-        # note.text = self.ui.textEdit.toPlainText().strip()
-
         if self.state().create_mode:
-            # It's not very elegant, but autosizing should be done here
-            # Otherwise e.g. the image size of each image note should be
-            # a part of the view state. That's not the worst but there were
-            # maybe other details that moved too much state out of the
-            # framework code
-            # if isinstance(self.edited_note, (TextNote, CardNote)):
-            #     # Shrink the note to fit contents
-            #     NoteType = note_view_state_type_for_note(self.edited_note,
-            #                                              edit=False)
-            #     map_page_widget = self.parent().page_view()
-            #     note_widget = map_page_widget.note_widget_by_note_gid(
-            #         self.edited_note.gid())
-            #     rect = self.edited_note.rect()
-            #     rect.set_size(minimal_nonelided_size(note_widget))
-            #     self.edited_note.set_rect(rect)
-
-            note_actions.finish_creating_note(self.parent().state(),
+            note_actions.finish_creating_note(self.tab_widget.state(),
                                               self.edited_note)
         else:
-            note_actions.finish_editing_note(self.parent().state(),
+            note_actions.finish_editing_note(self.tab_widget.state(),
                                              self.edited_note)
 
     def _handle_dev_button_click(self):
@@ -97,3 +94,23 @@ class BaseNoteEditWidget(QWidget):
             note_dict_str,
             # buttons=QMessageBox.Ok,
         )
+
+    def _show_the_type_switch_menu(self):
+        switch_type_menu_entries = {}
+        for NoteType in note_types_with_assiciated_views():
+
+            def command(NoteType=NoteType):
+                # Possibly ask for a scripts permission here
+                note_actions.switch_note_type(
+                    self.tab_widget.state(),
+                    NoteType.create_silent(**self.edited_note.asdict()))
+
+            switch_type_menu_entries[NoteType.__name__] = command
+
+        menu_dict = {'Switch type:': None, **switch_type_menu_entries}
+        menu = ContextMenuWidget(self, menu_dict)
+
+        # Center the menu under the button and show it
+        position = self.switch_type_button.rect().center()
+        position.setX(position.x() - menu.width() / 2)
+        menu.popup(position)

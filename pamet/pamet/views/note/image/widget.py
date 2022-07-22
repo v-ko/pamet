@@ -1,7 +1,5 @@
-from pathlib import Path
-from PySide6.QtCore import QRect, QSize, Qt
-from PySide6.QtGui import QColor, QImage, QPaintEvent, QPainter, QPixmap, QResizeEvent
-from PySide6.QtWidgets import QLabel
+from PySide6.QtCore import QRect
+from PySide6.QtGui import QColor, QPaintEvent, QPainter
 from misli.entity_library.change import Change
 from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.view_library.view_state import view_state_type
@@ -10,7 +8,8 @@ from misli.logging import get_logger
 from pamet import register_note_view_type
 from pamet.helpers import Url
 from pamet.model.image_note import ImageNote
-from pamet.views.note.base_note_view import NoteView, NoteViewState
+from pamet.views.note.base.view import NoteView
+from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.image.image_label import ImageLabel
 from pamet.views.note.qt_helpers import draw_link_decorations
 
@@ -46,8 +45,7 @@ class ImageNoteWidget(ImageLabel, NoteView):
             self.setPalette(palette)
 
         if change.updated.local_image_url:
-            local_url: Url = state.local_image_url
-            self.update_image_cache(local_url)
+            self.update_image_cache(state.image_url, state.local_image_url)
         if change.updated.geometry:
             self.setGeometry(QRect(*state.geometry))
 

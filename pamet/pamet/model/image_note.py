@@ -16,12 +16,7 @@ class ImageNote(Note):
 
     @property
     def image_url(self) -> Url:
-        try:
-            url = self.content[IMAGE_URL]  #@IgnoreException
-        except KeyError:
-            url = ''
-            self.content[IMAGE_URL] = url
-        return Url(url)
+        return Url(self.content.get(IMAGE_URL, ''))
 
     @image_url.setter
     def image_url(self, new_url: Union[Url, str, None]):
@@ -34,12 +29,7 @@ class ImageNote(Note):
 
     @property
     def local_image_url(self) -> Url:
-        try:
-            url = self.content[LOCAL_IMAGE_URL]  #@IgnoreException
-        except KeyError:
-            url = ''
-            self.content[LOCAL_IMAGE_URL] = url
-        return Url(url)
+        return Url(self.content.get(LOCAL_IMAGE_URL, ''))
 
     @local_image_url.setter
     def local_image_url(self, new_url: Union[Url, str, None]):

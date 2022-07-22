@@ -10,6 +10,7 @@ from pamet.model import Note
 from pamet.views.note.qt_helpers import minimal_nonelided_size
 # from pamet.views.note.anchor.widget import AnchorViewState
 from pamet.views.tab import widget as tab_widget
+from pamet.actions import map_page as map_page_actions
 
 log = misli.get_logger(__name__)
 
@@ -75,6 +76,13 @@ def abort_editing_note(tab_state: tab_widget.TabViewState):
     gui.update_state(tab_state)
 
 
+@action('notes.abort_editing_and_delete_note')
+def abort_editing_and_delete_note(tab_state: tab_widget.TabViewState):
+    note = tab_state.edit_view_state.get_note()
+    map_page_actions.delete_notes_and_connected_arrows([note])
+    abort_editing_note(tab_state)
+
+
 @action('note.apply_page_change_to_anchor_view')
 def apply_page_change_to_anchor_view(
         note_view_state: tab_widget.TextNoteViewState):
@@ -85,3 +93,13 @@ def apply_page_change_to_anchor_view(
     else:
         note_view_state.text += '(removed)'
     misli.gui.update_state(note_view_state)
+
+
+@action('note.switch_note_type')
+def switch_note_type(tab_state: TabViewState, note: Note):
+    if tab_state.edit_view_state.create_mode:
+        abort_editing_note(tab_state)
+        create_new_note(tab_state, note)
+    else:
+        finish_editing_note(tab_state, note)
+        start_editing_note(tab_state, note)

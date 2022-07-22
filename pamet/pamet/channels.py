@@ -1,5 +1,4 @@
 from misli.pubsub import Channel
-from pamet.model.page import Page
 
 # Entity changeset per top-level action (TLA), meaning the channel transmits
 # change-set objects (lists or sets) containing the changes made in a TLA

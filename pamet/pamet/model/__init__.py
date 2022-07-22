@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from copy import copy
 from datetime import datetime
 from typing import Generator, List, Union
+
 import misli
 from misli.change_aggregator import ChangeAggregator
 from misli.entity_library.change import Change
@@ -12,7 +15,6 @@ import pamet
 from pamet import channels
 from misli import entity_library
 from misli import get_logger
-from pamet.desktop_app.config import DesktopConfig
 from pamet.model.arrow import Arrow
 from pamet.services.undo import UndoService
 # from pamet.persistence_manager import PersistenceManager
@@ -188,11 +190,23 @@ def apply_change(change: Change):
     raw_entity_changes.push(change)
 
 
-# Config handling
-def get_config() -> DesktopConfig:
-    config_dict = misli.gui.util_provider().get_config()
-    return DesktopConfig.load(config_dict)
+# Validity checks
+def arrow_validity_check():
+    """Removes arrows with missing anchor notes. Must be performed after
+    the repo has been initialized."""
 
+    # Validity check on the arrow note anchors
+    # If the note, that the anchor points to, is missing - skip arrow
+    invalid_arrows = []
+    for arrow in pamet.find(type_name=Arrow.__name__):
+        if arrow.id == 'f3e5032d':
+            pass
+        if (arrow.has_tail_anchor() and not arrow.get_tail_note()) or\
+                (arrow.has_head_anchor() and not arrow.get_head_note()):
 
-def save_config(config: DesktopConfig):
-    misli.gui.util_provider().set_config(config.asdict())
+            invalid_arrows.append(arrow)
+
+    for arrow in invalid_arrows:
+        log.error('Removing arrow because of an invalid note anchor: '
+                  f'{arrow}')
+        pamet.remove_arrow(arrow)

@@ -282,16 +282,12 @@ class FSStorageRepository(Repository):
                 arrow_state['tail_coords'] = arrow_state.pop('tail_point')
 
             try:
-                arrow = entity_library.from_dict(Arrow.__name__, arrow_state)
+                arrow: Arrow = entity_library.from_dict(
+                    Arrow.__name__, arrow_state)
             except Exception as e:
                 log.error(f'Exception {e} raised while parsing arrow '
                           f'{arrow_state} from file {json_file_path}')
                 continue
-
-            #REMOVE vv
-            if not arrow.line_function_name:
-                arrow.line_function_name = BEZIER_CUBIC
-            arrow.line_thickness = DEFAULT_ARROW_THICKNESS
 
             arrows.append(arrow)
 

@@ -37,3 +37,5 @@ pamet_brython/cordova_app/platforms/
 pamet_brython/cordova_app/plugins/
 pamet_brython/cordova_app/package-lock.json
 pamet_brython/cordova_app/package.json
+pamet/acknowledgements.md
+pamet/pamet/views/note/script/test_cases

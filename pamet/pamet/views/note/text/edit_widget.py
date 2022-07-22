@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QCompleter, QPushButton
 import misli
 from misli.gui.view_library.view import View
 from pamet import register_note_view_type
+
 import pamet
 from pamet.desktop_app import icons
 from pamet.helpers import Url
@@ -30,11 +31,10 @@ class CardEditViewState(NoteEditViewState):
 @register_note_view_type(state_type=CardEditViewState,
                          note_type=(TextNote, ImageNote, CardNote),
                          edit=True)
-class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
+class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
 
     def __init__(self, parent, initial_state: CardEditViewState):
         super().__init__(parent, initial_state)
-        View.__init__(self, initial_state=initial_state)
 
         # Add the link props widget
         self.text_props_widget = TextEditPropsWidget(self)
@@ -68,18 +68,15 @@ class CardNoteEditWidget(BaseNoteEditWidget, View, AnchorEditWidgetMixin):
         # Add toolbar actions
         self.text_button = QPushButton(icons.text, '', self)
         self.text_button.setCheckable(True)
-        self.ui.toolbarLayout.addWidget(self.text_button)
+        self.ui.toolbarLayout.insertWidget(0, self.text_button)
 
         self.image_button = QPushButton(icons.image, '', self)
         self.image_button.setCheckable(True)
-        self.ui.toolbarLayout.addWidget(self.image_button)
+        self.ui.toolbarLayout.insertWidget(1, self.image_button)
 
         self.link_button = QPushButton(icons.link, '', self)
         self.link_button.setCheckable(True)
-        self.ui.toolbarLayout.addWidget(self.link_button)
-
-        trash_button = QPushButton(icons.trash, '', self)
-        self.ui.toolbarLayout.addWidget(trash_button)
+        self.ui.toolbarLayout.insertWidget(2, self.link_button)
 
         # Setup the buttons according to the type of the edited note
         if isinstance(self.edited_note, ImageNote):

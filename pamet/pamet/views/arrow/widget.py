@@ -20,7 +20,7 @@ from pamet.model.arrow import BEZIER_CUBIC, Arrow, ArrowAnchorType
 
 log = get_logger(__name__)
 
-CONTROL_POINT_DEBUG_VISUALS = False
+CONTROL_POINT_DEBUG_VISUALS = True
 
 TAIL = 'tail'
 HEAD = 'head'
@@ -28,6 +28,10 @@ ARROW_HAND_LENGTH = 20
 ARROW_HAND_ANGLE = math.radians(25)
 CP_BASE_DISTANCE = 80
 CP_DIST_SEGMENT_ADJUST_K = 0.1
+
+
+def special_sigmoid(x: float) -> float:
+    return 1 / (1 + math.exp(-x / (CP_BASE_DISTANCE / 2) + 5))
 
 
 @view_state_type
@@ -151,9 +155,10 @@ class ArrowWidget(QObject, ArrowView):
                     return ArrowAnchorType.BOTTOM_MID
 
     def cp_distance_for_segment(self, first_point, second_point):
-        return (
-            CP_BASE_DISTANCE +
-            CP_DIST_SEGMENT_ADJUST_K * first_point.distance_to(second_point))
+        dist = first_point.distance_to(second_point)
+
+        return (special_sigmoid(dist) * CP_BASE_DISTANCE +
+                CP_DIST_SEGMENT_ADJUST_K * dist)
 
     def bezier_cubic_curves_params(
         self,
@@ -287,7 +292,7 @@ class ArrowWidget(QObject, ArrowView):
             if not note_widget:
                 raise Exception
             if state.tail_anchor:
-                tail_anchor_pos = note_widget.arrow_anchor(
+                tail_anchor_pos = note_widget.state().arrow_anchor(
                     state.tail_anchor_type)
             else:
                 raise NotImplementedError
@@ -306,7 +311,7 @@ class ArrowWidget(QObject, ArrowView):
             if not note_widget:
                 raise Exception
             if state.head_anchor:
-                head_anchor_pos = note_widget.arrow_anchor(
+                head_anchor_pos = note_widget.state().arrow_anchor(
                     state.head_anchor_type)
             else:
                 raise NotImplementedError

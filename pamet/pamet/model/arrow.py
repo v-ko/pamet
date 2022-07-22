@@ -55,7 +55,7 @@ class Arrow(Entity):
 
     def __post_init__(self):
         if not self.page_id:
-            log.warning('Initializing Note without a page_id')
+            log.warning('Initializing Arrow without a page_id')
 
     def gid(self):
         return self.page_id, self.id
@@ -129,6 +129,18 @@ class Arrow(Entity):
 
     def has_head_anchor(self):
         return bool(self.head_note_id)
+
+    def get_tail_note(self):
+        page = self.get_parent_page()
+        if not page:
+            raise Exception
+        return page.note(self.tail_note_id)
+
+    def get_head_note(self):
+        page = self.get_parent_page()
+        if not page:
+            raise Exception
+        return page.note(self.head_note_id)
 
     def edge_indices(self):
         mid_edge_count = 2 + len(self.mid_points)
