@@ -1,10 +1,12 @@
 from PySide6.QtWidgets import QApplication
 from misli.entity_library.entity import Entity
+from pamet.helpers import Url
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
 
 
 class ClipboardService:
+
     def __init__(self):
         self._internal: list[Entity] = []
 
@@ -30,4 +32,33 @@ class ClipboardService:
         return [entity.copy() for entity in self._internal]
 
     def convert_external(self) -> list[Entity]:
-        pass
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        entities = []
+
+        if mime_data.hasImage():
+            raise NotImplementedError
+        elif mime_data.hasUrls():
+            urls = mime_data.text().split('\n')
+            for url in urls:
+                note = TextNote()
+                note.text = url
+                parsed_url = Url(url)
+                if parsed_url.has_web_schema():
+                    note.url = url
+                entities.append(note)
+            return entities
+
+        elif mime_data.hasText():  # This triggers for URLs too
+            text = mime_data.text()
+            text_sections = text.split('\n\n')
+
+            for section in text_sections:
+                note = TextNote()
+                note.text = section
+                # Single urls don't get detected by Qt
+                if Url(section).has_web_schema():
+                    note.url = section
+                entities.append(note)
+
+        return entities

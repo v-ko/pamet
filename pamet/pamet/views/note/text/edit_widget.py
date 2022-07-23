@@ -92,7 +92,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         # Setup the link button and line edit
         if initial_state.url.is_empty():
             self.link_props_widget.hide()
-            self.text_props_widget.ui.get_title_button.hide()
+            self.text_props_widget.ui.getTitleButton.hide()
         else:
             self.link_button.setChecked(True)
             self.link_props_widget.ui.urlLineEdit.setText(

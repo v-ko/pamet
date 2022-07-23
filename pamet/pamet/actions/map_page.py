@@ -10,6 +10,7 @@ import pamet
 
 from misli.basic_classes import Point2D, Rectangle
 from misli.gui.actions_library import action
+from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.helpers import Url, snap_to_grid
 from pamet.model import Note, Page
 from pamet.actions import tab as tab_actions
@@ -711,7 +712,7 @@ def redo(map_page_view_state: MapPageViewState):
     pamet.undo_history.forward_one_step(page.id)
 
 
-@action('copy_selected_children')
+@action('map_page.copy_selected_children')
 def copy_selected_children(map_page_view_state: MapPageViewState,
                            relative_to: Point2D = None):
     copied_notes = []
@@ -774,7 +775,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
     pamet.clipboard.set_contents(copied_notes + copied_arrows)
 
 
-@action('paste')
+@action('map_page.paste')
 def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
     page = map_page_view_state.get_page()
     entities = pamet.clipboard.get_contents()
@@ -831,7 +832,35 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
         pamet.insert_arrow(arrow)
 
 
-@action('cut')
-def cut_selected_children(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
+@action('map_page.cut_selected_children')
+def cut_selected_children(map_page_view_state: MapPageViewState,
+                          relative_to: Point2D = None):
     copy_selected_children(map_page_view_state, relative_to)
     delete_selected_children(map_page_view_state)
+
+
+@action('map_page.paste_special')
+def paste_special(map_page_view_state: MapPageViewState,
+                  relative_to: Point2D = None):
+    entities = pamet.clipboard.convert_external()
+
+    next_spawn_pos = relative_to or map_page_view_state.center()
+    for note in entities:
+        note.page_id = map_page_view_state.page_id
+        rect = note.rect()
+
+        # Autosize
+        if isinstance(note, (TextNote, CardNote, ImageNote)):
+            new_size = minimal_nonelided_size(note)
+            rect.set_size(snap_to_grid(new_size))
+
+        # Move under the last one
+        rect.set_top_left(next_spawn_pos)
+
+        # Update the spawn pos to be one unit under the last note
+        next_spawn_pos = rect.bottom_left()
+        next_spawn_pos += Point2D(0, ALIGNMENT_GRID_UNIT)
+
+        # Insert the note
+        note.set_rect(rect)
+        pamet.insert_note(note)

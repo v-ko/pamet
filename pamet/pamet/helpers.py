@@ -53,6 +53,9 @@ class Url(str):
             return False
         return self._parsed_url.scheme in ['http', 'https', '']
 
+    def has_web_schema(self):
+        return self._parsed_url.scheme in ['http', 'https']
+
     def is_custom(self):
         return self._parsed_url.scheme not in ['pamet', 'http', 'https', '']
 
