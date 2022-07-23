@@ -45,6 +45,12 @@ class MapPageView(View):
     def viewport(self):
         return self.state().viewport
 
+    def get_note_view_state_for_note_gid(self, note_gid: str):
+        for nv_state in self.state().note_view_states:
+            if nv_state.note_gid == note_gid:
+                return nv_state
+        return None
+
     def get_note_views_in_area(self, rect: Rectangle):
         unprojected_rect = self.state().unproject_rect(rect)
         intersecting = []

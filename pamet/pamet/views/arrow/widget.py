@@ -287,12 +287,12 @@ class ArrowWidget(QObject, ArrowView):
         state: ArrowViewState = self.state()
         if state.has_tail_anchor():
             tail_note = state.get_parent_page().note(state.tail_note_id)
-            note_widget = self.map_page_view.note_widget_by_note_gid(
+            nv_state = self.map_page_view.get_note_view_state_for_note_gid(
                 tail_note.gid())
-            if not note_widget:
+            if not nv_state:
                 raise Exception
             if state.tail_anchor:
-                tail_anchor_pos = note_widget.state().arrow_anchor(
+                tail_anchor_pos = nv_state.arrow_anchor(
                     state.tail_anchor_type)
             else:
                 raise NotImplementedError
@@ -306,12 +306,12 @@ class ArrowWidget(QObject, ArrowView):
 
         if state.head_note_id:
             head_note = state.get_parent_page().note(state.head_note_id)
-            note_widget = self.map_page_view.note_widget_by_note_gid(
+            nv_state = self.map_page_view.get_note_view_state_for_note_gid(
                 head_note.gid())
-            if not note_widget:
+            if not nv_state:
                 raise Exception
             if state.head_anchor:
-                head_anchor_pos = note_widget.state().arrow_anchor(
+                head_anchor_pos = nv_state.arrow_anchor(
                     state.head_anchor_type)
             else:
                 raise NotImplementedError

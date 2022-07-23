@@ -150,7 +150,7 @@ class ScriptNotePropsWidget(QWidget):
         note_text = self.edited_note.text
         # Keep the text matching the file name except if the user hasn't
         # made an edit (and they differ).
-        if not note_text or note_text == old_path.name:
+        if not note_text or (old_path and note_text == old_path.name):
             self.text_edit.setText(new_path.name)
 
     def handle_script_name_change(self, new_name: str):
