@@ -36,7 +36,7 @@ class Url(str):
     def __init__(self, url: Union[Url, str]):
         if isinstance(url, Url):
             url = str(url)
-        self._url = url
+        self._url: str = url
         self._parsed_url = urlparse(url)
 
     def __repr__(self) -> str:

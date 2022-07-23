@@ -22,7 +22,7 @@ class Ui_TextEditPropsWidget(object):
     def setupUi(self, TextEditPropsWidget):
         if not TextEditPropsWidget.objectName():
             TextEditPropsWidget.setObjectName(u"TextEditPropsWidget")
-        TextEditPropsWidget.resize(571, 141)
+        TextEditPropsWidget.resize(571, 48)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -39,10 +39,15 @@ class Ui_TextEditPropsWidget(object):
 
         self.helperHorizontalLayout.addWidget(self.label)
 
-        self.get_title_button = QPushButton(TextEditPropsWidget)
-        self.get_title_button.setObjectName(u"get_title_button")
+        self.getTitleButton = QPushButton(TextEditPropsWidget)
+        self.getTitleButton.setObjectName(u"getTitleButton")
 
-        self.helperHorizontalLayout.addWidget(self.get_title_button)
+        self.helperHorizontalLayout.addWidget(self.getTitleButton)
+
+        self.downloadInfoLabel = QLabel(TextEditPropsWidget)
+        self.downloadInfoLabel.setObjectName(u"downloadInfoLabel")
+
+        self.helperHorizontalLayout.addWidget(self.downloadInfoLabel)
 
 
         self.verticalLayout.addLayout(self.helperHorizontalLayout)
@@ -56,6 +61,7 @@ class Ui_TextEditPropsWidget(object):
     def retranslateUi(self, TextEditPropsWidget):
         TextEditPropsWidget.setWindowTitle(QCoreApplication.translate("TextEditPropsWidget", u"TextEditPropsWidget", None))
         self.label.setText(QCoreApplication.translate("TextEditPropsWidget", u"Text:", None))
-        self.get_title_button.setText(QCoreApplication.translate("TextEditPropsWidget", u"Get from URL (Page title)", None))
+        self.getTitleButton.setText(QCoreApplication.translate("TextEditPropsWidget", u"Get from URL/Page", None))
+        self.downloadInfoLabel.setText(QCoreApplication.translate("TextEditPropsWidget", u"Download info", None))
     # retranslateUi
 

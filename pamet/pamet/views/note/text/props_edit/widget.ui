@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>571</width>
-    <height>141</height>
+    <height>48</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -39,9 +39,16 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="get_title_button">
+      <widget class="QPushButton" name="getTitleButton">
        <property name="text">
-        <string>Get from URL (Page title)</string>
+        <string>Get from URL/Page</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="downloadInfoLabel">
+       <property name="text">
+        <string>Download info</string>
        </property>
       </widget>
      </item>

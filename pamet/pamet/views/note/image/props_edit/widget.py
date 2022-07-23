@@ -5,7 +5,7 @@ from PIL import Image
 
 from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QUrl, Qt
 from PySide6.QtGui import QImage, QImageReader, QPixmap, QResizeEvent
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QFileDialog, QWidget
 from misli.basic_classes.point2d import Point2D
 
@@ -28,8 +28,6 @@ class ImagePropsWidget(QWidget):
         self.edit_widget = parent
 
         # Locals
-        self._image_download_reply: QNetworkReply = None
-        self._network_am = QNetworkAccessManager(self)
         self._image_preview = None
 
         self.ui = Ui_ImagePropsWidget()
@@ -70,6 +68,14 @@ class ImagePropsWidget(QWidget):
             self.handle_image_url_text_change)
         self.ui.openFileButton.clicked.connect(
             self.handle_open_file_button_click)
+
+    @property
+    def _image_download_reply(self) -> QNetworkReply:
+        return self.edit_widget._image_download_reply
+
+    @_image_download_reply.setter
+    def _image_download_reply(self, reply: QNetworkReply):
+        self.edit_widget._image_download_reply = reply
 
     def handle_open_file_button_click(self):
         file_path, _ = QFileDialog.getOpenFileName()
@@ -165,7 +171,7 @@ class ImagePropsWidget(QWidget):
                 self._image_download_reply.abort()
 
             # Start downloading
-            self._image_download_reply = self._network_am.get(
+            self._image_download_reply = self.edit_widget._network_am.get(
                 QNetworkRequest(QUrl(str(url))))
 
             # Update label to mark downloading

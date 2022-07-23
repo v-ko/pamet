@@ -1,10 +1,10 @@
 from __future__ import annotations
 from PySide6.QtGui import QCloseEvent
+from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply
 
 from PySide6.QtWidgets import QCompleter, QPushButton
 
 import misli
-from misli.gui.view_library.view import View
 from pamet import register_note_view_type
 
 import pamet
@@ -35,6 +35,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
 
     def __init__(self, parent, initial_state: CardEditViewState):
         super().__init__(parent, initial_state)
+        self._network_am = QNetworkAccessManager(self)
+        self._image_download_reply: QNetworkReply = None
 
         # Add the link props widget
         self.text_props_widget = TextEditPropsWidget(self)
@@ -58,9 +60,6 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         self.link_props_widget.ui.urlLineEdit.setCompleter(page_completer)
 
         # Setup the text props widget
-        self.text_props_widget.ui.get_title_button.clicked.connect(
-            self._update_text_from_url)
-        self.text_edit.textChanged.connect(self.on_text_change)
 
         if isinstance(self.edited_note, (TextNote, CardNote)):
             self.text_edit.setPlainText(self.edited_note.text)
@@ -105,7 +104,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
 
     @property
     def text_edit(self):
-        return self.text_props_widget.ui.text_edit
+        return self.text_props_widget.text_edit
 
     # This shouldn't be specified explicitly IMO, but I couldn't find the bug
     def focusInEvent(self, event) -> None:
@@ -119,9 +118,6 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
             self.image_props_widget.ui.urlLineEdit.setFocus()
         elif isinstance(edited_note, CardNote):
             self.text_edit.setFocus()
-
-    def on_text_change(self):
-        self.edited_note.text = self.text_edit.toPlainText()
 
     def update_note_type(self):
         if self.text_button.isChecked() and self.image_button.isChecked():
@@ -216,20 +212,13 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
                 self.link_props_widget.ui.urlLineEdit.setText(linked_page.name)
                 return
 
-    def _update_text_from_url(self):
-        linked_page = self.edited_note.url.get_page()
-        if linked_page:
-            self.text_edit.setText(linked_page.name)
-
-        elif self.edited_note.url.is_custom():
-            # Just copy the URL to the text field
-            self.text_edit.setText(
-                self.link_props_widget.ui.urlLineEdit.text())
-
-        elif self.edited_note.url.is_external():  # Assume web page note
-            pass
+            # If it's clearly a web URL and the user has set the text -
+            # get the title
+            if url.scheme in ['http', 'https'] and \
+                    not self.text_edit.toPlainText():
+                self.text_props_widget._get_title()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self.image_props_widget._image_download_reply:
-            self.image_props_widget._image_download_reply.abort()
+        if self._image_download_reply:
+            self._image_download_reply.abort()
         return super().closeEvent(event)
