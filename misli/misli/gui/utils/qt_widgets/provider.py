@@ -47,6 +47,9 @@ class QtWidgetsUtilProvider(BaseUtilitiesProvider):
         config_path = self._app_data_folder / CONFIG_JSON
         config_path.write_text(config_str)
 
+    def set_clipboard_contents(self):
+        pass
+
     def add_key_binding(self, view, key_binding):
         shortcut = QShortcut(QKeySequence(key_binding.key), view)
         # shortcut.setContext(Qt.ApplicationShortcut)

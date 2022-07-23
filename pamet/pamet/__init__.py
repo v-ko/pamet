@@ -2,6 +2,7 @@ from pathlib import Path
 
 from misli.extensions_loader import ExtensionsLoader
 from misli.logging import get_logger
+from pamet.services.clipboard import ClipboardService
 from .model import page, pages, create_note, set_sync_repo, set_async_repo
 from .model import find, find_one, insert_note, insert_page, update_note
 from .model import update_page, remove_note, remove_page
@@ -28,3 +29,5 @@ default_key_bindings = [
 pamet_root = Path(__file__).parent
 extensions_loader = ExtensionsLoader(pamet_root)
 extensions_loader.load_all_recursively(pamet_root / 'model')
+
+clipboard = ClipboardService()
