@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import copy
+from dataclasses import fields
 from enum import Enum
 from typing import Any, Generator, Iterable
 
@@ -91,6 +92,7 @@ class Updated:
 
 
 class ChangeTypes(Enum):
+    EMPTY = 0
     CREATE = 1
     UPDATE = 2
     DELETE = 3
@@ -101,7 +103,6 @@ class Change:
      and the new states (as entities) as well as the change type.
     """
     def __init__(self,
-                 type: ChangeTypes,
                  old_state: Entity = None,
                  new_state: Entity = None):
         """Construct a change object. When the change is of type CREATE or
@@ -111,7 +112,10 @@ class Change:
         Raises:
             Exception: Missing id attribute of either entity state.
         """
-        self.type = type
+        if old_state and new_state:
+            if type(old_state) != type(new_state):
+                raise Exception
+
         self.old_state = old_state
         self.new_state = new_state
         self.added = Diff(self, DiffTypes.ADDED)
@@ -121,42 +125,93 @@ class Change:
         if not (self.old_state or self.new_state):
             raise ValueError('Both old and new state are None.')
 
+    @property
+    def change_type(self):
+        if self.old_state and self.new_state:
+            return ChangeTypes.UPDATE
+        elif not self.old_state and not self.new_state:
+            return ChangeTypes.EMPTY
+        elif not self.old_state:
+            return ChangeTypes.CREATE
+        else:
+            return ChangeTypes.DELETE
+
+    @classmethod
+    def from_dict(cls, change_dict: dict) -> Change:
+        if 'delta' in change_dict:
+            return cls.from_safe_delta_dict(change_dict)
+        return cls(change_dict['old_state'], change_dict['new_state'])
+
+    @classmethod
+    def from_safe_delta_dict(cls, delta_dict: dict):
+        old_state = delta_dict['old_state']
+        delta = delta_dict['delta']
+        new_state = copy(old_state).replace(**delta)
+        return cls(old_state, new_state)
+
+    @classmethod
+    def from_unsafe_delta_dict(cls, old_state: Entity, delta_dict: dict):
+        delta = delta_dict['delta']
+        new_state = copy(old_state).replace(**delta)
+        return cls(old_state, new_state)
+
     def asdict(self) -> dict:
         return dict(
-            type=str(self.type),
             old_state=self.old_state.asdict() if self.old_state else None,
             new_state=self.new_state.asdict() if self.new_state else None,
         )
 
+    def as_safe_delta_dict(self):
+        if not self.is_update():
+            return self.asdict()
+        return dict(old_state=self.old_state.asdict(), delta=self.delta())
+
+    def as_unsafe_delta_dict(self):
+        if self.is_create():
+            return self.asdict()
+        elif self.is_remove():
+            return dict(new_state=None)
+        else:
+            return dict(delta=self.delta())
+
+    def delta(self):
+        delta_dict = {}
+        for field in fields(self.old_state):
+            old_val = getattr(self.old_state, field.name)
+            new_val = getattr(self.new_state, field.name)
+            if old_val != new_val:
+                delta_dict[field.name] = new_val
+
+        return delta_dict
+
     @classmethod
     def CREATE(cls, state: Entity) -> Change:
         """Convenience method for constructing a Change with type CREATE"""
-        return cls(type=ChangeTypes.CREATE, new_state=copy(state))
+        return cls(new_state=copy(state))
 
     @classmethod
     def UPDATE(cls, old_state: Entity, new_state: Entity) -> Change:
         """Convenience method for constructing a Change with type UPDATE"""
-        return cls(type=ChangeTypes.UPDATE,
-                   old_state=copy(old_state),
+        return cls(old_state=copy(old_state),
                    new_state=copy(new_state))
 
     @classmethod
     def DELETE(cls, old_state: Entity) -> Change:
         """Convenience method for constructing a Change with type DELETE"""
-        return cls(type=ChangeTypes.DELETE, old_state=copy(old_state))
+        return cls(old_state=copy(old_state))
 
     def __repr__(self) -> str:
-        return (f'<Change type={self.type} {id(self)=} '
+        return (f'<Change type={self.change_type} {id(self)=} '
                 f'old_state={self.old_state} new_state={self.new_state}>')
 
     def is_create(self) -> bool:
-        return self.type == ChangeTypes.CREATE
+        return self.change_type == ChangeTypes.CREATE
 
     def is_update(self) -> bool:
-        return self.type == ChangeTypes.UPDATE
+        return self.change_type == ChangeTypes.UPDATE
 
     def is_delete(self) -> bool:
-        return self.type == ChangeTypes.DELETE
+        return self.change_type == ChangeTypes.DELETE
 
     def last_state(self) -> Entity:
         """Returns the latest available state.

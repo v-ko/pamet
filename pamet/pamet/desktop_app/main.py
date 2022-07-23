@@ -1,14 +1,15 @@
 import os
 
 import misli
-from misli.gui import channels
+from misli.gui import channels as misli_channels
+from pamet import channels as pamet_channels
 
 import pamet
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.helpers import configure_for_qt
-from pamet.persistence_manager import PersistenceManager
+from pamet.services.backup import BackupService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
 
@@ -21,6 +22,7 @@ log = misli.get_logger(__name__)
 def main():
     misli.line_spacing_in_pixels = 20
     app = DesktopApp()
+
     pamet.desktop_app.set_app(app)
     configure_for_qt()
 
@@ -54,7 +56,7 @@ def main():
     pamet.model.arrow_validity_check()
 
     # Debug
-    channels.state_changes_by_id.subscribe(
+    misli_channels.state_changes_by_id.subscribe(
         lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
     start_page = pamet.helpers.get_default_page() or pamet.page()
@@ -70,6 +72,11 @@ def main():
 
     app.focusChanged.connect(
         lambda w1, w2: print(f'Focus changed from {w1} to {w2}'))
+
+    backup_service = BackupService(pamet_channels.entity_change_sets_per_TLA,
+                                   fs_repo)
+    backup_service.start()
+    app.aboutToQuit.connect(backup_service.stop)
     return app.exec()
 
 

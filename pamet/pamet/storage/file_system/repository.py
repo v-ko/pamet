@@ -12,10 +12,9 @@ from misli.storage.repository import Repository
 import pamet
 
 from pamet.model import Page, Note
-from pamet.model.arrow import BEZIER_CUBIC, DEFAULT_ARROW_THICKNESS, Arrow
+from pamet.model.arrow import Arrow
 from slugify import slugify
 
-from .hacky_backups import backup_page_hackily
 from .legacy import _convert_v2_to_v4, _convert_v3_to_v4
 
 from misli import get_logger
@@ -242,8 +241,14 @@ class FSStorageRepository(Repository):
 
         # # TODO REMOVE
         page_state.pop('type_name', None)
-        note_states = page_state.pop('note_states', [])
-        arrow_states = page_state.pop('arrow_states', [])
+        if 'note_states' in page_state:
+            page_state['notes'] = page_state.pop('note_states', [])
+        if 'arrow_states' in page_state:
+            page_state['arrows'] = page_state.pop('arrow_states', [])
+
+        # Parse the children
+        note_states = page_state.pop('notes', [])
+        arrow_states = page_state.pop('arrows', [])
 
         notes = []
         for ns in note_states:
@@ -294,13 +299,14 @@ class FSStorageRepository(Repository):
         page = entity_library.from_dict(Page.__name__, page_state)
         return page, notes, arrows
 
-    def entities_to_json_str(self, page, notes, arrows):
+    def serialize_page(self, page: Page, notes: List[Note],
+                       arrows: List[Arrow]):
         page_state = page.asdict()
-        page_state['note_states'] = [n.asdict() for n in notes]
-        page_state['arrow_states'] = [a.asdict() for a in arrows]
+        page_state['notes'] = [n.asdict() for n in notes]
+        page_state['arrows'] = [a.asdict() for a in arrows]
 
         try:
-            json_str = json.dumps(page_state, ensure_ascii=False)
+            json_str = json.dumps(page_state, ensure_ascii=False, indent=4)
         except Exception as e:
             raise e  # Or log error
             return None
@@ -314,7 +320,7 @@ class FSStorageRepository(Repository):
                 log.error('Cannot create page. File already exists %s' % path)
                 return
 
-            page_json_str = self.entities_to_json_str(page, notes, arrows)
+            page_json_str = self.serialize_page(page, notes, arrows)
             if not page_json_str:
                 return
 
@@ -339,12 +345,7 @@ class FSStorageRepository(Repository):
             saved_path.rename(path)
             self.page_paths_by_id[page.id] = path
 
-        if path.exists():
-            backup_page_hackily(path)
-        else:
-            log.error(f'[update_page] Page at {path} was missing.')
-
-        page_json_str = self.entities_to_json_str(page, notes, arrows)
+        page_json_str = self.serialize_page(page, notes, arrows)
         if not page_json_str:
             return
 
