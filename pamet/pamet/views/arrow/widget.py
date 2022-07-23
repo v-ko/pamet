@@ -20,7 +20,7 @@ from pamet.model.arrow import BEZIER_CUBIC, Arrow, ArrowAnchorType
 
 log = get_logger(__name__)
 
-CONTROL_POINT_DEBUG_VISUALS = True
+CONTROL_POINT_DEBUG_VISUALS = False
 
 TAIL = 'tail'
 HEAD = 'head'

@@ -5,6 +5,7 @@ from typing import List
 import misli
 from misli import gui
 from misli.entity_library.entity import Entity
+from misli.helpers import get_new_id
 import pamet
 
 from misli.basic_classes import Point2D, Rectangle
@@ -710,9 +711,9 @@ def redo(map_page_view_state: MapPageViewState):
     pamet.undo_history.forward_one_step(page.id)
 
 
-@action('copy_selected_notes')
-def copy_selected_notes(map_page_view_state: MapPageViewState,
-                        relative_to: Point2D = None):
+@action('copy_selected_children')
+def copy_selected_children(map_page_view_state: MapPageViewState,
+                           relative_to: Point2D = None):
     copied_notes = []
     positions = []
     for child_view_id in map_page_view_state.selected_child_ids:
@@ -737,7 +738,7 @@ def copy_selected_notes(map_page_view_state: MapPageViewState,
     # clipboard (since pasting happens relative to the mouse)
     for note in copied_notes:
         rect: Rectangle = note.rect()
-        rect.move_top_left(rect.top_left - relative_to)
+        rect.set_top_left(rect.top_left() - relative_to)
         note.set_rect(rect)
 
     # If arrow view - get arrow and if not both notes are copied - skip
@@ -765,5 +766,72 @@ def copy_selected_notes(map_page_view_state: MapPageViewState,
         else:
             arrow.set_tail(fixed_pos=arrow.tail_point - relative_to)
 
+        mid_points = arrow.mid_points
+        mid_points = [mid_point - relative_to for mid_point in mid_points]
+        arrow.replace_midpoints(mid_points)
+
         copied_arrows.append(arrow)
     pamet.clipboard.set_contents(copied_notes + copied_arrows)
+
+
+@action('paste')
+def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
+    page = map_page_view_state.get_page()
+    entities = pamet.clipboard.get_contents()
+
+    updated_ids = {}
+    for note in entities:
+        if not isinstance(note, Note):
+            continue
+        if relative_to:
+            rect: Rectangle = note.rect()
+            rect.set_top_left(relative_to + rect.top_left())
+            note.set_rect(rect)
+
+        # Set the proper page id and ensure that there's no conflicting ids
+        note.page_id = page.id
+        if pamet.find(gid=note.gid()):
+            new_id = get_new_id()
+            updated_ids[note.id] = new_id
+            note.id = new_id
+        pamet.insert_note(note)
+
+    for arrow in entities:
+        if not isinstance(arrow, Arrow):
+            continue
+
+        # Set the proper page id and ensure that there's no conflicting ids
+        arrow.page_id = page.id
+        if pamet.find(gid=arrow.gid()):
+            new_id = get_new_id()
+            arrow.id = new_id
+
+        # Where the pasted note ids have been changed - correct them
+        # in the arrow anchors. Else for fixed anchors - just place them
+        # relative to the mouse
+        if arrow.has_tail_anchor():
+            if arrow.tail_note_id in updated_ids:
+                arrow.tail_note_id = updated_ids[arrow.tail_note_id]
+        else:
+            if relative_to:
+                arrow.tail_point = relative_to + arrow.tail_point
+
+        if arrow.has_head_anchor():
+            if arrow.head_note_id in updated_ids:
+                arrow.head_note_id = updated_ids[arrow.head_note_id]
+        else:
+            if relative_to:
+                arrow.head_point = relative_to + arrow.head_point
+
+        if relative_to:
+            mid_points = arrow.mid_points
+            mid_points = [relative_to + mid_point for mid_point in mid_points]
+            arrow.replace_midpoints(mid_points)
+
+        pamet.insert_arrow(arrow)
+
+
+@action('cut')
+def cut_selected_children(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
+    copy_selected_children(map_page_view_state, relative_to)
+    delete_selected_children(map_page_view_state)

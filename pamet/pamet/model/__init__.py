@@ -199,8 +199,6 @@ def arrow_validity_check():
     # If the note, that the anchor points to, is missing - skip arrow
     invalid_arrows = []
     for arrow in pamet.find(type_name=Arrow.__name__):
-        if arrow.id == 'f3e5032d':
-            pass
         if (arrow.has_tail_anchor() and not arrow.get_tail_note()) or\
                 (arrow.has_head_anchor() and not arrow.get_head_note()):
 

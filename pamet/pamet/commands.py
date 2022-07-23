@@ -1,6 +1,9 @@
+from __future__ import annotations
 from typing import Tuple
+from PySide6.QtGui import QCursor
 
 import misli
+from misli.basic_classes.point2d import Point2D
 from misli.gui import command
 
 from pamet.actions import note as note_actions
@@ -13,7 +16,7 @@ from pamet.views.note.base.state import NoteViewState
 log = misli.get_logger(__name__)
 
 
-def current_tab_and_page_views() -> Tuple:
+def current_tab_and_page_views() -> Tuple[TabWidget, MapPageWidget]:
     tab = current_tab()
     if not tab:
         raise Exception('There\'s no open tab.')
@@ -79,27 +82,66 @@ def open_command_palette_go_to_file():
 
 @command(title='Create an arrow')
 def start_arrow_creation():
-    tab, page_view = current_tab_and_page_views()
+    _, page_view = current_tab_and_page_views()
 
     map_page_actions.start_arrow_creation(page_view.state())
 
 
 @command(title='Resize selected notes to fit text')
 def autosize_selected_notes():
-    tab, page_view = current_tab_and_page_views()
+    _, page_view = current_tab_and_page_views()
     map_page_actions.autosize_selected_notes(page_view.state())
     page_view.autosize_selected_notes()
 
 
-@command(title='Undo last action')
+@command(title='Undo')
 def undo():
-    tab, page_view = current_tab_and_page_views()
-
+    _, page_view = current_tab_and_page_views()
     map_page_actions.undo(page_view.state())
 
 
-@command(title='Redo last undo')
+@command(title='Redo')
 def redo():
-    tab, page_view = current_tab_and_page_views()
-
+    _, page_view = current_tab_and_page_views()
     map_page_actions.redo(page_view.state())
+
+
+@command(title='Copy')
+def copy():
+    _, page_view = current_tab_and_page_views()
+
+    q_mouse_pos = page_view.mapFromGlobal(QCursor.pos())
+    mouse_pos = Point2D(q_mouse_pos.x(), q_mouse_pos.y())
+    map_page_state = page_view.state()
+    unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
+    map_page_actions.copy_selected_children(map_page_state, unproj_mouse_pos)
+
+
+@command(title='Paste')
+def paste():
+    _, page_view = current_tab_and_page_views()
+    q_mouse_pos = page_view.mapFromGlobal(QCursor.pos())
+    mouse_pos = Point2D(q_mouse_pos.x(), q_mouse_pos.y())
+    map_page_state = page_view.state()
+    unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
+    map_page_actions.paste(map_page_state, unproj_mouse_pos)
+
+
+@command(title='Cut')
+def cut():
+    _, page_view = current_tab_and_page_views()
+    q_mouse_pos = page_view.mapFromGlobal(QCursor.pos())
+    mouse_pos = Point2D(q_mouse_pos.x(), q_mouse_pos.y())
+    map_page_state = page_view.state()
+    unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
+    map_page_actions.cut_selected_children(map_page_state, unproj_mouse_pos)
+
+
+@command(title='Paste special')
+def paste_special():
+    _, page_view = current_tab_and_page_views()
+    q_mouse_pos = page_view.mapFromGlobal(QCursor.pos())
+    mouse_pos = Point2D(q_mouse_pos.x(), q_mouse_pos.y())
+    map_page_state = page_view.state()
+    unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
+    map_page_actions.paste_special(map_page_state, unproj_mouse_pos)

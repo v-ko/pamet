@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import Any, Generator, List
 from misli.entity_library.change import Change
 from misli.entity_library.entity import Entity
 from misli.helpers import find_many_by_props
@@ -58,13 +58,19 @@ class InMemoryRepository(Repository):
         # If searching by gid - there will be only one unique result (if any)
         if 'gid' in filter:
             gid = filter.get('gid')
-            result = self._entity_cache.get(gid, None)
+            try:
+                result = self._entity_cache.get(gid, None)
+            except TypeError:
+                result = []
             yield from [result] if result else []
 
         # If searching by parent_gid - use the index to do it efficiently
         if 'parent_gid' in filter:
             parent_gid = filter.pop('parent_gid')
-            found = self._entity_cache_by_parent.get(parent_gid, [])
+            try:
+                found = self._entity_cache_by_parent.get(parent_gid, [])
+            except TypeError:
+                found = []
             search_set = (self._entity_cache[gid] for gid in found)
         else:
             search_set = self._entity_cache.values()
@@ -80,5 +86,5 @@ class InMemoryRepository(Repository):
             search_set = find_many_by_props(search_set, **filter)
         yield from search_set
 
-    def find(self, **filter):
+    def find(self, **filter) -> Generator[Any, None, None]:
         yield from (entity.copy() for entity in self.find_cached(**filter))

@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QPointF, Qt, QPoint, QTimer, QRectF
-from PySide6.QtGui import QPainter, QPicture, QImage, QColor, QBrush, QCursor
+from PySide6.QtGui import QKeyEvent, QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
 
 import misli
@@ -22,6 +22,7 @@ import pamet
 from pamet import actions
 from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
+from pamet.desktop_app.helpers import control_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
 from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
@@ -76,6 +77,7 @@ class MapPageWidget(QWidget, MapPageView):
         self._mouse_press_position = QPoint()
         self._note_widgets = {}
         self._arrow_widgets: Dict[str, ArrowWidget] = {}
+        self._clipboard_outlines_shown = False
 
         # Setup shortcuts
         delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
@@ -125,6 +127,12 @@ class MapPageWidget(QWidget, MapPageView):
                   lambda: map_page_actions.undo(self.state()))
         QShortcut(QKeySequence('ctrl+shift+Z'), self,
                   lambda: map_page_actions.redo(self.state()))
+        QShortcut(QKeySequence('ctrl+'), self,
+                  lambda: map_page_actions.redo(self.state()))
+        QShortcut(QKeySequence('ctrl+C'), self, commands.copy)
+        QShortcut(QKeySequence('ctrl+V'), self, commands.paste)
+        QShortcut(QKeySequence('ctrl+X'), self, commands.cut)
+        QShortcut(QKeySequence('ctrl+shift+V'), self, commands.paste_special)
 
         # Widget config
         pal = self.palette()
@@ -697,6 +705,22 @@ class MapPageWidget(QWidget, MapPageView):
                     # painter.drawEllipse(q_mouse_pos, 100, 100)
                     painter.drawEllipse(q_anchor_pos, radius, radius)
 
+        # Draw the clipboard outlines if control is pressed
+        if control_is_pressed():
+            self._clipboard_outlines_shown = True
+            for note in pamet.clipboard.get_contents():
+                if not isinstance(note, Note):
+                    continue
+                nt_main_color = QColor(
+                        *note.get_color().to_uint8_rgba_list())
+                painter.setPen(nt_main_color)
+                painter.setBrush(Qt.NoBrush)
+                rect = note.rect()
+                rect.set_top_left(unprojected_mouse_pos + rect.top_left())
+                rect = state.project_rect(rect)
+                painter.drawRect(QRectF(*rect.as_tuple()))
+
+
         # Report stats
         notes_on_screen = len(display_rects_by_child_id)
 
@@ -774,6 +798,10 @@ class MapPageWidget(QWidget, MapPageView):
             if self.state().mode() == MapPageMode.CREATE_ARROW:
                 self.update()
 
+        # Prompt updates for the clipboard outline visualization
+        if control_is_pressed():
+            self.update()
+
     def mouseDoubleClickEvent(self, event):
         mouse_pos = Point2D(event.pos().x(), event.pos().y())
         state = self.state()
@@ -804,6 +832,18 @@ class MapPageWidget(QWidget, MapPageView):
         new_size = Point2D(event.size().width(), event.size().height())
         self.handle_resize_event(new_size)
 
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        # For the clipboard outline visualizations
+        if event.key() == Qt.Key_Control:
+            self.update()
+        return super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event: QKeyEvent) -> None:
+        # For the clipboard outline visualizations
+        if event.key() == Qt.Key_Control:
+            self.update()
+        return super().keyReleaseEvent(event)
+
     def handle_right_mouse_press(self, position):
         ncs_under_mouse = list(self.get_note_views_at(position))
         menu_entries = {}
@@ -816,9 +856,14 @@ class MapPageWidget(QWidget, MapPageView):
                     self.state(), {nv.id: True
                                    for nv in ncs_under_mouse})
                 menu_entries['Edit note'] = commands.edit_selected_notes
+                menu_entries['Copy'] = commands.copy
+                if pamet.clipboard.get_contents():
+                    menu_entries['Paste'] = commands.paste
+                menu_entries['Cut'] = commands.cut
             else:
                 menu_entries['New note'] = commands.create_new_note
 
+            menu_entries['Paste special'] = commands.paste_special
             menu_entries['New page'] = commands.create_new_page
             menu_entries['Create arrow'] = commands.start_arrow_creation
 
