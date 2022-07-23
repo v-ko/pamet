@@ -161,7 +161,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
 
             if not self.text_edit.toPlainText():
                 self.text_button.setChecked(False)  # This should call the hide
-
+        else:
+            self.image_props_widget.hide()
         self.update_note_type_buttons()
         self.update_note_type()
 
