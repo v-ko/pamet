@@ -166,7 +166,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         if checked:
             self.link_props_widget.show()
             self.link_props_widget.ui.urlLineEdit.setFocus()
-            self.text_props_widget.ui.get_title_button.show()
+            self.text_props_widget.ui.getTitleButton.show()
         else:
             self.link_props_widget.hide()
             self.edited_note.url = None

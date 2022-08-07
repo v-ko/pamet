@@ -6,7 +6,6 @@ import sched
 import shutil
 import threading
 import time
-from typing import Dict
 
 from misli.entity_library.change import Change
 from misli.helpers import get_new_id
@@ -50,6 +49,7 @@ def datetime_from_path(path):
 
 
 class Backup:
+
     def __init__(self, path: Path):
         self.path: Path = path
         self.datetime = datetime_from_path(path)
@@ -93,7 +93,7 @@ class BackupService:
         return self.backup_folder / 'backup_service_lock'
 
     def all_changes_path(self, page_id) -> Path:
-        return self.permanent_backups_folder(page_id>) / 'all_changes.jsonl'
+        return self.permanent_backups_folder(page_id) / 'all_changes.jsonl'
 
     def recents_path(self, page_id: str) -> Path:
         return self.backup_folder / page_id / 'recent_changes.jsonl'
@@ -199,22 +199,19 @@ class BackupService:
             folder.mkdir(parents=True, exist_ok=True)
             new_path = folder / backup.path.name
             backup.path.rename(new_path)
-            log.info(
-                f'Moved backup {backup.path.name} '
-                'to the yearly folder {folder}')
+            log.info(f'Moved backup {backup.path.name} '
+                     'to the yearly folder {folder}')
 
         # Update the timestamp
         self.prune_timestamp_path().write_text(now.isoformat())
 
     def backup_and_reschedule(self):
         self.backup_changed_pages()
-        self.scheduler.enter(BACKUP_INTERVAL, 2,
-                             self.backup_and_reschedule)
+        self.scheduler.enter(BACKUP_INTERVAL, 2, self.backup_and_reschedule)
 
     def prune_and_reschedule(self):
         self.prune_all()
-        self.scheduler.enter(PRUNE_INTERVAL, 2,
-                             self.prune_and_reschedule)
+        self.scheduler.enter(PRUNE_INTERVAL, 2, self.prune_and_reschedule)
 
     def process_changes(self):
         print('[BackupService] Processing changes')

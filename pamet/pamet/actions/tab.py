@@ -70,7 +70,7 @@ def go_to_url(tab_state: TabViewState, url: str):
 def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
     # This action assumes there's a page opened
     current_page_state = tab_state.page_view_state
-    current_page = current_page_state.page
+    current_page = current_page_state.get_page()
     new_name = generate_page_name()
     new_page = Page(name=new_name)
     pamet.insert_page(new_page)
