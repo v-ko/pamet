@@ -63,6 +63,8 @@ class BackupService:
         self.fs_repo = repo
         self._changed_page_ids: set = set()
 
+        self.stop_event = threading.Event()
+
         if not shutil.which('git'):
             raise Exception(
                 'The backup service depends on git. Install it please.')
@@ -112,7 +114,7 @@ class BackupService:
             self._change_buffer.extend(change_set)
 
     def backup_changed_pages(self):
-        print('[BackupService] Doing backup')
+        log.info('Doing backup')
         # Move the recent changes to backup files
         for page_id in self._changed_page_ids:
             page = pamet.page(id=page_id)
@@ -134,7 +136,7 @@ class BackupService:
             yield page_folder
 
     def prune_all(self):
-        print('[BackupService] Pruning backups.')
+        log.info('Pruning backups.')
         for page_folder in self.page_backup_folders():
             self.prune_page_backups(page_folder.name)
 
@@ -205,16 +207,7 @@ class BackupService:
         # Update the timestamp
         self.prune_timestamp_path().write_text(now.isoformat())
 
-    def backup_and_reschedule(self):
-        self.backup_changed_pages()
-        self.scheduler.enter(BACKUP_INTERVAL, 2, self.backup_and_reschedule)
-
-    def prune_and_reschedule(self):
-        self.prune_all()
-        self.scheduler.enter(PRUNE_INTERVAL, 2, self.prune_and_reschedule)
-
     def process_changes(self):
-        print('[BackupService] Processing changes')
         with self.buffer_lock:
             changes = self._change_buffer
             self._change_buffer = []
@@ -255,10 +248,24 @@ class BackupService:
             with open(all_changes_path, 'a') as all_changes_file:
                 all_changes_file.write(json_str_all)
 
+    def backup_and_reschedule(self):
+        self.backup_changed_pages()
+        self.scheduler.enter(BACKUP_INTERVAL, 2, self.backup_and_reschedule)
+
+    def prune_and_reschedule(self):
+        self.prune_all()
+        self.scheduler.enter(PRUNE_INTERVAL, 2, self.prune_and_reschedule)
+
     def process_changes_and_reschedule(self):
         self.process_changes()
         self.scheduler.enter(PROCESS_INTERVAL, 1,
                              self.process_changes_and_reschedule)
+
+    def run_scheduler(self):
+        timeout = 1
+        while timeout > 0:
+            timeout = self.scheduler.run(blocking=False)
+            self.stop_event.wait(timeout)
 
     def start(self):
         if self.service_lock_path().exists() and not IGNORE_LOCK:
@@ -267,7 +274,7 @@ class BackupService:
                             f'{self.service_lock_path()}')
         self.service_lock_path().write_text(self.id)
 
-        log.info('[BackupService] Starting')
+        log.info('Starting')
 
         self.change_sub = self.change_set_channel.subscribe(
             self.handle_change_set)
@@ -321,7 +328,10 @@ class BackupService:
         for event in self.scheduler.queue:
             self.scheduler.cancel(event=event)
 
-        log.info('[BackupService] Cancelled events.')
+        log.info('Cancelled events.')
+
+        self.stop_event.set()
         self.worker_thread.join()
-        log.info('[BackupService] Stopped service.')
+        log.info('Stopped service.')
+
         self.service_lock_path().unlink()
