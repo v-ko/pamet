@@ -8,7 +8,9 @@ import pamet
 from misli.basic_classes import Rectangle, Point2D
 from misli.gui import view_state_type, ViewState
 from pamet.constants import INITIAL_EYE_Z
+from pamet.helpers import Url
 from pamet.model import Note
+from pamet.model.page import Page
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.viewport import Viewport
 from pamet.views.note.base.state import NoteViewState
@@ -25,7 +27,7 @@ class MapPageMode(Enum):
 
 
 @view_state_type
-class MapPageViewState(ViewState, Viewport):
+class MapPageViewState(ViewState, Viewport, Page):
     page_id: str = ''
 
     note_view_states: List[NoteViewState] = field(default_factory=list)
@@ -103,3 +105,16 @@ class MapPageViewState(ViewState, Viewport):
             if note_vs.note_gid == (self.page_id, note_id):
                 return note_vs
         return None
+
+    def url(self):
+        return Url(f'pamet:///p/{self.page_id}')
+
+    def page_url(self, with_anchor=True) -> Url:
+        url = self.url()
+        center = self.viewport_center
+
+        if with_anchor:
+            url = url.with_anchor(
+                f'eye_at={self.viewport_height}/{center.x()}/{center.y()}')
+
+        return url

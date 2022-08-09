@@ -31,7 +31,6 @@ log = misli.get_logger(__name__)
 def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
                                 mouse_position: Point2D, first_delta: Point2D):
     map_page_view_state.set_mode(MapPageMode.DRAG_NAVIGATION)
-    # map_page_view_state.drag_navigation_active = True
     map_page_view_state.drag_navigation_start_position = mouse_position
     map_page_view_state.viewport_position_on_press = \
         map_page_view_state.viewport_center
@@ -40,6 +39,7 @@ def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
     mouse_drag_navigation_move(map_page_view_state, first_delta)
 
 
+@action('map_page.mouse_drag_navigation_move')
 def mouse_drag_navigation_move(map_page_view_state: MapPageViewState,
                                mouse_delta: Point2D):
     unprojected_delta = (mouse_delta /
@@ -47,20 +47,12 @@ def mouse_drag_navigation_move(map_page_view_state: MapPageViewState,
     new_viewport_center: Point2D = (
         map_page_view_state.viewport_position_on_press + unprojected_delta)
 
-    change_viewport_center(map_page_view_state, new_viewport_center.as_tuple())
-
-
-@action('map_page.change_viewport_center')
-def change_viewport_center(map_page_view_state: MapPageViewState,
-                           new_viewport_center: Point2D):
-
-    map_page_view_state.viewport_center = Point2D(*new_viewport_center)
+    map_page_view_state.viewport_center = new_viewport_center
     gui.update_state(map_page_view_state)
 
 
-@action('map_page.stop_drag_navigation')
-def stop_drag_navigation(map_page_view_state: MapPageViewState):
-    # map_page_view_state.drag_navigation_active = False
+@action('map_page.finish_mouse_drag_navigation')
+def finish_mouse_drag_navigation(map_page_view_state: MapPageViewState):
     map_page_view_state.set_mode(MapPageMode.NONE)
     gui.update_state(map_page_view_state)
 
@@ -125,7 +117,6 @@ def clear_child_selection(map_page_view_state: str):
 def set_viewport_height(map_page_view_state: MapPageViewState,
                         new_height: float):
     map_page_view_state.viewport_height = new_height
-
     gui.update_state(map_page_view_state)
     # //glutPostRedisplay(); artefact, thank you for siteseeing
 
@@ -137,7 +128,6 @@ def start_drag_select(map_page_view_state: MapPageViewState,
     map_page_view_state.mouse_position_on_drag_select_start = Point2D(
         *position)
 
-    # map_page_view_state.drag_select_active = True
     gui.update_state(map_page_view_state)
 
 
@@ -180,7 +170,7 @@ def stop_drag_select(map_page_view_state: MapPageViewState):
 def delete_notes_and_connected_arrows(notes: List[Note]):
     if not notes:
         return
-        
+
     note_ids = []
     page_id = None
     for note in notes:

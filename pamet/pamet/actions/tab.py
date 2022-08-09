@@ -51,27 +51,49 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
 
 
 @action('go_to_url')
-def go_to_url(tab_state: TabViewState, url: str):
+def go_to_url(tab_state: TabViewState,
+              url: str,
+              update_nav_history: bool = True):
+    old_page_state = tab_state.page_view_state
     create_and_set_page_view(tab_state, url)
     parsed_url = Url(url)
+    page_state = tab_state.page_view_state
 
     # Apply the anchor if any
     anchor = parsed_url.get_anchor()
     if anchor:
-        page_state = tab_state.page_view_state
+        height = page_state.viewport_height
         if isinstance(anchor, Note):
-            anchor = anchor.rect().center()
+            center = anchor.rect().center()
+        else:
+            height, center = anchor
 
-        page_state.viewport_center = anchor
+        page_state.viewport_height = height
+        page_state.viewport_center = center
         misli.gui.update_state(page_state)
 
-        url = parsed_url.get_page().url()  # strip the anchor
+    if not update_nav_history:
+        return
 
-    # Add the url to the navigation history (only if it's different from
-    # the last one)
+    # Add the url to the navigation history
     nav_history = tab_state.navigation_history
-    if not nav_history or (nav_history and nav_history[-1] != url):
-        nav_history.append(url)
+
+    # If the page has changed
+    last_page_id = None
+    if nav_history:
+        old_url = Url(nav_history[-1])
+        last_page_id = old_url.page_id()
+
+    if last_page_id != parsed_url.page_id():
+        # Update the last url to save it's viewport position anchor
+        # (to account for any viewport move/height changes
+        # since the last go_to_url. This might have to be moved to the
+        # finish_mouse_drag_move and height change actions)
+        if old_page_state:
+            nav_history[-1] = str(old_page_state.page_url())
+
+        # Append the url to the nav history
+        nav_history.append(str(page_state.page_url()))
 
     # Keep the nav history size in check
     if len(nav_history) > MAX_NAVIGATION_HISTORY:
@@ -121,8 +143,9 @@ def navigation_back(tab_state: TabViewState):
 
     tab_state.set_navigation_index(tab_state.current_nav_index - 1)
     misli.gui.update_state(tab_state)
-    create_and_set_page_view(tab_state,
-                             nav_history[tab_state.current_nav_index])
+    go_to_url(tab_state,
+              nav_history[tab_state.current_nav_index],
+              update_nav_history=False)
 
 
 @action('navigation_forward')
@@ -135,8 +158,9 @@ def navigation_forward(tab_state: TabViewState):
 
     tab_state.set_navigation_index(tab_state.current_nav_index + 1)
     misli.gui.update_state(tab_state)
-    create_and_set_page_view(tab_state,
-                             nav_history[tab_state.current_nav_index])
+    go_to_url(tab_state,
+              nav_history[tab_state.current_nav_index],
+              update_nav_history=False)
 
 
 @action('navigation_toggle_last')
@@ -147,8 +171,9 @@ def navigation_toggle_last(tab_state):
     nav_history = tab_state.navigation_history
     tab_state.set_navigation_index(tab_state.previous_nav_index)
     misli.gui.update_state(tab_state)
-    create_and_set_page_view(tab_state,
-                             nav_history[tab_state.current_nav_index])
+    go_to_url(tab_state,
+              nav_history[tab_state.current_nav_index],
+              update_nav_history=False)
 
 
 @action('tab.close_right_sidebar')

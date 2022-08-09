@@ -240,7 +240,7 @@ class MapPageView(View):
             map_page_actions.finish_child_move(self.state(), pos_delta)
 
         elif mode == MapPageMode.DRAG_NAVIGATION:
-            map_page_actions.stop_drag_navigation(self.state())
+            map_page_actions.finish_mouse_drag_navigation(self.state())
 
         elif mode == MapPageMode.ARROW_EDGE_DRAG:
             anchor_props = self.arrow_anchor_at(mouse_pos)

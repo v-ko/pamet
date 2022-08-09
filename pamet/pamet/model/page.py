@@ -1,5 +1,6 @@
 from misli import Entity, entity_type
 import pamet
+from pamet.helpers import Url
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note
 
@@ -26,4 +27,4 @@ class Page(Entity):
         return pamet.find_one(gid=(self.gid(), note_id))
 
     def url(self):
-        return f'pamet:///p/{self.id}'
+        return Url(f'pamet:///p/{self.id}')

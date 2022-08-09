@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 
-from typing import List, Union
+from typing import List, Tuple, Union
 from urllib.parse import ParseResult, urlparse, urlunparse
 from misli.basic_classes.point2d import Point2D
 from misli.logging import get_logger
@@ -59,7 +59,7 @@ class Url:
     def is_custom(self):
         return self._parsed_url.scheme not in ['pamet', 'http', 'https', '']
 
-    def get_page(self):
+    def page_id(self):
         # This method should probably not be in this class
         if not self.is_internal():
             # A search for imported public/shared pages should be done here
@@ -71,7 +71,10 @@ class Url:
             log.warning('Invalid url')
             return None
 
-        return pamet.page(id=parts[2])
+        return parts[2]
+
+    def get_page(self):
+        return pamet.page(id=self.page_id())
 
     def get_media_id(self):
         path = Path(self._parsed_url.path)
@@ -82,7 +85,7 @@ class Url:
 
         return parts[4]
 
-    def get_anchor(self) -> Note | Point2D | None:
+    def get_anchor(self) -> Note | Tuple[float, Point2D] | None:
         fragment = self._parsed_url.fragment
         if fragment.startswith('note'):
             try:
@@ -90,12 +93,14 @@ class Url:
             except Exception:
                 return None
             return pamet.find_one(id=note_id)
-        elif fragment.startswith('center'):
+        elif fragment.startswith('eye_at'):
             try:
                 center_tuple = fragment.split('=')[1]
-                center_coords = center_tuple.split(',')
-                center_coords = [float(c) for c in center_coords]
-                return Point2D(*center_coords)
+                data = center_tuple.split('/')
+                data = [float(c) for c in data]
+                height = data[0]
+                center = Point2D(data[1], data[2])
+                return height, center
             except Exception:
                 return None
 
