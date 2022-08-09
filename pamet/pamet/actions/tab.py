@@ -25,27 +25,31 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
     if not page:
         raise Exception('No page at the given URL')
 
-    # Create the page state with all of its children states
-    page_view_state = MapPageViewState(page_id=page.id)
-    misli.gui.add_state(page_view_state)
+    page_view_state = tab_state.page_state_from_cache(page.id)
 
-    for _note in page.notes():
-        NoteViewType = pamet.note_view_type(
-            note_type_name=type(_note).__name__)
-        StateType = pamet.note_state_type_by_view(NoteViewType.__name__)
-        note_view_state = StateType(**_note.asdict(), note_gid=_note.gid())
-        page_view_state.note_view_states.append(note_view_state)
-        misli.gui.add_state(note_view_state)
+    if not page_view_state:
+        # Create the page state with all of its children states
+        page_view_state = MapPageViewState(page_id=page.id)
+        misli.gui.add_state(page_view_state)
 
-    for arrow in page.arrows():
-        arrow_view_state = ArrowViewState(**arrow.asdict(),
-                                          arrow_gid=arrow.gid())
-        page_view_state.arrow_view_states.append(arrow_view_state)
-        misli.gui.add_state(arrow_view_state)
-    misli.gui.update_state(page_view_state)
+        for _note in page.notes():
+            NoteViewType = pamet.note_view_type(
+                note_type_name=type(_note).__name__)
+            StateType = pamet.note_state_type_by_view(NoteViewType.__name__)
+            note_view_state = StateType(**_note.asdict(), note_gid=_note.gid())
+            page_view_state.note_view_states.append(note_view_state)
+            misli.gui.add_state(note_view_state)
+
+        for arrow in page.arrows():
+            arrow_view_state = ArrowViewState(**arrow.asdict(),
+                                              arrow_gid=arrow.gid())
+            page_view_state.arrow_view_states.append(arrow_view_state)
+            misli.gui.add_state(arrow_view_state)
+        misli.gui.update_state(page_view_state)
 
     # Set the page state in the tab state and handle the navigation history
     tab_state.page_view_state = page_view_state
+    tab_state.add_page_state_to_cache(page_view_state)
     tab_state.title = page.name
     misli.gui.update_state(tab_state)
 
@@ -56,6 +60,7 @@ def go_to_url(tab_state: TabViewState,
               update_nav_history: bool = True):
     old_page_state = tab_state.page_view_state
     create_and_set_page_view(tab_state, url)
+
     parsed_url = Url(url)
     page_state = tab_state.page_view_state
 

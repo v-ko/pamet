@@ -25,6 +25,7 @@ from pamet.views.map_page.state import MapPageViewState
 
 SIDEBAR_WIDTH = 300
 MIN_TAB_WIDTH = SIDEBAR_WIDTH * 1.1
+MAX_PAGE_CACHE_SIZE = 100
 
 
 @view_state_type
@@ -41,6 +42,8 @@ class TabViewState(ViewState):
     navigation_history: List[str] = field(default_factory=list)
     current_nav_index: int = None
     previous_nav_index: int = None
+
+    page_state_cache: dict = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return (f'<TabViewState title={self.title}>')
@@ -60,8 +63,13 @@ class TabViewState(ViewState):
     def left_sidebar_is_open(self):
         return bool(self.left_sidebar_state)
 
+    def add_page_state_to_cache(self, page_state: MapPageViewState):
+        self.page_state_cache[page_state.page_id] = page_state
 
-# @register_view_type
+    def page_state_from_cache(self, page_id: str) -> MapPageViewState:
+        return self.page_state_cache.get(page_id, None)
+
+
 class TabWidget(QWidget, View):
 
     def __init__(self, parent, initial_state):
@@ -82,6 +90,7 @@ class TabWidget(QWidget, View):
         self._left_sidebar_widget = None
         self._right_sidebar_widget = None
         self._search_bar_widget = None
+        self._page_widget_cache = {}  # By page_id
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
         new_note_shortcut.activated.connect(self.create_new_note_command)
@@ -171,20 +180,41 @@ class TabWidget(QWidget, View):
                 self.edit_view.show()
                 self.edit_view.setFocus()
 
-    def switch_to_page_view(self, page_view_state):
+    def add_page_wideget_to_cache(self, page_widget: MapPageWidget):
+        self._page_widget_cache[page_widget.state().id] = page_widget
+        if MAX_PAGE_CACHE_SIZE < len(self._page_widget_cache):
+            page_id, page_widget = self._page_widget_cache.popitem()
+            page_widget.deleteLater()
+
+    def cached_page_widget(self, page_view_state_id: str):
+        return self._page_widget_cache.pop(page_view_state_id, None)
+
+    def switch_to_page_view(self, page_view_state: MapPageViewState):
+        """Switches to the specified page view state.
+
+        The TabWidget keeps a cache with page widgets associated with their
+        state ids. When possible - those get reused.
+        """
         if self._page_view:
             self.ui.centralContainer.layout().removeWidget(self._page_view)
-            self._page_view.deleteLater()
+            
+            self.add_page_wideget_to_cache(self._page_view)
+            self._page_view.hide()
 
         if not page_view_state:
             return
 
-        new_page_view = MapPageWidget(parent=self,
-                                      initial_state=page_view_state)
-        self._page_view = new_page_view
-        self.ui.centralContainer.layout().addWidget(new_page_view)
+        page_widget = self.cached_page_widget(page_view_state.id)
+        if not page_widget:
+            page_widget = MapPageWidget(parent=self,
+                                        initial_state=page_view_state)
+
+        self._page_view = page_widget
+        self.ui.centralContainer.layout().addWidget(page_widget)
+        self._page_view.show()
+
         # Must be visible to accept focus, so queue on the main loop
-        misli.call_delayed(new_page_view.setFocus)
+        misli.call_delayed(page_widget.setFocus)
 
     def create_new_note_command(self):
         page_widget = self.page_view()
