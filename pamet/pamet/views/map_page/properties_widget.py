@@ -94,18 +94,15 @@ class MapPagePropertiesWidget(QWidget, View):
             self.ui.nameWarningLabel.setText('The page name can not be empty')
             self.ui.nameWarningLabel.show()
             self.ui.saveButton.setEnabled(False)
-            self.save_shortcut.setEnabled(False)
             return
 
         elif pamet.page(name=new_text):
             self.ui.nameWarningLabel.setText('Name already taken')
             self.ui.nameWarningLabel.show()
             self.ui.saveButton.setEnabled(False)
-            self.save_shortcut.setEnabled(False)
             return
 
         self.ui.saveButton.setEnabled(True)
-        self.save_shortcut.setEnabled(True)
         self.ui.nameWarningLabel.hide()
 
     def _handle_home_page_toggle(self, checked: bool):

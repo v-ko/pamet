@@ -39,17 +39,6 @@ def create_new_page():
     current_window().current_tab().create_new_page_command()
 
 
-@command(title='Save page properties')
-def save_page_properties():
-    tab, page_view = current_tab_and_page_views()
-    properties_view_state = misli.gui.view_state(
-        tab.state().right_sidebar_view_id)
-    page = properties_view_state.page
-    page.name = properties_view_state.name_line_edit_text
-    map_page_actions.save_page_properties(page)
-    map_page_actions.close_page_properties(properties_view_state.id)
-
-
 @command(title='Open page properties')
 def open_page_properties():
     tab, page_view = current_tab_and_page_views()
