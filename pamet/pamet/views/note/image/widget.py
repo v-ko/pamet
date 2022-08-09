@@ -28,7 +28,7 @@ class ImageNoteWidget(ImageLabel, NoteView):
 
     def __init__(self, parent, initial_state):
         ImageLabel.__init__(self, parent)
-        NoteView.__init__(self, initial_state)
+        NoteView.__init__(self, parent, initial_state)
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
 

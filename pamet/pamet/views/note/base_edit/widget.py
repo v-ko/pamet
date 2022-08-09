@@ -21,7 +21,7 @@ class BaseNoteEditWidget(QWidget, View):
     def __init__(self, parent: TabWidget, initial_state: NoteEditViewState):
         QWidget.__init__(self, parent=parent)
         View.__init__(self, initial_state=initial_state)
-        self.tab_widget: TabWidget = parent
+        self.parent_tab: TabWidget = parent
 
         if initial_state.new_note_dict:
             type_name = initial_state.new_note_dict.pop('type_name')
@@ -46,9 +46,9 @@ class BaseNoteEditWidget(QWidget, View):
         self.ui.saveButton.clicked.connect(self._handle_ok_click)
         self.ui.devButton.clicked.connect(self._handle_dev_button_click)
         self.ui.cancelButton.clicked.connect(
-            lambda: note_actions.abort_editing_note(self.tab_widget.state()))
+            lambda: note_actions.abort_editing_note(self.parent_tab.state()))
         trash_button.clicked.connect(
-            lambda: note_actions.abort_editing_and_delete_note(self.tab_widget.
+            lambda: note_actions.abort_editing_and_delete_note(self.parent_tab.
                                                                state()))
         self.switch_type_button.clicked.connect(
             self._show_the_type_switch_menu)
@@ -72,14 +72,14 @@ class BaseNoteEditWidget(QWidget, View):
         self.setGeometry(self_rect)
 
     def _handle_esc_shortcut(self):
-        note_actions.abort_editing_note(self.tab_widget.state())
+        note_actions.abort_editing_note(self.parent_tab.state())
 
     def _handle_ok_click(self):
         if self.state().create_mode:
-            note_actions.finish_creating_note(self.tab_widget.state(),
+            note_actions.finish_creating_note(self.parent_tab.state(),
                                               self.edited_note)
         else:
-            note_actions.finish_editing_note(self.tab_widget.state(),
+            note_actions.finish_editing_note(self.parent_tab.state(),
                                              self.edited_note)
 
     def _handle_dev_button_click(self):
@@ -102,7 +102,7 @@ class BaseNoteEditWidget(QWidget, View):
             def command(NoteType=NoteType):
                 # Possibly ask for a scripts permission here
                 note_actions.switch_note_type(
-                    self.tab_widget.state(),
+                    self.parent_tab.state(),
                     NoteType.create_silent(**self.edited_note.asdict()))
 
             switch_type_menu_entries[NoteType.__name__] = command

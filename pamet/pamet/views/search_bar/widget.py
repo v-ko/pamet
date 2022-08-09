@@ -34,7 +34,7 @@ class SearchBarWidget(QWidget):
     def __init__(self, parent, initial_state):
         QWidget.__init__(self, parent)
 
-        self.tab_widget = parent
+        self.parent_tab = parent
 
         self.ui = Ui_SearchBarWidget()
         self.ui.setupUi(self)
@@ -75,5 +75,5 @@ class SearchBarWidget(QWidget):
 
         url = Url(page.url()).with_anchor(f'note={note.id}')
         url = str(url)
-        tab_actions.go_to_url(self.tab_widget.state(), url)
+        tab_actions.go_to_url(self.parent_tab.state(), url)
 

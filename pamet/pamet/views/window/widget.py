@@ -1,8 +1,8 @@
 from dataclasses import field
 from PySide6.QtCore import Qt
 
-from PySide6.QtWidgets import QMainWindow, QPushButton, QWidget
-from PySide6.QtGui import QIcon, QKeySequence, QResizeEvent, QShortcut
+from PySide6.QtWidgets import QMainWindow, QPushButton, QTabBar, QWidget
+from PySide6.QtGui import QIcon, QKeySequence, QMouseEvent, QResizeEvent, QShortcut
 
 from misli.entity_library.change import Change
 from misli.gui.utils.qt_widgets import bind_and_apply_state
@@ -37,6 +37,14 @@ class WindowViewState(ViewState):
                 f' {len(self.tab_states)=}>')
 
 
+class TabBar(QTabBar):  # Adds a tab close on middle-click
+
+    def mouseReleaseEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MiddleButton:
+            self.tabCloseRequested.emit(self.tabAt(event.pos()))
+        return super().mouseReleaseEvent(event)
+
+
 class WindowWidget(QMainWindow, View):
 
     def __init__(self, initial_state):
@@ -53,15 +61,21 @@ class WindowWidget(QMainWindow, View):
 
         self.menuButton = QPushButton(QIcon.fromTheme('menu'), '')
         self.corner_widget = CornerWidget(self)
+
+        self.ui.tabBarWidget.setTabBar(TabBar())
+        self.ui.tabBarWidget.setTabsClosable(True)
         self.ui.tabBarWidget.setCornerWidget(self.corner_widget)
 
         self.ui.tabBarWidget.currentChanged.connect(self.handle_tab_changed)
+        self.ui.tabBarWidget.tabCloseRequested.connect(
+            self.handle_tab_close_requested)
 
         QShortcut(QKeySequence('ctrl+shift+P'), self,
                   commands.open_command_palette)
         QShortcut(QKeySequence('ctrl+shift+F'), self,
                   commands.show_global_search)
         QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shorcut)
+        QShortcut(QKeySequence('ctrl+w'), self, commands.close_current_tab)
 
         go_to_file_shortcut = QShortcut(QKeySequence('ctrl+P'), self)
         go_to_file_shortcut.activated.connect(
@@ -99,7 +113,8 @@ class WindowWidget(QMainWindow, View):
     def handle_tab_changed(self, index: int):
         # If there's no tab currently
         if index == -1:
-            raise Exception('No tab')  # TODO: handle with opening a new one?
+            self.close()
+            return
 
         self.ui.tabBarWidget.widget(index).update()
 
@@ -148,7 +163,6 @@ class WindowWidget(QMainWindow, View):
         if state.command_view_state:
             window_actions.close_command_view(state)
 
-
         # Propagate to the map page if there's one
         current_tab = self.current_tab()
         if not current_tab:
@@ -166,3 +180,7 @@ class WindowWidget(QMainWindow, View):
             return
 
         map_page.handle_esc_shortcut()
+
+    def handle_tab_close_requested(self, tab_index: int):
+        tab_widget = self.ui.tabBarWidget.widget(tab_index)
+        window_actions.close_tab(self.state(), tab_widget.state())

@@ -32,8 +32,6 @@ class MapPagePropertiesWidget(QWidget, View):
         self.ui = Ui_MapPagePropertiesWidget()
         self.ui.setupUi(self)
 
-        self.tab_widget = tab_widget
-
         # Configure the UI
         # Set the home page check box state
         config = get_config()
@@ -71,16 +69,16 @@ class MapPagePropertiesWidget(QWidget, View):
         reply = QMessageBox.question(
             self, 'Delete page', 'Are you sure you want to delete the page?')
         if reply == QMessageBox.StandardButton.Yes:
-            actions.map_page.delete_page(self.tab_widget.state(),
+            actions.map_page.delete_page(self.parent_tab.state(),
                                          self.state().get_page())
-        actions.tab.close_right_sidebar(self.tab_widget.state())
+        actions.tab.close_right_sidebar(self.parent_tab.state())
 
     def _save_page(self):
         state = self.state()
         page = state.get_page()
         page.name = self.ui.nameLineEdit.text()
         actions.map_page.save_page_properties(page)
-        actions.tab.close_right_sidebar(self.tab_widget.state())
+        actions.tab.close_right_sidebar(self.parent_tab.state())
 
     def _handle_name_line_edit_text_changed(self, new_text):
         # Check if the id is available and valid

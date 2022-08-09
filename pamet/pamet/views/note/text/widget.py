@@ -30,7 +30,7 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
 
     def __init__(self, parent, initial_state):
         QLabel.__init__(self, parent=parent)
-        NoteView.__init__(self, initial_state=initial_state)
+        NoteView.__init__(self, parent=parent, initial_state=initial_state)
         LinkNoteViewMixin.__init__(self)
 
         self.setFont(default_note_font())

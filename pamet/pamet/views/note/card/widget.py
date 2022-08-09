@@ -30,7 +30,7 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
 
     def __init__(self, parent, initial_state):
         QWidget.__init__(self, parent)
-        NoteView.__init__(self, initial_state=initial_state)
+        NoteView.__init__(self, parent=parent, initial_state=initial_state)
         LinkNoteViewMixin.__init__(self)
 
         self.ui = Ui_CardNoteWidget()

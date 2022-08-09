@@ -141,3 +141,10 @@ def paste_special():
 def show_global_search():
     tab_view, _ = current_tab_and_page_views()
     tab_actions.open_global_search(tab_view.state())
+
+
+@command(title='Close tab')
+def close_current_tab():
+    window = current_window()
+    tab = window.current_tab()
+    window_actions.close_tab(window.state(), tab.state())

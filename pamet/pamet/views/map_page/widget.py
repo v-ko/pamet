@@ -68,8 +68,6 @@ class MapPageWidget(QWidget, MapPageView):
         QWidget.__init__(self, parent=parent)
         MapPageView.__init__(self, parent, initial_state)
 
-        self.tab_widget = parent
-
         # Local variables
         self._cache_per_nc_id = {}
         self._paint_event_count = 0
@@ -166,7 +164,7 @@ class MapPageWidget(QWidget, MapPageView):
 
     def handle_page_change(self, change: Change):
         if change.updated.name:
-            map_page_actions.handle_page_name_updated(self.tab_widget.state(),
+            map_page_actions.handle_page_name_updated(self.parent_tab.state(),
                                                       change.last_state())
 
     def unsubscribe_all(self):
@@ -712,15 +710,13 @@ class MapPageWidget(QWidget, MapPageView):
             for note in pamet.clipboard.get_contents():
                 if not isinstance(note, Note):
                     continue
-                nt_main_color = QColor(
-                        *note.get_color().to_uint8_rgba_list())
+                nt_main_color = QColor(*note.get_color().to_uint8_rgba_list())
                 painter.setPen(nt_main_color)
                 painter.setBrush(Qt.NoBrush)
                 rect = note.rect()
                 rect.set_top_left(unprojected_mouse_pos + rect.top_left())
                 rect = state.project_rect(rect)
                 painter.drawRect(QRectF(*rect.as_tuple()))
-
 
         # Report stats
         notes_on_screen = len(display_rects_by_child_id)
@@ -786,10 +782,12 @@ class MapPageWidget(QWidget, MapPageView):
                         event.pos().y()))
 
     def mouseReleaseEvent(self, event):
+        mouse_pos = Point2D(event.pos().x(), event.pos().y())
         if event.button() is Qt.LeftButton:
-            self.handle_left_mouse_release(
-                Point2D(event.pos().x(),
-                        event.pos().y()))
+            self.handle_left_mouse_release(mouse_pos)
+
+        elif event.button() is Qt.MiddleButton:
+            self.middle_click_event(mouse_pos)
 
     def mouseMoveEvent(self, event):
         old_nvs_under_mouse = copy(self._note_views_under_mouse)

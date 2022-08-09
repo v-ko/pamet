@@ -3,9 +3,9 @@ from __future__ import annotations
 import misli.gui
 from misli.gui.actions_library import action
 from misli.gui.view_library.view_state import ViewState
+from pamet.model.page import Page
 from pamet.views.command_palette.widget import CommandPaletteViewState
 from pamet.views.tab.widget import TabViewState
-from pamet.views.window import widget as window_widget
 
 from pamet.actions import tab as tab_actions
 from pamet.views.window.widget import WindowViewState
@@ -19,7 +19,7 @@ def new_browser_window():
 
 
 @action('window.new_browser_tab')
-def new_browser_tab(window_state: window_widget.WindowViewState, page: str):
+def new_browser_tab(window_state: WindowViewState, page: Page):
     tab_state = TabViewState()
     misli.gui.add_state(tab_state)
 
@@ -27,6 +27,13 @@ def new_browser_tab(window_state: window_widget.WindowViewState, page: str):
     misli.gui.update_state(window_state)
 
     tab_actions.go_to_url(tab_state, page.url())
+
+
+@action('window.close_tab')
+def close_tab(window_state: WindowViewState,
+              tab_state: TabViewState):
+    window_state.tab_states.remove(tab_state)
+    misli.gui.update_state(window_state)
 
 
 @action('window.open_command_view')

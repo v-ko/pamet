@@ -197,7 +197,7 @@ class TabWidget(QWidget, View):
         """
         if self._page_view:
             self.ui.centralContainer.layout().removeWidget(self._page_view)
-            
+
             self.add_page_wideget_to_cache(self._page_view)
             self._page_view.hide()
 

@@ -25,10 +25,11 @@ class MapPageView(View):
 
     def __init__(self, parent, initial_state):
         super().__init__(initial_state=initial_state)
+        self.parent_tab = parent
+
         self._state = initial_state
         self._left_mouse_is_pressed = False
         self._mouse_position_on_left_press = Point2D(0, 0)
-        self.parent_tab = parent
         self._note_views_under_mouse = []
 
     def note_views(self) -> List[NoteView]:
@@ -251,6 +252,11 @@ class MapPageView(View):
                                                     anchor_note_id=note_id,
                                                     anchor_type=anchor_type)
 
+        elif mode == MapPageMode.NONE:
+            note_view = self.get_note_view_at(mouse_pos)
+            if note_view and control_is_pressed():
+                note_view.middle_click_event(mouse_pos)
+
     def _new_note_size_on_resize(self, new_mouse_pos: Point2D) -> Point2D:
         mouse_delta = new_mouse_pos - self.state().note_resize_click_position
         size_delta = mouse_delta - self.state(
@@ -353,6 +359,13 @@ class MapPageView(View):
             note.x = note_pos.x()
             note.y = note_pos.y()
             actions.note.create_new_note(self.parent_tab.state(), note)
+
+    def middle_click_event(self, mouse_pos: Point2D):
+        note_view = self.get_note_view_at(mouse_pos)
+
+        if note_view:
+            note_view.middle_click_event(mouse_pos)
+
 
     def handle_resize_event(self, new_size: Point2D):
         map_page_actions.resize_page(self.id, new_size)
