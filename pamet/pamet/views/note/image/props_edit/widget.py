@@ -37,7 +37,8 @@ class ImagePropsWidget(QWidget):
         if isinstance(self.edit_widget.edited_note, (ImageNote, CardNote)):
             # Set the url line edit text and then connect the handler (to avoid
             # triggering it beforehand)
-            self.ui.urlLineEdit.setText(self.edit_widget.edited_note.image_url)
+            self.ui.urlLineEdit.setText(
+                str(self.edit_widget.edited_note.image_url))
 
             # Setup the image from the local data if any
             local_url: Url = self.edit_widget.edited_note.local_image_url
@@ -133,7 +134,7 @@ class ImagePropsWidget(QWidget):
                 return
 
             # Read binary
-            with open(url_path, 'rb')as image_file:
+            with open(url_path, 'rb') as image_file:
                 image_data = image_file.read()
 
             # create buffer

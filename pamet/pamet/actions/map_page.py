@@ -178,6 +178,9 @@ def stop_drag_select(map_page_view_state: MapPageViewState):
 
 @action('map_page.delete_notes_and_connected_arrows')
 def delete_notes_and_connected_arrows(notes: List[Note]):
+    if not notes:
+        return
+        
     note_ids = []
     page_id = None
     for note in notes:

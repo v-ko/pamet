@@ -3,6 +3,7 @@ from pathlib import Path
 from misli.extensions_loader import ExtensionsLoader
 from misli.logging import get_logger
 from pamet.services.clipboard import ClipboardService
+from pamet.services.search.base import BaseSearchService
 from .model import page, pages, create_note, set_sync_repo, set_async_repo
 from .model import find, find_one, insert_note, insert_page, update_note
 from .model import update_page, remove_note, remove_page
@@ -31,3 +32,14 @@ extensions_loader = ExtensionsLoader(pamet_root)
 extensions_loader.load_all_recursively(pamet_root / 'model')
 
 clipboard = ClipboardService()
+
+_search_service = None
+
+
+def search_service() -> BaseSearchService:
+    return _search_service
+
+
+def set_search_service(service):
+    global _search_service
+    _search_service = service

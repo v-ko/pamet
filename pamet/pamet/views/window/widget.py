@@ -59,6 +59,8 @@ class WindowWidget(QMainWindow, View):
 
         QShortcut(QKeySequence('ctrl+shift+P'), self,
                   commands.open_command_palette)
+        QShortcut(QKeySequence('ctrl+shift+F'), self,
+                  commands.show_global_search)
         QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shorcut)
 
         go_to_file_shortcut = QShortcut(QKeySequence('ctrl+P'), self)
@@ -154,8 +156,10 @@ class WindowWidget(QMainWindow, View):
 
         tab_state = current_tab.state()
         # Close sidebars if open
-        if tab_state.right_sidebar_open:
+        if tab_state.right_sidebar_is_open():
             tab_actions.close_right_sidebar(tab_state)
+        if tab_state.left_sidebar_is_open():
+            tab_actions.close_left_sidebar(tab_state)
 
         map_page = current_tab.page_view()
         if not map_page:

@@ -273,7 +273,8 @@ class MapPageWidget(QWidget, MapPageView):
 
         elif change.is_create():
             if isinstance(entity, NoteViewState):
-                self.on_child_updated(change)
+                pass
+                # self.on_child_updated(change)
             else:  # If it's an arrow
                 self.update()
 

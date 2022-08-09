@@ -16,6 +16,7 @@ from pamet.model.text_note import TextNote
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
 from pamet.views.map_page.widget import MapPageWidget
+from pamet.views.search_bar.widget import SearchBarWidget, SearchBarWidgetState
 from pamet.views.tab.ui_widget import Ui_TabMainWidget
 
 from misli.gui import ViewState, view_state_type
@@ -31,8 +32,10 @@ class TabViewState(ViewState):
     title: str = ''
     page_view_state: MapPageViewState = field(default=None)
     edit_view_state: ViewState = None
+    search_bar_state: ViewState = None
     creating_note: Note = None
 
+    left_sidebar_state: ViewState = None
     right_sidebar_state: ViewState = None
 
     navigation_history: List[str] = field(default_factory=list)
@@ -51,9 +54,11 @@ class TabViewState(ViewState):
         self.previous_nav_index = self.current_nav_index
         self.current_nav_index = new_index
 
-    @property
-    def right_sidebar_open(self):
+    def right_sidebar_is_open(self):
         return bool(self.right_sidebar_state)
+
+    def left_sidebar_is_open(self):
+        return bool(self.left_sidebar_state)
 
 
 # @register_view_type
@@ -74,7 +79,9 @@ class TabWidget(QWidget, View):
         self._page_view = None
         self._page_subscription_id = None
         self.edit_view = None
+        self._left_sidebar_widget = None
         self._right_sidebar_widget = None
+        self._search_bar_widget = None
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
         new_note_shortcut.activated.connect(self.create_new_note_command)
@@ -84,7 +91,8 @@ class TabWidget(QWidget, View):
 
         self.ui.rightSidebarCloseButton.clicked.connect(
             lambda: tab_actions.close_right_sidebar(self.state()))
-        # TODO: same for the left
+        self.ui.leftSidebarCloseButton.clicked.connect(
+            lambda: tab_actions.close_left_sidebar(self.state()))
 
         self.ui.commandLineEdit.hide()
         self.ui.leftSidebarContainer.hide()
@@ -119,13 +127,33 @@ class TabWidget(QWidget, View):
                     self, initial_state=state.right_sidebar_state)
                 self._right_sidebar_widget = new_widget
                 self.ui.rightSidebarContainer.layout().addWidget(new_widget)
-
-        if change.updated.right_sidebar_open:
-            if state.right_sidebar_open:
                 self.ui.rightSidebarContainer.show()
                 self.ui.rightSidebarContainer.raise_()
             else:
                 self.ui.rightSidebarContainer.hide()
+
+        if change.updated.left_sidebar_state:
+            if self._left_sidebar_widget:
+                self.ui.leftSidebarContainer.layout().removeWidget(
+                    self._left_sidebar_widget)
+
+                # If it's the search bar - don't delete it, we'll reuse it
+                if self._left_sidebar_widget != self._search_bar_widget:
+                    self._left_sidebar_widget.deleteLater()
+
+                self._left_sidebar_widget = None
+
+            if state.left_sidebar_state:
+                if not self._search_bar_widget:
+                    self._search_bar_widget = SearchBarWidget(
+                        self, initial_state=state.left_sidebar_state)
+                self._left_sidebar_widget = self._search_bar_widget
+                self.ui.leftSidebarContainer.layout().addWidget(
+                    self._search_bar_widget)
+                self.ui.leftSidebarContainer.show()
+                self.ui.leftSidebarContainer.raise_()
+            else:
+                self.ui.leftSidebarContainer.hide()
 
         if change.updated.edit_view_state:
             if self.edit_view:

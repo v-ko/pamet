@@ -10,6 +10,7 @@ from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.helpers import configure_for_qt
 from pamet.services.backup import BackupService
+from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
 
@@ -72,6 +73,11 @@ def main():
 
     app.focusChanged.connect(
         lambda w1, w2: print(f'Focus changed from {w1} to {w2}'))
+
+    search_service = FuzzySearchService(
+        pamet_channels.entity_change_sets_per_TLA)
+    search_service.load_all_content()
+    pamet.set_search_service(search_service)
 
     backup_service = BackupService(pamet_channels.entity_change_sets_per_TLA,
                                    fs_repo)

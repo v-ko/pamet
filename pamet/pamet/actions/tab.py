@@ -6,12 +6,14 @@ from misli.logging import get_logger
 
 import pamet
 from pamet.constants import MAX_NAVIGATION_HISTORY
+from pamet.model.note import Note
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.state import MapPageViewState
 from pamet.model import Page
 from pamet.helpers import Url, generate_page_name
 from pamet.actions import map_page as map_page_actions
+from pamet.views.search_bar.widget import SearchBarWidgetState
 
 log = get_logger(__name__)
 
@@ -51,6 +53,19 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
 @action('go_to_url')
 def go_to_url(tab_state: TabViewState, url: str):
     create_and_set_page_view(tab_state, url)
+    parsed_url = Url(url)
+
+    # Apply the anchor if any
+    anchor = parsed_url.get_anchor()
+    if anchor:
+        page_state = tab_state.page_view_state
+        if isinstance(anchor, Note):
+            anchor = anchor.rect().center()
+
+        page_state.viewport_center = anchor
+        misli.gui.update_state(page_state)
+
+        url = parsed_url.get_page().url()  # strip the anchor
 
     # Add the url to the navigation history (only if it's different from
     # the last one)
@@ -97,13 +112,6 @@ def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
     map_page_actions.open_page_properties(tab_state, focused_prop='name')
 
 
-@action('tab.close_right_sidebar')
-def close_right_sidebar(tab_state: TabViewState):
-    # TODO: if tab_state.right_sidebar_state and unsaved shit: push notification
-    tab_state.right_sidebar_state = None
-    misli.gui.update_state(tab_state)
-
-
 @action('navigation_back')
 def navigation_back(tab_state: TabViewState):
     nav_history = tab_state.navigation_history
@@ -141,3 +149,27 @@ def navigation_toggle_last(tab_state):
     misli.gui.update_state(tab_state)
     create_and_set_page_view(tab_state,
                              nav_history[tab_state.current_nav_index])
+
+
+@action('tab.close_right_sidebar')
+def close_right_sidebar(tab_state: TabViewState):
+    # TODO: if tab_state.right_sidebar_state and unsaved shit: push notification
+    tab_state.right_sidebar_state = None
+    misli.gui.update_state(tab_state)
+
+
+@action('tab.open_global_search')
+def open_global_search(tab_state: TabViewState):
+    # If not present - create the search bar state
+    if not tab_state.search_bar_state:
+        tab_state.search_bar_state = SearchBarWidgetState()
+        misli.gui.add_state(tab_state.search_bar_state)
+
+    tab_state.left_sidebar_state = tab_state.search_bar_state
+    misli.gui.update_state(tab_state)
+
+
+@action('tab.close_left_sidebar')
+def close_left_sidebar(tab_state: TabViewState):
+    tab_state.left_sidebar_state = None
+    misli.gui.update_state(tab_state)

@@ -8,6 +8,7 @@ from misli.gui import command
 
 from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
+from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 
 from pamet.gui_helpers import current_window, current_tab
@@ -145,3 +146,9 @@ def paste_special():
     map_page_state = page_view.state()
     unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
     map_page_actions.paste_special(map_page_state, unproj_mouse_pos)
+
+
+@command(title='Show search')
+def show_global_search():
+    tab_view, _ = current_tab_and_page_views()
+    tab_actions.open_global_search(tab_view.state())

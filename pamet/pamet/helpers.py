@@ -2,7 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from typing import List, Union
-from urllib.parse import ParseResult, urlparse
+from urllib.parse import ParseResult, urlparse, urlunparse
 from misli.basic_classes.point2d import Point2D
 from misli.logging import get_logger
 import pamet
@@ -32,7 +32,7 @@ def get_default_page():
     return pamet.page(id=config.home_page_id)
 
 
-class Url(str):
+class Url:
     def __init__(self, url: Union[Url, str]):
         if isinstance(url, Url):
             url = str(url)
@@ -40,7 +40,7 @@ class Url(str):
         self._parsed_url = urlparse(url)
 
     def __repr__(self) -> str:
-        return str(self._url)
+        return urlunparse(self._parsed_url)
 
     def __eq__(self, other: Url) -> bool:
         return self._url == other._url
@@ -81,6 +81,28 @@ class Url(str):
             return None
 
         return parts[4]
+
+    def get_anchor(self) -> Note | Point2D | None:
+        fragment = self._parsed_url.fragment
+        if fragment.startswith('note'):
+            try:
+                note_id = fragment.split('=')[1]
+            except Exception:
+                return None
+            return pamet.find_one(id=note_id)
+        elif fragment.startswith('center'):
+            try:
+                center_tuple = fragment.split('=')[1]
+                center_coords = center_tuple.split(',')
+                center_coords = [float(c) for c in center_coords]
+                return Point2D(*center_coords)
+            except Exception:
+                return None
+
+    def with_anchor(self, anchor: str) -> Url:
+        new_url = Url(self)
+        new_url._parsed_url = new_url._parsed_url._replace(fragment=anchor)
+        return new_url
 
     def is_empty(self):
         return not self._url
