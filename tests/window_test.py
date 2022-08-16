@@ -2,6 +2,7 @@ import signal
 import misli
 from misli.gui.actions_library import action
 
+import pamet
 from pamet.desktop_app.app import DesktopApp
 from pamet.views.window.widget import WindowWidget
 

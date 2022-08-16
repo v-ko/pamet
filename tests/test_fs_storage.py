@@ -1,9 +1,10 @@
 import shutil
+import misli
+from pamet.model.note import Note
+from pamet.model.page import Page
+from pamet.storage.file_system.repository import FSStorageRepository
 import pytest
 
-import pamet
-from pamet.services.fs_storage_repository import FSStorageRepository
-from pamet import Page, Note
 
 REPO_PATH = './tmp_mock_repo'
 
