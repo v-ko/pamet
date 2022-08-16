@@ -196,7 +196,7 @@ class Ui_ScriptNotePropsWidget(object):
         self.runInTerminalCheckbox.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Run in terminal", None))
         self.runPushButton.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Run", None))
         self.openInEditorPushButton.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Open in editor", None))
-        self.label_2.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Path", None))
+        self.label_2.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Path/Command", None))
         self.pathErrorLabel.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Path error label", None))
         self.chooseFilePushButton.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Choose file", None))
         self.deletePushButton.setText(QCoreApplication.translate("ScriptNotePropsWidget", u"Delete", None))
