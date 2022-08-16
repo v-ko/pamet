@@ -1,4 +1,5 @@
 from __future__ import annotations
+from datetime import datetime
 from pathlib import Path
 
 from typing import List, Tuple, Union
@@ -30,6 +31,10 @@ def generate_page_name() -> str:
 def get_default_page():
     config = pamet.desktop_app.get_config()
     return pamet.page(id=config.home_page_id)
+
+
+def current_time() -> datetime:
+    return datetime.utcnow().astimezone().replace(microsecond=0)
 
 
 class Url:

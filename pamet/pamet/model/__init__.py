@@ -15,6 +15,7 @@ import pamet
 from pamet import channels
 from misli import entity_library
 from misli import get_logger
+from pamet.helpers import current_time
 from pamet.model.arrow import Arrow
 from pamet.services.undo import UndoService
 # from pamet.persistence_manager import PersistenceManager
@@ -115,6 +116,13 @@ def remove_page(page_: Page):
 
 
 def update_page(page_: Page):
+    old_page = _sync_repo.find_one(id=page_.id)
+    if not old_page:
+        raise Exception('Can not update missing page.')
+
+    if page_.name != old_page.name:
+        page_.modified = current_time()
+
     change = _sync_repo.update_one(page_)
     raw_entity_changes.push(change)
 
@@ -126,8 +134,8 @@ def create_note(**props):
 
     type_name = pamet.note_type_from_props(props).__name__
     note_ = entity_library.from_dict(type_name, props)
-    note_.time_created = datetime.now()
-    note_.time_modified = datetime.now()
+    note_.created = current_time()
+    note_.modified = current_time()
     change = _sync_repo.insert_one(note_)
     if not change:
         raise Exception('No change returned for the inserted note.')
@@ -143,10 +151,11 @@ def insert_note(note_: Note):
 def update_note(note_: Note):
     old_note = _sync_repo.find_one(gid=note_.gid())
     if not old_note:
-        raise Exception('Can not update missing note')
+        raise Exception('Can not update missing note.')
 
     if note_.content != old_note.content:
-        note_.time_modified = datetime.now()
+        note_.modified = current_time()
+
     change = _sync_repo.update_one(note_)
     raw_entity_changes.push(change)
 

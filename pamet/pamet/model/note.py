@@ -119,27 +119,27 @@ class Note(Entity):
         self.width = new_rect.width()
         self.height = new_rect.height()
 
-    @property
-    def time_created(self) -> datetime:
-        return self.created
+    # @property
+    # def time_created(self) -> datetime:
+    #     return self.created
 
-    @time_created.setter
-    def time_created(self, new_dt: Union[datetime, str]):
-        if isinstance(new_dt, datetime):
-            self.created = new_dt.replace(microsecond=0)
-        else:
-            self.created = datetime_from_string(new_dt)
+    # @time_created.setter
+    # def time_created(self, new_dt: Union[datetime, str]):
+    #     if isinstance(new_dt, datetime):
+    #         self.created = new_dt.replace(microsecond=0)
+    #     else:
+    #         self.created = datetime_from_string(new_dt)
 
-    @property
-    def time_modified(self) -> datetime:
-        return self.modified
+    # @property
+    # def time_modified(self) -> datetime:
+    #     return self.modified
 
-    @time_modified.setter
-    def time_modified(self, new_dt: Union[datetime, str]):
-        if isinstance(new_dt, datetime):
-            self.modified = new_dt.replace(microsecond=0)
-        else:
-            self.modified = datetime_from_string(new_dt)
+    # @time_modified.setter
+    # def time_modified(self, new_dt: Union[datetime, str]):
+    #     if isinstance(new_dt, datetime):
+    #         self.modified = new_dt.replace(microsecond=0)
+    #     else:
+    #         self.modified = datetime_from_string(new_dt)
 
     @property
     def url(self) -> Url:
