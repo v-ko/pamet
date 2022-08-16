@@ -5,10 +5,10 @@ from misli.gui.actions_library import action
 from misli.gui.view_library.view_state import ViewState
 from pamet.model.page import Page
 from pamet.views.command_palette.widget import CommandPaletteViewState
-from pamet.views.tab.widget import TabViewState
+from pamet.views.tab.state import TabViewState
 
 from pamet.actions import tab as tab_actions
-from pamet.views.window.widget import WindowViewState
+from pamet.views.window.state import WindowViewState
 
 
 @action('window.new_browser_window')

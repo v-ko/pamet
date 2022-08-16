@@ -1,1 +1,0 @@
-- Delete last present page - should create the default page

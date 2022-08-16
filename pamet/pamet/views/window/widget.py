@@ -1,4 +1,3 @@
-from dataclasses import field
 from PySide6.QtCore import Qt
 
 from PySide6.QtWidgets import QMainWindow, QPushButton, QTabBar, QWidget
@@ -16,25 +15,11 @@ from pamet.views.window.ui_widget import Ui_BrowserWindow
 from pamet.actions import window as window_actions
 from pamet.actions import tab as tab_actions
 
-from misli.gui import ViewState, view_state_type
-
 WINDOW_MIN_WIDTH = 400
 WINDOW_MIN_HEIGHT = 400
 COMMAND_VIEW_SIDE_SPACING = 50
 COMMAND_VIEW_MIN_WIDTH = WINDOW_MIN_WIDTH - 2 * COMMAND_VIEW_SIDE_SPACING
 COMMAND_VIEW_MAX_WIDTH = 600
-
-
-@view_state_type
-class WindowViewState(ViewState):
-    title: str = ''
-    current_tab_id: str = ''
-    tab_states: list = field(default_factory=list)
-    command_view_state: View = None
-
-    def __repr__(self) -> str:
-        return (f'<WindowViewState title={self.title} {self.current_tab_id=}'
-                f' {len(self.tab_states)=}>')
 
 
 class TabBar(QTabBar):  # Adds a tab close on middle-click

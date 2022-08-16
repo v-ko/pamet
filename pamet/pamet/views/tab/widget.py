@@ -1,6 +1,3 @@
-from dataclasses import field
-from typing import List
-
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
@@ -16,58 +13,14 @@ from pamet.model.text_note import TextNote
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
 from pamet.views.map_page.widget import MapPageWidget
-from pamet.views.search_bar.widget import SearchBarWidget, SearchBarWidgetState
+from pamet.views.search_bar.widget import SearchBarWidget
 from pamet.views.tab.ui_widget import Ui_TabMainWidget
 
-from misli.gui import ViewState, view_state_type
-from pamet.model import Note
 from pamet.views.map_page.state import MapPageViewState
 
 SIDEBAR_WIDTH = 300
 MIN_TAB_WIDTH = SIDEBAR_WIDTH * 1.1
 MAX_PAGE_CACHE_SIZE = 100
-
-
-@view_state_type
-class TabViewState(ViewState):
-    title: str = ''
-    page_view_state: MapPageViewState = field(default=None)
-    edit_view_state: ViewState = None
-    search_bar_state: ViewState = None
-    creating_note: Note = None
-
-    left_sidebar_state: ViewState = None
-    right_sidebar_state: ViewState = None
-
-    navigation_history: List[str] = field(default_factory=list)
-    current_nav_index: int = None
-    previous_nav_index: int = None
-
-    page_state_cache: dict = field(default_factory=dict)
-
-    def __repr__(self) -> str:
-        return (f'<TabViewState title={self.title}>')
-
-    def set_navigation_index(self, new_index: int):
-        new_index = max(0, min(len(self.navigation_history) - 1, new_index))
-
-        if new_index == self.current_nav_index:
-            return
-
-        self.previous_nav_index = self.current_nav_index
-        self.current_nav_index = new_index
-
-    def right_sidebar_is_open(self):
-        return bool(self.right_sidebar_state)
-
-    def left_sidebar_is_open(self):
-        return bool(self.left_sidebar_state)
-
-    def add_page_state_to_cache(self, page_state: MapPageViewState):
-        self.page_state_cache[page_state.page_id] = page_state
-
-    def page_state_from_cache(self, page_id: str) -> MapPageViewState:
-        return self.page_state_cache.get(page_id, None)
 
 
 class TabWidget(QWidget, View):

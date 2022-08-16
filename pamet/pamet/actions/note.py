@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import misli
+import pamet.views.tab.state
 from misli import gui
 from misli.gui.actions_library import action
 
@@ -8,15 +9,13 @@ import pamet
 from pamet.helpers import snap_to_grid
 from pamet.model import Note
 from pamet.views.note.qt_helpers import minimal_nonelided_size
-# from pamet.views.note.anchor.widget import AnchorViewState
-from pamet.views.tab import widget as tab_widget
 from pamet.actions import map_page as map_page_actions
 
 log = misli.get_logger(__name__)
 
 
 @action('notes.create_new_note')
-def create_new_note(tab_state: tab_widget.TabViewState, note: Note):
+def create_new_note(tab_state: TabViewState, note: Note):
     # Check if there's an open edit window and abort it if so
     if tab_state.edit_view_state:
         abort_editing_note(tab_state)
@@ -33,7 +32,7 @@ def create_new_note(tab_state: tab_widget.TabViewState, note: Note):
 
 
 @action('notes.finish_creating_note')
-def finish_creating_note(tab_state: tab_widget.TabViewState, note: Note):
+def finish_creating_note(tab_state: TabViewState, note: Note):
     note = pamet.create_note(**note.asdict())
 
     # Autosize the note
@@ -47,7 +46,7 @@ def finish_creating_note(tab_state: tab_widget.TabViewState, note: Note):
 
 
 @action('notes.start_editing_note')
-def start_editing_note(tab_view_state: tab_widget.TabViewState, note: Note):
+def start_editing_note(tab_view_state: TabViewState, note: Note):
     # Check if there's an open edit window and abort it if so
     if tab_view_state.edit_view_state:
         abort_editing_note(tab_view_state)
@@ -62,7 +61,7 @@ def start_editing_note(tab_view_state: tab_widget.TabViewState, note: Note):
 
 
 @action('notes.finish_editing_note')
-def finish_editing_note(tab_state: tab_widget.TabViewState, note: Note):
+def finish_editing_note(tab_state: TabViewState, note: Note):
     pamet.update_note(note)
     gui.remove_state(tab_state.edit_view_state)
     tab_state.edit_view_state = None
@@ -71,13 +70,13 @@ def finish_editing_note(tab_state: tab_widget.TabViewState, note: Note):
 
 
 @action('notes.abort_editing_note')
-def abort_editing_note(tab_state: tab_widget.TabViewState):
+def abort_editing_note(tab_state: TabViewState):
     tab_state.edit_view_state = None
     gui.update_state(tab_state)
 
 
 @action('notes.abort_editing_and_delete_note')
-def abort_editing_and_delete_note(tab_state: tab_widget.TabViewState):
+def abort_editing_and_delete_note(tab_state: TabViewState):
     note = tab_state.edit_view_state.get_note()
     map_page_actions.delete_notes_and_connected_arrows([note])
     abort_editing_note(tab_state)
