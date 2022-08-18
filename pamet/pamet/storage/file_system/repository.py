@@ -46,7 +46,7 @@ class FSStorageRepository(Repository):
 
         self._process_legacy_pages()
 
-        # Load all pages in cache
+        # Load all pages in the cache
         for page_path in self.page_paths():
             try:
                 entities = self.get_entities_from_json(
@@ -299,8 +299,8 @@ class FSStorageRepository(Repository):
         page = entity_library.from_dict(Page.__name__, page_state)
         return page, notes, arrows
 
-    def serialize_page(self, page: Page, notes: List[Note],
-                       arrows: List[Arrow]):
+    @staticmethod
+    def serialize_page(page: Page, notes: List[Note], arrows: List[Arrow]):
         page_state = page.asdict()
         page_state['notes'] = [n.asdict() for n in notes]
         page_state['arrows'] = [a.asdict() for a in arrows]

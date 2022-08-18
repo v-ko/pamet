@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from copy import copy
-from datetime import datetime
 from typing import Generator, List, Union
 
 import misli
@@ -15,7 +14,7 @@ import pamet
 from pamet import channels
 from misli import entity_library
 from misli import get_logger
-from pamet.helpers import current_time
+from misli.helpers import current_time
 from pamet.model.arrow import Arrow
 from pamet.services.undo import UndoService
 # from pamet.persistence_manager import PersistenceManager
@@ -105,17 +104,19 @@ def page(**filter) -> Union[Page, None]:
     return copy(_sync_repo.find_one(**filter))
 
 
-def insert_page(page_: Page):
+def insert_page(page_: Page) -> Change:
     change = _sync_repo.insert_one(page_)
     raw_entity_changes.push(change)
+    return change
 
 
-def remove_page(page_: Page):
+def remove_page(page_: Page) -> Change:
     change = _sync_repo.remove_one(page_)
     raw_entity_changes.push(change)
+    return change
 
 
-def update_page(page_: Page):
+def update_page(page_: Page) -> Change:
     old_page = _sync_repo.find_one(id=page_.id)
     if not old_page:
         raise Exception('Can not update missing page.')
@@ -125,10 +126,11 @@ def update_page(page_: Page):
 
     change = _sync_repo.update_one(page_)
     raw_entity_changes.push(change)
+    return change
 
 
 # -------------Notes CRUD-------------
-def create_note(**props):
+def create_note(**props) -> Note:
     if 'page_id' not in props:
         raise Exception('Cannot create note without passing a page_id kwarg')
 
@@ -143,12 +145,13 @@ def create_note(**props):
     return note_
 
 
-def insert_note(note_: Note):
+def insert_note(note_: Note) -> Change:
     change = _sync_repo.insert_one(note_)
     raw_entity_changes.push(change)
+    return change
 
 
-def update_note(note_: Note):
+def update_note(note_: Note) -> Change:
     old_note = _sync_repo.find_one(gid=note_.gid())
     if not old_note:
         raise Exception('Can not update missing note.')
@@ -158,31 +161,36 @@ def update_note(note_: Note):
 
     change = _sync_repo.update_one(note_)
     raw_entity_changes.push(change)
+    return change
 
 
-def remove_note(note_: Note):
+def remove_note(note_: Note) -> Change:
     change = _sync_repo.remove_one(note_)
     raw_entity_changes.push(change)
+    return change
 
 
 # -------------Arrow CRUD-------------
-def insert_arrow(arrow_: Arrow):
+def insert_arrow(arrow_: Arrow) -> Change:
     change = _sync_repo.insert_one(arrow_)
     raw_entity_changes.push(change)
+    return change
 
 
-def update_arrow(arrow_: Arrow):
+def update_arrow(arrow_: Arrow) -> Change:
     old_arrow = _sync_repo.find_one(gid=arrow_.gid())
     if not old_arrow:
         raise Exception('Can not update missing arrow')
 
     change = _sync_repo.update_one(arrow_)
     raw_entity_changes.push(change)
+    return change
 
 
-def remove_arrow(arrow_: Arrow):
+def remove_arrow(arrow_: Arrow) -> Change:
     change = _sync_repo.remove_one(arrow_)
     raw_entity_changes.push(change)
+    return change
 
 
 # ------------For changes--------------

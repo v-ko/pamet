@@ -1,39 +1,30 @@
-import shutil
-import misli
-from pamet.model.note import Note
+import pamet
 from pamet.model.page import Page
+from pamet.model.text_note import TextNote
 from pamet.storage.file_system.repository import FSStorageRepository
-import pytest
 
 
-REPO_PATH = './tmp_mock_repo'
+def test_fs_repo_CRUD(tmp_path):
+    fs_repo = FSStorageRepository.new(tmp_path)
+    pamet.set_sync_repo(fs_repo)
 
-
-@pytest.fixture()
-def fs_repo():
-    fs_repo = FSStorageRepository.new(REPO_PATH)
-    yield fs_repo
-
-    shutil.rmtree(REPO_PATH)
-
-
-def test_fs_repo_CRUD(fs_repo):
     page = Page(id='test_page')
-    fs_repo.create_page(page, [])
+    pamet.insert_page(page)
+    fs_repo.write_to_disk()
 
-    assert fs_repo.page_names() == [page.id]
-    test_page, notes = fs_repo.get_page_and_notes(page.id)
-    note_states = [n.state() for n in notes]
-    assert (test_page.state(), note_states) == (page.state(), [])
+    assert fs_repo.path_for_page(page).exists()
 
-    note = Note(page_id=page.id, text='test text')
-    misli.insert(note)
-    fs_repo.update_page(page, [note])
+    note = TextNote()
+    note.text = 'test text'
+    page.insert_note(note)
+    fs_repo.write_to_disk()
 
-    test_page, test_notes = fs_repo.get_page_and_notes(page.id)
-    note_states = [n.state() for n in test_notes]
-    assert (test_page.state(), note_states) == (page.state(), [note.state()])
+    page_json = FSStorageRepository.serialize_page(page, page.notes(),
+                                                   page.arrows())
 
-    fs_repo.delete_page(page.id)
+    assert fs_repo.path_for_page(page).read_text() == page_json
 
-    assert fs_repo.page_names() == []
+    pamet.remove_page(page)
+    fs_repo.write_to_disk()
+
+    assert list(pamet.pages()) == []

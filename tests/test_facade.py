@@ -1,34 +1,40 @@
-import misli
+from misli.storage.in_memory_repository import InMemoryRepository
 import pamet
-from pamet.model.note import Note
 from pamet.model.page import Page
+from pamet.model.text_note import TextNote
 
 
 def test_page_CRUD():
-    page = Page(id='test_page')
-    misli.insert(page, [])
+    fs_repo = InMemoryRepository()
+    pamet.set_sync_repo(fs_repo)
+
+    page = Page(name='test_page')
+    pamet.insert_page(page)
     assert [p.asdict() for p in pamet.pages()] == [page.asdict()]
 
-    page.type_name = 'Page'
-    pamet.update_page(id=page.id)
+    page.name = 'test_page_updated'
+    pamet.update_page(page)
     assert [p.asdict() for p in pamet.pages()] == [page.asdict()]
 
-    pamet.delete_page(page.id)
-    assert pamet.pages() == []
+    pamet.remove_page(page)
+    assert list(pamet.pages()) == []
 
 
 def test_note_CRUD():
-    page = Page(id='test_page')
-    misli.insert(page, [])
+    fs_repo = InMemoryRepository()
+    pamet.set_sync_repo(fs_repo)
 
-    note = Note(page_id=page.id, text='test text')
-    misli.insert(note)
-    assert [n.asdict() for n in pamet.notes(page.id)] == [note.asdict()]
+    page = Page(name='test_page')
+    pamet.insert_page(page)
+
+    note = TextNote(page_id=page.id)
+    note.text = 'test text'
+    page.insert_note(note)
+    assert [n.asdict() for n in page.notes()] == [note.asdict()]
 
     note.text = 'test text changed'
-    misli.update(**note.asdict())
-    updated = pamet.note(page.id, note.id).asdict()
-    assert updated == note.asdict()
+    pamet.update_note(note)
+    assert pamet.find_one(gid=note.gid()).asdict() == note.asdict()
 
-    misli.remove(note)
-    assert pamet.notes(page.id) == []
+    pamet.remove_note(note)
+    assert pamet.find_one(gid=note.gid()) is None

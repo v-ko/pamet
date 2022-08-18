@@ -3,7 +3,7 @@ from datetime import datetime
 from dataclasses import fields, field
 
 from misli import entity_library
-from misli.helpers import datetime_to_string, get_new_id
+from misli.helpers import get_new_id, timestamp
 
 
 @entity_library.entity_type
@@ -81,7 +81,7 @@ class Entity:
                 val = val.copy()
                 self_dict[key] = val
             elif isinstance(val, datetime):
-                val = datetime_to_string(val)
+                val = timestamp(val)
                 self_dict[key] = val
 
         return self_dict

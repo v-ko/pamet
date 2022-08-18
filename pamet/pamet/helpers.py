@@ -1,14 +1,13 @@
 from __future__ import annotations
-from datetime import datetime
 from pathlib import Path
 
-from typing import List, Tuple, Union
-from urllib.parse import ParseResult, urlparse, urlunparse
+from typing import Tuple, Union
+from urllib.parse import urlparse, urlunparse
 from misli.basic_classes.point2d import Point2D
 from misli.logging import get_logger
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT
-# from pamet.desktop_app.config import get_config
+
 log = get_logger(__name__)
 
 
@@ -31,10 +30,6 @@ def generate_page_name() -> str:
 def get_default_page():
     config = pamet.desktop_app.get_config()
     return pamet.page(id=config.home_page_id)
-
-
-def current_time() -> datetime:
-    return datetime.utcnow().astimezone().replace(microsecond=0)
 
 
 class Url:

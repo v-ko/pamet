@@ -6,7 +6,6 @@ from datetime import datetime
 
 from misli import get_logger
 from misli import Entity, entity_type
-from misli.helpers import datetime_from_string
 from misli.basic_classes import Point2D, Rectangle, Color
 
 import pamet
@@ -15,6 +14,7 @@ from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
 from pamet.helpers import Url
+from misli.helpers import current_time
 from pamet.model.arrow import Arrow, ArrowAnchorType
 
 log = get_logger(__name__)
@@ -31,10 +31,8 @@ class Note(Entity):
     background_color: tuple = field(default_factory=lambda: DEFAULT_BG_COLOR)
     content: dict = field(default_factory=dict)
     metadata: dict = field(default_factory=dict)
-    created: datetime = field(
-        default_factory=lambda: datetime.fromtimestamp(0))
-    modified: datetime = field(
-        default_factory=lambda: datetime.fromtimestamp(0))
+    created: datetime = field(default_factory=current_time)
+    modified: datetime = field(default_factory=current_time)
     tags: List[str] = field(default_factory=list)
     type_name: str = ''
 
@@ -118,28 +116,6 @@ class Note(Entity):
         self.y = new_rect.y()
         self.width = new_rect.width()
         self.height = new_rect.height()
-
-    # @property
-    # def time_created(self) -> datetime:
-    #     return self.created
-
-    # @time_created.setter
-    # def time_created(self, new_dt: Union[datetime, str]):
-    #     if isinstance(new_dt, datetime):
-    #         self.created = new_dt.replace(microsecond=0)
-    #     else:
-    #         self.created = datetime_from_string(new_dt)
-
-    # @property
-    # def time_modified(self) -> datetime:
-    #     return self.modified
-
-    # @time_modified.setter
-    # def time_modified(self, new_dt: Union[datetime, str]):
-    #     if isinstance(new_dt, datetime):
-    #         self.modified = new_dt.replace(microsecond=0)
-    #     else:
-    #         self.modified = datetime_from_string(new_dt)
 
     @property
     def url(self) -> Url:

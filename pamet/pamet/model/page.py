@@ -1,8 +1,10 @@
 from dataclasses import field
 from datetime import datetime
 from misli import Entity, entity_type
+from misli.entity_library.change import Change
 import pamet
-from pamet.helpers import Url, current_time
+from pamet.helpers import Url
+from misli.helpers import current_time
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note
 
@@ -32,3 +34,11 @@ class Page(Entity):
 
     def url(self):
         return Url(f'pamet:///p/{self.id}')
+
+    def insert_note(self, note: Note) -> Change:
+        note.page_id = self.id
+        return pamet.insert_note(note)
+
+    def insert_arrow(self, arrow: Arrow) -> Change:
+        arrow.page_id = self.id
+        return pamet.insert_arrow(arrow)

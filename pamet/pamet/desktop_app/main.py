@@ -5,11 +5,12 @@ from misli.gui import channels as misli_channels
 from pamet import channels as pamet_channels
 
 import pamet
+from pamet import desktop_app
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.helpers import configure_for_qt
-from pamet.services.backup import BackupService
+from pamet.services.backup import FSStorageBackupService
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
@@ -24,15 +25,15 @@ def main():
     misli.line_spacing_in_pixels = 20
     app = DesktopApp()
 
-    pamet.desktop_app.set_app(app)
+    desktop_app.set_app(app)
     configure_for_qt()
 
     # Load the config
-    config = pamet.desktop_app.get_config()
+    config = desktop_app.get_config()
     # If there's changes after the load it means that some default is not saved
     # to disk or some other irregularity has been handled by the config class
     if config.changes_present:
-        pamet.desktop_app.save_config(config)
+        desktop_app.save_config(config)
 
     # Init the repo
     repo_path = config.repository_path
@@ -79,8 +80,10 @@ def main():
     search_service.load_all_content()
     pamet.set_search_service(search_service)
 
-    backup_service = BackupService(pamet_channels.entity_change_sets_per_TLA,
-                                   fs_repo)
+    backup_service = FSStorageBackupService(
+        backup_folder=config.backup_folder,
+        change_set_channel=pamet_channels.entity_change_sets_per_TLA,
+        record_all_changes=True)
     backup_service.start()
     app.aboutToQuit.connect(backup_service.stop)
     return app.exec()

@@ -1,9 +1,40 @@
+from __future__ import annotations
+
+from contextlib import contextmanager
 from typing import Generator, Any, List, Union
 
 from collections.abc import Iterable
 import random
 import uuid
 from datetime import datetime
+
+
+_fake_time = None
+
+
+@contextmanager
+def fake_time(time: datetime):
+    global _fake_time
+
+    if time.tzinfo is None:
+        time = time.astimezone()
+
+    _fake_time = time
+    yield
+    _fake_time = None
+
+
+def current_time() -> datetime:
+    if _fake_time:  # For testing purposes
+        return _fake_time
+
+    return datetime.now().astimezone()
+
+
+def timestamp(dt: datetime):
+    if dt.tzinfo is None:  # If no timezone is set - assume local
+        dt = dt.astimezone()
+    return dt.isoformat(timespec='seconds')
 
 
 def get_new_id() -> str:
@@ -53,11 +84,3 @@ def find_one_by_props(item_list: [list, dict], **props) -> Any:
         return None
 
     return items_found[0]
-
-
-def datetime_from_string(datetime_string: str) -> datetime:
-    return datetime.fromisoformat(datetime_string)
-
-
-def datetime_to_string(date_time: datetime) -> str:
-    return date_time.astimezone().isoformat()
