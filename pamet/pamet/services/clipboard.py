@@ -22,7 +22,7 @@ class ClipboardService:
             if isinstance(entity, TextNote):
                 ext_clipboard_items.append(entity.text)
             elif isinstance(entity, ImageNote):
-                ext_clipboard_items.append(entity.image_url)
+                ext_clipboard_items.append(str(entity.image_url))
 
         ext_content = '\n\n'.join(ext_clipboard_items)
         clipboard = QApplication.clipboard()
