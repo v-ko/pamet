@@ -54,6 +54,12 @@ class Rectangle:
         self._x = point.x()
         self._y = point.y()
 
+    def set_x(self, x: float):
+        self._x = x
+
+    def set_y(self, y: float):
+        self._y = y
+
     def move_center(self, new_center: Point2D):
         self.set_top_left(new_center - self.size() / 2)
 

@@ -62,7 +62,7 @@ class ScriptNotePropsWidget(QWidget):
             script_path = ''
         self.handle_script_path_change(str(script_path))
 
-        self.ui.argumentsLineEdit.setText(self.edited_note.script_args_str)
+        self.ui.argumentsLineEdit.setText(self.edited_note.command_args)
         self.text_edit.setText(self.edited_note.text)
 
         # Connect the UI with the handlers
@@ -207,7 +207,7 @@ class ScriptNotePropsWidget(QWidget):
         self.ui.scriptPathLineEdit.setText(path)
 
     def _handle_args_changed(self, new_args_text: str):
-        self.edited_note.script_args_str = new_args_text
+        self.edited_note.command_args = new_args_text
 
     def _set_default_folder(self):
         instructions_text = '''

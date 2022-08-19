@@ -135,12 +135,10 @@ def get_entity_class_by_name(entity_class_name: str):
 
 def from_dict(type_name: str, entity_dict: dict) -> Entity:
     """Construct an entity given its state as a dict"""
-    # type_name = entity_dict.pop('type_name')
     cls = get_entity_class_by_name(type_name)
     instance = cls()
     leftovers = instance.replace_silent(**entity_dict)
     if leftovers:
         log.error(f'Leftovers while loading entity '
                   f'(id={entity_dict.get("id", None)}): {leftovers}')
-    # instance = cls(**entity_dict)
     return instance

@@ -180,7 +180,7 @@ class MapPageView(View):
         if state.mode() == MapPageMode.CREATE_ARROW:
             anchor_props = self.arrow_anchor_at(mouse_pos)
             note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.FIXED)
+                                                    ArrowAnchorType.NONE)
             map_page_actions.arrow_creation_click(state,
                                                   fixed_pos=unproj_mouse_pos,
                                                   anchor_note_id=note_id,
@@ -246,7 +246,7 @@ class MapPageView(View):
         elif mode == MapPageMode.ARROW_EDGE_DRAG:
             anchor_props = self.arrow_anchor_at(mouse_pos)
             note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.FIXED)
+                                                    ArrowAnchorType.NONE)
             map_page_actions.finish_arrow_edge_drag(state,
                                                     fixed_pos=unproj_mouse_pos,
                                                     anchor_note_id=note_id,
@@ -316,7 +316,7 @@ class MapPageView(View):
         elif mode == MapPageMode.CREATE_ARROW:
             anchor_props = self.arrow_anchor_at(mouse_pos)
             note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.FIXED)
+                                                    ArrowAnchorType.NONE)
             map_page_actions.arrow_creation_move(state,
                                                  fixed_pos=unproj_mouse_pos,
                                                  anchor_note_id=note_id,
@@ -325,7 +325,7 @@ class MapPageView(View):
         elif mode == MapPageMode.ARROW_EDGE_DRAG:
             anchor_props = self.arrow_anchor_at(mouse_pos)
             note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.FIXED)
+                                                    ArrowAnchorType.NONE)
             map_page_actions.arrow_edge_drag_update(state,
                                                     fixed_pos=unproj_mouse_pos,
                                                     anchor_note_id=note_id,

@@ -35,7 +35,7 @@ class ScriptRunner:
 
     def run(self, note: ScriptNote):
         # Veeery Ad-hoc ATM
-        command = f'{note.script_path} {note.script_args_str}'
+        command = f'{note.script_path} {note.command_args}'
         path: Path = note.script_path
 
         if path.suffix == '.py':

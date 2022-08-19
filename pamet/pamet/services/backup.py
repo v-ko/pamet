@@ -564,7 +564,7 @@ class FSStorageBackupService:
         for page_backup_folder in self.page_backup_folders():
             page_id = page_backup_folder.name
             if self.tmp_changes_path(page_id).exists():
-                self._changed_page_ids.append(page_id)
+                self._changed_page_ids.add(page_id)
 
         # Get the timestamp for the last backup and schedule accordingly
         backup_ts = self.backup_timestamp_path()
@@ -620,5 +620,6 @@ class FSStorageBackupService:
 
         self.stop_event.set()
         self.worker_thread.join()
-        self.service_lock_path().unlink()
+        if self.service_lock_path().exists():
+            self.service_lock_path().unlink()
         log.info('Stopped service.')

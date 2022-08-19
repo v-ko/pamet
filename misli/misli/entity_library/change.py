@@ -125,6 +125,10 @@ class Change:
         if not (self.old_state or self.new_state):
             raise ValueError('Both old and new state are None.')
 
+    def __repr__(self) -> str:
+        return (f'<Change type={self.change_type} {id(self)=} '
+                f'old_state={self.old_state} new_state={self.new_state}>')
+
     @property
     def change_type(self):
         if self.old_state and self.new_state:
@@ -199,10 +203,6 @@ class Change:
     def DELETE(cls, old_state: Entity) -> Change:
         """Convenience method for constructing a Change with type DELETE"""
         return cls(old_state=copy(old_state))
-
-    def __repr__(self) -> str:
-        return (f'<Change type={self.change_type} {id(self)=} '
-                f'old_state={self.old_state} new_state={self.new_state}>')
 
     def is_create(self) -> bool:
         return self.change_type == ChangeTypes.CREATE

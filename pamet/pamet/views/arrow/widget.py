@@ -117,7 +117,7 @@ class ArrowWidget(QObject, ArrowView):
                               adjacent_point: Point2D,
                               control_point_distance: float,
                               anchor_type: ArrowAnchorType):
-        if anchor_type == ArrowAnchorType.FIXED:
+        if anchor_type == ArrowAnchorType.NONE:
             k = control_point_distance / terminal_point.distance_to(
                 adjacent_point)
             return terminal_point + (adjacent_point - terminal_point) * k

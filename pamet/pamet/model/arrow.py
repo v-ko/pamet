@@ -9,14 +9,15 @@ from misli.entity_library.entity import Entity
 from misli.logging import get_logger
 
 import pamet
-from pamet.constants import DEFAULT_ARROW_THICKNESS, DEFAULT_BG_COLOR, DEFAULT_COLOR
+from pamet.constants import DEFAULT_ARROW_THICKNESS
+from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 
 log = get_logger(__name__)
 BEZIER_CUBIC = 'bezier_cubic'
 
 
 class ArrowAnchorType(Enum):
-    FIXED = 0
+    NONE = 0
     AUTO = 1
     MID_LEFT = 2
     TOP_MID = 3
@@ -34,13 +35,13 @@ class Arrow(Entity):
 
     tail_coords: list = field(default_factory=list)
     tail_note_id: str = None
-    tail_anchor: str = ArrowAnchorType.FIXED.name
+    tail_anchor: str = ArrowAnchorType.NONE.name
 
     mid_point_coords: List[list] = field(default_factory=list)
 
     head_coords: list = field(default_factory=list)
     head_note_id: str = None
-    head_anchor: str = ArrowAnchorType.FIXED.name
+    head_anchor: str = ArrowAnchorType.NONE.name
 
     color: tuple = DEFAULT_COLOR
     # background_color: tuple = DEFAULT_BG_COLOR
@@ -53,9 +54,9 @@ class Arrow(Entity):
     def __repr__(self):
         return '<Arrow id=%s>' % self.id
 
-    def __post_init__(self):
-        if not self.page_id:
-            log.warning('Initializing Arrow without a page_id')
+    # def __post_init__(self):
+    #     if not self.page_id:
+    #         log.warning('Initializing Arrow without a page_id')
 
     def gid(self):
         return self.page_id, self.id
@@ -155,13 +156,13 @@ class Arrow(Entity):
     def set_tail(self,
                  fixed_pos: Point2D = None,
                  anchor_note_id: str = None,
-                 anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+                 anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
         if fixed_pos and anchor_note_id:
             # The fixed pos is almost always propagated
             # but if there's an anchor note - it takes precedence
             fixed_pos = None
 
-        if fixed_pos and anchor_type != ArrowAnchorType.FIXED:
+        if fixed_pos and anchor_type != ArrowAnchorType.NONE:
             raise Exception
 
         self.tail_point = fixed_pos
@@ -171,13 +172,13 @@ class Arrow(Entity):
     def set_head(self,
                  fixed_pos: Point2D = None,
                  anchor_note_id: str = None,
-                 anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+                 anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
         if fixed_pos and anchor_note_id:
             # The fixed pos is almost always propagated
             # but if there's an anchor note - it takes precedence
             fixed_pos = None
 
-        if fixed_pos and anchor_type != ArrowAnchorType.FIXED:
+        if fixed_pos and anchor_type != ArrowAnchorType.NONE:
             raise Exception
 
         self.head_point = fixed_pos

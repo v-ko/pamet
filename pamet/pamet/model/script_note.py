@@ -2,27 +2,18 @@ from pathlib import Path
 from misli.entity_library import entity_type
 from pamet.model.text_note import TextNote
 
-SCRIPT = 'script'
+# SCRIPT = 'script'
 SCRIPT_PATH = 'script_path'
-SCRIPT_ARGS = 'script_args'
+COMMAND_ARGS = 'command_args'
 
 
 @entity_type
 class ScriptNote(TextNote):
     run_in_terminal: bool = True
-    script_args_str: str = ''
-
-    @property
-    def script(self) -> str:
-        return self.content.get(SCRIPT, '')
-
-    @script.setter
-    def script(self, script: str):
-        self.content[SCRIPT] = script
 
     @property
     def script_path(self) -> Path | None:
-        path_str = self.content.get(SCRIPT, '')
+        path_str = self.content.get(SCRIPT_PATH, '')
         return Path(path_str) if path_str else None
 
     @script_path.setter
@@ -30,4 +21,12 @@ class ScriptNote(TextNote):
         if script is None:
             self.content.pop(SCRIPT_PATH, None)
             return
-        self.content[SCRIPT] = str(script)
+        self.content[SCRIPT_PATH] = str(script)
+
+    @property
+    def command_args(self) -> str:
+        return self.content.get(COMMAND_ARGS, '')
+
+    @command_args.setter
+    def command_args(self, script: str):
+        self.content[COMMAND_ARGS] = script

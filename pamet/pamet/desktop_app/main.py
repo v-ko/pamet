@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import misli
 from misli.gui import channels as misli_channels
@@ -36,16 +37,41 @@ def main():
         desktop_app.save_config(config)
 
     # Init the repo
-    repo_path = config.repository_path
+    repo_path = Path(config.repository_path)
     log.info('Using repository: %s' % repo_path)
 
     # # Testing - restore repo changes
-    # for f in os.scandir(repo_path):
-    #     if f.name.endswith('backup'):
-    #         os.rename(f.path, f.path[:-7])
-    #
-    #     if f.name.endswith('misl.json'):
-    #         os.remove(f.path)
+    # backup_folder = repo_path / '__legacy_pages_backup__'
+    # backup_page_names = []
+    # new_paths_by_old_path = {}
+    # for file in backup_folder.iterdir():
+    #     if file.name.endswith('.json.backup'):
+    #         new_path = file.parent.parent / file.with_suffix('').name
+    #         new_paths_by_old_path[file] = new_path
+
+    #         page_data = json.loads(file.read_text())
+    #         page_name = file.with_suffix('').with_suffix('').name
+    #         backup_page_names.append(page_name)
+
+    # # Read all page names in the repo
+    # page_paths_by_name = {}
+    # for file in repo_path.iterdir():
+    #     if file.is_file() and file.name.endswith('.pam4.json'):
+    #         page_data = json.loads(file.read_text())
+    #         name = page_data['name']
+    #         page_paths_by_name[name] = file
+
+    # # Delete all previously imported (by name matching)
+    # for page_name in backup_page_names:
+    #     if page_name in page_paths_by_name:
+    #         page_paths_by_name[page_name].unlink()
+    #     else:
+    #         pass
+
+    # # Restore the backups
+    # for old_path, new_path in new_paths_by_old_path.items():
+    #     old_path.rename(new_path)
+
 
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path,
@@ -58,8 +84,8 @@ def main():
     pamet.model.arrow_validity_check()
 
     # Debug
-    misli_channels.state_changes_by_id.subscribe(
-        lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
+    # misli_channels.state_changes_by_id.subscribe(
+    #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
     start_page = pamet.helpers.get_default_page() or pamet.page()
     if not start_page:

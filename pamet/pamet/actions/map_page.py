@@ -513,7 +513,7 @@ def place_arrow_view_tail(
         arrow_view_state: ArrowViewState,
         fixed_pos: Point2D,
         anchor_note_id: str = None,
-        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_tail(fixed_pos, anchor_note_id, anchor_type)
     misli.gui.update_state(arrow_view_state)
 
@@ -523,7 +523,7 @@ def place_arrow_view_head(
         arrow_view_state: ArrowViewState,
         fixed_pos: Point2D,
         anchor_note_id: str = None,
-        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_head(fixed_pos, anchor_note_id, anchor_type)
     misli.gui.update_state(arrow_view_state)
 
@@ -532,7 +532,7 @@ def place_arrow_view_head(
 def arrow_creation_click(map_page_view_state: MapPageViewState,
                          fixed_pos: Point2D = None,
                          anchor_note_id: str = None,
-                         anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+                         anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     should_finish = False
 
     for arrow_vs in map_page_view_state.new_arrow_view_states:
@@ -555,7 +555,7 @@ def arrow_creation_click(map_page_view_state: MapPageViewState,
 def arrow_creation_move(map_page_view_state: MapPageViewState,
                         fixed_pos: Point2D = None,
                         anchor_note_id: str = None,
-                        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+                        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     for av_state in map_page_view_state.new_arrow_view_states:
         place_arrow_view_head(av_state, fixed_pos)
 
@@ -596,7 +596,7 @@ def arrow_edge_drag_update(
         map_page_view_state: MapPageViewState,
         fixed_pos: Point2D = None,
         anchor_note_id: str = None,
-        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_vs: ArrowViewState = map_page_view_state.arrow_with_visible_cps
 
     if map_page_view_state.dragged_edge_index == 0:
@@ -632,7 +632,7 @@ def finish_arrow_edge_drag(
         map_page_view_state: MapPageViewState,
         fixed_pos: Point2D = None,
         anchor_note_id: str = None,
-        anchor_type: ArrowAnchorType = ArrowAnchorType.FIXED):
+        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow = map_page_view_state.arrow_with_visible_cps.get_arrow()
 
     if map_page_view_state.dragged_edge_index == 0:

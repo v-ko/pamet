@@ -1,7 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap, QResizeEvent
 from PySide6.QtWidgets import QLabel
-from anyio import Path
+from pathlib import Path
 
 from pamet.desktop_app import media_store
 from pamet.helpers import Url

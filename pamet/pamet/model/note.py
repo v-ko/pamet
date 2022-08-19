@@ -41,8 +41,8 @@ class Note(Entity):
 
     def __post_init__(self):
         self.type_name = type(self).__name__
-        if not self.page_id:
-            log.warning('Initializing Note without a page_id')
+        # if not self.page_id:
+        #     log.warning('Initializing Note without a page_id')
 
     def asdict(self):
         self_dict = super().asdict()
