@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 
@@ -37,12 +38,31 @@ def main():
     repo_path = Path(config.repository_path)
     log.info('Using repository: %s' % repo_path)
 
-    # # Testing - restore repo changes
-    # backup_folder = repo_path / '__legacy_pages_backup__'
+    # Testing - restore legacy backups
+
+    # V2
+    v2_backup_folder = repo_path / '__v2_legacy_pages_backup__'
+    for file in v2_backup_folder.iterdir():
+
+        v3_file_in_repo = file.parent.parent / file.name
+        v3_file_in_repo = v3_file_in_repo.with_suffix('').with_suffix('.json')
+
+        if v3_file_in_repo.exists():
+            v3_file_in_repo.unlink()
+        restore_path = file.parent.parent / file.name
+        restore_path = restore_path.with_suffix('')
+        file.rename(restore_path)
+
+    for file in repo_path.iterdir():
+        if file.name.endswith('.pam4.json'):
+            file.unlink()
+
+    # # V3
+    # v3_backup_folder = repo_path / '__v3_legacy_pages_backup__'
     # backup_page_names = []
     # new_paths_by_old_path = {}
-    # for file in backup_folder.iterdir():
-    #     if file.name.endswith('.json.backup'):
+    # for file in v3_backup_folder.iterdir():
+    #     if file.name.endswith('.backup'):
     #         new_path = file.parent.parent / file.with_suffix('').name
     #         new_paths_by_old_path[file] = new_path
 
@@ -69,7 +89,6 @@ def main():
     # for old_path, new_path in new_paths_by_old_path.items():
     #     old_path.rename(new_path)
 
-
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path,
                                            queue_save_on_change=True)
@@ -78,7 +97,7 @@ def main():
 
     pamet.set_sync_repo(fs_repo)
     # There should be a better place to do call the validity checks I guess
-    pamet.model.arrow_validity_check()
+    # pamet.model.arrow_validity_check()
 
     # Debug
     misli_channels.state_changes_per_TLA_by_id.subscribe(
