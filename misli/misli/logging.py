@@ -44,14 +44,15 @@ def _get_trace_decorator(logger_name: str):
 
             # Prep the log string
             stack_depth = len(function_call_stack_per_thread[thread_id])
-            indent = ' ' * 4 * (stack_depth - 1)
+            indent = '.' * 4 * (stack_depth - 1)
 
             args_string = ', '.join([str(a) for a in args])
             kwargs_string = ', '.join([f'{k}={v}' for k, v in kwargs.items()])
 
-            log.debug('%sCALL: %s ARGS=*(%s) KWARGS=**{%s}' %
-                      (indent, name_str, args_string, kwargs_string),
-                      extra={'markup': True})
+            msg = (
+                f'{indent}CALL: {name_str} '
+                f'ARGS=*({args_string}) KWARGS=**{{{kwargs_string}}}')
+            log.debug(msg, extra={'markup': True})
 
             result = func(*args, **kwargs)
 
