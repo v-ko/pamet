@@ -12,8 +12,9 @@ from misli.basic_classes import Point2D, Rectangle
 from misli.gui.utils import qt_widgets
 from misli.gui.view_library.view import View
 from misli.gui.views.context_menu.widget import ContextMenuWidget
-from pamet import commands
+from misli.gui import channels as sm_channels
 
+from pamet import commands
 from pamet.constants import ARROW_EDGE_RAIDUS, MAX_RENDER_TIME
 from pamet.constants import ALIGNMENT_LINE_LENGTH, RESIZE_CIRCLE_RADIUS
 from pamet.constants import LONG_PRESS_TIMEOUT
@@ -228,7 +229,7 @@ class MapPageWidget(QWidget, MapPageView):
         arrow_widget = ArrowWidget(av_state, self)
         self._arrow_widgets[av_state.id] = arrow_widget
 
-        subscription = misli.gui.channels.state_changes_by_id.subscribe(
+        subscription = sm_channels.state_changes_per_TLA_by_id.subscribe(
             lambda change: self.handle_child_view_state_update(change),
             index_val=av_state.id)
         self.arrow_view_state_subs_by_state_id[av_state.id] = subscription
@@ -245,7 +246,7 @@ class MapPageWidget(QWidget, MapPageView):
         note_widget.hide()
         self._note_widgets[nv_state.id] = note_widget
 
-        subscription = misli.gui.channels.state_changes_by_id.subscribe(
+        subscription = sm_channels.state_changes_per_TLA_by_id.subscribe(
             lambda change: self.handle_child_view_state_update(change),
             index_val=note_widget.id)
         self.nw_subscribtions[note_widget] = subscription
