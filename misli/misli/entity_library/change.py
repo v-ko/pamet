@@ -30,7 +30,6 @@ class Diff:
                 yield item
 
     def return_removed(self, old_val, new_val):
-        # if isinstance(old_val, list) and isinstance(new_val, list):
         if not isinstance(old_val, Iterable) and isinstance(new_val, Iterable):
             raise Exception('Attribute type is not Iterable')
 
@@ -76,8 +75,8 @@ class Updated:
 
         elif self.change.is_delete():
             # Warning and empty
-            log.error(f'Trying to infer if an attribute is updated for a'
-                      f' deleted state. Change: {self.change}')
+            # log.error(f'Trying to infer if an attribute is updated for a'
+            #           f' deleted state. Change: {self.change}')
             return False
 
         else:  # is_update()
@@ -112,10 +111,6 @@ class Change:
         Raises:
             Exception: Missing id attribute of either entity state.
         """
-        if old_state and new_state:
-            if type(old_state) != type(new_state):
-                raise Exception
-
         self.old_state = old_state
         self.new_state = new_state
         self.added = Diff(self, DiffTypes.ADDED)
