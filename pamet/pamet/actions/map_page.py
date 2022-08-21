@@ -101,7 +101,7 @@ def update_child_selections(map_page_view_state: MapPageViewState,
                  selection_updates_by_child_id)
 
 
-@action('map_page.clear_note_selection')
+@action('map_page.clear_child_selection')
 def clear_child_selection(map_page_view_state: str):
     selection_updates = {}
     for selected_child in map_page_view_state.selected_child_ids:
@@ -431,12 +431,12 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
         note_props.pop('id')
         nv_state = StateType(**note_props, note_gid=child.gid())
         misli.gui.add_state(nv_state)
-        page_view_state.note_view_states.append(nv_state)
+        page_view_state.note_view_states.add(nv_state)
     elif isinstance(child, Arrow):
         arrow_view_state = ArrowViewState(**child.asdict(),
                                           arrow_gid=child.gid())
         misli.gui.add_state(arrow_view_state)
-        page_view_state.arrow_view_states.append(arrow_view_state)
+        page_view_state.arrow_view_states.add(arrow_view_state)
 
     misli.gui.update_state(page_view_state)
 
@@ -444,14 +444,16 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
 @action('map_page.handle_child_removed')
 def handle_child_removed(page_view_state: MapPageViewState, child: Entity):
     if isinstance(child, Note):
-        nv_states = filter(lambda x: x.note_gid == child.gid(),
-                           page_view_state.note_view_states)
+        nv_states = list(
+            filter(lambda x: x.note_gid == child.gid(),
+                   page_view_state.note_view_states))
         for nv_state in nv_states:  # Should be len==1
             misli.gui.remove_state(nv_state)
             page_view_state.note_view_states.remove(nv_state)
     elif isinstance(child, Arrow):
-        av_states = filter(lambda x: x.arrow_gid == child.gid(),
-                           page_view_state.arrow_view_states)
+        av_states = list(
+            filter(lambda x: x.arrow_gid == child.gid(),
+                   page_view_state.arrow_view_states))
         for nv_state in av_states:  # Should be len==1
             misli.gui.remove_state(nv_state)
             page_view_state.arrow_view_states.remove(nv_state)
@@ -511,21 +513,19 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
 
 
 @action('map_page.place_arrow_view_tail')
-def place_arrow_view_tail(
-        arrow_view_state: ArrowViewState,
-        fixed_pos: Point2D,
-        anchor_note_id: str = None,
-        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
+def place_arrow_view_tail(arrow_view_state: ArrowViewState,
+                          fixed_pos: Point2D,
+                          anchor_note_id: str = None,
+                          anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_tail(fixed_pos, anchor_note_id, anchor_type)
     misli.gui.update_state(arrow_view_state)
 
 
 @action('map_page.place_arrow_view_head')
-def place_arrow_view_head(
-        arrow_view_state: ArrowViewState,
-        fixed_pos: Point2D,
-        anchor_note_id: str = None,
-        anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
+def place_arrow_view_head(arrow_view_state: ArrowViewState,
+                          fixed_pos: Point2D,
+                          anchor_note_id: str = None,
+                          anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_head(fixed_pos, anchor_note_id, anchor_type)
     misli.gui.update_state(arrow_view_state)
 

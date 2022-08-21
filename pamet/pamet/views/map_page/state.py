@@ -30,8 +30,8 @@ class MapPageMode(Enum):
 class MapPageViewState(ViewState, Viewport, Page):
     page_id: str = ''
 
-    note_view_states: List[NoteViewState] = field(default_factory=list)
-    arrow_view_states: List[ArrowViewState] = field(default_factory=list)
+    note_view_states: set[NoteViewState] = field(default_factory=set)
+    arrow_view_states: set[ArrowViewState] = field(default_factory=set)
 
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
     viewport_center: Point2D = field(default_factory=Point2D)

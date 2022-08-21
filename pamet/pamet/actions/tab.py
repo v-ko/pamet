@@ -39,6 +39,7 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
             note_props = _note.asdict()
             note_props.pop('id')
             note_view_state = StateType(**note_props, note_gid=_note.gid())
+            page_view_state.note_view_states.add(note_view_state)
             misli.gui.add_state(note_view_state)
 
         for arrow in page.arrows():
@@ -46,7 +47,7 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
             arrow_props.pop('id')
             arrow_view_state = ArrowViewState(**arrow_props,
                                               arrow_gid=arrow.gid())
-            page_view_state.arrow_view_states.append(arrow_view_state)
+            page_view_state.arrow_view_states.add(arrow_view_state)
             misli.gui.add_state(arrow_view_state)
         misli.gui.update_state(page_view_state)
 
