@@ -236,6 +236,8 @@ class ArrowWidget(QObject, ArrowView):
                 prev_point, current_point)
 
             # Calculate the second control point for the first curve
+            if b == 0:
+                b = 0.0001
             k = control_point_distance / b
             z_prim: Point2D = current_point + k * (prev_point - current_point)
             second_control_point = z_prim.rotated(alpha, current_point)
@@ -250,6 +252,8 @@ class ArrowWidget(QObject, ArrowView):
             # (mirrors the second cp of the last curve)
             control_point_distance = self.cp_distance_for_segment(
                 current_point, next_point)
+            if a == 0:
+                a = 0.0001
             k = control_point_distance / a
             q_prim = current_point + k * (next_point - current_point)
             first_cp = q_prim.rotated(-alpha, current_point)
