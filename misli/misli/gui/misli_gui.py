@@ -9,10 +9,11 @@ from misli.change_aggregator import ChangeAggregator
 from misli.gui.utils.base_provider import BaseUtilitiesProvider
 from misli.logging import BColors
 from misli.pubsub import Channel
-
-from .actions_library import Action, execute_action, name_for_wrapped_function
-from .view_library.view import ViewState
 from misli.gui import channels
+
+from .actions_library import ActionCall, execute_action
+from .actions_library import name_for_wrapped_action
+from .view_library.view import ViewState
 
 log = misli.get_logger(__name__)
 
@@ -28,7 +29,7 @@ actions_queue_channel.subscribe(execute_action)
 _state_aggregator = ChangeAggregator(
     input_channel=channels.raw_state_changes,
     release_trigger_channel=channels.completed_root_actions,
-    output_channel=channels.state_changes_by_id)
+    output_channel=channels.state_changes_per_TLA_by_id)
 
 _view_states = {}
 _state_backups = {}
@@ -117,7 +118,7 @@ def on_actions_logged(handler: Callable):
 
 
 def queue_action(action_func, args: list = None, kwargs: dict = None):
-    action = Action(name_for_wrapped_function(action_func))
+    action = ActionCall(name_for_wrapped_action(action_func))
     action.args = args or []
     action.kwargs = kwargs or {}
     actions_queue_channel.push(action)
@@ -164,13 +165,16 @@ def update_state(state_: ViewState):
     _state_backups[state_.id] = state_.copy()
     state_._version += 1
     _view_states[state_.id] = state_
+    return change
 
 
 @log.traced
 def remove_state(state_: ViewState):
     ensure_context()
     state_ = _view_states.pop(state_.id)
-    channels.raw_state_changes.push(Change.DELETE(state_))
+    change = Change.DELETE(state_)
+    channels.raw_state_changes.push(change)
+    return change
 
 
 # ----------------Various---------------------
