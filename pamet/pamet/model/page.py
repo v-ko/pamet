@@ -16,7 +16,7 @@ class Page(Entity):
     modified: datetime = field(default_factory=current_time)
 
     def __repr__(self):
-        return f'<Page id={self.id} name={self.name}>'
+        return f'<Page gid={self.gid()} name={self.name}>'
 
     def notes(self):
         return (entity for entity in pamet.find(parent_gid=self.gid())
