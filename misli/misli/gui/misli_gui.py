@@ -124,10 +124,14 @@ def queue_action(action_func, args: list = None, kwargs: dict = None):
 @log.traced
 def add_state(state_: ViewState):
     ensure_context()
+    if state_.id in _view_states:
+        raise Exception(f'View state with id {state_.id} already present.')
     state_._added = True
     _view_states[state_.id] = state_
     _state_backups[state_.id] = state_.copy()
-    channels.raw_state_changes.push(Change.CREATE(state_))
+    change = Change.CREATE(state_)
+    channels.raw_state_changes.push(change)
+    return change
 
 
 def view_state_exists(view_id: str) -> bool:
