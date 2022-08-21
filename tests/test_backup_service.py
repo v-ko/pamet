@@ -32,7 +32,8 @@ def test_change_processing(tmp_path):
     # Assert result
     jsonl_data = backup_service.tmp_changes_path(page.id).read_text()
     json_lines = jsonl_data.split('\n')
-    assert json_lines[0] == json.dumps(change.as_safe_delta_dict())
+    assert json_lines[0] == json.dumps(change.as_safe_delta_dict(),
+                                       ensure_ascii=False)
 
 
 def change_and_backup(backup_service,
@@ -54,7 +55,8 @@ def change_and_backup(backup_service,
 
 def changes_file_is_valid(path, changes):
     change_jsons = [
-        json.dumps(change.as_safe_delta_dict()) for change in changes
+        json.dumps(change.as_safe_delta_dict(), ensure_ascii=False)
+        for change in changes
     ]
     changes_content = path.read_text().rstrip()
     expected_content = '\n'.join(change_jsons)
