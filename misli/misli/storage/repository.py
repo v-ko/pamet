@@ -2,15 +2,22 @@ from typing import List, Union
 from misli import Entity
 from misli.entity_library.change import Change
 
+IMMUTABILITY_ERROR_MESSAGE = (
+    'Cannot alter an object after it has been added to the '
+    'repo. Make a copy of it and pass it to the repo instead.')
+
 
 class Repository:
+
     def insert_one(self, entity: Entity) -> Change:
+        entity.set_immutable(error_message=IMMUTABILITY_ERROR_MESSAGE)
         raise NotImplementedError
 
     def remove_one(self, entity: Entity) -> Change:
         raise NotImplementedError
 
     def update_one(self, entity: Entity) -> Change:
+        entity.set_immutable(error_message=IMMUTABILITY_ERROR_MESSAGE)
         raise NotImplementedError
 
     def insert(self, batch: List[Entity]):
