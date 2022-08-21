@@ -33,6 +33,11 @@ class NoMainLoop(MainLoop):
             (callback, time.time() + delay, args, kwargs))
 
     def process_events(self):
-        for callback, call_time, args, kwargs in self.callback_stack:
+        callback_stack = self.callback_stack
+        self.callback_stack = []
+        for callback, call_time, args, kwargs in callback_stack:
             if time.time() >= call_time:
                 callback(*args, **kwargs)
+
+        if self.callback_stack:
+            self.process_events()
