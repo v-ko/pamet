@@ -3,7 +3,7 @@ from typing import Any, Generator, List
 from misli.entity_library.change import Change
 from misli.entity_library.entity import Entity
 from misli.helpers import find_many_by_props
-from misli.storage.repository import Repository
+from misli.storage.repository import IMMUTABILITY_ERROR_MESSAGE, Repository
 
 
 class InMemoryRepository(Repository):
@@ -12,11 +12,33 @@ class InMemoryRepository(Repository):
         super().__init__()
         self._entity_cache = {}
         self._entity_cache_by_parent = defaultdict(set)
+        self._entity_cache_by_type = defaultdict(set)
 
-    def upsert_to_cache(self, entity: Entity):
+    def upsert_to_cache(self, entity: Entity) -> Entity | None:
+        """Adds an entity to the cache. Returns the old entity or None"""
+        old_entity = self.pop_from_cache(entity.gid())
+
+        # Make the entity immutable (works only in debug mode!)
+        entity.set_immutable(error_message=IMMUTABILITY_ERROR_MESSAGE)
+
+        # Insert it into the indices
         self._entity_cache[entity.gid()] = entity
+        self._entity_cache_by_type[type(entity).__name__].add(entity)
         if entity.parent_gid():
-            self._entity_cache_by_parent[entity.parent_gid()].add(entity.gid())
+            self._entity_cache_by_parent[entity.parent_gid()].add(entity)
+        return old_entity
+
+    def pop_from_cache(self, entity_gid: str | tuple) -> Entity:
+        entity = self._entity_cache.pop(entity_gid, None)
+        if not entity:
+            return None
+
+        self._entity_cache_by_type[type(entity).__name__].remove(entity)
+        if entity.parent_gid():
+            self._entity_cache_by_parent[entity.parent_gid()].remove(
+                entity)
+
+        return entity
 
     def insert_one(self, entity: Entity) -> Change:
         if entity.gid() in self._entity_cache:
@@ -26,30 +48,26 @@ class InMemoryRepository(Repository):
         self.upsert_to_cache(entity)
         return Change.CREATE(entity)
 
-    def insert(self, batch: List[Entity]):
-        return [self.insert_one(entity) for entity in batch]
-
-    def remove_one(self, entity: Entity) -> Change:
-        old_entity = self._entity_cache.pop(entity.gid(), None)
-        if not old_entity:
-            raise Exception(f'Cannot remove missing {entity}')
-
-        if old_entity.parent_gid():
-            self._entity_cache_by_parent[old_entity.parent_gid()].remove(
-                old_entity.gid())
-
-        return Change.DELETE(old_entity)
-
-    def remove(self, batch: List[Entity]):
-        return [self.remove_one(entity) for entity in batch]
-
     def update_one(self, entity: Entity) -> Change:
-        old_entity = self._entity_cache.pop(entity.gid(), None)
+        old_entity = self.pop_from_cache(entity.gid())
         if not old_entity:
             raise Exception('Cannot update missing {entity}')
 
         self.upsert_to_cache(entity)
         return Change.UPDATE(old_entity, entity)
+
+    def remove_one(self, entity: Entity) -> Change:
+        old_entity = self.pop_from_cache(entity.gid())
+        if not old_entity:
+            raise Exception(f'Cannot remove missing {entity}')
+
+        return Change.DELETE(old_entity)
+
+    def insert(self, batch: List[Entity]):
+        return [self.insert_one(entity) for entity in batch]
+
+    def remove(self, batch: List[Entity]):
+        return [self.remove_one(entity) for entity in batch]
 
     def update(self, batch: List[Entity]):
         return [self.update_one(entity) for entity in batch]
@@ -68,20 +86,16 @@ class InMemoryRepository(Repository):
         if 'parent_gid' in filter:
             parent_gid = filter.pop('parent_gid')
             try:
-                found = self._entity_cache_by_parent.get(parent_gid, [])
+                search_set = self._entity_cache_by_parent.get(parent_gid, [])
             except TypeError:
-                found = []
-            search_set = (self._entity_cache[gid] for gid in found)
+                search_set = []
         else:
             search_set = self._entity_cache.values()
 
         # Searching by type_name is a special case
         if 'type_name' in filter:
             type_name = filter.pop('type_name')
-            search_set = (
-                ent for ent in search_set
-                if type(ent).__name__ == type_name
-            )
+            search_set = self._entity_cache_by_type.get(type_name, [])
         if filter:
             search_set = find_many_by_props(search_set, **filter)
         yield from search_set
