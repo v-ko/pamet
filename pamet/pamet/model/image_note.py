@@ -22,7 +22,7 @@ class ImageNote(Note):
     def image_url(self, new_url: Union[Url, str, None]):
         if isinstance(new_url, Url):
             new_url = str(new_url)
-        elif new_url is None:
+        if not new_url:
             self.content.pop(IMAGE_URL, None)
             return
         self.content[IMAGE_URL] = new_url
@@ -35,7 +35,7 @@ class ImageNote(Note):
     def local_image_url(self, new_url: Union[Url, str, None]):
         if isinstance(new_url, Url):
             new_url = str(new_url)
-        elif new_url is None:
+        if not new_url:
             self.content.pop(LOCAL_IMAGE_URL, None)
             return
         self.content[LOCAL_IMAGE_URL] = new_url

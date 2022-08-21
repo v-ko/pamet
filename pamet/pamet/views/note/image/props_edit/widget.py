@@ -90,6 +90,20 @@ class ImagePropsWidget(QWidget):
                 image=self._image_preview)
         return super().resizeEvent(event)
 
+    def convert_image_with_pil(self, image_data: bytes):
+        bytes_io = io.BytesIO(image_data)
+        img_byte_arr = io.BytesIO()
+
+        try:  # Probe if Pillow can handle the image
+            pil_image = Image.open(bytes_io)  #@IgnoreException
+            pil_image.save(img_byte_arr, 'png')
+        except Exception:
+            self.update_image_note_and_preview(
+                error=('Could not read image with PIL.'))
+            return
+
+        return img_byte_arr.read()
+
     def update_image_note_and_preview(self,
                                       local_image_url: Url = None,
                                       image: QImage = None,
@@ -120,9 +134,12 @@ class ImagePropsWidget(QWidget):
         self.ui.infoLabel.setPixmap(pixmap)
 
     def handle_image_url_text_change(self, new_text: str):
+        if not new_text:
+            self.update_image_note_and_preview(error='Image not specified')
+            return
 
         url = Url(new_text)
-        if url.scheme == 'file':
+        if url.scheme == 'file' or not url.scheme and Path(str(url)).exists():
             # Check if exists - if not - error
             url_path = Path(url.path)
             if not url_path.exists():
@@ -138,32 +155,36 @@ class ImagePropsWidget(QWidget):
                 image_data = image_file.read()
 
             # create buffer
-            buffer = QBuffer(QByteArray(image_data))
+            qbytearr = QByteArray(image_data)
+            buffer = QBuffer(qbytearr)
             image_reader = QImageReader(buffer)
+
+            # If Qt doesn't support the format (e.g. WebP)
+            # try to convert it with Pillow to PNG
+            if image_reader.format() not in \
+                    image_reader.supportedImageFormats():
+
+                image_data = self.convert_image_with_pil(image_data)
+                bytearr = QByteArray(image_data)
+                buffer = QBuffer(bytearr)
+                image_reader = QImageReader(buffer)
+
             image = image_reader.read()
             if image.isNull():
                 self.update_image_note_and_preview(
                     error='Could not load image')
                 return
-            # check that the bytes object is not empty (DEBUG only)
-            if not image_data:
-                raise Exception
 
             # get md5
             md5sum = hashlib.md5(image_data).hexdigest()
-
-            self.update_image_note_and_preview(local_image_url=url,
+            self.update_image_note_and_preview(local_image_url=url.path,
                                                image=image,
                                                md5sum=md5sum)
         elif url.is_internal():
             path = media_store().path_for_internal_uri(url)
             image = QImage(path)
             self.update_image_note_and_preview(path, image)
-        elif url.is_external():
-            if not new_text:
-                self.update_image_note_and_preview(error='No image')
-                return
-
+        elif url.has_web_schema():
             # Check if already downloaded - no. No such optimisations
             # (url <> path associations) present
 
@@ -190,6 +211,11 @@ class ImagePropsWidget(QWidget):
 
                 image_qbytearray = self._image_download_reply.readAll()
                 image_data = image_qbytearray.data()
+                if not image_data:
+                    self.update_image_note_and_preview(error=(
+                        'Download complete, but no image data to read.'))
+                    return
+
                 buffer = QBuffer(image_qbytearray)
                 image_reader = QImageReader(buffer)
                 img_format = image_reader.format().data().decode('utf-8')
@@ -199,18 +225,10 @@ class ImagePropsWidget(QWidget):
                 if image_reader.format() not in \
                         image_reader.supportedImageFormats():
 
-                    pil_image = Image.open(image_data)
-
-                    try:  # Probe if Pillow can handle the image
-                        pil_image.verify()
-                    except Exception:
-                        self.update_image_note_and_preview(error=(
-                            f'Image format "{img_format}" not supported'))
+                    image_data = self.convert_image_with_pil(image_data)
+                    if not image_data:
                         return
-
-                    img_byte_arr = io.BytesIO()
-                    pil_image.save(img_byte_arr, 'png')
-                    buffer = QBuffer(QByteArray(img_byte_arr.read()))
+                    buffer = QBuffer(QByteArray(image_data))
                     image_reader = QImageReader(buffer)
 
                 image = image_reader.read()
