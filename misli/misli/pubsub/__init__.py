@@ -37,7 +37,7 @@ it's expected that the subscribed callables are light, since the main purpose
 of misli is GUI rendering and blocking the main loop would cause freezing.
 """
 
-from typing import Callable, Dict, Union, List, Any
+from typing import Callable, Dict, Any
 from collections import defaultdict
 from enum import Enum
 from copy import copy
@@ -114,6 +114,7 @@ class Subscription:
 
 
 class Channel:
+
     def __init__(self,
                  name: str,
                  index_key: Callable = None,
@@ -121,7 +122,7 @@ class Channel:
         self.name = name
         self.index_key = index_key
         self.filter_key = filter_key
-        self.message_stack = []
+        # self.message_stack = []
         self.subscriptions: Dict[tuple, Subscription] = {}  # by id
 
         # if index_key:
@@ -134,13 +135,18 @@ class Channel:
     def __repr__(self):
         return f'<Channel name={self.name}>'
 
-    # @log.traced
+    @log.traced
     def push(self, message):
         if self.filter_key:
             if not self.filter_key(message):
                 return
 
-        log.info('^^PUSH^^ on "%s": %s' % (self.name, message))
+        # self.message_stack.append(message)
+        # call_delayed(self.notify_subscribers)
+        # !!! NO, this way messages get batched by channel and
+        # the order is lost
+
+        # # log.info('^^PUSH^^ on "%s": %s' % (self.name, message))
 
         for sub_props, sub in self.subscriptions.items():
             if self.index_key and sub.index_val is not MISSING:
@@ -159,10 +165,9 @@ class Channel:
 
     def add_subscribtion(self, subscribtion):
         if subscribtion.props() in self.subscriptions:
-            raise Exception(
-                f'Subscription with props {subscribtion.props()} '
-                f'already added to channel '
-                f'{self.name}')
+            raise Exception(f'Subscription with props {subscribtion.props()} '
+                            f'already added to channel '
+                            f'{self.name}')
 
         self.subscriptions[subscribtion.props()] = subscribtion
 
@@ -175,24 +180,37 @@ class Channel:
 
         self.subscriptions.pop(subscribtion.props())
 
-    def notify_subscribers(self):
-        if not self.message_stack:
-            return
+    # def notify_subscribers(self):
+    # !!! NO, this way messages get batched by channel and the order is lost
+    #     if not self.message_stack:
+    #         return
 
-        # Iterate over a copy of the subscriptions, since an additional handler
-        # can get added while executing the present handlers
-        for sub_props, sub in copy(self.subscriptions).items():
-            # If the channel is not indexed or the subscriber does not filter
-            # messages using the index - notify for all messages
-            if not self.index_key or sub.filter_val is MISSING:
-                messages = self.message_stack
-            else:
-                messages = self.index.get(sub.filter_val, [])
+    #     # # Iterate over a copy of the subscriptions, since an additional handler
+    #     # # can get added while executing the present handlers
+    #     # for sub_props, sub in copy(self.subscriptions).items():
+    #     #     # If the channel is not indexed or the subscriber does not filter
+    #     #     # messages using the index - notify for all messages
+    #     #     if not self.index_key or sub.filter_val is MISSING:
+    #     #         messages = self.message_stack
+    #     #     else:
+    #     #         messages = self.index.get(sub.filter_val, [])
 
-            for message in messages:
-                log.info(f'Calling {sub.handler=} for {message=} on'
-                         f' channel_name={sub.channel_name}')
-                sub.handler(message)
+    #     #     for message in messages:
+    #     #         log.info(f'Calling {sub.handler=} for {message=} on'
+    #     #                  f' channel_name={sub.channel_name}')
+    #     #         sub.handler(message)
 
-        self.message_stack.clear()
-        self.index.clear()
+    #     for message in copy(self.message_stack):
+    #         # Copy the subscriptions we iterate over, because the list can
+    #         # change while executing the actions and we don't want that
+    #         for sub_props, sub in copy(self.subscriptions).items():
+    #             if self.index_key and sub.index_val is not MISSING:
+    #                 if self.index_key(message) != sub.index_val:
+    #                     continue
+
+    #             log.info(f'Calling {sub.handler=} for {message=} on'
+    #                      f' channel_name={self.name}')
+    #             call_delayed(sub.handler, 0, args=[message])
+    #             # !!!! sub.handler(message)
+    #     self.message_stack.clear()
+    #     # self.index.clear()
