@@ -63,7 +63,7 @@ class FSStorageRepository(Repository):
         self.removed_pages = set()
         self.pages_for_write_removal = {}
 
-        self._process_legacy_pages()
+        legacy_pages = self._process_legacy_pages()
 
         # Load all pages in the cache
         for page_path in self.page_paths():
@@ -108,19 +108,42 @@ class FSStorageRepository(Repository):
                     break
 
             # Add the entities to the in-memory cache
-            self.upsert_to_cache(page)
-            for note in notes:
-                self.upsert_to_cache(note)
-            for arrow in arrows:
-                self.upsert_to_cache(arrow)
+            try:
+                self.in_memory_repo.insert_one(page)
+                for note in notes:
+                    try:
+                        self.in_memory_repo.insert_one(note)
+                    except Exception:
+                        log.error(f'Duplicate note. Skipping {note}')
+                        continue
+                for arrow in arrows:
+                    try:
+                        self.in_memory_repo.insert_one(arrow)
+                    except Exception:
+                        log.error(f'Duplicate arrow. Skipping {arrow}')
+                        continue
+            except Exception:
+                log.error(f'Duplicate page. Skipping {page}')
+                continue
 
             # Save the path corresponding to the id in order to handle renames
             self.page_paths_by_id[page.id] = self.path_for_page(page)
+
+        # Fix the internal links of legacy pages
+        for page_path in legacy_pages:
+            self.fix_legacy_page_internal_links(page_path)
 
     def path_for_page(self, page) -> Path:
         slug = slugify(page.name, separator='_', max_length=100)
         name = f'{slug}-{page.id}{V4_FILE_EXT}'
         return self.path / name
+
+    def id_from_page_path(self, path: Path) -> str:
+        # Remove the file ext .pam4.json and get the file name
+        page_id = path.with_suffix('').stem
+
+        slug, page_id = page_id.split('-')
+        return page_id
 
     @classmethod
     def open(cls, path, **kwargs):
@@ -143,10 +166,10 @@ class FSStorageRepository(Repository):
         self._save_channel = save_channel
 
     def upsert_to_cache(self, entity: Entity):
-        self.in_memory_repo.upsert_to_cache(entity)
+        return self.in_memory_repo.upsert_to_cache(entity)
 
     def insert_one(self, entity: Entity):
-        self.upsert_to_cache(entity)
+        self.in_memory_repo.insert_one(entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
         elif isinstance(entity, (Note, Arrow)):
@@ -186,7 +209,6 @@ class FSStorageRepository(Repository):
 
     def update_one(self, entity):
         change = self.in_memory_repo.update_one(entity)
-        self.upsert_to_cache(entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
         elif isinstance(entity, (Note, Arrow)):
@@ -304,11 +326,14 @@ class FSStorageRepository(Repository):
 
             # /ad-hoc fixes
 
-            note_type = pamet.note_type_from_props(ns)
-            if not note_type:
+            try:
+                note_type = entity_library.get_entity_class_by_name(
+                    ns['type_name'])
+            except Exception:
                 log.error(f'Could not get note type (in {json_file_path}) '
                           f'for the following note: {ns}')
                 continue
+
             notes.append(entity_library.from_dict(note_type.__name__, ns))
 
         # Load the arrows
@@ -437,7 +462,7 @@ class FSStorageRepository(Repository):
 
         # If there's none - return
         if not v2_pages and not v3_pages:
-            return
+            return []
 
         legacy_pages: List[Tuple] = []  # Tuples (page, notes, arrows)
         backup_path = self.path / '__legacy_pages_backup__'
@@ -518,11 +543,16 @@ class FSStorageRepository(Repository):
         notes = []
         arrows = []
         notes_by_id = {}
+        ids_with_duplicates = []
         for nt in notes_data:
             # Scale old coords so that default widget fonts
             # look adequate without correction
             for coord in ['x', 'y', 'width', 'height']:
                 nt[coord] = nt[coord] * ONE_V3_COORD_UNIT_TO_V4
+
+                # There was that very specific case with an overflow, wtf
+                if not (-2147483647 < nt[coord] < 2147483647):
+                    nt[coord] = 1
 
             nt['page_id'] = page.id
 
@@ -599,6 +629,7 @@ class FSStorageRepository(Repository):
                 image_url = note_text[len(IMAGE_NOTE_PREFIX):]
                 note = entity_library.from_dict(ImageNote.__name__, nt)
                 note.image_url = image_url
+                note.local_image_url = image_url
 
             # System call notes
             elif note_text.startswith(SYSTEM_CALL_NOTE_PREFIX):
@@ -609,15 +640,35 @@ class FSStorageRepository(Repository):
                 note = entity_library.from_dict(ScriptNote.__name__, nt)
                 note.script_path = script_parts[0]
                 note.command_args = command_args
+                note.text = script
 
             else:  # It's just a text note
                 note = entity_library.from_dict(TextNote.__name__, nt)
                 note.text = note_text
 
+            # Detect duplicate ids
+            if note.id in notes_by_id:
+                ids_with_duplicates.append(note.id)
+                print(
+                    f'Updating the id of {note}. '
+                    f'Url: {note.url}, text: {note.text}. |'
+                    f'Duplicate {note}'
+                    f'Url: {notes_by_id[note.id].url}, '
+                    f'text: {notes_by_id[note.id].text}.'
+                )
+                note = note.with_id(get_new_id())
             notes.append(note)
             notes_by_id[note.id] = note
 
+        # Remove arrows which start or end at notes with duplicate ids, because
+        # we don't want to deal with that at all
+        arrows = [
+            a for a in arrows if arrow.tail_note_id not in ids_with_duplicates
+            and arrow.head_note_id not in ids_with_duplicates
+        ]
+
         for arrow in arrows:
+
             tail_note = notes_by_id[arrow.tail_note_id]
             head_note = notes_by_id[arrow.head_note_id]
 
@@ -630,7 +681,7 @@ class FSStorageRepository(Repository):
             intersect_check_rect.set_y(tail_rect.y())
 
             if tail_rect.intersects(intersect_check_rect):
-                if head_rect.center().y() > tail_rect.center().y():
+                if head_rect.center().y() < tail_rect.center().y():
                     arrow.tail_anchor_type = ArrowAnchorType.TOP_MID
                     arrow.head_anchor_type = ArrowAnchorType.BOTTOM_MID
                 else:
@@ -772,3 +823,30 @@ class FSStorageRepository(Repository):
                     control_point = None
 
                 arrows.append(Arrow(nt['id'], target_id, control_point))
+
+    def fix_legacy_page_internal_links(self, page_path: Path):
+        page_id = self.id_from_page_path(page_path)
+        page = self.find_one(id=page_id)
+
+        entities = self.find(parent_gid=page_id)
+        notes = [entity for entity in entities if isinstance(entity, Note)]
+        arrows = [entity for entity in entities if isinstance(entity, Arrow)]
+
+        notes_updated = 0
+        for note in notes:
+            if note.url.is_empty():
+                continue
+            linked_page = self.find_one(type_name=Page.__name__,
+                                        name=str(note.url))
+            if linked_page:
+                notes_updated += 1
+                note.url = linked_page.url()
+                self.in_memory_repo.update_one(note)
+
+        if len(set(notes)) != len(notes):
+            raise Exception
+
+        if notes_updated:
+            self.update_page(page, notes, arrows)
+            log.info(f'Updated {notes_updated} internal links for '
+                     f'imported legacy page "{page.name}"')
