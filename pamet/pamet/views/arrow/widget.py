@@ -60,7 +60,7 @@ class ArrowWidget(QObject, ArrowView):
         QObject.__init__(self, parent)
         ArrowView.__init__(self, initial_state)
         self.map_page_view = parent
-        self._anchor_subs_by_name = {}
+        self._anchor_subs_by_note_id = {}
         self._cached_curves = None
         self._cached_path = None
 
@@ -70,24 +70,43 @@ class ArrowWidget(QObject, ArrowView):
         self.destroyed.connect(lambda: self.unsubscribe_all())
 
     def unsubscribe_all(self):
-        for anchor_name in copy(self._anchor_subs_by_name):
-            self.unsubscribe_from_anchor(anchor_name)
+        for note_id in copy(self._anchor_subs_by_note_id):
+            self.unsubscribe_from_anchor(note_id)
 
-    def subscribe_to_anchor(self, anchor_name: str, note_id: str):
-        if anchor_name in self._anchor_subs_by_name:
-            self.unsubscribe_from_anchor(anchor_name)
+    def update_anchor_subscriptions(self):
+        state = self.state()
+        new_ids = set()
+        if state.tail_note_id:
+            new_ids.add(state.tail_note_id)
+        if state.head_note_id:
+            new_ids.add(state.head_note_id)
+
+        old_ids = set(self._anchor_subs_by_note_id.keys())
+        new_subs = new_ids - old_ids
+        subs_for_removal = old_ids - new_ids
+
+        for note_id in subs_for_removal:
+            self.unsubscribe_from_anchor(note_id)
+
+        for note_id in new_subs:
+            self.subscribe_to_anchor(note_id)
+
+    def subscribe_to_anchor(self, note_id: str):
+        # Clear the previous subscription
+        if note_id in self._anchor_subs_by_note_id:
+            self.unsubscribe_from_anchor(note_id)
 
         map_page_state = self.map_page_view.state()
         note_view_state = map_page_state.view_state_for_note_id(note_id)
-        sub = channels.state_changes_by_id.subscribe(
+        sub = channels.state_changes_per_TLA_by_id.subscribe(
             handler=self.handle_anchor_note_view_state_change,
             index_val=note_view_state.id)
-        self._anchor_subs_by_name[anchor_name] = sub
+        self._anchor_subs_by_note_id[note_id] = sub
 
-    def unsubscribe_from_anchor(self, anchor_name: str):
-        if anchor_name not in self._anchor_subs_by_name:
+    def unsubscribe_from_anchor(self, note_id: str):
+        if note_id not in self._anchor_subs_by_note_id:
             return
-        sub = self._anchor_subs_by_name.pop(anchor_name)
+        sub = self._anchor_subs_by_note_id.pop(note_id)
         sub.unsubscribe()
 
     def handle_anchor_note_view_state_change(self, change):
@@ -97,18 +116,8 @@ class ArrowWidget(QObject, ArrowView):
 
     def on_state_change(self, change: Change):
         # Update anchor note subscriptions
-        state = change.last_state()
-        if change.updated.tail_note_id:
-            if state.tail_note_id:
-                self.subscribe_to_anchor(TAIL, state.tail_note_id)
-            else:
-                self.unsubscribe_from_anchor(TAIL)
-
-        if change.updated.head_note_id:
-            if state.head_note_id:
-                self.subscribe_to_anchor(HEAD, state.head_note_id)
-            else:
-                self.unsubscribe_from_anchor(HEAD)
+        if change.updated.tail_note_id or change.updated.head_note_id:
+            self.update_anchor_subscriptions()
 
         if not change.is_delete():
             self.update_cached_path()
