@@ -43,7 +43,7 @@ class QtWidgetsUtilProvider(BaseUtilitiesProvider):
             return config_dict
 
     def set_config(self, updated_config: dict):
-        config_str = json.dumps(updated_config, indent=4)
+        config_str = json.dumps(updated_config, indent=4, ensure_ascii=False)
         config_path = self._app_data_folder / CONFIG_JSON
         config_path.write_text(config_str)
 
