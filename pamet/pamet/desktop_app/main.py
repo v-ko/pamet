@@ -18,9 +18,6 @@ from pamet.views.window.widget import WindowWidget
 
 log = misli.get_logger(__name__)
 
-# @action('main.create_window')
-# def create_window():
-
 
 def main():
     misli.line_spacing_in_pixels = 20
@@ -97,9 +94,6 @@ def main():
 
     misli.call_delayed(window_actions.new_browser_tab,
                        args=[window_state, start_page])
-
-    app.focusChanged.connect(
-        lambda w1, w2: print(f'Focus changed from {w1} to {w2}'))
 
     search_service = FuzzySearchService(
         pamet_channels.entity_change_sets_per_TLA)
