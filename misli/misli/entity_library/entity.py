@@ -1,9 +1,13 @@
+from __future__ import annotations
+
 from typing import Union
 from datetime import datetime
 from dataclasses import fields, field
 
 from misli import entity_library
 from misli.helpers import get_new_id, timestamp
+from misli.constants import LOGGING_LEVEL
+from misli_debug import LoggingLevels
 
 
 @entity_library.entity_type
@@ -32,36 +36,61 @@ class Entity:
     """
 
     id: str = field(default_factory=get_new_id)
+    immutability_error_message: str = field(default=False,
+                                            init=False,
+                                            repr=False)
 
     def __setattr__(self, key, value):
-        # TODO: optimize those checks or do them only when debugging.
-        # It's a huge overhead
+        # Do thorough checks only when debugging
+        if LOGGING_LEVEL != LoggingLevels.DEBUG:
+            return object.__setattr__(self, key, value)
+
+        if self.immutability_error_message:
+            raise Exception(self.immutability_error_message)
+
         field_names = [f.name for f in fields(self)]
         if not hasattr(self, key) and key not in field_names:
             raise Exception('Cannot set missing attribute')
-        object.__setattr__(self, key, value)
 
-    def __eq__(self, other: 'Entity') -> bool:
-        if not other:
-            return False
-        return self.id == other.id
-        # return self.asdict() == other.asdict()
+        # Since ids are used for hashing - it's wise to make them immutable
+        if key == 'id' and hasattr(self, 'id'):
+            raise Exception
+
+        return object.__setattr__(self, key, value)
+
+    # vv These two get transplanted in the entity_type decorator, since
+    # the dataclasses lib disregards them in child classes
+    # def __hash__(self):
+    #     return hash(self.gid())
+
+    # def __eq__(self, other: 'Entity') -> bool:
+    #     if not other:
+    #         return False
+    #     return self.gid() == other.gid()
 
     def __copy__(self):
         return self.copy()
 
     @classmethod
     def create_silent(cls, **props):
-        entity = cls()
+        if 'id' in props:
+            entity = cls(id=props.pop('id'))
+        else:
+            entity = cls()
         entity.replace_silent(**props)
 
         return entity
 
     def copy(self) -> 'Entity':
-        # return replace(self)
-        # return replace(self, **self.asdict())
         self_copy = type(self)(**self.asdict())
         return self_copy
+
+    def with_id(self, new_id: str) -> Entity:
+        """A convinience method to produce a copy with a changed id (since
+        setting it as an attribute is prohibited)."""
+        self_dict = self.asdict()
+        self_dict['id'] = new_id
+        return type(self)(**self_dict)
 
     def gid(self) -> Union[str, tuple]:
         """Returns the global id of the entity. This function can be
@@ -73,11 +102,13 @@ class Entity:
     def asdict(self) -> dict:
         """Return the entity fields as a dict"""
         # The dataclasses.asdict recurses and that's not what we want
-        self_dict = {f.name: getattr(self, f.name) for f in fields(self)
-                     if f.repr}
+        self_dict = {
+            f.name: getattr(self, f.name)
+            for f in fields(self) if f.repr
+        }
 
         for key, val in self_dict.items():
-            if isinstance(val, (list, dict)):
+            if isinstance(val, (list, dict, set)):
                 val = val.copy()
                 self_dict[key] = val
             elif isinstance(val, datetime):
@@ -94,6 +125,13 @@ class Entity:
     def replace_silent(self, **changes):
         """Same as replace, but ignores fields that are not present in the
         dataclass."""
+        if 'id' in changes:
+            id = changes.pop('id')
+            if id != self.id:
+                raise Exception(
+                    'The id of an entity is immutable.'
+                    'To produce a copy with a changed id use Entity.with_id')
+
         leftovers = {}
         for key, val in changes.items():
             if not hasattr(self, key):
@@ -106,3 +144,15 @@ class Entity:
         """Implement this to return the parent global id
         """
         return None
+
+    def set_immutable(self,
+                      immutable: bool = True,
+                      error_message: str = 'Entity marked as immutable.'):
+        """!! Works only in debugging mode (LOGLEVEL=DEBUG in env)!!
+        Marks the entity as immutable and an exception with the given
+        error_message is raised if __setattr__ is called."""
+        if not immutable:
+            self.immutability_error_message = ''
+            return
+
+        self.immutability_error_message = error_message
