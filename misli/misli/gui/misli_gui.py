@@ -83,23 +83,25 @@ def ensure_context():
 
 
 # Action channel interface
-def log_action_state(action: Action):
+def log_action_call(action_call: ActionCall):
     """Push an action to the actions channel and handle logging. Should only be
     called by the action decorator.
     """
-    args_str = ', '.join([str(a) for a in action.args])
+    args_str = ', '.join([str(a) for a in action_call.args])
     kwargs_str = ', '.join(
-        ['%s=%s' % (k, v) for k, v in action.kwargs.items()])
+        ['%s=%s' % (k, v) for k, v in action_call.kwargs.items()])
+
+    indent = '.' * 4 * (len(_action_context_stack) - 1)
 
     green = BColors.OKGREEN
     end = BColors.ENDC
-    msg = (f'Action {green}{action.run_state.name} {action.name}{end} '
+    msg = (f'{indent}Action {green}{action_call.run_state.name} {action_call.name}{end} '
            f'ARGS=*({args_str}) KWARGS=**{{{kwargs_str}}}')
-    if action.duration != -1:
-        msg += f' time={action.duration * 1000:.2f}ms'
+    if action_call.duration != -1:
+        msg += f' time={action_call.duration * 1000:.2f}ms'
     log.info(msg)
 
-    actions_log_channel.push(action)
+    actions_log_channel.push(action_call)
 
 
 @log.traced
