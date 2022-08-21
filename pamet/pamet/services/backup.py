@@ -20,7 +20,7 @@ from pamet import desktop_app
 
 log = get_logger(__name__)
 
-IGNORE_LOCK = True
+IGNORE_LOCK = False
 
 RECENT = 'recent'
 BACKUP = 'backup'
@@ -239,7 +239,7 @@ class FSStorageBackupService:
                 page_id = entity.page_id
 
             if not page_id:
-                log.error(f'Change f{change} has not page id')
+                log.error(f'Change f{change} has no page id')
                 continue
 
             changes_by_page[page_id].append(change)
@@ -250,7 +250,8 @@ class FSStorageBackupService:
         for page_id, changes in changes_by_page.items():
             json_strings = []
             for change in changes:
-                json_str = json.dumps(change.as_safe_delta_dict())
+                json_str = json.dumps(change.as_safe_delta_dict(),
+                                      ensure_ascii=False)
                 json_strings.append(json_str + '\n')
             json_str_all = ''.join(json_strings)
             # for change in changes:
@@ -270,6 +271,10 @@ class FSStorageBackupService:
         for page_id in self._changed_page_ids:
             # Serialize the page
             page = pamet.page(id=page_id)
+            if not page:
+                log.error(f'Can not backup missing page with id {page_id}')
+                continue
+
             notes = page.notes()
             arrows = page.arrows()
             page_str = FSStorageRepository.serialize_page(page, notes, arrows)
@@ -546,9 +551,11 @@ class FSStorageBackupService:
         Then the worker thread is started to carry out event scheduling and
         rescheduling."""
         if self.service_lock_path().exists() and not IGNORE_LOCK:
-            raise Exception('Another backup service is running. If you\'re'
-                            'sure it\'s not - you can delete the lock file: '
-                            f'{self.service_lock_path()}')
+            return False
+            # This should be a notification when I add notifications
+            # raise Exception('Another backup service is running. If you\'re'
+            #                 'sure it\'s not - you can delete the lock file: '
+            #                 f'{self.service_lock_path()}')
         self.service_lock_path().write_text(self.id)
 
         log.info('Starting')
