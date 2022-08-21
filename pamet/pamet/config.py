@@ -16,9 +16,9 @@ class PametConfig(Entity):
 
     @classmethod
     def load(cls: PametConfig, config_dict: dict):
-        config = cls()
-        config._dict_on_load = config_dict
-
+        dict_on_load = copy(config_dict)
+        config = cls(id=config_dict.pop('id'))
+        config._dict_on_load = dict_on_load
         leftovers = config.replace_silent(**config_dict)
         if leftovers:
             log.error(f'Unrecognized keys found in the config: {leftovers}')

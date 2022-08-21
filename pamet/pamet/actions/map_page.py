@@ -427,7 +427,9 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
         ViewType = pamet.note_view_type(note_type_name=type(child).__name__,
                                         edit=False)
         StateType = pamet.note_state_type_by_view(ViewType.__name__)
-        nv_state = StateType(**child.asdict(), note_gid=child.gid())
+        note_props = child.asdict()
+        note_props.pop('id')
+        nv_state = StateType(**note_props, note_gid=child.gid())
         misli.gui.add_state(nv_state)
         page_view_state.note_view_states.append(nv_state)
     elif isinstance(child, Arrow):
@@ -576,7 +578,12 @@ def finish_arrow_creation(map_page_view_state: MapPageViewState):
                 continue
 
         # Get the properties for the new arrow from the view state
-        arrow = Arrow.create_silent(**arrow_vs.asdict())
+        arrow_dict = arrow_vs.asdict()
+        # The new arrow should be a separate view state in order to avoid
+        # conflicts while the mock arrow is still present
+        arrow_dict.pop('id')
+        arrow = Arrow()
+        arrow.replace_silent(**arrow_dict)
         pamet.insert_arrow(arrow)
 
     map_page_view_state.clear_mode()

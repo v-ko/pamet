@@ -36,12 +36,15 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
             NoteViewType = pamet.note_view_type(
                 note_type_name=type(_note).__name__)
             StateType = pamet.note_state_type_by_view(NoteViewType.__name__)
-            note_view_state = StateType(**_note.asdict(), note_gid=_note.gid())
-            page_view_state.note_view_states.append(note_view_state)
+            note_props = _note.asdict()
+            note_props.pop('id')
+            note_view_state = StateType(**note_props, note_gid=_note.gid())
             misli.gui.add_state(note_view_state)
 
         for arrow in page.arrows():
-            arrow_view_state = ArrowViewState(**arrow.asdict(),
+            arrow_props = arrow.asdict()
+            arrow_props.pop('id')
+            arrow_view_state = ArrowViewState(**arrow_props,
                                               arrow_gid=arrow.gid())
             page_view_state.arrow_view_states.append(arrow_view_state)
             misli.gui.add_state(arrow_view_state)
