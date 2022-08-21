@@ -84,8 +84,8 @@ def main():
     pamet.model.arrow_validity_check()
 
     # Debug
-    # misli_channels.state_changes_by_id.subscribe(
-    #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
+    misli_channels.state_changes_per_TLA_by_id.subscribe(
+        lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
     start_page = pamet.helpers.get_default_page() or pamet.page()
     if not start_page:
@@ -110,8 +110,12 @@ def main():
         backup_folder=config.backup_folder,
         change_set_channel=pamet_channels.entity_change_sets_per_TLA,
         record_all_changes=True)
-    backup_service.start()
-    app.aboutToQuit.connect(backup_service.stop)
+    if not backup_service.start():
+        log.info('Backup service not started. '
+                 'Probably another instance is running')
+    else:
+        app.aboutToQuit.connect(backup_service.stop)
+
     return app.exec()
 
 
