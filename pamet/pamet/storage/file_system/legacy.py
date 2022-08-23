@@ -3,18 +3,17 @@ from collections import defaultdict
 from copy import copy
 import json
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
-from random import randint
 import shutil
 from typing import List
 from misli import entity_library
 
 from misli.basic_classes import Point2D
 from misli.basic_classes.rectangle import Rectangle
-from misli.entity_library.change import Change
 from misli.helpers import current_time, get_new_id
 from misli.logging import get_logger
+from misli.storage.in_memory_repository import InMemoryRepository
 from pamet.model import Page
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.image_note import ImageNote
@@ -50,10 +49,39 @@ def backup_file(file_path: Path, backup_folder: Path):
     return backup_path
 
 
+def new_legacy_id_for_legacy_note(note_id: int, timestamp: str, text: str,
+                                  all_ids: list):
+    time = datetime.strptime(timestamp, TIME_FORMAT)
+    # Make a deterministic new id based on the timestamp and old id
+    new_id = int(f'{note_id}{time.strftime("%y%m%d")}')
+    if new_id in all_ids:
+        # If that's not enough - add a suffix based on the note text
+        suffix = f'{hash(text)}'[-3:]
+        new_id = int(f'{new_id}{suffix}')
+        if new_id in all_ids:  # Mostly for timeline notes
+            raise Exception('WTF')
+
+    return new_id
+
+
+def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
+    # Make a deterministic new id based on the timestamp and old id
+    note_id = str(note_id)
+    timestamp = str(timestamp)
+    new_id = get_new_id(note_id + timestamp)
+    if new_id in all_ids:
+        # If that's not enough - add a suffix based on the note text
+        new_id = get_new_id(note_id + timestamp + str(content))
+        if new_id in all_ids:  # Mostly for timeline notes
+            raise Exception('WTF')
+
+    return new_id
+
+
 class LegacyFSRepoReader:
 
     def convert_v3_to_v4(self, json_path: str | Path, backup_folder: Path,
-                         page_id_to_name_mapping_info: dict):
+                         previous_v_repo_entities: dict):
         # V3 example: {
         # "is_displayed_first_on_startup": true
         # "notes": [
@@ -93,6 +121,7 @@ class LegacyFSRepoReader:
         arrows = []
         notes_by_id = {}
         ids_with_duplicates = []
+        new_ids_by_old = {}
         for nt in notes_data:
             v3_note_checksum_by_page_name[page.name] += 1
             # Scale old coords so that default widget fonts
@@ -199,12 +228,23 @@ class LegacyFSRepoReader:
             # Detect duplicate ids
             if note.id in notes_by_id:
                 ids_with_duplicates.append(note.id)
-                print(f'Updating the id of {note}. '
-                      f'Url: {note.url}, text: {note.text}. |'
-                      f'Duplicate {note}'
-                      f'Url: {notes_by_id[note.id].url}, '
-                      f'text: {notes_by_id[note.id].text}.')
-                note = note.with_id(get_new_id())
+                log.warning(f'Detected duplicate for {note}. '
+                            f'Links to/from it will be deleted.')
+                # f'Url: {note.url}, text: {note.text}. |'
+                # f'Duplicate {note}'
+                # f'Url: {notes_by_id[note.id].url}, '
+                # f'text: {notes_by_id[note.id].text}.')
+
+            old_id = note.id
+            note = note.with_id(
+                new_id_for_legacy_note(
+                    note.id,
+                    note.created,
+                    note.content,
+                    notes_by_id.keys(),
+                ))
+            new_ids_by_old[old_id] = note.id
+
             notes.append(note)
             notes_by_id[note.id] = note
 
@@ -216,6 +256,9 @@ class LegacyFSRepoReader:
         ]
 
         for arrow in arrows:
+            # Fix arrow ids (since we changed the note ids)
+            arrow.tail_note_id = new_ids_by_old[arrow.tail_note_id]
+            arrow.head_note_id = new_ids_by_old[arrow.head_note_id]
 
             tail_note = notes_by_id[arrow.tail_note_id]
             head_note = notes_by_id[arrow.head_note_id]
@@ -244,10 +287,17 @@ class LegacyFSRepoReader:
             else:
                 raise Exception
 
+        # Update the arrow ids to be deterministic
+        arrows_with_new_ids = []
+        for arrow in arrows:
+            new_id = get_new_id([arrow.tail_note_id, arrow.head_note_id])
+            arrows_with_new_ids.append(arrow.with_id(new_id))
+        arrows = arrows_with_new_ids
+
         # Assume page created time from the notes. Modified makes sense only
         # for renames as of now and there's no basis to infer it
-        page.created = earliest_creation_time
-        page.modified = earliest_creation_time
+        page.created = earliest_creation_time - timedelta(seconds=10)
+        page.modified = earliest_creation_time - timedelta(seconds=10)
 
         new_path = self.path_for_page(page)
         page_json_str = self.serialize_page(page, notes, arrows)
@@ -316,30 +366,27 @@ class LegacyFSRepoReader:
         if is_a_timeline_notefile:
             return
 
-        def random_id():
-            rid = randint(10000, 2000000)
-            if rid in v2_notes_by_page_name[file_path.stem]:
-                return random_id()
-            else:
-                return rid
-
         # Extract groups
         notes = defaultdict(dict)
         current_note_id = None
         changed_note_ids = []
+        meta_for_id_replace = {}  # Gets assigned the target id
         for line in lines_left:
 
             if line.startswith('[') and line.endswith(']'):
                 current_note_id = int(line[1:-1])
+
                 if current_note_id in v2_notes_by_page_name[file_path.stem]:
                     changed_note_ids.append(current_note_id)
-                    current_note_id = random_id()
+                    old_id = current_note_id
+                    current_note_id = get_new_id()
+                    if current_note_id in meta_for_id_replace:
+                        Exception('Not enough randomness, wtf')
+                    meta_for_id_replace[current_note_id] = old_id
+
                 v2_note_checksum_by_page_name[file_path.stem] += 1
                 v2_notes_by_page_name[file_path.stem].add(current_note_id)
                 continue
-
-            # if skip_till_next_note:
-            #     continue
 
             if '=' not in line:
                 raise Exception
@@ -372,6 +419,16 @@ class LegacyFSRepoReader:
                 raise Exception
 
             notes[current_note_id][key] = value
+
+        # Notes with duplicate ids first get a random id and then we
+        # replace it with a deterministic id based on
+        # id, timestamp, text
+        for nt_random_id, old_id in meta_for_id_replace.items():
+            nt = notes.pop(nt_random_id)
+            note_id = new_legacy_id_for_legacy_note(old_id, nt['t_made'],
+                                                    nt['txt'],
+                                                    list(notes.keys()))
+            notes[note_id] = nt
 
         for note_id, nt in notes.items():
             # Rename fields to the V3 schema
@@ -450,7 +507,7 @@ class LegacyFSRepoReader:
             if linked_page:
                 notes_updated += 1
                 note.url = linked_page.url()
-                self.in_memory_repo.update_one(note)
+                InMemoryRepository.update_one(self, note)
 
         if len(set(notes)) != len(notes):
             raise Exception
@@ -460,13 +517,20 @@ class LegacyFSRepoReader:
             log.info(f'Updated {notes_updated} internal links for '
                      f'imported legacy page "{page.name}"')
 
-    def _process_legacy_pages(self, page_id_to_name_mapping_info: dict = None):
+    def process_legacy_pages(self, previous_v_repo_entities: dict = None):
         # Collect the legacy page paths
         v2_pages = []
         v3_pages = []
+        v2_bacup_folder = self.path / '__v2_legacy_pages_backup__'
+        v3_backup_folder = self.path / '__v3_legacy_pages_backup__'
         for file in list(self.path.iterdir()):
             if self.is_v4_page(file) or not file.is_file():
                 continue
+
+            if file.name == '.misli_timeline_database.json':
+                backup_file(file, v3_backup_folder)
+                file.unlink()
+
             if file.suffix == '.misl':
                 v2_pages.append(file)
             elif file.suffix == '.json':
@@ -485,8 +549,7 @@ class LegacyFSRepoReader:
         for page_path in v2_pages:
             try:
                 new_path = self.convert_v2_to_v3(page_path,
-                                                 backup_folder=self.path /
-                                                 '__v2_legacy_pages_backup__')
+                                                 backup_folder=v2_bacup_folder)
                 v3_pages.append(new_path)
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
@@ -497,8 +560,8 @@ class LegacyFSRepoReader:
             try:
                 new_path = self.convert_v3_to_v4(
                     page_path,
-                    backup_folder=self.path / '__v3_legacy_pages_backup__',
-                    page_id_to_name_mapping_info=page_id_to_name_mapping_info)
+                    backup_folder=v3_backup_folder,
+                    previous_v_repo_entities=previous_v_repo_entities)
                 legacy_pages.append(new_path)
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '

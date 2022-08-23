@@ -63,7 +63,7 @@ def test_in_memory_repo():
     # Find using the type name index
     assert set(repo.find(type_name=TextNote.__name__)) == \
         set([note1b_for_update])
-        
+
 
 def test_fs_repo_CRUD(tmp_path):
     fs_repo = FSStorageRepository.new(tmp_path)

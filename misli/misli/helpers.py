@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+from hashlib import md5
 from typing import Generator, Any, List, Union
 
 from collections.abc import Iterable
@@ -37,8 +38,10 @@ def timestamp(dt: datetime):
     return dt.isoformat(timespec='seconds')
 
 
-def get_new_id() -> str:
+def get_new_id(seed=None) -> str:
     """Get a random id"""
+    if seed:
+        return md5(str(seed).encode('utf-8')).hexdigest()[-8:]
     guid = str(uuid.UUID(int=random.getrandbits(128)))[-8:]
     return guid
 
@@ -74,7 +77,7 @@ def find_many_by_props(
             yield item
 
 
-def find_one_by_props(item_list: [list, dict], **props) -> Any:
+def find_one_by_props(item_list: list | dict, **props) -> Any:
     """Convenience method to filter for one object in a list or dict with
      attributes matching the given keyword arguments.
     """
