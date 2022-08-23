@@ -27,6 +27,7 @@ class Note(Entity):
     page_id: str = ''
     geometry: list = field(default_factory=lambda:
                            [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT])
+    style: dict = field(default_factory=dict)
     color: tuple = field(default_factory=lambda: DEFAULT_COLOR)
     background_color: tuple = field(default_factory=lambda: DEFAULT_BG_COLOR)
     content: dict = field(default_factory=dict)
@@ -60,6 +61,34 @@ class Note(Entity):
 
     def rect(self) -> Rectangle:
         return Rectangle(*self.geometry)
+
+    @property
+    def color(self):
+        return self.style.get('color', DEFAULT_COLOR)
+
+    @color.setter
+    def color(self, new_color: tuple | Color):
+        if isinstance(new_color, Color):
+            new_color = new_color.as_tuple()
+
+        if new_color is None:
+            self.style.pop('color', None)
+            return
+        self.style['color'] = new_color
+
+    @property
+    def background_color(self):
+        return self.style.get('background_color', DEFAULT_BG_COLOR)
+
+    @background_color.setter
+    def background_color(self, new_background_color: tuple | background_color):
+        if isinstance(new_background_color, Color):
+            new_background_color = new_background_color.as_tuple()
+
+        if new_background_color is None:
+            self.style.pop('background_color', None)
+            return
+        self.style['background_color'] = new_background_color
 
     def set_color(self, color: Color):
         self.color = color.as_tuple()
