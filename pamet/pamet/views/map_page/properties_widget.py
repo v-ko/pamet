@@ -32,6 +32,8 @@ class MapPagePropertiesWidget(QWidget, View):
         self.ui = Ui_MapPagePropertiesWidget()
         self.ui.setupUi(self)
 
+        self.parent_tab = tab_widget
+
         # Configure the UI
         # Set the home page check box state
         config = get_config()
