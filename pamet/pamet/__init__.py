@@ -5,6 +5,7 @@ from misli.logging import get_logger
 from pamet.services.clipboard import ClipboardService
 from pamet.services.search.base import BaseSearchService
 from .model import page, pages, create_note, set_sync_repo, set_async_repo
+from .model import sync_repo, async_repo
 from .model import find, find_one, insert_note, insert_page, update_note
 from .model import update_page, remove_note, remove_page
 from .model import insert_arrow, remove_arrow, update_arrow

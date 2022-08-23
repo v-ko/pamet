@@ -140,11 +140,13 @@ class FSStorageRepository(InMemoryRepository, LegacyFSRepoReader):
         self._save_channel = save_channel
 
     def insert_one(self, entity: Entity):
-        InMemoryRepository.insert_one(self, entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
+            entity.parent_repository = self
         elif isinstance(entity, (Note, Arrow)):
             self.upserted_pages.add(entity.parent_gid())
+
+        InMemoryRepository.insert_one(self, entity)
 
         if self.queue_save_on_change:
             misli.call_delayed(self.write_to_disk, 0)
