@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from copy import copy
 from dataclasses import fields
+from datetime import datetime
 from enum import Enum
 from typing import Any, Generator, Iterable
 
 from misli import get_logger
 from misli.entity_library.entity import Entity
+from misli.helpers import current_time, timestamp
 
 log = get_logger(__name__)
 
@@ -103,7 +105,8 @@ class Change:
     """
     def __init__(self,
                  old_state: Entity = None,
-                 new_state: Entity = None):
+                 new_state: Entity = None,
+                 time: datetime | str = None):
         """Construct a change object. When the change is of type CREATE or
         DELETE - the old_state or new_state respectively should naturally be
         omitted.
@@ -113,6 +116,11 @@ class Change:
         """
         self.old_state = old_state
         self.new_state = new_state
+
+        self.time = time or current_time()
+        if isinstance(time, str):
+            self.time = datetime.fromisoformat(time)
+
         self.added = Diff(self, DiffTypes.ADDED)
         self.removed = Diff(self, DiffTypes.REMOVED)
         self.updated = Updated(self)
@@ -139,25 +147,28 @@ class Change:
     def from_dict(cls, change_dict: dict) -> Change:
         if 'delta' in change_dict:
             return cls.from_safe_delta_dict(change_dict)
-        return cls(change_dict['old_state'], change_dict['new_state'])
+        return cls(**change_dict)
 
     @classmethod
-    def from_safe_delta_dict(cls, delta_dict: dict):
-        old_state = delta_dict['old_state']
-        delta = delta_dict['delta']
-        new_state = copy(old_state).replace(**delta)
-        return cls(old_state, new_state)
+    def from_safe_delta_dict(cls, change_dict: dict):
+        old_state = change_dict['old_state']
 
-    @classmethod
-    def from_unsafe_delta_dict(cls, old_state: Entity, delta_dict: dict):
-        delta = delta_dict['delta']
-        new_state = copy(old_state).replace(**delta)
-        return cls(old_state, new_state)
+        # Get the delta and use it to generate the new_state
+        delta = change_dict.pop('delta')
+        change_dict['new_state'] = copy(old_state).replace(**delta)
+        return cls(**change_dict)
+
+    # @classmethod
+    # def from_unsafe_delta_dict(cls, old_state: Entity, delta_dict: dict):
+    #     delta = delta_dict['delta']
+    #     new_state = copy(old_state).replace(**delta)
+    #     return cls(old_state, new_state)
 
     def asdict(self) -> dict:
         return dict(
             old_state=self.old_state.asdict() if self.old_state else None,
             new_state=self.new_state.asdict() if self.new_state else None,
+            time=timestamp(self.time)
         )
 
     def as_safe_delta_dict(self):
