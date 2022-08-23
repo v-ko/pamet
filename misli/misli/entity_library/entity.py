@@ -42,7 +42,7 @@ class Entity:
 
     def __setattr__(self, key, value):
         # Do thorough checks only when debugging
-        if LOGGING_LEVEL != LoggingLevels.DEBUG:
+        if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
             return object.__setattr__(self, key, value)
 
         if self.immutability_error_message:
