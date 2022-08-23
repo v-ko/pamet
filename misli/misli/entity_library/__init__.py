@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Any
-from dataclasses import dataclass, MISSING, Field
+from dataclasses import dataclass, MISSING
 
 from misli.logging import get_logger
 
@@ -24,21 +24,6 @@ def __eq__(self, other: Entity) -> bool:
     if not other:
         return False
     return self.gid() == other.gid()
-
-
-def __setattr__(self, key, value):
-    if self.immutability_error_message:
-        raise Exception(self.immutability_error_message)
-
-    field_names = [f.name for f in fields(self)]
-    if not hasattr(self, key) and key not in field_names:
-        raise Exception('Cannot set missing attribute')
-
-    # Since ids are used for hashing - it's wise to make them immutable
-    if key == 'id' and hasattr(self, 'id'):
-        raise Exception
-
-    object.__setattr__(self, key, value)
 
 
 def entity_type(entity_class: Any, repr: bool = False):
