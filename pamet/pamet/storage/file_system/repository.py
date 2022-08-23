@@ -24,11 +24,11 @@ RANDOMIZE_TEXT = False
 V4_FILE_EXT = '.pam4.json'
 
 
-class FSStorageRepository(Repository, LegacyFSRepoReader):
+class FSStorageRepository(InMemoryRepository, LegacyFSRepoReader):
     """File system storage. This class has all entities cached at all times"""
 
     def __init__(self, path, queue_save_on_change=False):
-        Repository.__init__(self)
+        InMemoryRepository.__init__(self)
 
         self.path = Path(path)
         self.queue_save_on_change = queue_save_on_change
@@ -36,15 +36,13 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
 
         self._save_channel: Channel = None
 
-        self.in_memory_repo = InMemoryRepository()
         self.page_paths_by_id: Dict[str, Path] = {}
 
         self.upserted_pages = set()
         self.removed_pages = set()
         self.pages_for_write_removal = {}
 
-        legacy_pages = self._process_legacy_pages()
-
+    def load_all_pages(self):
         # Load all pages in the cache
         for page_path in self.page_paths():
             try:
@@ -73,7 +71,7 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
 
                 if dup_path.stat().st_mtime <= page_path.stat().st_mtime:
                     # If the page that's older is loaded
-                    self.in_memory_repo.remove_one(page_duplicate)
+                    InMemoryRepository.remove_one(self, page_duplicate)
                     backup_path = dup_path.with_suffix('.backup')
                     dup_path.rename(backup_path)
                     log.error(f'Found duplicate page "{page_duplicate.name} '
@@ -89,16 +87,16 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
 
             # Add the entities to the in-memory cache
             try:
-                self.in_memory_repo.insert_one(page)
+                InMemoryRepository.insert_one(self, page)
                 for note in notes:
                     try:
-                        self.in_memory_repo.insert_one(note)
+                        InMemoryRepository.insert_one(self, note)
                     except Exception:
                         log.error(f'Duplicate note. Skipping {note}')
                         continue
                 for arrow in arrows:
                     try:
-                        self.in_memory_repo.insert_one(arrow)
+                        InMemoryRepository.insert_one(self, arrow)
                     except Exception:
                         log.error(f'Duplicate arrow. Skipping {arrow}')
                         continue
@@ -108,13 +106,6 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
 
             # Save the path corresponding to the id in order to handle renames
             self.page_paths_by_id[page.id] = self.path_for_page(page)
-
-        # Fix the internal links of legacy pages
-        for page_path in legacy_pages:
-            page_id = self.id_from_page_path(page_path)
-            page = self.find_one(id=page_id)
-            self.fix_legacy_page_internal_links(page)
-            self.checksum_imported_page_notes(page)
 
     def path_for_page(self, page) -> Path:
         slug = slugify(page.name, separator='_', max_length=100)
@@ -148,11 +139,8 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
     def set_save_channel(self, save_channel):
         self._save_channel = save_channel
 
-    def upsert_to_cache(self, entity: Entity):
-        return self.in_memory_repo.upsert_to_cache(entity)
-
     def insert_one(self, entity: Entity):
-        self.in_memory_repo.insert_one(entity)
+        InMemoryRepository.insert_one(self, entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
         elif isinstance(entity, (Note, Arrow)):
@@ -171,7 +159,7 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
         misli.call_delayed(self.write_to_disk, 0)
 
     def remove_one(self, entity):
-        self.in_memory_repo.remove_one(entity)
+        InMemoryRepository.remove_one(self, entity)
         if isinstance(entity, Page):
             self.removed_pages.add(entity.gid())
             self.pages_for_write_removal[entity.gid()] = entity
@@ -191,7 +179,7 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
         misli.call_delayed(self.write_to_disk, 0)
 
     def update_one(self, entity):
-        change = self.in_memory_repo.update_one(entity)
+        change = InMemoryRepository.update_one(self, entity)
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
         elif isinstance(entity, (Note, Arrow)):
@@ -210,7 +198,7 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
         misli.call_delayed(self.write_to_disk, 0)
 
     def find(self, **filter):
-        yield from self.in_memory_repo.find(**filter)
+        yield from InMemoryRepository.find(self, **filter)
 
     def _try_to_save(self, changes: List[Change]):
         try:
@@ -306,6 +294,13 @@ class FSStorageRepository(Repository, LegacyFSRepoReader):
                 if 'script' in content:
                     script_path = content.pop('script')
                     content['script_path'] = script_path
+
+            if 'color' in ns:
+                for prop in ['color', 'background_color']:
+                    prop_val = ns.pop(prop)
+                    if 'style' not in ns:
+                        ns['style'] = {}
+                    ns['style'][prop] = prop_val
 
             # /ad-hoc fixes
 

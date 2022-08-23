@@ -92,6 +92,16 @@ def main():
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path,
                                            queue_save_on_change=True)
+        legacy_page_paths = fs_repo.process_legacy_pages()
+        fs_repo.load_all_pages()
+
+        # Checksum legacy pages and fix internal links in them
+        for page_path in legacy_page_paths:
+            page_id = fs_repo.id_from_page_path(page_path)
+            page = fs_repo.find_one(id=page_id)
+
+            fs_repo.checksum_imported_page_notes(page)
+            fs_repo.fix_legacy_page_internal_links(page)
     else:
         fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
