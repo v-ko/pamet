@@ -9,7 +9,7 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QFileDialog, QWidget
 from misli.basic_classes.point2d import Point2D
 
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.desktop_app import media_store
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote

@@ -11,8 +11,10 @@ import pamet
 from misli.basic_classes import Point2D, Rectangle
 from misli.gui.actions_library import action
 from pamet.constants import ALIGNMENT_GRID_UNIT
-from pamet.helpers import Url, snap_to_grid
-from pamet.model import Note, Page
+from pamet.helpers import snap_to_grid
+from pamet.url import Url
+from pamet.model.page import Page
+from pamet.model.note import Note
 from pamet.actions import tab as tab_actions
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.card_note import CardNote
@@ -181,7 +183,7 @@ def delete_notes_and_connected_arrows(notes: List[Note]):
             raise Exception
 
     arrows_for_deletion = []
-    for arrow in pamet.page(id=note.page_id).arrows():
+    for arrow in pamet.arrows(pamet.page(note.page_id)):
         if (arrow.tail_note_id and arrow.tail_note_id in note_ids) or\
                 (arrow.head_note_id and arrow.head_note_id in note_ids):
             arrows_for_deletion.append(arrow)
@@ -413,7 +415,8 @@ def delete_page(tab_view_state: TabViewState, page: Page):
         next_page = Url(tab_view_state.navigation_history[-1]).get_page()
 
     if not next_page:
-        next_page = pamet.helpers.get_default_page() or pamet.page()
+        next_page = pamet.helpers.get_default_page() or \
+            pamet.find_one(type=Page)
 
     if not next_page:
         raise NotImplementedError

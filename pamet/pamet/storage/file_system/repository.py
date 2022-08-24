@@ -1,20 +1,21 @@
 import time
-from typing import Dict, Generator, List, Tuple
+from typing import Dict, Generator, List
 import os
 import json
 from pathlib import Path
 from pamet.model.arrow import Arrow
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from slugify import slugify
 
 import misli
 from misli import entity_library, Entity, Change
 from misli.pubsub import Channel
 from misli.storage.in_memory_repository import InMemoryRepository
-from misli.storage.repository import Repository
 from misli import get_logger
 
 import pamet
-from pamet.model import Page, Note
+from pamet.model.page import Page
+from pamet.model.note import Note
 
 from .legacy import LegacyFSRepoReader
 
@@ -24,11 +25,13 @@ RANDOMIZE_TEXT = False
 V4_FILE_EXT = '.pam4.json'
 
 
-class FSStorageRepository(InMemoryRepository, LegacyFSRepoReader):
+class FSStorageRepository(PametInMemoryRepository,
+                          LegacyFSRepoReader):
     """File system storage. This class has all entities cached at all times"""
 
     def __init__(self, path, queue_save_on_change=False):
-        InMemoryRepository.__init__(self)
+        PametInMemoryRepository.__init__(self)
+        LegacyFSRepoReader.__init__(self)
 
         self.path = Path(path)
         self.queue_save_on_change = queue_save_on_change
@@ -65,7 +68,7 @@ class FSStorageRepository(InMemoryRepository, LegacyFSRepoReader):
                           f'page {page.name} anew.')
 
             # Check for dupicates
-            page_duplicates = self.find(gid=page.gid())
+            page_duplicates = list(self.find(gid=page.gid()))
             for page_duplicate in page_duplicates:
                 dup_path = self.path_for_page(page_duplicate)
 
@@ -142,7 +145,6 @@ class FSStorageRepository(InMemoryRepository, LegacyFSRepoReader):
     def insert_one(self, entity: Entity):
         if isinstance(entity, Page):
             self.upserted_pages.add(entity.gid())
-            entity.parent_repository = self
         elif isinstance(entity, (Note, Arrow)):
             self.upserted_pages.add(entity.parent_gid())
 
@@ -225,12 +227,12 @@ class FSStorageRepository(InMemoryRepository, LegacyFSRepoReader):
             raise Exception('A page is both marked for upsert and removal.')
 
         for page_gid in self.upserted_pages:
-            page = pamet.find_one(gid=page_gid)
+            page = pamet.page(page_gid)
 
             if page.id in self.page_paths_by_id:
-                self.update_page(page, page.notes(), page.arrows())
+                self.update_page(page, pamet.notes(page), pamet.arrows(page))
             else:
-                self.create_page(page, page.notes(), page.arrows())
+                self.create_page(page, pamet.notes(page), pamet.arrows(page))
 
         for page_gid in self.removed_pages:
             page = self.pages_for_write_removal.pop(page_gid)

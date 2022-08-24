@@ -1,12 +1,12 @@
 from copy import copy
-from misli.storage.in_memory_repository import InMemoryRepository
 import pamet
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 
 
 def test_page_CRUD():
-    fs_repo = InMemoryRepository()
+    fs_repo = PametInMemoryRepository()
     pamet.set_sync_repo(fs_repo)
 
     page = Page(name='test_page')
@@ -22,7 +22,7 @@ def test_page_CRUD():
 
 
 def test_note_CRUD():
-    fs_repo = InMemoryRepository()
+    fs_repo = PametInMemoryRepository()
     pamet.set_sync_repo(fs_repo)
 
     page = Page(name='test_page')
@@ -30,8 +30,8 @@ def test_note_CRUD():
 
     note = TextNote(page_id=page.id)
     note.text = 'test text'
-    page.insert_note(copy(note))
-    assert [n.asdict() for n in page.notes()] == [note.asdict()]
+    pamet.insert_note(copy(note))
+    assert [n.asdict() for n in pamet.notes(page)] == [note.asdict()]
 
     note.text = 'test text changed'
     pamet.update_note(note)

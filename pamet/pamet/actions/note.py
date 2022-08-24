@@ -7,7 +7,7 @@ from misli.gui.actions_library import action
 
 import pamet
 from pamet.helpers import snap_to_grid
-from pamet.model import Note
+from pamet.model.note import Note
 from pamet.views.note.qt_helpers import minimal_nonelided_size
 from pamet.actions import map_page as map_page_actions
 

@@ -20,7 +20,7 @@ class MapPagePropertiesViewState(ViewState):
     page_id: str = ''
 
     def get_page(self):
-        return pamet.page(id=self.page_id)
+        return pamet.page(self.page_id)
 
 
 class MapPagePropertiesWidget(QWidget, View):
@@ -96,7 +96,7 @@ class MapPagePropertiesWidget(QWidget, View):
             self.ui.saveButton.setEnabled(False)
             return
 
-        elif pamet.page(name=new_text):
+        elif pamet.find_one(name=new_text, type=Page):
             self.ui.nameWarningLabel.setText('Name already taken')
             self.ui.nameWarningLabel.show()
             self.ui.saveButton.setEnabled(False)

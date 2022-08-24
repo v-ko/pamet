@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Union
 
 from misli.helpers import get_new_id
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.model.page import Page
 from slugify import slugify
 

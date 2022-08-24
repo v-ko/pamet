@@ -3,7 +3,7 @@ from misli.gui.actions_library import action
 import pamet
 
 from pamet.helpers import generate_page_name
-from pamet.model import Page
+from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 
 

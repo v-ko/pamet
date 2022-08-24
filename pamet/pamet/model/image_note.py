@@ -2,7 +2,7 @@ from typing import Union
 from misli.basic_classes.point2d import Point2D
 from misli.basic_classes.rectangle import Rectangle
 from misli.entity_library import entity_type
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.model.note import Note
 
 IMAGE_URL = 'image_url'

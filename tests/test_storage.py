@@ -61,7 +61,7 @@ def test_in_memory_repo():
         set([note1a, note1b_for_update])
 
     # Find using the type name index
-    assert set(repo.find(type_name=TextNote.__name__)) == \
+    assert set(repo.find(type=TextNote)) == \
         set([note1b_for_update])
 
 
@@ -77,11 +77,11 @@ def test_fs_repo_CRUD(tmp_path):
 
     note = TextNote()
     note.text = 'test text'
-    page.insert_note(note)
+    pamet.insert_note(note, page)
     fs_repo.write_to_disk()
 
-    page_json = FSStorageRepository.serialize_page(page, page.notes(),
-                                                   page.arrows())
+    page_json = FSStorageRepository.serialize_page(page, pamet.notes(page),
+                                                   pamet.arrows(page))
 
     assert fs_repo.path_for_page(page).read_text() == page_json
 

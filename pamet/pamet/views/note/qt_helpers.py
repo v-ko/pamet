@@ -9,7 +9,7 @@ from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
 from pamet.desktop_app import default_note_font
 from pamet.desktop_app.helpers import TextLayout, elide_text
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote

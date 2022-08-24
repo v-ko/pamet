@@ -1,30 +1,24 @@
 from __future__ import annotations
 
-from copy import copy
 from typing import Generator, List, Union
 
 import misli
 from misli.change_aggregator import ChangeAggregator
 from misli.entity_library.change import Change
 from misli.pubsub import Channel
-from misli.storage.in_memory_repository import InMemoryRepository
 from misli.storage.repository import Repository
 
 import pamet
 from pamet import channels
-from misli import entity_library
 from misli import get_logger
-from misli.helpers import current_time
 from pamet.model.arrow import Arrow
 from pamet.services.undo import UndoService
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 # from pamet.persistence_manager import PersistenceManager
-
-from .note import Note
-from .page import Page  # So that they're accessible from the module
 
 log = get_logger(__name__)
 
-_sync_repo: Repository = InMemoryRepository()
+_sync_repo: Repository = PametInMemoryRepository()
 # _persistence_manager = PersistenceManager()
 
 raw_entity_changes = Channel('__RAW_ENTITY_CHANGES__')
@@ -59,6 +53,7 @@ def set_sync_repo(repository: Repository):
     operations.
     """
     global _sync_repo
+    repository.set_change_channel(raw_entity_changes)
     _sync_repo = repository
 
 
@@ -86,7 +81,7 @@ def set_async_repo(repo: Repository):
 
 # ------------Finds-----------------
 def find(**filter):
-    yield from _sync_repo.find(**filter)
+    return _sync_repo.find(find)
 
 
 def find_one(**filter):
@@ -95,116 +90,74 @@ def find_one(**filter):
 
 # -------------Pages CRUD-------------
 def pages(**filter) -> Generator[Page, None, None]:
-    filter['type_name'] = Page.__name__
-    return _sync_repo.find(**filter)
+    return _sync_repo.pages(**filter)
 
 
-def page(**filter) -> Union[Page, None]:
-    filter['type_name'] = Page.__name__
-    return copy(_sync_repo.find_one(**filter))
+def page(page_gid: str | tuple) -> Union[Page, None]:
+    return _sync_repo.page(page_gid)
 
 
 def insert_page(page_: Page) -> Change:
-    change = _sync_repo.insert_one(page_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.insert_page(page_)
 
 
 def remove_page(page_: Page) -> Change:
-    change = _sync_repo.remove_one(page_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.remove_page(page_)
 
 
 def update_page(page_: Page) -> Change:
-    old_page = _sync_repo.find_one(id=page_.id)
-    if not old_page:
-        raise Exception('Can not update missing page.')
-
-    if page_.name != old_page.name:
-        page_.modified = current_time()
-
-    change = _sync_repo.update_one(page_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.update_page(page_)
 
 
 # -------------Notes CRUD-------------
 def create_note(**props) -> Note:
-    if 'page_id' not in props:
-        raise Exception('Cannot create note without passing a page_id kwarg')
-
-    type_name = pamet.note_type_from_props(props).__name__
-    note_ = entity_library.from_dict(type_name, props)
-    note_.created = current_time()
-    note_.modified = current_time()
-    change = _sync_repo.insert_one(note_)
-    if not change:
-        raise Exception('No change returned for the inserted note.')
-    raw_entity_changes.push(change)
-    return note_
+    return _sync_repo.create_note(**props)
 
 
-def insert_note(note_: Note) -> Change:
-    change = _sync_repo.insert_one(note_)
-    raw_entity_changes.push(change)
-    return change
+def insert_note(note_: Note, page: Page = None) -> Change:
+    return _sync_repo.insert_note(note_, page)
 
 
 def update_note(note_: Note) -> Change:
-    old_note = _sync_repo.find_one(gid=note_.gid())
-    if not old_note:
-        raise Exception('Can not update missing note.')
-
-    if note_.content != old_note.content:
-        note_.modified = current_time()
-
-    change = _sync_repo.update_one(note_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.update_note(note_)
 
 
 def remove_note(note_: Note) -> Change:
-    change = _sync_repo.remove_one(note_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.remove_note(note_)
+
+
+def notes(page_: Page | str):
+    return _sync_repo.notes(page_)
+
+
+def note(page_: Page | str, note_id: str):
+    return _sync_repo.note(page_, note_id)
 
 
 # -------------Arrow CRUD-------------
 def insert_arrow(arrow_: Arrow) -> Change:
-    change = _sync_repo.insert_one(arrow_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.insert_arrow(arrow_)
 
 
 def update_arrow(arrow_: Arrow) -> Change:
-    old_arrow = _sync_repo.find_one(gid=arrow_.gid())
-    if not old_arrow:
-        raise Exception('Can not update missing arrow')
-
-    change = _sync_repo.update_one(arrow_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.update_arrow(arrow_)
 
 
 def remove_arrow(arrow_: Arrow) -> Change:
-    change = _sync_repo.remove_one(arrow_)
-    raw_entity_changes.push(change)
-    return change
+    return _sync_repo.remove_arrow(arrow_)
+
+
+def arrows(page_: Page | str):
+    return _sync_repo.arrows(page_)
+
+
+def arrow(page_: Page | str, arrow_id: str):
+    return _sync_repo.arrow(page_, arrow_id)
 
 
 # ------------For changes--------------
 def apply_change(change: Change):
-    last_state = change.last_state()
-
-    if change.is_create():
-        _sync_repo.insert_one(last_state)
-    elif change.is_update():
-        _sync_repo.update_one(last_state)
-    elif change.is_delete():
-        _sync_repo.remove_one(last_state)
-
-    raw_entity_changes.push(change)
+    return _sync_repo.apply_change(change)
 
 
 # Validity checks
@@ -215,7 +168,7 @@ def arrow_validity_check():
     # Validity check on the arrow note anchors
     # If the note, that the anchor points to, is missing - skip arrow
     invalid_arrows = []
-    for arrow in pamet.find(type_name=Arrow.__name__):
+    for arrow in pamet.find(type=Arrow):
         if (arrow.has_tail_anchor() and not arrow.get_tail_note()) or\
                 (arrow.has_head_anchor() and not arrow.get_head_note()):
 

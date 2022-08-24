@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QApplication
 from misli.entity_library.entity import Entity
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
 

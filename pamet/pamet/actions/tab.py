@@ -10,8 +10,9 @@ from pamet.model.note import Note
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.state import MapPageViewState
-from pamet.model import Page
-from pamet.helpers import Url, generate_page_name
+from pamet.model.page import Page
+from pamet.helpers import generate_page_name
+from pamet.url import Url
 from pamet.actions import map_page as map_page_actions
 from pamet.views.search_bar.widget import SearchBarWidgetState
 
@@ -32,7 +33,7 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
         page_view_state = MapPageViewState(page_id=page.id)
         misli.gui.add_state(page_view_state)
 
-        for _note in page.notes():
+        for _note in pamet.notes(page):
             NoteViewType = pamet.note_view_type(
                 note_type_name=type(_note).__name__)
             StateType = pamet.note_state_type_by_view(NoteViewType.__name__)
@@ -42,7 +43,7 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
             page_view_state.note_view_states.add(note_view_state)
             misli.gui.add_state(note_view_state)
 
-        for arrow in page.arrows():
+        for arrow in pamet.arrows(page):
             arrow_props = arrow.asdict()
             arrow_props.pop('id')
             arrow_view_state = ArrowViewState(**arrow_props,

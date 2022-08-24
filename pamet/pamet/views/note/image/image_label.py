@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QLabel
 from pathlib import Path
 
 from pamet.desktop_app import media_store
-from pamet.helpers import Url
+from pamet.url import Url
 
 
 class ImageLabel(QLabel):

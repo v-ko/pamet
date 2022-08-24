@@ -9,7 +9,7 @@ from pamet import register_note_view_type
 
 import pamet
 from pamet.desktop_app import icons
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.page import Page
@@ -54,7 +54,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
             self.on_url_change)
 
         # Setup a completer with all the page names except the current one
-        self_page = pamet.page(id=initial_state.page_id)
+        self_page = pamet.page(initial_state.page_id)
         page_completer = QCompleter(
             (p.name for p in pamet.pages() if p != self_page), parent=self)
         self.link_props_widget.ui.urlLineEdit.setCompleter(page_completer)

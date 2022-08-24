@@ -41,7 +41,7 @@ class BaseSearchService:
 
     def load_all_content(self):
         for page in pamet.pages():
-            for note in page.notes():
+            for note in pamet.notes(page):
                 self.content_strings[note.gid()] = content_str_for_note(note)
 
     def handle_change_set(self, change_set: List[Change]):

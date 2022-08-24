@@ -194,7 +194,7 @@ class ArrowWidget(QObject, ArrowView):
         # If the anchor type is AUTO - infer it
         if (state.has_tail_anchor()
                 and state.tail_anchor_type == ArrowAnchorType.AUTO):
-            tail_note = state.get_parent_page().note(state.tail_note_id)
+            tail_note = pamet.note(state.get_parent_page(), state.tail_note_id)
             note_view = self.map_page_view.note_widget_by_note_gid(
                 tail_note.gid())
 
@@ -272,7 +272,7 @@ class ArrowWidget(QObject, ArrowView):
         # If the anchor type is AUTO - infer it
         if (state.has_head_anchor()
                 and state.head_anchor_type == ArrowAnchorType.AUTO):
-            head_note = state.get_parent_page().note(state.head_note_id)
+            head_note = pamet.note(state.get_parent_page(), state.head_note_id)
             note_view = self.map_page_view.note_widget_by_note_gid(
                 head_note.gid())
 
@@ -299,14 +299,13 @@ class ArrowWidget(QObject, ArrowView):
     def update_cached_path(self):
         state: ArrowViewState = self.state()
         if state.has_tail_anchor():
-            tail_note = state.get_parent_page().note(state.tail_note_id)
+            tail_note = pamet.note(state.get_parent_page(), state.tail_note_id)
             nv_state = self.map_page_view.get_note_view_state_for_note_gid(
                 tail_note.gid())
             if not nv_state:
                 raise Exception
             if state.tail_anchor:
-                tail_anchor_pos = nv_state.arrow_anchor(
-                    state.tail_anchor_type)
+                tail_anchor_pos = nv_state.arrow_anchor(state.tail_anchor_type)
             else:
                 raise NotImplementedError
         elif state.tail_point:
@@ -318,14 +317,13 @@ class ArrowWidget(QObject, ArrowView):
             raise Exception
 
         if state.head_note_id:
-            head_note = state.get_parent_page().note(state.head_note_id)
+            head_note = pamet.note(state.get_parent_page(), state.head_note_id)
             nv_state = self.map_page_view.get_note_view_state_for_note_gid(
                 head_note.gid())
             if not nv_state:
                 raise Exception
             if state.head_anchor:
-                head_anchor_pos = nv_state.arrow_anchor(
-                    state.head_anchor_type)
+                head_anchor_pos = nv_state.arrow_anchor(state.head_anchor_type)
             else:
                 raise NotImplementedError
         elif state.head_point:

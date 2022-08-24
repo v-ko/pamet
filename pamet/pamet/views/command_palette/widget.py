@@ -89,7 +89,7 @@ class CommandPaletteWidget(QWidget, View):
                     continue
 
                 item = QListWidgetItem(name)
-                page = pamet.page(id=page_id).copy()
+                page = pamet.page(page_id).copy()
                 if not tab:
                     item.setData(Qt.UserRole,
                                  lambda p=page: window_actions.new_browser_tab(

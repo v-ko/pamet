@@ -8,8 +8,8 @@ import pamet
 from misli.basic_classes import Rectangle, Point2D
 from misli.gui import view_state_type, ViewState
 from pamet.constants import INITIAL_EYE_Z
-from pamet.helpers import Url
-from pamet.model import Note
+from pamet.url import Url
+from pamet.model.note import Note
 from pamet.model.page import Page
 from pamet.views.arrow.widget import ArrowViewState
 from pamet.views.map_page.viewport import Viewport
@@ -71,7 +71,7 @@ class MapPageViewState(ViewState, Viewport, Page):
                 f' {len(self.note_view_states)=}>')
 
     def get_page(self):
-        return pamet.page(gid=self.page_id)
+        return pamet.page(self.page_id)
 
     def mode(self):
         return MapPageMode(self.special_mode)

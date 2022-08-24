@@ -23,7 +23,7 @@ def main():
     pamet.insert(id='test_page')
     pamet.insert(
         page_id='test_page', text='Test that shit out')
-    print(pamet.page(gid='test_page').notes()[0].asdict())
+    print(pamet.page('test_page').notes()[0].asdict())
 
 
 if __name__ == '__main__':

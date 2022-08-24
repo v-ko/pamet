@@ -48,6 +48,10 @@ class Entity:
         if self.immutability_error_message:
             raise Exception(self.immutability_error_message)
 
+        if isinstance(value, datetime):
+            if not value.tzinfo:
+                raise Exception
+
         field_names = [f.name for f in fields(self)]
         if not hasattr(self, key) and key not in field_names:
             raise Exception('Cannot set missing attribute')
@@ -110,9 +114,6 @@ class Entity:
         for key, val in self_dict.items():
             if isinstance(val, (list, dict, set)):
                 val = val.copy()
-                self_dict[key] = val
-            elif isinstance(val, datetime):
-                val = timestamp(val)
                 self_dict[key] = val
 
         return self_dict

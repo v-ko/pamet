@@ -270,13 +270,13 @@ class FSStorageBackupService:
         # Move the recent changes to backup files
         for page_id in self._changed_page_ids:
             # Serialize the page
-            page = pamet.page(id=page_id)
+            page = pamet.page(page_id)
             if not page:
                 log.error(f'Can not backup missing page with id {page_id}')
                 continue
 
-            notes = page.notes()
-            arrows = page.arrows()
+            notes = pamet.notes(page)
+            arrows = pamet.arrows(page)
             page_str = FSStorageRepository.serialize_page(page, notes, arrows)
             last_backup_time = self.last_backup_time(page_id)
 

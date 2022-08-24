@@ -6,7 +6,7 @@ from misli.gui.view_library.view_state import view_state_type
 from misli.logging import get_logger
 
 from pamet import register_note_view_type
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.model.image_note import ImageNote
 from pamet.views.note.base.view import NoteView
 from pamet.views.note.base.state import NoteViewState

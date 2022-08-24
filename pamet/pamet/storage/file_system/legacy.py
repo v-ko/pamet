@@ -11,10 +11,10 @@ from misli import entity_library
 
 from misli.basic_classes import Point2D
 from misli.basic_classes.rectangle import Rectangle
-from misli.helpers import current_time, get_new_id
+from misli.helpers import current_time, get_new_id, timestamp
 from misli.logging import get_logger
 from misli.storage.in_memory_repository import InMemoryRepository
-from pamet.model import Page
+from pamet.model.page import Page
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.image_note import ImageNote
 from pamet.model.note import Note
@@ -30,10 +30,6 @@ INTERNAL_ANCHOR_PREFIX = 'this_note_points_to:'
 EXTERNAL_ANCHOR_PREFIX = 'define_web_page_note:'
 IMAGE_NOTE_PREFIX = 'define_picture_note:'
 SYSTEM_CALL_NOTE_PREFIX = 'define_system_call_note:'
-
-v2_note_checksum_by_page_name = defaultdict(int)
-v3_note_checksum_by_page_name = defaultdict(int)
-v2_notes_by_page_name = defaultdict(set)
 
 
 def backup_file(file_path: Path, backup_folder: Path):
@@ -80,6 +76,11 @@ def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
 
 class LegacyFSRepoReader:
 
+    def __init__(self) -> None:
+        self.v2_note_checksum_by_page_name = defaultdict(int)
+        self.v3_note_checksum_by_page_name = defaultdict(int)
+        self.v2_notes_by_page_name = defaultdict(set)
+
     def convert_v3_to_v4(self, json_path: str | Path, backup_folder: Path,
                          previous_v_repo_entities: dict):
         # V3 example: {
@@ -123,7 +124,7 @@ class LegacyFSRepoReader:
         ids_with_duplicates = []
         new_ids_by_old = {}
         for nt in notes_data:
-            v3_note_checksum_by_page_name[page.name] += 1
+            self.v3_note_checksum_by_page_name[page.name] += 1
             # Scale old coords so that default widget fonts
             # look adequate without correction
             for coord in ['x', 'y', 'width', 'height']:
@@ -152,10 +153,11 @@ class LegacyFSRepoReader:
 
             created = datetime.strptime(t_made, TIME_FORMAT)
             modified = datetime.strptime(t_mod, TIME_FORMAT)
-            created = created.astimezone()  # Fuckit, use the local timezone
+            # Fuckit, use the local timezone
+            created = created.astimezone()
             modified = modified.astimezone()
-            nt['created'] = created
-            nt['modified'] = modified
+            nt['created'] = timestamp(created)
+            nt['modified'] = timestamp(modified)
 
             nt.pop('font_size', None)
 
@@ -289,15 +291,21 @@ class LegacyFSRepoReader:
 
         # Update the arrow ids to be deterministic
         arrows_with_new_ids = []
+        arrows_by_id = {}
         for arrow in arrows:
             new_id = get_new_id([arrow.tail_note_id, arrow.head_note_id])
+            if new_id in arrows_by_id:
+                # This means there's a second arrow with the same start and
+                # end. We just remove it.
+                continue
+            arrows_by_id[new_id] = arrow
             arrows_with_new_ids.append(arrow.with_id(new_id))
         arrows = arrows_with_new_ids
 
         # Assume page created time from the notes. Modified makes sense only
         # for renames as of now and there's no basis to infer it
-        page.created = earliest_creation_time - timedelta(seconds=10)
-        page.modified = earliest_creation_time - timedelta(seconds=10)
+        page.datetime_created = earliest_creation_time - timedelta(seconds=10)
+        page.datetime_modified = earliest_creation_time - timedelta(seconds=10)
 
         new_path = self.path_for_page(page)
         page_json_str = self.serialize_page(page, notes, arrows)
@@ -376,7 +384,8 @@ class LegacyFSRepoReader:
             if line.startswith('[') and line.endswith(']'):
                 current_note_id = int(line[1:-1])
 
-                if current_note_id in v2_notes_by_page_name[file_path.stem]:
+                if current_note_id in self.v2_notes_by_page_name[
+                        file_path.stem]:
                     changed_note_ids.append(current_note_id)
                     old_id = current_note_id
                     current_note_id = get_new_id()
@@ -384,8 +393,8 @@ class LegacyFSRepoReader:
                         Exception('Not enough randomness, wtf')
                     meta_for_id_replace[current_note_id] = old_id
 
-                v2_note_checksum_by_page_name[file_path.stem] += 1
-                v2_notes_by_page_name[file_path.stem].add(current_note_id)
+                self.v2_note_checksum_by_page_name[file_path.stem] += 1
+                self.v2_notes_by_page_name[file_path.stem].add(current_note_id)
                 continue
 
             if '=' not in line:
@@ -468,8 +477,8 @@ class LegacyFSRepoReader:
 
                 nt['links'].append(link_dict)
 
-        assert len(notes) == len(v2_notes_by_page_name[file_path.stem])
-        assert len(notes) == v2_note_checksum_by_page_name[file_path.stem]
+        assert len(notes) == len(self.v2_notes_by_page_name[file_path.stem])
+        assert len(notes) == self.v2_note_checksum_by_page_name[file_path.stem]
 
         page_dict = {'notes': list(notes.values())}
         if is_displayed_first_on_startup:
@@ -491,15 +500,14 @@ class LegacyFSRepoReader:
         if not isinstance(page, Page):
             raise Exception
 
-        entities = self.find(parent_gid=page.gid())
-        notes = [entity for entity in entities if isinstance(entity, Note)]
-        arrows = [entity for entity in entities if isinstance(entity, Arrow)]
+        notes = set(self.notes(page))
+        arrows = set(self.arrows(page))
 
         notes_updated = 0
         for note in notes:
             if note.url.is_empty():
                 continue
-            linked_page = self.find_one(type_name=Page.__name__,
+            linked_page = self.find_one(type=Page,
                                         name=str(note.url))
 
             if str(note.url) == 'Imagga':
@@ -575,7 +583,7 @@ class LegacyFSRepoReader:
             if isinstance(nt, Note)
         ])
 
-        v2_note_count = v2_note_checksum_by_page_name[page.name]
-        v3_note_count = v3_note_checksum_by_page_name[page.name]
+        v2_note_count = self.v2_note_checksum_by_page_name[page.name]
+        v3_note_count = self.v3_note_checksum_by_page_name[page.name]
 
         assert note_count_in_repo == v2_note_count == v3_note_count

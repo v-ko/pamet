@@ -13,8 +13,8 @@ from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
-from pamet.helpers import Url
-from misli.helpers import current_time
+from pamet.url import Url
+from misli.helpers import current_time, timestamp
 from pamet.model.arrow import Arrow, ArrowAnchorType
 
 log = get_logger(__name__)
@@ -28,12 +28,10 @@ class Note(Entity):
     geometry: list = field(default_factory=lambda:
                            [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT])
     style: dict = field(default_factory=dict)
-    color: tuple = field(default_factory=lambda: DEFAULT_COLOR)
-    background_color: tuple = field(default_factory=lambda: DEFAULT_BG_COLOR)
     content: dict = field(default_factory=dict)
     metadata: dict = field(default_factory=dict)
-    created: datetime = field(default_factory=current_time)
-    modified: datetime = field(default_factory=current_time)
+    created: str = field(default_factory=lambda: str(current_time()))
+    modified: str = field(default_factory=lambda: str(current_time()))
     tags: List[str] = field(default_factory=list)
     type_name: str = ''
 
@@ -57,7 +55,7 @@ class Note(Entity):
         return self.page_id
 
     def get_page(self):
-        return pamet.page(id=self.page_id)
+        return pamet.page(self.page_id)
 
     def rect(self) -> Rectangle:
         return Rectangle(*self.geometry)
@@ -161,20 +159,17 @@ class Note(Entity):
         self.content[URL] = new_url
 
     def in_arrows(self) -> Generator[Arrow, None, None]:
-        arrows = pamet.page(id=self.page_id).arrows()
-        for arrow in arrows:
+        for arrow in pamet.arrows(self.page_id):
             if self.id == arrow.head_note_id:
                 yield arrow
 
     def out_arrows(self) -> Generator[Arrow, None, None]:
-        arrows = pamet.page(id=self.page_id).arrows()
-        for arrow in arrows:
+        for arrow in pamet.arrows(self.page_id):
             if self.id == arrow.tail_note_id:
                 yield arrow
 
     def connected_arrows(self) -> Generator[Arrow, None, None]:
-        arrows = pamet.page(id=self.page_id).arrows()
-        for arrow in arrows:
+        for arrow in pamet.arrows(self.page_id):
             if self.id == arrow.tail_note_id or self.id == arrow.head_note_id:
                 yield arrow
 
@@ -196,3 +191,19 @@ class Note(Entity):
                 return rect.bottom_left() + Point2D(rect.width() / 2)
             case _:
                 raise Exception
+
+    @property
+    def datetime_created(self) -> datetime:
+        return datetime.fromisoformat(self.created)
+
+    @datetime_created.setter
+    def datetime_created(self, new_dt: datetime):
+        self.created = timestamp(new_dt)
+
+    @property
+    def datetime_modified(self) -> datetime:
+        return datetime.fromisoformat(self.modified)
+
+    @datetime_modified.setter
+    def datetime_modified(self, new_dt: datetime):
+        self.modified = timestamp(new_dt)

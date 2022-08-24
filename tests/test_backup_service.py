@@ -6,13 +6,13 @@ import time
 from typing import List
 
 from misli.entity_library.change import Change
-from misli.storage.in_memory_repository import InMemoryRepository
 import pamet
 from misli.helpers import fake_time, current_time
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 from pamet.services.backup import FSStorageBackupService
 from pamet.storage.file_system.repository import FSStorageRepository
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 
 # Debug
 PROCESS_INTERVAL = 5
@@ -43,7 +43,7 @@ def change_and_backup(backup_service,
     note = TextNote()
     note.text = note_text
 
-    change = page.insert_note(note)
+    change = pamet.insert_note(note, page)
 
     backup_service.handle_change_set([change])
     backup_service.process_changes()
@@ -66,7 +66,7 @@ def changes_file_is_valid(path, changes):
 def test_backup(tmp_path):
     backup_service = FSStorageBackupService(backup_folder=tmp_path,
                                             record_all_changes=True)
-    in_mem_repo = InMemoryRepository()
+    in_mem_repo = PametInMemoryRepository()
     pamet.set_sync_repo(in_mem_repo)
 
     page = Page(name='test')
@@ -84,7 +84,7 @@ def test_backup(tmp_path):
     note = TextNote()
     note.text = 'Test note'
 
-    change = page.insert_note(note)
+    change = pamet.insert_note(note, page)
     page_json2 = FSStorageRepository.serialize_page(page, [note], [])
 
     backup_service.handle_change_set([change])
@@ -107,7 +107,7 @@ def test_pruning(tmp_path):
     backup_service = FSStorageBackupService(backup_folder=tmp_path,
                                             record_all_changes=True)
 
-    in_mem_repo = InMemoryRepository()
+    in_mem_repo = PametInMemoryRepository()
     pamet.set_sync_repo(in_mem_repo)
 
     for_removal: List[Path] = []
@@ -244,7 +244,7 @@ def test_pruning(tmp_path):
 def test_permanent_storage(tmp_path):
     backup_service = FSStorageBackupService(backup_folder=tmp_path)
 
-    in_mem_repo = InMemoryRepository()
+    in_mem_repo = PametInMemoryRepository()
     pamet.set_sync_repo(in_mem_repo)
 
     # Craete the initial backup
@@ -269,7 +269,7 @@ def test_sheduler_and_worker(tmp_path):
     # Just do a single backup and check it along with the backup/prune
     # timesetamps
 
-    in_mem_repo = InMemoryRepository()
+    in_mem_repo = PametInMemoryRepository()
     pamet.set_sync_repo(in_mem_repo)
 
     backup_service = FSStorageBackupService(backup_folder=tmp_path,

@@ -12,7 +12,10 @@ from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.helpers import configure_for_qt
+from pamet.model.page import Page
+
 from pamet.services.backup import FSStorageBackupService
+
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
@@ -40,22 +43,22 @@ def main():
 
     # Testing - restore legacy backups
 
-    # V2
-    v2_backup_folder = repo_path / '__v2_legacy_pages_backup__'
-    for file in v2_backup_folder.iterdir():
+    # # V2
+    # v2_backup_folder = repo_path / '__v2_legacy_pages_backup__'
+    # for file in v2_backup_folder.iterdir():
 
-        v3_file_in_repo = file.parent.parent / file.name
-        v3_file_in_repo = v3_file_in_repo.with_suffix('').with_suffix('.json')
+    #     v3_file_in_repo = file.parent.parent / file.name
+    #     v3_file_in_repo = v3_file_in_repo.with_suffix('').with_suffix('.json')
 
-        if v3_file_in_repo.exists():
-            v3_file_in_repo.unlink()
-        restore_path = file.parent.parent / file.name
-        restore_path = restore_path.with_suffix('')
-        file.rename(restore_path)
+    #     if v3_file_in_repo.exists():
+    #         v3_file_in_repo.unlink()
+    #     restore_path = file.parent.parent / file.name
+    #     restore_path = restore_path.with_suffix('')
+    #     file.rename(restore_path)
 
-    for file in repo_path.iterdir():
-        if file.name.endswith('.pam4.json'):
-            file.unlink()
+    # for file in repo_path.iterdir():
+    #     if file.name.endswith('.pam4.json'):
+    #         file.unlink()
 
     # # V3
     # v3_backup_folder = repo_path / '__v3_legacy_pages_backup__'
@@ -109,11 +112,11 @@ def main():
     # There should be a better place to do call the validity checks I guess
     # pamet.model.arrow_validity_check()
 
-    # Debug
-    misli_channels.state_changes_per_TLA_by_id.subscribe(
-        lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
+    # # Debug
+    # misli_channels.state_changes_per_TLA_by_id.subscribe(
+    #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
-    start_page = pamet.helpers.get_default_page() or pamet.page()
+    start_page = pamet.helpers.get_default_page() or pamet.find_one(type=Page)
     if not start_page:
         start_page = other_actions.create_default_page()
 

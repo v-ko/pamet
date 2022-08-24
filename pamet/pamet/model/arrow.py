@@ -65,7 +65,7 @@ class Arrow(Entity):
         return self.page_id
 
     def get_parent_page(self):
-        return pamet.page(id=self.page_id)
+        return pamet.page(self.page_id)
 
     @property
     def tail_point(self) -> Point2D:
@@ -135,13 +135,13 @@ class Arrow(Entity):
         page = self.get_parent_page()
         if not page:
             raise Exception
-        return page.note(self.tail_note_id)
+        return pamet.note(page, self.tail_note_id)
 
     def get_head_note(self):
         page = self.get_parent_page()
         if not page:
             raise Exception
-        return page.note(self.head_note_id)
+        return pamet.note(page, self.head_note_id)
 
     def edge_indices(self):
         mid_edge_count = 2 + len(self.mid_points)

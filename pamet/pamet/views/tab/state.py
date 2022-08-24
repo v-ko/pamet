@@ -2,7 +2,7 @@ from dataclasses import field
 from typing import List
 
 from misli.gui import view_state_type, ViewState
-from pamet.model import Note
+from pamet.model.note import Note
 from pamet.views.map_page.state import MapPageViewState
 
 

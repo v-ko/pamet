@@ -8,11 +8,18 @@ from misli.storage.repository import IMMUTABILITY_ERROR_MESSAGE, Repository
 
 class InMemoryRepository(Repository):
 
-    def __init__(self):
+    def __init__(self, types_for_cached_type_filtering: tuple = None):
         super().__init__()
+        self.types_for_cached_type_filtering = types_for_cached_type_filtering
+
         self._entity_cache = {}
         self._entity_cache_by_parent = defaultdict(set)
         self._entity_cache_by_type = defaultdict(set)
+
+    def type_cache_supported_subclass(self, entity: Entity):
+        for supported_class in self.types_for_cached_type_filtering:
+            if isinstance(entity, supported_class):
+                return supported_class
 
     def upsert_to_cache(self, entity: Entity) -> Entity | None:
         """Adds an entity to the cache. Returns the old entity or None"""
@@ -23,7 +30,11 @@ class InMemoryRepository(Repository):
 
         # Insert it into the indices
         self._entity_cache[entity.gid()] = entity
-        self._entity_cache_by_type[type(entity).__name__].add(entity)
+
+        if self.types_for_cached_type_filtering:
+            supported_subclass = self.type_cache_supported_subclass(entity)
+            if supported_subclass:
+                self._entity_cache_by_type[supported_subclass].add(entity)
         if entity.parent_gid():
             self._entity_cache_by_parent[entity.parent_gid()].add(entity)
         return old_entity
@@ -33,17 +44,19 @@ class InMemoryRepository(Repository):
         if not entity:
             return None
 
-        self._entity_cache_by_type[type(entity).__name__].remove(entity)
+        if self.types_for_cached_type_filtering:
+            supported_subclass = self.type_cache_supported_subclass(entity)
+            if supported_subclass:
+                self._entity_cache_by_type[supported_subclass].remove(entity)
+
         if entity.parent_gid():
-            self._entity_cache_by_parent[entity.parent_gid()].remove(
-                entity)
+            self._entity_cache_by_parent[entity.parent_gid()].remove(entity)
 
         return entity
 
     def insert_one(self, entity: Entity) -> Change:
         if entity.gid() in self._entity_cache:
-            raise Exception(
-                'Cannot insert {entity}, since it already exists')
+            raise Exception('Cannot insert {entity}, since it already exists')
 
         self.upsert_to_cache(entity)
         return Change.CREATE(entity)
@@ -72,33 +85,51 @@ class InMemoryRepository(Repository):
     def update(self, batch: List[Entity]):
         return [self.update_one(entity) for entity in batch]
 
-    def find_cached(self, **filter):
+    def find_cached(self,
+                    gid: str | tuple = None,
+                    type: Any = None,
+                    parent_gid: str | tuple = None,
+                    **filter) -> Generator[Any, None, None]:
         # If searching by gid - there will be only one unique result (if any)
-        if 'gid' in filter:
-            gid = filter.get('gid')
+        if gid:
             try:
                 result = self._entity_cache.get(gid, None)
             except TypeError:
                 result = []
-            yield from [result] if result else []
+            if result:
+                yield result
+                return
+            else:
+                return
 
         # If searching by parent_gid - use the index to do it efficiently
-        if 'parent_gid' in filter:
-            parent_gid = filter.pop('parent_gid')
+        if parent_gid:
             try:
-                search_set = self._entity_cache_by_parent.get(parent_gid, [])
+                search_set = self._entity_cache_by_parent.get(
+                    parent_gid, set())
             except TypeError:
                 search_set = []
         else:
-            search_set = self._entity_cache.values()
+            search_set = set(self._entity_cache.values())
 
         # Searching by type_name is a special case
-        if 'type_name' in filter:
-            type_name = filter.pop('type_name')
-            search_set = self._entity_cache_by_type.get(type_name, [])
+        if type:
+            if self.types_for_cached_type_filtering and \
+                    type in self.types_for_cached_type_filtering:
+                type_search_set = self._entity_cache_by_type.get(type, set())
+                search_set = search_set.intersection(type_search_set)
+            else:
+                search_set = (e for e in search_set if isinstance(e, type))
+
+        # Apply the rest of the filter
         if filter:
             search_set = find_many_by_props(search_set, **filter)
         yield from search_set
 
-    def find(self, **filter) -> Generator[Any, None, None]:
-        yield from (entity.copy() for entity in self.find_cached(**filter))
+    def find(self,
+             gid: str | tuple = None,
+             type: Any = None,
+             parent_gid: str | tuple = None,
+             **filter) -> Generator[Any, None, None]:
+        yield from (entity.copy() for entity in self.find_cached(
+            gid, type, parent_gid, **filter))

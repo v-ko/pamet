@@ -2,11 +2,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import QListWidgetItem, QWidget
 
-from misli.entity_library.change import Change
-from misli.gui.utils.qt_widgets import bind_and_apply_state
 from misli.gui.view_library.view_state import ViewState, view_state_type
 import pamet
-from pamet.helpers import Url
+from pamet.url import Url
 from pamet.services.search.base import SearchResult
 from pamet.actions import tab as tab_actions
 
