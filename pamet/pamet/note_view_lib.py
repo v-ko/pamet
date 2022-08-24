@@ -57,17 +57,6 @@ def note_view_state_type_for_note(note, edit=False):
     return note_state_type_by_view(NoteViewType.__name__)
 
 
-def note_type_from_props(props):
-    # I can infer the note type by doing kind of an IOU for the fields.
-    # I.e. iterate over the note types and sort them by match
-    try:
-        note_type = get_entity_class_by_name(props['type_name'])  #@IgnoreException
-    except Exception:
-        return None
-
-    return note_type
-
-
 def note_types_with_assiciated_views() -> Entity:
     note_types = []
     for note_type_name in _view_types_by_note_type_name:

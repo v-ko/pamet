@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Generator, Iterable
 
 from misli import get_logger
+from misli.entity_library import dump_to_dict, load_from_dict
 from misli.entity_library.entity import Entity
 from misli.helpers import current_time, timestamp
 
@@ -19,6 +20,7 @@ class DiffTypes(Enum):
 
 
 class Diff:
+
     def __init__(self, change: Change, type: DiffTypes):
         self.change = change
         self.type = type
@@ -65,6 +67,7 @@ class Diff:
 
 
 class Updated:
+
     def __init__(self, change: Change):
         self.change = change
 
@@ -103,6 +106,7 @@ class Change:
     """An object representing a change in the entity state. It holds the old
      and the new states (as entities) as well as the change type.
     """
+
     def __init__(self,
                  old_state: Entity = None,
                  new_state: Entity = None,
@@ -151,11 +155,15 @@ class Change:
 
     @classmethod
     def from_safe_delta_dict(cls, change_dict: dict):
-        old_state = change_dict['old_state']
+        old_state_dict = change_dict['old_state']
 
         # Get the delta and use it to generate the new_state
         delta = change_dict.pop('delta')
-        change_dict['new_state'] = copy(old_state).replace(**delta)
+        new_state_dict = copy(old_state_dict).replace(**delta)
+
+        change_dict['old_state'] = load_from_dict(old_state_dict)
+        change_dict['new_state'] = load_from_dict(new_state_dict)
+
         return cls(**change_dict)
 
     # @classmethod
@@ -165,16 +173,25 @@ class Change:
     #     return cls(old_state, new_state)
 
     def asdict(self) -> dict:
-        return dict(
-            old_state=self.old_state.asdict() if self.old_state else None,
-            new_state=self.new_state.asdict() if self.new_state else None,
-            time=timestamp(self.time)
-        )
+        if self.old_state:
+            old_state = dump_to_dict(self.old_state)
+        else:
+            old_state = None
+
+        if self.new_state:
+            new_state = dump_to_dict(self.new_state)
+        else:
+            new_state = None
+
+        return dict(old_state=old_state,
+                    new_state=new_state,
+                    time=timestamp(self.time))
 
     def as_safe_delta_dict(self):
         if not self.is_update():
             return self.asdict()
-        return dict(old_state=self.old_state.asdict(), delta=self.delta())
+
+        return dict(old_state=dump_to_dict(self.old_state), delta=self.delta())
 
     def as_unsafe_delta_dict(self):
         if self.is_create():
@@ -202,8 +219,7 @@ class Change:
     @classmethod
     def UPDATE(cls, old_state: Entity, new_state: Entity) -> Change:
         """Convenience method for constructing a Change with type UPDATE"""
-        return cls(old_state=copy(old_state),
-                   new_state=copy(new_state))
+        return cls(old_state=copy(old_state), new_state=copy(new_state))
 
     @classmethod
     def DELETE(cls, old_state: Entity) -> Change:

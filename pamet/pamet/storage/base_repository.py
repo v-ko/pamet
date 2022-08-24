@@ -54,21 +54,6 @@ class PametRepository(Repository):
         return self.find_one(gid=page_gid)
 
     # -------------Notes CRUD-------------
-    def create_note(self, **props) -> Note:
-        if 'page_id' not in props:
-            raise Exception(
-                'Cannot create note without passing a page_id kwarg')
-
-        type = pamet.note_type_from_props(props)
-        note_ = entity_library.from_dict(type, props)
-        note_.datetime_created = current_time()
-        note_.datetime_modified = current_time()
-        change = self.insert_one(note_)
-        if not change:
-            raise Exception('No change returned for the inserted note.')
-        if self.raw_entity_changes_channel:
-            self.raw_entity_changes_channel.push(change)
-        return note_
 
     def insert_note(self, note_: Note, page: Page = None) -> Change:
         if page:

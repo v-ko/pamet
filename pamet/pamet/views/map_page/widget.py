@@ -311,7 +311,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         else:  # Updated
             if isinstance(child, Note):
-                if change.updated.type_name:
+                if type(change.old_state) != type(change.new_state):
                     note_widget = self.note_widget_by_note_gid(child.gid())
                     self.remove_note_widget(note_widget)
                     map_page_actions.handle_child_removed(self_state, child)

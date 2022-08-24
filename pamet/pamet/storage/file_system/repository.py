@@ -260,13 +260,15 @@ class FSStorageRepository(PametInMemoryRepository,
         #     page_state['notes'] = page_state.pop('note_states', [])
         # if 'arrow_states' in page_state:
         #     page_state['arrows'] = page_state.pop('arrow_states', [])
+        if 'type_name' not in page_state:
+            page_state['type_name'] = Page.__name__
 
         # Detach the children
         note_states = page_state.pop('notes', [])
         arrow_states = page_state.pop('arrows', [])
 
         # Create the page
-        page = entity_library.from_dict(Page.__name__, page_state)
+        page = entity_library.load_from_dict(page_state)
 
         # Load the notes
         notes = []
@@ -308,20 +310,14 @@ class FSStorageRepository(PametInMemoryRepository,
 
             # /ad-hoc fixes
 
-            try:
-                note_type = entity_library.get_entity_class_by_name(
-                    ns['type_name'])
-            except Exception:
-                log.error(f'Could not get note type (in {json_file_path}) '
-                          f'for the following note: {ns}')
-                continue
-
-            notes.append(entity_library.from_dict(note_type.__name__, ns))
+            notes.append(entity_library.load_from_dict(ns))
 
         # Load the arrows
         arrows = []
         for arrow_state in arrow_states:
             # REMOVE vvv
+            if 'type_name' not in arrow_state:
+                arrow_state['type_name'] = Arrow.__name__
             # arrow_state.pop('background_color', None)
             # if 'mid_point_coords' not in arrow_state:
             #     arrow_state['mid_point_coords'] = arrow_state.pop('
@@ -331,12 +327,12 @@ class FSStorageRepository(PametInMemoryRepository,
             # if 'tail_coords' not in arrow_state:
             #     arrow_state['tail_coords'] = arrow_state.pop('tail_point')
 
+
             if 'page_id' not in arrow_state or not arrow_state['page_id']:
                 raise Exception
 
             try:
-                arrow: Arrow = entity_library.from_dict(
-                    Arrow.__name__, arrow_state)
+                arrow: Arrow = entity_library.load_from_dict(arrow_state)
             except Exception as e:
                 log.error(f'Exception {e} raised while parsing arrow '
                           f'{arrow_state} from file {json_file_path}')
@@ -348,9 +344,9 @@ class FSStorageRepository(PametInMemoryRepository,
 
     @staticmethod
     def serialize_page(page: Page, notes: List[Note], arrows: List[Arrow]):
-        page_state = page.asdict()
-        page_state['notes'] = [n.asdict() for n in notes]
-        page_state['arrows'] = [a.asdict() for a in arrows]
+        page_state = entity_library.dump_to_dict(page)
+        page_state['notes'] = [entity_library.dump_to_dict(n) for n in notes]
+        page_state['arrows'] = [entity_library.dump_to_dict(a) for a in arrows]
 
         try:
             json_str = json.dumps(page_state, ensure_ascii=False, indent=4)

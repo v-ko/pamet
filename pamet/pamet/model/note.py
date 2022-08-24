@@ -33,19 +33,12 @@ class Note(Entity):
     created: str = field(default_factory=lambda: str(current_time()))
     modified: str = field(default_factory=lambda: str(current_time()))
     tags: List[str] = field(default_factory=list)
-    type_name: str = ''
 
     def __repr__(self):
         return f'<{type(self).__name__} gid={self.gid()}>'
 
-    def __post_init__(self):
-        self.type_name = type(self).__name__
-        # if not self.page_id:
-        #     log.warning('Initializing Note without a page_id')
-
     def asdict(self):
         self_dict = super().asdict()
-        self_dict['type_name'] = type(self).__name__
         return self_dict
 
     def gid(self):

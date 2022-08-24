@@ -62,6 +62,13 @@ class Entity:
 
         return object.__setattr__(self, key, value)
 
+    def __post_init__(self):
+        # Just for consistency if a subclass implements it at some point
+        # removes it again - sub-sub-classes
+        # who implement __post_init__ won't need to change
+        # (add/remove the super().__post_init__() calls)
+        pass
+
     # vv These two get transplanted in the entity_type decorator, since
     # the dataclasses lib disregards them in child classes
     # def __hash__(self):

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import json
 from typing import Any
 from dataclasses import dataclass, MISSING
 
@@ -38,6 +39,10 @@ def entity_type(entity_class: Any, repr: bool = False):
     entity_class.__hash__ = __hash__
     entity_class.__eq__ = __eq__
 
+    if hasattr(entity_class, 'type_name'):
+        raise Exception('The type_name identifier is used in the '
+                        'serialization and is prohibited.')
+
     entity_class = dataclass(entity_class, repr=repr)
 
     # Register the entity class
@@ -54,9 +59,31 @@ def get_entity_class_by_name(entity_class_name: str):
     return entity_library[entity_class_name]
 
 
-def from_dict(type_name: str, entity_dict: dict) -> Entity:
-    """Construct an entity given its state as a dict"""
+def dump_to_dict(entity: Entity) -> dict:
+    entity_dict = entity.asdict()
+
+    if 'type_name' in entity_dict:
+        raise Exception
+
+    type_name = type(entity).__name__
+    entity_dict['type_name'] = type_name
+    return entity_dict
+
+
+def dump_as_json(entity: Entity, ensure_ascii=False, **dump_kwargs):
+    entity_dict = dump_to_dict(entity)
+    json_str = json.dumps(entity_dict, ensure_ascii=False, **dump_kwargs)
+    return json_str
+
+
+# def load_from_json(json_str: str):
+#     entity_dict = json.loads(json_str)
+
+
+def load_from_dict(entity_dict: dict):
+    type_name = entity_dict.pop('type_name')
     cls = get_entity_class_by_name(type_name)
+
     if 'id' in entity_dict:
         instance = cls(id=entity_dict.pop('id'))
     else:

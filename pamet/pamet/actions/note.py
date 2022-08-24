@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import misli
+from misli.entity_library import dump_to_dict
+from misli.helpers import current_time
 import pamet.views.tab.state
 from misli import gui
 from misli.gui.actions_library import action
@@ -22,7 +24,7 @@ def create_new_note(tab_state: TabViewState, note: Note):
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
     edit_view_state = EditViewType(note_gid=note.gid(),
-                                   new_note_dict=note.asdict())
+                                   new_note_dict=dump_to_dict(note))
     edit_view_state.update_from_note(note)
 
     tab_state.edit_view_state = edit_view_state
@@ -33,13 +35,16 @@ def create_new_note(tab_state: TabViewState, note: Note):
 
 @action('notes.finish_creating_note')
 def finish_creating_note(tab_state: TabViewState, note: Note):
-    note = pamet.create_note(**note.asdict())
+    # note = pamet.create_note(**note.asdict())
+
+    note.datetime_created = current_time()
+    note.datetime_modified = current_time()
 
     # Autosize the note
     rect = note.rect()
     rect.set_size(snap_to_grid(minimal_nonelided_size(note)))
     note.set_rect(rect)
-    pamet.update_note(note)
+    pamet.insert_note(note)
 
     tab_state.edit_view_state = None
     gui.update_state(tab_state)

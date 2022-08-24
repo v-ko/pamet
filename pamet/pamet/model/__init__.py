@@ -110,9 +110,6 @@ def update_page(page_: Page) -> Change:
 
 
 # -------------Notes CRUD-------------
-def create_note(**props) -> Note:
-    return _sync_repo.create_note(**props)
-
 
 def insert_note(note_: Note, page: Page = None) -> Change:
     return _sync_repo.insert_note(note_, page)

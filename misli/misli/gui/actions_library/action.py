@@ -72,5 +72,4 @@ class ActionCall:
         self_dict = copy(vars(self))
         self_dict['run_state'] = self.run_state.name
         self_dict.pop('_function')
-        # self_dict['function'] = name_for_unwrapped_action(self._function)
         return self_dict

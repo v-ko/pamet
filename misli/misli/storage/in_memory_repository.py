@@ -112,7 +112,7 @@ class InMemoryRepository(Repository):
         else:
             search_set = set(self._entity_cache.values())
 
-        # Searching by type_name is a special case
+        # Searching by type is a special case
         if type:
             if self.types_for_cached_type_filtering and \
                     type in self.types_for_cached_type_filtering:

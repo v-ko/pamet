@@ -24,9 +24,8 @@ class BaseNoteEditWidget(QWidget, View):
         self.parent_tab: TabWidget = parent
 
         if initial_state.new_note_dict:
-            type_name = initial_state.new_note_dict.pop('type_name')
-            self.edited_note = misli.entity_library.from_dict(
-                type_name, initial_state.new_note_dict)
+            self.edited_note = misli.entity_library.load_from_dict(
+                initial_state.new_note_dict)
         else:
             self.edited_note = initial_state.get_note()
 
