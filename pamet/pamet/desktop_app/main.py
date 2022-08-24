@@ -134,7 +134,7 @@ def main():
 
     backup_service = FSStorageBackupService(
         backup_folder=config.backup_folder,
-        change_set_channel=pamet_channels.entity_change_sets_per_TLA,
+        changeset_channel=pamet_channels.entity_change_sets_per_TLA,
         record_all_changes=True)
     if not backup_service.start():
         log.info('Backup service not started. '

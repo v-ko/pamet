@@ -30,7 +30,7 @@ def test_change_processing(tmp_path):
     backup_service.process_changes()
 
     # Assert result
-    jsonl_data = backup_service.tmp_changes_path(page.id).read_text()
+    jsonl_data = backup_service.tmp_changeset_path(page.id).read_text()
     json_lines = jsonl_data.split('\n')
     assert json_lines[0] == json.dumps(change.as_safe_delta_dict(),
                                        ensure_ascii=False)
@@ -96,7 +96,7 @@ def test_backup(tmp_path):
     assert len(backups) == 2
     assert page_json2 == backups[1].read_text()
 
-    changes_files = list(backup_service.changes_files_for_page(page.id))
+    changes_files = list(backup_service.changeset_paths_for_page(page.id))
     assert len(changes_files) == 1
     # lines = changes_files[0].read_text().split('\n')
     # assert lines[0] == json.dumps(change.as_safe_delta_dict())
@@ -152,7 +152,7 @@ def test_pruning(tmp_path):
     for_keeping.append(
         backup_service.recent_backup_path(page.id, weekly_kept_time))
     changes.append(change)
-    change_obj_file_path = backup_service.changes_path(page.id,
+    change_obj_file_path = backup_service.changeset_path(page.id,
                                                        initial_backup_time,
                                                        weekly_kept_time)
     change_obj_files[change_obj_file_path] = changes
@@ -184,7 +184,7 @@ def test_pruning(tmp_path):
     change = change_and_backup(backup_service, page, daily_kept_time,
                                'Last month, same day, to be kept')
     changes.append(change)
-    change_obj_file_path = backup_service.changes_path(page.id,
+    change_obj_file_path = backup_service.changeset_path(page.id,
                                                        weekly_kept_time,
                                                        daily_kept_time)
     change_obj_files[change_obj_file_path] = changes
@@ -215,7 +215,7 @@ def test_pruning(tmp_path):
     change = change_and_backup(backup_service, page, hourly_kept_time,
                                'Last day, same hour, to be kept')
     changes.append(change)
-    change_obj_file_path = backup_service.changes_path(page.id,
+    change_obj_file_path = backup_service.changeset_path(page.id,
                                                        daily_kept_time,
                                                        hourly_kept_time)
     change_obj_files[change_obj_file_path] = changes
@@ -234,7 +234,7 @@ def test_pruning(tmp_path):
     for backup_path in for_removal:
         assert not backup_path.exists()
 
-    assert len(backup_service.changes_files_for_page(
+    assert len(backup_service.changeset_paths_for_page(
         page.id)) == len(change_obj_files)
 
     for path, changes in change_obj_files.items():
@@ -288,7 +288,7 @@ def test_sheduler_and_worker(tmp_path):
 
     # Wait for the process_events
     time.sleep(0.6)
-    assert backup_service.tmp_changes_path(page.id).exists()
+    assert backup_service.tmp_changeset_path(page.id).exists()
 
     time.sleep(1)
     assert bool(backup_service.last_backup_time(page.id))
