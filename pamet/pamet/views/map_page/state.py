@@ -7,7 +7,7 @@ from typing import List
 import pamet
 from misli.basic_classes import Rectangle, Point2D
 from misli.gui import view_state_type, ViewState
-from pamet.constants import INITIAL_EYE_Z
+from pamet.constants import DEFAULT_EYE_HEIGHT
 from pamet.url import Url
 from pamet.model.note import Note
 from pamet.model.page import Page
@@ -35,7 +35,7 @@ class MapPageViewState(ViewState, Viewport, Page):
 
     geometry: Rectangle = Rectangle(0, 0, 500, 500)
     viewport_center: Point2D = field(default_factory=Point2D)
-    viewport_height: float = INITIAL_EYE_Z
+    viewport_height: float = DEFAULT_EYE_HEIGHT
 
     special_mode: int = 0
 

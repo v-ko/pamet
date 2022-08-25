@@ -147,31 +147,6 @@ class Change:
         else:
             return ChangeTypes.DELETE
 
-    @classmethod
-    def from_dict(cls, change_dict: dict) -> Change:
-        if 'delta' in change_dict:
-            return cls.from_safe_delta_dict(change_dict)
-        return cls(**change_dict)
-
-    @classmethod
-    def from_safe_delta_dict(cls, change_dict: dict):
-        old_state_dict = change_dict['old_state']
-
-        # Get the delta and use it to generate the new_state
-        delta = change_dict.pop('delta')
-        new_state_dict = copy(old_state_dict).replace(**delta)
-
-        change_dict['old_state'] = load_from_dict(old_state_dict)
-        change_dict['new_state'] = load_from_dict(new_state_dict)
-
-        return cls(**change_dict)
-
-    # @classmethod
-    # def from_unsafe_delta_dict(cls, old_state: Entity, delta_dict: dict):
-    #     delta = delta_dict['delta']
-    #     new_state = copy(old_state).replace(**delta)
-    #     return cls(old_state, new_state)
-
     def asdict(self) -> dict:
         if self.old_state:
             old_state = dump_to_dict(self.old_state)
@@ -186,6 +161,36 @@ class Change:
         return dict(old_state=old_state,
                     new_state=new_state,
                     time=timestamp(self.time))
+
+    @classmethod
+    def from_dict(cls, change_dict: dict) -> Change:
+        if 'delta' in change_dict:
+            return cls.from_safe_delta_dict(change_dict)
+        return cls(**change_dict)
+
+    @classmethod
+    def from_safe_delta_dict(cls, change_dict: dict):
+        old_state_dict = change_dict.get('old_state', None)
+        new_state_dict = change_dict.get('new_state', None)
+        delta = change_dict.get('delta', None)
+
+        # Get the delta and use it to generate the new_state
+        delta = change_dict.pop('delta', None)
+        if delta is not None:
+            new_state_dict = copy(old_state_dict).replace(**delta)
+
+        if old_state_dict:
+            change_dict['old_state'] = load_from_dict(old_state_dict)
+        if new_state_dict:
+            change_dict['new_state'] = load_from_dict(new_state_dict)
+
+        return cls(**change_dict)
+
+    # @classmethod
+    # def from_unsafe_delta_dict(cls, old_state: Entity, delta_dict: dict):
+    #     delta = delta_dict['delta']
+    #     new_state = copy(old_state).replace(**delta)
+    #     return cls(old_state, new_state)
 
     def as_safe_delta_dict(self):
         if not self.is_update():

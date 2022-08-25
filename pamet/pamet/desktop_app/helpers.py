@@ -200,7 +200,7 @@ def copy_script_templates(overwrite: bool = False):
         shutil.copy(source_file, target_path)
 
 
-def configure_for_qt():
+def configure_for_qt(app):
     global _media_store, _default_note_font
 
     # Force view registration (should be handled by the ExtensionManager)
@@ -212,7 +212,8 @@ def configure_for_qt():
     from pamet.views.note.script.widget import ScriptNoteWidget
     from pamet.views.note.script.edit_widget import ScriptNoteEditWidget
 
-    misli.configure_for_qt()
+    desktop_app.set_app(app)
+    misli.configure_for_qt(app)
 
     log.info(f'Using data folder: {pamet_data_folder_path}')
     util_provider = QtWidgetsUtilProvider(pamet_data_folder_path)

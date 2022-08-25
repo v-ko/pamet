@@ -8,11 +8,13 @@ from misli.logging import get_logger
 from misli.basic_classes import Point2D
 
 import pamet
+from pamet.constants import DEFAULT_EYE_HEIGHT
 
 log = get_logger(__name__)
 
 
 class Url:
+
     def __init__(self, url: Union[Url, str]):
         if isinstance(url, Url):
             url = str(url)
@@ -84,7 +86,23 @@ class Url:
             except Exception:
                 return None
 
-    def with_anchor(self, anchor: str) -> Url:
+    def with_anchor(self,
+                    anchor: str = None,
+                    eye_height: float = None,
+                    eye_pos: Point2D = None,
+                    note: Note = None) -> Url:
+        eye_is_specified = bool(eye_height is not None or eye_pos)
+        if bool(anchor) + eye_is_specified + bool(note) != 1:
+            raise Exception(
+                'Specifiy either eye_at, note or the anchor string')
+
+        if eye_is_specified:
+            if eye_height is None:
+                eye_height = DEFAULT_EYE_HEIGHT
+            elif eye_pos is None:
+                eye_pos = Point2D(0, 0)
+            anchor = f'eye_at={eye_height}/{eye_pos.x()}/{eye_pos.y()}'
+
         new_url = Url(self)
         new_url._parsed_url = new_url._parsed_url._replace(fragment=anchor)
         return new_url

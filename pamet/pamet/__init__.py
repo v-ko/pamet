@@ -9,7 +9,7 @@ from .model import page, pages, remove_page, update_page, insert_page
 from .model import find, find_one
 from .model import insert_note, remove_note, update_note, note, notes
 from .model import insert_arrow, remove_arrow, update_arrow, arrow, arrows
-from .model import apply_change, undo_history
+from .model import apply_change, undo_service
 
 from .note_view_lib import register_note_view_type, note_view_type
 from .note_view_lib import note_view_type_by_state, note_state_type_by_view

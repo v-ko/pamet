@@ -76,8 +76,10 @@ def dump_as_json(entity: Entity, ensure_ascii=False, **dump_kwargs):
     return json_str
 
 
-# def load_from_json(json_str: str):
-#     entity_dict = json.loads(json_str)
+def load_from_json(json_str: str):
+    raise Exception('not tested')
+    entity_dict = json.loads(json_str)
+    load_from_dict(entity_dict)
 
 
 def load_from_dict(entity_dict: dict):

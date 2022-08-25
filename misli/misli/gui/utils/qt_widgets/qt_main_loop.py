@@ -1,10 +1,13 @@
 from typing import Callable
 from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication
 from misli.pubsub.main_loop import MainLoop
-from numpy import isin
 
 
 class QtMainLoop(MainLoop):
+    def __init__(self, app: QApplication):
+        self.app = app
+
     def call_delayed(
             self,
             callback: Callable,
@@ -19,3 +22,9 @@ class QtMainLoop(MainLoop):
             raise Exception
 
         QTimer.singleShot(delay * 1000, lambda: callback(*args, **kwargs))
+
+    def process_events(self):
+        self.app.processEvents()
+
+    def loop(self):
+        self.app.exec()

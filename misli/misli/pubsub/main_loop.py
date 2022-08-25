@@ -13,6 +13,9 @@ class MainLoop:
 
         raise NotImplementedError
 
+    def process_events(self):
+        raise NotImplementedError
+
 
 class NoMainLoop(MainLoop):
     """A MainLoop implementation that relies on calling process_events instead

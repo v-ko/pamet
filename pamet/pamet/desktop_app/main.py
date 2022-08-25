@@ -17,6 +17,7 @@ from pamet.model.page import Page
 from pamet.services.backup import FSStorageBackupService
 
 from pamet.services.search.fuzzy import FuzzySearchService
+from pamet.services.undo import UndoService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
 
@@ -24,11 +25,9 @@ log = misli.get_logger(__name__)
 
 
 def main():
-    misli.line_spacing_in_pixels = 20
     app = DesktopApp()
 
-    desktop_app.set_app(app)
-    configure_for_qt()
+    configure_for_qt(app)
 
     # Load the config
     config = desktop_app.get_config()
@@ -109,6 +108,8 @@ def main():
         fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
     pamet.set_sync_repo(fs_repo)
+    pamet.set_undo_service(
+        UndoService(misli_channels.entity_change_sets_per_TLA))
     # There should be a better place to do call the validity checks I guess
     # pamet.model.arrow_validity_check()
 
@@ -124,8 +125,9 @@ def main():
     window = WindowWidget(initial_state=window_state)
     window.showMaximized()
 
-    misli.call_delayed(window_actions.new_browser_tab,
-                       args=[window_state, start_page])
+    # misli.call_delayed(window_actions.new_browser_tab,
+    #                    args=[window_state, start_page])
+    window_actions.new_browser_tab(window_state, start_page)
 
     search_service = FuzzySearchService(
         pamet_channels.entity_change_sets_per_TLA)
@@ -134,6 +136,7 @@ def main():
 
     backup_service = FSStorageBackupService(
         backup_folder=config.backup_folder,
+        repository=fs_repo,
         changeset_channel=pamet_channels.entity_change_sets_per_TLA,
         record_all_changes=True)
     if not backup_service.start():

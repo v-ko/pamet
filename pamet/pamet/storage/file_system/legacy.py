@@ -14,6 +14,8 @@ from misli.basic_classes.rectangle import Rectangle
 from misli.helpers import current_time, get_new_id, timestamp
 from misli.logging import get_logger
 from misli.storage.in_memory_repository import InMemoryRepository
+from pamet.constants import MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
+from pamet.helpers import snap_to_grid
 from pamet.model.page import Page
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.image_note import ImageNote
@@ -77,8 +79,8 @@ def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
 class LegacyFSRepoReader:
 
     def __init__(self) -> None:
-        self.v2_note_checksum_by_page_name = defaultdict(int)
-        self.v3_note_checksum_by_page_name = defaultdict(int)
+        self.v2_note_checksum_by_page_name = {}
+        self.v3_note_checksum_by_page_name = {}
         self.v2_notes_by_page_name = defaultdict(set)
 
     def convert_v3_to_v4(self, json_path: str | Path, backup_folder: Path,
@@ -115,6 +117,7 @@ class LegacyFSRepoReader:
 
         # Load the page
         page = Page(name=json_path.stem)
+        self.v3_note_checksum_by_page_name[page.name] = 0
 
         # Load the notes and arrows
         earliest_creation_time = current_time()
@@ -128,7 +131,7 @@ class LegacyFSRepoReader:
             # Scale old coords so that default widget fonts
             # look adequate without correction
             for coord in ['x', 'y', 'width', 'height']:
-                nt[coord] = nt[coord] * ONE_V3_COORD_UNIT_TO_V4
+                nt[coord] = snap_to_grid(nt[coord] * ONE_V3_COORD_UNIT_TO_V4)
 
                 # There was that very specific case with an overflow, wtf
                 if not (-2147483647 < nt[coord] < 2147483647):
@@ -139,8 +142,8 @@ class LegacyFSRepoReader:
             nt['id'] = str(nt['id'])
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
-            nt['geometry'] = (nt.pop('x'), nt.pop('y'), nt.pop('width'),
-                              nt.pop('height'))
+            nt['geometry'] = [nt.pop('x'), nt.pop('y'), nt.pop('width'),
+                              nt.pop('height')]
             t_made = nt.pop('t_made')
             t_mod = nt.pop('t_mod')
 
@@ -187,7 +190,8 @@ class LegacyFSRepoReader:
             # Internal anchors
             if note_text.startswith(INTERNAL_ANCHOR_PREFIX):
                 page_name = note_text[len(INTERNAL_ANCHOR_PREFIX):]
-                note = entity_library.from_dict(TextNote.__name__, nt)
+                nt['type_name'] = TextNote.__name__
+                note = entity_library.load_from_dict(nt)
                 note.url = page_name  # Will be converted to a url afterwards
 
             # External anchors (web links)
@@ -201,14 +205,16 @@ class LegacyFSRepoReader:
                     elif line.startswith('name='):
                         text = line[5:]
 
-                note = entity_library.from_dict(TextNote.__name__, nt)
+                nt['type_name'] = TextNote.__name__
+                note = entity_library.load_from_dict(nt)
                 note.url = url
                 note.text = text
 
             # Image notes
             elif note_text.startswith(IMAGE_NOTE_PREFIX):
                 image_url = note_text[len(IMAGE_NOTE_PREFIX):]
-                note = entity_library.from_dict(ImageNote.__name__, nt)
+                nt['type_name'] = ImageNote.__name__
+                note = entity_library.load_from_dict(nt)
                 note.image_url = image_url
                 note.local_image_url = image_url
 
@@ -218,13 +224,15 @@ class LegacyFSRepoReader:
                 script_parts = script.split()
                 command_args = ''.join(script_parts[1:])
 
-                note = entity_library.from_dict(ScriptNote.__name__, nt)
+                nt['type_name'] = ScriptNote.__name__
+                note = entity_library.load_from_dict(nt)
                 note.script_path = script_parts[0]
                 note.command_args = command_args
                 note.text = script
 
             else:  # It's just a text note
-                note = entity_library.from_dict(TextNote.__name__, nt)
+                nt['type_name'] = TextNote.__name__
+                note = entity_library.load_from_dict(nt)
                 note.text = note_text
 
             # Detect duplicate ids
@@ -246,6 +254,17 @@ class LegacyFSRepoReader:
                     notes_by_id.keys(),
                 ))
             new_ids_by_old[old_id] = note.id
+
+            # Check note sizes
+            size = note.rect().size()
+            size_x = max(min(size.x(), MAX_NOTE_WIDTH), MIN_NOTE_WIDTH)
+            size_y = max(min(size.y(), MAX_NOTE_HEIGHT), MIN_NOTE_HEIGHT)
+            if size_x != size.x() or size_y != size.y():
+                log.info(f'Note with invalid size imported. '
+                         f'Old: {size.x(), size.y()}; New: {size_x, size_y}')
+                rect = note.rect()
+                rect.set_size(Point2D(size_x, size_y))
+                note.set_rect(rect)
 
             notes.append(note)
             notes_by_id[note.id] = note
@@ -342,9 +361,9 @@ class LegacyFSRepoReader:
         # l_CP_y=
         # tags=
 
-        # Ignored fields: font_size, z (unused)
-
         file_path = Path(file_path)
+        self.v2_note_checksum_by_page_name[file_path.stem] = 0
+
         misl_file_string = file_path.read_text()
 
         is_displayed_first_on_startup = False
@@ -507,8 +526,7 @@ class LegacyFSRepoReader:
         for note in notes:
             if note.url.is_empty():
                 continue
-            linked_page = self.find_one(type=Page,
-                                        name=str(note.url))
+            linked_page = self.find_one(type=Page, name=str(note.url))
 
             if str(note.url) == 'Imagga':
                 pass
@@ -583,7 +601,10 @@ class LegacyFSRepoReader:
             if isinstance(nt, Note)
         ])
 
-        v2_note_count = self.v2_note_checksum_by_page_name[page.name]
-        v3_note_count = self.v3_note_checksum_by_page_name[page.name]
+        if page.name in self.v2_note_checksum_by_page_name:
+            v2_note_count = self.v2_note_checksum_by_page_name[page.name]
+            assert note_count_in_repo == v2_note_count
 
-        assert note_count_in_repo == v2_note_count == v3_note_count
+        if page.name in self.v3_note_checksum_by_page_name:
+            v3_note_count = self.v3_note_checksum_by_page_name[page.name]
+            assert note_count_in_repo == v3_note_count

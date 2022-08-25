@@ -436,8 +436,9 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
         misli.gui.add_state(nv_state)
         page_view_state.note_view_states.add(nv_state)
     elif isinstance(child, Arrow):
-        arrow_view_state = ArrowViewState(**child.asdict(),
-                                          arrow_gid=child.gid())
+        arrow_props = child.asdict()
+        arrow_props.pop('id')
+        arrow_view_state = ArrowViewState(**arrow_props, arrow_gid=child.gid())
         misli.gui.add_state(arrow_view_state)
         page_view_state.arrow_view_states.add(arrow_view_state)
 
@@ -706,13 +707,13 @@ def autosize_selected_notes(map_page_view_state: MapPageViewState):
 @action('map_page.undo')
 def undo(map_page_view_state: MapPageViewState):
     page = map_page_view_state.get_page()
-    pamet.undo_history.back_one_step(page.id)
+    pamet.undo_service().back_one_step(page.id)
 
 
 @action('map_page.redo')
 def redo(map_page_view_state: MapPageViewState):
     page = map_page_view_state.get_page()
-    pamet.undo_history.forward_one_step(page.id)
+    pamet.undo_service().forward_one_step(page.id)
 
 
 @action('map_page.copy_selected_children')
