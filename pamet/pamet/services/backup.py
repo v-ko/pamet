@@ -242,19 +242,25 @@ class FSStorageBackupService:
 
     #     return last_timestamp
 
-    def last_backup_time(self, page_id: str) -> datetime:
-        """Returns the timestamp of the most recent backup for a page as a
-        datetime object."""
-
+    def last_backup_for_page(self, page_id) -> Path:
         recent_backups = self.recent_backups_for_page(page_id)
         if recent_backups:
-            return datetime_from_backup_path(recent_backups[-1])
+            return recent_backups[-1]
 
         all_backups = self.backups_for_page(page_id)
         if all_backups:
-            return datetime_from_backup_path(all_backups[-1])
+            return all_backups[-1]
 
         return None
+
+    def last_backup_time(self, page_id: str) -> datetime:
+        """Returns the timestamp of the most recent backup for a page as a
+        datetime object."""
+        last_backup_path = self.last_backup_for_page(page_id)
+        if last_backup_path:
+            return datetime_from_backup_path(last_backup_path)
+        else:
+            return None
 
     def handle_change_set(self, change_set: list[Change]):
         """Should be connected to the per-TLA channel. Adds the received
