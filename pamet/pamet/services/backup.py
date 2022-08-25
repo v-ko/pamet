@@ -1,6 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, timedelta
 import json
+import os
 from pathlib import Path
 import sched
 import shutil
@@ -15,6 +16,7 @@ from misli.pubsub import Channel
 
 import pamet
 from pamet.model.page import Page
+from pamet.storage.base_repository import PametRepository
 from pamet.storage.file_system.repository import FSStorageRepository
 
 log = get_logger(__name__)
@@ -23,6 +25,7 @@ IGNORE_LOCK = False
 
 RECENT = 'recent'
 BACKUP = 'backup'
+BACKUPS = 'backups'
 CHANGESET = 'changeset'
 PERMANENT = 'permanent'
 
@@ -99,6 +102,7 @@ class FSStorageBackupService:
 
     def __init__(self,
                  backup_folder: Path,
+                 repository: PametRepository,
                  changeset_channel: Channel = None,
                  record_all_changes: bool = False,
                  process_interval: float = PROCESS_INTERVAL,
@@ -108,7 +112,7 @@ class FSStorageBackupService:
         self.id = get_new_id()
 
         self.backup_folder: Path = Path(backup_folder)
-        self.backup_folder.mkdir(exist_ok=True, parents=True)
+        self.repo = repository
         self.changeset_channel = changeset_channel
         self.record_all_changes = record_all_changes
 
@@ -131,23 +135,25 @@ class FSStorageBackupService:
         self._change_buffer: list[Change] = []
         self.buffer_lock = threading.Lock()
 
-    def prune_timestamp_path(self) -> Path:
+        self.pages_backup_data_folder().mkdir(exist_ok=True, parents=True)
+
+    def last_prune_timestamp_path(self) -> Path:
         return self.backup_folder / 'last_prune_timestamp.txt'
 
-    def backup_timestamp_path(self) -> Path:
+    def last_backup_timestamp_path(self) -> Path:
         return self.backup_folder / 'last_backup_timestamp.txt'
 
     def service_lock_path(self) -> Path:
         return self.backup_folder / 'backup_service_lock'
 
+    def pages_backup_data_folder(self):
+        return self.backup_folder / BACKUPS
+
     def page_backup_folder(self, page_id: str) -> Path:
-        return self.backup_folder / page_id
+        return self.pages_backup_data_folder() / page_id
 
     def tmp_changeset_path(self, page_id) -> Path:
         return self.page_backup_folder(page_id) / 'tmp_changeset.jsonl'
-
-    def recents_path(self, page_id: str) -> Path:
-        return self.page_backup_folder(page_id) / 'recent_changes.jsonl'
 
     def recent_backup_path(self, page_id, time: datetime) -> Path:
         name = f'{BACKUP}_{timestamp(time)}.json'
@@ -168,11 +174,32 @@ class FSStorageBackupService:
         path = self.page_backup_folder(page_id) / file_name
         return path
 
-    def page_backup_folders(self):
-        for page_folder in self.backup_folder.iterdir():
+    def per_page_backup_folders(self):
+        for page_folder in self.pages_backup_data_folder().iterdir():
             if not page_folder.is_dir():
                 continue
             yield page_folder
+
+    def backups_for_page(self, page_id) -> list[Path]:
+        backups = []
+        for root, dirs, files in os.walk(self.page_backup_folder(page_id)):
+            for file in files:
+                file = Path(file)
+                if file.name.startswith(BACKUP):
+                    backups.append(file)
+
+        return sorted(backups, key=lambda b: datetime_from_backup_path(b))
+
+    # def existing_backup_path(self, page_id: str, time: datetime):
+    #     recent_backup = self.recent_backup_path(page_id, time)
+    #     if recent_backup.exists():
+    #         return recent_backup
+
+    #     permanent_backup = self.permanent_backup_path(page_id, time)
+    #     if permanent_backup.exists():
+    #         return permanent_backup
+
+    #     return None
 
     def recent_backups_for_page(self, page_id) -> List[Path]:
         page_backup_folder = self.page_backup_folder(page_id)
@@ -201,19 +228,33 @@ class FSStorageBackupService:
         return sorted(changeset_files,
                       key=lambda b: datetimes_from_changeset_path(b)[0])
 
+    # def last_backup_time(self, page_id: str) -> datetime:
+    #     """Returns the timestamp of the most recent backup for a page as a
+    #     datetime object."""
+
+    #     last_timestamp = None
+    #     for file in self.recent_backups_for_page(page_id):
+    #         backup_dt = datetime_from_backup_path(file)
+    #         if not last_timestamp:
+    #             last_timestamp = backup_dt
+    #         elif last_timestamp < backup_dt:
+    #             last_timestamp = backup_dt
+
+    #     return last_timestamp
+
     def last_backup_time(self, page_id: str) -> datetime:
         """Returns the timestamp of the most recent backup for a page as a
         datetime object."""
 
-        last_timestamp = None
-        for file in self.recent_backups_for_page(page_id):
-            backup_dt = datetime_from_backup_path(file)
-            if not last_timestamp:
-                last_timestamp = backup_dt
-            elif last_timestamp < backup_dt:
-                last_timestamp = backup_dt
+        recent_backups = self.recent_backups_for_page(page_id)
+        if recent_backups:
+            return datetime_from_backup_path(recent_backups[-1])
 
-        return last_timestamp
+        all_backups = self.backups_for_page(page_id)
+        if all_backups:
+            return datetime_from_backup_path(all_backups[-1])
+
+        return None
 
     def handle_change_set(self, change_set: list[Change]):
         """Should be connected to the per-TLA channel. Adds the received
@@ -267,16 +308,19 @@ class FSStorageBackupService:
         """Saves the pages marked as changes (in self._changed_page_ids) as
         backup copies and if configured to do so - also saves the change
         objects in files between backups in order to have a fill history."""
+
+        self.process_changes()  # In case of last second changes
+
         # Move the recent changes to backup files
         for page_id in self._changed_page_ids:
             # Serialize the page
-            page = pamet.page(page_id)
+            page = self.repo.page(page_id)
             if not page:
                 log.error(f'Can not backup missing page with id {page_id}')
                 continue
 
-            notes = pamet.notes(page)
-            arrows = pamet.arrows(page)
+            notes = self.repo.notes(page)
+            arrows = self.repo.arrows(page)
             page_str = FSStorageRepository.serialize_page(page, notes, arrows)
             last_backup_time = self.last_backup_time(page_id)
 
@@ -303,7 +347,7 @@ class FSStorageBackupService:
             self.tmp_changeset_path(page_id).rename(changeset_path)
         self._changed_page_ids.clear()
 
-        self.backup_timestamp_path().write_text(timestamp(current_time()))
+        self.last_backup_timestamp_path().write_text(timestamp(current_time()))
 
     def move_to_permanent_where_appropriate(self, page_id: str):
         # For those older than self.permanent_backup_age -
@@ -346,9 +390,15 @@ class FSStorageBackupService:
 
     def prune_all(self):
         """Calls the pruning method for all pages."""
-        for page_folder in self.page_backup_folders():
-            self.prune_page_backups(page_folder.name)
-            self.move_to_permanent_where_appropriate(page_folder.name)
+        # for page_folder in self.per_page_backup_folders():
+        #     self.prune_page_backups(page_folder.name)
+        #     self.move_to_permanent_where_appropriate(page_folder.name)
+        for page_folder in self.per_page_backup_folders():
+            page_id = page_folder.name
+            self.prune_page_backups(page_id)
+
+            self.move_to_permanent_where_appropriate(page_id)
+        self.last_prune_timestamp_path().write_text(timestamp(current_time()))
 
     def prune_page_backups(self, page_id):
         """Removes old backups in accordance to the staggered scheme and
@@ -419,17 +469,9 @@ class FSStorageBackupService:
 
         # Merge the changes for the intervals where backups were deleted
         if self.record_all_changes:
-            backup_paths = [b.path for b in for_keeping]
-            self.merge_changesets_with_loose_ends(page_id,
-                                                  backup_paths=backup_paths)
+            self.merge_changesets_with_loose_ends(page_id)
 
-        # Update the timestamp
-        self.prune_timestamp_path().write_text(now.isoformat())
-
-    # def _merge_changes_chain(self, page_id: str, merge_chain: List[Tuple]):
-
-    def merge_changesets_with_loose_ends(self, page_id,
-                                         backup_paths: List[Path]):
+    def merge_changesets_with_loose_ends(self, page_id):
         # Parse all the change files, and merge those who don't have a backup
         # file on both sides.
         # A sanity check is performed: wether their timestamps chain properly
@@ -450,7 +492,8 @@ class FSStorageBackupService:
                                        key=lambda meta: meta[1][0])
 
         kept_backups_times = [
-            datetime_from_backup_path(b) for b in backup_paths
+            datetime_from_backup_path(b)
+            for b in self.recent_backups_for_page(page_id)
         ]
         merge_chain = []
         for changeset_path, (from_time, to_time) in sorted_changeset_meta:
@@ -566,13 +609,13 @@ class FSStorageBackupService:
         # Search for tmp_changeset files to populate the _changed_page_ids.
         # I.e. figure out which pages expect a backup because some changes
         # were made before the scheduled backup
-        for page_backup_folder in self.page_backup_folders():
+        for page_backup_folder in self.per_page_backup_folders():
             page_id = page_backup_folder.name
             if self.tmp_changeset_path(page_id).exists():
                 self._changed_page_ids.add(page_id)
 
         # Get the timestamp for the last backup and schedule accordingly
-        backup_ts = self.backup_timestamp_path()
+        backup_ts = self.last_backup_timestamp_path()
         if backup_ts.exists():
             last_backup_dt = datetime.fromisoformat(backup_ts.read_text())
             now = current_time()
@@ -590,7 +633,7 @@ class FSStorageBackupService:
             self.backup_and_reschedule()
 
         # Get the timestamp for the last pruning and schedule accordingly
-        prune_ts = self.prune_timestamp_path()
+        prune_ts = self.last_prune_timestamp_path()
         if prune_ts.exists():
             last_prune_dt = datetime.fromisoformat(prune_ts.read_text())
             now = current_time()

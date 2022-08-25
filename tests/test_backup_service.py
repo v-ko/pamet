@@ -22,7 +22,8 @@ PERMANENT_BACKUP_AGE = 30
 
 
 def test_change_processing(tmp_path):
-    backup_service = FSStorageBackupService(backup_folder=tmp_path)
+    backup_service = FSStorageBackupService(
+        backup_folder=tmp_path, repository=PametInMemoryRepository())
 
     page = Page(name='test')
     change = Change.CREATE(page)
@@ -64,9 +65,10 @@ def changes_file_is_valid(path, changes):
 
 
 def test_backup(tmp_path):
-    backup_service = FSStorageBackupService(backup_folder=tmp_path,
-                                            record_all_changes=True)
     in_mem_repo = PametInMemoryRepository()
+    backup_service = FSStorageBackupService(backup_folder=tmp_path,
+                                            repository=in_mem_repo,
+                                            record_all_changes=True)
     pamet.set_sync_repo(in_mem_repo)
 
     page = Page(name='test')
@@ -104,10 +106,11 @@ def test_backup(tmp_path):
 
 
 def test_pruning(tmp_path):
+    in_mem_repo = PametInMemoryRepository()
     backup_service = FSStorageBackupService(backup_folder=tmp_path,
+                                            repository=in_mem_repo,
                                             record_all_changes=True)
 
-    in_mem_repo = PametInMemoryRepository()
     pamet.set_sync_repo(in_mem_repo)
 
     for_removal: List[Path] = []
@@ -152,9 +155,8 @@ def test_pruning(tmp_path):
     for_keeping.append(
         backup_service.recent_backup_path(page.id, weekly_kept_time))
     changes.append(change)
-    change_obj_file_path = backup_service.changeset_path(page.id,
-                                                       initial_backup_time,
-                                                       weekly_kept_time)
+    change_obj_file_path = backup_service.changeset_path(
+        page.id, initial_backup_time, weekly_kept_time)
     change_obj_files[change_obj_file_path] = changes
 
     # Last month, same day
@@ -184,9 +186,8 @@ def test_pruning(tmp_path):
     change = change_and_backup(backup_service, page, daily_kept_time,
                                'Last month, same day, to be kept')
     changes.append(change)
-    change_obj_file_path = backup_service.changeset_path(page.id,
-                                                       weekly_kept_time,
-                                                       daily_kept_time)
+    change_obj_file_path = backup_service.changeset_path(
+        page.id, weekly_kept_time, daily_kept_time)
     change_obj_files[change_obj_file_path] = changes
 
     # Last day, same hour
@@ -215,9 +216,8 @@ def test_pruning(tmp_path):
     change = change_and_backup(backup_service, page, hourly_kept_time,
                                'Last day, same hour, to be kept')
     changes.append(change)
-    change_obj_file_path = backup_service.changeset_path(page.id,
-                                                       daily_kept_time,
-                                                       hourly_kept_time)
+    change_obj_file_path = backup_service.changeset_path(
+        page.id, daily_kept_time, hourly_kept_time)
     change_obj_files[change_obj_file_path] = changes
 
     # Do pruning
@@ -242,9 +242,10 @@ def test_pruning(tmp_path):
 
 
 def test_permanent_storage(tmp_path):
-    backup_service = FSStorageBackupService(backup_folder=tmp_path)
-
     in_mem_repo = PametInMemoryRepository()
+    backup_service = FSStorageBackupService(backup_folder=tmp_path,
+                                            repository=in_mem_repo)
+
     pamet.set_sync_repo(in_mem_repo)
 
     # Craete the initial backup
@@ -273,6 +274,7 @@ def test_sheduler_and_worker(tmp_path):
     pamet.set_sync_repo(in_mem_repo)
 
     backup_service = FSStorageBackupService(backup_folder=tmp_path,
+                                            repository=in_mem_repo,
                                             process_interval=0.5,
                                             backup_interval=1,
                                             prune_interval=1.5)
@@ -298,5 +300,5 @@ def test_sheduler_and_worker(tmp_path):
     # time_stopped = time.time()
     assert not backup_service.service_lock_path().exists()
 
-    assert backup_service.backup_timestamp_path().exists()
-    assert backup_service.prune_timestamp_path().exists()
+    assert backup_service.last_backup_timestamp_path().exists()
+    assert backup_service.last_prune_timestamp_path().exists()
