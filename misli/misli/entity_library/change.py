@@ -136,8 +136,8 @@ class Change:
             raise ValueError('Both old and new state are None.')
 
     def __repr__(self) -> str:
-        return (f'<Change if={self.id} time={timestamp(self.time)} '
-                f'type={self.change_type}'
+        return (f'<Change id={self.id} time={timestamp(self.time)} '
+                f'type={self.change_type} '
                 f'old_state={self.old_state} new_state={self.new_state}>')
 
     # def __hash__(self):
