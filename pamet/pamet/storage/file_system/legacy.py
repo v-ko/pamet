@@ -49,13 +49,11 @@ def backup_file(file_path: Path, backup_folder: Path):
 
 def new_legacy_id_for_legacy_note(note_id: int, timestamp: str, text: str,
                                   all_ids: list):
-    time = datetime.strptime(timestamp, TIME_FORMAT)
     # Make a deterministic new id based on the timestamp and old id
-    new_id = int(f'{note_id}{time.strftime("%y%m%d")}')
+    new_id = hash(timestamp)
     if new_id in all_ids:
         # If that's not enough - add a suffix based on the note text
-        suffix = f'{hash(text)}'[-3:]
-        new_id = int(f'{new_id}{suffix}')
+        new_id = hash(timestamp + text)
         if new_id in all_ids:  # Mostly for timeline notes
             raise Exception('WTF')
 
@@ -142,8 +140,12 @@ class LegacyFSRepoReader:
             nt['id'] = str(nt['id'])
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
-            nt['geometry'] = [nt.pop('x'), nt.pop('y'), nt.pop('width'),
-                              nt.pop('height')]
+            nt['geometry'] = [
+                nt.pop('x'),
+                nt.pop('y'),
+                nt.pop('width'),
+                nt.pop('height')
+            ]
             t_made = nt.pop('t_made')
             t_mod = nt.pop('t_mod')
 

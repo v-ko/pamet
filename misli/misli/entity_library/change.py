@@ -9,7 +9,7 @@ from typing import Any, Generator, Iterable
 from misli import get_logger
 from misli.entity_library import dump_to_dict, load_from_dict
 from misli.entity_library.entity import Entity
-from misli.helpers import current_time, timestamp
+from misli.helpers import current_time, get_new_id, timestamp
 
 log = get_logger(__name__)
 
@@ -110,7 +110,8 @@ class Change:
     def __init__(self,
                  old_state: Entity = None,
                  new_state: Entity = None,
-                 time: datetime | str = None):
+                 time: datetime | str = None,
+                 id: str = None):
         """Construct a change object. When the change is of type CREATE or
         DELETE - the old_state or new_state respectively should naturally be
         omitted.
@@ -118,6 +119,8 @@ class Change:
         Raises:
             Exception: Missing id attribute of either entity state.
         """
+        self.id = id or get_new_id()
+
         self.old_state = old_state
         self.new_state = new_state
 
@@ -133,8 +136,11 @@ class Change:
             raise ValueError('Both old and new state are None.')
 
     def __repr__(self) -> str:
-        return (f'<Change type={self.change_type} {id(self)=} '
+        return (f'<Change if={self.id} time={timestamp(self.time)} '
+                f'type={self.change_type}'
                 f'old_state={self.old_state} new_state={self.new_state}>')
+
+    # def __hash__(self):
 
     @property
     def change_type(self):
@@ -160,6 +166,7 @@ class Change:
 
         return dict(old_state=old_state,
                     new_state=new_state,
+                    id=self.id,
                     time=timestamp(self.time))
 
     @classmethod

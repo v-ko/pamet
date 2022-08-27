@@ -18,7 +18,7 @@ def fake_time(time: datetime):
     global _fake_time
 
     if time.tzinfo is None:
-        time = time.astimezone()
+        raise Exception
 
     _fake_time = time
     yield

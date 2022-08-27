@@ -9,12 +9,13 @@ import threading
 import time
 from typing import List
 
+from peewee import Model, CharField, SqliteDatabase, DateTimeField
+
 from misli.entity_library.change import Change
 from misli.helpers import get_new_id, current_time, timestamp
 from misli.logging import get_logger
 from misli.pubsub import Channel
 
-import pamet
 from pamet.model.page import Page
 from pamet.storage.base_repository import PametRepository
 from pamet.storage.file_system.repository import FSStorageRepository
@@ -66,6 +67,17 @@ class Backup:
         self.datetime = datetime_from_backup_path(path)
 
 
+class ChangePW(Model):
+    page_id = CharField()
+    time = DateTimeField()
+    json = CharField()
+
+    def to_change(self):
+        change_dict = json.loads(self.json)
+        change = Change.from_safe_delta_dict(change_dict)
+        return change
+
+
 class FSStorageBackupService:
     """Handles creating backups periodically. It has a
     staggered versioning scheme and the option to keep all changes in between
@@ -115,6 +127,7 @@ class FSStorageBackupService:
         self.repo = repository
         self.changeset_channel = changeset_channel
         self.record_all_changes = record_all_changes
+        self.changeset_db = None
 
         self.process_interval = process_interval
         self.backup_interval = backup_interval
@@ -135,7 +148,19 @@ class FSStorageBackupService:
         self._change_buffer: list[Change] = []
         self.buffer_lock = threading.Lock()
 
+        # Prep folders and changeset DB
         self.pages_backup_data_folder().mkdir(exist_ok=True, parents=True)
+
+        if self.record_all_changes:
+            self.changeset_db = SqliteDatabase(self.changeset_sqlite_db_path())
+            # If the changeset database doesn't exist - create it
+            if not self.changeset_sqlite_db_path().exists():
+
+                with self.changeset_db.bind_ctx([ChangePW]):
+                    self.changeset_db.create_tables([ChangePW])
+
+    def changeset_sqlite_db_path(self) -> Path:
+        return self.backup_folder / 'all_changes.sqlite3'
 
     def last_prune_timestamp_path(self) -> Path:
         return self.backup_folder / 'last_prune_timestamp.txt'
@@ -328,7 +353,6 @@ class FSStorageBackupService:
             notes = self.repo.notes(page)
             arrows = self.repo.arrows(page)
             page_str = FSStorageRepository.serialize_page(page, notes, arrows)
-            last_backup_time = self.last_backup_time(page_id)
 
             # Create the backup file
             now = current_time()
@@ -336,23 +360,27 @@ class FSStorageBackupService:
             backup_file_path.parent.mkdir(parents=True, exist_ok=True)
             if backup_file_path.exists():
                 error_msg = f'A file already exists at {backup_file_path}'
-                log.error(error_msg)
-                raise Exception(error_msg)
+                log.warning(error_msg)
             backup_file_path.write_text(page_str)
 
-            # If configured to do so - create the changes file
+            # If configured to do so - save the changes
             if not self.record_all_changes:
                 continue
 
-            if not last_backup_time:  # If there's no previous backups - drop
-                self.tmp_changeset_path(page_id).unlink()
-                continue
+            # Read them from the tmp changes file, and add them to the db
+            tmp_changeset_file = self.tmp_changeset_path(page_id)
+            lines = tmp_changeset_file.read_text().splitlines()
+            with self.changeset_db.bind_ctx([ChangePW]):
+                with self.changeset_db.atomic():
+                    for change_json in lines:
+                        change = Change.from_safe_delta_dict(
+                            json.loads(change_json))
+                        change = ChangePW.create(page_id=page_id,
+                                                 time=change.time,
+                                                 json=change_json)
+            tmp_changeset_file.unlink()
 
-            changeset_path = self.changeset_path(page_id, last_backup_time,
-                                                 now)
-            self.tmp_changeset_path(page_id).rename(changeset_path)
         self._changed_page_ids.clear()
-
         self.last_backup_timestamp_path().write_text(timestamp(current_time()))
 
     def move_to_permanent_where_appropriate(self, page_id: str):
@@ -387,12 +415,12 @@ class FSStorageBackupService:
             new_path = folder / backup.path.name
             backup.path.rename(new_path)
             log.info(f'Moved backup {backup.path.name} '
-                     'to the yearly folder {folder}')
+                     f'to the yearly folder {folder}')
 
-            # Also move the corresponding changes file if any
-            changeset_path = changeset_paths_by_to_times.get(backup.datetime)
-            if changeset_path:
-                changeset_path.rename(folder / changeset_path.name)
+            # # Also move the corresponding changes file if any
+            # changeset_path = changeset_paths_by_to_times.get(backup.datetime)
+            # if changeset_path:
+            #     changeset_path.rename(folder / changeset_path.name)
 
     def prune_all(self):
         """Calls the pruning method for all pages."""
@@ -421,7 +449,7 @@ class FSStorageBackupService:
         # Sort the backups into bins according to how old they are
         last_day = []
         last_month = []
-        last_year = []
+        older_than_a_month = []
         page_folder = self.page_backup_folder(page_id)
         for file_path in page_folder.iterdir():
             if not file_path.name.startswith(BACKUP) or \
@@ -437,7 +465,7 @@ class FSStorageBackupService:
             elif backup_age < LUNAR_MONTH:
                 last_month.append(backup)
             elif backup_age < self.permanent_backup_age:
-                last_year.append(backup)
+                older_than_a_month.append(backup)
 
         # Bin by hour, day, and week (by the clock/calendar),sort, and
         # delete all except the last for each group
@@ -447,14 +475,14 @@ class FSStorageBackupService:
         by_day = defaultdict(list)
         for backup in last_month:
             by_day[backup.datetime.day].append(backup)
-        by_week = defaultdict(list)
-        for backup in last_year:
-            week = backup.datetime.isocalendar()[1]
-            by_week[week].append(backup)
+        by_year_and_week = defaultdict(list)
+        for backup in older_than_a_month:
+            year, week, _ = backup.datetime.isocalendar()
+            by_year_and_week[(year, week)].append(backup)
 
         for_removal = []
         for_keeping = []
-        for by_interval in [by_hour, by_day, by_week]:  # Just so its DRY
+        for by_interval in [by_hour, by_day, by_year_and_week]:
             for specific_time_frame, backups in by_interval.items():
                 if not backups:
                     continue
@@ -471,95 +499,7 @@ class FSStorageBackupService:
         # Delete the backups files marked for removal
         for backup in for_removal:
             backup.path.unlink()
-            log.info(f'Removed backup {backup.path}')
-
-        # Merge the changes for the intervals where backups were deleted
-        if self.record_all_changes:
-            self.merge_changesets_with_loose_ends(page_id)
-
-    def merge_changesets_with_loose_ends(self, page_id):
-        # Parse all the change files, and merge those who don't have a backup
-        # file on both sides.
-        # A sanity check is performed: wether their timestamps chain properly
-
-        # Populate the changes files fils
-        changeset_times_by_path = {}
-        page_folder = self.page_backup_folder(page_id)
-        for file_path in page_folder.iterdir():
-            if file_path.name.startswith(CHANGESET) and file_path.is_file():
-                changeset_times_by_path[file_path] = \
-                    datetimes_from_changeset_path(file_path)
-
-        # Sort the changes, remove those who don't need merging
-        # and do an integrity check
-
-        # Sort the changes by from_time
-        sorted_changeset_meta = sorted(changeset_times_by_path.items(),
-                                       key=lambda meta: meta[1][0])
-
-        kept_backups_times = [
-            datetime_from_backup_path(b)
-            for b in self.recent_backups_for_page(page_id)
-        ]
-        merge_chain = []
-        for changeset_path, (from_time, to_time) in sorted_changeset_meta:
-            # If there's a backup on both sides of a changes chunk -
-            # no merging is needed. If there's already a chain started -
-            # we execute the merge
-            left_is_loose = not (from_time in kept_backups_times)
-            right_is_loose = not (to_time in kept_backups_times)
-            if not left_is_loose and not right_is_loose:
-                if merge_chain:
-                    raise Exception
-                continue
-
-            elif not left_is_loose and right_is_loose:
-                if merge_chain:
-                    raise Exception
-                merge_chain.append((changeset_path, from_time, to_time))
-                continue
-
-            elif left_is_loose and right_is_loose:
-                merge_chain.append((changeset_path, from_time, to_time))
-
-            else:  # left_is loose and not right_is_loose
-                merge_chain.append((changeset_path, from_time, to_time))
-
-                # If the "chain" is of only one element - something's fishy
-                # When we remove a backup there shoud be at least two loose
-                # changeset files
-                if len(merge_chain) == 1:
-                    raise Exception('Inconsistency in changes files. '
-                                    f'Merge chain: {merge_chain}')
-
-                # Get the merged changeset file name (from the first from_time
-                # and last to_time in the chain)
-                first_changeset_file_meta = merge_chain[0]
-                last_changeset_file_meta = merge_chain[-1]
-                _, outer_left_datetime, _ = first_changeset_file_meta
-                _, _, outer_right_datetime = last_changeset_file_meta
-                merged_changeset_path = self.changeset_path(
-                    page_id, outer_left_datetime, outer_right_datetime)
-
-                # Get the combined contents of the changeset files
-                paths = [metadata[0] for metadata in merge_chain]
-                content = '\n'.join(
-                    [path.read_text().rstrip() for path in paths])
-
-                # Write the merged changeset to the new file and delete the
-                # old ones
-                merged_changeset_path.write_text(content)
-                for path in paths:
-                    path.unlink()
-                    merge_chain = []
-
-        if merge_chain:
-            # There should be no changeset file that does not have a backup
-            # corresponding to its to_timestamp at the end of the chain
-            raise Exception(
-                f'Change files with no corresponding backup: '
-                f'{[m[0] for m in merge_chain]}.'
-                f'Delete them if you\'re ok with losing that data.')
+            log.info(f'Pruned backup {backup.path}')
 
     def backup_and_reschedule(self):
         self.backup_changed_pages()
@@ -677,3 +617,23 @@ class FSStorageBackupService:
         if self.service_lock_path().exists():
             self.service_lock_path().unlink()
         log.info('Stopped service.')
+
+    def get_changes(self,
+                    page_id: str = None,
+                    after_time: datetime = None,
+                    before_time: datetime = None):
+        with self.changeset_db.bind_ctx([ChangePW]):
+            where_args = []
+            if page_id is not None:
+                where_args.append(ChangePW.page_id == page_id)
+            if after_time is not None:
+                where_args.append(ChangePW.time >= after_time)
+            if before_time is not None:
+                where_args.append(ChangePW.time < before_time)
+
+            query = ChangePW.select()
+            if where_args:
+                query = query.where(*where_args)
+
+            for change_pw in query.iterator():
+                yield change_pw.to_change()
