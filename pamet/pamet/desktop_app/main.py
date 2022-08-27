@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import click
 
 import misli
 from misli.gui import channels as misli_channels
@@ -24,9 +25,12 @@ from pamet.views.window.widget import WindowWidget
 log = misli.get_logger(__name__)
 
 
-def main():
+@click.command()
+@click.argument('path',
+                type=click.Path(exists=True),
+                required=False)
+def main(path: str):
     app = DesktopApp()
-
     configure_for_qt(app)
 
     # Load the config
@@ -37,7 +41,10 @@ def main():
         desktop_app.save_config(config)
 
     # Init the repo
-    repo_path = Path(config.repository_path)
+    if path:
+        repo_path = Path(path)
+    else:
+        repo_path = Path(config.repository_path)
     log.info('Using repository: %s' % repo_path)
 
     # Testing - restore legacy backups
@@ -109,7 +116,7 @@ def main():
 
     pamet.set_sync_repo(fs_repo)
     pamet.set_undo_service(
-        UndoService(misli_channels.entity_change_sets_per_TLA))
+        UndoService(pamet_channels.entity_change_sets_per_TLA))
     # There should be a better place to do call the validity checks I guess
     # pamet.model.arrow_validity_check()
 
