@@ -169,13 +169,13 @@ class LegacyFSRepoReader:
             if created < earliest_creation_time:
                 earliest_creation_time = created
 
+            if not page.id:
+                raise Exception
+
             # Arrows
             legacy_arrows = nt.pop('links')
             for legacy_arrow in legacy_arrows:
-                arrow = Arrow()
-                if not page.id:
-                    raise Exception
-                arrow.page_id = page.id
+                arrow = Arrow.in_page(page)
                 arrow.set_tail(anchor_note_id=nt['id'])
                 arrow.set_head(anchor_note_id=str(legacy_arrow['to_id']))
                 control_point = legacy_arrow.pop('cp', None)
@@ -238,24 +238,24 @@ class LegacyFSRepoReader:
                 note.text = note_text
 
             # Detect duplicate ids
-            if note.id in notes_by_id:
-                ids_with_duplicates.append(note.id)
+            if note.own_id in notes_by_id:
+                ids_with_duplicates.append(note.own_id)
                 log.warning(f'Detected duplicate for {note}. '
                             f'Links to/from it will be deleted.')
                 # f'Url: {note.url}, text: {note.text}. |'
                 # f'Duplicate {note}'
-                # f'Url: {notes_by_id[note.id].url}, '
-                # f'text: {notes_by_id[note.id].text}.')
+                # f'Url: {notes_by_id[note.own_id].url}, '
+                # f'text: {notes_by_id[note.own_id].text}.')
 
-            old_id = note.id
+            old_id = note.own_id
             note = note.with_id(
                 new_id_for_legacy_note(
-                    note.id,
+                    note.own_id,
                     note.created,
                     note.content,
                     notes_by_id.keys(),
                 ))
-            new_ids_by_old[old_id] = note.id
+            new_ids_by_old[old_id] = note.own_id
 
             # Check note sizes
             size = note.rect().size()
@@ -269,7 +269,7 @@ class LegacyFSRepoReader:
                 note.set_rect(rect)
 
             notes.append(note)
-            notes_by_id[note.id] = note
+            notes_by_id[note.own_id] = note
 
         # Remove arrows which start or end at notes with duplicate ids, because
         # we don't want to deal with that at all
@@ -320,7 +320,7 @@ class LegacyFSRepoReader:
                 # end. We just remove it.
                 continue
             arrows_by_id[new_id] = arrow
-            arrows_with_new_ids.append(arrow.with_id(new_id))
+            arrows_with_new_ids.append(arrow.with_id(arrow.page_id, new_id))
         arrows = arrows_with_new_ids
 
         # Assume page created time from the notes. Modified makes sense only

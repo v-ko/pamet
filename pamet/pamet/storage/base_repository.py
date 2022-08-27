@@ -56,8 +56,8 @@ class PametRepository(Repository):
     # -------------Notes CRUD-------------
 
     def insert_note(self, note_: Note, page: Page = None) -> Change:
-        if page:
-            note_.page_id = page.id
+        if page and page.id != note_.page_id:
+            note_ = note_.with_id(page.id, note_.own_id)
         change = self.insert_one(note_)
         if self.raw_entity_changes_channel:
             self.raw_entity_changes_channel.push(change)

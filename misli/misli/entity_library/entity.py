@@ -35,7 +35,7 @@ class Entity:
     without it. See the register_entity_type docs for an example.
     """
 
-    id: str = field(default_factory=get_new_id)
+    id: str | tuple = field(default_factory=get_new_id)
     immutability_error_message: str = field(default=False,
                                             init=False,
                                             repr=False)
@@ -45,7 +45,8 @@ class Entity:
         if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
             return object.__setattr__(self, key, value)
 
-        if self.immutability_error_message:
+        if self.immutability_error_message and \
+                key != 'immutability_error_message':
             raise Exception(self.immutability_error_message)
 
         if isinstance(value, datetime):
@@ -57,8 +58,11 @@ class Entity:
             raise Exception('Cannot set missing attribute')
 
         # Since ids are used for hashing - it's wise to make them immutable
-        if key == 'id' and hasattr(self, 'id'):
-            raise Exception
+        if key == 'id':
+            assert isinstance(value, (str, tuple))  # Allowed types for id
+
+            if hasattr(self, 'id'):
+                raise Exception
 
         return object.__setattr__(self, key, value)
 
@@ -79,6 +83,9 @@ class Entity:
     #         return False
     #     return self.gid() == other.gid()
 
+    def __repr__(self) -> str:
+        return f'<{type(self)} id={self.id}>'
+
     def __copy__(self):
         return self.copy()
 
@@ -98,7 +105,7 @@ class Entity:
 
     def with_id(self, new_id: str) -> Entity:
         """A convinience method to produce a copy with a changed id (since
-        setting it as an attribute is prohibited)."""
+        the 'id' attribute is immutable (used in hashing))."""
         self_dict = self.asdict()
         self_dict['id'] = new_id
         return type(self)(**self_dict)

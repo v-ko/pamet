@@ -38,16 +38,15 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
                 note_type_name=type(_note).__name__)
             StateType = pamet.note_state_type_by_view(NoteViewType.__name__)
             note_props = _note.asdict()
-            note_props.pop('id')
-            note_view_state = StateType(**note_props, note_gid=_note.gid())
+            note_id = note_props.pop('id')
+            note_view_state = StateType(id=note_id, **note_props)
             page_view_state.note_view_states.add(note_view_state)
             misli.gui.add_state(note_view_state)
 
         for arrow in pamet.arrows(page):
             arrow_props = arrow.asdict()
-            arrow_props.pop('id')
-            arrow_view_state = ArrowViewState(**arrow_props,
-                                              arrow_gid=arrow.gid())
+            arrow_id = arrow_props.pop('id')
+            arrow_view_state = ArrowViewState(id=arrow_id, **arrow_props)
             page_view_state.arrow_view_states.add(arrow_view_state)
             misli.gui.add_state(arrow_view_state)
         misli.gui.update_state(page_view_state)
@@ -125,14 +124,14 @@ def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
     # Create a link to the new page at the mouse position or center
     # (in the old one)
     note_position = current_page_state.unproject_point(mouse_position)
-    new_page_link = TextNote(page_id=new_page.id)
+    new_page_link = TextNote.in_page(new_page)
     new_page_link.url = current_page.url()
     new_page_link.x = note_position.x()
     new_page_link.y = note_position.y()
     pamet.insert_note(new_page_link)
 
     # Create a link to "old" page in the new one
-    back_link_note = TextNote(page_id=current_page.id)
+    back_link_note = TextNote.in_page(current_page)
     back_link_note.url = new_page.url()
     rect = back_link_note.rect()
     rect.move_center(Point2D(0, 0))

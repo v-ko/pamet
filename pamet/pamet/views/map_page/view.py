@@ -134,7 +134,7 @@ class MapPageView(View):
         # Sort them and return the first
         intersections = sorted(intersections, key=lambda i: i[2])
         note_view, anchor_type = intersections[0][:2]
-        return note_view.state().get_note().id, anchor_type
+        return note_view.state().get_note().own_id, anchor_type
 
     def handle_delete_shortcut(self):
         map_page_actions.delete_selected_children(self.state())
@@ -158,7 +158,7 @@ class MapPageView(View):
             state = self.state()
             if child_under_mouse not in state.selected_child_ids:
                 map_page_actions.update_child_selections(
-                    state, {child_under_mouse.id: True})
+                    state, {child_under_mouse.view_id: True})
             map_page_actions.start_child_move(self.state(),
                                               mouse_pos.as_tuple())
 
@@ -193,10 +193,10 @@ class MapPageView(View):
 
         if ctrl_pressed:
             if child_under_mouse:
-                nc_selected = child_under_mouse.id in self.state(
+                nc_selected = child_under_mouse.view_id in self.state(
                 ).selected_child_ids
                 map_page_actions.update_child_selections(
-                    state, {child_under_mouse.id: not nc_selected})
+                    state, {child_under_mouse.view_id: not nc_selected})
 
         # Clear selection (or reduce it to the note under the mouse)
         if not ctrl_pressed and not shift_pressed:
@@ -207,13 +207,13 @@ class MapPageView(View):
 
             if child_under_mouse:
                 map_page_actions.update_child_selections(
-                    state, {child_under_mouse.id: True})
+                    state, {child_under_mouse.view_id: True})
 
         # Check for resize initiation
         if resize_nv:
-            if resize_nv.id not in state.selected_child_ids:
+            if resize_nv.view_id not in state.selected_child_ids:
                 map_page_actions.update_child_selections(
-                    state, {resize_nv.id: True})
+                    state, {resize_nv.view_id: True})
 
             resize_circle_center = resize_nv.state().rect().bottom_right()
             rcc_projected = state.project_point(resize_circle_center)
@@ -355,7 +355,7 @@ class MapPageView(View):
             note_view.left_mouse_double_click_event(relative_pos)
         else:
             note_pos = self.state().unproject_point(mouse_pos)
-            note = TextNote(page_id=self.state().page_id)
+            note = TextNote().with_id(page_id=self.state().page_id)
             note.x = note_pos.x()
             note.y = note_pos.y()
             actions.note.create_new_note(self.parent_tab.state(), note)
@@ -368,7 +368,7 @@ class MapPageView(View):
 
 
     def handle_resize_event(self, new_size: Point2D):
-        map_page_actions.resize_page(self.id, new_size)
+        map_page_actions.resize_page(self.state(), new_size)
 
     def undo(self):
         page = self.state().get_page()

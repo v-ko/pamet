@@ -2,10 +2,10 @@ from __future__ import annotations
 from dataclasses import field
 from typing import Any
 
-from misli import Entity
 from misli import entity_type
 from misli import gui
 from misli.entity_library.entity import Entity
+from misli.helpers import get_new_id
 
 
 def view_state_type(view_state_class: Any):
@@ -14,6 +14,9 @@ def view_state_type(view_state_class: Any):
 
 @view_state_type
 class ViewState(Entity):
+    '''Mind putting this class as last inherited when also inheriting from
+    an Entity with a custom id field.'''
+    view_id: str = field(default_factory=get_new_id)
     _added: bool = field(default=False, init=False, repr=False)
     _version: int = field(default=0, init=False, repr=False)
 
@@ -24,4 +27,4 @@ class ViewState(Entity):
         Entity.__setattr__(self, attr_name, value)
 
     def __repr__(self) -> str:
-        return f'{type(self).__name__} id={self.id}'
+        return f'{type(self).__name__} view_id={self.view_id}'

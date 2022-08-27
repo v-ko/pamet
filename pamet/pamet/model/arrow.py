@@ -5,12 +5,12 @@ from misli.basic_classes.color import Color
 from misli.basic_classes.point2d import Point2D
 
 from misli.entity_library import entity_type
-from misli.entity_library.entity import Entity
 from misli.logging import get_logger
 
 import pamet
 from pamet.constants import DEFAULT_ARROW_THICKNESS
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
+from pamet.model.page_child import PageChild
 
 log = get_logger(__name__)
 BEZIER_CUBIC = 'bezier_cubic'
@@ -30,9 +30,7 @@ class ArrowAnchorType(Enum):
 
 
 @entity_type
-class Arrow(Entity):
-    page_id: str = ''
-
+class Arrow(PageChild):
     tail_coords: list = field(default_factory=list)
     tail_note_id: str = None
     tail_anchor: str = ArrowAnchorType.NONE.name
@@ -50,16 +48,6 @@ class Arrow(Entity):
     line_function_name: str = BEZIER_CUBIC
     head_shape: str = None
     tail_shape: str = None
-
-    def __repr__(self):
-        return '<Arrow id=%s>' % self.id
-
-    # def __post_init__(self):
-    #     if not self.page_id:
-    #         log.warning('Initializing Arrow without a page_id')
-
-    def gid(self):
-        return self.page_id, self.id
 
     def parent_gid(self):
         return self.page_id

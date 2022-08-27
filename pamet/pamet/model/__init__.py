@@ -134,8 +134,8 @@ def notes(page_: Page | str):
     return _sync_repo.notes(page_)
 
 
-def note(page_: Page | str, note_id: str):
-    return _sync_repo.note(page_, note_id)
+def note(page_: Page | str, own_id: str):
+    return _sync_repo.note(page_, own_id)
 
 
 # -------------Arrow CRUD-------------
@@ -155,8 +155,8 @@ def arrows(page_: Page | str):
     return _sync_repo.arrows(page_)
 
 
-def arrow(page_: Page | str, arrow_id: str):
-    return _sync_repo.arrow(page_, arrow_id)
+def arrow(page_: Page | str, own_id: str):
+    return _sync_repo.arrow(page_, own_id)
 
 
 # ------------For changes--------------

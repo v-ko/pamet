@@ -75,10 +75,10 @@ class WindowWidget(QMainWindow, View):
         for tab_state in change.added.tab_states:
             tab = TabWidget(parent=self, initial_state=tab_state)
             self.ui.tabBarWidget.addTab(tab, tab_state.title)
-            self.tab_widgets[tab_state.id] = tab
+            self.tab_widgets[tab_state.view_id] = tab
 
         for tab_state in change.removed.tab_states:
-            tab = self.tab_widgets[tab_state.id]
+            tab = self.tab_widgets[tab_state.view_id]
             tab_idx = self.ui.tabBarWidget.indexOf(tab)
             self.ui.tabBarWidget.removeTab(tab_idx)
             tab.deleteLater()

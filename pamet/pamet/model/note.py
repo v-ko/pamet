@@ -5,7 +5,7 @@ from dataclasses import field
 from datetime import datetime
 
 from misli import get_logger
-from misli import Entity, entity_type
+from misli import entity_type
 from misli.basic_classes import Point2D, Rectangle, Color
 
 import pamet
@@ -13,6 +13,7 @@ from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
 from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
+from pamet.model.page_child import PageChild
 from pamet.url import Url
 from misli.helpers import current_time, timestamp
 from pamet.model.arrow import Arrow, ArrowAnchorType
@@ -23,8 +24,7 @@ URL = 'url'
 
 
 @entity_type
-class Note(Entity):
-    page_id: str = ''
+class Note(PageChild):
     geometry: list = field(default_factory=lambda:
                            [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT])
     style: dict = field(default_factory=dict)
@@ -40,9 +40,6 @@ class Note(Entity):
     def asdict(self):
         self_dict = super().asdict()
         return self_dict
-
-    def gid(self):
-        return self.page_id, self.id
 
     def parent_gid(self):
         return self.page_id
@@ -153,17 +150,18 @@ class Note(Entity):
 
     def in_arrows(self) -> Generator[Arrow, None, None]:
         for arrow in pamet.arrows(self.page_id):
-            if self.id == arrow.head_note_id:
+            if self.own_id == arrow.head_note_id:
                 yield arrow
 
     def out_arrows(self) -> Generator[Arrow, None, None]:
         for arrow in pamet.arrows(self.page_id):
-            if self.id == arrow.tail_note_id:
+            if self.own_id == arrow.tail_note_id:
                 yield arrow
 
     def connected_arrows(self) -> Generator[Arrow, None, None]:
         for arrow in pamet.arrows(self.page_id):
-            if self.id == arrow.tail_note_id or self.id == arrow.head_note_id:
+            if self.own_id == arrow.tail_note_id or \
+                    self.own_id == arrow.head_note_id:
                 yield arrow
 
     def arrow_anchor(self, anchor_type: ArrowAnchorType) -> Point2D:

@@ -145,7 +145,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         self.subscriptions = []
         self.nw_subscribtions = {}  # by note widget
-        self.arrow_view_state_subs_by_state_id = {}
+        self.arrow_view_state_subs_by_view_id = {}
         self.new_arrow_view_state_subs_by_state_id = {}
 
         # Subscribe to the page changes
@@ -175,7 +175,7 @@ class MapPageWidget(QWidget, MapPageView):
         for nw, subscription in self.nw_subscribtions.items():
             subscription.unsubscribe()
 
-        for avs_id, sub in self.arrow_view_state_subs_by_state_id.items():
+        for avs_id, sub in self.arrow_view_state_subs_by_view_id.items():
             sub.unsubscribe()
 
     def note_views(self) -> List[View]:
@@ -188,8 +188,8 @@ class MapPageWidget(QWidget, MapPageView):
         state = change.last_state()
         if change.updated.viewport_height:
             # Invalidate image_cache for all children
-            for child in self.children():
-                nv_cache = self._note_widget_cache(child.id)
+            for child in self.note_widgets():
+                nv_cache = self._note_widget_cache(child.view_id)
                 nv_cache.should_reallocate_image_cache = True
                 nv_cache.should_rerender_image_cache = True
             # self.update()
@@ -206,7 +206,7 @@ class MapPageWidget(QWidget, MapPageView):
             self.add_note_widget(nv_state)
 
         for nv_state in change.removed.note_view_states:
-            note_widget = self.note_widget(nv_state.id)
+            note_widget = self.note_widget(nv_state.view_id)
             if note_widget:
                 # Don't fail if it's missing. When changing type - we delete
                 # the note widget immediately (in order to avoid it handling
@@ -227,38 +227,38 @@ class MapPageWidget(QWidget, MapPageView):
 
     def add_arrow_widget(self, av_state: ArrowViewState):
         arrow_widget = ArrowWidget(av_state, self)
-        self._arrow_widgets[av_state.id] = arrow_widget
+        self._arrow_widgets[av_state.view_id] = arrow_widget
 
-        subscription = sm_channels.state_changes_per_TLA_by_id.subscribe(
+        subscription = sm_channels.state_changes_per_TLA_by_view_id.subscribe(
             lambda change: self.handle_child_view_state_update(change),
-            index_val=av_state.id)
-        self.arrow_view_state_subs_by_state_id[av_state.id] = subscription
+            index_val=av_state.view_id)
+        self.arrow_view_state_subs_by_view_id[av_state.view_id] = subscription
 
     def remove_arrow_widget(self, av_state: ArrowViewState):
-        subscription = self.arrow_view_state_subs_by_state_id.pop(av_state.id)
+        subscription = self.arrow_view_state_subs_by_view_id.pop(av_state.view_id)
         subscription.unsubscribe()
-        arrow_widget = self._arrow_widgets.pop(av_state.id)
+        arrow_widget = self._arrow_widgets.pop(av_state.view_id)
         arrow_widget.deleteLater()
 
     def add_note_widget(self, nv_state: NoteViewState):
         ViewType = pamet.note_view_type_by_state(type(nv_state).__name__)
         note_widget = ViewType(parent=self, initial_state=nv_state)
         note_widget.hide()
-        self._note_widgets[nv_state.id] = note_widget
+        self._note_widgets[nv_state.view_id] = note_widget
 
-        subscription = sm_channels.state_changes_per_TLA_by_id.subscribe(
+        subscription = sm_channels.state_changes_per_TLA_by_view_id.subscribe(
             lambda change: self.handle_child_view_state_update(change),
-            index_val=note_widget.id)
+            index_val=note_widget.view_id)
         self.nw_subscribtions[note_widget] = subscription
         # misli.call_delayed(self.on_child_updated, 0, args=[note_widget])
         self.update()
 
     def remove_note_widget(self, note_widget):
-        nw_state_id = note_widget.id
-        self.delete_note_view_cache(nw_state_id)
+        nw_view_id = note_widget.view_id
+        self.delete_note_view_cache(nw_view_id)
         subscription = self.nw_subscribtions.pop(note_widget)
         subscription.unsubscribe()
-        note_widget = self._note_widgets.pop(nw_state_id)
+        note_widget = self._note_widgets.pop(nw_view_id)
         note_widget.deleteLater()
         self.update()
 
@@ -281,7 +281,7 @@ class MapPageWidget(QWidget, MapPageView):
         if not change.is_update():
             raise Exception
 
-        nv_cache = self._note_widget_cache(change.new_state.id)
+        nv_cache = self._note_widget_cache(change.new_state.view_id)
 
         if change.updated.geometry:
             if change.old_state.rect().size() != change.new_state.rect().size(
@@ -368,7 +368,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         child.render(pcommand_cache, QPoint(0, 0))
 
-        nv_cache = self._note_widget_cache(child.id)
+        nv_cache = self._note_widget_cache(child.view_id)
         nv_cache.pcommand_cache = pcommand_cache
         nv_cache.should_rebuild_pcommand_cache = False
 
@@ -377,7 +377,7 @@ class MapPageWidget(QWidget, MapPageView):
         painter = QPainter()
 
         cache_rect = image_cache_rect_unprojected(display_rect)
-        nv_cache = self._note_widget_cache(child.id)
+        nv_cache = self._note_widget_cache(child.view_id)
 
         pcommand_cache = nv_cache.pcommand_cache
         render_img = nv_cache.image_cache
@@ -404,7 +404,7 @@ class MapPageWidget(QWidget, MapPageView):
         pcommand_cache.play(painter)
         painter.end()
 
-        nv_cache = self._note_widget_cache(child.id)
+        nv_cache = self._note_widget_cache(child.view_id)
         nv_cache.image_cache = render_img
         nv_cache.should_rerender_image_cache = False
 
@@ -453,7 +453,7 @@ class MapPageWidget(QWidget, MapPageView):
         self_state = self.state()
         unprojected_viewport = self_state.unproject_rect(viewport_rect)
 
-        display_rects_by_child_id = {}  # {nc_id: rect}
+        display_rects_by_child_view_id = {}  # {nc_id: rect}
         for note_widget in self.note_widgets():
             nt_rect = note_widget.state().rect()
 
@@ -461,10 +461,10 @@ class MapPageWidget(QWidget, MapPageView):
                 continue
 
             unprojected_rect = self_state.project_rect(nt_rect)
-            display_rects_by_child_id[note_widget.id] = QRectF(
+            display_rects_by_child_view_id[note_widget.view_id] = QRectF(
                 *unprojected_rect.as_tuple())
 
-        return display_rects_by_child_id
+        return display_rects_by_child_view_id
 
     def paintEvent(self, event):
         state: MapPageViewState = self.state()
@@ -504,7 +504,7 @@ class MapPageWidget(QWidget, MapPageView):
         # At minimum renders one component into cache and preps placeholders
         for child_id, display_rect in display_rects_by_child_id.items():
             note_widget = self.note_widget(child_id)
-            nw_cache = self._note_widget_cache(note_widget.id)
+            nw_cache = self._note_widget_cache(note_widget.view_id)
 
             if time.time() - paint_t0 > MAX_RENDER_TIME:
                 paint_urgently = True
@@ -538,7 +538,7 @@ class MapPageWidget(QWidget, MapPageView):
         # Draw the cached images, along with various decorations
         for child_id, display_rect in display_rects_by_child_id.items():
             note_widget = self.note_widget(child_id)
-            nw_cache = self._note_widget_cache(note_widget.id)
+            nw_cache = self._note_widget_cache(note_widget.view_id)
             note_vs = note_widget.state()
 
             render_img = nw_cache.image_cache
@@ -606,7 +606,7 @@ class MapPageWidget(QWidget, MapPageView):
                 painter.restore()
 
             # Draw the selection overlay and resize circle for selected notes
-            if note_widget.id in state.selected_child_ids:
+            if note_widget.view_id in state.selected_child_ids:
                 # Draw a yellow selection overlay
                 painter.fillRect(display_rect, selection_overlay_qcolor)
 
@@ -628,7 +628,7 @@ class MapPageWidget(QWidget, MapPageView):
             if state.mode() in [
                     MapPageMode.NOTE_RESIZE, MapPageMode.CHILD_MOVE
             ]:
-                if note_widget.id in state.selected_child_ids:
+                if note_widget.view_id in state.selected_child_ids:
                     qdr = display_rect
                     dr = Rectangle(qdr.x(), qdr.y(), qdr.width(), qdr.height())
                     self._draw_guide_lines_for_child(dr, painter)
@@ -644,8 +644,8 @@ class MapPageWidget(QWidget, MapPageView):
         # Draw the arrows
         for arrow_widget in self.arrow_widgets():
             draw_selection_overlay = False
-            if (arrow_widget.id in state.selected_child_ids
-                    or arrow_widget.id in state.drag_selected_child_ids):
+            if (arrow_widget.view_id in state.selected_child_ids
+                    or arrow_widget.view_id in state.drag_selected_child_ids):
                 draw_selection_overlay = True
 
             draw_control_points = False
@@ -767,7 +767,7 @@ class MapPageWidget(QWidget, MapPageView):
 
             if state.arrow_with_visible_cps:
                 arrow_widget = self.arrow_widget(
-                    state.arrow_with_visible_cps.id)
+                    state.arrow_with_visible_cps.view_id)
 
                 edge_under_mouse_idx = arrow_widget.edge_at(mouse_pos)
                 if edge_under_mouse_idx is not None:
@@ -809,7 +809,7 @@ class MapPageWidget(QWidget, MapPageView):
         if event.button() is Qt.LeftButton:
             if state.arrow_with_visible_cps:
                 arrow_widget = self.arrow_widget(
-                    state.arrow_with_visible_cps.id)
+                    state.arrow_with_visible_cps.view_id)
 
                 edge_under_mouse_idx = arrow_widget.edge_at(mouse_pos)
                 if edge_under_mouse_idx is not None:
@@ -853,7 +853,7 @@ class MapPageWidget(QWidget, MapPageView):
         if mode == MapPageMode.NONE:
             if ncs_under_mouse:
                 map_page_actions.update_child_selections(
-                    self.state(), {nv.id: True
+                    self.state(), {nv.view_id: True
                                    for nv in ncs_under_mouse})
                 menu_entries['Edit note'] = commands.edit_selected_notes
                 menu_entries['Copy'] = commands.copy

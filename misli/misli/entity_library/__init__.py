@@ -87,7 +87,10 @@ def load_from_dict(entity_dict: dict):
     cls = get_entity_class_by_name(type_name)
 
     if 'id' in entity_dict:
-        instance = cls(id=entity_dict.pop('id'))
+        id = entity_dict.pop('id')
+        if isinstance(id, list):  # Mostly when deserializing
+            id = tuple(id)
+        instance = cls(id=id)
     else:
         instance = cls()
 

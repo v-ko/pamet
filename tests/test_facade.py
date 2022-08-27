@@ -28,7 +28,7 @@ def test_note_CRUD():
     page = Page(name='test_page')
     pamet.insert_page(page)
 
-    note = TextNote(page_id=page.id)
+    note = TextNote.in_page(page)
     note.text = 'test text'
     pamet.insert_note(copy(note))
     assert [n.asdict() for n in pamet.notes(page)] == [note.asdict()]

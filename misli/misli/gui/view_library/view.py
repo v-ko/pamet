@@ -35,18 +35,18 @@ class View:
         """
         if not initial_state:
             initial_state = ViewState()
-        self._state_id = initial_state.id
+        self._view_id = initial_state.view_id
 
     def __repr__(self):
-        return '<%s id=%s>' % (type(self).__name__, self.id)
+        return '<%s view_id=%s>' % (type(self).__name__, self.view_id)
 
     @property
-    def id(self):
-        return self._state_id
+    def view_id(self):
+        return self._view_id
 
     def state(self) -> ViewState:
-        if misli.gui.view_state_exists(self._state_id):
-            self_state = misli.gui.view_state(self._state_id)
+        if misli.gui.view_state_exists(self._view_id):
+            self_state = misli.gui.view_state(self._view_id)
         else:
-            self_state = misli.gui.get_state_backup(self._state_id)
+            self_state = misli.gui.get_state_backup(self._view_id)
         return self_state

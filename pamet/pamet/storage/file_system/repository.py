@@ -288,6 +288,11 @@ class FSStorageRepository(PametInMemoryRepository,
             # if ns['type_name'] == 'AnchorNote':
             #     ns['type_name'] = 'TextNote'
 
+            id = ns['id']
+            if isinstance(id, str):
+                assert 'page_id' in ns
+                ns['id'] = (ns.pop('page_id'), id)
+
             if 'script_args_str' in ns:
                 command_args = ns.pop('script_args_str')
                 if 'content' not in ns:
@@ -316,6 +321,11 @@ class FSStorageRepository(PametInMemoryRepository,
         arrows = []
         for arrow_state in arrow_states:
             # REMOVE vvv
+            id = arrow_state['id']
+            if isinstance(id, str):
+                assert 'page_id' in arrow_state
+                arrow_state['id'] = (arrow_state.pop('page_id'), id)
+
             if 'type_name' not in arrow_state:
                 arrow_state['type_name'] = Arrow.__name__
             # arrow_state.pop('background_color', None)
@@ -328,8 +338,8 @@ class FSStorageRepository(PametInMemoryRepository,
             #     arrow_state['tail_coords'] = arrow_state.pop('tail_point')
 
 
-            if 'page_id' not in arrow_state or not arrow_state['page_id']:
-                raise Exception
+            # if 'page_id' not in arrow_state or not arrow_state['page_id']:
+            #     raise Exception
 
             try:
                 arrow: Arrow = entity_library.load_from_dict(arrow_state)

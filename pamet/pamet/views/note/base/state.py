@@ -6,9 +6,12 @@ from pamet.model.note import Note
 
 
 @view_state_type
-class NoteViewState(ViewState, Note):
-    note_gid: str = ''
+class NoteViewState(Note, ViewState):
     badges: list = field(default_factory=list, init=False, repr=False)
+
+    @property
+    def note_gid(self):
+        return self.id
 
     def __post_init__(self):
         if not self.note_gid:

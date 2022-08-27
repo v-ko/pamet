@@ -114,10 +114,10 @@ class ChangeAggregator:
         view state (identified by its id).
         '''
         state = change.last_state()
-        if state.id in self.slots:
-            self.slots[state.id].add_change(change)
+        if id(state) in self.slots:
+            self.slots[id(state)].add_change(change)
         else:
-            self.slots[state.id] = AggregatorSlot(change)
+            self.slots[id(state)] = AggregatorSlot(change)
 
     def release_aggregated_changes(self, completed_actions):
         changes = []

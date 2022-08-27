@@ -134,13 +134,13 @@ class TabWidget(QWidget, View):
                 self.edit_view.setFocus()
 
     def add_page_wideget_to_cache(self, page_widget: MapPageWidget):
-        self._page_widget_cache[page_widget.state().id] = page_widget
+        self._page_widget_cache[page_widget.state().view_id] = page_widget
         if MAX_PAGE_CACHE_SIZE < len(self._page_widget_cache):
             page_id, page_widget = self._page_widget_cache.popitem()
             page_widget.deleteLater()
 
-    def cached_page_widget(self, page_view_state_id: str):
-        return self._page_widget_cache.pop(page_view_state_id, None)
+    def cached_page_widget(self, page_view_id: str):
+        return self._page_widget_cache.pop(page_view_id, None)
 
     def switch_to_page_view(self, page_view_state: MapPageViewState):
         """Switches to the specified page view state.
@@ -157,7 +157,7 @@ class TabWidget(QWidget, View):
         if not page_view_state:
             return
 
-        page_widget = self.cached_page_widget(page_view_state.id)
+        page_widget = self.cached_page_widget(page_view_state.view_id)
         if not page_widget:
             page_widget = MapPageWidget(parent=self,
                                         initial_state=page_view_state)
@@ -181,7 +181,8 @@ class TabWidget(QWidget, View):
 
         edit_window_pos = Point2D(edit_window_pos.x(), edit_window_pos.y())
         note_pos = page_widget.state().unproject_point(edit_window_pos)
-        new_note = TextNote(page_id=page_widget.state().page_id)
+        new_note = TextNote()
+        new_note = new_note.with_id(page_id=page_widget.state().page_id)
         new_note.x = note_pos.x()
         new_note.y = note_pos.y()
         actions.note.create_new_note(self.state(), new_note)

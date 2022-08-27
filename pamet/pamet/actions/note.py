@@ -23,7 +23,7 @@ def create_new_note(tab_state: TabViewState, note: Note):
         abort_editing_note(tab_state)
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
-    edit_view_state = EditViewType(note_gid=note.gid(),
+    edit_view_state = EditViewType(id=note.gid(),
                                    new_note_dict=dump_to_dict(note))
     edit_view_state.update_from_note(note)
 
@@ -57,7 +57,7 @@ def start_editing_note(tab_view_state: TabViewState, note: Note):
         abort_editing_note(tab_view_state)
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
-    edit_view_state = EditViewType(note_gid=note.gid())
+    edit_view_state = EditViewType(id=note.gid())
     edit_view_state.update_from_note(note)
     tab_view_state.edit_view_state = edit_view_state
 

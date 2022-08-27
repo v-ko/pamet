@@ -41,7 +41,7 @@ def change_and_backup(backup_service,
                       page,
                       time,
                       note_text: str = 'Test note'):
-    note = TextNote()
+    note = TextNote.in_page(page)
     note.text = note_text
     with fake_time(time=time):
         change = pamet.insert_note(note, page)
@@ -81,7 +81,7 @@ def test_backup(tmp_path):
     assert len(backups) == 1
     assert page_json1 == backups[0].read_text()
 
-    note = TextNote()
+    note = TextNote.in_page(page)
     note.text = 'Test note'
 
     change2 = pamet.insert_note(note, page)

@@ -35,8 +35,10 @@ def special_sigmoid(x: float) -> float:
 
 
 @view_state_type
-class ArrowViewState(ViewState, Arrow):
-    arrow_gid: str = None
+class ArrowViewState(Arrow, ViewState):
+    @property
+    def arrow_gid(self):  # TODO: remove
+        return self.id
 
     def get_arrow(self):
         return pamet.find_one(gid=self.arrow_gid)
@@ -98,9 +100,9 @@ class ArrowWidget(QObject, ArrowView):
 
         map_page_state = self.map_page_view.state()
         note_view_state = map_page_state.view_state_for_note_id(note_id)
-        sub = channels.state_changes_per_TLA_by_id.subscribe(
+        sub = channels.state_changes_per_TLA_by_view_id.subscribe(
             handler=self.handle_anchor_note_view_state_change,
-            index_val=note_view_state.id)
+            index_val=note_view_state.view_id)
         self._anchor_subs_by_note_id[note_id] = sub
 
     def unsubscribe_from_anchor(self, note_id: str):

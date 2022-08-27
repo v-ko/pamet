@@ -85,9 +85,9 @@ def update_child_selections(map_page_view_state: MapPageViewState,
     # If there's only one arrow selected - show its control points
     single_selected_arrow = None
     if len(map_page_view_state.selected_child_ids) == 1:
-        (selected_id, ) = map_page_view_state.selected_child_ids
+        (first_selected_id, ) = map_page_view_state.selected_child_ids
         for arrow_vs in map_page_view_state.arrow_view_states:
-            if arrow_vs.id == selected_id:
+            if arrow_vs.id == first_selected_id:
                 single_selected_arrow = arrow_vs
 
     if single_selected_arrow:
@@ -348,8 +348,7 @@ def select_all_notes(map_page_view_state: MapPageViewState):
 
 
 @action('map_page.resize_page')
-def resize_page(map_page_view_id, new_size: Point2D):
-    map_page_view_state = gui.view_state(map_page_view_id)
+def resize_page(map_page_view_state: MapPageViewState, new_size: Point2D):
     map_page_view_state.geometry.set_size(new_size)
     gui.update_state(map_page_view_state)
 
@@ -431,14 +430,15 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
                                         edit=False)
         StateType = pamet.note_state_type_by_view(ViewType.__name__)
         note_props = child.asdict()
-        note_props.pop('id')
-        nv_state = StateType(**note_props, note_gid=child.gid())
+        note_id = note_props.pop('id')
+        nv_state = StateType(id=note_id, **note_props)
         misli.gui.add_state(nv_state)
         page_view_state.note_view_states.add(nv_state)
     elif isinstance(child, Arrow):
         arrow_props = child.asdict()
-        arrow_props.pop('id')
-        arrow_view_state = ArrowViewState(**arrow_props, arrow_gid=child.gid())
+        arrow_id = arrow_props.pop('id')
+        arrow_view_state = ArrowViewState(id=arrow_id,
+                                          **arrow_props)
         misli.gui.add_state(arrow_view_state)
         page_view_state.arrow_view_states.add(arrow_view_state)
 
@@ -798,7 +798,7 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
         if pamet.find(gid=note.gid()):
             new_id = get_new_id()
             updated_ids[note.id] = new_id
-            note.id = new_id
+            note = note.with_id(page_id=note.page_id, own_id=new_id)
         pamet.insert_note(note)
 
     for arrow in entities:
@@ -809,7 +809,7 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
         arrow.page_id = page.id
         if pamet.find(gid=arrow.gid()):
             new_id = get_new_id()
-            arrow.id = new_id
+            arrow = arrow.with_id(page_id=arrow.page_id, own_id=new_id)
 
         # Where the pasted note ids have been changed - correct them
         # in the arrow anchors. Else for fixed anchors - just place them

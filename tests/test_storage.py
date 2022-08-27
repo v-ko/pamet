@@ -15,11 +15,11 @@ def test_in_memory_repo():
     page1 = Page()
     page2 = Page()
 
-    note1a = Note(page_id=page1.id)
-    note1b_for_update = TextNote(page_id=page1.id)
-    note1c_for_removal = Note(page_id=page1.id)
+    note1a = Note.in_page(page1)
+    note1b_for_update = TextNote.in_page(page1)
+    note1c_for_removal = Note.in_page(page1)
 
-    note2 = Note(page_id=page2.id)
+    note2 = Note.in_page(page2)
 
     # Test the update and remove exceptions for missing entities
     with pytest.raises(Exception):

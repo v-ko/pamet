@@ -81,7 +81,7 @@ def test_view_state_updates_and_diffing():
     channels.raw_state_changes.subscribe(handle_raw_state_changes)
 
     parent_state = create_view_state()
-    subscription = channels.state_changes_per_TLA_by_id.subscribe(
+    subscription = channels.state_changes_per_TLA_by_view_id.subscribe(
         handle_state_change, index_val=parent_state.id)
 
     main_loop.process_events()
@@ -94,7 +94,7 @@ def test_view_state_updates_and_diffing():
         assert state.child_states == set(children_left)
 
     subscription.unsubscribe()
-    channels.state_changes_per_TLA_by_id.subscribe(handle_state_change,
+    channels.state_changes_per_TLA_by_view_id.subscribe(handle_state_change,
                                                    index_val=parent_state.id)
     main_loop.process_events()
 

@@ -29,7 +29,7 @@ actions_queue_channel.subscribe(execute_action)
 _state_aggregator = ChangeAggregator(
     input_channel=channels.raw_state_changes,
     release_trigger_channel=channels.completed_root_actions,
-    output_channel=channels.state_changes_per_TLA_by_id)
+    output_channel=channels.state_changes_per_TLA_by_view_id)
 
 _view_states = {}
 _state_backups = {}
@@ -96,7 +96,8 @@ def log_action_call(action_call: ActionCall):
 
     green = BColors.OKGREEN
     end = BColors.ENDC
-    msg = (f'{indent}Action {green}{action_call.run_state.name} {action_call.name}{end} '
+    msg = (f'{indent}Action {green}{action_call.run_state.name} '
+           f'{action_call.name}{end} '
            f'ARGS=*({args_str}) KWARGS=**{{{kwargs_str}}}')
     if action_call.duration != -1:
         msg += f' time={action_call.duration * 1000:.2f}ms'
@@ -127,11 +128,12 @@ def queue_action(action_func, args: list = None, kwargs: dict = None):
 @log.traced
 def add_state(state_: ViewState):
     ensure_context()
-    if state_.id in _view_states:
-        raise Exception(f'View state with id {state_.id} already present.')
+    if state_.view_id in _view_states:
+        raise Exception(
+            f'View state with id {state_.view_id} already present.')
     state_._added = True
-    _view_states[state_.id] = state_
-    _state_backups[state_.id] = state_.copy()
+    _view_states[state_.view_id] = state_
+    _state_backups[state_.view_id] = state_.copy()
     change = Change.CREATE(state_)
     channels.raw_state_changes.push(change)
     return change
@@ -152,26 +154,26 @@ def get_state_backup(view_id: str):
 @log.traced
 def update_state(state_: ViewState):
     ensure_context()
-    if state_.id not in _view_states:
+    if state_.view_id not in _view_states:
         raise Exception('Cannot update a state which has not been added.')
 
-    change = Change.UPDATE(_state_backups[state_.id], state_)
+    change = Change.UPDATE(_state_backups[state_.view_id], state_)
     channels.raw_state_changes.push(change)
 
-    if (state_._version + 1) <= _view_states[state_.id]._version:
+    if (state_._version + 1) <= _view_states[state_.view_id]._version:
         raise Exception('You\'re using an old state. This object has already '
                         'been updated')
 
-    _state_backups[state_.id] = state_.copy()
+    _state_backups[state_.view_id] = state_.copy()
     state_._version += 1
-    _view_states[state_.id] = state_
+    _view_states[state_.view_id] = state_
     return change
 
 
 @log.traced
 def remove_state(state_: ViewState):
     ensure_context()
-    state_ = _view_states.pop(state_.id)
+    state_ = _view_states.pop(state_.view_id)
     change = Change.DELETE(state_)
     channels.raw_state_changes.push(change)
     return change
