@@ -2,7 +2,7 @@ import os
 import json
 
 import misli
-from misli.gui.actions_library import ACTIONS, Action
+from misli.gui.actions_library import ACTIONS, ActionCall
 
 log = misli.get_logger(__name__)
 
@@ -20,8 +20,8 @@ class MisliGuiReplay:
         with open(actions_meta_path) as mf:
             action_states = json.load(mf)
 
-        self.actions = [Action(**a) for a in action_states]
-        self.actions_left = [Action(**a) for a in action_states]
+        self.actions = [ActionCall(**a) for a in action_states]
+        self.actions_left = [ActionCall(**a) for a in action_states]
 
     def end(self):
         self._ended = True
@@ -42,7 +42,7 @@ class MisliGuiReplay:
         timeout = action_to_dispatch.start_time
 
         if self.last_action_dispatched:
-            event_action = Action(**action_states[-1])
+            event_action = ActionCall(**action_states[-1])
             # ^^ This event has bad timestamps while replaying
 
             a0 = self.last_action_dispatched

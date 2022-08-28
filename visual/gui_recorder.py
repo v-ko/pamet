@@ -8,7 +8,7 @@ from PySide6.QtGui import QPixmap, QRegion
 import misli
 from misli import gui
 
-from misli.gui.actions_library import Action
+from misli.gui.actions_library import ActionCall
 from .constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
 
 log = misli.get_logger(__name__)
@@ -19,6 +19,7 @@ log = misli.get_logger(__name__)
 
 
 class MisliGuiRecorder:
+
     def __init__(self, component_name, ignored_actions_list=None):
         self.component_name = component_name
         self.ignored_actions_list = ignored_actions_list or []
@@ -26,8 +27,9 @@ class MisliGuiRecorder:
         self.snapshots = {}
 
     def capture_qt_component_to_image(self, image_id):
-        matching_components = [c for c in gui.views()
-                               if c.view_class == self.component_name]
+        matching_components = [
+            c for c in gui.views() if c.view_class == self.component_name
+        ]
 
         if not matching_components:
             self.snapshots[image_id] = None
@@ -38,8 +40,8 @@ class MisliGuiRecorder:
         target_component = matching_components[0]
 
         pixmap = QPixmap(target_component.rect().size())
-        target_component.render(
-            pixmap, QPoint(), QRegion(target_component.rect()))
+        target_component.render(pixmap, QPoint(),
+                                QRegion(target_component.rect()))
 
         self.snapshots[image_id] = pixmap
 
@@ -47,12 +49,13 @@ class MisliGuiRecorder:
         top_lvl_action = action_states[-1]
         self.recoding.append(top_lvl_action)
 
-        action = Action(**top_lvl_action)
+        action = ActionCall(**top_lvl_action)
         log.info('Recorded action %s' % action)
 
         last_index = len(self.recoding) - 1
-        misli.call_delayed(
-            self.capture_qt_component_to_image, 0, args=[last_index])
+        misli.call_delayed(self.capture_qt_component_to_image,
+                           0,
+                           args=[last_index])
 
     def save_recording(self, output_folder, overwrite=False):
         if os.path.exists(output_folder):
@@ -78,7 +81,7 @@ class MisliGuiRecorder:
         name = os.path.basename(output_folder) + RECORDING_EXTENSION
         output_file_path = os.path.join(output_folder, name)
         with open(output_file_path, 'w') as of:
-            json.dump(self.recoding, of)
+            json.dump(self.recoding, of, ensure_ascii=False)
 
         images_folder = os.path.join(output_folder, SNAPSHOTS_FOLDER_NAME)
         os.makedirs(images_folder)
