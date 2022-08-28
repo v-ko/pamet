@@ -1,7 +1,7 @@
 # Misli
 A collection of projects with emphasis on controlling and organizing the digital resources available to the individual.
 
-On the software side - the `misli` python module holds code common for writing cross platform apps in Python that can use different GUI frameworks (mainly Qt or arbitrary web frontends (via Brython and Cordova)). The aim is not to make a new GUI framework, but to abstract away and experiment with some technologies and architecture patterns. Read on below if you're interested in joining the development.
+On the software side - the `misli` python module holds code common for writing cross platform apps in Python that can use different GUI frameworks (mainly Qt or arbitrary web frontends (via Brython and Cordova)). The aim is not to make a new GUI framework, but to abstract away and experiment with some technologies and architecture patterns.
 
 # Pamet
 An app for organizing thoughts and notes
