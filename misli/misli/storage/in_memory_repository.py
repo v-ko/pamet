@@ -91,9 +91,11 @@ class InMemoryRepository(Repository):
                     parent_gid: str | tuple = None,
                     **filter) -> Generator[Any, None, None]:
         # If searching by gid - there will be only one unique result (if any)
-        if gid:
+        id = filter.pop('id', None)
+        if gid or id:
+            id = gid or id
             try:
-                result = self._entity_cache.get(gid, None)
+                result = self._entity_cache.get(id, None)
             except TypeError:
                 result = []
             if result:

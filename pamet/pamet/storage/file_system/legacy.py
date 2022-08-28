@@ -135,9 +135,9 @@ class LegacyFSRepoReader:
                 if not (-2147483647 < nt[coord] < 2147483647):
                     nt[coord] = 1
 
-            nt['page_id'] = page.id
+            # nt['page_id'] = page.id
 
-            nt['id'] = str(nt['id'])
+            nt['id'] = (page.id, str(nt['id']))
             nt['color'] = nt.pop('txt_col')
             nt['background_color'] = nt.pop('bg_col')
             nt['geometry'] = [
@@ -176,7 +176,7 @@ class LegacyFSRepoReader:
             legacy_arrows = nt.pop('links')
             for legacy_arrow in legacy_arrows:
                 arrow = Arrow.in_page(page)
-                arrow.set_tail(anchor_note_id=nt['id'])
+                arrow.set_tail(anchor_note_id=nt['id'][1])
                 arrow.set_head(anchor_note_id=str(legacy_arrow['to_id']))
                 control_point = legacy_arrow.pop('cp', None)
                 if control_point:
@@ -248,13 +248,12 @@ class LegacyFSRepoReader:
                 # f'text: {notes_by_id[note.own_id].text}.')
 
             old_id = note.own_id
-            note = note.with_id(
-                new_id_for_legacy_note(
-                    note.own_id,
-                    note.created,
-                    note.content,
-                    notes_by_id.keys(),
-                ))
+            note = note.with_id(own_id=new_id_for_legacy_note(
+                note.own_id,
+                note.created,
+                note.content,
+                notes_by_id.keys(),
+            ))
             new_ids_by_old[old_id] = note.own_id
 
             # Check note sizes

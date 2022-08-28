@@ -32,10 +32,13 @@ def current_time() -> datetime:
     return datetime.now().astimezone()
 
 
-def timestamp(dt: datetime):
+def timestamp(dt: datetime, microseconds: bool = False):
     if dt.tzinfo is None:  # If no timezone is set - assume local
         dt = dt.astimezone()
-    return dt.isoformat(timespec='seconds')
+    if microseconds:
+        return dt.isoformat()
+    else:
+        return dt.isoformat(timespec='seconds')
 
 
 def get_new_id(seed=None) -> str:

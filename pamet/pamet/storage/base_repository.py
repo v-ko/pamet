@@ -1,13 +1,13 @@
 from typing import Generator, Union
-from misli import entity_library
 from misli.entity_library.change import Change
 from misli.helpers import current_time
 from misli.pubsub import Channel
 from misli.storage.repository import Repository
-import pamet
+
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note
 from pamet.model.page import Page
+from pamet.model.page_child import PageChild
 
 
 class PametRepository(Repository):
@@ -53,15 +53,17 @@ class PametRepository(Repository):
             return None
         return self.find_one(gid=page_gid)
 
-    # -------------Notes CRUD-------------
-
-    def insert_note(self, note_: Note, page: Page = None) -> Change:
-        if page and page.id != note_.page_id:
-            note_ = note_.with_id(page.id, note_.own_id)
-        change = self.insert_one(note_)
+    def insert_child(self, child: PageChild, page: Page = None) -> Change:
+        if page and page.id != child.page_id:
+            child = child.with_id(page.id, child.own_id)
+        change = self.insert_one(child)
         if self.raw_entity_changes_channel:
             self.raw_entity_changes_channel.push(change)
         return change
+
+    # -------------Notes CRUD-------------
+    def insert_note(self, note: Note, page: Page = None) -> Change:
+        return self.insert_child(note, page)
 
     def update_note(self, note_: Note) -> Change:
         old_note = self.find_one(gid=note_.gid())
@@ -86,16 +88,24 @@ class PametRepository(Repository):
         page_gid = page_.gid() if isinstance(page_, Page) else page_
         return self.find(parent_gid=page_gid, type=Note)
 
-    def note(self, page_: Page | str, note_id: str):
+    def note(self, page_: Page | str, note_own_id: str):
         page_gid = page_.gid() if isinstance(page_, Page) else page_
-        return self.find_one(gid=(page_gid, note_id))
+        return self.find_one(gid=(page_gid, note_own_id))
+
+
+    # def notes(self, **kwargs) -> Generator[Note, None, None]:
+    #     if 'type' in kwargs:
+    #         raise Exception
+    #     return self.find(type=Note, **kwargs)
+
+    # def note(self, **kwargs):
+    #     if 'type' in kwargs:
+    #         raise Exception
+    #     return self.find_one(type=Note, **kwargs)
 
     # -------------Arrow CRUD-------------
-    def insert_arrow(self, arrow_: Arrow) -> Change:
-        change = self.insert_one(arrow_)
-        if self.raw_entity_changes_channel:
-            self.raw_entity_changes_channel.push(change)
-        return change
+    def insert_arrow(self, arrow_: Arrow, page: Page = None) -> Change:
+        return insert_child(arrow_, page)
 
     def update_arrow(self, arrow_: Arrow) -> Change:
         old_arrow = self.find_one(gid=arrow_.gid())

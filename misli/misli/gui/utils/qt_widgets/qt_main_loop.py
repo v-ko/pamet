@@ -7,6 +7,7 @@ from misli.pubsub.main_loop import MainLoop
 class QtMainLoop(MainLoop):
     def __init__(self, app: QApplication):
         self.app = app
+        # self.queue_checksum = 0
 
     def call_delayed(
             self,
@@ -21,7 +22,12 @@ class QtMainLoop(MainLoop):
         if not isinstance(callback, Callable):
             raise Exception
 
-        QTimer.singleShot(delay * 1000, lambda: callback(*args, **kwargs))
+        # def report_and_callback():
+        #     self.queue_checksum -= 1
+        #     callback(*args, **kwargs)
+
+        self.queue_checksum += 1
+        QTimer.singleShot(delay * 1000, lambda: callback(*args, **kwargs)
 
     def process_events(self):
         self.app.processEvents()

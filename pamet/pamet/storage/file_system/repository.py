@@ -21,7 +21,6 @@ from .legacy import LegacyFSRepoReader
 
 log = get_logger(__name__)
 
-RANDOMIZE_TEXT = False
 V4_FILE_EXT = '.pam4.json'
 
 

@@ -84,7 +84,7 @@ class Entity:
     #     return self.gid() == other.gid()
 
     def __repr__(self) -> str:
-        return f'<{type(self)} id={self.id}>'
+        return f'<{type(self).__name__} id={self.id}>'
 
     def __copy__(self):
         return self.copy()

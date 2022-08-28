@@ -22,8 +22,8 @@ class PageChild(Entity):
     def with_id(self, page_id: str = None, own_id: str = None):
         """A convinience method to produce a copy with a changed id (since
         the 'id' attribute is immutable (used in hashing))."""
-        page_id = page_id or get_new_id()
-        own_id = own_id or get_new_id()
+        page_id = page_id or self.page_id
+        own_id = own_id or self.own_id
         self_dict = self.asdict()
         self_dict['id'] = page_id, own_id
         return type(self)(**self_dict)

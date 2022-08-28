@@ -40,7 +40,6 @@ of misli is GUI rendering and blocking the main loop would cause freezing.
 from typing import Callable, Dict, Any
 from collections import defaultdict
 from enum import Enum
-from copy import copy
 from dataclasses import MISSING
 
 from misli.pubsub.main_loop import MainLoop, NoMainLoop

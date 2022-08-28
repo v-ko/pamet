@@ -167,7 +167,7 @@ class Change:
         return dict(old_state=old_state,
                     new_state=new_state,
                     id=self.id,
-                    time=timestamp(self.time))
+                    time=timestamp(self.time, microseconds=True))
 
     @classmethod
     def from_dict(cls, change_dict: dict) -> Change:
@@ -184,7 +184,8 @@ class Change:
         # Get the delta and use it to generate the new_state
         delta = change_dict.pop('delta', None)
         if delta is not None:
-            new_state_dict = copy(old_state_dict).replace(**delta)
+            new_state_dict = copy(old_state_dict)
+            new_state_dict.update(**delta)
 
         if old_state_dict:
             change_dict['old_state'] = load_from_dict(old_state_dict)

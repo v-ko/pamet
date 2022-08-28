@@ -70,7 +70,7 @@ class MapPageWidget(QWidget, MapPageView):
         MapPageView.__init__(self, parent, initial_state)
 
         # Local variables
-        self._cache_per_nc_id = {}
+        self._cache_per_nc_view_id = {}
         self._paint_event_count = 0
         self.debug_drawing = False
         self._mouse_press_position = QPoint()
@@ -332,13 +332,15 @@ class MapPageWidget(QWidget, MapPageView):
         return None
 
     def _note_widget_cache(self, note_view_id):
-        if note_view_id not in self._cache_per_nc_id:
-            self._cache_per_nc_id[note_view_id] = NoteViewCache()
+        if note_view_id not in self._cache_per_nc_view_id:
+            self._cache_per_nc_view_id[note_view_id] = NoteViewCache()
 
-        return self._cache_per_nc_id[note_view_id]
+        return self._cache_per_nc_view_id[note_view_id]
 
     def delete_note_view_cache(self, note_view_id):
-        del self._cache_per_nc_id[note_view_id]
+        if note_view_id not in self._cache_per_nc_view_id:
+            return
+        del self._cache_per_nc_view_id[note_view_id]
 
     def note_widgets(self):
         for nw_id, note_widget in self._note_widgets.items():

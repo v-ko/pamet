@@ -326,9 +326,6 @@ class FSStorageBackupService:
                                       ensure_ascii=False)
                 json_strings.append(json_str + '\n')
             json_str_all = ''.join(json_strings)
-            # for change in changes:
-            #     json_strings.append(json.dumps(change.as_safe_delta_dict()))
-            # json_str_all = '\n'.join(json_strings)
 
             tmp_changeset_path = self.tmp_changeset_path(page_id)
             tmp_changeset_path.parent.mkdir(parents=True, exist_ok=True)
@@ -347,7 +344,7 @@ class FSStorageBackupService:
             # Serialize the page
             page = self.repo.page(page_id)
             if not page:
-                log.error(f'Can not backup missing page with id {page_id}')
+                # Assume page has been deleted (we don't track that here)
                 continue
 
             notes = self.repo.notes(page)
