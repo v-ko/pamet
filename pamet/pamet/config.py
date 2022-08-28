@@ -18,7 +18,8 @@ class PametConfig(Entity):
     @classmethod
     def load(cls: PametConfig, config_dict: dict):
         dict_on_load = copy(config_dict)
-        config = cls(id=config_dict.pop('id'))
+        id = config_dict.pop('id', None)
+        config = cls(id=id) if id else cls()
         config._dict_on_load = dict_on_load
         leftovers = config.replace_silent(**config_dict)
         if leftovers:
