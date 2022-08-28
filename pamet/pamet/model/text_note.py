@@ -1,4 +1,5 @@
 
+import random
 from misli import get_logger
 from misli import entity_type
 from misli.basic_classes.point2d import Point2D
@@ -7,7 +8,11 @@ from pamet.constants import NOTE_MARGIN
 from pamet.model.note import Note
 log = get_logger(__name__)
 
+RANDOMIZE_TEXT = False
+
 TEXT = 'text'
+letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+letters += 'абвгдежзийклмнопрстуфхцчшщьъюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩѝЪЮЯ'
 
 
 @entity_type
@@ -24,6 +29,14 @@ class TextNote(Note):
         except KeyError:
             text = ''
             self.content[TEXT] = text
+
+        if RANDOMIZE_TEXT:
+            new_text = ''
+            for char in text:
+                if char != ' ':
+                    char = random.choice(letters)
+                new_text += char
+            text = new_text
         return text
 
     @text.setter
