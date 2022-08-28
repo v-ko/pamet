@@ -158,9 +158,7 @@ def test_pruning(tmp_path):
     for_keeping.append(
         backup_service.recent_backup_path(page.id, weekly_kept_time))
     changes.append(change)
-    change_obj_file_path = backup_service.changeset_path(
-        page.id, initial_backup_time, weekly_kept_time)
-    change_obj_files[change_obj_file_path] = changes
+    change_obj_files[weekly_kept_time] = changes
 
     # Last month, same day
     # This one should be deleted
@@ -189,9 +187,7 @@ def test_pruning(tmp_path):
     change = change_and_backup(backup_service, page, daily_kept_time,
                                'Last month, same day, to be kept')
     changes.append(change)
-    change_obj_file_path = backup_service.changeset_path(
-        page.id, weekly_kept_time, daily_kept_time)
-    change_obj_files[change_obj_file_path] = changes
+    change_obj_files[daily_kept_time] = changes
 
     # Last day, same hour
     # This one should be deleted
@@ -219,9 +215,7 @@ def test_pruning(tmp_path):
     change = change_and_backup(backup_service, page, hourly_kept_time,
                                'Last day, same hour, to be kept')
     changes.append(change)
-    change_obj_file_path = backup_service.changeset_path(
-        page.id, daily_kept_time, hourly_kept_time)
-    change_obj_files[change_obj_file_path] = changes
+    change_obj_files[hourly_kept_time] = changes
 
     # Do pruning
     with fake_time(

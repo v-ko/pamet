@@ -44,11 +44,13 @@ PROCESS_INTERVAL = 30
 PRUNE_INTERVAL = DAY
 BACKUP_INTERVAL = 1 * HOUR
 
+TIME_FORMAT = '%Y-%m-%dT%H-%M-%S+%z'
+
 
 def datetime_from_backup_path(path) -> datetime:
     """Exctracts the timestamp from the path/name of a backup file."""
     parts = path.stem.split('_')
-    return datetime.fromisoformat(parts[1])
+    return datetime.strptime(parts[1], TIME_FORMAT)
 
 
 def datetimes_from_changeset_path(path: Path) -> datetime:
@@ -57,6 +59,10 @@ def datetimes_from_changeset_path(path: Path) -> datetime:
     """
     parts = path.stem.split('_')
     return datetime.fromisoformat(parts[1]), datetime.fromisoformat(parts[2])
+
+
+def file_timestamp(time: datetime):
+    return time.strftime(TIME_FORMAT)
 
 
 class Backup:
@@ -181,23 +187,23 @@ class FSStorageBackupService:
         return self.page_backup_folder(page_id) / 'tmp_changeset.jsonl'
 
     def recent_backup_path(self, page_id, time: datetime) -> Path:
-        name = f'{BACKUP}_{timestamp(time)}.json'
+        name = f'{BACKUP}_{file_timestamp(time)}.json'
         return self.page_backup_folder(page_id) / name
 
     def permanent_backups_folder(self, page_id, time: datetime) -> Path:
         return self.page_backup_folder(page_id) / str(time.year)
 
     def permanent_backup_path(self, page_id, time: datetime) -> Path:
-        name = f'{BACKUP}_{timestamp(time)}.json'
+        name = f'{BACKUP}_{file_timestamp(time)}.json'
         return self.permanent_backups_folder(page_id, time) / name
 
-    def changeset_path(self, page_id, from_time: datetime,
-                       to_time: datetime) -> Path:
-        from_timestamp = timestamp(from_time)
-        to_timestamp = timestamp(to_time)
-        file_name = f'{CHANGESET}_{from_timestamp}_{to_timestamp}.jsonl'
-        path = self.page_backup_folder(page_id) / file_name
-        return path
+    # def changeset_path(self, page_id, from_time: datetime,
+    #                    to_time: datetime) -> Path:
+    #     from_timestamp = timestamp(from_time)
+    #     to_timestamp = timestamp(to_time)
+    #     file_name = f'{CHANGESET}_{from_timestamp}_{to_timestamp}.jsonl'
+    #     path = self.page_backup_folder(page_id) / file_name
+    #     return path
 
     def per_page_backup_folders(self):
         for page_folder in self.pages_backup_data_folder().iterdir():
