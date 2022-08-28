@@ -25,9 +25,9 @@ class QtMainLoop(MainLoop):
         # def report_and_callback():
         #     self.queue_checksum -= 1
         #     callback(*args, **kwargs)
+        # self.queue_checksum += 1
 
-        self.queue_checksum += 1
-        QTimer.singleShot(delay * 1000, lambda: callback(*args, **kwargs)
+        QTimer.singleShot(delay * 1000, lambda: callback(*args, **kwargs))
 
     def process_events(self):
         self.app.processEvents()
