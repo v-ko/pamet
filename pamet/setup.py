@@ -10,6 +10,6 @@ setuptools.setup(name='pamet',
                      ],
                  },
                  install_requires=[
-                     'PySide6', 'misli', 'click', 'slugify', 'thefuzz',
+                     'PySide6', 'misli', 'click', 'python-slugify', 'thefuzz',
                      'peewee', 'pillow'
                  ])
