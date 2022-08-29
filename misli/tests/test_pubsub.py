@@ -1,7 +1,6 @@
 import fusion
 from fusion.pubsub import Channel
 from fusion.pubsub.main_loop import NoMainLoop
-from pamet.model.text_note import TextNote
 
 
 def test_pubsub():
@@ -14,11 +13,9 @@ def test_pubsub():
 
     expected_notes = []
     all_notes = []
-    for text in ['Yes', 'Blah', 'NO']:
-        note = TextNote()
-        note.text = text
+    for note in ['Yes', 'Blah', 'NO']:
         all_notes.append(note)
-        if text != 'NO':
+        if note != 'NO':
             expected_notes.append(note)
 
     expected_on_the_indexed_channel = expected_notes[0]
