@@ -1,8 +1,8 @@
 from copy import copy
 from PySide6.QtGui import QColor
 
-import misli
-from misli.logging import get_logger
+import fusion
+from fusion.logging import get_logger
 
 from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.config import DesktopConfig
@@ -24,12 +24,12 @@ script_runner = ScriptRunner()
 
 # Config handling
 def get_config() -> DesktopConfig:
-    config_dict = misli.gui.util_provider().get_config()
+    config_dict = fusion.gui.util_provider().get_config()
     return DesktopConfig.load(config_dict)
 
 
 def save_config(config: DesktopConfig):
-    misli.gui.util_provider().set_config(config.asdict())
+    fusion.gui.util_provider().set_config(config.asdict())
 
 
 def media_store():

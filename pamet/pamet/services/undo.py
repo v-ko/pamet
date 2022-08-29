@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Dict, List
-from misli import Channel
-from misli.entity_library.change import Change
+from fusion import Channel
+from fusion.entity_library.change import Change
 import pamet
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note

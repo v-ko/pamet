@@ -1,9 +1,9 @@
 
 import random
-from misli import get_logger
-from misli import entity_type
-from misli.basic_classes.point2d import Point2D
-from misli.basic_classes.rectangle import Rectangle
+from fusion import get_logger
+from fusion import entity_type
+from fusion.basic_classes.point2d import Point2D
+from fusion.basic_classes.rectangle import Rectangle
 from pamet.constants import NOTE_MARGIN
 from pamet.model.note import Note
 log = get_logger(__name__)

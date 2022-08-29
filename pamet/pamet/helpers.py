@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import Union
-from misli.basic_classes.point2d import Point2D
-from misli.logging import get_logger
+from fusion.basic_classes.point2d import Point2D
+from fusion.logging import get_logger
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.model.page import Page

@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QShowEvent
 from PySide6.QtWidgets import QListWidgetItem, QWidget
 
-from misli.gui.view_library.view_state import ViewState, view_state_type
+from fusion.gui.view_library.view_state import ViewState, view_state_type
 import pamet
 from pamet.url import Url
 from pamet.services.search.base import SearchResult

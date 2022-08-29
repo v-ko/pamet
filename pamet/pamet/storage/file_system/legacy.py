@@ -1,20 +1,22 @@
 from ast import Tuple
 from collections import defaultdict
 from copy import copy
+from hashlib import md5
 import json
 
 from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
 from typing import List
-from misli import entity_library
+from fusion import entity_library
 
-from misli.basic_classes import Point2D
-from misli.basic_classes.rectangle import Rectangle
-from misli.helpers import current_time, get_new_id, timestamp
-from misli.logging import get_logger
-from misli.storage.in_memory_repository import InMemoryRepository
-from pamet.constants import MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
+from fusion.basic_classes import Point2D
+from fusion.basic_classes.rectangle import Rectangle
+from fusion.helpers import current_time, get_new_id, timestamp
+from fusion.logging import get_logger
+from fusion.storage.in_memory_repository import InMemoryRepository
+from pamet.constants import MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT
+from pamet.constants import MIN_NOTE_WIDTH
 from pamet.helpers import snap_to_grid
 from pamet.model.page import Page
 from pamet.model.arrow import Arrow, ArrowAnchorType
@@ -24,6 +26,19 @@ from pamet.model.script_note import ScriptNote
 from pamet.model.text_note import TextNote
 
 log = get_logger(__name__)
+
+_cache = {}
+_paths_cache = {}
+MAX_CACHE = 1000
+new_to_old_path = {}
+md5_by_old_name = {}
+
+# # Caching - to be removed. it's only for the bin import
+# def get_from_cache(page_path: Path):
+#     if page_md5 in _cache:
+#         return _cache[page_md5]
+#     return page_md5
+
 
 TIME_FORMAT = '%d.%m.%Y %H:%M:%S'
 ONE_V3_COORD_UNIT_TO_V4 = 20
@@ -114,7 +129,7 @@ class LegacyFSRepoReader:
         notes_data = page_data.pop('notes')
 
         # Load the page
-        page = Page(name=json_path.stem)
+        page = Page(name=json_path.stem, id=get_new_id(json_path.stem))
         self.v3_note_checksum_by_page_name[page.name] = 0
 
         # Load the notes and arrows
@@ -544,6 +559,17 @@ class LegacyFSRepoReader:
             log.info(f'Updated {notes_updated} internal links for '
                      f'imported legacy page "{page.name}"')
 
+        # # TODO: remove:
+        # # Insert into cache
+        # new_path = self.path_for_page(page)
+        # old_path = new_to_old_path[new_path]
+        # page_md5 = md5_by_old_name[old_path.stem]
+        # _cache[page_md5] = new_path.read_text()
+        # _paths_cache[page_md5] = new_path
+        # if len(_cache) > MAX_CACHE:
+        #     del _cache[next(iter(_cache.keys()))]
+        #     del _paths_cache[next(iter(_cache.keys()))]
+
     def process_legacy_pages(self, previous_v_repo_entities: dict = None):
         # Collect the legacy page paths
         v2_pages = []
@@ -572,11 +598,36 @@ class LegacyFSRepoReader:
 
         legacy_pages: List[Tuple] = []  # Tuples (page, notes, arrows)
 
+        # md5_by_old_name.clear()
+        # # Try to find them in the cache
+        # for page_path in copy(v2_pages):
+        #     page_md5 = md5(page_path.read_bytes()).hexdigest()
+        #     page_content = _cache.get(page_md5, None)
+        #     md5_by_old_name[page_path.stem] = md5
+        #     if page_content:
+        #         v2_pages.remove(page_path)
+        #         v4_path = _paths_cache[page_md5]
+        #         v4_path.write_text(page_content)
+
+        # for page_path in copy(v3_pages):
+        #     page_md5 = md5(page_path.read_bytes()).hexdigest()
+        #     page_content = _cache.get(page_md5, None)
+        #     md5_by_old_name[page_path.stem] = md5
+        #     if page_content:
+        #         v3_pages.remove(page_path)
+        #         v4_path = _paths_cache[page_md5]
+        #         v4_path.write_text(page_content)
+
+        # new_to_old_path.clear()  # Remove
+        # v2_to_v3_path = {}
+
         # Process the legacy pages
         for page_path in v2_pages:
             try:
                 new_path = self.convert_v2_to_v3(page_path,
                                                  backup_folder=v2_bacup_folder)
+                # new_to_old_path[new_path] = page_path
+                # v2_to_v3_path[page_path] = new_path
                 v3_pages.append(new_path)
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
@@ -589,11 +640,16 @@ class LegacyFSRepoReader:
                     page_path,
                     backup_folder=v3_backup_folder,
                     previous_v_repo_entities=previous_v_repo_entities)
+                # if page_path in v2_to_v3_path:  # v2 to v3
+                #     page_path = v2_to_v3_path[page_path]
+                # new_to_old_path[new_path] = page_path
+
                 legacy_pages.append(new_path)
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
                           f'{file.path}: {e}')
                 continue
+
         return legacy_pages
 
     def checksum_imported_page_notes(self, page: Page):

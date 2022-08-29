@@ -5,20 +5,20 @@ import json
 from PySide6.QtCore import QPoint
 from PySide6.QtGui import QPixmap, QRegion
 
-import misli
-from misli import gui
+import fusion
+from fusion import gui
 
-from misli.gui.actions_library import ActionCall
+from fusion.gui.actions_library import ActionCall
 from .constants import RECORDING_EXTENSION, SNAPSHOTS_FOLDER_NAME
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 # Save smaller images for the visual comparisons in order to ignore pixel-level
 # differences (that might occure on different resolutions, etc)
 # RESIZED_IMAGE_HEIGHT = 200
 
 
-class MisliGuiRecorder:
+class FusionGuiRecorder:
 
     def __init__(self, component_name, ignored_actions_list=None):
         self.component_name = component_name
@@ -53,9 +53,9 @@ class MisliGuiRecorder:
         log.info('Recorded action %s' % action)
 
         last_index = len(self.recoding) - 1
-        misli.call_delayed(self.capture_qt_component_to_image,
-                           0,
-                           args=[last_index])
+        fusion.call_delayed(self.capture_qt_component_to_image,
+                            0,
+                            args=[last_index])
 
     def save_recording(self, output_folder, overwrite=False):
         if os.path.exists(output_folder):

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 
-import misli
+import fusion
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 class AnchorEditWidgetMixin:

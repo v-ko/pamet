@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Union, Tuple
 from urllib.parse import urlparse, urlunparse
 
-from misli.logging import get_logger
-from misli.basic_classes import Point2D
+from fusion.logging import get_logger
+from fusion.basic_classes import Point2D
 
 import pamet
 from pamet.constants import DEFAULT_EYE_HEIGHT

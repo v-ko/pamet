@@ -2,9 +2,9 @@ from __future__ import annotations
 from typing import Tuple
 from PySide6.QtGui import QCursor
 
-import misli
-from misli.basic_classes.point2d import Point2D
-from misli.gui import command
+import fusion
+from fusion.basic_classes.point2d import Point2D
+from fusion.gui import command
 
 from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
@@ -14,7 +14,7 @@ from pamet.actions import window as window_actions
 from pamet.gui_helpers import current_window, current_tab
 from pamet.views.note.base.state import NoteViewState
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 def current_tab_and_page_views() -> Tuple[TabWidget, MapPageWidget]:
@@ -53,7 +53,7 @@ def edit_selected_notes():
         return
 
     for note_view_id in selected_child_ids:
-        note_state = misli.gui.view_state(note_view_id)
+        note_state = fusion.gui.view_state(note_view_id)
         if not isinstance(note_state, NoteViewState):
             continue
         note_actions.start_editing_note(tab.state(), note_state.get_note())

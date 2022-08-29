@@ -1,8 +1,8 @@
 from dataclasses import field
 from datetime import datetime
-from misli import Entity, entity_type
+from fusion import Entity, entity_type
 from pamet.url import Url
-from misli.helpers import current_time, timestamp
+from fusion.helpers import current_time, timestamp
 
 
 @entity_type

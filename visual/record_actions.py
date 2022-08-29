@@ -3,16 +3,16 @@
 import signal
 import argparse
 
-import misli
-from misli.gui import update_components_from_changes
+import fusion
+from fusion.gui import update_components_from_changes
 from pamet import usecases
 import pamet
-from misli.gui.utils.qt_widgets.qt_main_loop import QtMainLoop
+from fusion.gui.utils.qt_widgets.qt_main_loop import QtMainLoop
 
-from .gui_recorder import MisliGuiRecorder
-from .gui_replay import MisliGuiReplay
+from .gui_recorder import FusionGuiRecorder
+from .gui_replay import FusionGuiReplay
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
 
@@ -36,17 +36,17 @@ def main():
     overwrite = args.overwrite
     replay_speed = args.replay_speed
 
-    misli.set_main_loop(QtMainLoop())
+    fusion.set_main_loop(QtMainLoop())
     misli_gui.set_reproducible_ids(True)
-    misli.on_change(update_components_from_changes)
+    fusion.on_change(update_components_from_changes)
 
-    controller = MisliGuiRecorder('BrowserWindowView', ignored_actions_list)
-    misli.gui.on_action_logged(controller.handle_action_channel)
+    controller = FusionGuiRecorder('BrowserWindowView', ignored_actions_list)
+    fusion.gui.on_action_logged(controller.handle_action_channel)
 
     if file_for_replay:
-        replay = MisliGuiReplay(file_for_replay)
+        replay = FusionGuiReplay(file_for_replay)
         replay.speed = replay_speed
-        misli.gui.on_action_logged(replay.queue_next_action)
+        fusion.gui.on_action_logged(replay.queue_next_action)
 
     desktop_app_class = pamet.view_library.get_view_class('BrowserWindowView')
     desktop_app = desktop_app_class(parent=None)

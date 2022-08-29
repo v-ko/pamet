@@ -11,10 +11,10 @@ from typing import List
 
 from peewee import Model, CharField, SqliteDatabase, DateTimeField
 
-from misli.entity_library.change import Change
-from misli.helpers import get_new_id, current_time, timestamp
-from misli.logging import get_logger
-from misli.pubsub import Channel
+from fusion.entity_library.change import Change
+from fusion.helpers import get_new_id, current_time, timestamp
+from fusion.logging import get_logger
+from fusion.pubsub import Channel
 
 from pamet.model.page import Page
 from pamet.storage.base_repository import PametRepository

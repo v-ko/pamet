@@ -3,15 +3,15 @@ import shutil
 import argparse
 from PIL import Image, ImageChops, ImageStat
 
-import misli
+import fusion
 from .constants import RECORDING_EXTENSION, SNAP_EXTENSION
-from misli.gui import update_components_from_changes
-from misli.gui.utils.qt_widgets.qt_main_loop import QtMainLoop
+from fusion.gui import update_components_from_changes
+from fusion.gui.utils.qt_widgets.qt_main_loop import QtMainLoop
 
 import pamet
 
-from .gui_recorder import MisliGuiRecorder
-from .gui_replay import MisliGuiReplay
+from .gui_recorder import FusionGuiRecorder
+from .gui_replay import FusionGuiReplay
 
 INSPECTION_TEMPLATES_PATH = 'inspection_templates'
 AUTOMATIC_INSPECTION_OUTPUT_PATH = 'automatic_inspection_output'
@@ -20,17 +20,17 @@ DIFF_FOLDER = 'tmp_last_visual_inspection_diffs'
 
 
 def run_recording(file_for_replay, output_folder, replay_speed):
-    misli.set_main_loop(QtMainLoop())
+    fusion.set_main_loop(QtMainLoop())
     misli_gui.set_reproducible_ids(True)
 
-    recorder = MisliGuiRecorder('BrowserWindowView')
-    misli.gui.on_action_logged(recorder.handle_action_channel)
+    recorder = FusionGuiRecorder('BrowserWindowView')
+    fusion.gui.on_action_logged(recorder.handle_action_channel)
 
-    replay = MisliGuiReplay(file_for_replay)
+    replay = FusionGuiReplay(file_for_replay)
     replay.speed = replay_speed
 
-    misli.on_change(update_components_from_changes)
-    misli.gui.on_action_logged(replay.queue_next_action)
+    fusion.on_change(update_components_from_changes)
+    fusion.gui.on_action_logged(replay.queue_next_action)
 
     desktop_app_class = pamet.view_library.get_view_class('BrowserWindowView')
     desktop_app = desktop_app_class(parent=None)

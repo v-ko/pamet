@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from misli.entity_library.change import Change
-from misli.pubsub import Channel
+from fusion.entity_library.change import Change
+from fusion.pubsub import Channel
 import pamet
 from pamet.model.note import Note
 

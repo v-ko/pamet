@@ -1,5 +1,5 @@
-import misli
-from misli.gui import context
+import fusion
+from fusion.gui import context
 
 import pamet
 from pamet.views import map_page
@@ -13,7 +13,7 @@ def editing_note():
 
 
 def page_focus():
-    focused_view = misli.gui.focused_view()
+    focused_view = fusion.gui.focused_view()
     return isinstance(focused_view, map_page.view.MapPageView)
 
 

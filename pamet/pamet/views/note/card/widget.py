@@ -2,9 +2,9 @@ from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QColor, QPaintEvent, QPainter, QResizeEvent
 from PySide6.QtWidgets import QWidget
 
-from misli.entity_library.change import Change
-from misli.gui.utils.qt_widgets import bind_and_apply_state
-from misli.gui.view_library.view_state import view_state_type
+from fusion.entity_library.change import Change
+from fusion.gui.utils.qt_widgets import bind_and_apply_state
+from fusion.gui.view_library.view_state import view_state_type
 from pamet.desktop_app import default_note_font
 from pamet.desktop_app.helpers import draw_text_lines, elide_text
 from pamet.model.card_note import CardNote

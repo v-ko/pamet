@@ -4,14 +4,14 @@ from typing import List, Tuple, Union
 import math
 from PySide6.QtCore import QObject, QPointF, QRectF
 from PySide6.QtGui import QColor, QPainter, QPainterPath
-from misli.basic_classes.point2d import Point2D
-from misli.basic_classes.rectangle import Rectangle
-from misli.entity_library.change import Change
-from misli.gui import channels
-from misli.gui.utils.qt_widgets import bind_and_apply_state
-from misli.gui.view_library.view import View
-from misli.gui.view_library.view_state import ViewState, view_state_type
-from misli.logging import get_logger
+from fusion.basic_classes.point2d import Point2D
+from fusion.basic_classes.rectangle import Rectangle
+from fusion.entity_library.change import Change
+from fusion.gui import channels
+from fusion.gui.utils.qt_widgets import bind_and_apply_state
+from fusion.gui.view_library.view import View
+from fusion.gui.view_library.view_state import ViewState, view_state_type
+from fusion.logging import get_logger
 import pamet
 from pamet.desktop_app import selection_overlay_qcolor
 from pamet.constants import ARROW_EDGE_RAIDUS, ARROW_SELECTION_THICKNESS_DELTA, CONTROL_POINT_RADIUS, POTENTIAL_EDGE_RADIUS

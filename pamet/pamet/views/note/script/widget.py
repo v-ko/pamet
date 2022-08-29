@@ -2,10 +2,10 @@ from copy import copy
 from PySide6.QtCore import QPoint, QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
 from PySide6.QtWidgets import QWidget
-from misli.basic_classes.point2d import Point2D
+from fusion.basic_classes.point2d import Point2D
 
-from misli.entity_library.change import Change
-from misli.gui.view_library.view_state import view_state_type
+from fusion.entity_library.change import Change
+from fusion.gui.view_library.view_state import view_state_type
 import pamet
 from pamet import desktop_app
 from pamet.desktop_app.helpers import draw_text_lines

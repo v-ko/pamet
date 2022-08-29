@@ -2,11 +2,11 @@ from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QWidget, QLineEdit, QLab
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt
-from misli.entity_library.change import Change
+from fusion.entity_library.change import Change
 
-from misli.gui import ViewState, view_state_type
-from misli.gui.utils.qt_widgets import bind_and_apply_state
-from misli.gui.view_library.view import View
+from fusion.gui import ViewState, view_state_type
+from fusion.gui.utils.qt_widgets import bind_and_apply_state
+from fusion.gui.view_library.view import View
 
 import pamet
 from pamet import actions

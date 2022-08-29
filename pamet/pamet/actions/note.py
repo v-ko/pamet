@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import misli
-from misli.entity_library import dump_to_dict
-from misli.helpers import current_time
+import fusion
+from fusion.entity_library import dump_to_dict
+from fusion.helpers import current_time
 import pamet.views.tab.state
-from misli import gui
-from misli.gui.actions_library import action
+from fusion import gui
+from fusion.gui.actions_library import action
 
 import pamet
 from pamet.helpers import snap_to_grid
@@ -13,7 +13,7 @@ from pamet.model.note import Note
 from pamet.views.note.qt_helpers import minimal_nonelided_size
 from pamet.actions import map_page as map_page_actions
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 @action('notes.create_new_note')
@@ -96,7 +96,7 @@ def apply_page_change_to_anchor_view(
         note_view_state.text = page.name
     else:
         note_view_state.text += '(removed)'
-    misli.gui.update_state(note_view_state)
+    fusion.gui.update_state(note_view_state)
 
 
 @action('note.switch_note_type')

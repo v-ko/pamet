@@ -2,11 +2,11 @@ from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
 
-import misli
-from misli.basic_classes.point2d import Point2D
-from misli.entity_library.change import Change
-from misli.gui.utils import qt_widgets
-from misli.gui.view_library.view import View
+import fusion
+from fusion.basic_classes.point2d import Point2D
+from fusion.entity_library.change import Change
+from fusion.gui.utils import qt_widgets
+from fusion.gui.view_library.view import View
 from pamet import actions, note_view_type_by_state
 from pamet.actions import tab as tab_actions
 from pamet.model.text_note import TextNote
@@ -167,7 +167,7 @@ class TabWidget(QWidget, View):
         self._page_view.show()
 
         # Must be visible to accept focus, so queue on the main loop
-        misli.call_delayed(page_widget.setFocus)
+        fusion.call_delayed(page_widget.setFocus)
 
     def create_new_note_command(self):
         page_widget = self.page_view()

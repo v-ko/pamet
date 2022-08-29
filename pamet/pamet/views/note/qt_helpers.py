@@ -2,8 +2,8 @@ from copy import copy
 from typing import Union
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
-from misli.basic_classes.point2d import Point2D
-from misli.basic_classes.rectangle import Rectangle
+from fusion.basic_classes.point2d import Point2D
+from fusion.basic_classes.rectangle import Rectangle
 from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH
 from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO

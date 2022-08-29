@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from misli.helpers import get_new_id
+from fusion.helpers import get_new_id
 from pamet.url import Url
 from pamet.model.page import Page
 from slugify import slugify

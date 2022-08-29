@@ -5,8 +5,8 @@ from enum import Enum
 from typing import List
 
 import pamet
-from misli.basic_classes import Rectangle, Point2D
-from misli.gui import view_state_type, ViewState
+from fusion.basic_classes import Rectangle, Point2D
+from fusion.gui import view_state_type, ViewState
 from pamet.constants import DEFAULT_EYE_HEIGHT
 from pamet.url import Url
 from pamet.model.note import Note

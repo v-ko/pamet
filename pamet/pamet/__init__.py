@@ -1,8 +1,8 @@
 from importlib.resources import read_text
 from pathlib import Path
 
-from misli.extensions_loader import ExtensionsLoader
-from misli.logging import get_logger
+from fusion.extensions_loader import ExtensionsLoader
+from fusion.logging import get_logger
 from pamet.services.clipboard import ClipboardService
 from pamet.services.search.base import BaseSearchService
 from .model import sync_repo, async_repo, set_sync_repo, set_async_repo

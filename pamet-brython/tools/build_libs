@@ -10,8 +10,8 @@ REQUIREMENTS = ['rsync', 'brython-cli']
 BRYTHON_JS = 'brython.js'
 BRYTHON_STDLIB = 'brython_stdlib.js'
 BRYTHON_MODULES_JS = 'brython_modules.js'
-MISLI_BRYTHON_JS = 'misli.brython.js'
-MISLI = 'misli'
+FUSION_BRYTHON_JS = 'fusion.brython.js'
+FUSION = 'fusion'
 WEB_SHELL = 'web_shell'
 STATIC = 'static'
 
@@ -35,7 +35,7 @@ def modules_present(build_dir):
     entries = os.listdir(build_dir)
     modules_present = True
 
-    for module in [MISLI, WEB_SHELL]:
+    for module in [FUSION, WEB_SHELL]:
         if module not in entries:
             print('Module %s missing' % module)
             modules_present = False
@@ -50,19 +50,19 @@ def call(command_and_args: list, cwd: str):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--misli_module_path', default='../../misli/misli')
+    parser.add_argument('--fusion_module_path', default='../../fusion/fusion')
     parser.add_argument('--web_shell_path', default='../')
     parser.add_argument('--build_dir', default='../../builds/web_shell')
     parser.add_argument(
         '--deployment_dir', default='../../deployments/web_shell')
     args = parser.parse_args()
 
-    misli_module_path = os.path.abspath(args.misli_module_path)
+    fusion_module_path = os.path.abspath(args.fusion_module_path)
     web_shell_path = os.path.abspath(args.web_shell_path)
     build_dir = os.path.abspath(args.build_dir)
     deployment_dir = os.path.abspath(args.deployment_dir)
 
-    for d in [misli_module_path, web_shell_path]:
+    for d in [fusion_module_path, web_shell_path]:
         if not os.path.exists(d):
             print('No such path:', d)
             return -1
@@ -74,7 +74,7 @@ def main():
         return -1
 
     # Copy the needed modules
-    for m_path in [misli_module_path, web_shell_path]:
+    for m_path in [fusion_module_path, web_shell_path]:
         call(['rsync', '-r', '--delete', m_path, '.'], cwd=build_dir)
 
     if not modules_present(build_dir):
@@ -96,12 +96,12 @@ def main():
               BRYTHON_MODULES_JS)
         return -1
 
-    # Comptile the package for the misli module
-    build_misli_dir = join(build_dir, MISLI)
-    call(['brython-cli', '--make_package', MISLI], cwd=build_misli_dir)
+    # Comptile the package for the fusion module
+    build_fusion_dir = join(build_dir, FUSION)
+    call(['brython-cli', '--make_package', FUSION], cwd=build_fusion_dir)
 
-    if MISLI_BRYTHON_JS not in os.listdir(build_misli_dir):
-        print('Build error. %s missing. Aborting process.' % MISLI_BRYTHON_JS)
+    if FUSION_BRYTHON_JS not in os.listdir(build_fusion_dir):
+        print('Build error. %s missing. Aborting process.' % FUSION_BRYTHON_JS)
         return -1
 
     print('Copying libs to deployment folder')
@@ -115,8 +115,8 @@ def main():
         join(build_dir, BRYTHON_MODULES_JS),
         join(static_data_folder, BRYTHON_MODULES_JS))
     shutil.copy(
-        join(build_dir, MISLI, MISLI_BRYTHON_JS),
-        join(static_data_folder, MISLI_BRYTHON_JS))
+        join(build_dir, FUSION, FUSION_BRYTHON_JS),
+        join(static_data_folder, FUSION_BRYTHON_JS))
 
     for file in os.scandir(join(build_dir, WEB_SHELL)):
         if file.is_dir():

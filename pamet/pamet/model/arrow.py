@@ -1,11 +1,11 @@
 from dataclasses import field
 from enum import Enum
 from typing import List
-from misli.basic_classes.color import Color
-from misli.basic_classes.point2d import Point2D
+from fusion.basic_classes.color import Color
+from fusion.basic_classes.point2d import Point2D
 
-from misli.entity_library import entity_type
-from misli.logging import get_logger
+from fusion.entity_library import entity_type
+from fusion.logging import get_logger
 
 import pamet
 from pamet.constants import DEFAULT_ARROW_THICKNESS

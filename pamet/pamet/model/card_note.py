@@ -1,9 +1,9 @@
 
 from copy import copy
 from typing import Tuple
-from misli.basic_classes.point2d import Point2D
-from misli.basic_classes.rectangle import Rectangle
-from misli.entity_library import entity_type
+from fusion.basic_classes.point2d import Point2D
+from fusion.basic_classes.rectangle import Rectangle
+from fusion.entity_library import entity_type
 from pamet.constants import NOTE_MARGIN
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote

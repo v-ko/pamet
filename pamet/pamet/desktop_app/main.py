@@ -3,8 +3,8 @@ import os
 from pathlib import Path
 import click
 
-import misli
-from misli.gui import channels as misli_channels
+import fusion
+from fusion.gui import channels as misli_channels
 from pamet import channels as pamet_channels
 
 import pamet
@@ -22,7 +22,7 @@ from pamet.services.undo import UndoService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 @click.command()
@@ -132,7 +132,7 @@ def main(path: str):
     window = WindowWidget(initial_state=window_state)
     window.showMaximized()
 
-    # misli.call_delayed(window_actions.new_browser_tab,
+    # fusion.call_delayed(window_actions.new_browser_tab,
     #                    args=[window_state, start_page])
     window_actions.new_browser_tab(window_state, start_page)
 

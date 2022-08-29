@@ -1,10 +1,10 @@
 from PySide6.QtWidgets import QApplication
 
-import misli
-from misli.logging import LoggingLevels, LOGGING_LEVEL
+import fusion
+from fusion.logging import LoggingLevels, LOGGING_LEVEL
 import pamet
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 class DesktopApp(QApplication):

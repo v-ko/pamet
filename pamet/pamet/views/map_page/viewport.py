@@ -1,5 +1,5 @@
-import misli
-from misli.basic_classes import Point2D, Rectangle
+import fusion
+from fusion.basic_classes import Point2D, Rectangle
 
 
 class Viewport:
@@ -18,7 +18,7 @@ class Viewport:
         return self.viewport_height
 
     def height_scale_factor(self):
-        return misli.line_spacing_in_pixels / self.eye_height
+        return fusion.line_spacing_in_pixels / self.eye_height
 
     def project_rect(self, rect: Rectangle) -> Rectangle:
         top_left = self.project_point(rect.top_left())

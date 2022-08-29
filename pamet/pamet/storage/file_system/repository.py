@@ -7,11 +7,11 @@ from pamet.model.arrow import Arrow
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from slugify import slugify
 
-import misli
-from misli import entity_library, Entity, Change
-from misli.pubsub import Channel
-from misli.storage.in_memory_repository import InMemoryRepository
-from misli import get_logger
+import fusion
+from fusion import entity_library, Entity, Change
+from fusion.pubsub import Channel
+from fusion.storage.in_memory_repository import InMemoryRepository
+from fusion import get_logger
 
 import pamet
 from pamet.model.page import Page
@@ -150,7 +150,7 @@ class FSStorageRepository(PametInMemoryRepository,
         InMemoryRepository.insert_one(self, entity)
 
         if self.queue_save_on_change:
-            misli.call_delayed(self.write_to_disk, 0)
+            fusion.call_delayed(self.write_to_disk, 0)
 
         return Change.CREATE(entity)
 
@@ -159,7 +159,7 @@ class FSStorageRepository(PametInMemoryRepository,
             self.insert_one(entity)
 
         # Async to allow for grouping of all calls within an e.g. action
-        misli.call_delayed(self.write_to_disk, 0)
+        fusion.call_delayed(self.write_to_disk, 0)
 
     def remove_one(self, entity):
         InMemoryRepository.remove_one(self, entity)
@@ -170,7 +170,7 @@ class FSStorageRepository(PametInMemoryRepository,
             self.upserted_pages.add(entity.parent_gid())
 
         if self.queue_save_on_change:
-            misli.call_delayed(self.write_to_disk, 0)
+            fusion.call_delayed(self.write_to_disk, 0)
 
         return Change.DELETE(entity)
 
@@ -179,7 +179,7 @@ class FSStorageRepository(PametInMemoryRepository,
             self.remove_one(entity)
 
         # Async to allow for grouping of all calls within an e.g. action
-        misli.call_delayed(self.write_to_disk, 0)
+        fusion.call_delayed(self.write_to_disk, 0)
 
     def update_one(self, entity):
         change = InMemoryRepository.update_one(self, entity)
@@ -189,7 +189,7 @@ class FSStorageRepository(PametInMemoryRepository,
             self.upserted_pages.add(entity.parent_gid())
 
         if self.queue_save_on_change:
-            misli.call_delayed(self.write_to_disk, 0)
+            fusion.call_delayed(self.write_to_disk, 0)
 
         return change
 
@@ -198,7 +198,7 @@ class FSStorageRepository(PametInMemoryRepository,
             self.update_one(entity)
 
         # Async to allow for grouping of all calls within an e.g. action
-        misli.call_delayed(self.write_to_disk, 0)
+        fusion.call_delayed(self.write_to_disk, 0)
 
     def find(self, **filter):
         yield from InMemoryRepository.find(self, **filter)

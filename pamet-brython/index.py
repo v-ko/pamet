@@ -1,7 +1,7 @@
 from typing import Callable
 from browser import window, document, timer
 
-import misli
+import fusion
 import pamet
 
 
@@ -18,7 +18,7 @@ def main():
 
     window.pamet = pamet
 
-    misli.set_main_loop(JSMainLoop())
+    fusion.set_main_loop(JSMainLoop())
     print('test')
     pamet.insert(id='test_page')
     pamet.insert(

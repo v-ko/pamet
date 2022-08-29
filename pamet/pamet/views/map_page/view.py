@@ -1,9 +1,9 @@
 from copy import copy
 from typing import Generator, List, Union
 
-import misli
-from misli.basic_classes import Point2D, Rectangle
-from misli.gui.view_library.view import View
+import fusion
+from fusion.basic_classes import Point2D, Rectangle
+from fusion.gui.view_library.view import View
 import pamet
 
 from pamet.constants import ARROW_EDGE_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELECTION_RADIUS
@@ -18,7 +18,7 @@ from pamet.views.arrow.widget import ArrowView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 from pamet.views.note.base.view import NoteView
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 class MapPageView(View):

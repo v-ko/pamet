@@ -4,10 +4,10 @@ import setuptools
 with open("../README.md", "r") as fh:
     long_description = fh.read()
 
-version = (Path(__file__).parent / 'misli' / 'VERSION').read_text()
+version = (Path(__file__).parent / 'fusion' / 'VERSION').read_text()
 
 setuptools.setup(
-    name="misli",
+    name="fusion",
     version=version,
     author="Petko Ditchev",
     author_email="pditchev@gmail.com",

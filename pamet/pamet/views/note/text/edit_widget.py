@@ -4,7 +4,7 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply
 
 from PySide6.QtWidgets import QCompleter, QPushButton
 
-import misli
+import fusion
 from pamet import register_note_view_type
 
 import pamet
@@ -21,7 +21,7 @@ from pamet.views.note.base_edit.view_state import NoteEditViewState
 from pamet.views.note.base_edit.widget import BaseNoteEditWidget
 from pamet.views.note.text.props_edit.widget import TextEditPropsWidget
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 class CardEditViewState(NoteEditViewState):

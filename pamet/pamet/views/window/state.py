@@ -1,6 +1,6 @@
 from dataclasses import field
 
-from misli.gui import view_state_type, ViewState, View
+from fusion.gui import view_state_type, ViewState, View
 
 
 @view_state_type

@@ -1,5 +1,5 @@
 from pathlib import Path
-from misli.entity_library import entity_type
+from fusion.entity_library import entity_type
 from pamet.model.text_note import TextNote
 
 # SCRIPT = 'script'

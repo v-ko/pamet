@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import field
-from misli.entity_library import entity_type
-from misli.entity_library.entity import Entity
+from fusion.entity_library import entity_type
+from fusion.entity_library.entity import Entity
 
-from misli.helpers import get_new_id
+from fusion.helpers import get_new_id
 
 
 @entity_type

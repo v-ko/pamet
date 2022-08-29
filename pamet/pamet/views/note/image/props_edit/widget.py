@@ -7,7 +7,7 @@ from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QUrl, Qt
 from PySide6.QtGui import QImage, QImageReader, QPixmap, QResizeEvent
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QFileDialog, QWidget
-from misli.basic_classes.point2d import Point2D
+from fusion.basic_classes.point2d import Point2D
 
 from pamet.url import Url
 from pamet.desktop_app import media_store

@@ -4,9 +4,9 @@ from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QMessageBox, QPushButton, QWidget
 
-import misli.entity_library
-from misli.gui.view_library.view import View
-from misli.gui.views.context_menu.widget import ContextMenuWidget
+import fusion.entity_library
+from fusion.gui.view_library.view import View
+from fusion.gui.views.context_menu.widget import ContextMenuWidget
 from pamet.actions import note as note_actions
 from pamet.note_view_lib import note_types_with_assiciated_views
 from pamet.views.map_page.widget import MapPageWidget
@@ -24,7 +24,7 @@ class BaseNoteEditWidget(QWidget, View):
         self.parent_tab: TabWidget = parent
 
         if initial_state.new_note_dict:
-            self.edited_note = misli.entity_library.load_from_dict(
+            self.edited_note = fusion.entity_library.load_from_dict(
                 initial_state.new_note_dict)
         else:
             self.edited_note = initial_state.get_note()

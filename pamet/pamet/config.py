@@ -3,9 +3,9 @@ from copy import copy
 
 from dataclasses import field
 from pathlib import Path
-from misli.entity_library import entity_type
-from misli.entity_library.entity import Entity
-from misli.logging import get_logger
+from fusion.entity_library import entity_type
+from fusion.entity_library.entity import Entity
+from fusion.logging import get_logger
 
 log = get_logger(__name__)
 

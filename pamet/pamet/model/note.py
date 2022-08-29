@@ -4,9 +4,9 @@ from typing import Generator, List, Union
 from dataclasses import field
 from datetime import datetime
 
-from misli import get_logger
-from misli import entity_type
-from misli.basic_classes import Point2D, Rectangle, Color
+from fusion import get_logger
+from fusion import entity_type
+from fusion.basic_classes import Point2D, Rectangle, Color
 
 import pamet
 from pamet.constants import DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH
@@ -15,7 +15,7 @@ from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
 from pamet.model.page_child import PageChild
 from pamet.url import Url
-from misli.helpers import current_time, timestamp
+from fusion.helpers import current_time, timestamp
 from pamet.model.arrow import Arrow, ArrowAnchorType
 
 log = get_logger(__name__)

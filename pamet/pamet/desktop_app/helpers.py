@@ -5,10 +5,10 @@ import shutil
 from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, QPainter
 from PySide6.QtCore import Qt, QRectF, QRect
 
-import misli
-from misli.basic_classes.rectangle import Rectangle
-from misli.gui.utils.qt_widgets.provider import QtWidgetsUtilProvider
-from misli.logging import get_logger
+import fusion
+from fusion.basic_classes.rectangle import Rectangle
+from fusion.gui.utils.qt_widgets.provider import QtWidgetsUtilProvider
+from fusion.logging import get_logger
 
 import pamet
 from pamet.constants import NO_SCALE_LINE_SPACING
@@ -213,11 +213,11 @@ def configure_for_qt(app):
     from pamet.views.note.script.edit_widget import ScriptNoteEditWidget
 
     desktop_app.set_app(app)
-    misli.configure_for_qt(app)
+    fusion.configure_for_qt(app)
 
     log.info(f'Using data folder: {pamet_data_folder_path}')
     util_provider = QtWidgetsUtilProvider(pamet_data_folder_path)
-    misli.gui.set_util_provider(util_provider)
+    fusion.gui.set_util_provider(util_provider)
 
     config: DesktopConfig = desktop_app.get_config()
     if config.changes_present():

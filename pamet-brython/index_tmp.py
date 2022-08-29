@@ -1,5 +1,5 @@
 from browser import window, document
-import misli
+import fusion
 
 
 class Logger:
@@ -24,7 +24,7 @@ def test_func_kwa(**custom_kwargs):
 def main():
     window.test_func = test_func
     window.test_func_kwa = test_func_kwa
-    window.misli = misli
+    window.fusion = fusion
 
     label = document['label']
     label.text = 'LOADED, YO'

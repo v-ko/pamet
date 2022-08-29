@@ -5,7 +5,7 @@ import stat
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton, QWidget
-from misli.gui.misli_gui import util_provider
+from fusion.gui.misli_gui import util_provider
 from pamet import desktop_app
 from pamet.desktop_app import get_config, save_config
 

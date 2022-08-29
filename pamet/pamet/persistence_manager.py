@@ -1,9 +1,9 @@
 from typing import List
-from misli.entity_library.change import Change
-from misli.entity_library.entity import Entity
-from misli.pubsub import Channel
-from misli.storage.in_memory_repository import InMemoryRepository
-from misli.storage.repository import Repository
+from fusion.entity_library.change import Change
+from fusion.entity_library.entity import Entity
+from fusion.pubsub import Channel
+from fusion.storage.in_memory_repository import InMemoryRepository
+from fusion.storage.repository import Repository
 
 
 class PersistenceManager(Repository):

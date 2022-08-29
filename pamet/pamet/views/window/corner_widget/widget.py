@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QWidget
-from misli.gui.views.context_menu.widget import ContextMenuWidget
+from fusion.gui.views.context_menu.widget import ContextMenuWidget
 from pamet import commands
 
 from pamet.actions import tab as tab_actions

@@ -2,8 +2,8 @@ from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Qt, QRect
 
-from misli.gui.utils.qt_widgets import bind_and_apply_state
-from misli.gui.view_library.view_state import view_state_type
+from fusion.gui.utils.qt_widgets import bind_and_apply_state
+from fusion.gui.view_library.view_state import view_state_type
 from pamet import register_note_view_type
 from pamet.desktop_app import default_note_font
 from pamet.model.text_note import TextNote
@@ -12,7 +12,7 @@ from pamet.views.note.base.view import NoteView
 from pamet.views.note.base.state import NoteViewState
 from pamet.desktop_app.helpers import elide_text, draw_text_lines
 
-from misli import get_logger
+from fusion import get_logger
 from pamet.views.note.qt_helpers import draw_link_decorations
 
 log = get_logger(__name__)

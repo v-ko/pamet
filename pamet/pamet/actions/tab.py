@@ -1,8 +1,8 @@
 from __future__ import annotations
-import misli
-from misli.gui import action
-from misli.basic_classes import Point2D
-from misli.logging import get_logger
+import fusion
+from fusion.gui import action
+from fusion.basic_classes import Point2D
+from fusion.logging import get_logger
 
 import pamet
 from pamet.constants import MAX_NAVIGATION_HISTORY
@@ -31,7 +31,7 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
     if not page_view_state:
         # Create the page state with all of its children states
         page_view_state = MapPageViewState(page_id=page.id)
-        misli.gui.add_state(page_view_state)
+        fusion.gui.add_state(page_view_state)
 
         for _note in pamet.notes(page):
             NoteViewType = pamet.note_view_type(
@@ -41,21 +41,21 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
             note_id = note_props.pop('id')
             note_view_state = StateType(id=note_id, **note_props)
             page_view_state.note_view_states.add(note_view_state)
-            misli.gui.add_state(note_view_state)
+            fusion.gui.add_state(note_view_state)
 
         for arrow in pamet.arrows(page):
             arrow_props = arrow.asdict()
             arrow_id = arrow_props.pop('id')
             arrow_view_state = ArrowViewState(id=arrow_id, **arrow_props)
             page_view_state.arrow_view_states.add(arrow_view_state)
-            misli.gui.add_state(arrow_view_state)
-        misli.gui.update_state(page_view_state)
+            fusion.gui.add_state(arrow_view_state)
+        fusion.gui.update_state(page_view_state)
 
     # Set the page state in the tab state and handle the navigation history
     tab_state.page_view_state = page_view_state
     tab_state.add_page_state_to_cache(page_view_state)
     tab_state.title = page.name
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
 
 
 @action('go_to_url')
@@ -79,7 +79,7 @@ def go_to_url(tab_state: TabViewState,
 
         page_state.viewport_height = height
         page_state.viewport_center = center
-        misli.gui.update_state(page_state)
+        fusion.gui.update_state(page_state)
 
     if not update_nav_history:
         return
@@ -109,7 +109,7 @@ def go_to_url(tab_state: TabViewState,
         nav_history.pop(0)
 
     tab_state.set_navigation_index(len(nav_history) - 1)
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
 
 
 @action('page.create_and_link_page')
@@ -151,7 +151,7 @@ def navigation_back(tab_state: TabViewState):
         return
 
     tab_state.set_navigation_index(tab_state.current_nav_index - 1)
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
     go_to_url(tab_state,
               nav_history[tab_state.current_nav_index],
               update_nav_history=False)
@@ -166,7 +166,7 @@ def navigation_forward(tab_state: TabViewState):
         return
 
     tab_state.set_navigation_index(tab_state.current_nav_index + 1)
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
     go_to_url(tab_state,
               nav_history[tab_state.current_nav_index],
               update_nav_history=False)
@@ -179,7 +179,7 @@ def navigation_toggle_last(tab_state):
 
     nav_history = tab_state.navigation_history
     tab_state.set_navigation_index(tab_state.previous_nav_index)
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
     go_to_url(tab_state,
               nav_history[tab_state.current_nav_index],
               update_nav_history=False)
@@ -189,7 +189,7 @@ def navigation_toggle_last(tab_state):
 def close_right_sidebar(tab_state: TabViewState):
     # TODO: if tab_state.right_sidebar_state and unsaved shit: push notification
     tab_state.right_sidebar_state = None
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
 
 
 @action('tab.open_global_search')
@@ -197,13 +197,13 @@ def open_global_search(tab_state: TabViewState):
     # If not present - create the search bar state
     if not tab_state.search_bar_state:
         tab_state.search_bar_state = SearchBarWidgetState()
-        misli.gui.add_state(tab_state.search_bar_state)
+        fusion.gui.add_state(tab_state.search_bar_state)
 
     tab_state.left_sidebar_state = tab_state.search_bar_state
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
 
 
 @action('tab.close_left_sidebar')
 def close_left_sidebar(tab_state: TabViewState):
     tab_state.left_sidebar_state = None
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)

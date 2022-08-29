@@ -1,6 +1,6 @@
-from misli.basic_classes import Point2D
-from misli.gui.actions_library import action
-from misli.helpers import get_new_id
+from fusion.basic_classes import Point2D
+from fusion.gui.actions_library import action
+from fusion.helpers import get_new_id
 import pamet
 
 from pamet.helpers import generate_page_name

@@ -1,4 +1,4 @@
-from misli.gui.view_library.view_state import view_state_type
+from fusion.gui.view_library.view_state import view_state_type
 from pamet.model.script_note import ScriptNote
 from pamet.note_view_lib import register_note_view_type
 from pamet.views.note.base_edit.view_state import NoteEditViewState

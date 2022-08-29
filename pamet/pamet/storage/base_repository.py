@@ -1,8 +1,8 @@
 from typing import Generator, Union
-from misli.entity_library.change import Change
-from misli.helpers import current_time
-from misli.pubsub import Channel
-from misli.storage.repository import Repository
+from fusion.entity_library.change import Change
+from fusion.helpers import current_time
+from fusion.pubsub import Channel
+from fusion.storage.repository import Repository
 
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note

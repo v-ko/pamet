@@ -1,13 +1,13 @@
 import os
 import json
 
-import misli
-from misli.gui.actions_library import ACTIONS, ActionCall
+import fusion
+from fusion.gui.actions_library import ACTIONS, ActionCall
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
-class MisliGuiReplay:
+class FusionGuiReplay:
     def __init__(self, actions_meta_path):
         self.last_action_dispatched = None
         self._ended = False
@@ -59,7 +59,7 @@ class MisliGuiReplay:
 
         log.info('(%s/%s) Dispatching with timeout %s: %s' %
                  (action_idx, actions_count, timeout, action_to_dispatch))
-        misli.call_delayed(
+        fusion.call_delayed(
             ACTIONS[action_to_dispatch.type],
             self.speed * timeout,
             action_to_dispatch.args,

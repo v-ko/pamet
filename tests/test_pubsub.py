@@ -1,12 +1,12 @@
-import misli
-from misli.pubsub import Channel
-from misli.pubsub.main_loop import NoMainLoop
+import fusion
+from fusion.pubsub import Channel
+from fusion.pubsub.main_loop import NoMainLoop
 from pamet.model.text_note import TextNote
 
 
 def test_pubsub():
     main_loop = NoMainLoop()
-    misli.set_main_loop(main_loop)
+    fusion.set_main_loop(main_loop)
 
     channel = Channel('test_channel',
                       index_key=lambda x: x.id,

@@ -2,14 +2,14 @@ from __future__ import annotations
 from dataclasses import fields
 from typing import List
 
-import misli
-from misli import gui
-from misli.entity_library.entity import Entity
-from misli.helpers import get_new_id
+import fusion
+from fusion import gui
+from fusion.entity_library.entity import Entity
+from fusion.helpers import get_new_id
 import pamet
 
-from misli.basic_classes import Point2D, Rectangle
-from misli.gui.actions_library import action
+from fusion.basic_classes import Point2D, Rectangle
+from fusion.gui.actions_library import action
 from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.helpers import snap_to_grid
 from pamet.url import Url
@@ -26,7 +26,7 @@ from pamet.views.map_page.state import MapPageMode, MapPageViewState
 from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.qt_helpers import minimal_nonelided_size
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 
 @action('map_page.start_mouse_drag_navigation')
@@ -220,7 +220,7 @@ def delete_selected_children(map_page_view_state: MapPageViewState):
         pamet.remove_arrow(arrow)
 
     clear_child_selection(map_page_view_state)
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.start_notes_resize')
@@ -234,7 +234,7 @@ def start_notes_resize(map_page_view_state: MapPageViewState, main_note: Note,
     map_page_view_state.note_resize_main_note = main_note.copy()
 
     for child_id in map_page_view_state.selected_child_ids:
-        child_state = misli.gui.view_state(child_id)
+        child_state = fusion.gui.view_state(child_id)
         if isinstance(child_state, NoteViewState):
             map_page_view_state.note_resize_states.append(child_state)
 
@@ -266,7 +266,7 @@ def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: list):
     map_page_view_state.set_mode(MapPageMode.CHILD_MOVE)
     map_page_view_state.mouse_position_on_note_drag_start = Point2D(*mouse_pos)
     for cid in map_page_view_state.selected_child_ids:
-        child_state = misli.gui.view_state(cid)
+        child_state = fusion.gui.view_state(cid)
         if isinstance(child_state, ArrowViewState):
             map_page_view_state.moved_arrow_states.append(child_state)
         elif isinstance(child_state, NoteViewState):
@@ -379,7 +379,7 @@ def color_selected_children(map_page_view_state: str,
             raise Exception
 
     clear_child_selection(map_page_view_state)
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.open_page_properties')
@@ -389,15 +389,15 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
     properties_view_state = MapPagePropertiesViewState(
         page_id=page_view_state.page_id)
 
-    misli.gui.add_state(properties_view_state)
+    fusion.gui.add_state(properties_view_state)
 
     if focused_prop:
         properties_view_state.focused_prop = focused_prop
-        misli.gui.update_state(properties_view_state)
+        fusion.gui.update_state(properties_view_state)
 
     tab_state.right_sidebar_state = properties_view_state
 
-    misli.gui.update_state(tab_state)
+    fusion.gui.update_state(tab_state)
 
 
 @action('map_page.save_page_properties')
@@ -432,17 +432,17 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
         note_props = child.asdict()
         note_id = note_props.pop('id')
         nv_state = StateType(id=note_id, **note_props)
-        misli.gui.add_state(nv_state)
+        fusion.gui.add_state(nv_state)
         page_view_state.note_view_states.add(nv_state)
     elif isinstance(child, Arrow):
         arrow_props = child.asdict()
         arrow_id = arrow_props.pop('id')
         arrow_view_state = ArrowViewState(id=arrow_id,
                                           **arrow_props)
-        misli.gui.add_state(arrow_view_state)
+        fusion.gui.add_state(arrow_view_state)
         page_view_state.arrow_view_states.add(arrow_view_state)
 
-    misli.gui.update_state(page_view_state)
+    fusion.gui.update_state(page_view_state)
 
 
 @action('map_page.handle_child_removed')
@@ -452,17 +452,17 @@ def handle_child_removed(page_view_state: MapPageViewState, child: Entity):
             filter(lambda x: x.note_gid == child.gid(),
                    page_view_state.note_view_states))
         for nv_state in nv_states:  # Should be len==1
-            misli.gui.remove_state(nv_state)
+            fusion.gui.remove_state(nv_state)
             page_view_state.note_view_states.remove(nv_state)
     elif isinstance(child, Arrow):
         av_states = list(
             filter(lambda x: x.arrow_gid == child.gid(),
                    page_view_state.arrow_view_states))
         for nv_state in av_states:  # Should be len==1
-            misli.gui.remove_state(nv_state)
+            fusion.gui.remove_state(nv_state)
             page_view_state.arrow_view_states.remove(nv_state)
 
-    misli.gui.update_state(page_view_state)
+    fusion.gui.update_state(page_view_state)
 
 
 @action('map_page.handle_child_updated')
@@ -471,23 +471,23 @@ def handle_child_updated(child_view_state: NoteViewState, child: Note):
         child_view_state.update_from_note(child)
     elif isinstance(child, Arrow):
         child_view_state.update_from_arrow(child)
-    misli.gui.update_state(child_view_state)
+    fusion.gui.update_state(child_view_state)
 
 
 @action('map_page.handle_page_name_updated')
 def handle_page_name_updated(tab_view_state: TabViewState, page: Page):
     tab_view_state.title = page.name
-    misli.gui.update_state(tab_view_state)
+    fusion.gui.update_state(tab_view_state)
 
 
 @action('map_page.start_arrow_creation')
 def start_arrow_creation(map_page_view_state: MapPageViewState):
     av_state = ArrowViewState(page_id=map_page_view_state.page_id)
-    misli.gui.add_state(av_state)
+    fusion.gui.add_state(av_state)
 
     map_page_view_state.set_mode(MapPageMode.CREATE_ARROW)
     map_page_view_state.new_arrow_view_states.append(av_state)
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.abort_special_mode')
@@ -496,16 +496,16 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
     # For child moving
     for note_state in map_page_view_state.moved_note_states:
         note_state.update_from_note(note_state.get_note())
-        misli.gui.update_state(note_state)
+        fusion.gui.update_state(note_state)
 
     for arrow_state in map_page_view_state.moved_arrow_states:
         arrow_state.update_from_arrow(arrow_state.get_arrow())
-        misli.gui.update_state(arrow_state)
+        fusion.gui.update_state(arrow_state)
 
     # For note resizing
     for note_state in map_page_view_state.note_resize_states:
         note_state.update_from_note(note_state.get_note())
-        misli.gui.update_state(note_state)
+        fusion.gui.update_state(note_state)
 
     # Restore the arrow view if there was edge dragging
     if map_page_view_state.mode() == MapPageMode.ARROW_EDGE_DRAG:
@@ -513,7 +513,7 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
             map_page_view_state.arrow_with_visible_cps.get_arrow())
 
     map_page_view_state.clear_mode()
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.place_arrow_view_tail')
@@ -522,7 +522,7 @@ def place_arrow_view_tail(arrow_view_state: ArrowViewState,
                           anchor_note_id: str = None,
                           anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_tail(fixed_pos, anchor_note_id, anchor_type)
-    misli.gui.update_state(arrow_view_state)
+    fusion.gui.update_state(arrow_view_state)
 
 
 @action('map_page.place_arrow_view_head')
@@ -531,7 +531,7 @@ def place_arrow_view_head(arrow_view_state: ArrowViewState,
                           anchor_note_id: str = None,
                           anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_head(fixed_pos, anchor_note_id, anchor_type)
-    misli.gui.update_state(arrow_view_state)
+    fusion.gui.update_state(arrow_view_state)
 
 
 @action('map_page.arrow_creation_click')
@@ -591,7 +591,7 @@ def finish_arrow_creation(map_page_view_state: MapPageViewState):
         pamet.insert_arrow(arrow)
 
     map_page_view_state.clear_mode()
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.start_arrow_edge_drag')
@@ -599,7 +599,7 @@ def start_arrow_edge_drag(map_page_view_state: MapPageViewState,
                           mouse_pos: Point2D, edge_index: float):
     map_page_view_state.dragged_edge_index = edge_index
     map_page_view_state.set_mode(MapPageMode.ARROW_EDGE_DRAG)
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.arrow_edge_drag_update')
@@ -634,8 +634,8 @@ def arrow_edge_drag_update(
         pamet.update_arrow(arrow)
 
         map_page_view_state.dragged_edge_index = 1 + mid_point_idx
-        misli.gui.update_state(map_page_view_state)
-    misli.gui.update_state(arrow_vs)
+        fusion.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(arrow_vs)
 
 
 @action('map_page.finish_arrow_edge_drag')
@@ -664,7 +664,7 @@ def finish_arrow_edge_drag(
 
     pamet.update_arrow(arrow)
     map_page_view_state.clear_mode()
-    misli.gui.update_state(map_page_view_state)
+    fusion.gui.update_state(map_page_view_state)
 
 
 @action('map_page.delete_control_point')
@@ -688,7 +688,7 @@ def autosize_selected_notes(map_page_view_state: MapPageViewState):
     # QFontMetrics.boundingRect (that works for single lines) and elideText
     # for single words
     for child_id in map_page_view_state.selected_child_ids:
-        note_vs = misli.gui.view_state(child_id)
+        note_vs = fusion.gui.view_state(child_id)
         if not isinstance(note_vs, (TextNote, CardNote, ImageNote)):
             continue
 
@@ -722,7 +722,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
     copied_notes = []
     positions = []
     for child_view_id in map_page_view_state.selected_child_ids:
-        child_vs = misli.gui.view_state(child_view_id)
+        child_vs = fusion.gui.view_state(child_view_id)
 
         # If note view - get note and translate position
         if not isinstance(child_vs, NoteViewState):
@@ -750,7 +750,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
     # else translate and add to the list
     copied_arrows = []
     for child_view_id in map_page_view_state.selected_child_ids:
-        child_vs = misli.gui.view_state(child_view_id)
+        child_vs = fusion.gui.view_state(child_view_id)
 
         # If note view - get note and translate position
         if not isinstance(child_vs, ArrowViewState):

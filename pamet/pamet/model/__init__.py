@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import Generator, List, Union
 
-import misli
-from misli.change_aggregator import ChangeAggregator
-from misli.entity_library.change import Change
-from misli.pubsub import Channel
-from misli.storage.repository import Repository
+import fusion
+from fusion.change_aggregator import ChangeAggregator
+from fusion.entity_library.change import Change
+from fusion.pubsub import Channel
+from fusion.storage.repository import Repository
 
 import pamet
 from pamet import channels
-from misli import get_logger
+from fusion import get_logger
 from pamet.model.arrow import Arrow
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 # from pamet.persistence_manager import PersistenceManager
@@ -25,7 +25,7 @@ raw_entity_changes = Channel('__RAW_ENTITY_CHANGES__')
 
 entity_change_aggregator = ChangeAggregator(
     input_channel=raw_entity_changes,
-    release_trigger_channel=misli.gui.channels.completed_root_actions,
+    release_trigger_channel=fusion.gui.channels.completed_root_actions,
     changeset_output_channel=channels.entity_change_sets_per_TLA)
 
 

@@ -1,15 +1,15 @@
 from dataclasses import field
-import misli
-from misli.gui import channels
-from misli.gui.actions_library import action, wrapped_action_by_name
-from misli.gui.actions_library.action import ActionCall
-from misli.gui.view_library.view_state import ViewState, view_state_type
-from misli.pubsub.main_loop import NoMainLoop
+import fusion
+from fusion.gui import channels
+from fusion.gui.actions_library import action, wrapped_action_by_name
+from fusion.gui.actions_library.action import ActionCall
+from fusion.gui.view_library.view_state import ViewState, view_state_type
+from fusion.pubsub.main_loop import NoMainLoop
 
 
 def test_view_state_updates_and_diffing():
     main_loop = NoMainLoop()
-    misli.set_main_loop(main_loop)
+    fusion.set_main_loop(main_loop)
 
     expected_raw_state_changes = []
 
@@ -34,15 +34,15 @@ def test_view_state_updates_and_diffing():
             parent_state.child_states.add(child)
             children.append(child)
 
-            change = misli.gui.add_state(child)
+            change = fusion.gui.add_state(child)
             expected_raw_state_changes.append(change)
-        change = misli.gui.update_state(parent_state)
+        change = fusion.gui.update_state(parent_state)
         expected_raw_state_changes.append(change)
 
     @action('create_view_state')
     def create_view_state():
         parent_state = MockViewState()
-        change = misli.gui.add_state(parent_state)
+        change = fusion.gui.add_state(parent_state)
         expected_raw_state_changes.append(change)
         add_children(parent_state)
         dummy_nested()
@@ -52,10 +52,10 @@ def test_view_state_updates_and_diffing():
     def remove_child(parent_state):
         removed_child = parent_state.child_states.pop()
         children_left.extend(list(parent_state.child_states))
-        change = misli.gui.remove_state(removed_child)
+        change = fusion.gui.remove_state(removed_child)
         expected_raw_state_changes.append(change)
 
-        change = misli.gui.update_state(parent_state)
+        change = fusion.gui.update_state(parent_state)
         expected_raw_state_changes.append(change)
         return removed_child
 

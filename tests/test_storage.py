@@ -1,7 +1,7 @@
 from copy import copy
 import pytest
 
-from misli.storage.in_memory_repository import InMemoryRepository
+from fusion.storage.in_memory_repository import InMemoryRepository
 import pamet
 from pamet.model.note import Note
 from pamet.model.page import Page

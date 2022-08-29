@@ -1,8 +1,8 @@
 from __future__ import annotations
-from misli import entity_library
+from fusion import entity_library
 
-from misli.entity_library import get_entity_class_by_name
-from misli.entity_library.entity import Entity
+from fusion.entity_library import get_entity_class_by_name
+from fusion.entity_library.entity import Entity
 
 _view_types_by_note_type_name = {}
 _edit_view_types_by_note_type_name = {}

@@ -5,9 +5,9 @@ from pathlib import Path
 import time
 from typing import List
 
-from misli.entity_library.change import Change
+from fusion.entity_library.change import Change
 import pamet
-from misli.helpers import fake_time, current_time, get_new_id
+from fusion.helpers import fake_time, current_time, get_new_id
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 from pamet.services.backup import FSStorageBackupService

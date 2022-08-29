@@ -1,4 +1,4 @@
-from misli.storage.in_memory_repository import InMemoryRepository
+from fusion.storage.in_memory_repository import InMemoryRepository
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note
 from pamet.model.page import Page

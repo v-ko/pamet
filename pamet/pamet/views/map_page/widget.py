@@ -7,12 +7,12 @@ from PySide6.QtCore import QPointF, Qt, QPoint, QTimer, QRectF
 from PySide6.QtGui import QKeyEvent, QPainter, QPicture, QImage, QColor, QBrush, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
 
-import misli
-from misli.basic_classes import Point2D, Rectangle
-from misli.gui.utils import qt_widgets
-from misli.gui.view_library.view import View
-from misli.gui.views.context_menu.widget import ContextMenuWidget
-from misli.gui import channels as sm_channels
+import fusion
+from fusion.basic_classes import Point2D, Rectangle
+from fusion.gui.utils import qt_widgets
+from fusion.gui.view_library.view import View
+from fusion.gui.views.context_menu.widget import ContextMenuWidget
+from fusion.gui import channels as sm_channels
 
 from pamet import commands
 from pamet.constants import ARROW_EDGE_RAIDUS, MAX_RENDER_TIME
@@ -30,10 +30,10 @@ from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
 from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
-from misli.entity_library.change import Change
+from fusion.entity_library.change import Change
 from pamet.views.note.base.state import NoteViewState
 
-log = misli.get_logger(__name__)
+log = fusion.get_logger(__name__)
 
 IMAGE_CACHE_PADDING = 1
 MIN_FULL_CHILD_RENDERS_PER_PAINT_EVENT = 10
@@ -250,7 +250,7 @@ class MapPageWidget(QWidget, MapPageView):
             lambda change: self.handle_child_view_state_update(change),
             index_val=note_widget.view_id)
         self.nw_subscribtions[note_widget] = subscription
-        # misli.call_delayed(self.on_child_updated, 0, args=[note_widget])
+        # fusion.call_delayed(self.on_child_updated, 0, args=[note_widget])
         self.update()
 
     def remove_note_widget(self, note_widget):
