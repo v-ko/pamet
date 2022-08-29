@@ -1,7 +1,11 @@
+from pathlib import Path
 import setuptools
 
+
+version = (Path(__file__).parent / 'pamet' / 'VERSION').read_text()
+
 setuptools.setup(name='pamet',
-                 version='4.0.0.pre-alpha1',
+                 version=version,
                  packages=setuptools.find_packages(),
                  entry_points={
                      'console_scripts': [

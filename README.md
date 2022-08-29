@@ -25,7 +25,7 @@ To reiterate - a LOT of the functionality is missing, so the demo as of now serv
 ## Installation
 Currently only the setuptools install from source is possible (there are plans for proper packaging). Requires Python 3.8 or higher.
 
-1. Get the code with `git clone https://github.com/fusion-a/misli.git`
+1. Get the code with `git clone https://github.com/v-ko/misli.git`
 
 2. Install the python packages:
     * Enter the `misli` folder and run `python setup.py develop` in the console

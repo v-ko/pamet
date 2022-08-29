@@ -1,3 +1,4 @@
+from importlib.resources import read_text
 from pathlib import Path
 
 from misli.extensions_loader import ExtensionsLoader
@@ -16,19 +17,11 @@ from .note_view_lib import note_view_type_by_state, note_state_type_by_view
 from .note_view_lib import note_view_state_type_for_note
 
 log = get_logger(__name__)
-# from misli.gui import KeyBinding
-# from pamet.views.note.base_note_view import NoteViewState
 
-default_key_bindings = [
-    # KeyBinding('N', commands.create_new_note, conditions='pageFocus'),
-    # KeyBinding('Ctrl+N', commands.create_new_page, conditions='pageFocus'),
-    # KeyBinding('Ctrl+S',
-    #            commands.save_page_properties,
-    #            conditions='inPageProperties'),
-    # KeyBinding('E', commands.edit_selected_notes, conditions='notesSelected')
-]
 
 pamet_root = Path(__file__).parent
+__version__ = (pamet_root / 'VERSION').read_text()
+
 extensions_loader = ExtensionsLoader(pamet_root)
 extensions_loader.load_all_recursively(pamet_root / 'model')
 

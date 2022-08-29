@@ -1,15 +1,18 @@
+from pathlib import Path
 import setuptools
 
 with open("../README.md", "r") as fh:
     long_description = fh.read()
 
+version = (Path(__file__).parent / 'misli' / 'VERSION').read_text()
+
 setuptools.setup(
     name="misli",
-    version="0.1.0",
+    version=version,
     author="Petko Ditchev",
     author_email="pditchev@gmail.com",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/fusion-a/misli",
+    url="https://github.com/v-ko/misli",
     packages=setuptools.find_packages(),
 )
