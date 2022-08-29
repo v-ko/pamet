@@ -5,9 +5,8 @@ from datetime import datetime
 from dataclasses import fields, field
 
 from misli import entity_library
-from misli.helpers import get_new_id, timestamp
-from misli.constants import LOGGING_LEVEL
-from misli_debug import LoggingLevels
+from misli.helpers import get_new_id
+from misli.logging import LoggingLevels, LOGGING_LEVEL
 
 
 @entity_library.entity_type

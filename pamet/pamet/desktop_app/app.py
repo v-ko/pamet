@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import QApplication
 
 import misli
-from pamet.constants import ORGANISATION_NAME, DESKTOP_APP_NAME
-from pamet.constants import DESKTOP_APP_VERSION
+from misli.logging import LoggingLevels, LOGGING_LEVEL
+import pamet
 
 log = misli.get_logger(__name__)
 
@@ -11,6 +11,11 @@ class DesktopApp(QApplication):
     def __init__(self):
         QApplication.__init__(self)
 
-        self.setOrganizationName(ORGANISATION_NAME)
-        self.setApplicationName(DESKTOP_APP_NAME)
-        self.setApplicationVersion(DESKTOP_APP_VERSION)
+        name = 'pamet'
+
+        if LOGGING_LEVEL == LoggingLevels.DEBUG:
+            name += '-debug'
+
+        self.setOrganizationName('p10')
+        self.setApplicationName(name)
+        self.setApplicationVersion(pamet.__version__)

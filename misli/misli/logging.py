@@ -1,10 +1,25 @@
+from enum import Enum
 import logging
+import os
 import threading
 import functools
 from typing import Callable
 from collections import defaultdict
 
-from misli.constants import LOGGING_LEVEL
+
+class LoggingLevels(Enum):
+    # Those should be stdlib logging compatible
+    CRITICAL = 50
+    ERROR = 40
+    WARNING = 30
+    INFO = 20
+    DEBUG = 10
+    NOTSET = 0
+
+
+log_lvl_name = os.environ.get('LOGLEVEL', LoggingLevels.ERROR.name)
+print(f'Loaded logging level {log_lvl_name=}')
+LOGGING_LEVEL = LoggingLevels[log_lvl_name].value
 
 
 class BColors:
