@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Misli
-Comment=A program to organize thoughts and notes
-Exec=misli
-Icon=misli.png
-Terminal=false
-Type=Application
-StartupWMClass=misli
-Hidden=false

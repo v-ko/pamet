@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Package>
-    <DisplayName>Misli</DisplayName>
-    <Version>2.0.0</Version>
-    <ReleaseDate>2015-09-19</ReleaseDate>
-
-    <Default>true</Default>
-    <Script>installscript.qs</Script>
-</Package>
