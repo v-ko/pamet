@@ -583,6 +583,7 @@ class LegacyFSRepoReader:
             if file.name == '.misli_timeline_database.json':
                 backup_file(file, v3_backup_folder)
                 file.unlink()
+                continue
 
             if file.suffix == '.misl':
                 v2_pages.append(file)
