@@ -1,6 +1,7 @@
 from importlib.resources import read_text
 from pathlib import Path
 
+from fusion.entity_library.entity import Entity
 from fusion.extensions_loader import ExtensionsLoader
 from fusion.logging import get_logger
 from pamet.services.clipboard import ClipboardService
@@ -28,6 +29,7 @@ extensions_loader.load_all_recursively(pamet_root / 'model')
 clipboard = ClipboardService()
 
 _search_service = None
+_broken_entities = {}  # the entity as key, and exception as value
 
 
 def search_service() -> BaseSearchService:
@@ -37,3 +39,14 @@ def search_service() -> BaseSearchService:
 def set_search_service(service):
     global _search_service
     _search_service = service
+
+
+def broken_entities():
+    return _broken_entities
+
+
+def entity_broke(entity: Entity, exception: Exception):
+    if entity not in _broken_entities:
+        log.error(f'Entity {entity} broke.')
+
+    _broken_entities[entity] = exception

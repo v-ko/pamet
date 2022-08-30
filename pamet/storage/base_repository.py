@@ -105,7 +105,7 @@ class PametRepository(Repository):
 
     # -------------Arrow CRUD-------------
     def insert_arrow(self, arrow_: Arrow, page: Page = None) -> Change:
-        return insert_child(arrow_, page)
+        return self.insert_child(arrow_, page)
 
     def update_arrow(self, arrow_: Arrow) -> Change:
         old_arrow = self.find_one(gid=arrow_.gid())

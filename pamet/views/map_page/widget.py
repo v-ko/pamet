@@ -226,7 +226,12 @@ class MapPageWidget(QWidget, MapPageView):
         self.update()
 
     def add_arrow_widget(self, av_state: ArrowViewState):
-        arrow_widget = ArrowWidget(av_state, self)
+        try:
+            arrow_widget = ArrowWidget(av_state, self)
+        except Exception as e:
+            pamet.entity_broke(av_state, e)
+            return
+
         self._arrow_widgets[av_state.view_id] = arrow_widget
 
         subscription = sm_channels.state_changes_per_TLA_by_view_id.subscribe(
@@ -242,8 +247,13 @@ class MapPageWidget(QWidget, MapPageView):
         arrow_widget.deleteLater()
 
     def add_note_widget(self, nv_state: NoteViewState):
-        ViewType = pamet.note_view_type_by_state(type(nv_state).__name__)
-        note_widget = ViewType(parent=self, initial_state=nv_state)
+        try:
+            ViewType = pamet.note_view_type_by_state(type(nv_state).__name__)
+            note_widget = ViewType(parent=self, initial_state=nv_state)
+        except Exception as e:
+            pamet.entity_broke(nv_state, e)
+            return
+
         note_widget.hide()
         self._note_widgets[nv_state.view_id] = note_widget
 

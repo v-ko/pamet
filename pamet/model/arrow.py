@@ -120,13 +120,13 @@ class Arrow(PageChild):
         return bool(self.head_note_id)
 
     def get_tail_note(self):
-        page = self.get_parent_page()
+        page = self.get_page()
         if not page:
             raise Exception
         return pamet.note(page, self.tail_note_id)
 
     def get_head_note(self):
-        page = self.get_parent_page()
+        page = self.get_page()
         if not page:
             raise Exception
         return pamet.note(page, self.head_note_id)
