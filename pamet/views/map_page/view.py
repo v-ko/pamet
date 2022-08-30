@@ -279,7 +279,7 @@ class MapPageView(View):
             if av.intersects_rect(unprojected_rect)
         ]
         drag_selected_child_ids = set([
-            child.id for child in nvs_in_selection + arrow_views_in_selection
+            child.view_id for child in nvs_in_selection + arrow_views_in_selection
         ])
 
         map_page_actions.update_drag_select(self.state(),

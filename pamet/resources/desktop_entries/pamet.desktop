@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Pamet
+Comment=A program to organize thoughts and notes
+Exec=pamet
+Icon=pamet.png
+Terminal=false
+Type=Application
+StartupWMClass=pamet
+Hidden=false
