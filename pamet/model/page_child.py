@@ -5,6 +5,7 @@ from fusion.entity_library import entity_type
 from fusion.entity_library.entity import Entity
 
 from fusion.helpers import get_new_id
+import pamet
 
 
 @entity_type
@@ -29,6 +30,20 @@ class PageChild(Entity):
         return type(self)(**self_dict)
 
     @classmethod
-    def in_page(cls, page: Page, own_id: str = None, **child_props):
+    def in_page(cls,
+                page: Page = None,
+                page_id: str = None,
+                own_id: str = None,
+                **child_props):
+        if page:
+            if page_id:
+                raise Exception('Only specify page OR page_id')
+            page_id = page.id
+        if page_id is None:
+            raise Exception('You must specify either page or page_id.')
+
         own_id = own_id or get_new_id()
-        return cls(id=(page.id, own_id), **child_props)
+        return cls(id=(page_id, own_id), **child_props)
+
+    def get_page(self):
+        return pamet.page(self.id[0])

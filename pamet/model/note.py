@@ -44,9 +44,6 @@ class Note(PageChild):
     def parent_gid(self):
         return self.page_id
 
-    def get_page(self):
-        return pamet.page(self.page_id)
-
     def rect(self) -> Rectangle:
         return Rectangle(*self.geometry)
 

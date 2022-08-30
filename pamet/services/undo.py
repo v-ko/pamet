@@ -3,9 +3,8 @@ from typing import Dict, List
 from fusion import Channel
 from fusion.entity_library.change import Change
 import pamet
-from pamet.model.arrow import Arrow
-from pamet.model.note import Note
 from pamet.model.page import Page
+from pamet.model.page_child import PageChild
 
 MAX_UNDO_HISTORY_SIZE = 1000
 
@@ -96,25 +95,19 @@ class UndoService:
 
     def handle_change_set(self, change_set: List[Change]):
         # Validate the change set and determine the page
-        page_id = None
+        changes_by_page_id = defaultdict(list)
         for change in change_set:
             state = change.last_state()
-            if isinstance(state, (Note, Arrow)):
-                change_page_id = state.page_id
+            if isinstance(state, PageChild):
+                changes_by_page_id[state.page_id].append(change)
             elif isinstance(state, Page):
-                change_page_id = state.id
+                changes_by_page_id[state.id].append(change)
             else:
                 raise Exception
 
-            if page_id is not None and page_id != change_page_id:
-                raise Exception('Only changes in one page should be done '
-                                'per TLA')
-
-            page_id = change_page_id
-
-        if page_id is None:
-            raise Exception
-        self._histories_by_page_id[page_id].handle_change_set(change_set)
+        for page_id, changeset_for_page in changes_by_page_id.items():
+            self._histories_by_page_id[page_id].handle_change_set(
+                changeset_for_page)
 
     def has_undo_forward(self, page_id):
         if page_id not in self._histories_by_page_id:

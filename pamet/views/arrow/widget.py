@@ -36,6 +36,7 @@ def special_sigmoid(x: float) -> float:
 
 @view_state_type
 class ArrowViewState(Arrow, ViewState):
+
     @property
     def arrow_gid(self):  # TODO: remove
         return self.id
@@ -93,22 +94,25 @@ class ArrowWidget(QObject, ArrowView):
         for note_id in new_subs:
             self.subscribe_to_anchor(note_id)
 
-    def subscribe_to_anchor(self, note_id: str):
+    def subscribe_to_anchor(self, note_own_id: str):
         # Clear the previous subscription
-        if note_id in self._anchor_subs_by_note_id:
-            self.unsubscribe_from_anchor(note_id)
+        if note_own_id in self._anchor_subs_by_note_id:
+            self.unsubscribe_from_anchor(note_own_id)
 
         map_page_state = self.map_page_view.state()
-        note_view_state = map_page_state.view_state_for_note_id(note_id)
+        note_view_state = map_page_state.view_state_for_note_id(note_own_id)
+        if not note_view_state:
+            raise Exception('Anchor note with own id {note_own_id} not found')
+
         sub = channels.state_changes_per_TLA_by_view_id.subscribe(
             handler=self.handle_anchor_note_view_state_change,
             index_val=note_view_state.view_id)
-        self._anchor_subs_by_note_id[note_id] = sub
+        self._anchor_subs_by_note_id[note_own_id] = sub
 
-    def unsubscribe_from_anchor(self, note_id: str):
-        if note_id not in self._anchor_subs_by_note_id:
+    def unsubscribe_from_anchor(self, note_own_id: str):
+        if note_own_id not in self._anchor_subs_by_note_id:
             return
-        sub = self._anchor_subs_by_note_id.pop(note_id)
+        sub = self._anchor_subs_by_note_id.pop(note_own_id)
         sub.unsubscribe()
 
     def handle_anchor_note_view_state_change(self, change):
@@ -196,7 +200,7 @@ class ArrowWidget(QObject, ArrowView):
         # If the anchor type is AUTO - infer it
         if (state.has_tail_anchor()
                 and state.tail_anchor_type == ArrowAnchorType.AUTO):
-            tail_note = pamet.note(state.get_parent_page(), state.tail_note_id)
+            tail_note = pamet.note(state.get_page(), state.tail_note_id)
             note_view = self.map_page_view.note_widget_by_note_gid(
                 tail_note.gid())
 
@@ -274,7 +278,7 @@ class ArrowWidget(QObject, ArrowView):
         # If the anchor type is AUTO - infer it
         if (state.has_head_anchor()
                 and state.head_anchor_type == ArrowAnchorType.AUTO):
-            head_note = pamet.note(state.get_parent_page(), state.head_note_id)
+            head_note = pamet.note(state.get_page(), state.head_note_id)
             note_view = self.map_page_view.note_widget_by_note_gid(
                 head_note.gid())
 
@@ -301,7 +305,7 @@ class ArrowWidget(QObject, ArrowView):
     def update_cached_path(self):
         state: ArrowViewState = self.state()
         if state.has_tail_anchor():
-            tail_note = pamet.note(state.get_parent_page(), state.tail_note_id)
+            tail_note = pamet.note(state.get_page(), state.tail_note_id)
             nv_state = self.map_page_view.get_note_view_state_for_note_gid(
                 tail_note.gid())
             if not nv_state:
@@ -319,7 +323,7 @@ class ArrowWidget(QObject, ArrowView):
             raise Exception
 
         if state.head_note_id:
-            head_note = pamet.note(state.get_parent_page(), state.head_note_id)
+            head_note = pamet.note(state.get_page(), state.head_note_id)
             nv_state = self.map_page_view.get_note_view_state_for_note_gid(
                 head_note.gid())
             if not nv_state:

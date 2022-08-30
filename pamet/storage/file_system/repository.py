@@ -4,6 +4,7 @@ import os
 import json
 from pathlib import Path
 from pamet.model.arrow import Arrow
+from pamet.model.page_child import PageChild
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from slugify import slugify
 
@@ -42,7 +43,7 @@ class FSStorageRepository(PametInMemoryRepository,
 
         self.upserted_pages = set()
         self.removed_pages = set()
-        self.pages_for_write_removal = {}
+        self.pages_for_write_removal = set()
 
     def load_all_pages(self):
         # Load all pages in the cache
@@ -143,9 +144,12 @@ class FSStorageRepository(PametInMemoryRepository,
 
     def insert_one(self, entity: Entity):
         if isinstance(entity, Page):
-            self.upserted_pages.add(entity.gid())
-        elif isinstance(entity, (Note, Arrow)):
-            self.upserted_pages.add(entity.parent_gid())
+            self.upserted_pages.add(entity)
+        elif isinstance(entity, PageChild):
+            page = entity.get_page()
+            if not page:
+                raise Exception(f'Invalid parent for {entity}')
+            self.upserted_pages.add(page)
 
         InMemoryRepository.insert_one(self, entity)
 
@@ -164,10 +168,13 @@ class FSStorageRepository(PametInMemoryRepository,
     def remove_one(self, entity):
         InMemoryRepository.remove_one(self, entity)
         if isinstance(entity, Page):
-            self.removed_pages.add(entity.gid())
-            self.pages_for_write_removal[entity.gid()] = entity
-        elif isinstance(entity, (Note, Arrow)):
-            self.upserted_pages.add(entity.parent_gid())
+            self.removed_pages.add(entity)
+            self.pages_for_write_removal.add(entity)
+        elif isinstance(entity, PageChild):
+            page = entity.get_page()
+            if not page:
+                raise Exception(f'Invalid parent for {entity}')
+            self.upserted_pages.add(page)
 
         if self.queue_save_on_change:
             fusion.call_delayed(self.write_to_disk, 0)
@@ -184,9 +191,12 @@ class FSStorageRepository(PametInMemoryRepository,
     def update_one(self, entity):
         change = InMemoryRepository.update_one(self, entity)
         if isinstance(entity, Page):
-            self.upserted_pages.add(entity.gid())
-        elif isinstance(entity, (Note, Arrow)):
-            self.upserted_pages.add(entity.parent_gid())
+            self.upserted_pages.add(entity)
+        elif isinstance(entity, PageChild):
+            page = entity.get_page()
+            if not page:
+                raise Exception(f'Invalid parent for {entity}')
+            self.upserted_pages.add(page)
 
         if self.queue_save_on_change:
             fusion.call_delayed(self.write_to_disk, 0)
@@ -225,16 +235,16 @@ class FSStorageRepository(PametInMemoryRepository,
         if self.upserted_pages.intersection(self.removed_pages):
             raise Exception('A page is both marked for upsert and removal.')
 
-        for page_gid in self.upserted_pages:
-            page = pamet.page(page_gid)
+        for page in self.upserted_pages:
+            page = pamet.page(page.id)
 
             if page.id in self.page_paths_by_id:
                 self.update_page(page, pamet.notes(page), pamet.arrows(page))
             else:
                 self.create_page(page, pamet.notes(page), pamet.arrows(page))
 
-        for page_gid in self.removed_pages:
-            page = self.pages_for_write_removal.pop(page_gid)
+        for page in self.removed_pages:
+            page = self.pages_for_write_removal.pop(page)
             self.delete_page(page)
 
         self.upserted_pages.clear()

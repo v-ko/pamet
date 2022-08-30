@@ -176,7 +176,7 @@ def delete_notes_and_connected_arrows(notes: List[Note]):
     note_ids = []
     page_id = None
     for note in notes:
-        note_ids.append(note.id)
+        note_ids.append(note.own_id)
         if not page_id:
             page_id = note.page_id
         elif page_id != note.page_id:
@@ -476,7 +476,7 @@ def handle_page_name_updated(tab_view_state: TabViewState, page: Page):
 
 @action('map_page.start_arrow_creation')
 def start_arrow_creation(map_page_view_state: MapPageViewState):
-    av_state = ArrowViewState(page_id=map_page_view_state.page_id)
+    av_state = ArrowViewState().in_page(page_id=map_page_view_state.page_id)
     fusion.gui.add_state(av_state)
 
     map_page_view_state.set_mode(MapPageMode.CREATE_ARROW)
@@ -577,10 +577,11 @@ def finish_arrow_creation(map_page_view_state: MapPageViewState):
 
         # Get the properties for the new arrow from the view state
         arrow_dict = arrow_vs.asdict()
-        # The new arrow should be a separate view state in order to avoid
+        # The new arrow should have a new id in order to avoid
         # conflicts while the mock arrow is still present
         arrow_dict.pop('id')
-        arrow = Arrow()
+        arrow = Arrow.in_page(page_id=arrow_vs.page_id)
+        # Since the view state has extra attributes
         arrow.replace_silent(**arrow_dict)
         pamet.insert_arrow(arrow)
 
