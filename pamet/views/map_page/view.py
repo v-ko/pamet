@@ -156,11 +156,11 @@ class MapPageView(View):
 
         if child_under_mouse:
             state = self.state()
-            if child_under_mouse not in state.selected_child_ids:
+            if child_under_mouse.state() not in state.selected_children:
                 map_page_actions.update_child_selections(
-                    state, {child_under_mouse.view_id: True})
+                    state, {child_under_mouse.state(): True})
             map_page_actions.start_child_move(self.state(),
-                                              mouse_pos.as_tuple())
+                                              mouse_pos)
 
     def handle_left_mouse_press(self, mouse_pos: Point2D):
         self._mouse_position_on_left_press = copy(mouse_pos)
@@ -179,8 +179,7 @@ class MapPageView(View):
 
         if state.mode() == MapPageMode.CREATE_ARROW:
             anchor_props = self.arrow_anchor_at(mouse_pos)
-            note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.NONE)
+            note_id, anchor_type = anchor_props or (None, ArrowAnchorType.NONE)
             map_page_actions.arrow_creation_click(state,
                                                   fixed_pos=unproj_mouse_pos,
                                                   anchor_note_id=note_id,
@@ -193,10 +192,10 @@ class MapPageView(View):
 
         if ctrl_pressed:
             if child_under_mouse:
-                nc_selected = child_under_mouse.view_id in self.state(
-                ).selected_child_ids
+                nc_selected = child_under_mouse.state() in self.state(
+                ).selected_children
                 map_page_actions.update_child_selections(
-                    state, {child_under_mouse.view_id: not nc_selected})
+                    state, {child_under_mouse.state(): not nc_selected})
 
         # Clear selection (or reduce it to the note under the mouse)
         if not ctrl_pressed and not shift_pressed:
@@ -207,18 +206,19 @@ class MapPageView(View):
 
             if child_under_mouse:
                 map_page_actions.update_child_selections(
-                    state, {child_under_mouse.view_id: True})
+                    state, {child_under_mouse.state(): True})
 
         # Check for resize initiation
         if resize_nv:
-            if resize_nv.view_id not in state.selected_child_ids:
+            resize_nv_state = resize_nv.state()
+            if resize_nv_state not in state.selected_children:
                 map_page_actions.update_child_selections(
-                    state, {resize_nv.view_id: True})
+                    state, {resize_nv_state: True})
 
-            resize_circle_center = resize_nv.state().rect().bottom_right()
+            resize_circle_center = resize_nv_state.rect().bottom_right()
             rcc_projected = state.project_point(resize_circle_center)
             map_page_actions.start_notes_resize(state,
-                                                resize_nv.state().get_note(),
+                                                resize_nv_state.get_note(),
                                                 mouse_pos, rcc_projected)
 
     def handle_left_mouse_release(self, mouse_pos: Point2D):
@@ -245,8 +245,7 @@ class MapPageView(View):
 
         elif mode == MapPageMode.ARROW_EDGE_DRAG:
             anchor_props = self.arrow_anchor_at(mouse_pos)
-            note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.NONE)
+            note_id, anchor_type = anchor_props or (None, ArrowAnchorType.NONE)
             map_page_actions.finish_arrow_edge_drag(state,
                                                     fixed_pos=unproj_mouse_pos,
                                                     anchor_note_id=note_id,
@@ -278,13 +277,14 @@ class MapPageView(View):
             av for av in self.arrow_views()
             if av.intersects_rect(unprojected_rect)
         ]
-        drag_selected_child_ids = set([
-            child.view_id for child in nvs_in_selection + arrow_views_in_selection
+        drag_selected_children = set([
+            child.state()
+            for child in nvs_in_selection + arrow_views_in_selection
         ])
 
         map_page_actions.update_drag_select(self.state(),
                                             selection_rect.as_tuple(),
-                                            drag_selected_child_ids)
+                                            drag_selected_children)
 
     def handle_mouse_move(self, mouse_pos: Point2D):
         state = self.state()
@@ -315,8 +315,7 @@ class MapPageView(View):
 
         elif mode == MapPageMode.CREATE_ARROW:
             anchor_props = self.arrow_anchor_at(mouse_pos)
-            note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.NONE)
+            note_id, anchor_type = anchor_props or (None, ArrowAnchorType.NONE)
             map_page_actions.arrow_creation_move(state,
                                                  fixed_pos=unproj_mouse_pos,
                                                  anchor_note_id=note_id,
@@ -324,8 +323,7 @@ class MapPageView(View):
 
         elif mode == MapPageMode.ARROW_EDGE_DRAG:
             anchor_props = self.arrow_anchor_at(mouse_pos)
-            note_id, anchor_type = anchor_props or (None,
-                                                    ArrowAnchorType.NONE)
+            note_id, anchor_type = anchor_props or (None, ArrowAnchorType.NONE)
             map_page_actions.arrow_edge_drag_update(state,
                                                     fixed_pos=unproj_mouse_pos,
                                                     anchor_note_id=note_id,
@@ -365,7 +363,6 @@ class MapPageView(View):
 
         if note_view:
             note_view.middle_click_event(mouse_pos)
-
 
     def handle_resize_event(self, new_size: Point2D):
         map_page_actions.resize_page(self.state(), new_size)

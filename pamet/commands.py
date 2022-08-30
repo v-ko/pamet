@@ -48,12 +48,8 @@ def open_page_properties():
 @command(title='Edit selected note')
 def edit_selected_notes():
     tab, page_view = current_tab_and_page_views()
-    selected_child_ids = page_view.state().selected_child_ids
-    if not selected_child_ids:
-        return
 
-    for note_view_id in selected_child_ids:
-        note_state = fusion.gui.view_state(note_view_id)
+    for note_state in page_view.state().selected_children:
         if not isinstance(note_state, NoteViewState):
             continue
         note_actions.start_editing_note(tab.state(), note_state.get_note())
