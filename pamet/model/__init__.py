@@ -88,7 +88,7 @@ def set_async_repo(repo: Repository):
 
 # ------------Finds-----------------
 def find(**filter):
-    return _sync_repo.find(find)
+    return _sync_repo.find(**filter)
 
 
 def find_one(**filter):
