@@ -43,7 +43,6 @@ class FSStorageRepository(PametInMemoryRepository,
 
         self.upserted_pages = set()
         self.removed_pages = set()
-        self.pages_for_write_removal = set()
 
     def load_all_pages(self):
         # Load all pages in the cache
@@ -169,7 +168,6 @@ class FSStorageRepository(PametInMemoryRepository,
         InMemoryRepository.remove_one(self, entity)
         if isinstance(entity, Page):
             self.removed_pages.add(entity)
-            self.pages_for_write_removal.add(entity)
         elif isinstance(entity, PageChild):
             page = entity.get_page()
             if not page:
@@ -244,7 +242,6 @@ class FSStorageRepository(PametInMemoryRepository,
                 self.create_page(page, pamet.notes(page), pamet.arrows(page))
 
         for page in self.removed_pages:
-            page = self.pages_for_write_removal.pop(page)
             self.delete_page(page)
 
         self.upserted_pages.clear()
