@@ -38,20 +38,18 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
                 note_type_name=type(_note).__name__)
             StateType = pamet.note_state_type_by_view(NoteViewType.__name__)
             note_props = _note.asdict()
-            note_id = note_props.pop('id')
-            note_view_state = StateType(id=note_id, **note_props)
+            note_view_state = StateType(**note_props)
             page_view_state.note_view_states.add(note_view_state)
             fusion.gui.add_state(note_view_state)
 
         for arrow in pamet.arrows(page):
             arrow_props = arrow.asdict()
-            arrow_id = arrow_props.pop('id')
-            arrow_view_state = ArrowViewState(id=arrow_id, **arrow_props)
+            arrow_view_state = ArrowViewState(**arrow_props)
             page_view_state.arrow_view_states.add(arrow_view_state)
             fusion.gui.add_state(arrow_view_state)
         fusion.gui.update_state(page_view_state)
 
-    # Set the page state in the tab state and handle the navigation history
+    # Set the page state in the tab state (and cache it)
     tab_state.page_view_state = page_view_state
     tab_state.add_page_state_to_cache(page_view_state)
     tab_state.title = page.name

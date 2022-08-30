@@ -261,7 +261,6 @@ class MapPageWidget(QWidget, MapPageView):
             lambda change: self.handle_child_view_state_update(change),
             index_val=note_widget.view_id)
         self.nw_subscribtions[note_widget] = subscription
-        # fusion.call_delayed(self.on_child_updated, 0, args=[note_widget])
         self.update()
 
     def remove_note_widget(self, note_widget):
