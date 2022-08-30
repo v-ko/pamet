@@ -794,11 +794,12 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
             note.set_rect(rect)
 
         # Set the proper page id and ensure that there's no conflicting ids
-        note.page_id = page.id
+        new_page_id = page.id
+        new_own_id = note.own_id
         if pamet.find(gid=note.gid()):
-            new_id = get_new_id()
-            updated_ids[note.id] = new_id
-            note = note.with_id(page_id=note.page_id, own_id=new_id)
+            new_own_id = get_new_id()
+            updated_ids[note.id] = new_own_id
+        note = note.with_id(page_id=new_page_id, own_id=new_own_id)
         pamet.insert_note(note)
 
     for arrow in entities:
@@ -806,10 +807,11 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
             continue
 
         # Set the proper page id and ensure that there's no conflicting ids
-        arrow.page_id = page.id
+        new_page_id = page.id
+        new_own_id = arrow.own_id
         if pamet.find(gid=arrow.gid()):
-            new_id = get_new_id()
-            arrow = arrow.with_id(page_id=arrow.page_id, own_id=new_id)
+            new_own_id = get_new_id()
+        arrow = arrow.with_id(page_id=new_page_id, own_id=new_own_id)
 
         # Where the pasted note ids have been changed - correct them
         # in the arrow anchors. Else for fixed anchors - just place them
