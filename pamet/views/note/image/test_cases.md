@@ -1,4 +1,0 @@
-- download an >30mb image - should resize it on save
-- close the edit widget mid-download (should stop the download)
-- delete from media store manually - should give error
-- delete local file - should give error
