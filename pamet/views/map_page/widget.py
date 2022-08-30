@@ -235,7 +235,8 @@ class MapPageWidget(QWidget, MapPageView):
         self.arrow_view_state_subs_by_view_id[av_state.view_id] = subscription
 
     def remove_arrow_widget(self, av_state: ArrowViewState):
-        subscription = self.arrow_view_state_subs_by_view_id.pop(av_state.view_id)
+        subscription = self.arrow_view_state_subs_by_view_id.pop(
+            av_state.view_id)
         subscription.unsubscribe()
         arrow_widget = self._arrow_widgets.pop(av_state.view_id)
         arrow_widget.deleteLater()
@@ -346,8 +347,8 @@ class MapPageWidget(QWidget, MapPageView):
         for nw_id, note_widget in self._note_widgets.items():
             yield note_widget
 
-    def note_widget(self, state_id):
-        return self._note_widgets.get(state_id, None)
+    def note_widget(self, view_Id):
+        return self._note_widgets.get(view_Id, None)
 
     def note_widget_by_note_gid(self, note_gid):
         for nw_state_id, note_widget in self._note_widgets.items():
@@ -447,7 +448,7 @@ class MapPageWidget(QWidget, MapPageView):
             points = [*p1.as_tuple(), *p2.as_tuple()]
             painter.drawLine(*points)
 
-    def _visible_display_rects_by_child_id(self):
+    def _visible_display_rects_by_view_id(self):
         viewport_rect = Rectangle(self.rect().x(),
                                   self.rect().y(),
                                   self.rect().width(),
@@ -494,7 +495,7 @@ class MapPageWidget(QWidget, MapPageView):
         paint_urgently = False
 
         # Determine the components inside the viewport
-        display_rects_by_child_id = self._visible_display_rects_by_child_id()
+        display_rects_by_view_id = self._visible_display_rects_by_view_id()
 
         # Prep the unprojected mouse position to check if there's a note there
         q_mouse_pos = self.mapFromGlobal(self.cursor().pos())
@@ -504,8 +505,8 @@ class MapPageWidget(QWidget, MapPageView):
         # Render the notes into a painter-commands-cache and an image cache
         # (prep only placeholders if slow)
         # At minimum renders one component into cache and preps placeholders
-        for child_id, display_rect in display_rects_by_child_id.items():
-            note_widget = self.note_widget(child_id)
+        for child_view_id, display_rect in display_rects_by_view_id.items():
+            note_widget = self.note_widget(child_view_id)
             nw_cache = self._note_widget_cache(note_widget.view_id)
 
             if time.time() - paint_t0 > MAX_RENDER_TIME:
@@ -538,8 +539,8 @@ class MapPageWidget(QWidget, MapPageView):
                 notes_reusing_cache += 1
 
         # Draw the cached images, along with various decorations
-        for child_id, display_rect in display_rects_by_child_id.items():
-            note_widget = self.note_widget(child_id)
+        for child_view_id, display_rect in display_rects_by_view_id.items():
+            note_widget = self.note_widget(child_view_id)
             nw_cache = self._note_widget_cache(note_widget.view_id)
             note_vs = note_widget.state()
 
@@ -608,7 +609,7 @@ class MapPageWidget(QWidget, MapPageView):
                 painter.restore()
 
             # Draw the selection overlay and resize circle for selected notes
-            if note_widget.view_id in state.selected_child_ids:
+            if note_widget.state() in state.selected_children:
                 # Draw a yellow selection overlay
                 painter.fillRect(display_rect, selection_overlay_qcolor)
 
@@ -630,7 +631,7 @@ class MapPageWidget(QWidget, MapPageView):
             if state.mode() in [
                     MapPageMode.NOTE_RESIZE, MapPageMode.CHILD_MOVE
             ]:
-                if note_widget.view_id in state.selected_child_ids:
+                if note_widget.state() in state.selected_children:
                     qdr = display_rect
                     dr = Rectangle(qdr.x(), qdr.y(), qdr.width(), qdr.height())
                     self._draw_guide_lines_for_child(dr, painter)
@@ -646,13 +647,14 @@ class MapPageWidget(QWidget, MapPageView):
         # Draw the arrows
         for arrow_widget in self.arrow_widgets():
             draw_selection_overlay = False
-            if (arrow_widget.view_id in state.selected_child_ids
-                    or arrow_widget.view_id in state.drag_selected_child_ids):
+            arrow_widget_state = arrow_widget.state()
+            if (arrow_widget_state in state.selected_children
+                    or arrow_widget_state in state.drag_selected_children):
                 draw_selection_overlay = True
 
             draw_control_points = False
             if state.arrow_with_visible_cps:
-                if state.arrow_with_visible_cps == arrow_widget.state():
+                if state.arrow_with_visible_cps == arrow_widget_state:
                     draw_control_points = True
 
             arrow_widget.render(painter, draw_selection_overlay,
@@ -668,11 +670,12 @@ class MapPageWidget(QWidget, MapPageView):
             painter.fillRect(drag_select_rect, DRAG_SELECT_COLOR)
 
             # Draw the selection overlays
-            for nc_id in state.drag_selected_child_ids:
-                if nc_id not in display_rects_by_child_id:
+            for note_view_state in state.drag_selected_children:
+                if note_view_state.view_id not in display_rects_by_view_id:
                     continue
-                painter.fillRect(display_rects_by_child_id[nc_id],
-                                 selection_overlay_qcolor)
+                painter.fillRect(
+                    display_rects_by_view_id[note_view_state.view_id],
+                    selection_overlay_qcolor)
                 # elif nc_id in self._arrow_widgets:
                 # ^^ that gets done while drawing the arrows
 
@@ -722,7 +725,7 @@ class MapPageWidget(QWidget, MapPageView):
                 painter.drawRect(QRectF(*rect.as_tuple()))
 
         # Report stats
-        notes_on_screen = len(display_rects_by_child_id)
+        notes_on_screen = len(display_rects_by_view_id)
 
         latency = 1000 * (time.time() - paint_t0)
         # fps = 1000 / latency

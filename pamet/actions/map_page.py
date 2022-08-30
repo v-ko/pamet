@@ -67,16 +67,16 @@ def update_child_selections(map_page_view_state: MapPageViewState,
         return
 
     selection_update_count = 0
-    for child_id, selected in selection_updates_by_child_id.items():
+    for child, selected in selection_updates_by_child_id.items():
 
-        if (child_id in map_page_view_state.selected_child_ids
+        if (child in map_page_view_state.selected_children
                 and not selected):
-            map_page_view_state.selected_child_ids.remove(child_id)
+            map_page_view_state.selected_children.remove(child)
             selection_update_count += 1
 
-        elif (child_id not in map_page_view_state.selected_child_ids
+        elif (child not in map_page_view_state.selected_children
               and selected):
-            map_page_view_state.selected_child_ids.add(child_id)
+            map_page_view_state.selected_children.add(child)
             selection_update_count += 1
 
         else:
@@ -84,10 +84,10 @@ def update_child_selections(map_page_view_state: MapPageViewState,
 
     # If there's only one arrow selected - show its control points
     single_selected_arrow = None
-    if len(map_page_view_state.selected_child_ids) == 1:
-        (first_selected_id, ) = map_page_view_state.selected_child_ids
+    if len(map_page_view_state.selected_children) == 1:
+        (first_selected_child, ) = map_page_view_state.selected_children
         for arrow_vs in map_page_view_state.arrow_view_states:
-            if arrow_vs.id == first_selected_id:
+            if arrow_vs.id == first_selected_child.own_id:
                 single_selected_arrow = arrow_vs
 
     if single_selected_arrow:
@@ -106,7 +106,7 @@ def update_child_selections(map_page_view_state: MapPageViewState,
 @action('map_page.clear_child_selection')
 def clear_child_selection(map_page_view_state: str):
     selection_updates = {}
-    for selected_child in map_page_view_state.selected_child_ids:
+    for selected_child in map_page_view_state.selected_children:
         selection_updates[selected_child] = False
 
     if not selection_updates:
@@ -136,31 +136,31 @@ def start_drag_select(map_page_view_state: MapPageViewState,
 @action('map_page.update_drag_select')
 def update_drag_select(map_page_view_state: MapPageViewState,
                        rect_props: list,
-                       drag_selected_child_ids: set = None):
-    if drag_selected_child_ids is None:
-        drag_selected_child_ids = set()
+                       drag_selected_children: set = None):
+    if drag_selected_children is None:
+        drag_selected_children = set()
 
     map_page_view_state.drag_select_rect_props = rect_props
-    map_page_view_state.drag_selected_child_ids.clear()
+    map_page_view_state.drag_selected_children.clear()
 
-    for nc_id in drag_selected_child_ids:
-        if nc_id not in map_page_view_state.drag_selected_child_ids:
-            map_page_view_state.drag_selected_child_ids.add(nc_id)
+    for child_state in drag_selected_children:
+        if child_state not in map_page_view_state.drag_selected_children:
+            map_page_view_state.drag_selected_children.add(child_state)
 
     gui.update_state(map_page_view_state)
 
 
 @action('map_page.stop_drag_select')
 def stop_drag_select(map_page_view_state: MapPageViewState):
-    added_selections = (map_page_view_state.drag_selected_child_ids -
-                        map_page_view_state.selected_child_ids)
-    removed_selections = (map_page_view_state.selected_child_ids -
-                          map_page_view_state.drag_selected_child_ids)
+    added_selections = (map_page_view_state.drag_selected_children -
+                        map_page_view_state.selected_children)
+    removed_selections = (map_page_view_state.selected_children -
+                          map_page_view_state.drag_selected_children)
 
-    selection_updates = {child_id: True for child_id in added_selections}
+    selection_updates = {child_state: True for child_state in added_selections}
     selection_updates.update(
-        {child_id: False
-         for child_id in removed_selections})
+        {child_state: False
+         for child_state in removed_selections})
 
     update_child_selections(map_page_view_state, selection_updates)
     map_page_view_state.clear_mode()
@@ -197,27 +197,24 @@ def delete_notes_and_connected_arrows(notes: List[Note]):
 
 @action('map_page.delete_selected_children')
 def delete_selected_children(map_page_view_state: MapPageViewState):
-    # Parse the ids into lists for removal
-    arrow_gids_for_removal = []
+    # Parse the ids into lists for removal, since we need to do it in order -
+    # .. ?
+    arrows_for_removal = []
     notes_for_removal = []
-    for nc_id in map_page_view_state.selected_child_ids:
-        child_state = gui.view_state(nc_id)
+    for child_state in map_page_view_state.selected_children:
         if isinstance(child_state, NoteViewState):
             note = child_state.get_note()
             notes_for_removal.append(note)
         elif isinstance(child_state, ArrowViewState):
-            arrow_gids_for_removal.append(child_state.arrow_gid)
+            arrows_for_removal.append(child_state.get_arrow())
         else:
             raise Exception('Unexpected state type')
 
-    delete_notes_and_connected_arrows(notes_for_removal)
-
-    # Delete the arrows
-    for arrow_gid in arrow_gids_for_removal:
-        arrow = pamet.find_one(gid=arrow_gid)
-        if not arrow:  # May've been removed with the notes
-            continue
+    # Execute the removal
+    for arrow in arrows_for_removal:
         pamet.remove_arrow(arrow)
+
+    delete_notes_and_connected_arrows(notes_for_removal)
 
     clear_child_selection(map_page_view_state)
     fusion.gui.update_state(map_page_view_state)
@@ -233,8 +230,7 @@ def start_notes_resize(map_page_view_state: MapPageViewState, main_note: Note,
     map_page_view_state.note_resize_click_position = mouse_position
     map_page_view_state.note_resize_main_note = main_note.copy()
 
-    for child_id in map_page_view_state.selected_child_ids:
-        child_state = fusion.gui.view_state(child_id)
+    for child_state in map_page_view_state.selected_children:
         if isinstance(child_state, NoteViewState):
             map_page_view_state.note_resize_states.append(child_state)
 
@@ -262,11 +258,10 @@ def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
 
 
 @action('map_page.start_child_move')
-def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: list):
+def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: Point2D):
     map_page_view_state.set_mode(MapPageMode.CHILD_MOVE)
-    map_page_view_state.mouse_position_on_note_drag_start = Point2D(*mouse_pos)
-    for cid in map_page_view_state.selected_child_ids:
-        child_state = fusion.gui.view_state(cid)
+    map_page_view_state.mouse_position_on_note_drag_start = mouse_pos
+    for child_state in map_page_view_state.selected_children:
         if isinstance(child_state, ArrowViewState):
             map_page_view_state.moved_arrow_states.append(child_state)
         elif isinstance(child_state, NoteViewState):
@@ -342,7 +337,7 @@ def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
 @action('map_page.select_all_notes')
 def select_all_notes(map_page_view_state: MapPageViewState):
     for note_vs in map_page_view_state.note_view_states:
-        map_page_view_state.selected_child_ids.add(note_vs.id)
+        map_page_view_state.selected_children.add(note_vs)
 
     gui.update_state(map_page_view_state)
 
@@ -357,11 +352,10 @@ def resize_page(map_page_view_state: MapPageViewState, new_size: Point2D):
 def color_selected_children(map_page_view_state: str,
                             color: list = None,
                             background_color: list = None):
-    for note_view_id in map_page_view_state.selected_child_ids:
-        child_vs = gui.view_state(note_view_id)
+    for child_state in map_page_view_state.selected_children:
 
-        if isinstance(child_vs, NoteViewState):
-            note = child_vs.get_note()
+        if isinstance(child_state, NoteViewState):
+            note = child_state.get_note()
 
             color = color or note.color
             background_color = background_color or note.background_color
@@ -370,8 +364,8 @@ def color_selected_children(map_page_view_state: str,
             note.background_color = background_color
             pamet.update_note(note)
 
-        elif isinstance(child_vs, ArrowViewState):
-            arrow = child_vs.get_arrow()
+        elif isinstance(child_state, ArrowViewState):
+            arrow = child_state.get_arrow()
             color = color or arrow.color
             arrow.color = color
             pamet.update_arrow(arrow)
@@ -687,8 +681,7 @@ def autosize_selected_notes(map_page_view_state: MapPageViewState):
     # in order for this to work on web. The latter only requires abstracting
     # QFontMetrics.boundingRect (that works for single lines) and elideText
     # for single words
-    for child_id in map_page_view_state.selected_child_ids:
-        note_vs = fusion.gui.view_state(child_id)
+    for note_vs in map_page_view_state.selected_children:
         if not isinstance(note_vs, (TextNote, CardNote, ImageNote)):
             continue
 
@@ -721,9 +714,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
                            relative_to: Point2D = None):
     copied_notes = []
     positions = []
-    for child_view_id in map_page_view_state.selected_child_ids:
-        child_vs = fusion.gui.view_state(child_view_id)
-
+    for child_vs in map_page_view_state.selected_children:
         # If note view - get note and translate position
         if not isinstance(child_vs, NoteViewState):
             continue
@@ -749,9 +740,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
     # If arrow view - get arrow and if not both notes are copied - skip
     # else translate and add to the list
     copied_arrows = []
-    for child_view_id in map_page_view_state.selected_child_ids:
-        child_vs = fusion.gui.view_state(child_view_id)
-
+    for child_vs in map_page_view_state.selected_children:
         # If note view - get note and translate position
         if not isinstance(child_vs, ArrowViewState):
             continue

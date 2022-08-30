@@ -42,11 +42,11 @@ class MapPageViewState(ViewState, Viewport, Page):
     # drag_navigation_active: bool = False
     drag_navigation_start_position: Point2D = None
 
-    selected_child_ids: set = field(default_factory=set)
+    selected_children: set = field(default_factory=set)
 
     # Field/drag selection
     mouse_position_on_drag_select_start: Point2D = None
-    drag_selected_child_ids: set = field(default_factory=set)
+    drag_selected_children: set = field(default_factory=set)
     drag_select_rect_props: list = field(default_factory=list)
 
     # Note resize related
@@ -85,7 +85,7 @@ class MapPageViewState(ViewState, Viewport, Page):
         self.special_mode = MapPageMode.NONE
         self.drag_navigation_start_position = None
         self.mouse_position_on_drag_select_start = None
-        self.drag_selected_child_ids = set()
+        self.drag_selected_children = set()
         self.drag_select_rect_props = []
 
         self.mouse_position_on_note_drag_start = None

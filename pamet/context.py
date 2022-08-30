@@ -31,7 +31,7 @@ def notes_selected():
     if not page_view:
         return False
 
-    if not page_view.state().selected_child_ids:
+    if not page_view.state().selected_children:
         return False
 
     return True
