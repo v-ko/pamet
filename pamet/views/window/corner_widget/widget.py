@@ -31,6 +31,9 @@ class CornerWidget(QWidget):
         self.ui.menuButton.clicked.connect(self.open_main_menu)
 
     def open_main_menu(self):
-        entries = {'Page properties': commands.open_page_properties}
+        entries = {
+            'Page properties': commands.open_page_properties,
+            'Open settings (JSON)': commands.open_settings_json,
+        }
         context_menu = ContextMenuWidget(self, entries=entries)
         context_menu.popup(self.ui.menuButton.rect().bottomRight())

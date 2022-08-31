@@ -7,6 +7,7 @@ from fusion.extensions_loader import ExtensionsLoader
 from fusion.logging import get_logger
 from pamet.services.clipboard import ClipboardService
 from pamet.services.search.base import BaseSearchService
+
 from .model import sync_repo, async_repo, set_sync_repo, set_async_repo
 from .model import page, pages, remove_page, update_page, insert_page
 from .model import find, find_one

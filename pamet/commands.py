@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Tuple
-from PySide6.QtGui import QCursor
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QCursor, QDesktopServices
 
 import fusion
 from fusion.basic_classes.point2d import Point2D
@@ -144,3 +145,9 @@ def close_current_tab():
     window = current_window()
     tab = window.current_tab()
     window_actions.close_tab(window.state(), tab.state())
+
+
+@command(title='Open settings (JSON)')
+def open_settings_json():
+    settings_path = fusion.gui.util_provider().config_file_path()
+    QDesktopServices.openUrl(QUrl(str(settings_path)))
