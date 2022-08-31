@@ -1,5 +1,6 @@
-from importlib.resources import read_text
 from pathlib import Path
+import importlib.metadata
+__version__ = importlib.metadata.version(__package__)
 
 from fusion.entity_library.entity import Entity
 from fusion.extensions_loader import ExtensionsLoader
@@ -21,7 +22,7 @@ log = get_logger(__name__)
 
 
 pamet_root = Path(__file__).parent
-__version__ = (pamet_root / 'VERSION').read_text()
+# __version__ = (pamet_root / 'VERSION').read_text()
 
 extensions_loader = ExtensionsLoader(pamet_root)
 extensions_loader.load_all_recursively(pamet_root / 'model')
