@@ -141,16 +141,19 @@ def main(path: str):
     search_service.load_all_content()
     pamet.set_search_service(search_service)
 
-    backup_service = FSStorageBackupService(
-        backup_folder=config.backup_folder,
-        repository=fs_repo,
-        changeset_channel=pamet_channels.entity_change_sets_per_TLA,
-        record_all_changes=True)
-    if not backup_service.start():
-        log.info('Backup service not started. '
-                 'Probably another instance is running')
-    else:
-        app.aboutToQuit.connect(backup_service.stop)
+    # Run the backup service only on the main repo. This is not cool. There
+    # should be a per-repo setting for the backup folder path
+    if not path:
+        backup_service = FSStorageBackupService(
+            backup_folder=config.backup_folder,
+            repository=fs_repo,
+            changeset_channel=pamet_channels.entity_change_sets_per_TLA,
+            record_all_changes=True)
+        if not backup_service.start():
+            log.info('Backup service not started. '
+                    'Probably another instance is running')
+        else:
+            app.aboutToQuit.connect(backup_service.stop)
 
     return app.exec()
 
