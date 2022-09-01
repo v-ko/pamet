@@ -1,0 +1,36 @@
+:root {
+    --map-scale: 1;
+    --map-translate-x: 0;
+    --map-translate-y: 0;
+  }
+
+body{
+    margin: 0;
+    overflow: clip;
+}
+.note {
+    /* color: rgba(0,0,255,1);
+    background: rgba(0,0,255,0.1); */
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: blue;
+    font-family: "Helvetica";
+    text-decoration: none;
+    /* transform: ; */
+}
+#mapPage{
+    /* border: 1px solid red; */
+    /* top: -1000;
+    left: -1000;
+    width: 2000px;
+    height: 2000px; */
+    width: 100%;
+    height: 100%;
+    transform: translate(50vw, 50vh)  translate(var(--map-translate-x), var(--map-translate-y)) scale(var(--map-scale));
+    /* background: rgba(0,0,255,0.1); */
+    backface-visibility: hidden;
+    /* transform-origin: 50vw + var(--map-translate-x), 50vh + var(--map-translate-y); */
+}

@@ -50,7 +50,7 @@ def set_default_note_font(new_default_note_font):
     _default_note_font = new_default_note_font
 
 
-def app():
+def get_app():
     return _app
 
 

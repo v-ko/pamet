@@ -1,7 +1,9 @@
 from __future__ import annotations
+from pathlib import Path
 from typing import Tuple
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QCursor, QDesktopServices
+from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 import fusion
 from fusion.basic_classes.point2d import Point2D
@@ -13,6 +15,7 @@ from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 
 from pamet.gui_helpers import current_window, current_tab
+from pamet.desktop_app.helpers import resource_path
 from pamet.views.note.base.state import NoteViewState
 
 log = fusion.get_logger(__name__)
@@ -58,8 +61,7 @@ def edit_selected_notes():
 
 @command(title='Show all commands')
 def open_command_palette():
-    window_actions.open_command_view(current_window().state(),
-                                     prefix='>')
+    window_actions.open_command_view(current_window().state(), prefix='>')
 
 
 @command(title='Go to file')
@@ -151,3 +153,79 @@ def close_current_tab():
 def open_settings_json():
     settings_path = fusion.gui.util_provider().config_file_path()
     QDesktopServices.openUrl(QUrl(str(settings_path)))
+
+
+@command(title='Export as web page')
+def export_as_web_page():
+    tab_view, page_view = current_tab_and_page_views()
+    # page = page_view.state().get_page()
+
+    note_elements = []
+    for nt_view in page_view.note_views():
+        nv_state = nt_view.state()
+        r = nv_state.rect()
+
+        color_vals = [c * 100 for c in nv_state.color]
+        color_str = ', '.join([f'{c}%' for c in color_vals])
+        color_str = f'rgba({color_str})'
+
+        bg_color_vals = [c * 100 for c in nv_state.background_color]
+        bg_color_str = ', '.join([f'{c}%' for c in bg_color_vals])
+        bg_color_str = f'rgba({bg_color_str})'
+
+        note_style = (f'top: {r.y()}; left: {r.x()};'
+                      f'width: {r.width()};height: {r.height()};')
+        note_style += f' color: {color_str};'
+        note_style += f' background: {bg_color_str};'
+
+        note_el_props = {
+            'id': nv_state.id,
+            'class': 'note',
+        }
+        if nv_state.url.is_external():
+            note_el_props['href'] = nv_state.url
+            note_style += f'border: 1px solid {color_str};'
+
+        note_el_props['style'] = note_style
+
+        props_str = ' '.join([f'{k}="{v}"' for k, v in note_el_props.items()])
+        # id="{nv_state.id}" class="note" style="{note_style}"
+        note_el = f'''
+        <a {props_str}>
+            {nt_view.displayed_text}
+        </a>
+        '''
+        note_elements.append(note_el)
+
+    note_elements_str = "\n".join(note_elements)
+    page_script = resource_path('static_page_src/script.js').read_text()
+    page_style = resource_path('static_page_src/style.css').read_text()
+    page_str = f'''
+    <html>
+        <head>
+            <style>
+            {page_style}
+            </style>
+        </head>
+        <body>
+            <div id="mapPage">
+{note_elements_str}
+            </div>
+
+            <script>
+                {page_script}
+            </script>
+        </body>
+    </html>
+    '''
+    path = '/home/p10/tst.html'
+
+    # A dummy widget, because QFileDialog crashed the app without it
+    widget = QWidget()
+    path, _ = QFileDialog.getSaveFileName(widget, 'Choose save path')
+    widget.deleteLater()
+
+    if not path:
+        return
+    path = Path(path)
+    path.write_text(page_str)

@@ -34,6 +34,7 @@ class CornerWidget(QWidget):
         entries = {
             'Page properties': commands.open_page_properties,
             'Open settings (JSON)': commands.open_settings_json,
+            'Export as HTML page /*buggy*': commands.export_as_web_page,
         }
         context_menu = ContextMenuWidget(self, entries=entries)
         context_menu.popup(self.ui.menuButton.rect().bottomRight())
