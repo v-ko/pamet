@@ -145,7 +145,7 @@ class FSStorageRepository(PametInMemoryRepository,
         if isinstance(entity, Page):
             self.upserted_pages.add(entity)
         elif isinstance(entity, PageChild):
-            page = entity.get_page()
+            page = self.page(entity.page_id)
             if not page:
                 raise Exception(f'Invalid parent for {entity}')
             self.upserted_pages.add(page)
@@ -169,7 +169,7 @@ class FSStorageRepository(PametInMemoryRepository,
         if isinstance(entity, Page):
             self.removed_pages.add(entity)
         elif isinstance(entity, PageChild):
-            page = entity.get_page()
+            page = self.page(entity.page_id)
             if not page:
                 raise Exception(f'Invalid parent for {entity}')
             self.upserted_pages.add(page)
@@ -191,7 +191,7 @@ class FSStorageRepository(PametInMemoryRepository,
         if isinstance(entity, Page):
             self.upserted_pages.add(entity)
         elif isinstance(entity, PageChild):
-            page = entity.get_page()
+            page = self.page(entity.page_id)
             if not page:
                 raise Exception(f'Invalid parent for {entity}')
             self.upserted_pages.add(page)

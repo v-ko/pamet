@@ -69,7 +69,7 @@ class SearchBarWidget(QWidget):
     def handle_item_activated(self, item: SearchItem):
         search_result: SearchResult = item.data(Qt.UserRole)
         note = search_result.get_note()
-        page = note.get_page()
+        page = pamet.page(note.page_id)
 
         url = Url(page.url()).with_anchor(f'note={note.id}')
         url = str(url)

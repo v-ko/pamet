@@ -90,7 +90,7 @@ def abort_editing_and_delete_note(tab_state: TabViewState):
 @action('note.apply_page_change_to_anchor_view')
 def apply_page_change_to_anchor_view(
         note_view_state: tab_widget.TextNoteViewState):
-    page = note_view_state.url.get_page()
+    page = pamet.page(note_view_state.url.get_page_id())
     # If it's missing - leave the text, the border will indicate
     if page:
         note_view_state.text = page.name

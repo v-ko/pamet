@@ -5,13 +5,15 @@ from PySide6.QtWidgets import QWidget
 from fusion.entity_library.change import Change
 from fusion.gui.utils.qt_widgets import bind_and_apply_state
 from fusion.gui.view_library.view_state import view_state_type
+
+import pamet
 from pamet.desktop_app import default_note_font
 from pamet.desktop_app.helpers import draw_text_lines, elide_text
 from pamet.model.card_note import CardNote
 from pamet.note_view_lib import register_note_view_type
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
 from pamet.views.note.base.view import NoteView
-from ..base.state import NoteViewState
+from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.image.image_label import ImageLabel
 from pamet.views.note.qt_helpers import draw_link_decorations
 
@@ -69,7 +71,7 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
             else:
                 self._alignment = Qt.AlignHCenter
 
-            url_page = state.url.get_page()
+            url_page = pamet.page(state.url.get_page_id())
             if url_page:
                 self._elided_text_layout = elide_text(url_page.name,
                                                       state.text_rect(),
@@ -80,9 +82,9 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
                                                       self.font())
 
         if change.updated.url:
-            url_page = state.url.get_page()
+            url_page = pamet.page(state.url.get_page_id())
             if url_page and url_page.name:
-                self.connect_to_page_changes(self.state().url.get_page())
+                self.connect_to_page_changes(self.state().url.get_page_id())
             else:
                 self.disconnect_from_page_changes()
 

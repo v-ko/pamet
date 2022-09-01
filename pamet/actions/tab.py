@@ -22,7 +22,7 @@ log = get_logger(__name__)
 @action('create_and_set_page')
 def create_and_set_page_view(tab_state: TabViewState, url: str):
     parsed_url = Url(url)
-    page = parsed_url.get_page()
+    page = pamet.page(parsed_url.get_page_id())
     if not page:
         raise Exception('No page at the given URL')
 
@@ -89,9 +89,9 @@ def go_to_url(tab_state: TabViewState,
     last_page_id = None
     if nav_history:
         old_url = Url(nav_history[-1])
-        last_page_id = old_url.page_id()
+        last_page_id = old_url.get_page_id()
 
-    if last_page_id != parsed_url.page_id():
+    if last_page_id != parsed_url.get_page_id():
         # Update the last url to save it's viewport position anchor
         # (to account for any viewport move/height changes
         # since the last go_to_url. This might have to be moved to the
@@ -114,7 +114,7 @@ def go_to_url(tab_state: TabViewState,
 def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
     # This action assumes there's a page opened
     current_page_state = tab_state.page_view_state
-    current_page = current_page_state.get_page()
+    current_page = pamet.page(current_page_state.page_id)
     new_name = generate_page_name()
     new_page = Page(name=new_name)
     pamet.insert_page(new_page)

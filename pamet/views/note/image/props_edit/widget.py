@@ -262,7 +262,7 @@ class ImagePropsWidget(QWidget):
                     return
 
                 local_url = media_store().save_blob(
-                    self.edit_widget.state().get_page(), blob, img_format, url)
+                    self.edit_widget.state().page_id, blob, img_format, url)
                 if not local_url:
                     self.update_image_note_and_preview(
                         error='Could not save image locally.')

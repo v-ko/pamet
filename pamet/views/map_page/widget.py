@@ -867,7 +867,7 @@ class MapPageWidget(QWidget, MapPageView):
         if mode == MapPageMode.NONE:
             if ncs_under_mouse:
                 map_page_actions.update_child_selections(
-                    self.state(), {nv.view_id: True
+                    self.state(), {nv: True
                                    for nv in ncs_under_mouse})
                 menu_entries['Edit note'] = commands.edit_selected_notes
                 menu_entries['Copy'] = commands.copy

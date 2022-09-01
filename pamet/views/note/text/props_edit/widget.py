@@ -1,7 +1,8 @@
 from PySide6.QtCore import QSize, QUrl
-from PySide6.QtGui import QResizeEvent
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QTextEdit, QWidget
+
+import pamet
 from pamet.url import Url
 from .ui_widget import Ui_TextEditPropsWidget
 
@@ -50,7 +51,7 @@ class TextEditPropsWidget(QWidget):
     def _get_title(self):
         edited_note = self.edit_widget.edited_note
         url: Url = edited_note.url
-        page = url.get_page()
+        page = pamet.page(url.get_page_id())
 
         if page:
             self.text_edit.setText(page.name)

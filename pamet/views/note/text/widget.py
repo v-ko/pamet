@@ -4,6 +4,8 @@ from PySide6.QtCore import Qt, QRect
 
 from fusion.gui.utils.qt_widgets import bind_and_apply_state
 from fusion.gui.view_library.view_state import view_state_type
+
+import pamet
 from pamet import register_note_view_type
 from pamet.desktop_app import default_note_font
 from pamet.model.text_note import TextNote
@@ -92,7 +94,7 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
             else:
                 self._alignment = Qt.AlignHCenter
 
-            url_page = state.url.get_page()
+            url_page = pamet.page(state.url.get_page_id())
             if url_page:
                 self._elided_text_layout = elide_text(url_page.name,
                                                       state.text_rect(),
@@ -103,9 +105,9 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
                                                       self.font())
 
         if change.updated.url:
-            url_page = state.url.get_page()
+            url_page = pamet.page(state.url.get_page_id())
             if url_page and url_page.name:
-                self.connect_to_page_changes(self.state().url.get_page())
+                self.connect_to_page_changes(url_page.id)
             else:
                 self.disconnect_from_page_changes()
 

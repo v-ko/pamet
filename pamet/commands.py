@@ -158,7 +158,6 @@ def open_settings_json():
 @command(title='Export as web page')
 def export_as_web_page():
     tab_view, page_view = current_tab_and_page_views()
-    # page = page_view.state().get_page()
 
     note_elements = []
     for nt_view in page_view.note_views():

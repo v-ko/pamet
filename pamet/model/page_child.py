@@ -44,6 +44,3 @@ class PageChild(Entity):
 
         own_id = own_id or get_new_id()
         return cls(id=(page_id, own_id), **child_props)
-
-    def get_page(self):
-        return pamet.page(self.id[0])
