@@ -171,7 +171,7 @@ class FSStorageRepository(PametInMemoryRepository,
         elif isinstance(entity, PageChild):
             page = self.page(entity.page_id)
             if not page:
-                raise Exception(f'Invalid parent for {entity}')
+                return None
             self.upserted_pages.add(page)
 
         if self.queue_save_on_change:
