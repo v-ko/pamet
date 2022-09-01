@@ -206,7 +206,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
 
         else:  # If there is a schema
             # If an URI is pasted with a pamet schema
-            linked_page: Page = self.edited_note.url.get_page()
+            linked_page: Page = pamet.page(self.edited_note.url.get_page_id())
             if linked_page:
                 self.decorate_for_internal_url(True)
                 self.link_props_widget.ui.urlLineEdit.setText(linked_page.name)

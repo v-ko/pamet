@@ -69,13 +69,11 @@ def update_child_selections(map_page_view_state: MapPageViewState,
     selection_update_count = 0
     for child, selected in selection_updates_by_child_id.items():
 
-        if (child in map_page_view_state.selected_children
-                and not selected):
+        if (child in map_page_view_state.selected_children and not selected):
             map_page_view_state.selected_children.remove(child)
             selection_update_count += 1
 
-        elif (child not in map_page_view_state.selected_children
-              and selected):
+        elif (child not in map_page_view_state.selected_children and selected):
             map_page_view_state.selected_children.add(child)
             selection_update_count += 1
 
@@ -258,7 +256,8 @@ def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
 
 
 @action('map_page.start_child_move')
-def start_child_move(map_page_view_state: MapPageViewState, mouse_pos: Point2D):
+def start_child_move(map_page_view_state: MapPageViewState,
+                     mouse_pos: Point2D):
     map_page_view_state.set_mode(MapPageMode.CHILD_MOVE)
     map_page_view_state.mouse_position_on_note_drag_start = mouse_pos
     for child_state in map_page_view_state.selected_children:
@@ -405,7 +404,8 @@ def delete_page(tab_view_state: TabViewState, page: Page):
     # Try to go to the last page if any
     next_page = None
     if tab_view_state.navigation_history:
-        next_page = Url(tab_view_state.navigation_history[-1]).get_page()
+        next_page = pamet.page(
+            Url(tab_view_state.navigation_history[-1]).get_page_id())
 
     if not next_page:
         next_page = pamet.helpers.get_default_page() or \
@@ -431,8 +431,7 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
     elif isinstance(child, Arrow):
         arrow_props = child.asdict()
         arrow_id = arrow_props.pop('id')
-        arrow_view_state = ArrowViewState(id=arrow_id,
-                                          **arrow_props)
+        arrow_view_state = ArrowViewState(id=arrow_id, **arrow_props)
         fusion.gui.add_state(arrow_view_state)
         page_view_state.arrow_view_states.add(arrow_view_state)
 
@@ -700,13 +699,13 @@ def autosize_selected_notes(map_page_view_state: MapPageViewState):
 
 @action('map_page.undo')
 def undo(map_page_view_state: MapPageViewState):
-    page = map_page_view_state.get_page()
+    page = pamet.page(map_page_view_state.page_id)
     pamet.undo_service().back_one_step(page.id)
 
 
 @action('map_page.redo')
 def redo(map_page_view_state: MapPageViewState):
-    page = map_page_view_state.get_page()
+    page = pamet.page(map_page_view_state)
     pamet.undo_service().forward_one_step(page.id)
 
 
@@ -771,7 +770,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
 
 @action('map_page.paste')
 def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
-    page = map_page_view_state.get_page()
+    page = pamet.page(map_page_view_state)
     entities = pamet.clipboard.get_contents()
 
     updated_ids = {}

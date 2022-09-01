@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import Union
 
 from fusion.helpers import get_new_id
+
+import pamet
 from pamet.url import Url
 from pamet.model.page import Page
 from slugify import slugify
@@ -18,11 +20,11 @@ class MediaStore:
         if not uri.is_internal():
             raise Exception('The given URI is not internal')
 
-        page = uri.get_page()
+        page = pamet.page(uri.get_page_id())
         media_id = uri.get_media_id()
         return self.media_root / page.id / media_id
 
-    def save_blob(self, page: Page, blob: bytes, format: str,
+    def save_blob(self, page_id: str, blob: bytes, format: str,
                   source_uri: Union[Url, str] = None) -> Url:
         """Saves the given blob to a file in the media store.
 
@@ -42,7 +44,7 @@ class MediaStore:
         file_name = f'{source_slug}[{get_new_id()}]'
         if format:
             file_name += f'.{format}'
-        file_path = self.media_root / page.id
+        file_path = self.media_root / page_id
         file_path.mkdir(parents=True, exist_ok=True)
         file_path = file_path / file_name
 
@@ -54,4 +56,4 @@ class MediaStore:
         if not bytes_written:
             return None
 
-        return Url(f'pamet:///p/{page.id}/media/{file_name}')
+        return Url(f'pamet:///p/{page_id}/media/{file_name}')

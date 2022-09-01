@@ -368,9 +368,7 @@ class MapPageView(View):
         map_page_actions.resize_page(self.state(), new_size)
 
     def undo(self):
-        page = self.state().get_page()
-        pamet.undo_service().back_one_step(page.id)
+        pamet.undo_service().back_one_step(self.state().page_id)
 
     def redo(self):
-        page = self.state().get_page()
-        pamet.undo_service().forward_one_step(page.id)
+        pamet.undo_service().forward_one_step(self.state().page_id)

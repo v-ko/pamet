@@ -173,8 +173,10 @@ def arrow_validity_check():
     # If the note, that the anchor points to, is missing - skip arrow
     invalid_arrows = []
     for arrow in pamet.find(type=Arrow):
-        if (arrow.has_tail_anchor() and not arrow.get_tail_note()) or\
-                (arrow.has_head_anchor() and not arrow.get_head_note()):
+        tail_note = pamet.note(arrow.page_id, arrow.get_tail_note_own_id())
+        head_note = pamet.note(arrow.page_id, arrow.get_head_note_own_id())
+        if (arrow.has_tail_anchor() and not tail_note) or\
+                (arrow.has_head_anchor() and not head_note):
 
             invalid_arrows.append(arrow)
 

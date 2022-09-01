@@ -4,6 +4,8 @@ from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
 from fusion.basic_classes.point2d import Point2D
 from fusion.basic_classes.rectangle import Rectangle
+
+import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH
 from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
@@ -112,7 +114,7 @@ def draw_link_decorations(note_widget, painter: QPainter):
     if url.is_internal():
         # For internal notes draw only a solid border
         # But if the target page is missing - draw it with a dashed pattern
-        if not url.get_page():
+        if not pamet.page(url.get_page_id()):
             pen.setStyle(Qt.DashLine)
             painter.setPen(pen)
         painter.drawRect(internal_border_rect)

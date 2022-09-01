@@ -3,6 +3,7 @@ from PySide6.QtGui import QDesktopServices
 from fusion.basic_classes.point2d import Point2D
 from fusion.gui.view_library.view import View
 
+import pamet
 from pamet.actions import window as window_actions
 from pamet.actions import tab as tab_actions
 from pamet.actions import note as note_actions
@@ -29,7 +30,7 @@ class NoteView(View):
 
         # If there's a linked page - go to it
         if state.url.is_internal():
-            page = state.url.get_page()
+            page = pamet.page(state.url.get_page_id())
             if page:
                 tab_actions.go_to_url(self.parent_page.parent_tab.state(),
                                       page.url())
@@ -41,7 +42,7 @@ class NoteView(View):
 
     def middle_click_event(self, position: Point2D):
         url = self.state().url
-        page = url.get_page()
+        page = pamet.page(url.get_page_id())
 
         if not page:
             return

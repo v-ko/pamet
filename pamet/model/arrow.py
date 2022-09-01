@@ -119,18 +119,6 @@ class Arrow(PageChild):
     def has_head_anchor(self):
         return bool(self.head_note_id)
 
-    def get_tail_note(self):
-        page = self.get_page()
-        if not page:
-            raise Exception
-        return pamet.note(page, self.tail_note_id)
-
-    def get_head_note(self):
-        page = self.get_page()
-        if not page:
-            raise Exception
-        return pamet.note(page, self.head_note_id)
-
     def edge_indices(self):
         mid_edge_count = 2 + len(self.mid_points)
         return list(range(mid_edge_count))

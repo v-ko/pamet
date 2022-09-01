@@ -8,12 +8,12 @@ class LinkNoteViewMixin:
     def __init__(self):
         self._page_subscription: Subscription = None
 
-    def connect_to_page_changes(self, page):
+    def connect_to_page_changes(self, page_id):
         if self._page_subscription:
             self.disconnect_from_page_changes()
 
         self._page_subscription = channels.entity_changes_by_id.subscribe(
-            self.handle_page_change, index_val=page.id)
+            self.handle_page_change, index_val=page_id)
 
     def disconnect_from_page_changes(self):
         if self._page_subscription:

@@ -70,9 +70,6 @@ class MapPageViewState(ViewState, Viewport, Page):
         return (f'<MapPageViewState page_id={self.page_id}'
                 f' {len(self.note_view_states)=}>')
 
-    def get_page(self):
-        return pamet.page(self.page_id)
-
     def mode(self):
         return MapPageMode(self.special_mode)
 

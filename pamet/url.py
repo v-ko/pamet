@@ -41,7 +41,7 @@ class Url:
     def is_custom(self):
         return self._parsed_url.scheme not in ['pamet', 'http', 'https', '']
 
-    def page_id(self):
+    def get_page_id(self):
         # This method should probably not be in this class
         if not self.is_internal():
             # A search for imported public/shared pages should be done here
@@ -54,9 +54,6 @@ class Url:
             return None
 
         return parts[2]
-
-    def get_page(self):
-        return pamet.page(self.page_id())
 
     def get_media_id(self):
         path = Path(self._parsed_url.path)
