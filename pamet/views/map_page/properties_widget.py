@@ -57,7 +57,8 @@ class MapPagePropertiesWidget(QWidget, View):
     def on_state_change(self, change: Change):
         # Fill the prop fields with the respective values
         if change.updated.page_id:
-            self.ui.nameLineEdit.setText(self.state().name)
+            page = pamet.page(self.state().page_id)
+            self.ui.nameLineEdit.setText(page.name)
 
         # Apply the field focus when specified
         if change.updated.focused_prop:
