@@ -417,7 +417,7 @@ def delete_page(tab_view_state: TabViewState, page: Page):
     tab_actions.go_to_url(tab_view_state, next_page.url())
 
 
-@action('map_page.handle_child_added')
+@action('map_page.handle_child_added', issuer='entity_change_apply_logic')
 def handle_child_added(page_view_state: MapPageViewState, child: Entity):
     if isinstance(child, Note):
         ViewType = pamet.note_view_type(note_type_name=type(child).__name__,
@@ -438,7 +438,7 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
     fusion.gui.update_state(page_view_state)
 
 
-@action('map_page.handle_child_removed')
+@action('map_page.handle_child_removed', issuer='entity_change_apply_logic')
 def handle_child_removed(page_view_state: MapPageViewState, child: Entity):
     if isinstance(child, Note):
         nv_states = list(
@@ -458,7 +458,7 @@ def handle_child_removed(page_view_state: MapPageViewState, child: Entity):
     fusion.gui.update_state(page_view_state)
 
 
-@action('map_page.handle_child_updated')
+@action('map_page.handle_child_updated', issuer='entity_change_apply_logic')
 def handle_child_updated(child_view_state: NoteViewState, child: Note):
     if isinstance(child, Note):
         child_view_state.update_from_note(child)
@@ -467,7 +467,8 @@ def handle_child_updated(child_view_state: NoteViewState, child: Note):
     fusion.gui.update_state(child_view_state)
 
 
-@action('map_page.handle_page_name_updated')
+@action('map_page.handle_page_name_updated',
+        issuer='entity_change_apply_logic')
 def handle_page_name_updated(tab_view_state: TabViewState, page: Page):
     tab_view_state.title = page.name
     fusion.gui.update_state(tab_view_state)
