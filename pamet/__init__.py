@@ -1,5 +1,7 @@
 from pathlib import Path
 import importlib.metadata
+
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 __version__ = importlib.metadata.version(__package__)
 
 from fusion.entity_library.entity import Entity
@@ -25,13 +27,15 @@ log = get_logger(__name__)
 pamet_root = Path(__file__).parent
 # __version__ = (pamet_root / 'VERSION').read_text()
 
-extensions_loader = ExtensionsLoader(pamet_root)
-extensions_loader.load_all_recursively(pamet_root / 'model')
+entity_types_loader = ExtensionsLoader(pamet_root)
+entity_types_loader.load_all_recursively(pamet_root / 'model')
 
 clipboard = ClipboardService()
 
 _search_service = None
 _broken_entities = {}  # the entity as key, and exception as value
+
+set_sync_repo(PametInMemoryRepository())  # Set a default repo
 
 
 def search_service() -> BaseSearchService:

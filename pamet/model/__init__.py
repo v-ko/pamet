@@ -17,7 +17,8 @@ from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 
 log = get_logger(__name__)
 
-_sync_repo: Repository = PametInMemoryRepository()
+_sync_repo: Repository = None
+
 # _persistence_manager = PersistenceManager()
 _undo_service = None
 
