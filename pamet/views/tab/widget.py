@@ -7,6 +7,7 @@ from fusion.basic_classes.point2d import Point2D
 from fusion.entity_library.change import Change
 from fusion.gui.utils import qt_widgets
 from fusion.gui.view_library.view import View
+
 from pamet import actions, note_view_type_by_state
 from pamet.actions import tab as tab_actions
 from pamet.model.text_note import TextNote
