@@ -30,8 +30,8 @@ class Note(PageChild):
     style: dict = field(default_factory=dict)
     content: dict = field(default_factory=dict)
     metadata: dict = field(default_factory=dict)
-    created: str = field(default_factory=lambda: str(current_time()))
-    modified: str = field(default_factory=lambda: str(current_time()))
+    created: str = field(default_factory=lambda: timestamp((current_time())))
+    modified: str = field(default_factory=lambda: timestamp((current_time())))
     tags: List[str] = field(default_factory=list)
 
     def __repr__(self):
