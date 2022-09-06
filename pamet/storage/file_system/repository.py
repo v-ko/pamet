@@ -11,7 +11,7 @@ from slugify import slugify
 import fusion
 from fusion.libs.entity import Entity, dump_to_dict, load_from_dict
 from fusion.libs.entity.change import Change
-from fusion.pubsub import Channel
+from fusion.libs.channel import Channel
 from fusion.storage.in_memory_repository import InMemoryRepository
 from fusion import get_logger
 

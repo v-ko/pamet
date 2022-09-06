@@ -1,8 +1,8 @@
 
 from copy import copy
 from typing import Tuple
-from fusion.basic_classes.point2d import Point2D
-from fusion.basic_classes.rectangle import Rectangle
+from fusion.util.point2d import Point2D
+from fusion.util.rectangle import Rectangle
 from fusion.libs.entity import entity_type
 from pamet.constants import NOTE_MARGIN
 from pamet.model.image_note import ImageNote

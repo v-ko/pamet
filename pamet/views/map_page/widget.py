@@ -8,11 +8,11 @@ from PySide6.QtGui import QKeyEvent, QPainter, QPicture, QImage, QColor, QBrush,
 from PySide6.QtGui import QKeySequence, QShortcut
 
 import fusion
-from fusion.basic_classes import Point2D, Rectangle
-from fusion.gui.utils import qt_widgets
-from fusion.gui.view_library.view import View
-from fusion.gui.views.context_menu.widget import ContextMenuWidget
-from fusion.gui import channels as sm_channels
+from fusion.util import Point2D, Rectangle
+from fusion.platform.qt_widgets import bind_and_apply_state
+from fusion.view import View
+from fusion.platform.qt_widgets.views.context_menu.widget import ContextMenuWidget
+from fusion import gui as fsm
 
 from pamet import commands
 from pamet.constants import ARROW_EDGE_RAIDUS, MAX_RENDER_TIME
@@ -159,7 +159,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         self.destroyed.connect(lambda: self.unsubscribe_all())
 
-        qt_widgets.bind_and_apply_state(self,
+        bind_and_apply_state(self,
                                         initial_state,
                                         on_state_change=self.on_state_change)
 
@@ -234,7 +234,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         self._arrow_widgets[av_state.view_id] = arrow_widget
 
-        subscription = sm_channels.state_changes_per_TLA_by_view_id.subscribe(
+        subscription = fsm.state_changes_per_TLA_by_view_id.subscribe(
             lambda change: self.handle_child_view_state_update(change),
             index_val=av_state.view_id)
         self.arrow_view_state_subs_by_view_id[av_state.view_id] = subscription
@@ -257,7 +257,7 @@ class MapPageWidget(QWidget, MapPageView):
         note_widget.hide()
         self._note_widgets[nv_state.view_id] = note_widget
 
-        subscription = sm_channels.state_changes_per_TLA_by_view_id.subscribe(
+        subscription = fsm.state_changes_per_TLA_by_view_id.subscribe(
             lambda change: self.handle_child_view_state_update(change),
             index_val=note_widget.view_id)
         self.nw_subscribtions[note_widget] = subscription

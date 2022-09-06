@@ -6,8 +6,8 @@ from PySide6.QtGui import QCursor, QDesktopServices
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 
 import fusion
-from fusion.basic_classes.point2d import Point2D
-from fusion.gui import command
+from fusion.util.point2d import Point2D
+from fusion.libs.command import command
 
 from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Union
 
-from fusion.helpers import get_new_id
+from fusion.util import get_new_id
 
 import pamet
 from pamet.url import Url

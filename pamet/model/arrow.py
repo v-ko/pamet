@@ -1,8 +1,8 @@
 from dataclasses import field
 from enum import Enum
 from typing import List
-from fusion.basic_classes.color import Color
-from fusion.basic_classes.point2d import Point2D
+from fusion.util.color import Color
+from fusion.util.point2d import Point2D
 
 from fusion.libs.entity import entity_type
 from fusion.logging import get_logger

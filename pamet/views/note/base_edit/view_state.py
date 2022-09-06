@@ -1,4 +1,4 @@
-from fusion.gui import view_state_type
+from fusion.libs.state import view_state_type
 from pamet.model.note import Note
 from pamet.views.note.base.state import NoteViewState
 

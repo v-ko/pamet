@@ -1,13 +1,13 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFocusEvent, QKeyEvent, QKeySequence, QResizeEvent, QShortcut
+from PySide6.QtGui import QFocusEvent, QKeyEvent, QResizeEvent
 from PySide6.QtWidgets import QListWidgetItem, QWidget
-from fusion.gui.view_library.view import View
+from fusion.view import View
 import pamet
 
 from thefuzz import process
 
-from fusion.gui.commands_library import commands
-from fusion.gui.view_library.view_state import ViewState, view_state_type
+from fusion.libs.command import commands
+from fusion.libs.state import ViewState, view_state_type
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 from .ui_widget import Ui_CommandPaletteWidget

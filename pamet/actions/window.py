@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import fusion.gui
-from fusion.gui.actions_library import action
-from fusion.gui.view_library.view_state import ViewState
+from fusion.libs.action import action
+from fusion.libs.state import ViewState
 from pamet.model.page import Page
 from pamet.views.command_palette.widget import CommandPaletteViewState
 from pamet.views.tab.state import TabViewState

@@ -1,7 +1,7 @@
 from typing import List
 from fusion.libs.entity.change import Change
 from fusion.libs.entity import Entity
-from fusion.pubsub import Channel
+from fusion.libs.channel import Channel
 from fusion.storage.in_memory_repository import InMemoryRepository
 from fusion.storage.repository import Repository
 

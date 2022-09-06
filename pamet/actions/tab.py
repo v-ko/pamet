@@ -1,7 +1,7 @@
 from __future__ import annotations
 import fusion
-from fusion.gui import action
-from fusion.basic_classes import Point2D
+from fusion.libs.action import action
+from fusion.util import Point2D
 from fusion.logging import get_logger
 
 import pamet

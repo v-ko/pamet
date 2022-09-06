@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import field
 from fusion.libs.entity import entity_type, Entity
 
-from fusion.helpers import get_new_id
+from fusion.util import get_new_id
 import pamet
 
 

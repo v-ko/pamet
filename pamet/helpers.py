@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Union
-from fusion.basic_classes.point2d import Point2D
+from fusion.util.point2d import Point2D
 from fusion.logging import get_logger
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT

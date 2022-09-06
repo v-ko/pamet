@@ -6,8 +6,9 @@ from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, Q
 from PySide6.QtCore import Qt, QRectF, QRect
 
 import fusion
-from fusion.basic_classes.rectangle import Rectangle
-from fusion.gui.utils.qt_widgets.provider import QtWidgetsUtilProvider
+from fusion.util.rectangle import Rectangle
+from fusion.extensions_loader import ExtensionsLoader
+from fusion.platform.qt_widgets.provider import QtWidgetsUtilProvider
 from fusion.logging import get_logger
 
 import pamet
@@ -206,13 +207,6 @@ def configure_for_qt(app):
     global _media_store, _default_note_font
 
     # Force view registration (should be handled by the ExtensionManager)
-    from pamet.views.map_page.widget import MapPageWidget
-    from pamet.views.note.text.widget import TextNoteWidget
-    from pamet.views.note.text.edit_widget import CardNoteEditWidget
-    from pamet.views.note.image.widget import ImageNoteWidget
-    from pamet.views.note.card.widget import CardNoteWidget
-    from pamet.views.note.script.widget import ScriptNoteWidget
-    from pamet.views.note.script.edit_widget import ScriptNoteEditWidget
 
     desktop_app.set_app(app)
     fusion.configure_for_qt(app)
@@ -237,6 +231,9 @@ def configure_for_qt(app):
     _default_note_font.setPointSizeF(14)
     desktop_app.set_default_note_font(_default_note_font)
 
+    pamet_root = Path(__file__).parent.parent
+    views_loader = ExtensionsLoader(pamet_root)
+    views_loader.load_all_recursively(pamet_root / 'views')
 
 # def get_scripts_permission():
 #     # Warn of the risks from scripts

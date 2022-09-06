@@ -1,7 +1,7 @@
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
-from fusion.basic_classes.point2d import Point2D
-from fusion.gui.view_library.view import View
+from fusion.util.point2d import Point2D
+from fusion.view import View
 
 import pamet
 from pamet.actions import window as window_actions

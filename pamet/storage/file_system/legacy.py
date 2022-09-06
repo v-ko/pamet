@@ -10,9 +10,9 @@ import shutil
 from typing import List
 from fusion.libs.entity import load_from_dict
 
-from fusion.basic_classes import Point2D
-from fusion.basic_classes.rectangle import Rectangle
-from fusion.helpers import current_time, get_new_id, timestamp
+from fusion.util import Point2D
+from fusion.util.rectangle import Rectangle
+from fusion.util import current_time, get_new_id, timestamp
 from fusion.logging import get_logger
 from fusion.storage.in_memory_repository import InMemoryRepository
 from pamet.constants import MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT

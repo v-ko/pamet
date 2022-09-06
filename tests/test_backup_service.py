@@ -8,7 +8,7 @@ from typing import List
 from fusion.libs.entity.change import Change
 
 import pamet
-from fusion.helpers import fake_time, current_time
+from fusion.util import fake_time, current_time
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 from pamet.services.backup import FSStorageBackupService
