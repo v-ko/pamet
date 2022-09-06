@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import fusion.gui
+from fusion import fsm
 from fusion.libs.action import action
 from fusion.libs.state import ViewState
 from pamet.model.page import Page
@@ -14,26 +14,25 @@ from pamet.views.window.state import WindowViewState
 @action('window.new_browser_window')
 def new_browser_window():
     window_state = WindowViewState()
-    fusion.gui.add_state(window_state)
+    fsm.add_state(window_state)
     return window_state
 
 
 @action('window.new_browser_tab')
 def new_browser_tab(window_state: WindowViewState, page: Page):
     tab_state = TabViewState()
-    fusion.gui.add_state(tab_state)
+    fsm.add_state(tab_state)
 
     window_state.tab_states.append(tab_state)
-    fusion.gui.update_state(window_state)
+    fsm.update_state(window_state)
 
     tab_actions.go_to_url(tab_state, page.url())
 
 
 @action('window.close_tab')
-def close_tab(window_state: WindowViewState,
-              tab_state: TabViewState):
+def close_tab(window_state: WindowViewState, tab_state: TabViewState):
     window_state.tab_states.remove(tab_state)
-    fusion.gui.update_state(window_state)
+    fsm.update_state(window_state)
 
 
 @action('window.open_command_view')
@@ -43,13 +42,13 @@ def open_command_view(window_state: WindowViewState,
 
     if not command_view_state:
         command_view_state = CommandPaletteViewState(line_edit_text=prefix)
-        fusion.gui.add_state(command_view_state)
+        fsm.add_state(command_view_state)
 
     window_state.command_view_state = command_view_state
-    fusion.gui.update_state(window_state)
+    fsm.update_state(window_state)
 
 
 @action('window.close_command_view')
 def close_command_view(window_state: WindowViewState):
     window_state.command_view_state = None
-    fusion.gui.update_state(window_state)
+    fsm.update_state(window_state)

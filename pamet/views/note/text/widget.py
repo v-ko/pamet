@@ -12,7 +12,7 @@ from pamet.model.text_note import TextNote
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
 from pamet.views.note.base.view import NoteView
 from pamet.views.note.base.state import NoteViewState
-from pamet.desktop_app.helpers import elide_text, draw_text_lines
+from pamet.desktop_app.util import elide_text, draw_text_lines
 
 from fusion import get_logger
 from pamet.views.note.qt_helpers import draw_link_decorations

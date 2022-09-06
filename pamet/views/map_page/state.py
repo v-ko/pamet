@@ -8,7 +8,7 @@ import pamet
 from fusion.util import Rectangle, Point2D
 from fusion.libs.state import view_state_type, ViewState
 from pamet.constants import DEFAULT_EYE_HEIGHT
-from pamet.url import Url
+from pamet.util.url import Url
 from pamet.model.note import Note
 from pamet.model.page import Page
 from pamet.views.arrow.widget import ArrowViewState
@@ -29,7 +29,6 @@ class MapPageMode(Enum):
 @view_state_type
 class MapPageViewState(ViewState, Viewport, Page):
     page_id: str = ''
-
     note_view_states: set[NoteViewState] = field(default_factory=set)
     arrow_view_states: set[ArrowViewState] = field(default_factory=set)
 
@@ -69,6 +68,10 @@ class MapPageViewState(ViewState, Viewport, Page):
     def __repr__(self):
         return (f'<MapPageViewState page_id={self.page_id}'
                 f' {len(self.note_view_states)=}>')
+
+    # @property
+    # def page_id(self):
+    #     return self.id
 
     def mode(self):
         return MapPageMode(self.special_mode)

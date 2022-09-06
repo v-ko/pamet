@@ -4,10 +4,11 @@ from PySide6.QtWidgets import QLabel
 from pathlib import Path
 
 from pamet.desktop_app import media_store
-from pamet.url import Url
+from pamet.util.url import Url
 
 
 class ImageLabel(QLabel):
+
     def __init__(self, parent):
         QLabel.__init__(self, parent)
         self._image = None
@@ -30,8 +31,7 @@ class ImageLabel(QLabel):
             else:
                 self._image = QImage(local_path)
                 if self._image.isNull():
-                    self.setText(
-                        f'Could not load the image at {local_path}')
+                    self.setText(f'Could not load the image at {local_path}')
                     self._image = None
                     return
                 self.update_pixmap()
@@ -46,8 +46,8 @@ class ImageLabel(QLabel):
     def update_pixmap(self):
         if not self._image:
             return
-        scaled_image = self._image.scaled(
-            self.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation)
+        scaled_image = self._image.scaled(self.size(), Qt.KeepAspectRatio,
+                                          Qt.SmoothTransformation)
         self.setPixmap(QPixmap.fromImage(scaled_image))
 
     def resizeEvent(self, event: QResizeEvent):

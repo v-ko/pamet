@@ -14,7 +14,7 @@ from pamet.constants import DEFAULT_BG_COLOR, DEFAULT_COLOR
 from pamet.constants import MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MAX_NOTE_WIDTH, MAX_NOTE_HEIGHT
 from pamet.model.page_child import PageChild
-from pamet.url import Url
+from pamet.util.url import Url
 from fusion.util import current_time, timestamp
 from pamet.model.arrow import Arrow, ArrowAnchorType
 

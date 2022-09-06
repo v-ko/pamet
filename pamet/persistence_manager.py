@@ -4,6 +4,7 @@ from fusion.libs.entity import Entity
 from fusion.libs.channel import Channel
 from fusion.storage.in_memory_repository import InMemoryRepository
 from fusion.storage.repository import Repository
+from pamet.storage.base_repository import PametRepository
 
 
 class PersistenceManager(Repository):
@@ -16,8 +17,12 @@ class PersistenceManager(Repository):
     Also the state of the class can be connected to the gui to reflect the
     save status. donno how yet"""
 
-    def __init__(self, in_channel: Channel, async_repo: Repository = None):
+    def __init__(self,
+                 in_channel: Channel,
+                 sync_repo: PametRepository,
+                 async_repo: Repository = None):
         self.in_channel = in_channel
+        self.sync_repo = sync_repo
         self.async_repo = async_repo
         self._change_sets = []
 

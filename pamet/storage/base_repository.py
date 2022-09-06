@@ -92,7 +92,6 @@ class PametRepository(Repository):
         page_gid = page_.gid() if isinstance(page_, Page) else page_
         return self.find_one(gid=(page_gid, note_own_id))
 
-
     # def notes(self, **kwargs) -> Generator[Note, None, None]:
     #     if 'type' in kwargs:
     #         raise Exception
@@ -144,3 +143,8 @@ class PametRepository(Repository):
 
         if self.raw_entity_changes_channel:
             self.raw_entity_changes_channel.push(change)
+
+    def write_to_disk(self):
+        # TODO: This should be redundant when I implement the
+        # Persistence Manager
+        pass

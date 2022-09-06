@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import List
 
 import fusion
-from fusion import gui
+from fusion import fsm
 from fusion.libs.entity import Entity
 from fusion.util import get_new_id
 import pamet
@@ -10,8 +10,8 @@ import pamet
 from fusion.util import Point2D, Rectangle
 from fusion.libs.action import action
 from pamet.constants import ALIGNMENT_GRID_UNIT
-from pamet.helpers import snap_to_grid
-from pamet.url import Url
+from pamet.util import snap_to_grid
+from pamet.util.url import Url
 from pamet.model.page import Page
 from pamet.model.note import Note
 from pamet.actions import tab as tab_actions
@@ -36,7 +36,7 @@ def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
     map_page_view_state.viewport_position_on_press = \
         map_page_view_state.viewport_center
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
     mouse_drag_navigation_move(map_page_view_state, first_delta)
 
 
@@ -49,13 +49,13 @@ def mouse_drag_navigation_move(map_page_view_state: MapPageViewState,
         map_page_view_state.viewport_position_on_press + unprojected_delta)
 
     map_page_view_state.viewport_center = new_viewport_center
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.finish_mouse_drag_navigation')
 def finish_mouse_drag_navigation(map_page_view_state: MapPageViewState):
     map_page_view_state.set_mode(MapPageMode.NONE)
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.update_note_selections')
@@ -93,7 +93,7 @@ def update_child_selections(map_page_view_state: MapPageViewState,
         map_page_view_state.arrow_with_visible_cps = None
 
     if selection_update_count > 0:
-        gui.update_state(map_page_view_state)
+        fsm.update_state(map_page_view_state)
         # log.info('Updated %s selections' % selection_update_count)
     else:
         log.info('No selections updated out of %s' %
@@ -116,7 +116,7 @@ def clear_child_selection(map_page_view_state: str):
 def set_viewport_height(map_page_view_state: MapPageViewState,
                         new_height: float):
     map_page_view_state.viewport_height = new_height
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
     # //glutPostRedisplay(); artefact, thank you for siteseeing
 
 
@@ -127,7 +127,7 @@ def start_drag_select(map_page_view_state: MapPageViewState,
     map_page_view_state.mouse_position_on_drag_select_start = Point2D(
         *position)
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.update_drag_select')
@@ -144,7 +144,7 @@ def update_drag_select(map_page_view_state: MapPageViewState,
         if child_state not in map_page_view_state.drag_selected_children:
             map_page_view_state.drag_selected_children.add(child_state)
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.stop_drag_select')
@@ -162,7 +162,7 @@ def stop_drag_select(map_page_view_state: MapPageViewState):
     update_child_selections(map_page_view_state, selection_updates)
     map_page_view_state.clear_mode()
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.delete_notes_and_connected_arrows')
@@ -214,7 +214,7 @@ def delete_selected_children(map_page_view_state: MapPageViewState):
     delete_notes_and_connected_arrows(notes_for_removal)
 
     clear_child_selection(map_page_view_state)
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.start_notes_resize')
@@ -232,7 +232,7 @@ def start_notes_resize(map_page_view_state: MapPageViewState, main_note: Note,
             map_page_view_state.note_resize_states.append(child_state)
 
     # map_page_view_state.note_resize_active = True
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.resize_note_views')
@@ -240,7 +240,7 @@ def resize_note_views(map_page_view_state: MapPageViewState,
                       new_size: Point2D):
     for ncs in map_page_view_state.note_resize_states:
         ncs.set_size(snap_to_grid(new_size))
-        gui.update_state(ncs)
+        fsm.update_state(ncs)
 
 
 @action('map_page.finish_notes_resize')
@@ -251,7 +251,7 @@ def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
         pamet.update_note(note)
     map_page_view_state.clear_mode()
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.start_child_move')
@@ -267,7 +267,7 @@ def start_child_move(map_page_view_state: MapPageViewState,
         else:
             raise Exception('Unexpected state type')
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.moved_child_view_update')
@@ -280,7 +280,7 @@ def moved_child_view_update(map_page_view_state: MapPageViewState,
         rect = note.rect()
         rect.set_top_left(snap_to_grid(rect.top_left() + delta))
         note_state.set_rect(rect)
-        gui.update_state(note_state)
+        fsm.update_state(note_state)
 
     for arrow_state in map_page_view_state.moved_arrow_states:
         arrow: Arrow = arrow_state.get_arrow()
@@ -298,7 +298,7 @@ def moved_child_view_update(map_page_view_state: MapPageViewState,
             ]
             arrow_state.replace_midpoints(mid_points)
 
-        gui.update_state(arrow_state)
+        fsm.update_state(arrow_state)
 
 
 @action('map_page.finish_child_move')
@@ -329,7 +329,7 @@ def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
         pamet.update_arrow(arrow)
 
     map_page_view_state.clear_mode()
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.select_all_notes')
@@ -337,13 +337,13 @@ def select_all_notes(map_page_view_state: MapPageViewState):
     for note_vs in map_page_view_state.note_view_states:
         map_page_view_state.selected_children.add(note_vs)
 
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.resize_page')
 def resize_page(map_page_view_state: MapPageViewState, new_size: Point2D):
     map_page_view_state.geometry.set_size(new_size)
-    gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('notes.color_selected_children')
@@ -371,7 +371,7 @@ def color_selected_children(map_page_view_state: str,
             raise Exception
 
     clear_child_selection(map_page_view_state)
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.open_page_properties')
@@ -379,17 +379,17 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
     page_view_state = tab_state.page_view_state
 
     properties_view_state = MapPagePropertiesViewState(
-        page_id=page_view_state.page_id)
+        id=page_view_state.page_id)
 
-    fusion.gui.add_state(properties_view_state)
+    fsm.add_state(properties_view_state)
 
     if focused_prop:
         properties_view_state.focused_prop = focused_prop
-        fusion.gui.update_state(properties_view_state)
+        fsm.update_state(properties_view_state)
 
     tab_state.right_sidebar_state = properties_view_state
 
-    fusion.gui.update_state(tab_state)
+    fsm.update_state(tab_state)
 
 
 @action('map_page.save_page_properties')
@@ -407,11 +407,10 @@ def delete_page(tab_view_state: TabViewState, page: Page):
             Url(tab_view_state.navigation_history[-1]).get_page_id())
 
     if not next_page:
-        next_page = pamet.helpers.get_default_page() or \
+        next_page = pamet.util.get_default_page() or \
             pamet.find_one(type=Page)
 
     if not next_page:
-        raise NotImplementedError
         next_page = pamet.actions.other.create_default_page()
     tab_actions.go_to_url(tab_view_state, next_page.url())
 
@@ -425,16 +424,16 @@ def handle_child_added(page_view_state: MapPageViewState, child: Entity):
         note_props = child.asdict()
         note_id = note_props.pop('id')
         nv_state = StateType(id=note_id, **note_props)
-        fusion.gui.add_state(nv_state)
+        fsm.add_state(nv_state)
         page_view_state.note_view_states.add(nv_state)
     elif isinstance(child, Arrow):
         arrow_props = child.asdict()
         arrow_id = arrow_props.pop('id')
         arrow_view_state = ArrowViewState(id=arrow_id, **arrow_props)
-        fusion.gui.add_state(arrow_view_state)
+        fsm.add_state(arrow_view_state)
         page_view_state.arrow_view_states.add(arrow_view_state)
 
-    fusion.gui.update_state(page_view_state)
+    fsm.update_state(page_view_state)
 
 
 @action('map_page.handle_child_removed', issuer='entity_change_apply_logic')
@@ -444,17 +443,17 @@ def handle_child_removed(page_view_state: MapPageViewState, child: Entity):
             filter(lambda x: x.note_gid == child.gid(),
                    page_view_state.note_view_states))
         for nv_state in nv_states:  # Should be len==1
-            fusion.gui.remove_state(nv_state)
+            fsm.remove_state(nv_state)
             page_view_state.note_view_states.remove(nv_state)
     elif isinstance(child, Arrow):
         av_states = list(
             filter(lambda x: x.arrow_gid == child.gid(),
                    page_view_state.arrow_view_states))
         for nv_state in av_states:  # Should be len==1
-            fusion.gui.remove_state(nv_state)
+            fsm.remove_state(nv_state)
             page_view_state.arrow_view_states.remove(nv_state)
 
-    fusion.gui.update_state(page_view_state)
+    fsm.update_state(page_view_state)
 
 
 @action('map_page.handle_child_updated', issuer='entity_change_apply_logic')
@@ -463,24 +462,24 @@ def handle_child_updated(child_view_state: NoteViewState, child: Note):
         child_view_state.update_from_note(child)
     elif isinstance(child, Arrow):
         child_view_state.update_from_arrow(child)
-    fusion.gui.update_state(child_view_state)
+    fsm.update_state(child_view_state)
 
 
 @action('map_page.handle_page_name_updated',
         issuer='entity_change_apply_logic')
 def handle_page_name_updated(tab_view_state: TabViewState, page: Page):
     tab_view_state.title = page.name
-    fusion.gui.update_state(tab_view_state)
+    fsm.update_state(tab_view_state)
 
 
 @action('map_page.start_arrow_creation')
 def start_arrow_creation(map_page_view_state: MapPageViewState):
     av_state = ArrowViewState().in_page(page_id=map_page_view_state.page_id)
-    fusion.gui.add_state(av_state)
+    fsm.add_state(av_state)
 
     map_page_view_state.set_mode(MapPageMode.CREATE_ARROW)
     map_page_view_state.new_arrow_view_states.append(av_state)
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.abort_special_mode')
@@ -489,16 +488,16 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
     # For child moving
     for note_state in map_page_view_state.moved_note_states:
         note_state.update_from_note(note_state.get_note())
-        fusion.gui.update_state(note_state)
+        fsm.update_state(note_state)
 
     for arrow_state in map_page_view_state.moved_arrow_states:
         arrow_state.update_from_arrow(arrow_state.get_arrow())
-        fusion.gui.update_state(arrow_state)
+        fsm.update_state(arrow_state)
 
     # For note resizing
     for note_state in map_page_view_state.note_resize_states:
         note_state.update_from_note(note_state.get_note())
-        fusion.gui.update_state(note_state)
+        fsm.update_state(note_state)
 
     # Restore the arrow view if there was edge dragging
     if map_page_view_state.mode() == MapPageMode.ARROW_EDGE_DRAG:
@@ -506,7 +505,7 @@ def abort_special_mode(map_page_view_state: MapPageViewState):
             map_page_view_state.arrow_with_visible_cps.get_arrow())
 
     map_page_view_state.clear_mode()
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.place_arrow_view_tail')
@@ -515,7 +514,7 @@ def place_arrow_view_tail(arrow_view_state: ArrowViewState,
                           anchor_note_id: str = None,
                           anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_tail(fixed_pos, anchor_note_id, anchor_type)
-    fusion.gui.update_state(arrow_view_state)
+    fsm.update_state(arrow_view_state)
 
 
 @action('map_page.place_arrow_view_head')
@@ -524,7 +523,7 @@ def place_arrow_view_head(arrow_view_state: ArrowViewState,
                           anchor_note_id: str = None,
                           anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_view_state.set_head(fixed_pos, anchor_note_id, anchor_type)
-    fusion.gui.update_state(arrow_view_state)
+    fsm.update_state(arrow_view_state)
 
 
 @action('map_page.arrow_creation_click')
@@ -585,7 +584,7 @@ def finish_arrow_creation(map_page_view_state: MapPageViewState):
         pamet.insert_arrow(arrow)
 
     map_page_view_state.clear_mode()
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.start_arrow_edge_drag')
@@ -593,7 +592,7 @@ def start_arrow_edge_drag(map_page_view_state: MapPageViewState,
                           mouse_pos: Point2D, edge_index: float):
     map_page_view_state.dragged_edge_index = edge_index
     map_page_view_state.set_mode(MapPageMode.ARROW_EDGE_DRAG)
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.arrow_edge_drag_update')
@@ -628,8 +627,8 @@ def arrow_edge_drag_update(
         pamet.update_arrow(arrow)
 
         map_page_view_state.dragged_edge_index = 1 + mid_point_idx
-        fusion.gui.update_state(map_page_view_state)
-    fusion.gui.update_state(arrow_vs)
+        fsm.update_state(map_page_view_state)
+    fsm.update_state(arrow_vs)
 
 
 @action('map_page.finish_arrow_edge_drag')
@@ -658,7 +657,7 @@ def finish_arrow_edge_drag(
 
     pamet.update_arrow(arrow)
     map_page_view_state.clear_mode()
-    fusion.gui.update_state(map_page_view_state)
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.delete_control_point')
@@ -770,7 +769,7 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
 
 @action('map_page.paste')
 def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
-    page = pamet.page(map_page_view_state)
+    page = pamet.page(map_page_view_state.id)
     entities = pamet.clipboard.get_contents()
 
     updated_ids = {}

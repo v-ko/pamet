@@ -9,7 +9,7 @@ from pamet import register_note_view_type
 
 import pamet
 from pamet.desktop_app import icons
-from pamet.url import Url
+from pamet.util.url import Url
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.page import Page

@@ -2,7 +2,7 @@ from fusion.util import Point2D
 from fusion.libs.action import action
 import pamet
 
-from pamet.helpers import generate_page_name
+from pamet.util import generate_page_name
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 

@@ -4,11 +4,11 @@ import fusion
 from fusion.libs.entity import dump_to_dict
 from fusion.util import current_time
 import pamet.views.tab.state
-from fusion import gui
+from fusion import fsm
 from fusion.libs.action import action
 
 import pamet
-from pamet.helpers import snap_to_grid
+from pamet.util import snap_to_grid
 from pamet.model.note import Note
 from pamet.views.note.qt_helpers import minimal_nonelided_size
 from pamet.actions import map_page as map_page_actions
@@ -29,8 +29,8 @@ def create_new_note(tab_state: TabViewState, note: Note):
 
     tab_state.edit_view_state = edit_view_state
 
-    gui.add_state(edit_view_state)
-    gui.update_state(tab_state)
+    fsm.add_state(edit_view_state)
+    fsm.update_state(tab_state)
 
 
 @action('notes.finish_creating_note')
@@ -47,7 +47,7 @@ def finish_creating_note(tab_state: TabViewState, note: Note):
     pamet.insert_note(note)
 
     tab_state.edit_view_state = None
-    gui.update_state(tab_state)
+    fsm.update_state(tab_state)
 
 
 @action('notes.start_editing_note')
@@ -61,23 +61,23 @@ def start_editing_note(tab_view_state: TabViewState, note: Note):
     edit_view_state.update_from_note(note)
     tab_view_state.edit_view_state = edit_view_state
 
-    gui.add_state(edit_view_state)
-    gui.update_state(tab_view_state)
+    fsm.add_state(edit_view_state)
+    fsm.update_state(tab_view_state)
 
 
 @action('notes.finish_editing_note')
 def finish_editing_note(tab_state: TabViewState, note: Note):
     pamet.update_note(note)
-    gui.remove_state(tab_state.edit_view_state)
+    fsm.remove_state(tab_state.edit_view_state)
     tab_state.edit_view_state = None
-    gui.update_state(tab_state)
+    fsm.update_state(tab_state)
     # autosize_note(note_component_id)
 
 
 @action('notes.abort_editing_note')
 def abort_editing_note(tab_state: TabViewState):
     tab_state.edit_view_state = None
-    gui.update_state(tab_state)
+    fsm.update_state(tab_state)
 
 
 @action('notes.abort_editing_and_delete_note')
@@ -96,7 +96,7 @@ def apply_page_change_to_anchor_view(
         note_view_state.text = page.name
     else:
         note_view_state.text += '(removed)'
-    fusion.gui.update_state(note_view_state)
+    fsm.update_state(note_view_state)
 
 
 @action('note.switch_note_type')

@@ -8,7 +8,7 @@ from fusion.libs.state import view_state_type
 
 import pamet
 from pamet.desktop_app import default_note_font
-from pamet.desktop_app.helpers import draw_text_lines, elide_text
+from pamet.desktop_app.util import draw_text_lines, elide_text
 from pamet.model.card_note import CardNote
 from pamet.note_view_lib import register_note_view_type
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin

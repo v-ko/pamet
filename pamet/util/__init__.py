@@ -31,3 +31,24 @@ def get_default_page():
     return pamet.page(config.home_page_id)
 
 
+# Validity checks
+def arrow_validity_check():
+    """Removes arrows with missing anchor notes. Must be performed after
+    the repo has been initialized."""
+    from pamet.model.arrow import Arrow
+
+    # Validity check on the arrow note anchors
+    # If the note, that the anchor points to, is missing - skip arrow
+    invalid_arrows = []
+    for arrow in pamet.find(type=Arrow):
+        tail_note = pamet.note(arrow.page_id, arrow.get_tail_note_own_id())
+        head_note = pamet.note(arrow.page_id, arrow.get_head_note_own_id())
+        if (arrow.has_tail_anchor() and not tail_note) or\
+                (arrow.has_head_anchor() and not head_note):
+
+            invalid_arrows.append(arrow)
+
+    for arrow in invalid_arrows:
+        log.error('Removing arrow because of an invalid note anchor: '
+                  f'{arrow}')
+        pamet.remove_arrow(arrow)

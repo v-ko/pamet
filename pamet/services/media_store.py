@@ -4,7 +4,7 @@ from typing import Union
 from fusion.util import get_new_id
 
 import pamet
-from pamet.url import Url
+from pamet.util.url import Url
 from pamet.model.page import Page
 from slugify import slugify
 
@@ -24,7 +24,10 @@ class MediaStore:
         media_id = uri.get_media_id()
         return self.media_root / page.id / media_id
 
-    def save_blob(self, page_id: str, blob: bytes, format: str,
+    def save_blob(self,
+                  page_id: str,
+                  blob: bytes,
+                  format: str,
                   source_uri: Union[Url, str] = None) -> Url:
         """Saves the given blob to a file in the media store.
 

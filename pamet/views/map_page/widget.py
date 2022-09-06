@@ -12,7 +12,7 @@ from fusion.util import Point2D, Rectangle
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
 from fusion.platform.qt_widgets.views.context_menu.widget import ContextMenuWidget
-from fusion import gui as fsm
+from fusion import fsm as fsm
 
 from pamet import commands
 from pamet.constants import ARROW_EDGE_RAIDUS, MAX_RENDER_TIME
@@ -23,7 +23,7 @@ import pamet
 from pamet import actions
 from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
-from pamet.desktop_app.helpers import control_is_pressed
+from pamet.desktop_app.util import control_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
 from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
@@ -160,8 +160,8 @@ class MapPageWidget(QWidget, MapPageView):
         self.destroyed.connect(lambda: self.unsubscribe_all())
 
         bind_and_apply_state(self,
-                                        initial_state,
-                                        on_state_change=self.on_state_change)
+                             initial_state,
+                             on_state_change=self.on_state_change)
 
     def handle_page_change(self, change: Change):
         if change.updated.name:

@@ -5,7 +5,7 @@ from fusion.util.point2d import Point2D
 
 from fusion.libs.state import view_state_type
 from pamet import desktop_app
-from pamet.desktop_app.helpers import draw_text_lines
+from pamet.desktop_app.util import draw_text_lines
 from pamet.model.script_note import ScriptNote
 from pamet.note_view_lib import register_note_view_type
 from pamet.views.note.base.state import NoteViewState

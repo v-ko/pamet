@@ -1,14 +1,15 @@
+from __future__ import annotations
 from typing import List, Tuple, Union
 from pathlib import Path
 import shutil
 
+from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, QPainter
 from PySide6.QtCore import Qt, QRectF, QRect
 
-import fusion
 from fusion.util.rectangle import Rectangle
 from fusion.extensions_loader import ExtensionsLoader
-from fusion.platform.qt_widgets.provider import QtWidgetsUtilProvider
+from fusion.platform.qt_widgets import configure_for_qt as fusion_config_qt
 from fusion.logging import get_logger
 
 import pamet
@@ -28,7 +29,16 @@ def shift_is_pressed():
     return QGuiApplication.queryKeyboardModifiers() & Qt.ShiftModifier
 
 
+def current_window() -> WindowWidget:
+    return QApplication.activeWindow()
+
+
+def current_tab() -> TabWidget:
+    return current_window().current_tab()
+
+
 class TextLayout:
+
     def __init__(self):
         self.data = []
         self.is_elided = False
@@ -113,8 +123,8 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
                 # Elide if we're past the end of the last line
                 # or if it's the first word on the line and it's just too long
                 if at_the_last_line or word_idx_on_line == 0:
-                    word = font_metrics.elidedText(
-                        word, Qt.ElideRight, width_left)
+                    word = font_metrics.elidedText(word, Qt.ElideRight,
+                                                   width_left)
                     text_layout.is_elided = True
                     words_on_line.append(word)
                     used_words += 1
@@ -145,11 +155,8 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
     return text_layout
 
 
-def draw_text_lines(
-        painter: QPainter,
-        text_layout: List[Tuple[str, QRectF]],
-        alignment: Qt.AlignmentFlag,
-        text_rect: QRect):
+def draw_text_lines(painter: QPainter, text_layout: List[Tuple[str, QRectF]],
+                    alignment: Qt.AlignmentFlag, text_rect: QRect):
     if not text_layout:
         return
     # Qt configures the fonts with a lot of ascent
@@ -167,8 +174,8 @@ def draw_text_lines(
         line_rect = QRectF(elide_line_rect)
         line_rect.moveTop(vertical_offset + line_rect.top())
         line_rect.setHeight(line_rect.height() + hacky_padding)
-        after_rect = painter.drawText(
-            line_rect, alignment | Qt.TextDontClip, line_text)
+        after_rect = painter.drawText(line_rect, alignment | Qt.TextDontClip,
+                                      line_text)
 
         # print(after_rect)
         # painter.drawRect(line_rect)
@@ -206,14 +213,9 @@ def copy_script_templates(overwrite: bool = False):
 def configure_for_qt(app):
     global _media_store, _default_note_font
 
-    # Force view registration (should be handled by the ExtensionManager)
-
-    desktop_app.set_app(app)
-    fusion.configure_for_qt(app)
-
     log.info(f'Using data folder: {pamet_data_folder_path}')
-    util_provider = QtWidgetsUtilProvider(pamet_data_folder_path)
-    fusion.gui.set_util_provider(util_provider)
+    desktop_app.set_app(app)
+    fusion_config_qt(app)
 
     config: DesktopConfig = desktop_app.get_config()
     if config.changes_present():
@@ -234,6 +236,7 @@ def configure_for_qt(app):
     pamet_root = Path(__file__).parent.parent
     views_loader = ExtensionsLoader(pamet_root)
     views_loader.load_all_recursively(pamet_root / 'views')
+
 
 # def get_scripts_permission():
 #     # Warn of the risks from scripts

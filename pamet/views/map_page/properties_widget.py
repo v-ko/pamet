@@ -14,7 +14,10 @@ from .ui_properties_widget import Ui_MapPagePropertiesWidget
 @view_state_type
 class MapPagePropertiesViewState(ViewState):
     focused_prop: str = ''
-    page_id: str = ''
+
+    @property
+    def page_id(self):
+        return self.id
 
 
 class MapPagePropertiesWidget(QWidget, View):
@@ -66,9 +69,8 @@ class MapPagePropertiesWidget(QWidget, View):
         reply = QMessageBox.question(
             self, 'Delete page', 'Are you sure you want to delete the page?')
         if reply == QMessageBox.StandardButton.Yes:
-            actions.map_page.delete_page(
-                pamet.page(self.parent_tab.state(),
-                           self.state().page_id))
+            actions.map_page.delete_page(self.parent_tab.state(),
+                                         pamet.page(self.state().page_id))
         actions.tab.close_right_sidebar(self.parent_tab.state())
 
     def _save_page(self):

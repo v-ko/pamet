@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QListWidgetItem, QWidget
 
 from fusion.libs.state import ViewState, view_state_type
 import pamet
-from pamet.url import Url
+from pamet.util.url import Url
 from pamet.services.search.base import SearchResult
 from pamet.actions import tab as tab_actions
 
@@ -74,4 +74,3 @@ class SearchBarWidget(QWidget):
         url = Url(page.url()).with_anchor(f'note={note.id}')
         url = str(url)
         tab_actions.go_to_url(self.parent_tab.state(), url)
-
