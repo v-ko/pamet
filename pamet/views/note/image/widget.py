@@ -1,6 +1,6 @@
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QColor, QPaintEvent, QPainter
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.gui.utils.qt_widgets import bind_and_apply_state
 from fusion.gui.view_library.view_state import view_state_type
 from fusion.logging import get_logger

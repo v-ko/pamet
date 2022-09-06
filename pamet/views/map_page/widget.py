@@ -30,7 +30,7 @@ from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
 from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from pamet.views.note.base.state import NoteViewState
 
 log = fusion.get_logger(__name__)

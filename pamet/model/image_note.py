@@ -1,7 +1,7 @@
 from typing import Union
 from fusion.basic_classes.point2d import Point2D
 from fusion.basic_classes.rectangle import Rectangle
-from fusion.entity_library import entity_type
+from fusion.libs.entity import entity_type
 from pamet.url import Url
 from pamet.model.note import Note
 

@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Dict, List
 from fusion import Channel
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 import pamet
 from pamet.model.page import Page
 from pamet.model.page_child import PageChild

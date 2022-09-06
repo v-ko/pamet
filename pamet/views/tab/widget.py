@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 
 import fusion
 from fusion.basic_classes.point2d import Point2D
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.gui.utils import qt_widgets
 from fusion.gui.view_library.view import View
 

@@ -3,8 +3,7 @@ from copy import copy
 
 from dataclasses import field
 from pathlib import Path
-from fusion.entity_library import entity_type
-from fusion.entity_library.entity import Entity
+from fusion.libs.entity import entity_type, Entity
 from fusion.logging import get_logger
 
 log = get_logger(__name__)

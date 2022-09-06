@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import field
-from fusion.entity_library import entity_type
-from fusion.entity_library.entity import Entity
+from fusion.libs.entity import entity_type, Entity
 
 from fusion.helpers import get_new_id
 import pamet

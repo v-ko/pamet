@@ -3,7 +3,7 @@ from pathlib import Path
 from PySide6.QtCore import QStandardPaths
 
 from fusion import get_logger
-from fusion.entity_library import entity_type
+from fusion.libs.entity import entity_type
 from pamet.config import PametConfig
 
 log = get_logger(__name__)

@@ -4,7 +4,7 @@ from typing import List
 from fusion.basic_classes.color import Color
 from fusion.basic_classes.point2d import Point2D
 
-from fusion.entity_library import entity_type
+from fusion.libs.entity import entity_type
 from fusion.logging import get_logger
 
 import pamet

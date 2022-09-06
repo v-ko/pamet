@@ -1,8 +1,5 @@
 from __future__ import annotations
-from fusion import entity_library
-
-from fusion.entity_library import get_entity_class_by_name
-from fusion.entity_library.entity import Entity
+from fusion.libs.entity import Entity, get_entity_class_by_name
 
 _view_types_by_note_type_name = {}
 _edit_view_types_by_note_type_name = {}
@@ -60,6 +57,6 @@ def note_view_state_type_for_note(note, edit=False):
 def note_types_with_assiciated_views() -> Entity:
     note_types = []
     for note_type_name in _view_types_by_note_type_name:
-        note_type = entity_library.get_entity_class_by_name(note_type_name)
+        note_type = get_entity_class_by_name(note_type_name)
         note_types.append(note_type)
     return note_types

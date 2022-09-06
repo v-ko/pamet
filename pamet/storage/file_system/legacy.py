@@ -1,14 +1,14 @@
 from ast import Tuple
 from collections import defaultdict
 from copy import copy
-from hashlib import md5
+# from hashlib import md5
 import json
 
 from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
 from typing import List
-from fusion import entity_library
+from fusion.libs.entity import load_from_dict
 
 from fusion.basic_classes import Point2D
 from fusion.basic_classes.rectangle import Rectangle
@@ -208,7 +208,7 @@ class LegacyFSRepoReader:
             if note_text.startswith(INTERNAL_ANCHOR_PREFIX):
                 page_name = note_text[len(INTERNAL_ANCHOR_PREFIX):]
                 nt['type_name'] = TextNote.__name__
-                note = entity_library.load_from_dict(nt)
+                note = load_from_dict(nt)
                 note.url = page_name  # Will be converted to a url afterwards
 
             # External anchors (web links)
@@ -223,7 +223,7 @@ class LegacyFSRepoReader:
                         text = line[5:]
 
                 nt['type_name'] = TextNote.__name__
-                note = entity_library.load_from_dict(nt)
+                note = load_from_dict(nt)
                 note.url = url
                 note.text = text
 
@@ -231,7 +231,7 @@ class LegacyFSRepoReader:
             elif note_text.startswith(IMAGE_NOTE_PREFIX):
                 image_url = note_text[len(IMAGE_NOTE_PREFIX):]
                 nt['type_name'] = ImageNote.__name__
-                note = entity_library.load_from_dict(nt)
+                note = load_from_dict(nt)
                 note.image_url = image_url
                 note.local_image_url = image_url
 
@@ -242,14 +242,14 @@ class LegacyFSRepoReader:
                 command_args = ''.join(script_parts[1:])
 
                 nt['type_name'] = ScriptNote.__name__
-                note = entity_library.load_from_dict(nt)
+                note = load_from_dict(nt)
                 note.script_path = script_parts[0]
                 note.command_args = command_args
                 note.text = script
 
             else:  # It's just a text note
                 nt['type_name'] = TextNote.__name__
-                note = entity_library.load_from_dict(nt)
+                note = load_from_dict(nt)
                 note.text = note_text
 
             # Detect duplicate ids

@@ -1,4 +1,4 @@
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.pubsub import Subscription
 from pamet import channels
 from pamet.actions import note as note_actions
