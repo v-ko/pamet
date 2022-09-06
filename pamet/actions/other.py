@@ -1,6 +1,5 @@
-from fusion.basic_classes import Point2D
-from fusion.gui.actions_library import action
-from fusion.helpers import get_new_id
+from fusion.util import Point2D
+from fusion.libs.action import action
 import pamet
 
 from pamet.helpers import generate_page_name

@@ -4,7 +4,7 @@ from pathlib import Path
 import click
 
 import fusion
-from fusion.gui import channels as misli_channels
+# from fusion.gui import channels as misli_channels
 from pamet import channels as pamet_channels
 
 import pamet

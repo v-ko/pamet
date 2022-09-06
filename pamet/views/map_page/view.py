@@ -2,8 +2,8 @@ from copy import copy
 from typing import Generator, List, Union
 
 import fusion
-from fusion.basic_classes import Point2D, Rectangle
-from fusion.gui.view_library.view import View
+from fusion.util import Point2D, Rectangle
+from fusion.view import View
 import pamet
 
 from pamet.constants import ARROW_EDGE_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELECTION_RADIUS

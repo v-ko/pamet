@@ -1,5 +1,5 @@
 import fusion
-from fusion.basic_classes import Point2D, Rectangle
+from fusion.util import Point2D, Rectangle
 
 
 class Viewport:

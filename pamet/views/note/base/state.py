@@ -1,7 +1,7 @@
 from dataclasses import field
 
 import pamet
-from fusion.gui import view_state_type, ViewState
+from fusion.libs.state import view_state_type, ViewState
 from pamet.model.note import Note
 
 

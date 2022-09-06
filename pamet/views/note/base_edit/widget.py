@@ -5,8 +5,8 @@ from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QMessageBox, QPushButton, QWidget
 
 from fusion.libs.entity import load_from_dict
-from fusion.gui.view_library.view import View
-from fusion.gui.views.context_menu.widget import ContextMenuWidget
+from fusion.view import View
+from fusion.platform.qt_widgets.views.context_menu.widget import ContextMenuWidget
 from pamet.actions import note as note_actions
 from pamet.note_view_lib import note_types_with_assiciated_views
 from pamet.views.map_page.widget import MapPageWidget

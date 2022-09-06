@@ -5,7 +5,7 @@ from typing import Generator, List, Union
 import fusion
 from fusion.change_aggregator import ChangeAggregator
 from fusion.libs.entity.change import Change
-from fusion.pubsub import Channel
+from fusion.libs.channel import Channel
 from fusion.storage.repository import Repository
 
 import pamet
@@ -26,7 +26,7 @@ raw_entity_changes = Channel('__RAW_ENTITY_CHANGES__')
 
 entity_change_aggregator = ChangeAggregator(
     input_channel=raw_entity_changes,
-    release_trigger_channel=fusion.gui.channels.completed_root_actions,
+    release_trigger_channel=fusion.gui.completed_root_actions,
     changeset_output_channel=channels.entity_change_sets_per_TLA)
 
 

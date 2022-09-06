@@ -3,10 +3,10 @@ from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt
 
 import fusion
-from fusion.basic_classes.point2d import Point2D
+from fusion.util.point2d import Point2D
 from fusion.libs.entity.change import Change
-from fusion.gui.utils import qt_widgets
-from fusion.gui.view_library.view import View
+from fusion.platform.qt_widgets import bind_and_apply_state
+from fusion.view import View
 
 from pamet import actions, note_view_type_by_state
 from pamet.actions import tab as tab_actions
@@ -48,7 +48,7 @@ class TabWidget(QWidget, View):
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
         new_note_shortcut.activated.connect(self.create_new_note_command)
-
+ 
         new_page_shortcut = QShortcut(QKeySequence('ctrl+N'), self)
         new_page_shortcut.activated.connect(self.create_new_page_command)
 
@@ -61,7 +61,7 @@ class TabWidget(QWidget, View):
         self.ui.leftSidebarContainer.hide()
 
         # The state should be managed by the window
-        qt_widgets.bind_and_apply_state(self,
+        bind_and_apply_state(self,
                                         initial_state,
                                         on_state_change=self.on_state_change)
 

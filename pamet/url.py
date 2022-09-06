@@ -5,7 +5,7 @@ from typing import Union, Tuple
 from urllib.parse import urlparse, urlunparse
 
 from fusion.logging import get_logger
-from fusion.basic_classes import Point2D
+from fusion.util import Point2D
 
 import pamet
 from pamet.constants import DEFAULT_EYE_HEIGHT

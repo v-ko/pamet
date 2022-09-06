@@ -3,7 +3,7 @@
 # from fusion.gui.misli_gui import view_state
 
 # from pamet.model.text_note import TextNote
-# from fusion.basic_classes.point2d import Point2D
+# from fusion.util.point2d import Point2D
 
 
 # def test_new(window_fixture, request):

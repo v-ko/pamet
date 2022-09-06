@@ -4,8 +4,8 @@ from PySide6.QtWidgets import QMainWindow, QPushButton, QTabBar, QWidget
 from PySide6.QtGui import QIcon, QKeySequence, QMouseEvent, QResizeEvent, QShortcut
 
 from fusion.libs.entity.change import Change
-from fusion.gui.utils.qt_widgets import bind_and_apply_state
-from fusion.gui.view_library.view import View
+from fusion.platform.qt_widgets import bind_and_apply_state
+from fusion.view import View
 from pamet import commands
 from pamet.views.tab.widget import TabWidget
 from pamet.views.command_palette.widget import CommandPaletteViewState

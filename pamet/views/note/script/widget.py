@@ -1,12 +1,9 @@
 from copy import copy
 from PySide6.QtCore import QPoint, QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
-from PySide6.QtWidgets import QWidget
-from fusion.basic_classes.point2d import Point2D
+from fusion.util.point2d import Point2D
 
-from fusion.libs.entity.change import Change
-from fusion.gui.view_library.view_state import view_state_type
-import pamet
+from fusion.libs.state import view_state_type
 from pamet import desktop_app
 from pamet.desktop_app.helpers import draw_text_lines
 from pamet.model.script_note import ScriptNote

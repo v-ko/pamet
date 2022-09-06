@@ -2,8 +2,8 @@ from PySide6.QtWidgets import QLabel
 from PySide6.QtGui import QPainter, QColor
 from PySide6.QtCore import Qt, QRect
 
-from fusion.gui.utils.qt_widgets import bind_and_apply_state
-from fusion.gui.view_library.view_state import view_state_type
+from fusion.platform.qt_widgets import bind_and_apply_state
+from fusion.libs.state import view_state_type
 
 import pamet
 from pamet import register_note_view_type

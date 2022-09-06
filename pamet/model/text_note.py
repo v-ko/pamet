@@ -2,8 +2,8 @@
 import random
 from fusion import get_logger
 from fusion import entity_type
-from fusion.basic_classes.point2d import Point2D
-from fusion.basic_classes.rectangle import Rectangle
+from fusion.util.point2d import Point2D
+from fusion.util.rectangle import Rectangle
 from pamet.constants import NOTE_MARGIN
 from pamet.model.note import Note
 log = get_logger(__name__)

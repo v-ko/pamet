@@ -2,8 +2,8 @@ from copy import copy
 from typing import Union
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
-from fusion.basic_classes.point2d import Point2D
-from fusion.basic_classes.rectangle import Rectangle
+from fusion.util.point2d import Point2D
+from fusion.util.rectangle import Rectangle
 
 import pamet
 from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH

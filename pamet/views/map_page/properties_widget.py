@@ -1,12 +1,9 @@
-from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QWidget, QLineEdit, QLabel
-from PySide6.QtGui import QShortcut, QKeySequence
-from PySide6.QtWidgets import QPushButton
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMessageBox, QWidget
 from fusion.libs.entity.change import Change
 
-from fusion.gui import ViewState, view_state_type
-from fusion.gui.utils.qt_widgets import bind_and_apply_state
-from fusion.gui.view_library.view import View
+from fusion.libs.state import ViewState, view_state_type
+from fusion.platform.qt_widgets import bind_and_apply_state
+from fusion.view import View
 
 import pamet
 from pamet import actions

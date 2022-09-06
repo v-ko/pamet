@@ -4,13 +4,13 @@ from typing import List, Tuple, Union
 import math
 from PySide6.QtCore import QObject, QPointF, QRectF
 from PySide6.QtGui import QColor, QPainter, QPainterPath
-from fusion.basic_classes.point2d import Point2D
-from fusion.basic_classes.rectangle import Rectangle
+import fusion
+from fusion.util.point2d import Point2D
+from fusion.util.rectangle import Rectangle
 from fusion.libs.entity.change import Change
-from fusion.gui import channels
-from fusion.gui.utils.qt_widgets import bind_and_apply_state
-from fusion.gui.view_library.view import View
-from fusion.gui.view_library.view_state import ViewState, view_state_type
+from fusion.platform.qt_widgets import bind_and_apply_state
+from fusion.view import View
+from fusion.libs.state import ViewState, view_state_type
 from fusion.logging import get_logger
 import pamet
 from pamet.desktop_app import selection_overlay_qcolor
@@ -104,7 +104,7 @@ class ArrowWidget(QObject, ArrowView):
         if not note_view_state:
             raise Exception('Anchor note with own id {note_own_id} not found')
 
-        sub = channels.state_changes_per_TLA_by_view_id.subscribe(
+        sub = fusion.gui.state_changes_per_TLA_by_view_id.subscribe(
             handler=self.handle_anchor_note_view_state_change,
             index_val=note_view_state.view_id)
         self._anchor_subs_by_note_id[note_own_id] = sub

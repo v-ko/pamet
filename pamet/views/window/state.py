@@ -1,6 +1,7 @@
 from dataclasses import field
 
-from fusion.gui import view_state_type, ViewState, View
+from fusion.libs.state import view_state_type, ViewState
+from fusion.view import View
 
 
 @view_state_type

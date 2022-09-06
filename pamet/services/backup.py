@@ -12,9 +12,9 @@ from typing import List
 from peewee import Model, CharField, SqliteDatabase, DateTimeField
 
 from fusion.libs.entity.change import Change
-from fusion.helpers import get_new_id, current_time, timestamp
+from fusion.util import get_new_id, current_time, timestamp
 from fusion.logging import get_logger
-from fusion.pubsub import Channel
+from fusion.libs.channel import Channel
 
 from pamet.model.page import Page
 from pamet.storage.base_repository import PametRepository

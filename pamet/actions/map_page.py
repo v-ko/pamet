@@ -1,15 +1,14 @@
 from __future__ import annotations
-from dataclasses import fields
 from typing import List
 
 import fusion
 from fusion import gui
 from fusion.libs.entity import Entity
-from fusion.helpers import get_new_id
+from fusion.util import get_new_id
 import pamet
 
-from fusion.basic_classes import Point2D, Rectangle
-from fusion.gui.actions_library import action
+from fusion.util import Point2D, Rectangle
+from fusion.libs.action import action
 from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.helpers import snap_to_grid
 from pamet.url import Url
