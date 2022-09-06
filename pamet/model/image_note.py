@@ -2,7 +2,7 @@ from typing import Union
 from fusion.util.point2d import Point2D
 from fusion.util.rectangle import Rectangle
 from fusion.libs.entity import entity_type
-from pamet.url import Url
+from pamet.util.url import Url
 from pamet.model.note import Note
 
 IMAGE_URL = 'image_url'

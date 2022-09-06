@@ -7,7 +7,7 @@ from fusion.view import View
 import pamet
 
 from pamet.constants import ARROW_EDGE_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELECTION_RADIUS
-from pamet.desktop_app.helpers import control_is_pressed, shift_is_pressed
+from pamet.desktop_app.util import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 
 from pamet import actions
@@ -159,8 +159,7 @@ class MapPageView(View):
             if child_under_mouse.state() not in state.selected_children:
                 map_page_actions.update_child_selections(
                     state, {child_under_mouse.state(): True})
-            map_page_actions.start_child_move(self.state(),
-                                              mouse_pos)
+            map_page_actions.start_child_move(self.state(), mouse_pos)
 
     def handle_left_mouse_press(self, mouse_pos: Point2D):
         self._mouse_position_on_left_press = copy(mouse_pos)

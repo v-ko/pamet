@@ -5,11 +5,11 @@ import stat
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton, QWidget
-from fusion.gui import util_provider
+from pamet.desktop_app.config import pamet_data_folder_path
 from pamet import desktop_app
 from pamet.desktop_app import get_config, save_config
 
-from pamet.desktop_app.helpers import resource_path
+from pamet.desktop_app.util import resource_path
 from pamet.model.script_note import ScriptNote
 from pamet.views.note.text.props_edit.widget import FixedTextEdit
 from .name_seed_data import adjectives, fruits, animals
@@ -217,7 +217,7 @@ class ScriptNotePropsWidget(QWidget):
         '''
         QMessageBox.information(self, 'How to set the folder',
                                 instructions_text)
-        QDesktopServices.openUrl(QUrl(str(util_provider().config_file_path())))
+        QDesktopServices.openUrl(QUrl(str(pamet_data_folder_path)))
         self.edit_widget._handle_esc_shortcut()
 
     def _configure_templates(self):

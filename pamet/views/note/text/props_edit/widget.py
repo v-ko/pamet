@@ -3,7 +3,7 @@ from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QTextEdit, QWidget
 
 import pamet
-from pamet.url import Url
+from pamet.util.url import Url
 from .ui_widget import Ui_TextEditPropsWidget
 
 TEXT_EDIT_MIN_SIZE = 30

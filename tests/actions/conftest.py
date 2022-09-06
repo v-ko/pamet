@@ -1,12 +1,14 @@
 from PySide6.QtCore import Qt
 import pytest
 import fusion
+# from fusion.state_manager import FusionStateManager
 
 import pamet
-from pamet.desktop_app.helpers import configure_for_qt
+from pamet.desktop_app.util import configure_for_qt
 from pamet.desktop_app.app import DesktopApp
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from pamet.views.window.widget import WindowWidget
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
@@ -26,7 +28,10 @@ def pytest_addoption(parser):
 def window_fixture(request):
     run_headless = request.config.getoption('--headless')
     # Init the app
-    fusion.gui.set_reproducible_ids(True)
+    fusion.set_reproducible_ids(True)
+    fusion.fsm.reset()
+    pamet.set_sync_repo(PametInMemoryRepository())
+
     app = DesktopApp()
     configure_for_qt(app)
 

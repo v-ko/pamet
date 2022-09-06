@@ -105,6 +105,10 @@ class CommandPaletteWidget(QWidget, View):
         self.adjustSize()
 
     def _handle_item_activated(self, item):
+        if not item:
+            window_actions.close_command_view(self.parent().state())
+            return
+
         # Call the corresponding method (stored as item data)
         command = item.data(Qt.UserRole)
         window_actions.close_command_view(self.parent().state())

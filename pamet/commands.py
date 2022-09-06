@@ -14,8 +14,7 @@ from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 
-from pamet.gui_helpers import current_window, current_tab
-from pamet.desktop_app.helpers import resource_path
+from pamet.desktop_app.util import resource_path, current_window, current_tab
 from pamet.views.note.base.state import NoteViewState
 
 log = fusion.get_logger(__name__)

@@ -17,7 +17,7 @@ from fusion.logging import get_logger
 from fusion.storage.in_memory_repository import InMemoryRepository
 from pamet.constants import MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT
 from pamet.constants import MIN_NOTE_WIDTH
-from pamet.helpers import snap_to_grid
+from pamet.util import snap_to_grid
 from pamet.model.page import Page
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.image_note import ImageNote
@@ -38,7 +38,6 @@ md5_by_old_name = {}
 #     if page_md5 in _cache:
 #         return _cache[page_md5]
 #     return page_md5
-
 
 TIME_FORMAT = '%d.%m.%Y %H:%M:%S'
 ONE_V3_COORD_UNIT_TO_V4 = 20

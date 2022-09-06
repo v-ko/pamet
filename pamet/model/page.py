@@ -1,7 +1,7 @@
 from dataclasses import field
 from datetime import datetime
 from fusion import Entity, entity_type
-from pamet.url import Url
+from pamet.util.url import Url
 from fusion.util import current_time, timestamp
 
 

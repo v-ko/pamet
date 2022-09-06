@@ -10,8 +10,8 @@ from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NO
 from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
 from pamet.desktop_app import default_note_font
-from pamet.desktop_app.helpers import TextLayout, elide_text
-from pamet.url import Url
+from pamet.desktop_app.util import TextLayout, elide_text
+from pamet.util.url import Url
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
@@ -76,13 +76,11 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
 
         rect.set_height(rect.height() - unit)
         # test_note.set_rect(rect)
-        text_layout = elide_text(text, note.text_rect(rect.size()),
-                                 note_font)
+        text_layout = elide_text(text, note.text_rect(rect.size()), note_font)
 
     # Adjust the width. We check for changes in the text, because
     # even elided text (if it's multi line) can have empty space laterally
-    text_layout = elide_text(text, note.text_rect(rect.size()),
-                             note_font)
+    text_layout = elide_text(text, note.text_rect(rect.size()), note_font)
     text_before_adjust = text_layout.text()
     text = text_before_adjust
     while rect.width() >= MIN_NOTE_WIDTH and rect.height() >= MIN_NOTE_HEIGHT:
@@ -93,8 +91,7 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
 
         rect.set_width(rect.width() - unit)
         # test_note.set_rect(rect)
-        text_layout = elide_text(text, note.text_rect(rect.size()),
-                                 note_font)
+        text_layout = elide_text(text, note.text_rect(rect.size()), note_font)
         text = text_layout.text()
 
     return Point2D(width, height)

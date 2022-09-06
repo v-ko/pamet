@@ -26,8 +26,7 @@ log = get_logger(__name__)
 V4_FILE_EXT = '.pam4.json'
 
 
-class FSStorageRepository(PametInMemoryRepository,
-                          LegacyFSRepoReader):
+class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
     """File system storage. This class has all entities cached at all times"""
 
     def __init__(self, path, queue_save_on_change=False):
@@ -153,17 +152,11 @@ class FSStorageRepository(PametInMemoryRepository,
 
         InMemoryRepository.insert_one(self, entity)
 
-        if self.queue_save_on_change:
-            fusion.call_delayed(self.write_to_disk, 0)
-
         return Change.CREATE(entity)
 
     def insert(self, entities: List[Entity]):
         for entity in entities:
             self.insert_one(entity)
-
-        # Async to allow for grouping of all calls within an e.g. action
-        fusion.call_delayed(self.write_to_disk, 0)
 
     def remove_one(self, entity):
         InMemoryRepository.remove_one(self, entity)
@@ -175,17 +168,11 @@ class FSStorageRepository(PametInMemoryRepository,
                 return None
             self.upserted_pages.add(page)
 
-        if self.queue_save_on_change:
-            fusion.call_delayed(self.write_to_disk, 0)
-
         return Change.DELETE(entity)
 
     def remove(self, entities: List[Entity]):
         for entity in entities:
             self.remove_one(entity)
-
-        # Async to allow for grouping of all calls within an e.g. action
-        fusion.call_delayed(self.write_to_disk, 0)
 
     def update_one(self, entity):
         change = InMemoryRepository.update_one(self, entity)
@@ -197,17 +184,11 @@ class FSStorageRepository(PametInMemoryRepository,
                 raise Exception(f'Invalid parent for {entity}')
             self.upserted_pages.add(page)
 
-        if self.queue_save_on_change:
-            fusion.call_delayed(self.write_to_disk, 0)
-
         return change
 
     def update(self, entities: List[Entity]):
         for entity in entities:
             self.update_one(entity)
-
-        # Async to allow for grouping of all calls within an e.g. action
-        fusion.call_delayed(self.write_to_disk, 0)
 
     def find(self, **filter):
         yield from InMemoryRepository.find(self, **filter)
@@ -343,7 +324,6 @@ class FSStorageRepository(PametInMemoryRepository,
             #     arrow_state['head_coords'] = arrow_state.pop('head_point')
             # if 'tail_coords' not in arrow_state:
             #     arrow_state['tail_coords'] = arrow_state.pop('tail_point')
-
 
             # if 'page_id' not in arrow_state or not arrow_state['page_id']:
             #     raise Exception

@@ -1,4 +1,5 @@
 from copy import copy
+import json
 from PySide6.QtGui import QColor
 
 import fusion
@@ -8,8 +9,11 @@ from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.config import DesktopConfig
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
 from pamet.services.script_runner import ScriptRunner
+from pamet.desktop_app.config import DesktopConfig, pamet_data_folder_path
 
 log = get_logger(__name__)
+
+CONFIG_JSON = 'config.json'
 
 icons = PametQtWidgetsCachedIcons()
 
@@ -24,12 +28,21 @@ script_runner = ScriptRunner()
 
 # Config handling
 def get_config() -> DesktopConfig:
-    config_dict = fusion.gui.util_provider().get_config()
-    return DesktopConfig.load(config_dict)
+    config_path = pamet_data_folder_path / CONFIG_JSON
+    if not config_path.exists():
+        return {}
+
+    with open(config_path) as config_file:
+        config_dict = json.load(config_file)
+        return DesktopConfig.load(config_dict)
 
 
-def save_config(config: DesktopConfig):
-    fusion.gui.util_provider().set_config(config.asdict())
+def save_config(updated_config: DesktopConfig):
+    config_str = json.dumps(updated_config.asdict(),
+                            indent=4,
+                            ensure_ascii=False)
+    config_path = pamet_data_folder_path / CONFIG_JSON
+    config_path.write_text(config_str)
 
 
 def media_store():

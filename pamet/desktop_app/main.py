@@ -12,7 +12,7 @@ from pamet import desktop_app
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.helpers import configure_for_qt
+from pamet.desktop_app.util import configure_for_qt
 from pamet.model.page import Page
 
 from pamet.services.backup import FSStorageBackupService
@@ -26,9 +26,7 @@ log = fusion.get_logger(__name__)
 
 
 @click.command()
-@click.argument('path',
-                type=click.Path(exists=True),
-                required=False)
+@click.argument('path', type=click.Path(exists=True), required=False)
 def main(path: str):
     app = DesktopApp()
     configure_for_qt(app)
@@ -124,7 +122,7 @@ def main(path: str):
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
-    start_page = pamet.helpers.get_default_page() or pamet.find_one(type=Page)
+    start_page = pamet.util.get_default_page() or pamet.find_one(type=Page)
     if not start_page:
         start_page = other_actions.create_default_page()
 
@@ -151,7 +149,7 @@ def main(path: str):
             record_all_changes=True)
         if not backup_service.start():
             log.info('Backup service not started. '
-                    'Probably another instance is running')
+                     'Probably another instance is running')
         else:
             app.aboutToQuit.connect(backup_service.stop)
 
