@@ -4,7 +4,7 @@ import importlib.metadata
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 __version__ = importlib.metadata.version(__package__)
 
-from fusion.entity_library.entity import Entity
+from fusion.libs.entity import Entity
 from fusion.extensions_loader import ExtensionsLoader
 from fusion.logging import get_logger
 from pamet.services.clipboard import ClipboardService

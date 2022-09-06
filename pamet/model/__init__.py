@@ -4,7 +4,7 @@ from typing import Generator, List, Union
 
 import fusion
 from fusion.change_aggregator import ChangeAggregator
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.pubsub import Channel
 from fusion.storage.repository import Repository
 

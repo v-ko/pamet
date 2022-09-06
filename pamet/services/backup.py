@@ -11,7 +11,7 @@ from typing import List
 
 from peewee import Model, CharField, SqliteDatabase, DateTimeField
 
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.helpers import get_new_id, current_time, timestamp
 from fusion.logging import get_logger
 from fusion.pubsub import Channel

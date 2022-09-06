@@ -4,7 +4,7 @@ from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
 from PySide6.QtWidgets import QWidget
 from fusion.basic_classes.point2d import Point2D
 
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.gui.view_library.view_state import view_state_type
 import pamet
 from pamet import desktop_app

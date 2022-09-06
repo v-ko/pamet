@@ -2,7 +2,7 @@ from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QWidget, QLineEdit, QLab
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import Qt
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 
 from fusion.gui import ViewState, view_state_type
 from fusion.gui.utils.qt_widgets import bind_and_apply_state

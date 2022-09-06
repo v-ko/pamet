@@ -4,7 +4,7 @@ from typing import List
 
 import fusion
 from fusion import gui
-from fusion.entity_library.entity import Entity
+from fusion.libs.entity import Entity
 from fusion.helpers import get_new_id
 import pamet
 

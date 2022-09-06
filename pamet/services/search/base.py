@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.pubsub import Channel
 import pamet
 from pamet.model.note import Note

@@ -9,7 +9,8 @@ from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from slugify import slugify
 
 import fusion
-from fusion import entity_library, Entity, Change
+from fusion.libs.entity import Entity, dump_to_dict, load_from_dict
+from fusion.libs.entity.change import Change
 from fusion.pubsub import Channel
 from fusion.storage.in_memory_repository import InMemoryRepository
 from fusion import get_logger
@@ -274,7 +275,7 @@ class FSStorageRepository(PametInMemoryRepository,
         arrow_states = page_state.pop('arrows', [])
 
         # Create the page
-        page = entity_library.load_from_dict(page_state)
+        page = load_from_dict(page_state)
 
         # Load the notes
         notes = []
@@ -321,7 +322,7 @@ class FSStorageRepository(PametInMemoryRepository,
 
             # /ad-hoc fixes
 
-            notes.append(entity_library.load_from_dict(ns))
+            notes.append(load_from_dict(ns))
 
         # Load the arrows
         arrows = []
@@ -348,7 +349,7 @@ class FSStorageRepository(PametInMemoryRepository,
             #     raise Exception
 
             try:
-                arrow: Arrow = entity_library.load_from_dict(arrow_state)
+                arrow: Arrow = load_from_dict(arrow_state)
             except Exception as e:
                 log.error(f'Exception {e} raised while parsing arrow '
                           f'{arrow_state} from file {json_file_path}')
@@ -360,9 +361,9 @@ class FSStorageRepository(PametInMemoryRepository,
 
     @staticmethod
     def serialize_page(page: Page, notes: List[Note], arrows: List[Arrow]):
-        page_state = entity_library.dump_to_dict(page)
-        page_state['notes'] = [entity_library.dump_to_dict(n) for n in notes]
-        page_state['arrows'] = [entity_library.dump_to_dict(a) for a in arrows]
+        page_state = dump_to_dict(page)
+        page_state['notes'] = [dump_to_dict(n) for n in notes]
+        page_state['arrows'] = [dump_to_dict(a) for a in arrows]
 
         try:
             json_str = json.dumps(page_state, ensure_ascii=False, indent=4)

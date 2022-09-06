@@ -5,10 +5,10 @@ from pathlib import Path
 import time
 from typing import List
 
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 
 import pamet
-from fusion.helpers import fake_time, current_time, get_new_id
+from fusion.helpers import fake_time, current_time
 from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 from pamet.services.backup import FSStorageBackupService

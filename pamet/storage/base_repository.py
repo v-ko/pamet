@@ -1,5 +1,5 @@
 from typing import Generator, Union
-from fusion.entity_library.change import Change
+from fusion.libs.entity.change import Change
 from fusion.helpers import current_time
 from fusion.pubsub import Channel
 from fusion.storage.repository import Repository
