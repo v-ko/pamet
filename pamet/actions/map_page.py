@@ -84,7 +84,7 @@ def update_child_selections(map_page_view_state: MapPageViewState,
     if len(map_page_view_state.selected_children) == 1:
         (first_selected_child, ) = map_page_view_state.selected_children
         for arrow_vs in map_page_view_state.arrow_view_states:
-            if arrow_vs.id == first_selected_child.own_id:
+            if arrow_vs.id == first_selected_child.id:
                 single_selected_arrow = arrow_vs
 
     if single_selected_arrow:
