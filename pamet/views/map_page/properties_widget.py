@@ -8,6 +8,7 @@ from fusion.view import View
 import pamet
 from pamet import actions
 from pamet.desktop_app import get_config, save_config
+from pamet.model.page import Page
 from .ui_properties_widget import Ui_MapPagePropertiesWidget
 
 
