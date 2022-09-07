@@ -103,7 +103,7 @@ class ArrowWidget(QObject, ArrowView):
             self.unsubscribe_from_anchor(note_own_id)
 
         map_page_state = self.map_page_view.state()
-        note_view_state = map_page_state.view_state_for_note_id(note_own_id)
+        note_view_state = map_page_state.view_state_for_note_own_id(note_own_id)
         if not note_view_state:
             raise Exception('Anchor note with own id {note_own_id} not found')
 
