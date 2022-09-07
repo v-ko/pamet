@@ -57,11 +57,20 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
     fsm.update_state(tab_state)
 
 
+@action('update_current_url')
+def update_current_url(tab_state: TabViewState):
+    if tab_state.current_nav_index is None:
+        return
+
+    new_url = tab_state.page_view_state.page_url()
+    tab_state.navigation_history[tab_state.current_nav_index] = new_url
+    fsm.update_state(tab_state)
+
+
 @action('go_to_url')
 def go_to_url(tab_state: TabViewState,
               url: str,
               update_nav_history: bool = True):
-    old_page_state = tab_state.page_view_state
     create_and_set_page_view(tab_state, url)
 
     parsed_url = Url(url)
@@ -93,13 +102,6 @@ def go_to_url(tab_state: TabViewState,
         last_page_id = old_url.get_page_id()
 
     if last_page_id != parsed_url.get_page_id():
-        # Update the last url to save it's viewport position anchor
-        # (to account for any viewport move/height changes
-        # since the last go_to_url. This might have to be moved to the
-        # finish_mouse_drag_move and height change actions)
-        if old_page_state:
-            nav_history[-1] = str(old_page_state.page_url())
-
         # Append the url to the nav history
         nav_history.append(str(page_state.page_url()))
 
