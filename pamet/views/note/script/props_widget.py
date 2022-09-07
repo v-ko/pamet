@@ -1,17 +1,15 @@
 from pathlib import Path
 from random import choice
 import shutil
-import stat
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton, QWidget
 from pamet.desktop_app.config import pamet_data_folder_path
 from pamet import desktop_app
-from pamet.desktop_app import get_config, save_config
+from pamet.desktop_app import get_config
 
-from pamet.desktop_app.util import resource_path
 from pamet.model.script_note import ScriptNote
-from pamet.views.note.text.props_edit.widget import FixedTextEdit
+from pamet.views.note.card.props_edit.widget import FixedTextEdit
 from .name_seed_data import adjectives, fruits, animals
 
 from .ui_props_widget import Ui_ScriptNotePropsWidget
