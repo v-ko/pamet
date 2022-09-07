@@ -7,7 +7,7 @@ from fusion.view import View
 
 import pamet
 from pamet import actions
-from pamet.desktop_app import get_config
+from pamet.desktop_app import get_config, save_config
 from .ui_properties_widget import Ui_MapPagePropertiesWidget
 
 
@@ -110,4 +110,4 @@ class MapPagePropertiesWidget(QWidget, View):
             config.home_page_id = self.state().page_id
         else:
             config.home_page_id = None
-        pamet.save_config(config)
+        save_config(config)
