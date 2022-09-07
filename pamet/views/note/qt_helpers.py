@@ -6,7 +6,7 @@ from fusion.util.point2d import Point2D
 from fusion.util.rectangle import Rectangle
 
 import pamet
-from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH
+from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH, MAX_NOTE_WIDTH
 from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
 from pamet.desktop_app import default_note_font
@@ -35,7 +35,7 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
 
     # Start with the largest possible rect
     # test_note = state.get_note()
-    max_w = MAX_AUTOSIZE_WIDTH
+    max_w = MAX_NOTE_WIDTH
 
     unit = ALIGNMENT_GRID_UNIT
     min_width_u = int(MIN_NOTE_WIDTH / unit)
@@ -43,7 +43,7 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
 
     # Do a binary search for the proper width (keeping the aspect ratio)
     low_width_bound = 0
-    high_width_bound = round(max_w / unit - min_height_u)
+    high_width_bound = round(max_w / unit - min_width_u)
     while (high_width_bound - low_width_bound) > 0:
         test_width_it = (high_width_bound + low_width_bound) // 2
         test_width_u = min_width_u + test_width_it
@@ -52,7 +52,8 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
         # test_note.set_rect(
         #     Rectangle(0, 0, test_width_u * unit, test_height_u * unit))
         test_size = Point2D(test_width_u * unit, test_height_u * unit)
-        if elide_text(text, note.text_rect(test_size), note_font).is_elided:
+        text_layout = elide_text(text, note.text_rect(test_size), note_font)
+        if text_layout.is_elided:
             low_width_bound = test_width_it + 1
         else:
             high_width_bound = test_width_it
@@ -66,7 +67,6 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
 
     # Adjust the height
     rect = Rectangle(0, 0, width, height)
-    # rect.set_size(Point2D(width, height))
     text_layout = TextLayout()
     while rect.width() >= MIN_NOTE_WIDTH and rect.height() >= MIN_NOTE_HEIGHT:
         if text_layout.is_elided:
@@ -75,14 +75,15 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
             height = rect.height()
 
         rect.set_height(rect.height() - unit)
-        # test_note.set_rect(rect)
         text_layout = elide_text(text, note.text_rect(rect.size()), note_font)
 
     # Adjust the width. We check for changes in the text, because
     # even elided text (if it's multi line) can have empty space laterally
-    text_layout = elide_text(text, note.text_rect(rect.size()), note_font)
+    text_layout = elide_text(text, note.text_rect(Point2D(width, height)),
+                             note_font)
     text_before_adjust = text_layout.text()
     text = text_before_adjust
+    rect = Rectangle(0, 0, width, height)
     while rect.width() >= MIN_NOTE_WIDTH and rect.height() >= MIN_NOTE_HEIGHT:
         if text != text_before_adjust:
             break
