@@ -31,7 +31,7 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
 
     if not page_view_state:
         # Create the page state with all of its children states
-        page_view_state = MapPageViewState(page_id=page.id)
+        page_view_state = MapPageViewState(id=page.id)
         fsm.add_state(page_view_state)
 
         for _note in pamet.notes(page):

@@ -26,6 +26,7 @@ from pamet.actions import map_page as map_page_actions
 from pamet.desktop_app.util import control_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
+from pamet.util import snap_to_grid
 from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
 from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
@@ -729,7 +730,8 @@ class MapPageWidget(QWidget, MapPageView):
                 painter.setPen(nt_main_color)
                 painter.setBrush(Qt.NoBrush)
                 rect = note.rect()
-                rect.set_top_left(unprojected_mouse_pos + rect.top_left())
+                rect.set_top_left(
+                    snap_to_grid(unprojected_mouse_pos + rect.top_left()))
                 rect = state.project_rect(rect)
                 painter.drawRect(QRectF(*rect.as_tuple()))
 

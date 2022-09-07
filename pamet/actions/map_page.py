@@ -733,7 +733,12 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
     # clipboard (since pasting happens relative to the mouse)
     for note in copied_notes:
         rect: Rectangle = note.rect()
-        rect.set_top_left(rect.top_left() - relative_to)
+
+        # If there's just one note selected - we don't want a relative pos
+        if len(copied_notes) == 1:
+            rect.set_top_left(Point2D(0, 0))
+        else:
+            rect.set_top_left(rect.top_left() - relative_to)
         note.set_rect(rect)
 
     # If arrow view - get arrow and if not both notes are copied - skip
@@ -778,7 +783,8 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
             continue
         if relative_to:
             rect: Rectangle = note.rect()
-            rect.set_top_left(relative_to + rect.top_left())
+            top_left = snap_to_grid(relative_to + rect.top_left())
+            rect.set_top_left(top_left)
             note.set_rect(rect)
 
         # Set the proper page id and ensure that there's no conflicting ids
@@ -809,18 +815,21 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
                 arrow.tail_note_id = updated_ids[arrow.tail_note_id]
         else:
             if relative_to:
-                arrow.tail_point = relative_to + arrow.tail_point
+                arrow.tail_point = snap_to_grid(relative_to + arrow.tail_point)
 
         if arrow.has_head_anchor():
             if arrow.head_note_id in updated_ids:
                 arrow.head_note_id = updated_ids[arrow.head_note_id]
         else:
             if relative_to:
-                arrow.head_point = relative_to + arrow.head_point
+                arrow.head_point = snap_to_grid(relative_to + arrow.head_point)
 
         if relative_to:
             mid_points = arrow.mid_points
-            mid_points = [relative_to + mid_point for mid_point in mid_points]
+            mid_points = [
+                snap_to_grid(relative_to + mid_point)
+                for mid_point in mid_points
+            ]
             arrow.replace_midpoints(mid_points)
 
         pamet.insert_arrow(arrow)
@@ -840,7 +849,7 @@ def paste_special(map_page_view_state: MapPageViewState,
 
     next_spawn_pos = relative_to or map_page_view_state.center()
     for note in entities:
-        note.page_id = map_page_view_state.page_id
+        note = note.with_id(page_id=map_page_view_state.page_id)
         rect = note.rect()
 
         # Autosize
