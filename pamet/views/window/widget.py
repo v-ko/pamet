@@ -156,7 +156,7 @@ class WindowWidget(QMainWindow, View):
         tab_state = current_tab.state()
         # Close sidebars if open
         if tab_state.right_sidebar_is_open():
-            tab_actions.close_right_sidebar(tab_state)
+            tab_actions.close_page_properties(tab_state)
         if tab_state.left_sidebar_is_open():
             tab_actions.close_left_sidebar(tab_state)
 

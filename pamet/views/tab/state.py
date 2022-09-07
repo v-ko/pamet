@@ -10,12 +10,12 @@ from pamet.views.map_page.state import MapPageViewState
 class TabViewState(ViewState):
     title: str = ''
     page_view_state: MapPageViewState = field(default=None)
-    edit_view_state: ViewState = None
+    note_edit_view_state: ViewState = None
     search_bar_state: ViewState = None
     creating_note: Note = None
 
     left_sidebar_state: ViewState = None
-    right_sidebar_state: ViewState = None
+    page_edit_view_state: ViewState = None
 
     navigation_history: List[str] = field(default_factory=list)
     current_nav_index: int = None
@@ -36,7 +36,7 @@ class TabViewState(ViewState):
         self.current_nav_index = new_index
 
     def right_sidebar_is_open(self):
-        return bool(self.right_sidebar_state)
+        return bool(self.page_edit_view_state)
 
     def left_sidebar_is_open(self):
         return bool(self.left_sidebar_state)

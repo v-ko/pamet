@@ -46,7 +46,8 @@ class TextEditPropsWidget(QWidget):
         self.edit_widget._image_download_reply = reply
 
     def on_text_change(self):
-        self.edit_widget.edited_note.text = self.text_edit.toPlainText()
+        new_text = self.text_edit.toPlainText().strip()
+        self.edit_widget.edited_note.text = new_text
 
     def _get_title(self):
         edited_note = self.edit_widget.edited_note

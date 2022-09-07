@@ -71,14 +71,14 @@ class MapPagePropertiesWidget(QWidget, View):
         if reply == QMessageBox.StandardButton.Yes:
             actions.map_page.delete_page(self.parent_tab.state(),
                                          pamet.page(self.state().page_id))
-        actions.tab.close_right_sidebar(self.parent_tab.state())
+        actions.tab.close_page_properties(self.parent_tab.state())
 
     def _save_page(self):
         state = self.state()
         page = pamet.page(state.page_id)
         page.name = self.ui.nameLineEdit.text()
         actions.map_page.save_page_properties(page)
-        actions.tab.close_right_sidebar(self.parent_tab.state())
+        actions.tab.close_page_properties(self.parent_tab.state())
 
     def _handle_name_line_edit_text_changed(self, new_text):
         # Check if the id is available and valid

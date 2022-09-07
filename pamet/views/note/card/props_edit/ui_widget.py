@@ -62,6 +62,6 @@ class Ui_TextEditPropsWidget(object):
         TextEditPropsWidget.setWindowTitle(QCoreApplication.translate("TextEditPropsWidget", u"TextEditPropsWidget", None))
         self.label.setText(QCoreApplication.translate("TextEditPropsWidget", u"Text:", None))
         self.getTitleButton.setText(QCoreApplication.translate("TextEditPropsWidget", u"Get from URL/Page", None))
-        self.downloadInfoLabel.setText(QCoreApplication.translate("TextEditPropsWidget", u"Download info", None))
+        self.downloadInfoLabel.setText("")
     # retranslateUi
 

@@ -15,6 +15,7 @@ from pamet.model.page import Page
 from pamet.util import generate_page_name
 from pamet.util.url import Url
 from pamet.actions import map_page as map_page_actions
+from pamet.actions import note as note_actions
 from pamet.views.search_bar.widget import SearchBarWidgetState
 
 log = get_logger(__name__)
@@ -71,6 +72,12 @@ def update_current_url(tab_state: TabViewState):
 def go_to_url(tab_state: TabViewState,
               url: str,
               update_nav_history: bool = True):
+    # Close any note or page edit windows
+    if tab_state.note_edit_view_state:
+        note_actions.abort_editing_note(tab_state)
+    if tab_state.page_edit_view_state:
+        close_page_properties(tab_state)
+
     create_and_set_page_view(tab_state, url)
 
     parsed_url = Url(url)
@@ -186,10 +193,9 @@ def navigation_toggle_last(tab_state):
               update_nav_history=False)
 
 
-@action('tab.close_right_sidebar')
-def close_right_sidebar(tab_state: TabViewState):
-    # TODO: if tab_state.right_sidebar_state and unsaved shit: push notification
-    tab_state.right_sidebar_state = None
+@action('tab.close_page_properties')
+def close_page_properties(tab_state: TabViewState):
+    tab_state.page_edit_view_state = None
     fsm.update_state(tab_state)
 
 

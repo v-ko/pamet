@@ -387,7 +387,7 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
         properties_view_state.focused_prop = focused_prop
         fsm.update_state(properties_view_state)
 
-    tab_state.right_sidebar_state = properties_view_state
+    tab_state.page_edit_view_state = properties_view_state
 
     fsm.update_state(tab_state)
 
