@@ -60,13 +60,13 @@ def finish_mouse_drag_navigation(map_page_view_state: MapPageViewState):
 
 @action('map_page.update_note_selections')
 def update_child_selections(map_page_view_state: MapPageViewState,
-                            selection_updates_by_child_id: dict):
+                            selection_updates_by_child: dict):
 
-    if not selection_updates_by_child_id:
+    if not selection_updates_by_child:
         return
 
     selection_update_count = 0
-    for child, selected in selection_updates_by_child_id.items():
+    for child, selected in selection_updates_by_child.items():
 
         if (child in map_page_view_state.selected_children and not selected):
             map_page_view_state.selected_children.remove(child)
@@ -97,7 +97,7 @@ def update_child_selections(map_page_view_state: MapPageViewState,
         # log.info('Updated %s selections' % selection_update_count)
     else:
         log.info('No selections updated out of %s' %
-                 selection_updates_by_child_id)
+                 selection_updates_by_child)
 
 
 @action('map_page.clear_child_selection')
@@ -124,8 +124,8 @@ def set_viewport_height(map_page_view_state: MapPageViewState,
 def start_drag_select(map_page_view_state: MapPageViewState,
                       position: Point2D):
     map_page_view_state.set_mode(MapPageMode.DRAG_SELECT)
-    map_page_view_state.mouse_position_on_drag_select_start = Point2D(
-        *position)
+    map_page_view_state.mouse_position_on_drag_select_start = position
+    # map_page_view_state.drag_selected_children.update(children_under_mouse)
 
     fsm.update_state(map_page_view_state)
 
@@ -148,16 +148,18 @@ def update_drag_select(map_page_view_state: MapPageViewState,
 
 
 @action('map_page.stop_drag_select')
-def stop_drag_select(map_page_view_state: MapPageViewState):
+def stop_drag_select(map_page_view_state: MapPageViewState, position: Point2D):
     added_selections = (map_page_view_state.drag_selected_children -
                         map_page_view_state.selected_children)
-    removed_selections = (map_page_view_state.selected_children -
-                          map_page_view_state.drag_selected_children)
+    removed_selections = map_page_view_state.selected_children.intersection(
+        map_page_view_state.drag_selected_children)
 
     selection_updates = {child_state: True for child_state in added_selections}
     selection_updates.update(
         {child_state: False
          for child_state in removed_selections})
+
+    # If there was no drag selection, but only a click
 
     update_child_selections(map_page_view_state, selection_updates)
     map_page_view_state.clear_mode()
