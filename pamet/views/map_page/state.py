@@ -114,7 +114,7 @@ class MapPageViewState(ViewState, Viewport, Page):
         center = self.viewport_center
 
         if with_anchor:
-            url = url.with_anchor(
-                f'eye_at={self.viewport_height}/{center.x()}/{center.y()}')
+            url = url.with_anchor(eye_pos=center,
+                                  eye_height=self.viewport_height)
 
         return url

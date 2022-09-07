@@ -12,6 +12,7 @@ from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 
 from pamet import actions
 from pamet.actions import map_page as map_page_actions
+from pamet.actions import tab as tab_actions
 from pamet.model.arrow import ArrowAnchorType
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowView
@@ -241,6 +242,7 @@ class MapPageView(View):
 
         elif mode == MapPageMode.DRAG_NAVIGATION:
             map_page_actions.finish_mouse_drag_navigation(self.state())
+            tab_actions.update_current_url(self.parent_tab.state())
 
         elif mode == MapPageMode.ARROW_EDGE_DRAG:
             anchor_props = self.arrow_anchor_at(mouse_pos)
@@ -336,6 +338,7 @@ class MapPageView(View):
                          min(current_height - delta, MAX_HEIGHT_SCALE))
 
         map_page_actions.set_viewport_height(self.state(), new_height)
+        tab_actions.update_current_url(self.parent_tab.state())
 
     def left_mouse_double_click_event(self, mouse_pos: Point2D):
         if self.state().mode() == MapPageMode.CREATE_ARROW:
