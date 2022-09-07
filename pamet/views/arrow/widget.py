@@ -4,7 +4,8 @@ from typing import List, Tuple, Union
 import math
 from PySide6.QtCore import QObject, QPointF, QRectF
 from PySide6.QtGui import QColor, QPainter, QPainterPath
-import fusion
+
+from fusion import fsm
 from fusion.util.point2d import Point2D
 from fusion.util.rectangle import Rectangle
 from fusion.libs.entity.change import Change
@@ -45,7 +46,9 @@ class ArrowViewState(Arrow, ViewState):
         return pamet.find_one(gid=self.arrow_gid)
 
     def update_from_arrow(self, arrow: Arrow):
-        self.replace(**arrow.asdict())
+        arrow_dict = arrow.asdict()
+        assert self.id == arrow_dict.pop('id')
+        self.replace(**arrow_dict)
 
 
 class ArrowView(View):
@@ -104,7 +107,7 @@ class ArrowWidget(QObject, ArrowView):
         if not note_view_state:
             raise Exception('Anchor note with own id {note_own_id} not found')
 
-        sub = fusion.gui.state_changes_per_TLA_by_view_id.subscribe(
+        sub = fsm.state_changes_per_TLA_by_view_id.subscribe(
             handler=self.handle_anchor_note_view_state_change,
             index_val=note_view_state.view_id)
         self._anchor_subs_by_note_id[note_own_id] = sub
