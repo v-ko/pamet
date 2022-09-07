@@ -28,7 +28,7 @@ class MapPageMode(Enum):
 
 @view_state_type
 class MapPageViewState(ViewState, Viewport, Page):
-    page_id: str = ''
+    # page_id: str = ''
     note_view_states: set[NoteViewState] = field(default_factory=set)
     arrow_view_states: set[ArrowViewState] = field(default_factory=set)
 
@@ -69,9 +69,9 @@ class MapPageViewState(ViewState, Viewport, Page):
         return (f'<MapPageViewState page_id={self.page_id}'
                 f' {len(self.note_view_states)=}>')
 
-    # @property
-    # def page_id(self):
-    #     return self.id
+    @property
+    def page_id(self):
+        return self.id
 
     def mode(self):
         return MapPageMode(self.special_mode)
