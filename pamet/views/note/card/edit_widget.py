@@ -19,7 +19,7 @@ from pamet.views.note.anchor.edit_widget import AnchorEditWidgetMixin
 from pamet.views.note.anchor.props_edit.widget import AnchorEditPropsWidget
 from pamet.views.note.base_edit.view_state import NoteEditViewState
 from pamet.views.note.base_edit.widget import BaseNoteEditWidget
-from pamet.views.note.text.props_edit.widget import TextEditPropsWidget
+from pamet.views.note.card.props_edit.widget import TextEditPropsWidget
 
 log = fusion.get_logger(__name__)
 
@@ -101,6 +101,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         self.text_button.toggled.connect(self.handle_text_button_toggled)
         self.image_button.toggled.connect(self.handle_image_button_toggled)
         self.link_button.toggled.connect(self.handle_link_button_toggled)
+        self.update_buttons_from_note_type()
 
     @property
     def text_edit(self):
@@ -119,7 +120,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         elif isinstance(edited_note, CardNote):
             self.text_edit.setFocus()
 
-    def update_note_type(self):
+    def update_note_type_from_buttons(self):
         if self.text_button.isChecked() and self.image_button.isChecked():
             self.edited_note = CardNote(**self.edited_note.asdict())
         elif self.text_button.isChecked():
@@ -129,7 +130,9 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         else:
             raise Exception
 
-    def update_note_type_buttons(self):
+        self.update_buttons_from_note_type()
+
+    def update_buttons_from_note_type(self):
         # Should show/hide the widget and if toggled off and the text is not
         # shown - show it (i.e. revert to basic text note)
         if not (self.text_button.isChecked() or self.image_button.isChecked()):
@@ -147,8 +150,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
             self.text_props_widget.show()
         else:
             self.text_props_widget.hide()
-        self.update_note_type_buttons()
-        self.update_note_type()
+        self.update_buttons_from_note_type()
+        self.update_note_type_from_buttons()
 
     def handle_image_button_toggled(self, checked: bool):
         if checked:
@@ -159,8 +162,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
                 self.text_button.setChecked(False)  # This should call the hide
         else:
             self.image_props_widget.hide()
-        self.update_note_type_buttons()
-        self.update_note_type()
+        self.update_buttons_from_note_type()
+        self.update_note_type_from_buttons()
 
     def handle_link_button_toggled(self, checked: bool):
         if checked:
@@ -170,7 +173,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         else:
             self.link_props_widget.hide()
             self.edited_note.url = None
-            self.text_props_widget.ui.get_title_button.hide()
+            self.text_props_widget.ui.getTitleButton.hide()
 
     def decorate_for_internal_url(self, url_is_internal):
         if url_is_internal:
