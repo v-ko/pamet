@@ -132,15 +132,15 @@ def create_new_page(tab_state: TabViewState, mouse_position: Point2D):
     # Create a link to the new page at the mouse position or center
     # (in the old one)
     note_position = current_page_state.unproject_point(mouse_position)
-    new_page_link = TextNote.in_page(new_page)
-    new_page_link.url = current_page.url()
+    new_page_link = TextNote.in_page(current_page)
+    new_page_link.url = new_page.url()
     new_page_link.x = note_position.x()
     new_page_link.y = note_position.y()
     pamet.insert_note(new_page_link)
 
     # Create a link to "old" page in the new one
-    back_link_note = TextNote.in_page(current_page)
-    back_link_note.url = new_page.url()
+    back_link_note = TextNote.in_page(new_page)
+    back_link_note.url = current_page.url()
     rect = back_link_note.rect()
     rect.move_center(Point2D(0, 0))
     back_link_note.set_rect(rect)
