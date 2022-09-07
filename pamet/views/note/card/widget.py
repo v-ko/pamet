@@ -42,6 +42,7 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
         self.image_label = ImageLabel(self)
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
+        self.destroyed.connect(lambda: self.disconnect_from_page_changes())
 
     def on_state_change(self, change: Change):
         state = change.last_state()
@@ -71,20 +72,12 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
             else:
                 self._alignment = Qt.AlignHCenter
 
-            url_page = pamet.page(state.url.get_page_id())
-            if url_page:
-                self._elided_text_layout = elide_text(url_page.name,
-                                                      state.text_rect(),
-                                                      self.font())
-            else:
-                self._elided_text_layout = elide_text(state.text,
-                                                      state.text_rect(),
-                                                      self.font())
+            self.recalculate_elided_text()
 
         if change.updated.url:
             url_page = pamet.page(state.url.get_page_id())
             if url_page and url_page.name:
-                self.connect_to_page_changes(self.state().url.get_page_id())
+                self.connect_to_page_changes(url_page.id)
             else:
                 self.disconnect_from_page_changes()
 

@@ -62,7 +62,7 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
             inferred_path = self.path_for_page(page)
             if page_path != inferred_path:  # If not - fix it by re-saving
                 page_path.unlink()
-                self.create_page(page, notes, arrows)
+                self.create_page_on_disk(page, notes, arrows)
                 log.error(f'Bad page name. Deleted {page_path} and saved the '
                           f'page {page.name} anew.')
 
@@ -183,7 +183,6 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
             if not page:
                 raise Exception(f'Invalid parent for {entity}')
             self.upserted_pages.add(page)
-
         return change
 
     def update(self, entities: List[Entity]):
@@ -219,12 +218,14 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
             page = pamet.page(page.id)
 
             if page.id in self.page_paths_by_id:
-                self.update_page(page, pamet.notes(page), pamet.arrows(page))
+                self.update_page_on_disk(page, pamet.notes(page),
+                                         pamet.arrows(page))
             else:
-                self.create_page(page, pamet.notes(page), pamet.arrows(page))
+                self.create_page_on_disk(page, pamet.notes(page),
+                                         pamet.arrows(page))
 
         for page in self.removed_pages:
-            self.delete_page(page)
+            self.delete_page_on_disk(page)
 
         self.upserted_pages.clear()
         self.removed_pages.clear()
@@ -353,7 +354,8 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
 
         return json_str
 
-    def create_page(self, page: Page, notes: List[Note], arrows: List[Arrow]):
+    def create_page_on_disk(self, page: Page, notes: List[Note],
+                            arrows: List[Arrow]):
         path = self.path_for_page(page)
         try:
             if path.exists():
@@ -373,7 +375,8 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
 
         return path
 
-    def update_page(self, page: Page, notes: List[Note], arrows: List[Arrow]):
+    def update_page_on_disk(self, page: Page, notes: List[Note],
+                            arrows: List[Arrow]):
         saved_path = self.page_paths_by_id[page.id]
         path = self.path_for_page(page)
 
@@ -393,7 +396,7 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
         with open(path, 'w') as pf:
             pf.write(page_json_str)
 
-    def delete_page(self, page):
+    def delete_page_on_disk(self, page):
         path = self.page_paths_by_id.pop(page.id)
 
         if os.path.exists(path):

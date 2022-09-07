@@ -94,15 +94,7 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
             else:
                 self._alignment = Qt.AlignHCenter
 
-            url_page = pamet.page(state.url.get_page_id())
-            if url_page:
-                self._elided_text_layout = elide_text(url_page.name,
-                                                      state.text_rect(),
-                                                      self.font())
-            else:
-                self._elided_text_layout = elide_text(state.text,
-                                                      state.text_rect(),
-                                                      self.font())
+            self.recalculate_elided_text()
 
         if change.updated.url:
             url_page = pamet.page(state.url.get_page_id())
