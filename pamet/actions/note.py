@@ -19,7 +19,7 @@ log = fusion.get_logger(__name__)
 @action('notes.create_new_note')
 def create_new_note(tab_state: TabViewState, note: Note):
     # Check if there's an open edit window and abort it if so
-    if tab_state.edit_view_state:
+    if tab_state.note_edit_view_state:
         abort_editing_note(tab_state)
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
@@ -27,7 +27,7 @@ def create_new_note(tab_state: TabViewState, note: Note):
                                    new_note_dict=dump_to_dict(note))
     edit_view_state.update_from_note(note)
 
-    tab_state.edit_view_state = edit_view_state
+    tab_state.note_edit_view_state = edit_view_state
 
     fsm.add_state(edit_view_state)
     fsm.update_state(tab_state)
@@ -46,20 +46,20 @@ def finish_creating_note(tab_state: TabViewState, note: Note):
     note.set_rect(rect)
     pamet.insert_note(note)
 
-    tab_state.edit_view_state = None
+    tab_state.note_edit_view_state = None
     fsm.update_state(tab_state)
 
 
 @action('notes.start_editing_note')
 def start_editing_note(tab_view_state: TabViewState, note: Note):
     # Check if there's an open edit window and abort it if so
-    if tab_view_state.edit_view_state:
+    if tab_view_state.note_edit_view_state:
         abort_editing_note(tab_view_state)
 
     EditViewType = pamet.note_view_state_type_for_note(note, edit=True)
     edit_view_state = EditViewType(id=note.gid())
     edit_view_state.update_from_note(note)
-    tab_view_state.edit_view_state = edit_view_state
+    tab_view_state.note_edit_view_state = edit_view_state
 
     fsm.add_state(edit_view_state)
     fsm.update_state(tab_view_state)
@@ -68,21 +68,21 @@ def start_editing_note(tab_view_state: TabViewState, note: Note):
 @action('notes.finish_editing_note')
 def finish_editing_note(tab_state: TabViewState, note: Note):
     pamet.update_note(note)
-    fsm.remove_state(tab_state.edit_view_state)
-    tab_state.edit_view_state = None
+    fsm.remove_state(tab_state.note_edit_view_state)
+    tab_state.note_edit_view_state = None
     fsm.update_state(tab_state)
     # autosize_note(note_component_id)
 
 
 @action('notes.abort_editing_note')
 def abort_editing_note(tab_state: TabViewState):
-    tab_state.edit_view_state = None
+    tab_state.note_edit_view_state = None
     fsm.update_state(tab_state)
 
 
 @action('notes.abort_editing_and_delete_note')
 def abort_editing_and_delete_note(tab_state: TabViewState):
-    note = tab_state.edit_view_state.get_note()
+    note = tab_state.note_edit_view_state.get_note()
     map_page_actions.delete_notes_and_connected_arrows([note])
     abort_editing_note(tab_state)
 
@@ -101,7 +101,7 @@ def apply_page_change_to_anchor_view(
 
 @action('note.switch_note_type')
 def switch_note_type(tab_state: TabViewState, note: Note):
-    if tab_state.edit_view_state.create_mode:
+    if tab_state.note_edit_view_state.create_mode:
         abort_editing_note(tab_state)
         create_new_note(tab_state, note)
     else:

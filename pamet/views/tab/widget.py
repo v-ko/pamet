@@ -48,12 +48,12 @@ class TabWidget(QWidget, View):
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
         new_note_shortcut.activated.connect(self.create_new_note_command)
- 
+
         new_page_shortcut = QShortcut(QKeySequence('ctrl+N'), self)
         new_page_shortcut.activated.connect(self.create_new_page_command)
 
         self.ui.rightSidebarCloseButton.clicked.connect(
-            lambda: tab_actions.close_right_sidebar(self.state()))
+            lambda: tab_actions.close_page_properties(self.state()))
         self.ui.leftSidebarCloseButton.clicked.connect(
             lambda: tab_actions.close_left_sidebar(self.state()))
 
@@ -78,16 +78,16 @@ class TabWidget(QWidget, View):
             self.parent_window.ui.tabBarWidget.setTabText(
                 self_idx, state.title)
 
-        if change.updated.right_sidebar_state:
+        if change.updated.page_edit_view_state:
             if self._right_sidebar_widget:
                 self.ui.rightSidebarContainer.layout().removeWidget(
                     self._right_sidebar_widget)
                 self._right_sidebar_widget.deleteLater()
                 self._right_sidebar_widget = None
 
-            if state.right_sidebar_state:
+            if state.page_edit_view_state:
                 new_widget = MapPagePropertiesWidget(
-                    self, initial_state=state.right_sidebar_state)
+                    self, initial_state=state.page_edit_view_state)
                 self._right_sidebar_widget = new_widget
                 self.ui.rightSidebarContainer.layout().addWidget(new_widget)
                 self.ui.rightSidebarContainer.show()
@@ -118,17 +118,17 @@ class TabWidget(QWidget, View):
             else:
                 self.ui.leftSidebarContainer.hide()
 
-        if change.updated.edit_view_state:
+        if change.updated.note_edit_view_state:
             if self.edit_view:
                 self.edit_view.close()
                 self.edit_view.deleteLater()
                 self.edit_view = None
 
-            if state.edit_view_state:
+            if state.note_edit_view_state:
                 EditViewType = note_view_type_by_state(
-                    type(state.edit_view_state).__name__)
+                    type(state.note_edit_view_state).__name__)
                 self.edit_view = EditViewType(
-                    parent=self, initial_state=state.edit_view_state)
+                    parent=self, initial_state=state.note_edit_view_state)
                 self.edit_view.setParent(self)
                 self.edit_view.setWindowFlag(Qt.Sheet, True)
                 self.edit_view.show()

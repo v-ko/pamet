@@ -48,7 +48,7 @@
      <item>
       <widget class="QLabel" name="downloadInfoLabel">
        <property name="text">
-        <string>Download info</string>
+        <string/>
        </property>
       </widget>
      </item>
