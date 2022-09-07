@@ -100,9 +100,9 @@ class MapPageViewState(ViewState, Viewport, Page):
 
         self.new_arrow_view_states.clear()
 
-    def view_state_for_note_id(self, note_id: str):
+    def view_state_for_note_own_id(self, note_own_id: str):
         for note_vs in self.note_view_states:
-            if note_vs.note_gid == (self.page_id, note_id):
+            if note_vs.note_gid == (self.page_id, note_own_id):
                 return note_vs
         return None
 

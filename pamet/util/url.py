@@ -68,10 +68,10 @@ class Url:
         fragment = self._parsed_url.fragment
         if fragment.startswith('note'):
             try:
-                note_id = fragment.split('=')[1]
+                note_own_id = fragment.split('=')[1]
             except Exception:
                 return None
-            return pamet.find_one(id=note_id)
+            return pamet.note(self.get_page_id(), own_id=note_own_id)
         elif fragment.startswith('eye_at'):
             try:
                 center_tuple = fragment.split('=')[1]
@@ -99,6 +99,9 @@ class Url:
             elif eye_pos is None:
                 eye_pos = Point2D(0, 0)
             anchor = f'eye_at={eye_height}/{eye_pos.x()}/{eye_pos.y()}'
+
+        if note:
+            anchor = f'note={note.own_id}'
 
         new_url = Url(self)
         new_url._parsed_url = new_url._parsed_url._replace(fragment=anchor)

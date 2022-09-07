@@ -89,8 +89,15 @@ def go_to_url(tab_state: TabViewState,
         height = page_state.viewport_height
         if isinstance(anchor, Note):
             center = anchor.rect().center()
-        else:
+            note_view_state = page_state.view_state_for_note_own_id(
+                anchor.own_id)
+            map_page_actions.clear_child_selection(page_state)
+            map_page_actions.update_child_selections(page_state,
+                                                     {note_view_state: True})
+        elif isinstance(anchor, tuple):
             height, center = anchor
+        else:
+            raise Exception
 
         page_state.viewport_height = height
         page_state.viewport_center = center

@@ -71,6 +71,6 @@ class SearchBarWidget(QWidget):
         note = search_result.get_note()
         page = pamet.page(note.page_id)
 
-        url = Url(page.url()).with_anchor(f'note={note.id}')
+        url = Url(page.url()).with_anchor(note=note)
         url = str(url)
         tab_actions.go_to_url(self.parent_tab.state(), url)
