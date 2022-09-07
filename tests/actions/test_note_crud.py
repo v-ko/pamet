@@ -19,7 +19,7 @@ def test_note_crud(window_fixture, request):
                      apply_delay=not run_headless):
         pamet.actions.map_page.update_child_selections(
             map_page_view_state=fsm.view_state('3'),
-            selection_updates_by_child_id={fsm.view_state('4'): True})
+            selection_updates_by_child={fsm.view_state('4'): True})
 
     # Resize
     with exec_action(delay_before_next=0.013455867767333984,
@@ -71,7 +71,7 @@ def test_note_crud(window_fixture, request):
                      apply_delay=not run_headless):
         pamet.actions.map_page.update_child_selections(
             map_page_view_state=fsm.view_state('3'),
-            selection_updates_by_child_id={fsm.view_state('4'): True})
+            selection_updates_by_child={fsm.view_state('4'): True})
 
     # Move
     with exec_action(delay_before_next=0.24416422843933105,

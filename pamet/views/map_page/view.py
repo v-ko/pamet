@@ -187,15 +187,23 @@ class MapPageView(View):
             return
 
         if ctrl_pressed and shift_pressed:
-            map_page_actions.start_drag_select(state, mouse_pos.as_tuple())
+            map_page_actions.start_drag_select(state, mouse_pos)
             return
 
-        if ctrl_pressed:
+        if ctrl_pressed and not shift_pressed:
             if child_under_mouse:
                 nc_selected = child_under_mouse.state() in self.state(
                 ).selected_children
                 map_page_actions.update_child_selections(
                     state, {child_under_mouse.state(): not nc_selected})
+        elif shift_pressed or (ctrl_pressed and shift_pressed):
+            # Select the note under the mouse (if it's not already so)
+            if child_under_mouse:
+                nc_selected = child_under_mouse.state() in self.state(
+                ).selected_children
+                if not nc_selected:
+                    map_page_actions.update_child_selections(
+                        state, {child_under_mouse.state(): True})
 
         # Clear selection (or reduce it to the note under the mouse)
         if not ctrl_pressed and not shift_pressed:
@@ -229,7 +237,17 @@ class MapPageView(View):
         unproj_mouse_pos = state.unproject_point(mouse_pos)
 
         if mode == MapPageMode.DRAG_SELECT:
-            map_page_actions.stop_drag_select(self.state())
+            same_pos = state.mouse_position_on_drag_select_start == mouse_pos
+            map_page_actions.stop_drag_select(state, mouse_pos)
+            # If no drag select has happened, but it was just a click - add
+            # the note under the mouse to the selection.
+            if same_pos:
+                child_under_mouse = self.get_arrow_view_at(mouse_pos)
+                nv_under_mouse = self.get_note_view_at(mouse_pos)
+                if nv_under_mouse:
+                    child_under_mouse = nv_under_mouse
+                map_page_actions.update_child_selections(
+                    state, {child_under_mouse.state(): True})
 
         elif mode == MapPageMode.NOTE_RESIZE:
             new_size = self._new_note_size_on_resize(mouse_pos)
@@ -270,10 +288,9 @@ class MapPageView(View):
     def _handle_move_on_drag_select(self, mouse_pos: Point2D):
         selection_rect = Rectangle.from_points(
             self.state().mouse_position_on_drag_select_start, mouse_pos)
+        unprojected_rect = self.state().unproject_rect(selection_rect)
 
         nvs_in_selection = self.get_note_views_in_area(selection_rect)
-
-        unprojected_rect = self.state().unproject_rect(selection_rect)
         arrow_views_in_selection = [
             av for av in self.arrow_views()
             if av.intersects_rect(unprojected_rect)
