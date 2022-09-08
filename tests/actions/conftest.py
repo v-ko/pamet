@@ -1,6 +1,8 @@
 from PySide6.QtCore import Qt
 import pytest
 import fusion
+from fusion.libs import entity as entity_lib
+from fusion.libs import channel as channel_lib
 # from fusion.state_manager import FusionStateManager
 
 import pamet
@@ -9,7 +11,6 @@ from pamet.desktop_app.app import DesktopApp
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
 from pamet.storage.file_system.repository import FSStorageRepository
-from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from pamet.views.window.widget import WindowWidget
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
@@ -19,7 +20,7 @@ from pamet import channels as pamet_channels
 def pytest_addoption(parser):
     parser.addoption(
         '--headless',
-        # action='store',
+        action='store',
         default=False,
         type=bool,
         help='Whether to show the app when running the action tests')
@@ -30,8 +31,11 @@ def window_fixture(request, tmp_path):
     run_headless = request.config.getoption('--headless')
     # Init the app
     fusion.set_reproducible_ids(True)
+    entity_lib.reset_entity_id_counter()
+    channel_lib.unsibscribe_all()  # TODO: there should be a cleaner way
     fusion.fsm.reset()
-    
+    pamet.reset()
+
     fs_repo = FSStorageRepository.new(tmp_path, queue_save_on_change=True)
     pamet.set_sync_repo(fs_repo)
 
