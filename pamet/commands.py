@@ -8,6 +8,8 @@ from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
 import fusion
 from fusion.util.point2d import Point2D
 from fusion.libs.command import command
+from pamet import desktop_app
+import pamet
 
 from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
@@ -148,9 +150,15 @@ def close_current_tab():
     window_actions.close_tab(window.state(), tab.state())
 
 
-@command(title='Open settings (JSON)')
-def open_settings_json():
-    settings_path = fusion.gui.util_provider().config_file_path()
+@command(title='Open user settings (JSON)')
+def open_user_settings_json():
+    settings_path = desktop_app.user_settings_path()
+    QDesktopServices.openUrl(QUrl(str(settings_path)))
+
+
+@command(title='Open repo settings (JSON)')
+def open_repo_settings_json():
+    settings_path = desktop_app.repo_settings_path(pamet.sync_repo().path)
     QDesktopServices.openUrl(QUrl(str(settings_path)))
 
 

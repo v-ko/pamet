@@ -148,3 +148,7 @@ class PametRepository(Repository):
         # TODO: This should be redundant when I implement the
         # Persistence Manager
         pass
+
+    def default_page(self):
+        return self.find_one(type=Page)
+        

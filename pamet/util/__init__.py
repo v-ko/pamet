@@ -26,11 +26,6 @@ def generate_page_name() -> str:
         page_name = f'{base_name} {default_names_found}'
 
 
-def get_default_page():
-    config = pamet.desktop_app.get_config()
-    return pamet.page(config.home_page_id)
-
-
 # Validity checks
 def arrow_validity_check():
     """Removes arrows with missing anchor notes. Must be performed after

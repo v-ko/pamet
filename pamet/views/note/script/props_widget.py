@@ -6,7 +6,7 @@ from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QFileDialog, QMessageBox, QPushButton, QWidget
 from pamet.desktop_app.config import pamet_data_folder_path
 from pamet import desktop_app
-from pamet.desktop_app import get_config
+from pamet.desktop_app import get_user_settings
 
 from pamet.model.script_note import ScriptNote
 from pamet.views.note.card.props_edit.widget import FixedTextEdit
@@ -33,7 +33,7 @@ class ScriptNotePropsWidget(QWidget):
 
         # Locals
         self._unsaved_script_changes = False
-        config = get_config()
+        config = get_user_settings()
         self._scripts_folder = Path(config.scripts_folder)
         self._scripts_folder.mkdir(parents=True, exist_ok=True)
 

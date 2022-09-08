@@ -1,19 +1,19 @@
 from copy import copy
 import json
+from pathlib import Path
 from PySide6.QtGui import QColor
 
-import fusion
 from fusion.logging import get_logger
 
 from pamet.constants import SELECTION_OVERLAY_COLOR
-from pamet.desktop_app.config import DesktopConfig
+from pamet.desktop_app.config import RepoSettings, UserDesktopSettings
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
 from pamet.services.script_runner import ScriptRunner
-from pamet.desktop_app.config import DesktopConfig, pamet_data_folder_path
+from pamet.desktop_app.config import pamet_data_folder_path
 
 log = get_logger(__name__)
 
-CONFIG_JSON = 'config.json'
+SETTINGS_JSON = 'settings.json'
 
 icons = PametQtWidgetsCachedIcons()
 
@@ -26,22 +26,54 @@ _app = None
 script_runner = ScriptRunner()
 
 
+def user_settings_path() -> Path:
+    return pamet_data_folder_path / SETTINGS_JSON
+
+
+def repo_settings_path(repo_path: Path) -> Path:
+    return repo_path / '.pamet' / SETTINGS_JSON
+
+
 # Config handling
-def get_config() -> DesktopConfig:
-    config_path = pamet_data_folder_path / CONFIG_JSON
-    if not config_path.exists():
-        return {}
+def get_user_settings() -> UserDesktopSettings:
+    settings_path = user_settings_path()
+    if not settings_path.exists():
+        return UserDesktopSettings()
 
-    with open(config_path) as config_file:
-        config_dict = json.load(config_file)
-        return DesktopConfig.load(config_dict)
+    with open(settings_path) as settings_file:
+        config_dict = json.load(settings_file)
+        return UserDesktopSettings.load(config_dict)
 
 
-def save_config(updated_config: DesktopConfig):
+def save_user_settings(updated_config: UserDesktopSettings):
     config_str = json.dumps(updated_config.asdict(),
                             indent=4,
                             ensure_ascii=False)
-    config_path = pamet_data_folder_path / CONFIG_JSON
+    config_path = user_settings_path()
+    config_path.write_text(config_str)
+
+
+def get_repo_settings(repo_path: Path) -> RepoSettings:
+    config_path = repo_settings_path(repo_path)
+    if not config_path.exists():
+        return RepoSettings(repo_path=repo_path)
+
+    with open(config_path) as config_file:
+        config_dict = json.load(config_file)
+        dict_on_load = copy(config_dict)
+        settings_id = config_dict.pop('id')
+        settings = RepoSettings(id=settings_id, repo_path=repo_path)
+        settings.replace_silent(**config_dict)
+        settings._dict_on_load = dict_on_load
+        return settings
+
+
+def save_repo_settings(repo_settings: RepoSettings):
+    config_str = json.dumps(repo_settings.asdict(),
+                            indent=4,
+                            ensure_ascii=False)
+    config_path = repo_settings_path(repo_settings.repo_path)
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(config_str)
 
 

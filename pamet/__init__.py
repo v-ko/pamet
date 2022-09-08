@@ -22,6 +22,7 @@ from pamet.services.clipboard import ClipboardService
 from pamet.services.search.base import BaseSearchService
 from pamet import channels
 from pamet.model.arrow import Arrow
+from pamet.desktop_app import get_user_settings
 
 from .note_view_lib import register_note_view_type, note_view_type
 from .note_view_lib import note_view_type_by_state, note_state_type_by_view
@@ -153,6 +154,10 @@ def page(page_gid: str) -> Union[Page, None]:
     if not isinstance(page_gid, str):
         raise Exception
     return _sync_repo.page(page_gid)
+
+
+def default_page() -> Page:
+    return _sync_repo.default_page()
 
 
 def insert_page(page_: Page) -> Change:

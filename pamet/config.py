@@ -10,12 +10,11 @@ log = get_logger(__name__)
 
 
 @entity_type
-class PametConfig(Entity):
+class PametSettings(Entity):
     _dict_on_load: dict = field(init=False, repr=False)
-    home_page_id: str = None
 
     @classmethod
-    def load(cls: PametConfig, config_dict: dict):
+    def load(cls: PametSettings, config_dict: dict):
         dict_on_load = copy(config_dict)
         id = config_dict.pop('id', None)
         config = cls(id=id) if id else cls()
