@@ -14,6 +14,7 @@ class PametRepository(Repository):
 
     def __init__(self) -> None:
         self.raw_entity_changes_channel = None
+        self.default_page_id = None
 
     def set_change_channel(self, change_channel: Channel):
         self.raw_entity_changes_channel = change_channel
@@ -150,5 +151,7 @@ class PametRepository(Repository):
         pass
 
     def default_page(self):
-        return self.find_one(type=Page)
-        
+        return self.page(self.default_page_id)
+
+    def set_default_page(self, new_page: Page):
+        self.default_page_id = new_page.id

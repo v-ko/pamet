@@ -8,6 +8,7 @@ from pamet.desktop_app.util import configure_for_qt
 from pamet.desktop_app.app import DesktopApp
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
+from pamet.storage.file_system.repository import FSStorageRepository
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
 from pamet.views.window.widget import WindowWidget
 from pamet.actions import window as window_actions
@@ -25,12 +26,14 @@ def pytest_addoption(parser):
 
 
 @pytest.fixture
-def window_fixture(request):
+def window_fixture(request, tmp_path):
     run_headless = request.config.getoption('--headless')
     # Init the app
     fusion.set_reproducible_ids(True)
     fusion.fsm.reset()
-    pamet.set_sync_repo(PametInMemoryRepository())
+    
+    fs_repo = FSStorageRepository.new(tmp_path, queue_save_on_change=True)
+    pamet.set_sync_repo(fs_repo)
 
     app = DesktopApp()
     configure_for_qt(app)

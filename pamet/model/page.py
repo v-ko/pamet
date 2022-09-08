@@ -8,8 +8,8 @@ from fusion.util import current_time, timestamp
 @entity_type
 class Page(Entity):
     name: str = ''
-    created: str = field(default_factory=lambda: str(current_time()))
-    modified: str = field(default_factory=lambda: str(current_time()))
+    created: str = field(default_factory=lambda: timestamp(current_time()))
+    modified: str = field(default_factory=lambda: timestamp(current_time()))
 
     def __repr__(self):
         return f'<Page gid={self.gid()} name={self.name}>'
