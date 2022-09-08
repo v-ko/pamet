@@ -30,7 +30,6 @@ log = fusion.get_logger(__name__)
 @click.argument('path', type=click.Path(exists=True), required=False)
 def main(path: str):
     app = DesktopApp()
-    app.setQuitOnLastWindowClosed(True)  # Needed for some reason
     configure_for_qt(app)
     # Load the config
     user_config = desktop_app.get_user_settings()

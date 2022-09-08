@@ -19,3 +19,4 @@ class DesktopApp(QApplication):
         self.setOrganizationName('p10')
         self.setApplicationName(name)
         self.setApplicationVersion(pamet.__version__)
+        self.setQuitOnLastWindowClosed(True)  # Needed for some reason

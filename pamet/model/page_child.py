@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import field
-from fusion.libs.entity import entity_type, Entity
-
-from fusion.util import get_new_id
-import pamet
+from fusion.libs.entity import entity_type, Entity, get_entity_id
 
 
 @entity_type
 class PageChild(Entity):
-    id: tuple[str, str] = field(default_factory=lambda: ('', get_new_id()))
+    id: tuple[str, str] = field(default_factory=lambda: ('', get_entity_id()))
 
     @property
     def page_id(self):
@@ -41,5 +38,5 @@ class PageChild(Entity):
         if page_id is None:
             raise Exception('You must specify either page or page_id.')
 
-        own_id = own_id or get_new_id()
+        own_id = own_id or get_entity_id()
         return cls(id=(page_id, own_id), **child_props)

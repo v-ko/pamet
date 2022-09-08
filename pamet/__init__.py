@@ -48,10 +48,7 @@ _undo_service = None
 
 raw_entity_changes = Channel('__RAW_ENTITY_CHANGES__')
 
-entity_change_aggregator = ChangeAggregator(
-    input_channel=raw_entity_changes,
-    release_trigger_channel=completed_root_actions,
-    changeset_output_channel=channels.entity_change_sets_per_TLA)
+entity_change_aggregator = None
 
 
 # Chain the entity changes channels
@@ -61,7 +58,24 @@ def unwrap_changeset(changeset: List[Change]):
         channels.entity_changes_by_parent_gid.push(change)
 
 
-channels.entity_change_sets_per_TLA.subscribe(unwrap_changeset)
+def setup():
+    global entity_change_aggregator
+    global clipboard
+
+    entity_change_aggregator = ChangeAggregator(
+        input_channel=raw_entity_changes,
+        release_trigger_channel=completed_root_actions,
+        changeset_output_channel=channels.entity_change_sets_per_TLA)
+    clipboard = ClipboardService()
+
+    channels.entity_change_sets_per_TLA.subscribe(unwrap_changeset)
+
+
+setup()
+
+
+def reset():
+    setup()
 
 
 def search_service() -> BaseSearchService:
