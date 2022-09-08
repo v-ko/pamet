@@ -11,7 +11,7 @@ log = get_logger(__name__)
 
 @entity_type
 class PametSettings(Entity):
-    _dict_on_load: dict = field(init=False, repr=False)
+    _dict_on_load: dict = field(default_factory=dict, init=False, repr=False)
 
     @classmethod
     def load(cls: PametSettings, config_dict: dict):
