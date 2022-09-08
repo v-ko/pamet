@@ -3,6 +3,7 @@ from typing import Dict, Generator, List
 import os
 import json
 from pathlib import Path
+from pamet import desktop_app
 from pamet.desktop_app import get_repo_settings, get_user_settings
 from pamet.model.arrow import Arrow
 from pamet.model.page_child import PageChild
@@ -437,4 +438,9 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
     def default_page(self):
         repo_settings = get_repo_settings(self.path)
         default_page = self.page(repo_settings.home_page)
-        return default_page or super().default_page()
+        return default_page
+
+    def set_default_page(self, new_page: Page):
+        repo_settings = get_repo_settings(self.path)
+        repo_settings.home_page = new_page.id
+        desktop_app.save_repo_settings(repo_settings)

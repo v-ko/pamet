@@ -128,7 +128,7 @@ def main(path: str):
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
-    start_page = pamet.default_page()
+    start_page = pamet.default_page() or fs_repo.find_one(type=Page)
     if not start_page:
         start_page = other_actions.create_default_page()
 
