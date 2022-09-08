@@ -4,7 +4,7 @@ from typing import List
 import fusion
 from fusion import fsm
 from fusion.libs.entity import Entity
-from fusion.util import get_new_id
+from fusion.util import get_entity_id
 import pamet
 
 from fusion.util import Point2D, Rectangle
@@ -797,7 +797,7 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
         new_page_id = page.id
         new_own_id = note.own_id
         if pamet.find(gid=note.gid()):
-            new_own_id = get_new_id()
+            new_own_id = get_entity_id()
             updated_ids[note.id] = new_own_id
         note = note.with_id(page_id=new_page_id, own_id=new_own_id)
         pamet.insert_note(note)
@@ -810,7 +810,7 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
         new_page_id = page.id
         new_own_id = arrow.own_id
         if pamet.find(gid=arrow.gid()):
-            new_own_id = get_new_id()
+            new_own_id = get_entity_id()
         arrow = arrow.with_id(page_id=new_page_id, own_id=new_own_id)
 
         # Where the pasted note ids have been changed - correct them
