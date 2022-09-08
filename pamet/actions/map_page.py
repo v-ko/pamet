@@ -3,8 +3,7 @@ from typing import List
 
 import fusion
 from fusion import fsm
-from fusion.libs.entity import Entity
-from fusion.util import get_entity_id
+from fusion.libs.entity import Entity, get_entity_id
 import pamet
 
 from fusion.util import Point2D, Rectangle
