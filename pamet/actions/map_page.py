@@ -420,6 +420,10 @@ def delete_page(tab_view_state: TabViewState, page: Page):
 @action('map_page.handle_child_added', issuer='entity_change_apply_logic')
 def handle_child_added(page_view_state: MapPageViewState, child: Entity):
     if isinstance(child, Note):
+        if page_view_state.view_state_for_note_own_id(child.own_id):
+            return  # A workaround for duplicate calls.
+            # These methods should be replaced by a PageUpdate service
+            # (instead of per-page subscriptions, etc)
         ViewType = pamet.note_view_type(note_type_name=type(child).__name__,
                                         edit=False)
         StateType = pamet.note_state_type_by_view(ViewType.__name__)
