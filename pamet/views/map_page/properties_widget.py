@@ -7,7 +7,7 @@ from fusion.view import View
 
 import pamet
 from pamet import actions
-from pamet.desktop_app import get_config, save_config
+from pamet.desktop_app import get_user_settings, save_user_settings
 from pamet.model.page import Page
 from .ui_properties_widget import Ui_MapPagePropertiesWidget
 
@@ -34,7 +34,7 @@ class MapPagePropertiesWidget(QWidget, View):
 
         # Configure the UI
         # Set the home page check box state
-        config = get_config()
+        config = get_user_settings()
         page = pamet.page(initial_state.page_id)
         if config.home_page_id == page.id:
             self.ui.setAsHomePageCheckBox.setChecked(True)
@@ -105,10 +105,10 @@ class MapPagePropertiesWidget(QWidget, View):
         self.ui.nameWarningLabel.hide()
 
     def _handle_home_page_toggle(self, checked: bool):
-        config = get_config()
+        config = get_user_settings()
 
         if checked:
             config.home_page_id = self.state().page_id
         else:
             config.home_page_id = None
-        save_config(config)
+        save_user_settings(config)

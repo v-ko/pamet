@@ -409,8 +409,7 @@ def delete_page(tab_view_state: TabViewState, page: Page):
             Url(tab_view_state.navigation_history[-1]).get_page_id())
 
     if not next_page:
-        next_page = pamet.util.get_default_page() or \
-            pamet.find_one(type=Page)
+        next_page = pamet.default_page()
 
     if not next_page:
         next_page = pamet.actions.other.create_default_page()

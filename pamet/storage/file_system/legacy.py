@@ -69,7 +69,9 @@ def new_legacy_id_for_legacy_note(note_id: int, timestamp: str, text: str,
         # If that's not enough - add a suffix based on the note text
         new_id = hash(timestamp + text)
         if new_id in all_ids:  # Mostly for timeline notes
-            raise Exception('WTF')
+            new_id = hash(get_new_id())
+            if new_id in all_ids:
+                raise Exception('WTF')
 
     return new_id
 
@@ -554,7 +556,7 @@ class LegacyFSRepoReader:
             raise Exception
 
         if notes_updated:
-            self.update_page(page, notes, arrows)
+            self.update_page_on_disk(page, notes, arrows)
             log.info(f'Updated {notes_updated} internal links for '
                      f'imported legacy page "{page.name}"')
 

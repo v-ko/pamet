@@ -3,6 +3,7 @@ from typing import Dict, Generator, List
 import os
 import json
 from pathlib import Path
+from pamet.desktop_app import get_repo_settings, get_user_settings
 from pamet.model.arrow import Arrow
 from pamet.model.page_child import PageChild
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
@@ -432,3 +433,8 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
         if time.time() - t0 > 0.03:
             log.warning('The save time was above 30ms. Maybe it\'s time to '
                         'implement the async IO')
+
+    def default_page(self):
+        repo_settings = get_repo_settings(self.path)
+        default_page = self.page(repo_settings.home_page)
+        return default_page or super().default_page()

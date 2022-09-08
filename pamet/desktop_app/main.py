@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+from PySide6.QtWidgets import QMessageBox
 import click
 
 import fusion
@@ -15,7 +16,7 @@ from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.util import configure_for_qt
 from pamet.model.page import Page
 
-from pamet.services.backup import FSStorageBackupService
+from pamet.services.backup import AnotherServiceAlreadyRunningException, FSStorageBackupService
 
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
@@ -29,20 +30,20 @@ log = fusion.get_logger(__name__)
 @click.argument('path', type=click.Path(exists=True), required=False)
 def main(path: str):
     app = DesktopApp()
+    app.setQuitOnLastWindowClosed(True)  # Needed for some reason
     configure_for_qt(app)
-
     # Load the config
-    config = desktop_app.get_config()
+    user_config = desktop_app.get_user_settings()
     # If there's changes after the load it means that some default is not saved
     # to disk or some other irregularity has been handled by the config class
-    if config.changes_present:
-        desktop_app.save_config(config)
+    if user_config.changes_present:
+        desktop_app.save_user_settings(user_config)
 
     # Init the repo
     if path:
         repo_path = Path(path)
     else:
-        repo_path = Path(config.repository_path)
+        repo_path = Path(user_config.repository_path)
     log.info('Using repository: %s' % repo_path)
 
     # Testing - restore legacy backups
@@ -112,9 +113,14 @@ def main(path: str):
     else:
         fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
+    repo_settings = desktop_app.get_repo_settings(repo_path)
+    if repo_settings.changes_present:
+        desktop_app.save_repo_settings(repo_settings)
+
     pamet.set_sync_repo(fs_repo)
     pamet.set_undo_service(
         UndoService(pamet_channels.entity_change_sets_per_TLA))
+
     # There should be a better place to do call the validity checks I guess
     # pamet.model.arrow_validity_check()
 
@@ -122,7 +128,7 @@ def main(path: str):
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
-    start_page = pamet.util.get_default_page() or pamet.find_one(type=Page)
+    start_page = pamet.default_page()
     if not start_page:
         start_page = other_actions.create_default_page()
 
@@ -139,18 +145,31 @@ def main(path: str):
     search_service.load_all_content()
     pamet.set_search_service(search_service)
 
-    # Run the backup service only on the main repo. This is not cool. There
-    # should be a per-repo setting for the backup folder path
-    if not path:
+    if repo_settings.backups_enabled:
         backup_service = FSStorageBackupService(
-            backup_folder=config.backup_folder,
+            backup_folder=repo_settings.backup_folder,
             repository=fs_repo,
             changeset_channel=pamet_channels.entity_change_sets_per_TLA,
-            record_all_changes=True)
-        if not backup_service.start():
+            record_all_changes=repo_settings.record_all_changes)
+
+        service_started = False
+        try:
+            backup_service.start()
+            service_started = True
+        except AnotherServiceAlreadyRunningException:
             log.info('Backup service not started. '
                      'Probably another instance is running')
-        else:
+            reply = QMessageBox.question(
+                window, 'Backup service conflict',
+                'A backup service lock is present. If you\'re sure there\'s '
+                'no other instances running on the same repo - '
+                'press Yes to override.')
+            if reply == QMessageBox.StandardButton.Yes:
+                backup_service.service_lock_path().unlink()
+                backup_service.start()
+                service_started = True
+
+        if service_started:
             app.aboutToQuit.connect(backup_service.stop)
 
     return app.exec()

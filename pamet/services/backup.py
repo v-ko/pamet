@@ -84,6 +84,10 @@ class ChangePW(Model):
         return change
 
 
+class AnotherServiceAlreadyRunningException(Exception):
+    pass
+
+
 class FSStorageBackupService:
     """Handles creating backups periodically. It has a
     staggered versioning scheme and the option to keep all changes in between
@@ -120,7 +124,7 @@ class FSStorageBackupService:
 
     def __init__(self,
                  backup_folder: Path,
-                 repository: PametRepository,
+                 repository: PametRepository = None,
                  changeset_channel: Channel = None,
                  record_all_changes: bool = False,
                  process_interval: float = PROCESS_INTERVAL,
@@ -128,6 +132,11 @@ class FSStorageBackupService:
                  prune_interval: float = PRUNE_INTERVAL,
                  permanent_backup_age: float = PERMANENT_BACKUP_AGE) -> None:
         self.id = get_new_id()
+
+        # if not backup_folder:
+        #     if not repository or not repository.path:
+        #         raise Exception
+        #     backup_folder = repository.path / '__backups__'
 
         self.backup_folder: Path = Path(backup_folder)
         self.repo = repository
@@ -343,6 +352,9 @@ class FSStorageBackupService:
         backup copies and if configured to do so - also saves the change
         objects in files between backups in order to have a fill history."""
 
+        if not self.repo:
+            raise Exception('Cannot backup without a configured repository.')
+
         self.process_changes()  # In case of last second changes
 
         # Move the recent changes to backup files
@@ -524,7 +536,7 @@ class FSStorageBackupService:
         This gets called in a separate thread. Continues until the stop_event
         is set."""
         timeout = 1
-        while timeout > 0:
+        while timeout and timeout > 0:
             timeout = self.scheduler.run(blocking=False)
             self.stop_event.wait(timeout)
 
@@ -541,7 +553,7 @@ class FSStorageBackupService:
         Then the worker thread is started to carry out event scheduling and
         rescheduling."""
         if self.service_lock_path().exists() and not IGNORE_LOCK:
-            return False
+            raise AnotherServiceAlreadyRunningException
             # This should be a notification when I add notifications
             # raise Exception('Another backup service is running. If you\'re'
             #                 'sure it\'s not - you can delete the lock file: '
@@ -603,7 +615,7 @@ class FSStorageBackupService:
         self.scheduler.enter(self.process_interval, 1,
                              self.process_changes_and_reschedule)
 
-        self.worker_thread = threading.Thread(target=self.scheduler.run)
+        self.worker_thread = threading.Thread(target=self.run_scheduler)
         self.worker_thread.start()
 
     def stop(self):
@@ -617,6 +629,7 @@ class FSStorageBackupService:
 
         self.stop_event.set()
         self.worker_thread.join()
+
         if self.service_lock_path().exists():
             self.service_lock_path().unlink()
         log.info('Stopped service.')

@@ -15,7 +15,7 @@ from fusion.logging import get_logger
 import pamet
 from pamet.constants import NO_SCALE_LINE_SPACING
 from pamet import desktop_app
-from pamet.desktop_app.config import DesktopConfig, pamet_data_folder_path
+from pamet.desktop_app.config import UserDesktopSettings, pamet_data_folder_path
 from pamet.services.media_store import MediaStore
 
 log = get_logger(__name__)
@@ -195,8 +195,8 @@ def resource_path(subpath: Union[str, Path]):
 
 
 def copy_script_templates(overwrite: bool = False):
-    config = pamet.desktop_app.get_config()
-    templates_folder: Path = Path(config.script_templates_folder)
+    user_settings = pamet.desktop_app.get_user_settings()
+    templates_folder: Path = Path(user_settings.script_templates_folder)
     templates_folder.mkdir(parents=True, exist_ok=True)
     source_folder = resource_path('script_templates')
 
@@ -217,9 +217,9 @@ def configure_for_qt(app):
     desktop_app.set_app(app)
     fusion_config_qt(app)
 
-    config: DesktopConfig = desktop_app.get_config()
+    config: UserDesktopSettings = desktop_app.get_user_settings()
     if config.changes_present():
-        desktop_app.save_config(config)
+        desktop_app.save_user_settings(config)
 
     copy_script_templates()
 

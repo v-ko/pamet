@@ -33,7 +33,8 @@ class CornerWidget(QWidget):
     def open_main_menu(self):
         entries = {
             'Page properties': commands.open_page_properties,
-            'Open settings (JSON)': commands.open_settings_json,
+            'Open user settings (JSON)': commands.open_user_settings_json,
+            'Open repo settings (JSON)': commands.open_repo_settings_json,
             'Export as HTML page /*buggy*': commands.export_as_web_page,
         }
         context_menu = ContextMenuWidget(self, entries=entries)
