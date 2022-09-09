@@ -14,7 +14,7 @@ from fusion.util.point2d import Point2D
 def test_note_crud(window_fixture, request):
     run_headless = request.config.getoption('--headless')
 
-    with exec_action(delay_before_next=0.0029449462890625,
+    with exec_action(delay_before_next=0.001154184341430664,
                      apply_delay=not run_headless):
         pamet.actions.map_page.clear_child_selection(
             map_page_view_state=fsm.view_state('3'))
@@ -24,42 +24,12 @@ def test_note_crud(window_fixture, request):
             map_page_view_state=fsm.view_state('3'),
             selection_updates_by_child={fsm.view_state('4'): True})
 
-    with exec_action(delay_before_next=0.5214769840240479,
-                     apply_delay=not run_headless):
-        pamet.actions.map_page.start_child_move(
-            map_page_view_state=fsm.view_state('3'),
-            mouse_pos=Point2D(944, 475))
-
-    with exec_action(delay_before_next=0.5144076347351074,
-                     apply_delay=not run_headless):
-        pamet.actions.map_page.moved_child_view_update(
-            map_page_view_state=fsm.view_state('3'),
-            delta=Point2D(-12.0, -32.0))
-
-    with exec_action(delay_before_next=0.5219848155975342,
-                     apply_delay=not run_headless):
-        pamet.actions.map_page.moved_child_view_update(
-            map_page_view_state=fsm.view_state('3'),
-            delta=Point2D(-36.0, -140.0))
-
-    with exec_action(delay_before_next=0.5219817161560059,
-                     apply_delay=not run_headless):
-        pamet.actions.map_page.moved_child_view_update(
-            map_page_view_state=fsm.view_state('3'),
-            delta=Point2D(-18.0, -236.0))
-
-    with exec_action(delay_before_next=0.5362186431884766,
-                     apply_delay=not run_headless):
-        pamet.actions.map_page.finish_child_move(
-            map_page_view_state=fsm.view_state('3'),
-            delta=Point2D(-18.0, -236.0))
-
-    with exec_action(delay_before_next=0.009685754776000977,
+    with exec_action(delay_before_next=0.00896000862121582,
                      apply_delay=not run_headless):
         pamet.actions.map_page.clear_child_selection(
             map_page_view_state=fsm.view_state('3'))
 
-    with exec_action(delay_before_next=0.009208917617797852,
+    with exec_action(delay_before_next=0.007747173309326172,
                      apply_delay=not run_headless):
         pamet.actions.map_page.update_child_selections(
             map_page_view_state=fsm.view_state('3'),
@@ -68,70 +38,130 @@ def test_note_crud(window_fixture, request):
     with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.map_page.start_notes_resize(
             map_page_view_state=fsm.view_state('3'),
-            main_note=TextNote(id=("6baa9455", "7a024204"),
-                               geometry=[-180, -320, 320, 160],
+            main_note=TextNote(id=("00000001", "00000002"),
+                               geometry=[-160.0, -80.0, 320, 160],
                                style={},
                                content={"text": "Mock help note"},
                                metadata={},
-                               created="2022-09-08T18:01:03+03:00",
-                               modified="2022-09-08T18:01:03+03:00",
+                               created="2022-09-09T10:03:12+03:00",
+                               modified="2022-09-09T10:03:12+03:00",
                                tags=[]),
-            mouse_position=Point2D(988, 399),
-            resize_circle_center_projected=Point2D(989.0, 401.5))
+            mouse_position=Point2D(1002, 523),
+            resize_circle_center_projected=Point2D(999.0, 521.5))
 
-    with exec_action(delay_before_next=0.5253458023071289,
+    with exec_action(delay_before_next=0.5956573486328125,
                      apply_delay=not run_headless):
         pamet.actions.map_page.resize_note_views(
             map_page_view_state=fsm.view_state('3'),
-            new_size=Point2D(234.0, 97.0))
+            new_size=Point2D(188.0, 95.0))
 
-    with exec_action(delay_before_next=0.5214567184448242,
+    with exec_action(delay_before_next=0.5051360130310059,
                      apply_delay=not run_headless):
         pamet.actions.map_page.resize_note_views(
             map_page_view_state=fsm.view_state('3'),
-            new_size=Point2D(212.0, 91.0))
+            new_size=Point2D(186.0, 95.0))
 
-    with exec_action(delay_before_next=0.008827686309814453,
+    with exec_action(delay_before_next=0.5053880214691162,
                      apply_delay=not run_headless):
         pamet.actions.map_page.resize_note_views(
             map_page_view_state=fsm.view_state('3'),
-            new_size=Point2D(190.0, 85.0))
+            new_size=Point2D(176.0, 93.0))
+
+    with exec_action(delay_before_next=0.003194570541381836,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.resize_note_views(
+            map_page_view_state=fsm.view_state('3'),
+            new_size=Point2D(174.0, 93.0))
 
     with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.map_page.finish_notes_resize(
             map_page_view_state=fsm.view_state('3'),
-            new_size=Point2D(190.0, 85.0))
+            new_size=Point2D(174.0, 93.0))
+
+    with exec_action(delay_before_next=0.003925800323486328,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.clear_child_selection(
+            map_page_view_state=fsm.view_state('3'))
+
+    with exec_action(delay_before_next=1, apply_delay=not run_headless):
+        pamet.actions.map_page.update_child_selections(
+            map_page_view_state=fsm.view_state('3'),
+            selection_updates_by_child={fsm.view_state('4'): True})
+
+    with exec_action(delay_before_next=0.5153989791870117,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.start_child_move(
+            map_page_view_state=fsm.view_state('3'),
+            mouse_pos=Point2D(884, 455))
+
+    with exec_action(delay_before_next=0.5095925331115723,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.moved_child_view_update(
+            map_page_view_state=fsm.view_state('3'),
+            delta=Point2D(-8.0, -74.0))
+
+    with exec_action(delay_before_next=0.5160834789276123,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.moved_child_view_update(
+            map_page_view_state=fsm.view_state('3'),
+            delta=Point2D(-24.0, -178.0))
+
+    with exec_action(delay_before_next=0.5158922672271729,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.moved_child_view_update(
+            map_page_view_state=fsm.view_state('3'),
+            delta=Point2D(-20.0, -210.0))
+
+    with exec_action(delay_before_next=0.007718324661254883,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.moved_child_view_update(
+            map_page_view_state=fsm.view_state('3'),
+            delta=Point2D(-20.0, -212.0))
+
+    with exec_action(delay_before_next=1, apply_delay=not run_headless):
+        pamet.actions.map_page.finish_child_move(
+            map_page_view_state=fsm.view_state('3'),
+            delta=Point2D(-20.0, -212.0))
+
+    with exec_action(delay_before_next=0.0045282840728759766,
+                     apply_delay=not run_headless):
+        pamet.actions.map_page.clear_child_selection(
+            map_page_view_state=fsm.view_state('3'))
+
+    with exec_action(delay_before_next=1, apply_delay=not run_headless):
+        pamet.actions.map_page.update_child_selections(
+            map_page_view_state=fsm.view_state('3'),
+            selection_updates_by_child={fsm.view_state('4'): True})
 
     with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.note.start_editing_note(
             tab_view_state=fsm.view_state('2'),
-            note=TextNote(id=("6baa9455", "7a024204"),
-                          geometry=[-180, -320, 190, 80],
+            note=TextNote(id=("00000001", "00000002"),
+                          geometry=[-180, -290, 170, 90],
                           style={},
                           content={"text": "Mock help note"},
                           metadata={},
-                          created="2022-09-08T18:01:03+03:00",
-                          modified="2022-09-08T18:01:03+03:00",
+                          created="2022-09-09T10:03:12+03:00",
+                          modified="2022-09-09T10:03:12+03:00",
                           tags=[]))
 
     with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.note.finish_editing_note(
             tab_state=fsm.view_state('2'),
-            note=TextNote(id=("6baa9455", "7a024204"),
-                          geometry=[-180, -320, 190, 80],
+            note=TextNote(id=("00000001", "00000002"),
+                          geometry=[-180, -290, 170, 90],
                           style={},
-                          content={"text": "Mock help note\nMultiline"},
+                          content={"text": "Mock help note\nEdited multiline"},
                           metadata={},
-                          created="2022-09-08T18:01:03+03:00",
-                          modified="2022-09-08T18:01:19+03:00",
+                          created="2022-09-09T10:03:12+03:00",
+                          modified="2022-09-09T10:03:36+03:00",
                           tags=[]))
 
-    with exec_action(delay_before_next=0.9817540645599365,
-                     apply_delay=not run_headless):
+    with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.map_page.delete_selected_children(
             map_page_view_state=fsm.view_state('3'))
 
-    with exec_action(delay_before_next=0.5074722766876221,
+    with exec_action(delay_before_next=0.5052444934844971,
                      apply_delay=not run_headless):
         pamet.actions.map_page.clear_child_selection(
             map_page_view_state=fsm.view_state('3'))
@@ -139,25 +169,25 @@ def test_note_crud(window_fixture, request):
     with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.note.create_new_note(
             tab_state=fsm.view_state('2'),
-            note=TextNote(id=("6baa9455", "0bb2c3f0"),
-                          geometry=[-86.0, -207.0, 320, 160],
+            note=TextNote(id=("00000001", "00000005"),
+                          geometry=[-128.0, -207.0, 320, 160],
                           style={},
                           content={"text": ""},
                           metadata={},
-                          created="2022-09-08T18:01:24+03:00",
-                          modified="2022-09-08T18:01:24+03:00",
+                          created="2022-09-09T10:03:44+03:00",
+                          modified="2022-09-09T10:03:44+03:00",
                           tags=[]))
 
     with exec_action(delay_before_next=1, apply_delay=not run_headless):
         pamet.actions.note.finish_creating_note(
             tab_state=fsm.view_state('2'),
-            note=TextNote(id=("6baa9455", "0bb2c3f0"),
-                          geometry=[-86.0, -207.0, 100, 30],
+            note=TextNote(id=("00000001", "00000005"),
+                          geometry=[-128.0, -207.0, 100, 30],
                           style={},
                           content={"text": "New note"},
                           metadata={},
-                          created="2022-09-08T18:01:28+03:00",
-                          modified="2022-09-08T18:01:28+03:00",
+                          created="2022-09-09T10:03:47+03:00",
+                          modified="2022-09-09T10:03:47+03:00",
                           tags=[]))
 
     assert True
