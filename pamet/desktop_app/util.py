@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import List, Tuple, Union
+from importlib import resources
+from typing import List, Tuple
 from pathlib import Path
 import shutil
 
@@ -13,6 +14,7 @@ from fusion.platform.qt_widgets import configure_for_qt as fusion_config_qt
 from fusion.logging import get_logger
 
 import pamet
+from pamet.util import resource_dir, resource_path
 from pamet.constants import NO_SCALE_LINE_SPACING
 from pamet import desktop_app
 from pamet.desktop_app.config import UserDesktopSettings, pamet_data_folder_path
@@ -182,27 +184,13 @@ def draw_text_lines(painter: QPainter, text_layout: List[Tuple[str, QRectF]],
         # painter.drawRect(after_rect)
 
 
-def resource_path(subpath: Union[str, Path]):
-    resource_dir_path = Path(__file__).parent.parent / 'resources'
-    resource_path = resource_dir_path / Path(subpath)
-
-    if subpath.startswith('/'):
-        subpath = subpath[1:]
-
-    if not resource_path.exists():
-        raise Exception('Resource not found')
-    return resource_path
-
-
 def copy_script_templates(overwrite: bool = False):
     user_settings = pamet.desktop_app.get_user_settings()
     templates_folder: Path = Path(user_settings.script_templates_folder)
     templates_folder.mkdir(parents=True, exist_ok=True)
-    source_folder = resource_path('script_templates')
+    source_folder = resource_dir('script_templates')
 
     for source_file in source_folder.iterdir():
-        if not source_file.is_file():
-            continue
         target_path = templates_folder / source_file.name
         if target_path.exists() and not overwrite:
             continue
@@ -233,9 +221,10 @@ def configure_for_qt(app):
     _default_note_font.setPointSizeF(14)
     desktop_app.set_default_note_font(_default_note_font)
 
-    pamet_root = Path(__file__).parent.parent
+    views_dir = resources.files('pamet') / 'views'
+    pamet_root = views_dir.parent
     views_loader = ExtensionsLoader(pamet_root)
-    views_loader.load_all_recursively(pamet_root / 'views')
+    views_loader.load_all_recursively(views_dir)
 
 
 # def get_scripts_permission():

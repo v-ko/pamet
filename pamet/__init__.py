@@ -1,5 +1,5 @@
 from __future__ import annotations
-from pathlib import Path
+from importlib import resources
 import importlib.metadata
 
 __version__ = importlib.metadata.version(__package__)
@@ -30,11 +30,10 @@ from .note_view_lib import note_view_state_type_for_note
 
 log = get_logger(__name__)
 
-pamet_root = Path(__file__).parent
-# __version__ = (pamet_root / 'VERSION').read_text()
-
+model_dir = resources.files('pamet') / 'model'
+pamet_root = model_dir.parent
 entity_types_loader = ExtensionsLoader(pamet_root)
-entity_types_loader.load_all_recursively(pamet_root / 'model')
+entity_types_loader.load_all_recursively(model_dir)
 
 clipboard = ClipboardService()
 

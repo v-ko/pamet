@@ -153,13 +153,13 @@ def close_current_tab():
 @command(title='Open user settings (JSON)')
 def open_user_settings_json():
     settings_path = desktop_app.user_settings_path()
-    QDesktopServices.openUrl(QUrl(str(settings_path)))
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
 
 
 @command(title='Open repo settings (JSON)')
 def open_repo_settings_json():
     settings_path = desktop_app.repo_settings_path(pamet.sync_repo().path)
-    QDesktopServices.openUrl(QUrl(str(settings_path)))
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
 
 
 @command(title='Export as web page')
