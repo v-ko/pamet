@@ -180,10 +180,10 @@ class ScriptNotePropsWidget(QWidget):
         self.ui.scriptPathLineEdit.setText(str(new_path))
 
     def _handle_open_in_editor_button_click(self):
-        QDesktopServices.openUrl(QUrl(str(self.edited_note.script_path)))
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.edited_note.script_path)))
 
     def _handle_open_containing_folder_button_click(self):
-        QDesktopServices.openUrl(QUrl(str(
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(
             self.edited_note.script_path.parent)))
 
     def _handle_delete_button_click(self):
@@ -215,7 +215,7 @@ class ScriptNotePropsWidget(QWidget):
         '''
         QMessageBox.information(self, 'How to set the folder',
                                 instructions_text)
-        QDesktopServices.openUrl(QUrl(str(pamet_data_folder_path)))
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(pamet_data_folder_path)))
         self.edit_widget._handle_esc_shortcut()
 
     def _configure_templates(self):
@@ -227,7 +227,7 @@ class ScriptNotePropsWidget(QWidget):
         '''
         QMessageBox.information(self, 'How to set the folder',
                                 instructions_text)
-        QDesktopServices.openUrl(QUrl(str(self._templates_folder)))
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._templates_folder)))
         self.edit_widget._handle_esc_shortcut()
 
     def _handle_run_in_terminal_toggled(self, checked: bool):
