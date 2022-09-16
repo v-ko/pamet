@@ -224,7 +224,6 @@ def export_as_web_page():
         </body>
     </html>
     '''
-    path = '/home/p10/tst.html'
 
     # A dummy widget, because QFileDialog crashed the app without it
     widget = QWidget()
