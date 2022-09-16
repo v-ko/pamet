@@ -191,6 +191,9 @@ def copy_script_templates(overwrite: bool = False):
     source_folder = resource_dir('script_templates')
 
     for source_file in source_folder.iterdir():
+        if not source_file.is_file():
+            continue
+
         target_path = templates_folder / source_file.name
         if target_path.exists() and not overwrite:
             continue
