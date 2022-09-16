@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop">
+  <id>org.amakak.pamet</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <name>Pamet</name>
+  <summary>An app for personal note organization</summary>
+  <description>
+    <p>
+        The app features map-like navigation, multiple pages with hyperlinking,
+        note moving/resize, limited (as of now) style changes. The notes can
+        hold an image, text, link. There's also a backup service, notes that
+        can invoke scripts, among other extra functionality, that's still
+        being developed.
+    </p>
+    <p>
+        The app is still in alpha, UI bugs are to be expected, but the storage
+        and backup functionalities should be stable.
+    </p>
+  </description>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/v-ko/pamet/master/pamet/resources/presentation/pamet_demo_page_screenshot.png</image>
+    </screenshot>
+  </screenshots>
+  <url type="homepage">https://github.com/v-ko/pamet</url>
+  <!-- <update_contact>richard_at_hughsie.com</update_contact> -->
+</component>
