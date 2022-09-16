@@ -2,7 +2,7 @@
 Name=Pamet
 Comment=A program to organize thoughts and notes
 Exec=pamet
-Icon=org.amakak.pamet.png
+Icon=org.amakak.pamet
 Terminal=false
 Type=Application
 StartupWMClass=pamet
