@@ -38,7 +38,7 @@ An app for organizing thoughts and notes.
 ![screenshot](pamet/resources/presentation/pamet_demo.gif)
 
 ## Testing
-There are unit tests for some of the functionality and testing for the actions(=controller) which are not presize but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
+There are unit tests for some of the functionality and testing for the actions(=controller) which are not precise but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
 
 ![screenshot](pamet/resources/presentation/pamet_test_suite_demo.gif)
 
