@@ -6,6 +6,7 @@ from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QApplication, QMessageBox
 import pamet
+from pamet import desktop_app
 from pamet.model.script_note import ScriptNote
 
 python_missing_text = '''
@@ -71,7 +72,7 @@ class ScriptRunner:
                 return
             command = f'bash {command}'
 
-        config = pamet.desktop_app.get_config()
+        config = desktop_app.get_user_settings()
         if note.run_in_terminal:
             if os.name == 'posix':
                 if not shutil.which('bash'):
