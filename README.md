@@ -4,10 +4,14 @@ An app for organizing thoughts and notes.
 **Still in alpha** - you'll probably encounter GUI bugs, but the data storage/saving is stable.
 
 ## Installation
-Currently installation is possible from pypi/pip and via a windows static build ([download it on the releases page](https://github.com/v-ko/pamet/releases/)).
+Currently installation is possible from pypi/pip and via a windows .
 
 ### Via pip
 `pip install pamet` , start with `pamet`
+
+### Windows
+- From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR)
+- By downloading the static build from [the Releases page](https://github.com/v-ko/pamet/releases/)
 
 ### From source
 - Clone the [Fusion](https://github.com/v-ko/fusion) and Pamet repos.
@@ -35,7 +39,7 @@ Currently installation is possible from pypi/pip and via a windows static build 
 ![screenshot](pamet/resources/presentation/pamet_demo.gif)
 
 ## Testing
-There are unit tests for some of the functionality and testing for the actions(=controller) which are not presize but are quite useful for visual verification (+are [quite easy to generate](tests/actions/new_test_HOW_TO.md)).
+There are unit tests for some of the functionality and testing for the actions(=controller) which are not presize but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
 
 ![screenshot](pamet/resources/presentation/pamet_test_suite_demo.gif)
 
