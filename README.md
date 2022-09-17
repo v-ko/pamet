@@ -18,7 +18,6 @@ Currently installation is possible from pypi/pip and via a windows .
 - Run `pip install .` (with the respective repo as current working dir).
     * If you want a development install run `pip install -e .` instead. Install Fusion first (otherwise it'll get pulled from PyPI). Also it would be best to do it in a virtual environment if you want to run the release version in parallel
 
-- A submission in the windows store is pending
 - A Flatpak is in the works but I hit an [issue](https://github.com/flatpak/flatpak/issues/5103) there.
 
 ## Usage
