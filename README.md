@@ -4,12 +4,11 @@ An app for organizing thoughts and notes.
 **Still in alpha** - you'll probably encounter GUI bugs, but the data storage/saving is stable.
 
 ## Installation
-Currently installation is possible from pypi/pip and via a windows .
 
 ### Via pip
 `pip install pamet` , start with `pamet`
 
-### Windows
+### Windows options
 - From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR)
 - By downloading the static build from [the Releases page](https://github.com/v-ko/pamet/releases/)
 
@@ -23,8 +22,9 @@ Currently installation is possible from pypi/pip and via a windows .
 ## Usage
 - Ctrl+shift+P for the command palette
 - Double click to create a new note
+- L to craete an arrow
 - Click to select
-- Long-press to initiate move
+- Long-press and drag to move selected notes/arrows
 - Ctrl or shift to select multiple notes
 - Ctrl+Shift to drag-select multiple notes
 - Drag the lower right corner of a note to resize it
