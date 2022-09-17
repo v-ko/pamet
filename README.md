@@ -9,7 +9,7 @@ An app for organizing thoughts and notes.
 `pip install pamet` , start with `pamet`
 
 ### Windows options
-- From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR)
+- From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR) ()
 - By downloading the static build from [the Releases page](https://github.com/v-ko/pamet/releases/)
 
 ### From source

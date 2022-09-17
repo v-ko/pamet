@@ -133,11 +133,6 @@ class FSStorageBackupService:
                  permanent_backup_age: float = PERMANENT_BACKUP_AGE) -> None:
         self.id = get_new_id()
 
-        # if not backup_folder:
-        #     if not repository or not repository.path:
-        #         raise Exception
-        #     backup_folder = repository.path / '__backups__'
-
         self.backup_folder: Path = Path(backup_folder)
         self.repo = repository
         self.changeset_channel = changeset_channel
@@ -152,9 +147,6 @@ class FSStorageBackupService:
         self._changed_page_ids: set = set()
         self.stop_event = threading.Event()
 
-        if not shutil.which('git'):
-            raise Exception(
-                'The backup service depends on git. Install it please.')
         self.input_channel_sub = None
 
         self.worker_thread = threading.Thread()
