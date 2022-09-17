@@ -16,33 +16,5 @@ __pycache__
 .VSCodeCounter
 .qt_for_python
 
-# Exclude tmp stuff (visual tests ATM)
-tmp_*
-
-react_app
-*/web_shell/brython_stdlib.js
-*/web_shell/brython.js
-
-www
-
-*/web_shell/test
-
-work-log
-brython-work-log
-work-history
-docs
-
-pamet_brython/cordova_app/platforms/
-pamet_brython/cordova_app/plugins/
-pamet_brython/cordova_app/package-lock.json
-pamet_brython/cordova_app/package.json
-pamet/acknowledgements.md
-pamet/pamet/views/note/script/test_cases
-work-log.md
-
-convert_misli_archives
-dev-workflow.md
-release-routine.md
-
 dist
 build
