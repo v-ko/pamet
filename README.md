@@ -18,6 +18,7 @@ Currently installation is possible from pypi/pip and via a windows static build 
 - A Flatpak is in the works but I hit an [issue](https://github.com/flatpak/flatpak/issues/5103) there.
 
 ## Usage
+- Ctrl+shift+P for the command palette
 - Double click to create a new note
 - Click to select
 - Long-press to initiate move
