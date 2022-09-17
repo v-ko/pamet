@@ -1,5 +1,7 @@
 # Pamet
-An app for organizing thoughts and notes
+An app for organizing thoughts and notes.
+
+**Still in alpha** - you'll probably encounter GUI bugs, but the data storage/saving is stable.
 
 ## Installation
 Currently installation is possible from pypi/pip and via a windows static build ([download it on the releases page](https://github.com/v-ko/pamet/releases/)).
@@ -36,5 +38,12 @@ There are unit tests for some of the functionality and testing for the actions(=
 
 ![screenshot](pamet/resources/presentation/pamet_test_suite_demo.gif)
 
-## Development history
-Check some notes on the topic [here](development-history.md)
+## Development state and future
+Check some notes on the [development so far](development-history.md)
+
+Currently the code documentation isn't updated, and typing annotations have to be completed in places.
+
+Next goals in terms of features:
+- Server for page sharing
+- A minimal web app for viewing pages
+- A minimal android app for viewing and limited input
