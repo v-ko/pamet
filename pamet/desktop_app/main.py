@@ -17,6 +17,7 @@ from pamet.desktop_app.util import configure_for_qt
 from pamet.model.page import Page
 
 from pamet.services.backup import AnotherServiceAlreadyRunningException, FSStorageBackupService
+from pamet.services.other_pages_list_update import OtherPagesListUpdateService
 
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
@@ -143,6 +144,8 @@ def main(path: str):
         pamet_channels.entity_change_sets_per_TLA)
     search_service.load_all_content()
     pamet.set_search_service(search_service)
+
+    other_page_list_service = OtherPagesListUpdateService()
 
     if repo_settings.backups_enabled:
         backup_service = FSStorageBackupService(
