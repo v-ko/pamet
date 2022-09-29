@@ -1,8 +1,14 @@
+from copy import copy
 from PySide6.QtWidgets import QApplication
 from fusion.libs.entity import Entity
+from fusion.util.point2d import Point2D
+from pamet.constants import ALIGNMENT_GRID_UNIT
+from pamet.model.card_note import CardNote
+from pamet.util import snap_to_grid
 from pamet.util.url import Url
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
+from pamet.views.note.qt_helpers import minimal_nonelided_size
 
 
 class ClipboardService:
@@ -14,7 +20,7 @@ class ClipboardService:
         if not entities:
             return
 
-        self._internal = entities
+        self._internal = copy(entities)
 
         # The notes will be converted to markdown one fine day
         ext_clipboard_items = []
@@ -60,5 +66,25 @@ class ClipboardService:
                 if Url(section).has_web_schema():
                     note.url = section
                 entities.append(note)
+
+        # Autosize the notes and place them one under the other
+        next_spawn_pos = Point2D(0, 0)
+        for note in entities:
+            rect = note.rect()
+
+            # Autosize
+            if isinstance(note, (TextNote, CardNote, ImageNote)):
+                new_size = minimal_nonelided_size(note)
+                rect.set_size(snap_to_grid(new_size))
+
+            # Move under the last one
+            rect.set_top_left(next_spawn_pos)
+
+            # Update the spawn pos to be one unit under the last note
+            next_spawn_pos = rect.bottom_left()
+            next_spawn_pos += Point2D(0, ALIGNMENT_GRID_UNIT)
+
+            # Insert the note
+            note.set_rect(rect)
 
         return entities
