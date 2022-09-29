@@ -6,7 +6,8 @@ from fusion.util.point2d import Point2D
 from fusion.util.rectangle import Rectangle
 
 import pamet
-from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_AUTOSIZE_WIDTH, MAX_NOTE_WIDTH
+from pamet.constants import ALIGNMENT_GRID_UNIT, DEFAULT_NOTE_HEIGHT
+from pamet.constants import DEFAULT_NOTE_WIDTH, MAX_NOTE_WIDTH
 from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
 from pamet.desktop_app import default_note_font
@@ -17,7 +18,7 @@ from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
 
 
-def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
+def minimal_nonelided_size(note: TextNote | CardNote | ImageNote) -> Point2D:
     """Do a binary search to get the minimal note size"""
     default_note_size = Point2D(DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT)
     note_font = default_note_font()
@@ -29,7 +30,11 @@ def minimal_nonelided_size(note: Union[TextNote, CardNote]) -> Point2D:
         else:
             return default_note_size
 
-    text = note.text
+    if note.url.is_internal():
+        text = str(note.url)
+    else:
+        text = note.text
+
     if not text:
         return default_note_size
 
