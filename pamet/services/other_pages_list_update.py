@@ -119,6 +119,7 @@ class OtherPagesListUpdateService:
                             continue
 
                         self.oplist_notes_by_page_id[entity.page_id] = entity
+                        self.update_oplist(entity.page_id)
                     elif change.is_delete():
                         self.oplist_notes_by_page_id.pop(entity.page_id)
 
