@@ -31,7 +31,11 @@ def minimal_nonelided_size(note: TextNote | CardNote | ImageNote) -> Point2D:
             return default_note_size
 
     if note.url.is_internal():
-        text = str(note.url)
+        internal_page = pamet.page(note.url.get_page_id())
+        if internal_page:
+            text = str(internal_page.name)
+        else:
+            text = '(missing)'  # TODO: This is not DRY
     else:
         text = note.text
 

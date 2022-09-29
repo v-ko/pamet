@@ -49,6 +49,9 @@ class OtherPagesListUpdateService:
 
     @action('update_oplist')
     def update_oplist(self, page_id: str):
+        if page_id not in self.oplist_notes_by_page_id:
+            return
+
         oplist_note = self.oplist_notes_by_page_id[page_id]
 
         # Get all the other notes in the page. Make a set with the ones linking
@@ -73,15 +76,19 @@ class OtherPagesListUpdateService:
         # Find the bottom of the list in order to add the note there
         probe_spawn_pos = spawn_pos
         while probe_spawn_pos and notes_probably_in_list:
+            found_next = False
             for note in notes_probably_in_list:
                 rect = note.rect()
                 if rect.contains(probe_spawn_pos):
                     probe_spawn_pos = (rect.bottom_left() +
                                        Point2D(0, ALIGNMENT_GRID_UNIT))
-                else:
-                    spawn_pos = probe_spawn_pos
-                    probe_spawn_pos = None
+                    found_next = True
                     break
+
+            if not found_next:
+                spawn_pos = probe_spawn_pos
+                probe_spawn_pos = None
+                break
 
         for missing_page_id in missing_links:
             new_note = TextNote.in_page(page_id=page_id)
@@ -92,7 +99,7 @@ class OtherPagesListUpdateService:
             rect.set_top_left(spawn_pos)
 
             # Autosize
-            new_size = minimal_nonelided_size(note)
+            new_size = minimal_nonelided_size(new_note)
             rect.set_size(snap_to_grid(new_size))
 
             # Move to the spawn pos
@@ -105,6 +112,8 @@ class OtherPagesListUpdateService:
             spawn_pos.set_y(rect.bottom() + ALIGNMENT_GRID_UNIT)
 
     def handle_entity_changes(self, change_set: list[Change]):
+        pages_for_update = set()
+
         for change in change_set:
             entity = change.last_state()
 
@@ -119,7 +128,7 @@ class OtherPagesListUpdateService:
                             continue
 
                         self.oplist_notes_by_page_id[entity.page_id] = entity
-                        self.update_oplist(entity.page_id)
+                        pages_for_update.add(entity.page_id)
                     elif change.is_delete():
                         self.oplist_notes_by_page_id.pop(entity.page_id)
 
@@ -129,7 +138,10 @@ class OtherPagesListUpdateService:
                     if ((entity.url.is_internal()) and
                         (change.is_create() or change.is_delete())
                             or (change.is_update() and change.updated.url)):
-                        self.update_oplist(entity.page_id)
+                        pages_for_update.add(entity.page_id)
+
+                for page_id in pages_for_update:
+                    self.update_oplist(page_id)
 
             elif isinstance(entity, Page) and change.is_create():
                 self.update_all_oplists()
