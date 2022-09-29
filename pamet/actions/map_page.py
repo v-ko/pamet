@@ -758,13 +758,13 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
 
         # Check for tail and head notes - if not present - don't copy the arrow
         if arrow.has_head_anchor():
-            if arrow.head_note_id not in (note.id for note in copied_notes):
+            if arrow.head_note_id not in (note.own_id for note in copied_notes):
                 continue
         else:  # If it's a fixed pos - translate it relative to relative_to
             arrow.set_head(fixed_pos=arrow.head_point - relative_to)
 
         if arrow.has_tail_anchor():
-            if arrow.tail_note_id not in (note.id for note in copied_notes):
+            if arrow.tail_note_id not in (note.own_id for note in copied_notes):
                 continue
         else:
             arrow.set_tail(fixed_pos=arrow.tail_point - relative_to)
@@ -795,9 +795,10 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
         # Set the proper page id and ensure that there's no conflicting ids
         new_page_id = page.id
         new_own_id = note.own_id
-        if pamet.find(gid=note.gid()):
+        # If there's a note with the same own_id in the page - create a new one
+        if pamet.find(gid=(new_page_id, note.own_id)):
             new_own_id = get_entity_id()
-            updated_ids[note.id] = new_own_id
+            updated_ids[note.own_id] = new_own_id
         note = note.with_id(page_id=new_page_id, own_id=new_own_id)
         pamet.insert_note(note)
 
@@ -852,22 +853,13 @@ def paste_special(map_page_view_state: MapPageViewState,
                   relative_to: Point2D = None):
     entities = pamet.clipboard.convert_external()
 
-    next_spawn_pos = relative_to or map_page_view_state.center()
+    relative_to = relative_to or map_page_view_state.center()
     for note in entities:
         note = note.with_id(page_id=map_page_view_state.page_id)
         rect = note.rect()
 
-        # Autosize
-        if isinstance(note, (TextNote, CardNote, ImageNote)):
-            new_size = minimal_nonelided_size(note)
-            rect.set_size(snap_to_grid(new_size))
-
-        # Move under the last one
-        rect.set_top_left(next_spawn_pos)
-
-        # Update the spawn pos to be one unit under the last note
-        next_spawn_pos = rect.bottom_left()
-        next_spawn_pos += Point2D(0, ALIGNMENT_GRID_UNIT)
+        # Move the notes relative to the disired point
+        rect.set_top_left(snap_to_grid(rect.top_left() + relative_to))
 
         # Insert the note
         note.set_rect(rect)
