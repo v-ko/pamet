@@ -270,11 +270,6 @@ class MapPageView(View):
                                                     anchor_note_id=note_id,
                                                     anchor_type=anchor_type)
 
-        elif mode == MapPageMode.NONE:
-            note_view = self.get_note_view_at(mouse_pos)
-            if note_view and control_is_pressed():
-                note_view.middle_click_event(mouse_pos)
-
     def _new_note_size_on_resize(self, new_mouse_pos: Point2D) -> Point2D:
         mouse_delta = new_mouse_pos - self.state().note_resize_click_position
         size_delta = mouse_delta - self.state(
