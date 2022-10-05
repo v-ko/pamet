@@ -277,7 +277,7 @@ def moved_child_view_update(map_page_view_state: MapPageViewState,
     moved_note_ids = []
     for note_state in map_page_view_state.moved_note_states:
         note = note_state.get_note()
-        moved_note_ids.append(note.id)
+        moved_note_ids.append(note.own_id)
         rect = note.rect()
         rect.set_top_left(snap_to_grid(rect.top_left() + delta))
         note_state.set_rect(rect)
@@ -307,7 +307,7 @@ def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
     moved_note_ids = []
     for note_state in map_page_view_state.moved_note_states:
         note = note_state.get_note()
-        moved_note_ids.append(note.id)
+        moved_note_ids.append(note.own_id)
         note.x = snap_to_grid(note.x + delta.x())
         note.y = snap_to_grid(note.y + delta.y())
         pamet.update_note(note)
