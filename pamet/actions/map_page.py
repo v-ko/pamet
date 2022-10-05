@@ -709,7 +709,7 @@ def undo(map_page_view_state: MapPageViewState):
 
 @action('map_page.redo')
 def redo(map_page_view_state: MapPageViewState):
-    page = pamet.page(map_page_view_state)
+    page = pamet.page(map_page_view_state.page_id)
     pamet.undo_service().forward_one_step(page.id)
 
 
