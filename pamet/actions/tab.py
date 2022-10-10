@@ -6,7 +6,7 @@ from fusion.util import Point2D
 from fusion.logging import get_logger
 
 import pamet
-from pamet.constants import MAX_NAVIGATION_HISTORY
+from pamet.constants import DEFAULT_EYE_HEIGHT, MAX_NAVIGATION_HISTORY
 from pamet.model.note import Note
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
@@ -22,9 +22,7 @@ log = get_logger(__name__)
 
 
 @action('create_and_set_page')
-def create_and_set_page_view(tab_state: TabViewState, url: str):
-    parsed_url = Url(url)
-    page = pamet.page(parsed_url.get_page_id())
+def get_or_create_page_view(tab_state: TabViewState, page: Page):
     if not page:
         raise Exception('No page at the given URL')
 
@@ -51,10 +49,17 @@ def create_and_set_page_view(tab_state: TabViewState, url: str):
             fsm.add_state(arrow_view_state)
         fsm.update_state(page_view_state)
 
-    # Set the page state in the tab state (and cache it)
-    tab_state.page_view_state = page_view_state
     tab_state.add_page_state_to_cache(page_view_state)
-    tab_state.title = page.name
+    fsm.update_state(tab_state)
+
+    return page_view_state
+
+
+def set_page_view_state(tab_state: TabViewState,
+                        page_view_state: MapPageViewState):
+
+    tab_state.page_view_state = page_view_state
+    tab_state.title = pamet.page(page_view_state.page_id).name
     fsm.update_state(tab_state)
 
 
@@ -72,19 +77,21 @@ def update_current_url(tab_state: TabViewState):
 def go_to_url(tab_state: TabViewState,
               url: str,
               update_nav_history: bool = True):
-    # Close any note or page edit windows
-    if tab_state.note_edit_view_state:
-        note_actions.abort_editing_note(tab_state)
-    if tab_state.page_edit_view_state:
-        close_page_properties(tab_state)
-
-    create_and_set_page_view(tab_state, url)
 
     parsed_url = Url(url)
-    page_state = tab_state.page_view_state
+    page = pamet.page(parsed_url.get_page_id())
+
+    if not page:
+        tab_state.page_view_state = None
+        fsm.update_state(tab_state)
+        return
+
+    page_state = get_or_create_page_view(tab_state, page)
 
     # Apply the anchor if any
     anchor = parsed_url.get_anchor()
+    height = DEFAULT_EYE_HEIGHT
+    center = Point2D()
     if anchor:
         height = page_state.viewport_height
         if isinstance(anchor, Note):
@@ -99,8 +106,20 @@ def go_to_url(tab_state: TabViewState,
         else:
             raise Exception
 
+    # Close any note or page edit windows
+    if tab_state.note_edit_view_state:
+        note_actions.abort_editing_note(tab_state)
+    if tab_state.page_edit_view_state:
+        close_page_properties(tab_state)
+
+    page_state = get_or_create_page_view(tab_state, page)
+    set_page_view_state(tab_state, page_state)
+
+    if height:
         page_state.viewport_height = height
+    if center:
         page_state.viewport_center = center
+    if height or center:
         fsm.update_state(page_state)
 
     if not update_nav_history:
@@ -115,7 +134,7 @@ def go_to_url(tab_state: TabViewState,
         old_url = Url(nav_history[-1])
         last_page_id = old_url.get_page_id()
 
-    if last_page_id != parsed_url.get_page_id():
+    if last_page_id != page.id:
         # Append the url to the nav history
         nav_history.append(str(page_state.page_url()))
 

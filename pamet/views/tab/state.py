@@ -42,6 +42,8 @@ class TabViewState(ViewState):
         return bool(self.left_sidebar_state)
 
     def add_page_state_to_cache(self, page_state: MapPageViewState):
+        if page_state.id in self.page_state_cache:
+            return
         self.page_state_cache[page_state.page_id] = page_state
 
     def page_state_from_cache(self, page_id: str) -> MapPageViewState:

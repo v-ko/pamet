@@ -8,7 +8,6 @@ import pamet
 
 from fusion.util import Point2D, Rectangle
 from fusion.libs.action import action
-from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.util import snap_to_grid
 from pamet.util.url import Url
 from pamet.model.page import Page
@@ -333,10 +332,13 @@ def finish_child_move(map_page_view_state: MapPageViewState, delta: Point2D):
     fsm.update_state(map_page_view_state)
 
 
-@action('map_page.select_all_notes')
-def select_all_notes(map_page_view_state: MapPageViewState):
+@action('map_page.select_all_children')
+def select_all_children(map_page_view_state: MapPageViewState):
     for note_vs in map_page_view_state.note_view_states:
         map_page_view_state.selected_children.add(note_vs)
+
+    for arrow_vs in map_page_view_state.arrow_view_states:
+        map_page_view_state.selected_children.add(arrow_vs)
 
     fsm.update_state(map_page_view_state)
 
