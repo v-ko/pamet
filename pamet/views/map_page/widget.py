@@ -20,7 +20,6 @@ from pamet.constants import ALIGNMENT_LINE_LENGTH, RESIZE_CIRCLE_RADIUS
 from pamet.constants import LONG_PRESS_TIMEOUT
 
 import pamet
-from pamet import actions
 from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
 from pamet.desktop_app.util import control_is_pressed
@@ -85,35 +84,35 @@ class MapPageWidget(QWidget, MapPageView):
 
         color_notes_blue = QShortcut(QKeySequence('1'), self)
         color_notes_blue.activated.connect(
-            lambda: actions.map_page.color_selected_children(
+            lambda: map_page_actions.color_selected_children(
                 self.state(),
                 color=[0, 0, 1, 1],
                 background_color=[0, 0, 1, 0.1]))
         color_notes_green = QShortcut(QKeySequence('2'), self)
         color_notes_green.activated.connect(
-            lambda: actions.map_page.color_selected_children(
+            lambda: map_page_actions.color_selected_children(
                 self.state(),
                 color=[0, 0.64, 0.235, 1],
                 background_color=[0, 1, 0, 0.1]))
         color_notes_red = QShortcut(QKeySequence('3'), self)
         color_notes_red.activated.connect(
-            lambda: actions.map_page.color_selected_children(
+            lambda: map_page_actions.color_selected_children(
                 self.state(),
                 color=[1, 0, 0, 1],
                 background_color=[1, 0, 0, 0.1]))
         color_notes_gray = QShortcut(QKeySequence('4'), self)
         color_notes_gray.activated.connect(
-            lambda: actions.map_page.color_selected_children(
+            lambda: map_page_actions.color_selected_children(
                 self.state(),
                 color=[0, 0, 0, 1],
                 background_color=[0, 0, 0, 0.1]))
         remove_note_background = QShortcut(QKeySequence('5'), self)
         remove_note_background.activated.connect(
-            lambda: actions.map_page.color_selected_children(
+            lambda: map_page_actions.color_selected_children(
                 self.state(), background_color=[0, 0, 0, 0]))
         select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_A), self)
         select_all_shortcut.activated.connect(
-            lambda: actions.map_page.select_all_notes(self.state()))
+            lambda: map_page_actions.select_all_children(self.state()))
         QShortcut(QKeySequence(Qt.Key_E), self, commands.edit_selected_notes)
         QShortcut(QKeySequence(Qt.CTRL + Qt.Key_E), self,
                   commands.open_page_properties)

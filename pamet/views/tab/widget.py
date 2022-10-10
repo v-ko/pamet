@@ -1,5 +1,5 @@
 from PySide6.QtGui import QShortcut, QKeySequence
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QLabel, QWidget
 from PySide6.QtCore import Qt
 
 import fusion
@@ -60,10 +60,12 @@ class TabWidget(QWidget, View):
         self.ui.commandLineEdit.hide()
         self.ui.leftSidebarContainer.hide()
 
+        self.page_not_found_label = QLabel('Page missing.', self)
+
         # The state should be managed by the window
         bind_and_apply_state(self,
-                                        initial_state,
-                                        on_state_change=self.on_state_change)
+                             initial_state,
+                             on_state_change=self.on_state_change)
 
     def page_view(self) -> MapPageViewState:
         return self._page_view
@@ -151,24 +153,25 @@ class TabWidget(QWidget, View):
         """
         if self._page_view:
             self.ui.centralContainer.layout().removeWidget(self._page_view)
+            if isinstance(self._page_view, MapPageWidget):
+                self.add_page_wideget_to_cache(self._page_view)
 
-            self.add_page_wideget_to_cache(self._page_view)
             self._page_view.hide()
 
         if not page_view_state:
-            return
-
-        page_widget = self.cached_page_widget(page_view_state.view_id)
-        if not page_widget:
-            page_widget = MapPageWidget(parent=self,
-                                        initial_state=page_view_state)
-
+            page_widget = self.page_not_found_label
+        else:
+            page_widget = self.cached_page_widget(page_view_state.view_id)
+            if not page_widget:
+                page_widget = MapPageWidget(parent=self,
+                                            initial_state=page_view_state)
         self._page_view = page_widget
-        self.ui.centralContainer.layout().addWidget(page_widget)
+
+        self.ui.centralContainer.layout().addWidget(self._page_view)
         self._page_view.show()
 
         # Must be visible to accept focus, so queue on the main loop
-        fusion.call_delayed(page_widget.setFocus)
+        fusion.call_delayed(self._page_view.setFocus)
 
     def create_new_note_command(self):
         page_widget = self.page_view()
