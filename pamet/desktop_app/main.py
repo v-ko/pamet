@@ -5,7 +5,9 @@ from PySide6.QtWidgets import QMessageBox
 import click
 
 import fusion
-# from fusion.gui import channels as misli_channels
+from fusion.libs.action import actions_log_channel
+from fusion.libs.action.action_call import ActionCall, ActionRunStates
+from fusion.logging import LOGGING_LEVEL, LoggingLevels
 from pamet import channels as pamet_channels
 
 import pamet
@@ -146,6 +148,19 @@ def main(path: str):
     pamet.set_search_service(search_service)
 
     other_page_list_service = OtherPagesListUpdateService()
+
+    # Setup exception reporting for failed actions
+    if LOGGING_LEVEL != LoggingLevels.DEBUG:
+
+        def show_exception_for_failed_action(action_call: ActionCall):
+            if action_call.run_state != ActionRunStates.FAILED:
+                return
+            QMessageBox.critical(
+                app.activeWindow(),
+                f'Exception raised during action "{action_call.name}"',
+                action_call.error)
+
+        actions_log_channel.subscribe(show_exception_for_failed_action)
 
     if repo_settings.backups_enabled:
         backup_service = FSStorageBackupService(
