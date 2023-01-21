@@ -8,15 +8,17 @@ import shutil
 from PIL import Image
 
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, QImage, QImageReader, QPainter
-from PySide6.QtCore import QBuffer, QByteArray, QIODevice, Qt, QRectF, QRect
+from PySide6.QtGui import QFont, QGuiApplication, QFontMetrics, QImage
+from PySide6.QtGui import QImageReader, QPainter
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, Qt
+from PySide6.QtCore import QRectF, QRect
 
 from fusion.util.rectangle import Rectangle
 from fusion.logging import get_logger
 
 import pamet
-from pamet.util import resource_dir
 from pamet.constants import NO_SCALE_LINE_SPACING
+from pamet.util import resource_dir
 
 log = get_logger(__name__)
 
@@ -256,21 +258,3 @@ def jpeg_blob_from_image(image: QImage, quality: int = 100) -> bytes:
         raise Exception('Could not save image to buffer')
 
     return blob
-
-
-# def get_scripts_permission():
-#     # Warn of the risks from scripts
-#     warning_text = '''!!!WARNING!!!
-
-#     Executings scripts may harm your system. Do not run code that you do
-#     not understand or trust the authors of.
-
-#     Do you know what you're doing?
-#     '''
-#     if not config.accepted_script_risks:
-#         reply = QMessageBox.question(
-#             self, 'Scripts warning', warning_text)
-#         if reply == QMessageBox.StandardButton.Yes:
-#             config.accepted_script_risks = True
-#             save_config(config)
-#         else:

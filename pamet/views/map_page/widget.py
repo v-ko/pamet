@@ -22,6 +22,7 @@ from pamet.constants import LONG_PRESS_TIMEOUT
 import pamet
 from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
+from pamet.desktop_app.mime_data_utils import entities_from_mime_data
 from pamet.desktop_app.util import control_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
@@ -163,6 +164,25 @@ class MapPageWidget(QWidget, MapPageView):
         bind_and_apply_state(self,
                              initial_state,
                              on_state_change=self.on_state_change)
+
+    def dragEnterEvent(self, event):
+        mime_data = event.mimeData()
+        if mime_data.hasUrls() or mime_data.hasImage() or mime_data.hasText():
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        mime_data = event.mimeData()
+        entities = entities_from_mime_data(mime_data)
+
+        q_mouse_pos = self.mapFromGlobal(QCursor.pos())
+        mouse_pos = Point2D(q_mouse_pos.x(), q_mouse_pos.y())
+        
+        map_page_state = self.state()
+        unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
+        map_page_actions.insert_entities_relative_to(map_page_state, entities,
+                                                     unproj_mouse_pos)
 
     def handle_page_change(self, change: Change):
         if change.updated.name:

@@ -1,5 +1,4 @@
 from copy import copy
-from typing import Union
 from PySide6.QtCore import QPointF, QRectF, QSizeF, Qt
 from PySide6.QtGui import QPainter, QPainterPath, QPalette, QPolygon
 from fusion.util.point2d import Point2D
@@ -12,7 +11,6 @@ from pamet.constants import MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH
 from pamet.constants import PREFERRED_TEXT_NOTE_ASPECT_RATIO
 from pamet.desktop_app import default_note_font
 from pamet.desktop_app.util import TextLayout, elide_text
-from pamet.util.url import Url
 from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
@@ -112,7 +110,7 @@ def draw_link_decorations(note_widget, painter: QPainter):
 
     # Draw the link decorations
     pen = painter.pen()
-    url: Url = state.url
+    url: pamet.util.url.Url = state.url
 
     internal_border_rect = QRectF(note_widget.rect())
     internal_border_rect.setSize(internal_border_rect.size() - QSizeF(1, 1))

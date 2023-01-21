@@ -850,11 +850,10 @@ def cut_selected_children(map_page_view_state: MapPageViewState,
     delete_selected_children(map_page_view_state)
 
 
-@action('map_page.paste_special')
-def paste_special(map_page_view_state: MapPageViewState,
-                  relative_to: Point2D = None):
-    entities = pamet.clipboard.convert_external()
-
+@action('map_page.insert_entities_relative_to')
+def insert_entities_relative_to(map_page_view_state: MapPageViewState,
+                                entities: List[Entity],
+                                relative_to: Point2D = None):
     relative_to = relative_to or map_page_view_state.center()
     for note in entities:
         note = note.with_id(page_id=map_page_view_state.page_id)
@@ -866,3 +865,10 @@ def paste_special(map_page_view_state: MapPageViewState,
         # Insert the note
         note.set_rect(rect)
         pamet.insert_note(note)
+
+
+@action('map_page.paste_special')
+def paste_special(map_page_view_state: MapPageViewState,
+                  relative_to: Point2D = None):
+    entities = pamet.clipboard.convert_external()
+    insert_entities_relative_to(map_page_view_state, entities, relative_to)
