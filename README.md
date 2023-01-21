@@ -1,16 +1,18 @@
 # Pamet
-An app for organizing thoughts and notes.
+An infinite canvas for organizing information with text/images/links. Written using Qt for Python.
 
-**Still in alpha** - you'll probably encounter GUI bugs, but the data storage/saving is stable.
+⚠ **Still in alpha** ⚠ - you'll probably encounter GUI bugs, but the data storage/saving is stable.
 
 ## Installation
 
-### Via pip
-`pip install pamet` , start with `pamet`
-
 ### Windows options
-- From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR) ()
+- From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR)
 - By downloading the static build from [the Releases page](https://github.com/v-ko/pamet/releases/)
+
+### Via pip
+Requires Python `>3.10`. If it's not available for your package manager(/app store) - you can use [pyenv](https://github.com/pyenv/pyenv).
+
+`pip install pamet` , start with `pamet`
 
 ### From source
 - Clone the [Fusion](https://github.com/v-ko/fusion) and Pamet repos.
