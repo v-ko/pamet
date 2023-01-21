@@ -1,9 +1,11 @@
 import traceback
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 import fusion
 from fusion.logging import LoggingLevels, LOGGING_LEVEL
 import pamet
+from pamet.views.selector_widget import SelectorWidget
 
 log = fusion.get_logger(__name__)
 
@@ -26,6 +28,8 @@ class DesktopApp(QApplication):
         # a message box from a command
         self.message_box = QMessageBox()
 
+        # Selector widget for grabbing screen snipptes
+        self.selector_widget = SelectorWidget()
 
     def hacky_present_modal(self, dialog):
         # Otherwise the app crashes when showing the dialog from a command

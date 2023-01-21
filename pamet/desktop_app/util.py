@@ -1,24 +1,22 @@
 from __future__ import annotations
-from importlib import resources
+import hashlib
+import io
 from typing import List, Tuple
 from pathlib import Path
 import shutil
 
+from PIL import Image
+
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, QPainter
-from PySide6.QtCore import Qt, QRectF, QRect
+from PySide6.QtGui import QFont, QFontDatabase, QGuiApplication, QFontMetrics, QImage, QImageReader, QPainter
+from PySide6.QtCore import QBuffer, QByteArray, QIODevice, Qt, QRectF, QRect
 
 from fusion.util.rectangle import Rectangle
-from fusion.extensions_loader import ExtensionsLoader
-from fusion.platform.qt_widgets import configure_for_qt as fusion_config_qt
 from fusion.logging import get_logger
 
 import pamet
-from pamet.util import resource_dir, resource_path
+from pamet.util import resource_dir
 from pamet.constants import NO_SCALE_LINE_SPACING
-from pamet import desktop_app
-from pamet.desktop_app.config import UserDesktopSettings, pamet_data_folder_path
-from pamet.services.media_store import MediaStore
 
 log = get_logger(__name__)
 
@@ -201,33 +199,63 @@ def copy_script_templates(overwrite: bool = False):
         shutil.copy(source_file, target_path)
 
 
-def configure_for_qt(app):
-    global _media_store, _default_note_font
+def convert_image_with_pil(image_data: bytes):
+    bytes_io = io.BytesIO(image_data)
+    img_byte_arr = io.BytesIO()
 
-    log.info(f'Using data folder: {pamet_data_folder_path}')
-    desktop_app.set_app(app)
-    fusion_config_qt(app)
+    try:  # Probe if Pillow can handle the image
+        pil_image = Image.open(bytes_io)  #@IgnoreException
+        pil_image.save(img_byte_arr, 'png')
+    except Exception as e:
+        raise Exception(f'Could not read image with PIL: "{e}"')
 
-    config: UserDesktopSettings = desktop_app.get_user_settings()
-    if config.changes_present():
-        desktop_app.save_user_settings(config)
+    return img_byte_arr.read()
 
-    copy_script_templates()
 
-    desktop_app.set_media_store(MediaStore(config.media_store_path))
-    desktop_app.icons.load_all()
+def get_image_and_md5_from_bytearray(
+        bytearray: QByteArray) -> Tuple[QImage, str]:
+    if not isinstance(bytearray, QByteArray) or bytearray.isEmpty():
+        raise Exception('Bytearray is wrong type or empty')
 
-    _font_id = QFontDatabase.addApplicationFont(
-        str(resource_path('fonts/OpenSans-VariableFont_wdth,wght.ttf')))
-    _font_family = QFontDatabase.applicationFontFamilies(_font_id)[0]
-    _default_note_font = QFont(_font_family)
-    _default_note_font.setPointSizeF(14)
-    desktop_app.set_default_note_font(_default_note_font)
+    # create buffer
+    image_data = bytearray.data()
+    buffer = QBuffer(bytearray)
+    image_reader = QImageReader(buffer)
 
-    views_dir = resources.files('pamet') / 'views'
-    pamet_root = views_dir.parent
-    views_loader = ExtensionsLoader(pamet_root)
-    views_loader.load_all_recursively(views_dir)
+    # If Qt doesn't support the format (e.g. WebP)
+    # try to convert it with Pillow to PNG
+    if image_reader.format() not in \
+            image_reader.supportedImageFormats():
+
+        image_data = convert_image_with_pil(image_data)
+        if not image_data:
+            return QImage(), None
+        buffer = QBuffer(QByteArray(image_data))
+        image_reader = QImageReader(buffer)
+
+    image = image_reader.read()
+    if image.isNull():
+        raise Exception(
+            f'Could not load image. Error: {image_reader.errorString()}')
+
+    # get md5
+    md5sum = hashlib.md5(image_data).hexdigest()
+
+    return image, md5sum
+
+
+def jpeg_blob_from_image(image: QImage, quality: int = 100) -> bytes:
+    if image.isNull():
+        raise Exception('Image is null')
+
+    blob = QByteArray()
+    buffer = QBuffer(blob)
+    buffer.open(QIODevice.WriteOnly)
+    ok = image.save(buffer, 'jpg', quality)
+    if not ok:
+        raise Exception('Could not save image to buffer')
+
+    return blob
 
 
 # def get_scripts_permission():

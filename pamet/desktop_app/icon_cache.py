@@ -1,5 +1,5 @@
 from PySide6.QtGui import QIcon
-from pamet.desktop_app.util import resource_path
+from pamet.util import resource_path
 
 
 class PametQtWidgetsCachedIcons:

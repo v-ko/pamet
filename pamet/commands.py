@@ -1,9 +1,9 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Tuple
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QTimer, QUrl
 from PySide6.QtGui import QCursor, QDesktopServices
-from PySide6.QtWidgets import QFileDialog, QMessageBox, QWidget
+from PySide6.QtWidgets import QFileDialog
 
 import fusion
 from fusion.util.point2d import Point2D
@@ -16,8 +16,10 @@ from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 
-from pamet.desktop_app.util import resource_path, current_window, current_tab
+from pamet.desktop_app.util import current_window, current_tab
+from pamet.util import resource_path
 from pamet.views.note.base.state import NoteViewState
+from pamet.views.note.image.widget import ImageNoteWidget
 
 log = fusion.get_logger(__name__)
 
@@ -246,3 +248,10 @@ def export_as_web_page():
             return
         path = Path(path)
         path.write_text(page_str)
+
+    QTimer.singleShot(0, hackily_ask_for_path_and_save_file)
+
+
+@command(title='Grab screen snippet')
+def grab_screen_snippet():
+    desktop_app.get_app().selector_widget.showFullScreen()

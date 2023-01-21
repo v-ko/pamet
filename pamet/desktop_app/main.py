@@ -15,7 +15,7 @@ from pamet import desktop_app
 from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.util import configure_for_qt
+from pamet.desktop_app.init_config import configure_for_qt
 from pamet.model.page import Page
 
 from pamet.services.backup import AnotherServiceAlreadyRunningException, FSStorageBackupService

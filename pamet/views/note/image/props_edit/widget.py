@@ -1,13 +1,11 @@
-import hashlib
-import io
 from pathlib import Path
-from PIL import Image
 
-from PySide6.QtCore import QBuffer, QByteArray, QIODevice, QUrl, Qt
-from PySide6.QtGui import QImage, QImageReader, QPixmap, QResizeEvent
+from PySide6.QtCore import QByteArray, QUrl, Qt
+from PySide6.QtGui import QImage, QPixmap, QResizeEvent
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QFileDialog, QWidget
 from fusion.util.point2d import Point2D
+from pamet.desktop_app.util import get_image_and_md5_from_bytearray
 
 from pamet.util.url import Url
 from pamet.desktop_app import media_store
@@ -90,20 +88,6 @@ class ImagePropsWidget(QWidget):
                 image=self._image_preview)
         return super().resizeEvent(event)
 
-    def convert_image_with_pil(self, image_data: bytes):
-        bytes_io = io.BytesIO(image_data)
-        img_byte_arr = io.BytesIO()
-
-        try:  # Probe if Pillow can handle the image
-            pil_image = Image.open(bytes_io)  #@IgnoreException
-            pil_image.save(img_byte_arr, 'png')
-        except Exception:
-            self.update_image_note_and_preview(
-                error=('Could not read image with PIL.'))
-            return
-
-        return img_byte_arr.read()
-
     def update_image_note_and_preview(self,
                                       local_image_url: Url = None,
                                       image: QImage = None,
@@ -154,29 +138,15 @@ class ImagePropsWidget(QWidget):
             with open(url_path, 'rb') as image_file:
                 image_data = image_file.read()
 
-            # create buffer
-            qbytearr = QByteArray(image_data)
-            buffer = QBuffer(qbytearr)
-            image_reader = QImageReader(buffer)
-
-            # If Qt doesn't support the format (e.g. WebP)
-            # try to convert it with Pillow to PNG
-            if image_reader.format() not in \
-                    image_reader.supportedImageFormats():
-
-                image_data = self.convert_image_with_pil(image_data)
-                bytearr = QByteArray(image_data)
-                buffer = QBuffer(bytearr)
-                image_reader = QImageReader(buffer)
-
-            image = image_reader.read()
-            if image.isNull():
+            # Convert to QImage
+            try:
+                image, md5sum = get_image_and_md5_from_bytearray(
+                    QByteArray(image_data))
+            except Exception as e:
                 self.update_image_note_and_preview(
-                    error='Could not load image')
+                    error=f'Could not load image: {e}')
                 return
 
-            # get md5
-            md5sum = hashlib.md5(image_data).hexdigest()
             self.update_image_note_and_preview(local_image_url=url.path,
                                                image=image,
                                                md5sum=md5sum)
@@ -216,26 +186,12 @@ class ImagePropsWidget(QWidget):
                         'Download complete, but no image data to read.'))
                     return
 
-                buffer = QBuffer(image_qbytearray)
-                image_reader = QImageReader(buffer)
-                img_format = image_reader.format().data().decode('utf-8')
-
-                # If Qt doesn't support the format (e.g. WebP)
-                # try to convert it with Pillow to PNG
-                if image_reader.format() not in \
-                        image_reader.supportedImageFormats():
-
-                    image_data = self.convert_image_with_pil(image_data)
-                    if not image_data:
-                        return
-                    buffer = QBuffer(QByteArray(image_data))
-                    image_reader = QImageReader(buffer)
-
-                image = image_reader.read()
-                if image.isNull():
+                try:
+                    image, md5sum = get_image_and_md5_from_bytearray(
+                        image_qbytearray)
+                except Exception as e:
                     self.update_image_note_and_preview(
-                        error=(f'Could not read image. Error:'
-                               f' {image_reader.errorString()}'))
+                        error=f'Could not read image. Error: {e}')
                     return
 
                 # Check image size in bytes and scale down if needed
@@ -246,30 +202,13 @@ class ImagePropsWidget(QWidget):
                                          MAX_IMAGE_SIZE_EDGE,
                                          Qt.KeepAspectRatio)
 
-                # Get format and if it's ok - save
-                if not img_format:
+                try:
+                    local_url = media_store().save_image(
+                        image, 'jpg', self.edit_widget.state().page_id, url)
+                except Exception as e:
                     self.update_image_note_and_preview(
-                        error=f'Bad image format: "{img_format}"')
-                    return
-
-                blob = QByteArray()
-                buffer = QBuffer(blob)
-                buffer.open(QIODevice.WriteOnly)
-                ok = image.save(buffer, img_format)
-                if not ok:
-                    self.update_image_note_and_preview(
-                        error='Could not save image to buffer')
-                    return
-
-                local_url = media_store().save_blob(
-                    self.edit_widget.state().page_id, blob, img_format, url)
-                if not local_url:
-                    self.update_image_note_and_preview(
-                        error='Could not save image locally.')
+                        error=f'Could not save image to media store: {e}')
                 else:
-                    self.update_image_note_and_preview(
-                        error='Calculating md5sum.')
-                    md5sum = hashlib.md5(image_data).hexdigest()
 
                     self.update_image_note_and_preview(
                         local_image_url=local_url, image=image, md5sum=md5sum)

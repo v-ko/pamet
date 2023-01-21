@@ -132,6 +132,7 @@ class MapPageWidget(QWidget, MapPageView):
         QShortcut(QKeySequence('ctrl+V'), self, commands.paste)
         QShortcut(QKeySequence('ctrl+X'), self, commands.cut)
         QShortcut(QKeySequence('ctrl+shift+V'), self, commands.paste_special)
+        QShortcut(QKeySequence('ctrl+Q'), self, commands.grab_screen_snippet)
 
         # Widget config
         pal = self.palette()

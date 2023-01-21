@@ -1,11 +1,12 @@
 from pathlib import Path
 from typing import Union
 
+from PySide6.QtGui import QImage
+
 from fusion.util import get_new_id
 
-import pamet
+from pamet.desktop_app.util import jpeg_blob_from_image
 from pamet.util.url import Url
-from pamet.model.page import Page
 from slugify import slugify
 
 
@@ -20,14 +21,14 @@ class MediaStore:
         if not uri.is_internal():
             raise Exception('The given URI is not internal')
 
-        page = pamet.page(uri.get_page_id())
+        cache_subfolder_name = uri.get_page_id()
         media_id = uri.get_media_id()
-        return self.media_root / page.id / media_id
+        return self.media_root / cache_subfolder_name / media_id
 
     def save_blob(self,
-                  page_id: str,
                   blob: bytes,
-                  format: str,
+                  format: str = '',
+                  cache_subfolder_name: str = '__common__',
                   source_uri: Union[Url, str] = None) -> Url:
         """Saves the given blob to a file in the media store.
 
@@ -47,7 +48,7 @@ class MediaStore:
         file_name = f'{source_slug}[{get_new_id()}]'
         if format:
             file_name += f'.{format}'
-        file_path = self.media_root / page_id
+        file_path = self.media_root / cache_subfolder_name
         file_path.mkdir(parents=True, exist_ok=True)
         file_path = file_path / file_name
 
@@ -59,4 +60,15 @@ class MediaStore:
         if not bytes_written:
             return None
 
-        return Url(f'pamet:///p/{page_id}/media/{file_name}')
+        return Url(f'pamet:///p/{cache_subfolder_name}/media/{file_name}')
+
+    def save_image(self,
+                   image: QImage,
+                   format: str = 'jpg',
+                   cache_subfolder_name: str = '__images__',
+                   source_uri: Union[Url, str] = None) -> Url:
+        if image.isNull():
+            raise Exception('The given image is null')
+
+        blob = jpeg_blob_from_image(image)
+        return self.save_blob(blob, format, cache_subfolder_name, source_uri)
