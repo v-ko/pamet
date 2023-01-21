@@ -1,4 +1,3 @@
-from jinja2 import is_undefined
 from fusion.libs.action import action
 from fusion.libs.entity.change import Change
 from fusion.util.point2d import Point2D
@@ -22,37 +21,38 @@ DUPLICATE_LIST_NOTE_WARNING = 'Only one OtherPageList note allowed per page.'
 class OtherPagesListUpdateService:
 
     def __init__(self) -> None:
+        self.OPL_notes_by_page_id = {}
+
+    def start(self):
         channels.entity_change_sets_per_TLA.subscribe(
             self.handle_entity_changes)
 
-        self.oplist_notes_by_page_id = {}
-
         # Create the oplist cache
         for note in pamet.find(type=OtherPageListNote):
-            if note.page_id in self.oplist_notes_by_page_id:
-                self.swap_duplicate_oplist_note_for_warning(note)
+            if note.page_id in self.OPL_notes_by_page_id:
+                self.swap_duplicate_OPLNote_for_warning(note)
                 continue
-            self.oplist_notes_by_page_id[note.page_id] = note
+            self.OPL_notes_by_page_id[note.page_id] = note
 
         self.update_all_oplists()
 
     @action('swap_duplicate_oplist_note_for_warning')
-    def swap_duplicate_oplist_note_for_warning(self, note: OtherPageListNote):
+    def swap_duplicate_OPLNote_for_warning(self, note: OtherPageListNote):
         note = TextNote().with_id(note.id)
         note.text = DUPLICATE_LIST_NOTE_WARNING
         pamet.update_note(note)
 
     @action('update_all_oplists')
     def update_all_oplists(self):
-        for page_id in self.oplist_notes_by_page_id:
+        for page_id in self.OPL_notes_by_page_id:
             self.update_oplist(page_id)
 
     @action('update_oplist')
     def update_oplist(self, page_id: str):
-        if page_id not in self.oplist_notes_by_page_id:
+        if page_id not in self.OPL_notes_by_page_id:
             return
 
-        oplist_note = self.oplist_notes_by_page_id[page_id]
+        oplist_note = self.OPL_notes_by_page_id[page_id]
 
         # Get all the other notes in the page. Make a set with the ones linking
         # to internal pages and fill in the OPList to hold links to all pages
@@ -123,18 +123,18 @@ class OtherPagesListUpdateService:
                     if change.is_create():
                         # If there's already an OPList note in that page -
                         # disable it
-                        if entity.page_id in self.oplist_notes_by_page_id:
-                            self.swap_duplicate_oplist_note_for_warning(entity)
+                        if entity.page_id in self.OPL_notes_by_page_id:
+                            self.swap_duplicate_OPLNote_for_warning(entity)
                             continue
 
-                        self.oplist_notes_by_page_id[entity.page_id] = entity
+                        self.OPL_notes_by_page_id[entity.page_id] = entity
                         pages_for_update.add(entity.page_id)
                     elif change.is_delete():
-                        self.oplist_notes_by_page_id.pop(entity.page_id)
+                        self.OPL_notes_by_page_id.pop(entity.page_id)
 
                 # If the note change is in one of the pages with an OPList
                 # if it's a change in the internal link - update the OPList
-                elif entity.page_id in self.oplist_notes_by_page_id:
+                elif entity.page_id in self.OPL_notes_by_page_id:
                     if ((entity.url.is_internal()) and
                         (change.is_create() or change.is_delete())
                             or (change.is_update() and change.updated.url)):

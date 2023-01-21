@@ -148,6 +148,7 @@ def main(path: str):
     pamet.set_search_service(search_service)
 
     other_page_list_service = OtherPagesListUpdateService()
+    other_page_list_service.start()
 
     # Setup exception reporting for failed actions
     if LOGGING_LEVEL != LoggingLevels.DEBUG:
