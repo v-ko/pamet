@@ -29,7 +29,7 @@ body{
     height: 2000px; */
     width: 100%;
     height: 100%;
-    transform: translate(50vw, 50vh)  translate(var(--map-translate-x), var(--map-translate-y)) scale(var(--map-scale));
+    transform: translate(var(--map-translate-x), var(--map-translate-y)) scale(var(--map-scale)) translate(50vw, 50vh);
     /* background: rgba(0,0,255,0.1); */
     backface-visibility: hidden;
     /* transform-origin: 50vw + var(--map-translate-x), 50vh + var(--map-translate-y); */
