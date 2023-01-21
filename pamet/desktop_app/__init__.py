@@ -1,3 +1,4 @@
+from __future__ import annotations
 from copy import copy
 import json
 from pathlib import Path
@@ -6,6 +7,7 @@ from PySide6.QtGui import QColor
 from fusion.logging import get_logger
 
 from pamet.constants import SELECTION_OVERLAY_COLOR
+from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import RepoSettings, UserDesktopSettings
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
 from pamet.services.script_runner import ScriptRunner
@@ -95,7 +97,7 @@ def set_default_note_font(new_default_note_font):
     _default_note_font = new_default_note_font
 
 
-def get_app():
+def get_app() -> DesktopApp:
     return _app
 
 
