@@ -155,10 +155,8 @@ def main(path: str):
         def show_exception_for_failed_action(action_call: ActionCall):
             if action_call.run_state != ActionRunStates.FAILED:
                 return
-            QMessageBox.critical(
-                app.activeWindow(),
-                f'Exception raised during action "{action_call.name}"',
-                action_call.error)
+            title = f'Exception raised during action "{action_call.name}"'
+            app.present_exception(exception=action_call.error, title=title)
 
         actions_log_channel.subscribe(show_exception_for_failed_action)
 
