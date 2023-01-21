@@ -46,12 +46,6 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
         # at destroyed)
         self.destroyed.connect(lambda: self.disconnect_from_page_changes())
 
-    @property
-    def displayed_text(self):
-        if not self._elided_text_layout:
-            return '!! Text not processed !!'
-        return self._elided_text_layout.text()
-
     def on_state_change(self, change):
         state = change.last_state()
         if change.updated.color or change.updated.background_color:

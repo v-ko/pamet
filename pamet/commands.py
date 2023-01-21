@@ -168,6 +168,10 @@ def export_as_web_page():
 
     note_elements = []
     for nt_view in page_view.note_views():
+        # Skip images
+        if isinstance(nt_view, ImageNoteWidget):
+            continue
+
         nv_state = nt_view.state()
         r = nv_state.rect()
 
@@ -225,12 +229,20 @@ def export_as_web_page():
     </html>
     '''
 
-    # A dummy widget, because QFileDialog crashed the app without it
-    widget = QWidget()
-    path, _ = QFileDialog.getSaveFileName(widget, 'Choose save path')
-    widget.deleteLater()
+    # Hackily present the file chooser modal
+    # (otherwise the app crashes when the modal is closed)
+    file_name = f'{tab_view.state().title}.html'
 
-    if not path:
-        return
-    path = Path(path)
-    path.write_text(page_str)
+    def hackily_ask_for_path_and_save_file():
+        file_dialog = QFileDialog(parent=page_view)
+        path, _ = file_dialog.getSaveFileName(
+            None,
+            caption='Choose save path',
+            dir=file_name,
+            filter='*.html',
+        )
+
+        if not path:
+            return
+        path = Path(path)
+        path.write_text(page_str)

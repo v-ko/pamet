@@ -12,6 +12,12 @@ class LinkNoteViewMixin:
     def __init__(self):
         self._page_subscription: Subscription = None
 
+    @property
+    def displayed_text(self):
+        if not self._elided_text_layout:
+            return '!! Text not processed !!'
+        return self._elided_text_layout.text()
+
     def recalculate_elided_text(self):
         state = self.state()
         url: Url = state.url
