@@ -151,7 +151,7 @@ def main(path: str):
     other_page_list_service.start()
 
     # Setup exception reporting for failed actions
-    if LOGGING_LEVEL != LoggingLevels.DEBUG:
+    if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
 
         def show_exception_for_failed_action(action_call: ActionCall):
             if action_call.run_state != ActionRunStates.FAILED:

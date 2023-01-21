@@ -545,7 +545,7 @@ class FSStorageBackupService:
         Then the worker thread is started to carry out event scheduling and
         rescheduling."""
         if self.service_lock_path().exists() and not IGNORE_LOCK:
-            raise AnotherServiceAlreadyRunningException
+            raise AnotherServiceAlreadyRunningException  #@IgnoreException
             # This should be a notification when I add notifications
             # raise Exception('Another backup service is running. If you\'re'
             #                 'sure it\'s not - you can delete the lock file: '
