@@ -51,7 +51,7 @@ class SelectorWidget(QWidget):
 
         # This has to be before setting the clipboard contents
         # because otherwise the notfy-send hangs
-        subprocess.check_output(['notify-send', 'Copied snippet to clipboard'])
+        # subprocess.run(['notify-send', 'Copied snippet to clipboard'])
 
         clipboard = QApplication.clipboard()
         clipboard.setImage(region.toImage())
