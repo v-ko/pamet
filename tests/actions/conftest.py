@@ -6,7 +6,7 @@ from fusion.libs import channel as channel_lib
 # from fusion.state_manager import FusionStateManager
 
 import pamet
-from pamet.desktop_app.util import configure_for_qt
+from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.app import DesktopApp
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService

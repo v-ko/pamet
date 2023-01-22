@@ -7,7 +7,7 @@ name = "pamet"
 version = "4.0.0.alpha10"
 description = "An app for organizing notes and thoughts"
 authors = [{ name = "Petko Dichev", email = "pditchev@gmail.com" }]
-license = { file = "LICENSE" }
+license = { text = "GPLv3" }
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -18,6 +18,8 @@ dependencies = [
     'thefuzz',
     'peewee',
     'pillow',
+    'fastapi',
+    'uvicorn',
 ]
 # readme =
 classifiers = [

@@ -1,4 +1,3 @@
-import json
 import os
 from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
@@ -8,7 +7,7 @@ import fusion
 from fusion.libs.action import actions_log_channel
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
-from pamet import channels as pamet_channels
+from pamet import channels as pamet_channels, commands
 
 import pamet
 from pamet import desktop_app
@@ -18,7 +17,9 @@ from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.init_config import configure_for_qt
 from pamet.model.page import Page
 
-from pamet.services.backup import AnotherServiceAlreadyRunningException, FSStorageBackupService
+from pamet.services.backup import AnotherServiceAlreadyRunningException
+from pamet.services.backup import FSStorageBackupService
+from pamet.services.local_server import LocalServer
 from pamet.services.other_pages_list_update import OtherPagesListUpdateService
 
 from pamet.services.search.fuzzy import FuzzySearchService
@@ -29,10 +30,42 @@ from pamet.views.window.widget import WindowWidget
 log = fusion.get_logger(__name__)
 
 
+def raise_a_window():
+    windows = [
+        w for w in DesktopApp.instance().topLevelWidgets()
+        if isinstance(w, WindowWidget)
+    ]
+    if windows:
+        windows[0].show()
+        windows[0].activateWindow()
+        windows[0].raise_()
+
+
+local_server_commands = {
+    'grab_screen_snippet': commands.grab_screen_snippet,
+    'raise_window': raise_a_window
+}
+
+
 @click.command()
 @click.argument('path', type=click.Path(exists=True), required=False)
-def main(path: str):
+@click.option('--command', type=click.Choice(local_server_commands.keys()))
+def main(path: str, command: str):
+    # Check if another instance is running
+    local_server = LocalServer(commands=local_server_commands)
+    if local_server.another_instance_is_running():
+        port = local_server.get_port_from_lock_file()
+        if command:
+            LocalServer.send_command(port, command)
+        else:
+            LocalServer.send_command(port, 'raise_window')
+        return
+    else:
+        local_server.start()
+
     app = DesktopApp()
+    app.aboutToQuit.connect(local_server.stop)
+
     configure_for_qt(app)
     # Load the config
     user_config = desktop_app.get_user_settings()

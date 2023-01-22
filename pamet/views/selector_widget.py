@@ -23,6 +23,13 @@ class SelectorWidget(QWidget):
         self.mousePressPoint = QPoint()
         self.selectedRect = QRect()
 
+    def finish(self):
+        self.taking_screenshot = False
+        self.close()
+
+    def keyPressEvent(self, event):
+        self.finish()
+
     def rectFromAnyTwoPoints(self, p1, p2):
         x1 = min(p1.x(), p2.x())
         y1 = min(p1.y(), p2.y())
@@ -34,9 +41,12 @@ class SelectorWidget(QWidget):
     def grabSelectedRect(self):
         screen = self.window().windowHandle().screen()
         pixmap = screen.grabWindow(0)
+
         if not self.selectedRect.isValid():
             print('Selected rect is not valid')
+            self.finish()
             return
+
         region = pixmap.copy(self.selectedRect)
 
         # This has to be before setting the clipboard contents
@@ -46,8 +56,7 @@ class SelectorWidget(QWidget):
         clipboard = QApplication.clipboard()
         clipboard.setImage(region.toImage())
 
-        self.taking_screenshot = False
-        self.close()
+        self.finish()
 
     def mousePressEvent(self, event):
         self.mousePressPoint = event.pos()

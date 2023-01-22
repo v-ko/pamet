@@ -1,9 +1,10 @@
 from __future__ import annotations
 from pathlib import Path
+import subprocess
 from typing import Tuple
-from PySide6.QtCore import QTimer, QUrl
+from PySide6.QtCore import QTimer, QUrl, Qt
 from PySide6.QtGui import QCursor, QDesktopServices
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QApplication, QFileDialog
 
 import fusion
 from fusion.util.point2d import Point2D
@@ -254,4 +255,12 @@ def export_as_web_page():
 
 @command(title='Grab screen snippet')
 def grab_screen_snippet():
+    active_window = current_window()
+    if not active_window:
+        # Minimize all non-active windows
+        # (so that the screenshot doesn't include them. It's a problem on KDE)
+        for window in QApplication.instance().topLevelWidgets():
+            if window != QApplication.activeWindow():
+                window.setWindowState(Qt.WindowMinimized)
+
     desktop_app.get_app().selector_widget.showFullScreen()

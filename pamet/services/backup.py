@@ -4,7 +4,6 @@ import json
 import os
 from pathlib import Path
 import sched
-import shutil
 import threading
 import time
 from typing import List
@@ -544,13 +543,9 @@ class FSStorageBackupService:
 
         Then the worker thread is started to carry out event scheduling and
         rescheduling."""
-        if self.service_lock_path().exists() and not IGNORE_LOCK:
-            raise AnotherServiceAlreadyRunningException  #@IgnoreException
-            # This should be a notification when I add notifications
-            # raise Exception('Another backup service is running. If you\'re'
-            #                 'sure it\'s not - you can delete the lock file: '
-            #                 f'{self.service_lock_path()}')
-        self.service_lock_path().write_text(self.id)
+        # if self.service_lock_path().exists() and not IGNORE_LOCK:
+        #     raise AnotherServiceAlreadyRunningException  #@IgnoreException
+        # self.service_lock_path().write_text(self.id)
 
         log.info('Starting')
 
@@ -622,8 +617,8 @@ class FSStorageBackupService:
         self.stop_event.set()
         self.worker_thread.join()
 
-        if self.service_lock_path().exists():
-            self.service_lock_path().unlink()
+        # if self.service_lock_path().exists():
+        #     self.service_lock_path().unlink()
         log.info('Stopped service.')
 
     def get_changes(self,
