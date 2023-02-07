@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QPointF, Qt, QPoint, QTimer, QRectF
-from PySide6.QtGui import QKeyEvent, QPainter, QPicture, QImage, QColor, QBrush, QCursor
+from PySide6.QtGui import QKeyEvent, QPainter, QPalette, QPicture, QImage, QColor, QBrush, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
 
 import fusion
@@ -137,7 +137,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         # Widget config
         pal = self.palette()
-        pal.setColor(pal.Window, Qt.white)
+        pal.setColor(QPalette.ColorRole.Window, Qt.white)
 
         self.setPalette(pal)
         self.setMouseTracking(True)
@@ -178,7 +178,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         q_mouse_pos = self.mapFromGlobal(QCursor.pos())
         mouse_pos = Point2D(q_mouse_pos.x(), q_mouse_pos.y())
-        
+
         map_page_state = self.state()
         unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
         map_page_actions.insert_entities_relative_to(map_page_state, entities,
