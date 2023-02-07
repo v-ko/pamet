@@ -13,10 +13,10 @@ class FuzzySearchService(BaseSearchService):
             score = 0
             if index_entry.content_lowered.startswith(text):
                 score = 1
-            elif index_entry.content_lowered.find(text):
+            elif index_entry.content_lowered.find(text) != -1:
                 score = 0.99
             else:
-                score = fuzz.partial_ratio(text, index_entry.content_lowered)
+                score = fuzz.ratio(text, index_entry.content_lowered)
                 score = (score / 100) * 0.98
 
             if score <= 0.5:
@@ -28,4 +28,7 @@ class FuzzySearchService(BaseSearchService):
                 score=score)
             search_results.append(search_result)
 
-        return sorted(search_results, key=lambda r: r.score, reverse=True)
+        search_results = sorted(search_results,
+                                key=lambda r: r.score,
+                                reverse=True)
+        return search_results
