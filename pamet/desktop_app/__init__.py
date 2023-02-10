@@ -40,7 +40,9 @@ def repo_settings_path(repo_path: Path) -> Path:
 def get_user_settings() -> UserDesktopSettings:
     settings_path = user_settings_path()
     if not settings_path.exists():
-        return UserDesktopSettings()
+        settings = UserDesktopSettings()
+        save_user_settings(settings)
+        return settings
 
     with open(settings_path) as settings_file:
         config_dict = json.load(settings_file)
@@ -58,7 +60,9 @@ def save_user_settings(updated_config: UserDesktopSettings):
 def get_repo_settings(repo_path: Path) -> RepoSettings:
     config_path = repo_settings_path(repo_path)
     if not config_path.exists():
-        return RepoSettings(repo_path=repo_path)
+        settings = RepoSettings(repo_path=repo_path)
+        save_repo_settings(settings)
+        return settings
 
     with open(config_path) as config_file:
         config_dict = json.load(config_file)
