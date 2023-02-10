@@ -157,7 +157,6 @@ def find_one(**filter):
 
 # -------------Pages CRUD-------------
 def pages(**filter) -> Generator[Page, None, None]:
-    fusion.call_delayed(_sync_repo.write_to_disk, 0)
     return _sync_repo.pages(**filter)
 
 
