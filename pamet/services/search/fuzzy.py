@@ -19,7 +19,7 @@ class FuzzySearchService(BaseSearchService):
                 score = fuzz.ratio(text, index_entry.content_lowered)
                 score = (score / 100) * 0.98
 
-            if score <= 0.5:
+            if score <= 0.4:
                 continue
 
             search_result = SearchResult(

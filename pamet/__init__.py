@@ -38,6 +38,7 @@ entity_types_loader.load_all_recursively(model_dir)
 clipboard = ClipboardService()
 
 _search_service = None
+_semantic_search_service = None
 _broken_entities = {}  # the entity as key, and exception as value
 
 _sync_repo: PametRepository = None  # Should be set via the setter method
@@ -85,6 +86,14 @@ def set_search_service(service):
     global _search_service
     _search_service = service
 
+
+def semantic_search_service() -> BaseSearchService:
+    return _semantic_search_service
+
+
+def set_semantic_search_service(service):
+    global _semantic_search_service
+    _semantic_search_service = service
 
 def broken_entities():
     return _broken_entities

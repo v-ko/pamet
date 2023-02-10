@@ -7,7 +7,7 @@ import fusion
 from fusion.libs.action import actions_log_channel
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
-from pamet import channels as pamet_channels, commands
+from pamet import channels as pamet_channels, commands, set_semantic_search_service
 
 import pamet
 from pamet import desktop_app
@@ -23,6 +23,7 @@ from pamet.services.local_server import LocalServer
 from pamet.services.other_pages_list_update import OtherPagesListUpdateService
 
 from pamet.services.search.fuzzy import FuzzySearchService
+from pamet.services.search.semantic import SemanticSearchService
 from pamet.services.undo import UndoService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
@@ -220,6 +221,21 @@ def main(path: str, command: str):
 
         if service_started:
             app.aboutToQuit.connect(backup_service.stop)
+
+    # Experimental semantic search
+    if repo_settings.semantic_search_enabled:
+        semantic_search_service = SemanticSearchService(
+            data_folder=repo_path / '__semantic_index__',
+            change_set_channel=pamet_channels.entity_change_sets_per_TLA)
+
+        print('Loading semantic search index...')
+        semantic_search_service.load_all_content()
+        print('Semantic search index loaded')
+        set_semantic_search_service(semantic_search_service)
+
+    fusion.set_main_loop_exception_handler(
+        lambda e: app.present_exception(e, title='Main loop exception')
+    )
 
     return app.exec()
 

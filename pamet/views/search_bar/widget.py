@@ -46,6 +46,10 @@ class SearchBarWidget(QWidget):
         self.ui.resultsListWidget.itemClicked.connect(
             self.handle_item_activated)
 
+    @property
+    def search_service(self):
+        return pamet.search_service()
+
     def showEvent(self, event: QShowEvent):
         self.ui.searchLineEdit.setFocus()
         self.ui.searchLineEdit.selectAll()
@@ -57,9 +61,8 @@ class SearchBarWidget(QWidget):
         if not search_text:
             return
 
-        search_service = pamet.search_service()
         count = 0
-        for result in search_service.text_search(search_text):
+        for result in self.search_service.text_search(search_text):
             self.ui.resultsListWidget.addItem(SearchItem(result))
             count += 1
 

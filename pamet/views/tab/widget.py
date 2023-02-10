@@ -14,7 +14,8 @@ from pamet.model.text_note import TextNote
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
 from pamet.views.map_page.widget import MapPageWidget
-from pamet.views.search_bar.widget import SearchBarWidget
+from pamet.views.search_bar.widget import SearchBarWidget, SearchBarWidgetState
+from pamet.views.semantic_search_bar.widget import SemanticSearchBarWidget, SemanticSearchBarWidgetState
 from pamet.views.tab.ui_widget import Ui_TabMainWidget
 
 from pamet.views.map_page.state import MapPageViewState
@@ -43,7 +44,8 @@ class TabWidget(QWidget, View):
         self.edit_view = None
         self._left_sidebar_widget = None
         self._right_sidebar_widget = None
-        self._search_bar_widget = None
+        self._search_widget = None
+        self._semantic_search_widget = None
         self._page_widget_cache = {}  # By page_id
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
@@ -69,6 +71,31 @@ class TabWidget(QWidget, View):
 
     def page_view(self) -> MapPageViewState:
         return self._page_view
+
+    def set_search_pane_state(self, pane_state: bool):
+        if pane_state:
+            if type(pane_state) == SearchBarWidgetState:
+                if not self._search_widget:
+                    self._search_widget = SearchBarWidget(
+                        self, initial_state=pane_state)
+
+                self._left_sidebar_widget = self._search_widget
+                self.ui.leftSidebarContainer.layout().addWidget(
+                    self._search_widget)
+
+            elif type(pane_state) == SemanticSearchBarWidgetState:
+                if not self._semantic_search_widget:
+                    self._semantic_search_widget = SemanticSearchBarWidget(
+                        self, initial_state=pane_state)
+
+                self._left_sidebar_widget = self._semantic_search_widget
+                self.ui.leftSidebarContainer.layout().addWidget(
+                    self._semantic_search_widget)
+
+            self.ui.leftSidebarContainer.show()
+            self.ui.leftSidebarContainer.raise_()
+        else:
+            self.ui.leftSidebarContainer.hide()
 
     def on_state_change(self, change: Change):
         state = change.last_state()
@@ -98,27 +125,20 @@ class TabWidget(QWidget, View):
                 self.ui.rightSidebarContainer.hide()
 
         if change.updated.left_sidebar_state:
+            # Clear the sidebar
             if self._left_sidebar_widget:
                 self.ui.leftSidebarContainer.layout().removeWidget(
                     self._left_sidebar_widget)
 
                 # If it's the search bar - don't delete it, we'll reuse it
-                if self._left_sidebar_widget != self._search_bar_widget:
+                if self._left_sidebar_widget not in [
+                        self._search_widget, self._semantic_search_widget
+                ]:
                     self._left_sidebar_widget.deleteLater()
 
                 self._left_sidebar_widget = None
 
-            if state.left_sidebar_state:
-                if not self._search_bar_widget:
-                    self._search_bar_widget = SearchBarWidget(
-                        self, initial_state=state.left_sidebar_state)
-                self._left_sidebar_widget = self._search_bar_widget
-                self.ui.leftSidebarContainer.layout().addWidget(
-                    self._search_bar_widget)
-                self.ui.leftSidebarContainer.show()
-                self.ui.leftSidebarContainer.raise_()
-            else:
-                self.ui.leftSidebarContainer.hide()
+            self.set_search_pane_state(state.left_sidebar_state)
 
         if change.updated.note_edit_view_state:
             if self.edit_view:

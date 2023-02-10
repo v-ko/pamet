@@ -35,6 +35,7 @@ class RepoSettings(PametSettings):
     backup_folder: str = None
     home_page: str = None
     record_all_changes: bool = False
+    semantic_search_enabled: bool = False
 
     def __post_init__(self):
         if self.repo_path is None:

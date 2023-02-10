@@ -22,7 +22,12 @@ class Ui_SearchBarWidget(object):
     def setupUi(self, SearchBarWidget):
         if not SearchBarWidget.objectName():
             SearchBarWidget.setObjectName(u"SearchBarWidget")
-        SearchBarWidget.resize(453, 525)
+        SearchBarWidget.resize(354, 620)
+        sizePolicy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Preferred)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(SearchBarWidget.sizePolicy().hasHeightForWidth())
+        SearchBarWidget.setSizePolicy(sizePolicy)
         self.verticalLayout = QVBoxLayout(SearchBarWidget)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.searchLineEdit = QLineEdit(SearchBarWidget)

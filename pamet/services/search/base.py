@@ -39,6 +39,7 @@ class SearchResult:
 
 class IndexEntry:
     def __init__(self, note: Note):
+        self.note_gid = note.gid()
         self.content_string = content_str_for_note(note)
         self.content_lowered = concat_content_for_note(note).lower()
 
@@ -48,12 +49,19 @@ class BaseSearchService:
     def __init__(self, change_set_channel: Channel):
         self.index = {}  # By note gid
         change_set_channel.subscribe(self.handle_change_set)
+        # self.ready = False
+
+    def upsert_to_index(self, entry: IndexEntry):
+        self.index[entry.note_gid] = entry
+
+    def remove_from_index(self, note_gid: Tuple):
+        self.index.pop(note_gid)
 
     def load_all_content(self):
         for page in pamet.pages():
             for note in pamet.notes(page):
-                index_entry = IndexEntry(note)
-                self.index[note.gid()] = index_entry
+                self.upsert_to_index(IndexEntry(note))
+        # self.ready = True
 
     def handle_change_set(self, change_set: List[Change]):
         """Keeps the cached texts up to date using the received changes."""
@@ -64,10 +72,9 @@ class BaseSearchService:
 
             if change.is_delete():
                 if state.gid() in self.index:
-                    self.index.pop(state.gid())
+                    self.remove_from_index(state.gid())
             else:  # change is_create or is_update
-                index_entry = IndexEntry(state)
-                self.index[state.gid()] = index_entry
+                self.upsert_to_index(IndexEntry(state))
 
     def text_search(self, text: str) -> SearchResult:
         """Searches the cached texts and returns search results"""

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication, QFileDialog
 import fusion
 from fusion.util.point2d import Point2D
 from fusion.libs.command import command
-from pamet import desktop_app
+from pamet import desktop_app, semantic_search_service
 import pamet
 
 from pamet.actions import note as note_actions
@@ -144,6 +144,16 @@ def paste_special():
 def show_global_search():
     tab_view, _ = current_tab_and_page_views()
     tab_actions.open_global_search(tab_view.state())
+
+
+@command(title='Show semantic search (experimental')
+def show_semantic_search():
+    tab_view, _ = current_tab_and_page_views()
+    if not semantic_search_service():
+        raise Exception('Semantic search is not available.'
+                        'Itt\'s either broken or you have not enabled it '
+                        'in the repo settings.')
+    tab_actions.open_semantic_search(tab_view.state())
 
 
 @command(title='Close tab')
