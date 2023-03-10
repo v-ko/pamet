@@ -21,7 +21,12 @@ class SearchBarWidgetState(ViewState):
 class SearchItem(QListWidgetItem):
 
     def __init__(self, search_result: SearchResult):
-        QListWidgetItem.__init__(self, search_result.content_string)
+        # Limit the result text legnth
+        result_text = search_result.content_string
+        if len(search_result.content_string) > 100:
+            result_text = search_result.content_string[:100] + '...'
+            
+        QListWidgetItem.__init__(self, result_text)
         self.setData(Qt.UserRole, search_result)
         # self.setBackground(Qt.gray)
         # self.setText(search_result.content_string)
