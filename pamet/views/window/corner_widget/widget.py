@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import QWidget
-from fusion.platform.qt_widgets.views.context_menu.widget import ContextMenuWidget
 from pamet import commands
 
 from pamet.actions import tab as tab_actions
+from pamet.views.context_menu.widget import ContextMenuWidget
 
 from .ui_widget import Ui_CornerWidget
 

@@ -95,6 +95,7 @@ def set_semantic_search_service(service):
     global _semantic_search_service
     _semantic_search_service = service
 
+
 def broken_entities():
     return _broken_entities
 
@@ -117,6 +118,16 @@ def set_undo_service(undo_service_):
 
 def sync_repo():
     """Returns the synchronous repo"""
+    if not _sync_repo:
+        raise Exception(
+            '''Sync repo not set. To use pamet, you should configure
+            a repository first:
+            # Instantiate a repository (e.g. a file-system based one)
+            repo = FSStorageRepository(folder_path)
+            # Set it as the sync repo
+            set_sync_repo(repo)
+            ''')
+
     return _sync_repo
 
 

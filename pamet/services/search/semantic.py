@@ -19,7 +19,7 @@ class SemanticSearchService(BaseSearchService):
         super().__init__(change_set_channel)
         self.data_folder = Path(data_folder)
         self.data_folder.mkdir(parents=True, exist_ok=True)
-        self.fv_index = {}
+        self.fv_index = {}  # Feature vectors by text
         self.sqlite_db = SqliteDict(self.data_folder / 'semantic_index.sqlite',
                                     autocommit=True)
         self.embedding_model = SentenceTransformer('all-MiniLM-L6-v2')

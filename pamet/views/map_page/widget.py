@@ -11,7 +11,6 @@ import fusion
 from fusion.util import Point2D, Rectangle
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
-from fusion.platform.qt_widgets.views.context_menu.widget import ContextMenuWidget
 from fusion import fsm as fsm
 
 from pamet import commands
@@ -28,6 +27,7 @@ from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
 from pamet.util import snap_to_grid
 from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
+from pamet.views.context_menu.widget import ContextMenuWidget
 from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
