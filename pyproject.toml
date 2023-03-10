@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pamet"
-version = "4.0.0.alpha10"
+version = "4.0.0.alpha11"
 description = "An app for organizing notes and thoughts"
 authors = [{ name = "Petko Dichev", email = "pditchev@gmail.com" }]
 license = { text = "GPLv3" }
@@ -12,14 +12,16 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     'PySide6',
-    'python-fusion>=0.7.1',
+    'python-fusion>=0.7.4',
     'click',
     'python-slugify',
     'thefuzz',
     'peewee',
     'pillow',
+    'watchdog',
     'fastapi',
     'uvicorn',
+    'sqlitedict'
 ]
 # readme =
 classifiers = [
