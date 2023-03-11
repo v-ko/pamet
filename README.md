@@ -37,12 +37,12 @@ Requires Python `>3.10`. If it's not available for your package manager(/app sto
 - Paste special with ctrl+shift+V (imports links and multiple notes) - will be improved
 
 ![screenshot](pamet/resources/presentation/pamet_demo_page_screenshot.png)
-![screenshot](pamet/resources/presentation/pamet_demo.gif)
+![screenshot](https://misli.org/static/presentation/pamet_demo.gif)
 
 ## Testing
 There are unit tests for some of the functionality and testing for the actions(=controller) which are not precise but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
 
-![screenshot](pamet/resources/presentation/pamet_test_suite_demo.gif)
+![screenshot](http://misli.org/static/presentation/pamet_test_suite_demo.gif)
 
 ## Development state and future
 Check some notes on the [development so far](development-history.md)
