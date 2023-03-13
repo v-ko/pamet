@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pamet"
-version = "4.0.0.alpha11"
+version = "4.0.0.alpha12"
 description = "An app for organizing notes and thoughts"
 authors = [{ name = "Petko Dichev", email = "pditchev@gmail.com" }]
 license = { text = "GPLv3" }
@@ -21,7 +21,8 @@ dependencies = [
     'watchdog',
     'fastapi',
     'uvicorn',
-    'sqlitedict'
+    'sqlitedict',
+    'requests'
 ]
 # readme =
 classifiers = [
