@@ -670,9 +670,9 @@ def finish_arrow_edge_drag(
 @action('map_page.delete_control_point')
 def delete_arrow_edge(arrow_view_state: ArrowViewState, edge_index: float):
     if edge_index == 0 or edge_index == arrow_view_state.edge_indices()[-1]:
-        raise Exception('Cannot remove the tail or head')
+        return
     if edge_index not in arrow_view_state.edge_indices():
-        raise Exception(f'Cannot remove edge with index {edge_index}')
+        raise Exception(f'Cannot remove missing edge with index {edge_index}')
 
     arrow = arrow_view_state.get_arrow()
     mid_points = arrow.mid_points
