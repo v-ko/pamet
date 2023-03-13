@@ -21,6 +21,7 @@ from pamet.constants import NO_SCALE_LINE_SPACING
 from pamet.util import resource_dir
 
 log = get_logger(__name__)
+EMPTY_LINE = ''
 
 
 def control_is_pressed():
@@ -55,6 +56,9 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
     # Get the needed parameters
     line_spacing = NO_SCALE_LINE_SPACING
 
+    # Replace tabs with spaces
+    text = text.replace('\t', '    ')
+
     # Get the y coordinates of the lines
     line_vpositions = []
     line_y = text_rect.top()
@@ -66,13 +70,15 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
     # EoL char (by keeping their indexes in eol_word_indices)
     words = []
     eol_word_indices = []
-
     for line in text.split('\n'):
-        words_on_line = line.split()
+        if not line:
+            words.append(EMPTY_LINE)
+            eol_word_indices.append(len(words) - 1)
+            continue
+        words_on_line = line.split(' ')
         words.extend(words_on_line)
         eol_word_indices.append(len(words) - 1)
 
-    # Start filling the available lines one by one
     text_layout = TextLayout()
 
     # In case for some reason the text rect is too small to fit any text
@@ -84,6 +90,7 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
     word_reached_idx = 0
     ellipsis_width = font_metrics.boundingRect('...').width()
 
+    # Start filling the available lines one by one
     for line_idx, line_y in enumerate(line_vpositions):
         words_left = words[word_reached_idx:]
 
@@ -140,7 +147,7 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
                     ellide_line_end = True
                 break
 
-        if not words_on_line:
+        if not words_left:
             break
 
         word_reached_idx += used_words

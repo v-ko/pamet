@@ -1,4 +1,5 @@
 from PySide6.QtCore import QSize, QUrl
+from PySide6.QtGui import QTextOption
 from PySide6.QtNetwork import QNetworkReply, QNetworkRequest
 from PySide6.QtWidgets import QTextEdit, QWidget
 
@@ -12,6 +13,16 @@ TEXT_EDIT_MIN_SIZE = 30
 class FixedTextEdit(QTextEdit):
     """The default QTextEdit implementation has an inflexible (borderline
     buggy) size constraints, which cannot be overwriteen in any other way."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setAcceptRichText(False)
+
+        # Set tab stop distance to 4 spaces
+        text_option = QTextOption()
+        text_option.setTabStopDistance(
+            4 * self.fontMetrics().horizontalAdvance(' '))
+        self.document().setDefaultTextOption(text_option)
 
     def minimumSizeHint(self) -> QSize:
         return QSize(TEXT_EDIT_MIN_SIZE, TEXT_EDIT_MIN_SIZE)
