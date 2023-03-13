@@ -111,11 +111,11 @@ class MapPageWidget(QWidget, MapPageView):
         remove_note_background.activated.connect(
             lambda: map_page_actions.color_selected_children(
                 self.state(), background_color=[0, 0, 0, 0]))
-        select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL + Qt.Key_A), self)
+        select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL | Qt.Key_A), self)
         select_all_shortcut.activated.connect(
             lambda: map_page_actions.select_all_children(self.state()))
         QShortcut(QKeySequence(Qt.Key_E), self, commands.edit_selected_notes)
-        QShortcut(QKeySequence(Qt.CTRL + Qt.Key_E), self,
+        QShortcut(QKeySequence(Qt.CTRL | Qt.Key_E), self,
                   commands.open_page_properties)
         QShortcut(QKeySequence(Qt.Key_L), self, commands.start_arrow_creation)
         # QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shortcut,
