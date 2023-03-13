@@ -36,7 +36,7 @@ Requires Python `>3.10`. If it's not available for your package manager(/app sto
 - Copy/paste/cut work as you'd expect
 - Paste special with ctrl+shift+V (imports links and multiple notes) - will be improved
 
-![screenshot](pamet/resources/presentation/pamet_demo_page_screenshot.png)
+![screenshot](https://misli.org/static/presentation/pamet_demo_page_screenshot.png)
 ![screenshot](https://misli.org/static/presentation/pamet_demo.gif)
 
 ## Testing
