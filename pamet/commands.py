@@ -18,6 +18,7 @@ from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
 
 from pamet.desktop_app.util import current_window, current_tab
+from pamet.model.text_note import TextNote
 from pamet.util import resource_path
 from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.image.widget import ImageNoteWidget
@@ -39,12 +40,33 @@ def current_tab_and_page_views() -> Tuple[TabWidget, MapPageWidget]:
 
 @command(title='Create new note')
 def create_new_note():
-    current_window().current_tab().create_new_note_command()
+    tab_widget = current_window().current_tab()
+    page_widget = tab_widget.page_view()
+
+    # If the mouse is on the page - make the note on its position.
+    # Else: make it in the center of the viewport
+    if page_widget.underMouse():
+        edit_window_pos = page_widget.mapFromGlobal(QCursor.pos())
+    else:
+        edit_window_pos = page_widget.geometry().center()
+
+    edit_window_pos = Point2D(edit_window_pos.x(), edit_window_pos.y())
+
+    note_pos = page_widget.state().unproject_point(edit_window_pos)
+    new_note = TextNote()
+    new_note = new_note.with_id(page_id=page_widget.state().page_id)
+    new_note.x = note_pos.x()
+    new_note.y = note_pos.y()
+    note_actions.create_new_note(tab_widget.state(), new_note)
 
 
 @command(title='Create new page')
 def create_new_page():
-    current_window().current_tab().create_new_page_command()
+    tab_widget = current_window().current_tab()
+    page_widget = tab_widget.page_view()
+    mouse_pos = page_widget.mapFromGlobal(QCursor.pos())
+    edit_window_pos = Point2D(mouse_pos.x(), mouse_pos.y())
+    tab_actions.create_new_page(tab_widget.state(), edit_window_pos)
 
 
 @command(title='Open page properties')

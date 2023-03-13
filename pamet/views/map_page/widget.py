@@ -828,7 +828,9 @@ class MapPageWidget(QWidget, MapPageView):
 
     def mouseMoveEvent(self, event):
         old_nvs_under_mouse = copy(self._note_views_under_mouse)
-        self.handle_mouse_move(Point2D(event.pos().x(), event.pos().y()))
+        mouse_pos = Point2D(event.pos().x(), event.pos().y())
+
+        self.handle_mouse_move(mouse_pos)
 
         if self._note_views_under_mouse != old_nvs_under_mouse:
             if self.state().mode() == MapPageMode.CREATE_ARROW:
@@ -843,6 +845,8 @@ class MapPageWidget(QWidget, MapPageView):
         state = self.state()
 
         if event.button() is Qt.LeftButton:
+            # If there's an arrow selected and an edge under the mouse
+            # delete the edge
             if state.arrow_with_visible_cps:
                 arrow_widget = self.arrow_widget(
                     state.arrow_with_visible_cps.view_id)
@@ -853,6 +857,7 @@ class MapPageWidget(QWidget, MapPageView):
                         state.arrow_with_visible_cps, edge_under_mouse_idx)
                     return
 
+            # Otherwise, handle the double click as usual
             self.left_mouse_double_click_event(
                 Point2D(event.pos().x(),
                         event.pos().y()))

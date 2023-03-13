@@ -39,7 +39,8 @@ class Viewport:
         return y_on_page + self.geometry.height() / 2
 
     def unproject_point(self, point) -> Point2D:
-        return Point2D(self.unproject_x(point.x()), self.unproject_y(point.y()))
+        return Point2D(self.unproject_x(point.x()),
+                       self.unproject_y(point.y()))
 
     def unproject_rect(self, rect: Rectangle) -> Rectangle:
         top_left = self.unproject_point(rect.top_left())

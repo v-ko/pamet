@@ -3,14 +3,12 @@ from PySide6.QtWidgets import QLabel, QWidget
 from PySide6.QtCore import Qt
 
 import fusion
-from fusion.util.point2d import Point2D
 from fusion.libs.entity.change import Change
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
 
-from pamet import actions, note_view_type_by_state
+from pamet import commands, note_view_type_by_state
 from pamet.actions import tab as tab_actions
-from pamet.model.text_note import TextNote
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 
 from pamet.views.map_page.widget import MapPageWidget
@@ -49,10 +47,12 @@ class TabWidget(QWidget, View):
         self._page_widget_cache = {}  # By page_id
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
-        new_note_shortcut.activated.connect(self.create_new_note_command)
+        new_note_shortcut.activated.connect(
+            commands.create_new_note)
 
         new_page_shortcut = QShortcut(QKeySequence('ctrl+N'), self)
-        new_page_shortcut.activated.connect(self.create_new_page_command)
+        new_page_shortcut.activated.connect(
+            commands.create_new_page)
 
         self.ui.rightSidebarCloseButton.clicked.connect(
             lambda: tab_actions.close_page_properties(self.state()))
@@ -192,26 +192,3 @@ class TabWidget(QWidget, View):
 
         # Must be visible to accept focus, so queue on the main loop
         fusion.call_delayed(self._page_view.setFocus)
-
-    def create_new_note_command(self):
-        page_widget = self.page_view()
-
-        # If the mouse is on the page - make the note on its position.
-        # Else: make it in the center of the viewport
-        if page_widget.underMouse():
-            edit_window_pos = self.cursor().pos()
-        else:
-            edit_window_pos = page_widget.geometry().center()
-
-        edit_window_pos = Point2D(edit_window_pos.x(), edit_window_pos.y())
-        note_pos = page_widget.state().unproject_point(edit_window_pos)
-        new_note = TextNote()
-        new_note = new_note.with_id(page_id=page_widget.state().page_id)
-        new_note.x = note_pos.x()
-        new_note.y = note_pos.y()
-        actions.note.create_new_note(self.state(), new_note)
-
-    def create_new_page_command(self):
-        mouse_pos = self.cursor().pos()
-        edit_window_pos = Point2D(mouse_pos.x(), mouse_pos.y())
-        tab_actions.create_new_page(self.state(), edit_window_pos)

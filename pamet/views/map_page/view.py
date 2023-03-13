@@ -10,7 +10,7 @@ from pamet.constants import ARROW_EDGE_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELEC
 from pamet.desktop_app.util import control_is_pressed, shift_is_pressed
 from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 
-from pamet import actions
+from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.model.arrow import ArrowAnchorType
@@ -370,7 +370,7 @@ class MapPageView(View):
             note = TextNote().with_id(page_id=self.state().page_id)
             note.x = note_pos.x()
             note.y = note_pos.y()
-            actions.note.create_new_note(self.parent_tab.state(), note)
+            note_actions.create_new_note(self.parent_tab.state(), note)
 
     def middle_click_event(self, mouse_pos: Point2D):
         note_view = self.get_note_view_at(mouse_pos)
