@@ -103,7 +103,8 @@ class ArrowWidget(QObject, ArrowView):
             self.unsubscribe_from_anchor(note_own_id)
 
         map_page_state = self.map_page_view.state()
-        note_view_state = map_page_state.view_state_for_note_own_id(note_own_id)
+        note_view_state = map_page_state.view_state_for_note_own_id(
+            note_own_id)
         if not note_view_state:
             raise Exception('Anchor note with own id {note_own_id} not found')
 
@@ -377,11 +378,16 @@ class ArrowWidget(QObject, ArrowView):
         painter.drawPath(self._cached_path)
 
         # Draw the arrow head
-        point_at_end = self._cached_curves[-1][-2]
-        # point_at_end = self._cached_path.pointAtPercent(0.97)
+        # 100% is at 0.5 because the path doubles itself (both directions)
+        # path_length =  / 2
+        determ_point_percent = self._cached_path.percentAtLength(
+            self._cached_path.length() / 2 - ARROW_HAND_LENGTH)
+        # point_at_end = self._cached_curves[-1][-2]
+        point_at_end = self._cached_path.pointAtPercent(determ_point_percent)
         point_at_end = Point2D(point_at_end.x(), point_at_end.y())
-        end_point = self._cached_curves[-1][-1]
-        # end_point = self._cached_path.pointAtPercent(1)  # 100%
+        # end_point = self._cached_curves[-1][-1]
+        # 100% is at 0.5 because the path doubles itself (both directions)
+        end_point = self._cached_path.pointAtPercent(0.5)
         end_point = Point2D(end_point.x(), end_point.y())
 
         normalized_vec = (end_point -
