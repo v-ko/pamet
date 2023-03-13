@@ -1,5 +1,8 @@
 from copy import copy
 from typing import Generator, List, Union
+from PySide6.QtCore import Qt
+
+from PySide6.QtGui import QGuiApplication
 
 import fusion
 from fusion.util import Point2D, Rectangle
@@ -29,9 +32,12 @@ class MapPageView(View):
         self.parent_tab = parent
 
         self._state = initial_state
-        self._left_mouse_is_pressed = False
         self._mouse_position_on_left_press = Point2D(0, 0)
         self._note_views_under_mouse = []
+
+    @property
+    def _left_mouse_is_pressed(self):
+        return QGuiApplication.mouseButtons() & Qt.LeftButton
 
     def note_views(self) -> List[NoteView]:
         raise NotImplementedError
@@ -164,8 +170,6 @@ class MapPageView(View):
 
     def handle_left_mouse_press(self, mouse_pos: Point2D):
         self._mouse_position_on_left_press = copy(mouse_pos)
-        self._left_mouse_is_pressed = True
-
         ctrl_pressed = control_is_pressed()
         shift_pressed = shift_is_pressed()
         state = self.state()
@@ -230,8 +234,6 @@ class MapPageView(View):
                                                 mouse_pos, rcc_projected)
 
     def handle_left_mouse_release(self, mouse_pos: Point2D):
-        self._left_mouse_is_pressed = False
-
         state: MapPageViewState = self.state()
         mode = state.mode()
         unproj_mouse_pos = state.unproject_point(mouse_pos)
@@ -311,7 +313,7 @@ class MapPageView(View):
                 map_page_actions.start_mouse_drag_navigation(
                     state, self._mouse_position_on_left_press, delta)
 
-        if mode == MapPageMode.DRAG_SELECT:
+        elif mode == MapPageMode.DRAG_SELECT:
             self._handle_move_on_drag_select(mouse_pos)
 
         elif mode == MapPageMode.NOTE_RESIZE:

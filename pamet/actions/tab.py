@@ -10,7 +10,7 @@ from pamet.constants import DEFAULT_EYE_HEIGHT, MAX_NAVIGATION_HISTORY
 from pamet.model.note import Note
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
-from pamet.views.map_page.state import MapPageViewState
+from pamet.views.map_page.state import MapPageMode, MapPageViewState
 from pamet.model.page import Page
 from pamet.util import generate_page_name
 from pamet.util.url import Url
@@ -87,6 +87,7 @@ def go_to_url(tab_state: TabViewState,
         fsm.update_state(tab_state)
         return
 
+    old_page_state = tab_state.page_view_state
     page_state = get_or_create_page_view(tab_state, page)
 
     # Apply the anchor if any
@@ -112,6 +113,10 @@ def go_to_url(tab_state: TabViewState,
         note_actions.abort_editing_note(tab_state)
     if tab_state.page_edit_view_state:
         close_page_properties(tab_state)
+
+    # Abort page actions on the current page if any (clear mode)
+    if old_page_state and old_page_state.mode() != MapPageMode.NONE:
+        map_page_actions.abort_special_mode(old_page_state)
 
     page_state = get_or_create_page_view(tab_state, page)
     set_page_view_state(tab_state, page_state)
