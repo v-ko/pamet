@@ -194,6 +194,8 @@ def delete_notes_and_connected_arrows(notes: List[Note]):
 
 @action('map_page.delete_selected_children')
 def delete_selected_children(map_page_view_state: MapPageViewState):
+    if map_page_view_state.mode != MapPageMode.NONE:
+        abort_special_mode(map_page_view_state)
     # Parse the ids into lists for removal, since we need to do it in order -
     # .. ?
     arrows_for_removal = []
@@ -705,12 +707,16 @@ def autosize_selected_notes(map_page_view_state: MapPageViewState):
 
 @action('map_page.undo')
 def undo(map_page_view_state: MapPageViewState):
+    if map_page_view_state.mode != MapPageMode.NONE:
+        abort_special_mode(map_page_view_state)
     page = pamet.page(map_page_view_state.page_id)
     pamet.undo_service().back_one_step(page.id)
 
 
 @action('map_page.redo')
 def redo(map_page_view_state: MapPageViewState):
+    if map_page_view_state.mode != MapPageMode.NONE:
+        abort_special_mode(map_page_view_state)
     page = pamet.page(map_page_view_state.page_id)
     pamet.undo_service().forward_one_step(page.id)
 
@@ -846,6 +852,8 @@ def paste(map_page_view_state: MapPageViewState, relative_to: Point2D = None):
 @action('map_page.cut_selected_children')
 def cut_selected_children(map_page_view_state: MapPageViewState,
                           relative_to: Point2D = None):
+    if map_page_view_state.mode != MapPageMode.NONE:
+        abort_special_mode(map_page_view_state)
     copy_selected_children(map_page_view_state, relative_to)
     delete_selected_children(map_page_view_state)
 
