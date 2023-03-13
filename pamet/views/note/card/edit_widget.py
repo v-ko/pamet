@@ -1,4 +1,5 @@
 from __future__ import annotations
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply
 
@@ -57,6 +58,9 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
         self_page = pamet.page(initial_state.page_id)
         page_completer = QCompleter(
             (p.name for p in pamet.pages() if p != self_page), parent=self)
+        page_completer.setCaseSensitivity(Qt.CaseInsensitive)
+        page_completer.setFilterMode(Qt.MatchContains)
+
         self.link_props_widget.ui.urlLineEdit.setCompleter(page_completer)
 
         # Setup the text props widget
@@ -193,7 +197,7 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
             # We check if it happens to be the name of a note page
             page_by_name = None
             for page in pamet.pages():
-                if page.name == url_field:
+                if page.name.lower() == url_field.lower():
                     page_by_name = page
                     break
 
