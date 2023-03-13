@@ -10,7 +10,7 @@ try:
     from sentence_transformers import SentenceTransformer, util
 except Exception:
     raise Exception('The semantic search service depends on the python '
-                    'packages ')
+                    'packages sentence_transformers and sqlitedict. ')
 
 
 class SemanticSearchService(BaseSearchService):

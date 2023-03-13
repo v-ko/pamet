@@ -23,7 +23,6 @@ from pamet.services.local_server import LocalServer
 from pamet.services.other_pages_list_update import OtherPagesListUpdateService
 
 from pamet.services.search.fuzzy import FuzzySearchService
-from pamet.services.search.semantic import SemanticSearchService
 from pamet.services.undo import UndoService
 from pamet.storage import FSStorageRepository
 from pamet.views.window.widget import WindowWidget
@@ -224,6 +223,7 @@ def main(path: str, command: str):
 
     # Experimental semantic search
     if repo_settings.semantic_search_enabled:
+        from pamet.services.search.semantic import SemanticSearchService
         semantic_search_service = SemanticSearchService(
             data_folder=repo_path / '__semantic_index__',
             change_set_channel=pamet_channels.entity_change_sets_per_TLA)
