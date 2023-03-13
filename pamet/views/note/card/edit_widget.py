@@ -178,6 +178,8 @@ class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
             self.link_props_widget.hide()
             self.edited_note.url = None
             self.text_props_widget.ui.getTitleButton.hide()
+        self.update_buttons_from_note_type()
+        self.update_note_type_from_buttons()
 
     def decorate_for_internal_url(self, url_is_internal):
         if url_is_internal:
