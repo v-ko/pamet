@@ -113,11 +113,12 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
             at_last_word = word_idx_on_line == (len(words_left) - 1)
 
             # Get the dimentions of the word if drawn
-            word_bbox = font_metrics.boundingRect(word)
+            # word_bbox = font_metrics.boundingRect(word)
+            horizontal_advance = font_metrics.horizontalAdvance(word)
 
             # There's enough space on the line for the next word
-            if width_left >= word_bbox.width():
-                width_left -= word_bbox.width()
+            if width_left >= horizontal_advance:
+                width_left -= horizontal_advance
                 words_on_line.append(word)
                 used_words += 1
 
