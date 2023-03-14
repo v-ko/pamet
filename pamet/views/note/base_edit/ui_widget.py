@@ -109,7 +109,7 @@ class Ui_BaseNoteEditWidget(object):
     # setupUi
 
     def retranslateUi(self, BaseNoteEditWidget):
-        BaseNoteEditWidget.setWindowTitle(QCoreApplication.translate("BaseNoteEditWidget", u"BaseNoteEditWidget", None))
+        BaseNoteEditWidget.setWindowTitle(QCoreApplication.translate("BaseNoteEditWidget", u"Edit note", None))
         self.devButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"dev", None))
         self.cancelButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Cancel (Esc)", None))
         self.saveButton.setText(QCoreApplication.translate("BaseNoteEditWidget", u"Save (ctrl+s)", None))
