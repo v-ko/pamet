@@ -246,7 +246,12 @@ def resize_note_views(map_page_view_state: MapPageViewState,
 
 
 @action('map_page.finish_notes_resize')
-def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list):
+def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list, mouse_pos: Point2D = None):
+    # If it's only a click - resize to the size of the main note
+    if mouse_pos:
+        if map_page_view_state.note_resize_click_position == mouse_pos:
+            new_size = map_page_view_state.note_resize_main_note.rect().size()
+
     for note_state in map_page_view_state.note_resize_states:
         note = note_state.get_note()
         note.set_size(snap_to_grid(new_size))
