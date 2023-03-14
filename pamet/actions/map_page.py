@@ -612,6 +612,9 @@ def arrow_edge_drag_update(
         anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow_vs: ArrowViewState = map_page_view_state.arrow_with_visible_cps
 
+    if fixed_pos:
+        fixed_pos = snap_to_grid(fixed_pos)
+
     if map_page_view_state.dragged_edge_index == 0:
         place_arrow_view_tail(arrow_vs, fixed_pos, anchor_note_id, anchor_type)
 
@@ -647,6 +650,9 @@ def finish_arrow_edge_drag(
         anchor_note_id: str = None,
         anchor_type: ArrowAnchorType = ArrowAnchorType.NONE):
     arrow = map_page_view_state.arrow_with_visible_cps.get_arrow()
+
+    if fixed_pos:
+        fixed_pos = snap_to_grid(fixed_pos)
 
     if map_page_view_state.dragged_edge_index == 0:
         arrow.set_tail(fixed_pos, anchor_note_id, anchor_type)
