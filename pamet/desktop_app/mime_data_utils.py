@@ -92,8 +92,10 @@ def entities_from_mime_data(mime_data: QMimeData) -> list[Entity]:
         text_sections = text.split('\n\n')
 
         for section in text_sections:
+            if not section.strip():
+                continue
             note = TextNote()
-            note.text = section
+            note.text = section.strip()
             # Single urls don't get detected by Qt
             if Url(section).has_web_schema():
                 note.url = section
