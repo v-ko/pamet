@@ -42,6 +42,7 @@ def finish_creating_note(tab_state: TabViewState, note: Note):
     # Autosize the note
     rect = note.rect()
     rect.set_size(snap_to_grid(minimal_nonelided_size(note)))
+    rect.set_top_left(snap_to_grid(rect.top_left()))
     note.set_rect(rect)
     pamet.insert_note(note)
 
@@ -66,6 +67,9 @@ def start_editing_note(tab_view_state: TabViewState, note: Note):
 
 @action('notes.finish_editing_note')
 def finish_editing_note(tab_state: TabViewState, note: Note):
+    rect = note.rect()
+    rect.set_size(snap_to_grid(rect.size()))
+    rect.set_top_left(snap_to_grid(rect.top_left()))
     pamet.update_note(note)
     fsm.remove_state(tab_state.note_edit_view_state)
     tab_state.note_edit_view_state = None
