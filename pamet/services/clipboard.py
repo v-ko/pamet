@@ -2,6 +2,7 @@ from copy import copy
 from PySide6.QtWidgets import QApplication
 from fusion.libs.entity import Entity
 from pamet.desktop_app.mime_data_utils import entities_from_mime_data
+from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
 from fusion import get_logger
@@ -20,13 +21,42 @@ class ClipboardService:
 
         self._internal = copy(entities)
 
+        def text_note_to_markdown(text_note: TextNote) -> str:
+            if not text_note.url.is_empty():
+                return f'[{text_note.text}]({text_note.url})'
+            else:
+                return text_note.text
+
+        def image_note_to_markdown(image_note: ImageNote) -> str:
+            text = f'image_{image_note.own_id}'
+            markdown = f'![{text}]({image_note.image_url})'
+            if not image_note.url.is_empty():
+                markdown = f'[{markdown}]({image_note.url})'
+            return markdown
+
         # The notes will be converted to markdown one fine day
         ext_clipboard_items = []
         for entity in entities:
-            if isinstance(entity, TextNote):
-                ext_clipboard_items.append(entity.text)
+            if isinstance(entity, CardNote):
+                image_markdown = image_note_to_markdown(entity)
+                text_markdown = text_note_to_markdown(entity)
+                if len(text_markdown) > 200:
+                    markdown = '| <!-- --> | <!-- --> |\n'
+                    markdown += '| --- | --- |\n'
+                    markdown += f'| {image_markdown} | {text_markdown} |'
+                else:
+                    markdown = f'| {image_markdown} |\n'
+                    markdown += '| --- |\n'
+                    markdown += f'| {text_markdown} |\n'
+                ext_clipboard_items.append(markdown)
+
+            elif isinstance(entity, TextNote):
+                markdown = text_note_to_markdown(entity)
+                ext_clipboard_items.append(markdown)
+
             elif isinstance(entity, ImageNote):
-                ext_clipboard_items.append(str(entity.image_url))
+                markdown = image_note_to_markdown(entity)
+                ext_clipboard_items.append(markdown)
 
         ext_content = '\n\n'.join(ext_clipboard_items)
         clipboard = QApplication.clipboard()
