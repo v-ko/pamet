@@ -47,12 +47,12 @@ class TabWidget(QWidget, View):
         self._page_widget_cache = {}  # By page_id
 
         new_note_shortcut = QShortcut(QKeySequence('N'), self)
-        new_note_shortcut.activated.connect(
-            commands.create_new_note)
+        new_note_shortcut.activated.connect(commands.create_new_note)
 
         new_page_shortcut = QShortcut(QKeySequence('ctrl+N'), self)
-        new_page_shortcut.activated.connect(
-            commands.create_new_page)
+        new_page_shortcut.activated.connect(commands.create_new_page)
+
+        QShortcut(QKeySequence('F5'), self, commands.refresh_page)
 
         self.ui.rightSidebarCloseButton.clicked.connect(
             lambda: tab_actions.close_page_properties(self.state()))
@@ -165,6 +165,9 @@ class TabWidget(QWidget, View):
     def cached_page_widget(self, page_view_id: str):
         return self._page_widget_cache.pop(page_view_id, None)
 
+    def remove_page_widget_from_cache(self, page_view_id: str):
+        self._page_widget_cache.pop(page_view_id, None)
+
     def switch_to_page_view(self, page_view_state: MapPageViewState):
         """Switches to the specified page view state.
 
@@ -192,3 +195,11 @@ class TabWidget(QWidget, View):
 
         # Must be visible to accept focus, so queue on the main loop
         fusion.call_delayed(self._page_view.setFocus)
+
+    def clear_page_view(self):
+        if not self._page_view:
+            return
+
+        self.ui.centralContainer.layout().removeWidget(self._page_view)
+        # self._page_view.deleteLater()
+        self._page_view = None

@@ -48,3 +48,7 @@ class TabViewState(ViewState):
 
     def page_state_from_cache(self, page_id: str) -> MapPageViewState:
         return self.page_state_cache.get(page_id, None)
+
+    def remove_page_state_from_cache(self, page_id: str):
+        if page_id in self.page_state_cache:
+            del self.page_state_cache[page_id]

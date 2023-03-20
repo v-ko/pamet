@@ -296,3 +296,14 @@ def grab_screen_snippet():
                 window.setWindowState(Qt.WindowMinimized)
 
     desktop_app.get_app().selector_widget.showFullScreen()
+
+
+@command(title='Refresh page')
+def refresh_page():
+    tab_view, page_view = current_tab_and_page_views()
+
+    # Remove view cache
+    if page_view:
+        tab_view.clear_page_view()
+        tab_view.remove_page_widget_from_cache(page_view.state().view_id)
+    tab_actions.refresh_page(tab_view.state())

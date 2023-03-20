@@ -23,7 +23,7 @@ log = get_logger(__name__)
 
 
 @action('create_and_set_page')
-def get_or_create_page_view(tab_state: TabViewState, page: Page):
+def get_or_create_page_view_state(tab_state: TabViewState, page: Page):
     if not page:
         raise Exception('No page at the given URL')
 
@@ -88,7 +88,7 @@ def go_to_url(tab_state: TabViewState,
         return
 
     old_page_state = tab_state.page_view_state
-    page_state = get_or_create_page_view(tab_state, page)
+    page_state = get_or_create_page_view_state(tab_state, page)
 
     # Apply the anchor if any
     anchor = parsed_url.get_anchor()
@@ -118,7 +118,7 @@ def go_to_url(tab_state: TabViewState,
     if old_page_state and old_page_state.mode() != MapPageMode.NONE:
         map_page_actions.abort_special_mode(old_page_state)
 
-    page_state = get_or_create_page_view(tab_state, page)
+    page_state = get_or_create_page_view_state(tab_state, page)
     set_page_view_state(tab_state, page_state)
 
     if height:
@@ -257,3 +257,12 @@ def open_semantic_search(tab_state: TabViewState):
 def close_left_sidebar(tab_state: TabViewState):
     tab_state.left_sidebar_state = None
     fsm.update_state(tab_state)
+
+
+@action('tab.refresh_page')
+def refresh_page(tab_state: TabViewState):
+    page_state = tab_state.page_view_state
+    tab_state.remove_page_state_from_cache(page_state.id)
+    fsm.update_state(tab_state)
+    if page_state:
+        go_to_url(tab_state, page_state.page_url())
