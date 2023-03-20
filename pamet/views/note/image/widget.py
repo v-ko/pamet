@@ -1,11 +1,14 @@
-from PySide6.QtCore import QRect
-from PySide6.QtGui import QColor, QPaintEvent, QPainter
+from pathlib import Path
+from PySide6.QtCore import QRect, QUrl
+from PySide6.QtGui import QColor, QDesktopServices, QPaintEvent, QPainter
 from fusion.libs.entity.change import Change
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.libs.state import view_state_type
 from fusion.logging import get_logger
+from fusion.util.point2d import Point2D
 
 from pamet import register_note_view_type
+from pamet.desktop_app import media_store
 from pamet.model.image_note import ImageNote
 from pamet.views.note.base.view import NoteView
 from pamet.views.note.base.state import NoteViewState
@@ -30,6 +33,19 @@ class ImageNoteWidget(ImageLabel, NoteView):
         NoteView.__init__(self, parent, initial_state)
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
+
+    def left_mouse_double_click_event(self, position: Point2D):
+        local_url = self.state().local_image_url
+        if local_url:
+            local_path = Path(local_url.path)
+            if local_url.is_internal():
+                local_path = media_store().path_for_internal_uri(local_url)
+
+            if local_path.exists():
+                QDesktopServices.openUrl(QUrl.fromLocalFile(str(local_path)))
+                return
+
+        super().left_mouse_double_click_event(position)
 
     def on_state_change(self, change: Change):
         state: ImageNoteViewState = change.last_state()
