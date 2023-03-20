@@ -4,7 +4,7 @@ from typing import Dict, List
 
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import QPointF, Qt, QPoint, QTimer, QRectF
-from PySide6.QtGui import QKeyEvent, QPainter, QPalette, QPicture, QImage, QColor, QBrush, QCursor
+from PySide6.QtGui import QKeyEvent, QPainter, QPalette, QPen, QPicture, QImage, QColor, QBrush, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
 
 import fusion
@@ -641,7 +641,14 @@ class MapPageWidget(QWidget, MapPageView):
             # Draw the selection overlay and resize circle for selected notes
             if note_widget.state() in state.selected_children:
                 # Draw a yellow selection overlay
-                painter.fillRect(display_rect, selection_overlay_qcolor)
+                # painter.fillRect(display_rect, selection_overlay_qcolor)
+
+                # Draw a yellow selection border with width 2
+                painter.save()
+                painter.setBrush(Qt.NoBrush)
+                painter.setPen(QPen(selection_overlay_qcolor, 10))
+                painter.drawRect(display_rect)
+                painter.restore()
 
                 # Draw the resize circle
                 center = display_rect.bottomRight()
@@ -652,6 +659,7 @@ class MapPageWidget(QWidget, MapPageView):
                 circle_fill_color.setAlpha(60)
 
                 painter.save()
+                painter.setPen(Qt.NoPen)
                 painter.setBrush(QBrush(circle_fill_color, Qt.SolidPattern))
 
                 painter.drawEllipse(center, radius, radius)
