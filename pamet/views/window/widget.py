@@ -61,6 +61,19 @@ class WindowWidget(QMainWindow, View):
         QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shorcut)
         QShortcut(QKeySequence('ctrl+w'), self, commands.close_current_tab)
 
+        def go_to_tab_num(num):
+            self.ui.tabBarWidget.setCurrentIndex(num - 1)
+
+        QShortcut(QKeySequence('ctrl+1'), self, lambda: go_to_tab_num(1))
+        QShortcut(QKeySequence('ctrl+2'), self, lambda: go_to_tab_num(2))
+        QShortcut(QKeySequence('ctrl+3'), self, lambda: go_to_tab_num(3))
+        QShortcut(QKeySequence('ctrl+4'), self, lambda: go_to_tab_num(4))
+        QShortcut(QKeySequence('ctrl+5'), self, lambda: go_to_tab_num(5))
+        QShortcut(QKeySequence('ctrl+6'), self, lambda: go_to_tab_num(6))
+        QShortcut(QKeySequence('ctrl+7'), self, lambda: go_to_tab_num(7))
+        QShortcut(QKeySequence('ctrl+8'), self, lambda: go_to_tab_num(8))
+        QShortcut(QKeySequence('ctrl+9'), self, lambda: go_to_tab_num(9))
+
         go_to_file_shortcut = QShortcut(QKeySequence('ctrl+P'), self)
         go_to_file_shortcut.activated.connect(
             commands.open_command_palette_go_to_file)
