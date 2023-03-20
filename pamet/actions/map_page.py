@@ -8,6 +8,7 @@ import pamet
 
 from fusion.util import Point2D, Rectangle
 from fusion.libs.action import action
+from pamet.constants import B_PALETTE, BG_ALPHA_PALETTE, G_PALETTE, R_PALETTE
 from pamet.util import snap_to_grid
 from pamet.util.url import Url
 from pamet.model.page import Page
@@ -246,7 +247,9 @@ def resize_note_views(map_page_view_state: MapPageViewState,
 
 
 @action('map_page.finish_notes_resize')
-def finish_notes_resize(map_page_view_state: MapPageViewState, new_size: list, mouse_pos: Point2D = None):
+def finish_notes_resize(map_page_view_state: MapPageViewState,
+                        new_size: list,
+                        mouse_pos: Point2D = None):
     # If it's only a click - resize to the size of the main note
     if mouse_pos:
         if map_page_view_state.note_resize_click_position == mouse_pos:
@@ -382,6 +385,65 @@ def color_selected_children(map_page_view_state: str,
 
     clear_child_selection(map_page_view_state)
     fsm.update_state(map_page_view_state)
+
+
+@action('map_page.shift_selected_childrens_color')
+def shift_selected_childrens_color(map_page_view_state: MapPageViewState,
+                                   fg_mask: list = None,
+                                   bg_mask: list = None,
+                                   shift: float = -0.25):
+
+    def snap_to_palette(color: tuple[float, float, float, float],
+                        backgroud=False) -> tuple[float, float, float, float]:
+        r, g, b, a = color
+
+        r = min(R_PALETTE, key=lambda x: abs(x - r))
+        g = min(G_PALETTE, key=lambda x: abs(x - g))
+        b = min(B_PALETTE, key=lambda x: abs(x - b))
+
+        if backgroud:
+            a = min(BG_ALPHA_PALETTE, key=lambda x: abs(x - a))
+        return r, g, b, a
+
+    def shift_color(color, mask, shift, background=False):
+        if len(mask) != len(color):
+            raise Exception('Bad mask or color')
+
+        new_col = list(color)
+        for chan_i, shift_requested in enumerate(mask):
+            if shift_requested:
+                new_col[chan_i] = new_col[chan_i] + shift
+                if new_col[chan_i] > 1:
+                    new_col[chan_i] = new_col[chan_i] - 1
+                elif new_col[chan_i] < 0:
+                    new_col[chan_i] = new_col[chan_i] + 1
+
+        # Snap to palette
+        print(f'shifted color: {color} -> {new_col}')
+        new_col = snap_to_palette(new_col, backgroud=background)
+        return tuple(new_col)
+
+    for child_state in map_page_view_state.selected_children:
+
+        if isinstance(child_state, NoteViewState):
+            note = child_state.get_note()
+
+            if fg_mask:
+                note.color = shift_color(note.color, fg_mask, shift)
+            if bg_mask:
+                note.background_color = shift_color(note.background_color,
+                                                    bg_mask,
+                                                    shift,
+                                                    background=True)
+
+            pamet.update_note(note)
+
+        elif isinstance(child_state, ArrowViewState):
+            arrow = child_state.get_arrow()
+            arrow.color = shift_color(arrow.color, shift)
+            pamet.update_arrow(arrow)
+        else:
+            raise Exception
 
 
 @action('map_page.open_page_properties')
@@ -777,13 +839,15 @@ def copy_selected_children(map_page_view_state: MapPageViewState,
 
         # Check for tail and head notes - if not present - don't copy the arrow
         if arrow.has_head_anchor():
-            if arrow.head_note_id not in (note.own_id for note in copied_notes):
+            if arrow.head_note_id not in (note.own_id
+                                          for note in copied_notes):
                 continue
         else:  # If it's a fixed pos - translate it relative to relative_to
             arrow.set_head(fixed_pos=arrow.head_point - relative_to)
 
         if arrow.has_tail_anchor():
-            if arrow.tail_note_id not in (note.own_id for note in copied_notes):
+            if arrow.tail_note_id not in (note.own_id
+                                          for note in copied_notes):
                 continue
         else:
             arrow.set_tail(fixed_pos=arrow.tail_point - relative_to)

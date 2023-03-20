@@ -14,7 +14,7 @@ from fusion.view import View
 from fusion import fsm as fsm
 
 from pamet import commands
-from pamet.constants import ARROW_EDGE_RAIDUS, MAX_RENDER_TIME
+from pamet.constants import ARROW_EDGE_RAIDUS, GREEN_COLOR, MAX_RENDER_TIME
 from pamet.constants import ALIGNMENT_LINE_LENGTH, RESIZE_CIRCLE_RADIUS
 from pamet.constants import LONG_PRESS_TIMEOUT
 
@@ -93,7 +93,7 @@ class MapPageWidget(QWidget, MapPageView):
         color_notes_green.activated.connect(
             lambda: map_page_actions.color_selected_children(
                 self.state(),
-                color=[0, 0.64, 0.235, 1],
+                color=list(GREEN_COLOR),
                 background_color=[0, 1, 0, 0.1]))
         color_notes_red = QShortcut(QKeySequence('3'), self)
         color_notes_red.activated.connect(
@@ -134,6 +134,38 @@ class MapPageWidget(QWidget, MapPageView):
         QShortcut(QKeySequence('ctrl+X'), self, commands.cut)
         QShortcut(QKeySequence('ctrl+shift+V'), self, commands.paste_special)
         QShortcut(QKeySequence('ctrl+Q'), self, commands.grab_screen_snippet)
+
+        # Color shifting
+        QShortcut(
+            QKeySequence('shift+1'), self,
+            lambda: map_page_actions.shift_selected_childrens_color(
+                self.state(),
+                fg_mask=(False, False, True, False),
+                bg_mask=(False, False, True, False)))
+        QShortcut(
+            QKeySequence('shift+2'), self,
+            lambda: map_page_actions.shift_selected_childrens_color(
+                self.state(),
+                fg_mask=(False, True, False, False),
+                bg_mask=(False, True, False, False)))
+        QShortcut(
+            QKeySequence('shift+3'), self,
+            lambda: map_page_actions.shift_selected_childrens_color(
+                self.state(),
+                fg_mask=(True, False, False, False),
+                bg_mask=(True, False, False, False)))
+        QShortcut(
+            QKeySequence('shift+4'), self, lambda: map_page_actions.
+            shift_selected_childrens_color(self.state(),
+                                           fg_mask=(True, True, True, False),
+                                           bg_mask=(True, True, True, False)))
+
+        QShortcut(
+            QKeySequence('shift+5'), self,
+            lambda: map_page_actions.shift_selected_childrens_color(
+                self.state(),
+                fg_mask=(False, False, False, False),
+                bg_mask=(False, False, False, True), shift=-0.0333))
 
         # Widget config
         pal = self.palette()
