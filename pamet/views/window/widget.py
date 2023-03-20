@@ -47,7 +47,6 @@ class WindowWidget(QMainWindow, View):
         self.menuButton = QPushButton(QIcon.fromTheme('menu'), '')
         self.corner_widget = CornerWidget(self)
 
-        self.ui.tabBarWidget.setTabBar(TabBar())
         self.ui.tabBarWidget.setTabsClosable(True)
         self.ui.tabBarWidget.setCornerWidget(self.corner_widget)
 
