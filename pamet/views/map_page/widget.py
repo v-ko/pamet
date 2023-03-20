@@ -165,7 +165,8 @@ class MapPageWidget(QWidget, MapPageView):
             lambda: map_page_actions.shift_selected_childrens_color(
                 self.state(),
                 fg_mask=(False, False, False, False),
-                bg_mask=(False, False, False, True), shift=-0.0333))
+                bg_mask=(False, False, False, True),
+                shift=-0.0333))
 
         # Widget config
         pal = self.palette()
@@ -705,6 +706,19 @@ class MapPageWidget(QWidget, MapPageView):
                     qdr = display_rect
                     dr = Rectangle(qdr.x(), qdr.y(), qdr.width(), qdr.height())
                     self._draw_guide_lines_for_child(dr, painter)
+
+            if self.state().viewport_height < 10:
+                # Display the note's creation and mod times
+                painter.save()
+                font = painter.font()
+                font.setPointSizeF(2 * state.height_scale_factor())
+                painter.setFont(font)
+                painter.setPen(Qt.black)
+                painter.drawText(display_rect.topLeft() + QPoint(0, 0.5),
+                                 f'Created: {note_vs.datetime_created}')
+                painter.drawText(display_rect.topLeft() + QPoint(0, 20.5),
+                                 f'Modified: {note_vs.datetime_modified}')
+                painter.restore()
 
         # Draw arrows and their selection overlays
         painter.save()
