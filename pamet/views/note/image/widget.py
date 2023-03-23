@@ -66,5 +66,8 @@ class ImageNoteWidget(ImageLabel, NoteView):
 
     def paintEvent(self, event: QPaintEvent):
         painter = QPainter()
+        painter.begin(self)
         draw_link_decorations(self, painter)
+        painter.end()
+        
         super().paintEvent(event)
