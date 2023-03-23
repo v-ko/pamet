@@ -33,6 +33,7 @@ from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
 from fusion.libs.entity.change import Change
 from pamet.views.note.base.state import NoteViewState
+from pamet.views.note.file.state import FileNoteViewState
 
 log = fusion.get_logger(__name__)
 
@@ -348,11 +349,9 @@ class MapPageWidget(QWidget, MapPageView):
         nv_cache = self._note_widget_cache(change.new_state.view_id)
 
         if change.updated.geometry:
-            if change.old_state.rect().size() != change.new_state.rect().size(
-            ):
-                nv_cache.should_rebuild_pcommand_cache = True
-                nv_cache.should_reallocate_image_cache = True
-                nv_cache.should_rerender_image_cache = True
+            nv_cache.should_rebuild_pcommand_cache = True
+            nv_cache.should_reallocate_image_cache = True
+            nv_cache.should_rerender_image_cache = True
 
         if change.updated.content:
             nv_cache.should_rebuild_pcommand_cache = True
@@ -361,6 +360,12 @@ class MapPageWidget(QWidget, MapPageView):
         if change.updated.color or change.updated.background_color:
             nv_cache.should_rebuild_pcommand_cache = True
             nv_cache.should_rerender_image_cache = True
+
+        state = change.last_state()
+        if isinstance(state, FileNoteViewState):
+            if change.updated.preview_request_t:
+                nv_cache.should_rebuild_pcommand_cache = True
+                nv_cache.should_rerender_image_cache = True
 
         self.update()
 
@@ -526,9 +531,9 @@ class MapPageWidget(QWidget, MapPageView):
             if not nt_rect.intersects(unprojected_viewport):
                 continue
 
-            unprojected_rect = self_state.project_rect(nt_rect)
+            projected_rect = self_state.project_rect(nt_rect)
             display_rects_by_child_view_id[note_widget.view_id] = QRectF(
-                *unprojected_rect.as_tuple())
+                *projected_rect.as_tuple())
 
         return display_rects_by_child_view_id
 
