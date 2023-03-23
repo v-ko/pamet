@@ -2,8 +2,8 @@ from copy import copy
 import time
 from typing import Dict, List
 
-from PySide6.QtWidgets import QWidget
-from PySide6.QtCore import QPointF, Qt, QPoint, QTimer, QRectF
+from PySide6.QtWidgets import QGestureEvent, QWidget
+from PySide6.QtCore import QEvent, QPointF, Qt, QPoint, QTimer, QRectF
 from PySide6.QtGui import QKeyEvent, QPainter, QPalette, QPen, QPicture, QImage, QColor, QBrush, QCursor
 from PySide6.QtGui import QKeySequence, QShortcut
 
@@ -79,6 +79,14 @@ class MapPageWidget(QWidget, MapPageView):
         self._note_widgets = {}
         self._arrow_widgets: Dict[str, ArrowWidget] = {}
         self._clipboard_outlines_shown = False
+
+        # Setup ui
+        self.setAttribute(Qt.WA_AcceptTouchEvents, True)
+        for gesture in [
+                Qt.PinchGesture, Qt.PanGesture, Qt.SwipeGesture, Qt.TapGesture,
+                Qt.TapAndHoldGesture
+        ]:
+            self.grabGesture(gesture)
 
         # Setup shortcuts
         delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
@@ -885,6 +893,9 @@ class MapPageWidget(QWidget, MapPageView):
         elif event.button() is Qt.MiddleButton:
             self.middle_click_event(mouse_pos)
 
+        elif event.button() is Qt.RightButton:
+            self.handle_right_mouse_release(mouse_pos)
+
     def mouseMoveEvent(self, event):
         old_nvs_under_mouse = copy(self._note_views_under_mouse)
         mouse_pos = Point2D(event.pos().x(), event.pos().y())
@@ -898,6 +909,21 @@ class MapPageWidget(QWidget, MapPageView):
         # Prompt updates for the clipboard outline visualization
         if control_is_pressed():
             self.update()
+
+    def touchEvent(self, event):
+        print(event)
+
+    def event(self, event):
+        if event.type() == QEvent.TouchBegin:
+            print(event)
+            self.gestureEvent(event)
+        return super().event(event)
+
+    def gestureEvent(self, event: QGestureEvent):
+        # pinch_gesture = event.gesture(Qt.PinchGesture)
+        # if pinch_gesture:
+        #     print(pinch_gesture)
+        print(event.gestures())
 
     def mouseDoubleClickEvent(self, event):
         mouse_pos = Point2D(event.pos().x(), event.pos().y())
@@ -944,13 +970,58 @@ class MapPageWidget(QWidget, MapPageView):
             self.update()
         return super().keyReleaseEvent(event)
 
-    def handle_right_mouse_press(self, position):
-        ncs_under_mouse = list(self.get_note_views_at(position))
-        menu_entries = {}
+    def handle_right_mouse_press(self, mouse_pos):
+        self._mouse_position_on_left_press = copy(mouse_pos)
+        state = self.state()
 
-        mode = self.state().mode()
+        child_under_mouse = self.get_arrow_view_at(mouse_pos)
+        nv_under_mouse = self.get_note_view_at(mouse_pos)
+        if nv_under_mouse:
+            child_under_mouse = nv_under_mouse
 
-        if mode == MapPageMode.NONE:
+        if state.mode() == MapPageMode.CREATE_ARROW:
+            map_page_actions.abort_special_mode(state)
+
+        if not child_under_mouse:
+            map_page_actions.start_drag_select(state, mouse_pos)
+            return
+
+        else:
+            # Select the note under the mouse (if it's not already so)
+            nc_selected = child_under_mouse.state() in self.state(
+            ).selected_children
+            if not nc_selected:
+                map_page_actions.update_child_selections(
+                    state, {child_under_mouse.state(): True})
+
+            # Start moving the notes and arrows
+            map_page_actions.start_child_move(state, mouse_pos)
+
+    def handle_right_mouse_release(self, mouse_pos):
+        state: MapPageViewState = self.state()
+        mode = state.mode()
+        ncs_under_mouse = list(self.get_note_views_at(mouse_pos))
+
+        if mode == MapPageMode.DRAG_SELECT:
+            same_pos = state.mouse_position_on_drag_select_start == mouse_pos
+            map_page_actions.stop_drag_select(state, mouse_pos)
+            # If no drag select has happened, but it was just a click - add
+            # the note under the mouse to the selection.
+            if same_pos:
+                child_under_mouse = self.get_arrow_view_at(mouse_pos)
+                nv_under_mouse = self.get_note_view_at(mouse_pos)
+                if nv_under_mouse:
+                    child_under_mouse = nv_under_mouse
+                map_page_actions.update_child_selections(
+                    state, {child_under_mouse.state(): True})
+
+        elif mode == MapPageMode.CHILD_MOVE:
+            pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
+            pos_delta /= self.state().height_scale_factor()
+            map_page_actions.finish_child_move(self.state(), pos_delta)
+
+        elif mode == MapPageMode.NONE:
+            menu_entries = {}
             if ncs_under_mouse:
                 map_page_actions.update_child_selections(
                     self.state(), {nv.state(): True
@@ -967,19 +1038,16 @@ class MapPageWidget(QWidget, MapPageView):
             menu_entries['New page'] = commands.create_new_page
             menu_entries['Create arrow'] = commands.start_arrow_creation
 
+            # Open the context menu with the tab as its parent
+            context_menu = ContextMenuWidget(self.parent(),
+                                             entries=menu_entries)
+            context_menu.popup_on_mouse_pos()
         else:
             if mode == MapPageMode.CREATE_ARROW:
                 text = 'Cancel arrow creation'
                 menu_entries[
                     text] = lambda: map_page_actions.abort_special_mode(
                         self.state())
-            else:
-                # If we're in another special mode - don't show the menu
-                return
-
-        # Open the context menu with the tab as its parent
-        context_menu = ContextMenuWidget(self.parent(), entries=menu_entries)
-        context_menu.popup_on_mouse_pos()
 
     def handle_esc_shortcut(self):
         if self.state().mode() != MapPageMode.NONE:
