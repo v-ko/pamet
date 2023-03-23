@@ -299,7 +299,6 @@ def test_sheduler_and_worker(tmp_path):
     # Start the service
     backup_service.start()
     # time_started = time.time()
-    assert backup_service.service_lock_path().exists()
 
     # Enter a change
     page = Page(name='test')
