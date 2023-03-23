@@ -19,6 +19,7 @@ from pamet.model.page import Page
 
 from pamet.services.backup import AnotherServiceAlreadyRunningException
 from pamet.services.backup import FSStorageBackupService
+from pamet.services.file_note_watcher import FileNoteWatcherService
 from pamet.services.local_server import LocalServer
 from pamet.services.other_pages_list_update import OtherPagesListUpdateService
 
@@ -81,57 +82,6 @@ def main(path: str, command: str):
         repo_path = Path(user_config.repository_path)
     log.info('Using repository: %s' % repo_path)
 
-    # Testing - restore legacy backups
-
-    # # V2
-    # v2_backup_folder = repo_path / '__v2_legacy_pages_backup__'
-    # for file in v2_backup_folder.iterdir():
-
-    #     v3_file_in_repo = file.parent.parent / file.name
-    #     v3_file_in_repo = v3_file_in_repo.with_suffix('').with_suffix('.json')
-
-    #     if v3_file_in_repo.exists():
-    #         v3_file_in_repo.unlink()
-    #     restore_path = file.parent.parent / file.name
-    #     restore_path = restore_path.with_suffix('')
-    #     file.rename(restore_path)
-
-    # for file in repo_path.iterdir():
-    #     if file.name.endswith('.pam4.json'):
-    #         file.unlink()
-
-    # # V3
-    # v3_backup_folder = repo_path / '__v3_legacy_pages_backup__'
-    # backup_page_names = []
-    # new_paths_by_old_path = {}
-    # for file in v3_backup_folder.iterdir():
-    #     if file.name.endswith('.backup'):
-    #         new_path = file.parent.parent / file.with_suffix('').name
-    #         new_paths_by_old_path[file] = new_path
-
-    #         page_data = json.loads(file.read_text())
-    #         page_name = file.with_suffix('').with_suffix('').name
-    #         backup_page_names.append(page_name)
-
-    # # Read all page names in the repo
-    # page_paths_by_name = {}
-    # for file in repo_path.iterdir():
-    #     if file.is_file() and file.name.endswith('.pam4.json'):
-    #         page_data = json.loads(file.read_text())
-    #         name = page_data['name']
-    #         page_paths_by_name[name] = file
-
-    # # Delete all previously imported (by name matching)
-    # for page_name in backup_page_names:
-    #     if page_name in page_paths_by_name:
-    #         page_paths_by_name[page_name].unlink()
-    #     else:
-    #         pass
-
-    # # Restore the backups
-    # for old_path, new_path in new_paths_by_old_path.items():
-    #     old_path.rename(new_path)
-
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path,
                                            queue_save_on_change=True)
@@ -156,9 +106,6 @@ def main(path: str, command: str):
     pamet.set_undo_service(
         UndoService(pamet_channels.entity_change_sets_per_TLA))
 
-    # There should be a better place to do call the validity checks I guess
-    # pamet.model.arrow_validity_check()
-
     # # Debug
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
@@ -171,8 +118,6 @@ def main(path: str, command: str):
     window = WindowWidget(initial_state=window_state)
     window.showMaximized()
 
-    # fusion.call_delayed(window_actions.new_browser_tab,
-    #                    args=[window_state, start_page])
     window_actions.new_browser_tab(window_state, start_page)
 
     search_service = FuzzySearchService(
@@ -236,6 +181,11 @@ def main(path: str, command: str):
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title='Main loop exception')
     )
+
+    # Watch files that have previews in notes and update them
+    file_note_watcher_service = FileNoteWatcherService()
+    file_note_watcher_service.start()
+    app.aboutToQuit.connect(file_note_watcher_service.stop)
 
     return app.exec()
 

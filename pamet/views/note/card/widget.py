@@ -13,7 +13,7 @@ from pamet.model.card_note import CardNote
 from pamet.note_view_lib import register_note_view_type
 from pamet.views.note.anchor.view_mixin import LinkNoteViewMixin
 from pamet.views.note.base.view import NoteView
-from pamet.views.note.base.state import NoteViewState
+from pamet.views.note.file.state import FileNoteViewState
 from pamet.views.note.image.image_label import ImageLabel
 from pamet.views.note.qt_helpers import draw_link_decorations
 
@@ -21,7 +21,7 @@ from .ui_widget import Ui_CardNoteWidget
 
 
 @view_state_type
-class CardNoteViewState(NoteViewState, CardNote):
+class CardNoteViewState(FileNoteViewState, CardNote):
     pass
 
 
@@ -60,7 +60,7 @@ class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
         if change.updated.geometry:
             self.setGeometry(QRect(*state.geometry))
 
-        if change.updated.local_image_url:
+        if change.updated.local_image_url or change.updated.preview_request_t:
             self.image_label.update_image_cache(state.image_url,
                                                 state.local_image_url)
 

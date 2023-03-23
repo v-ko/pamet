@@ -1,4 +1,5 @@
 from __future__ import annotations
+import time
 
 import fusion
 from fusion.libs.entity import dump_to_dict
@@ -110,3 +111,9 @@ def switch_note_type(tab_state: TabViewState, note: Note):
     else:
         finish_editing_note(tab_state, note)
         start_editing_note(tab_state, note)
+
+
+@action('note.request_file_preview_reload')
+def request_file_preview_reload(note_view_state):
+    note_view_state.preview_request_t = time.time()
+    fsm.update_state(note_view_state)

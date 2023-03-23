@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
-import subprocess
 from typing import Tuple
+
 from PySide6.QtCore import QTimer, QUrl, Qt
 from PySide6.QtGui import QCursor, QDesktopServices
 from PySide6.QtWidgets import QApplication, QFileDialog

@@ -18,7 +18,9 @@ from fusion.logging import get_logger
 
 import pamet
 from pamet.constants import NO_SCALE_LINE_SPACING
+from pamet.desktop_app import media_store
 from pamet.util import resource_dir
+from pamet.util.url import Url
 
 log = get_logger(__name__)
 EMPTY_LINE = ''
@@ -266,3 +268,11 @@ def jpeg_blob_from_image(image: QImage, quality: int = 100) -> bytes:
         raise Exception('Could not save image to buffer')
 
     return blob
+
+
+def resolve_media_url(url: Url):
+    local_path = Path(url.path)
+    if url.is_internal():
+        local_path = media_store().path_for_internal_uri(url)
+
+    return local_path

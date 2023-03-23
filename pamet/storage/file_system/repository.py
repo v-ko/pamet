@@ -1,16 +1,22 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 import time
 from typing import Dict, Generator, List
 import os
 import json
 from pathlib import Path
+
+# from watchdog.observers import Observer
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from slugify import slugify
+
 from pamet import desktop_app
-from pamet.desktop_app import get_repo_settings, get_user_settings
+from pamet.desktop_app import get_repo_settings
 from pamet.model.arrow import Arrow
 from pamet.model.page_child import PageChild
 from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
-from slugify import slugify
 
-import fusion
 from fusion.libs.entity import Entity, dump_to_dict, load_from_dict
 from fusion.libs.entity.change import Change
 from fusion.libs.channel import Channel
@@ -28,6 +34,40 @@ log = get_logger(__name__)
 V4_FILE_EXT = '.pam4.json'
 
 
+# On this implementation:
+# - Cancel out events made by the repo itself
+# - Implement an action to apply external changes to the repo
+class FSWatchEventHandler(FileSystemEventHandler):
+    def __init__(self, repo: FSStorageRepository) -> None:
+        super().__init__()
+        self.repo = repo
+
+    # def on_created(self, event):
+    #     print('Created', event)
+
+    # def on_deleted(self, event):
+    #     print('deleted', event)
+
+    # def on_modified(self, event):
+    #     print('modified', event)
+
+    # def on_moved(self, event):
+    #     print('moved', event)
+
+    def on_any_event(self, event: FileSystemEvent):
+        if event.is_directory:
+            return
+
+        print('INOTIFY:', event.event_type, event.src_path, event.is_directory)
+
+
+@dataclass
+class FileWrite:
+    path: Path
+    # data: str
+    timestamp: float
+
+
 class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
     """File system storage. This class has all entities cached at all times"""
 
@@ -35,7 +75,10 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
         PametInMemoryRepository.__init__(self)
         LegacyFSRepoReader.__init__(self)
 
-        self.path = Path(path)
+        self._path = Path(path)
+        if not self._path.exists() or not self._path.is_dir():
+            raise Exception('Invalid repository path')
+
         self.queue_save_on_change = queue_save_on_change
         self._page_ids = []
 
@@ -45,6 +88,25 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
 
         self.upserted_pages = set()
         self.removed_pages = set()
+
+        # # Watcher related
+        # self._fs_observer = None
+        # self.external_changes_channel = Channel('external_changes')
+        # self._unconfirmed_file_writes = []
+
+    @property
+    def path(self):
+        return self._path
+
+    # def start_watching(self):
+    #     self._fs_observer = Observer()
+    #     event_handler = FSWatchEventHandler(self)
+    #     self._fs_observer.schedule(event_handler, self.path, recursive=False)
+    #     self._fs_observer.start()
+
+    # def stop_watching(self):
+    #     self._fs_observer.stop()
+    #     self._fs_observer.join()
 
     def load_all_pages(self):
         # Load all pages in the cache

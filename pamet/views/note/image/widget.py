@@ -11,7 +11,7 @@ from pamet import register_note_view_type
 from pamet.desktop_app import media_store
 from pamet.model.image_note import ImageNote
 from pamet.views.note.base.view import NoteView
-from pamet.views.note.base.state import NoteViewState
+from pamet.views.note.file.state import FileNoteViewState
 from pamet.views.note.image.image_label import ImageLabel
 from pamet.views.note.qt_helpers import draw_link_decorations
 
@@ -19,7 +19,7 @@ log = get_logger(__name__)
 
 
 @view_state_type
-class ImageNoteViewState(NoteViewState, ImageNote):
+class ImageNoteViewState(FileNoteViewState, ImageNote):
     pass
 
 
@@ -59,7 +59,7 @@ class ImageNoteWidget(ImageLabel, NoteView):
             palette.setColor(self.foregroundRole(), fg_col)
             self.setPalette(palette)
 
-        if change.updated.local_image_url:
+        if change.updated.local_image_url or change.updated.preview_request_t:
             self.update_image_cache(state.image_url, state.local_image_url)
         if change.updated.geometry:
             self.setGeometry(QRect(*state.geometry))
