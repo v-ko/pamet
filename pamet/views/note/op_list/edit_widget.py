@@ -11,5 +11,3 @@ from pamet.views.note.base_edit.widget import BaseNoteEditWidget
                          edit=True)
 class OtherPageListNoteEditWidget(BaseNoteEditWidget):
     pass
-    # def __init__(self, parent: TabWidget, initial_state: NoteEditViewState):
-    #     super().__init__(parent, initial_state)

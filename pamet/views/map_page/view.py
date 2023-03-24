@@ -11,7 +11,6 @@ import pamet
 
 from pamet.constants import ARROW_EDGE_RAIDUS, RESIZE_CIRCLE_RADIUS, ARROW_SELECTION_RADIUS
 from pamet.desktop_app.util import control_is_pressed, shift_is_pressed
-from pamet.constants import MOVE_SPEED, MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE
 
 from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions

@@ -1,4 +1,3 @@
-from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QLabel, QWidget
 from PySide6.QtCore import Qt
 
@@ -7,7 +6,7 @@ from fusion.libs.entity.change import Change
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
 
-from pamet import commands, note_view_type_by_state
+from pamet import note_view_type_by_state
 from pamet.actions import tab as tab_actions
 from pamet.views.map_page.properties_widget import MapPagePropertiesWidget
 

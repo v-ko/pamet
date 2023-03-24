@@ -2,7 +2,7 @@ import sys
 from PySide6.QtCore import Qt
 
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QPushButton, QTabBar, QWidget
-from PySide6.QtGui import QAction, QIcon, QKeySequence, QMouseEvent, QResizeEvent, QShortcut
+from PySide6.QtGui import QIcon, QKeySequence, QMouseEvent, QResizeEvent, QShortcut
 from PySide6.QtCore import __version__ as qt_version
 import fusion
 

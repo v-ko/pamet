@@ -233,22 +233,12 @@ def close_page_properties(tab_state: TabViewState):
 
 @action('tab.open_global_search')
 def open_global_search(tab_state: TabViewState):
-    # If not present - create the search bar state
-    # if not tab_state.search_bar_state:
-    #     tab_state.search_bar_state = SearchBarWidgetState()
-    #     fsm.add_state(tab_state.search_bar_state)
-
     tab_state.left_sidebar_state = SearchBarWidgetState()
     fsm.update_state(tab_state)
 
 
 @action('tab.open_semantic_search')
 def open_semantic_search(tab_state: TabViewState):
-    # If not present - create the search bar state
-    # if not tab_state.search_bar_state:
-    #     tab_state.search_bar_state = SemanticSearchBarWidgetState()
-    #     fsm.add_state(tab_state.search_bar_state)
-
     tab_state.left_sidebar_state = SemanticSearchBarWidgetState()
     fsm.update_state(tab_state)
 

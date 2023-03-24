@@ -4,7 +4,6 @@ from dataclasses import field
 from enum import Enum
 from typing import List
 
-import pamet
 from fusion.util import Rectangle, Point2D
 from fusion.libs.state import view_state_type, ViewState
 from pamet.constants import DEFAULT_EYE_HEIGHT

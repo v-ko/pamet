@@ -4,4 +4,3 @@ from pamet.views.note.base.state import NoteViewState
 
 class OtherPageListNoteViewState(NoteViewState, OtherPageListNote):
     pass
-

@@ -45,4 +45,3 @@ class DesktopApp(QApplication):
         self.message_box.setWindowTitle(title)
         self.message_box.setIcon(QMessageBox.Critical)
         self.hacky_present_modal(self.message_box)
-        # QMessageBox.critical(self.activeWindow(), title, text)

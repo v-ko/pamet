@@ -28,7 +28,7 @@ def entities_from_mime_data(mime_data: QMimeData) -> list[Entity]:
         try:
             image = mime_data.imageData()
             if image.isNull():
-                raise Exception(f'Could not load image from clipboard')
+                raise Exception('Could not load image from clipboard')
 
             blob = jpeg_blob_from_image(image)
             local_path = pamet.desktop_app.media_store().save_blob(

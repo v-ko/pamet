@@ -1,5 +1,3 @@
-import subprocess
-
 from PySide6.QtWidgets import QWidget
 from PySide6.QtGui import QColor, QImage, QPainter, QBrush
 from PySide6.QtGui import QCursor
