@@ -42,11 +42,6 @@ class Ui_CornerWidget(object):
 
         self.horizontalLayout.addWidget(self.navigationForwardButton)
 
-        self.menuButton = QPushButton(CornerWidget)
-        self.menuButton.setObjectName(u"menuButton")
-
-        self.horizontalLayout.addWidget(self.menuButton)
-
 
         self.retranslateUi(CornerWidget)
 
@@ -67,6 +62,5 @@ class Ui_CornerWidget(object):
 #if QT_CONFIG(shortcut)
         self.navigationForwardButton.setShortcut(QCoreApplication.translate("CornerWidget", u"Alt+Right", None))
 #endif // QT_CONFIG(shortcut)
-        self.menuButton.setText(QCoreApplication.translate("CornerWidget", u"Menu", None))
     # retranslateUi
 

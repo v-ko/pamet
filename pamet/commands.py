@@ -16,6 +16,7 @@ from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
+from pamet.constants import GREEN_FG_COLOR
 
 from pamet.desktop_app.util import current_window, current_tab
 from pamet.model.text_note import TextNote
@@ -40,8 +41,7 @@ def current_tab_and_page_views() -> Tuple[TabWidget, MapPageWidget]:
 
 @command(title='Create new note')
 def create_new_note():
-    tab_widget = current_window().current_tab()
-    page_widget = tab_widget.page_view()
+    tab_widget, page_widget = current_tab_and_page_views()
 
     # If the mouse is on the page - make the note on its position.
     # Else: make it in the center of the viewport
@@ -106,7 +106,6 @@ def start_arrow_creation():
 def autosize_selected_notes():
     _, page_view = current_tab_and_page_views()
     map_page_actions.autosize_selected_notes(page_view.state())
-    page_view.autosize_selected_notes()
 
 
 @command(title='Undo')
@@ -160,6 +159,12 @@ def paste_special():
     map_page_state = page_view.state()
     unproj_mouse_pos = map_page_state.unproject_point(mouse_pos)
     map_page_actions.paste_special(map_page_state, unproj_mouse_pos)
+
+
+@command(title='Delete selected')
+def delete_selected():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.delete_selected_children(page_view.state())
 
 
 @command(title='Show search')
@@ -307,3 +312,117 @@ def refresh_page():
         tab_view.clear_page_view()
         tab_view.remove_page_widget_from_cache(page_view.state().view_id)
     tab_actions.refresh_page(tab_view.state())
+
+
+@command(title='Color selected notes blue')
+def color_selected_notes_blue():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.color_selected_children(page_view.state(),
+                                             color=[0, 0, 1, 1],
+                                             background_color=[0, 0, 1, 0.1])
+
+
+@command(title='Color selected notes green')
+def color_selected_notes_green():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.color_selected_children(page_view.state(),
+                                             color=list(GREEN_FG_COLOR),
+                                             background_color=[0, 1, 0, 0.1])
+
+
+@command(title='Color selected notes red')
+def color_selected_notes_red():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.color_selected_children(page_view.state(),
+                                             color=[1, 0, 0, 1],
+                                             background_color=[1, 0, 0, 0.1])
+
+
+@command(title='Color selected notes black')
+def color_selected_notes_black():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.color_selected_children(page_view.state(),
+                                             color=[0, 0, 0, 1],
+                                             background_color=[0, 0, 0, 0.1])
+
+
+@command(title='Make background transparent for selected notes')
+def make_background_transparent_for_selected_notes():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.color_selected_children(page_view.state(),
+                                             background_color=[0, 0, 0, 0])
+
+
+@command(title='Blue shift selected')
+def blue_shift_selected():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.shift_selected_childrens_color(page_view.state(),
+                                                    fg_mask=(False, False,
+                                                             True, False),
+                                                    bg_mask=(False, False,
+                                                             True, False))
+
+
+@command(title='Green shift selected')
+def green_shift_selected():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.shift_selected_childrens_color(page_view.state(),
+                                                    fg_mask=(False, True,
+                                                             False, False),
+                                                    bg_mask=(False, True,
+                                                             False, False))
+
+
+@command(title='Red shift selected')
+def red_shift_selected():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.shift_selected_childrens_color(page_view.state(),
+                                                    fg_mask=(True, False,
+                                                             False, False),
+                                                    bg_mask=(True, False,
+                                                             False, False))
+
+
+@command(title='Black shift selected notes')
+def black_shift_selected():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.shift_selected_childrens_color(page_view.state(),
+                                                    fg_mask=(True, True, True,
+                                                             False),
+                                                    bg_mask=(True, True, True,
+                                                             False))
+
+
+@command(title='Shift selected note transparency')
+def shift_selected_note_transparency():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.shift_selected_childrens_color(page_view.state(),
+                                                    fg_mask=(False, False,
+                                                             False, False),
+                                                    bg_mask=(False, False,
+                                                             False, True),
+                                                    shift=-0.0333)
+
+
+@command(title='Select all')
+def select_all():
+    _, page_view = current_tab_and_page_views()
+    map_page_actions.select_all_children(page_view.state())
+
+
+@command(title='Navigate back')
+def navigate_back():
+    tab_view, _ = current_tab_and_page_views()
+    tab_actions.navigation_back(tab_view.state())
+
+
+@command(title='Navigate forward')
+def navigate_forward():
+    tab_view, _ = current_tab_and_page_views()
+    tab_actions.navigation_forward(tab_view.state())
+
+
+@command(title='Toggle between last two pages')
+def toggle_between_last_two_pages():
+    tab_view, _ = current_tab_and_page_views()
+    tab_actions.navigation_toggle_last(tab_view.state())

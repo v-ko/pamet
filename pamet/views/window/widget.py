@@ -1,12 +1,16 @@
+import sys
 from PySide6.QtCore import Qt
 
-from PySide6.QtWidgets import QMainWindow, QPushButton, QTabBar, QWidget
-from PySide6.QtGui import QIcon, QKeySequence, QMouseEvent, QResizeEvent, QShortcut
+from PySide6.QtWidgets import QMainWindow, QMessageBox, QPushButton, QTabBar, QWidget
+from PySide6.QtGui import QAction, QIcon, QKeySequence, QMouseEvent, QResizeEvent, QShortcut
+from PySide6.QtCore import __version__ as qt_version
+import fusion
 
 from fusion.libs.entity.change import Change
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
 from pamet import commands
+import pamet
 from pamet.views.tab.widget import TabWidget
 from pamet.views.command_palette.widget import CommandPaletteViewState
 from pamet.views.command_palette.widget import CommandPaletteWidget
@@ -41,6 +45,86 @@ class WindowWidget(QMainWindow, View):
         self.setMinimumWidth(WINDOW_MIN_WIDTH)
         self.setMinimumHeight(WINDOW_MIN_HEIGHT)
 
+        # Setup main menu
+        # Page menu
+        self.ui.actionNew_page.triggered.connect(commands.create_new_page)
+        self.ui.actionGo_to_page.triggered.connect(
+            commands.open_command_palette_go_to_file)
+        self.ui.actionRefresh.triggered.connect(commands.refresh_page)
+        self.ui.actionPageProperties.triggered.connect(
+            commands.open_page_properties)
+
+        # Note menu
+        self.ui.actionNew_note.triggered.connect(commands.create_new_note)
+        self.ui.actionCreate_arrow.triggered.connect(
+            commands.start_arrow_creation)
+        self.ui.actionEdit_note.triggered.connect(commands.edit_selected_notes)
+        self.ui.actionSelect_all.triggered.connect(commands.select_all)
+        self.ui.actionCopy.triggered.connect(commands.copy)
+        self.ui.actionPaste.triggered.connect(commands.paste)
+        self.ui.actionPaste_special.triggered.connect(commands.paste_special)
+        self.ui.actionCut.triggered.connect(commands.cut)
+        self.ui.actionDelete_selected.triggered.connect(
+            commands.delete_selected)
+        self.ui.actionUndo.triggered.connect(commands.undo)
+        self.ui.actionRedo.triggered.connect(commands.redo)
+        self.ui.actionAutosize.triggered.connect(
+            commands.autosize_selected_notes)
+        self.ui.actionColorSelectedBlue.triggered.connect(
+            commands.color_selected_notes_blue)
+        self.ui.actionColorSelectedGreen.triggered.connect(
+            commands.color_selected_notes_green)
+        self.ui.actionColorSelectedRed.triggered.connect(
+            commands.color_selected_notes_red)
+        self.ui.actionColorSelectedBlack.triggered.connect(
+            commands.color_selected_notes_black)
+        self.ui.actionRemove_background.triggered.connect(
+            commands.make_background_transparent_for_selected_notes)
+        self.ui.actionBlue_shift.triggered.connect(
+            commands.blue_shift_selected)
+        self.ui.actionGreen_shift.triggered.connect(
+            commands.green_shift_selected)
+        self.ui.actionRed_shift.triggered.connect(commands.red_shift_selected)
+        self.ui.actionBlack_shift.triggered.connect(
+            commands.black_shift_selected)
+        self.ui.actionTransparency_shift.triggered.connect(
+            commands.shift_selected_note_transparency)
+
+        # Other menu
+        self.ui.actionGrab_screen_snippet.triggered.connect(
+            commands.grab_screen_snippet)
+        self.ui.actionGlobal_search.triggered.connect(
+            commands.show_global_search)
+        self.ui.actionOpen_command_palette.triggered.connect(
+            commands.open_command_palette)
+        self.ui.actionOpen_user_settings.triggered.connect(
+            commands.open_user_settings_json)
+        self.ui.actionOpen_repo_settings.triggered.connect(
+            commands.open_repo_settings_json)
+        # Navigation
+        self.ui.actionBack.triggered.connect(commands.navigate_back)
+        self.ui.actionForward.triggered.connect(commands.navigate_forward)
+        self.ui.actionToggle.triggered.connect(
+            commands.toggle_between_last_two_pages)
+
+        def show_about_dialog():
+            QMessageBox.about(
+                self, 'About Pamet', f"""
+            <h1>Pamet</h1>
+            <p>An app for organizing notes and thoughts.</p>
+            <p> Github:
+                <a href="https://github.com/v-ko/pamet">
+                    https://github.com/v-ko/pamet
+                </a>
+            </p>
+            <p>Version: {pamet.__version__}</p>
+            <p>Fusion version: {fusion.__version__}</p>
+            <p>Qt version: {qt_version}</p>
+            <p>Python version: {sys.version}</p>
+            """)
+
+        self.ui.actionAbout.triggered.connect(show_about_dialog)
+
         self.tab_widgets = {}
         self.command_widget: QWidget = None
 
@@ -54,10 +138,10 @@ class WindowWidget(QMainWindow, View):
         self.ui.tabBarWidget.tabCloseRequested.connect(
             self.handle_tab_close_requested)
 
-        QShortcut(QKeySequence('ctrl+shift+P'), self,
-                  commands.open_command_palette)
-        QShortcut(QKeySequence('ctrl+shift+F'), self,
-                  commands.show_global_search)
+        # QShortcut(QKeySequence('ctrl+shift+P'), self,
+        #           commands.open_command_palette)
+        # QShortcut(QKeySequence('ctrl+shift+F'), self,
+        #           commands.show_global_search)
         QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shorcut)
         QShortcut(QKeySequence('ctrl+w'), self, commands.close_current_tab)
 
@@ -73,10 +157,6 @@ class WindowWidget(QMainWindow, View):
         QShortcut(QKeySequence('ctrl+7'), self, lambda: go_to_tab_num(7))
         QShortcut(QKeySequence('ctrl+8'), self, lambda: go_to_tab_num(8))
         QShortcut(QKeySequence('ctrl+9'), self, lambda: go_to_tab_num(9))
-
-        go_to_file_shortcut = QShortcut(QKeySequence('ctrl+P'), self)
-        go_to_file_shortcut.activated.connect(
-            commands.open_command_palette_go_to_file)
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
 

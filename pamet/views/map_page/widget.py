@@ -1,11 +1,11 @@
 from copy import copy
+import math
 import time
 from typing import Dict, List
 
 from PySide6.QtWidgets import QGestureEvent, QWidget
 from PySide6.QtCore import QEvent, QPointF, Qt, QPoint, QTimer, QRectF
 from PySide6.QtGui import QKeyEvent, QPainter, QPalette, QPen, QPicture, QImage, QColor, QBrush, QCursor
-from PySide6.QtGui import QKeySequence, QShortcut
 
 import fusion
 from fusion.util import Point2D, Rectangle
@@ -14,20 +14,21 @@ from fusion.view import View
 from fusion import fsm as fsm
 
 from pamet import commands
-from pamet.constants import ARROW_EDGE_RAIDUS, GREEN_COLOR, MAX_RENDER_TIME
+from pamet.constants import ARROW_EDGE_RAIDUS, GREEN_FG_COLOR, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MIN_HEIGHT_SCALE, MOVE_SPEED
 from pamet.constants import ALIGNMENT_LINE_LENGTH, RESIZE_CIRCLE_RADIUS
 from pamet.constants import LONG_PRESS_TIMEOUT
 
 import pamet
 from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
+from pamet.actions import tab as tab_actions
 from pamet.desktop_app.mime_data_utils import entities_from_mime_data
 from pamet.desktop_app.util import control_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
 from pamet.util import snap_to_grid
 from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
-from pamet.views.context_menu.widget import ContextMenuWidget
+from pamet.views.context_menu.widget import SEPARATOR, ContextMenuWidget
 from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 
@@ -87,95 +88,6 @@ class MapPageWidget(QWidget, MapPageView):
                 Qt.TapAndHoldGesture
         ]:
             self.grabGesture(gesture)
-
-        # Setup shortcuts
-        delete_shortcut = QShortcut(QKeySequence(Qt.Key_Delete), self)
-        delete_shortcut.activated.connect(self.handle_delete_shortcut)
-
-        color_notes_blue = QShortcut(QKeySequence('1'), self)
-        color_notes_blue.activated.connect(
-            lambda: map_page_actions.color_selected_children(
-                self.state(),
-                color=[0, 0, 1, 1],
-                background_color=[0, 0, 1, 0.1]))
-        color_notes_green = QShortcut(QKeySequence('2'), self)
-        color_notes_green.activated.connect(
-            lambda: map_page_actions.color_selected_children(
-                self.state(),
-                color=list(GREEN_COLOR),
-                background_color=[0, 1, 0, 0.1]))
-        color_notes_red = QShortcut(QKeySequence('3'), self)
-        color_notes_red.activated.connect(
-            lambda: map_page_actions.color_selected_children(
-                self.state(),
-                color=[1, 0, 0, 1],
-                background_color=[1, 0, 0, 0.1]))
-        color_notes_gray = QShortcut(QKeySequence('4'), self)
-        color_notes_gray.activated.connect(
-            lambda: map_page_actions.color_selected_children(
-                self.state(),
-                color=[0, 0, 0, 1],
-                background_color=[0, 0, 0, 0.1]))
-        remove_note_background = QShortcut(QKeySequence('5'), self)
-        remove_note_background.activated.connect(
-            lambda: map_page_actions.color_selected_children(
-                self.state(), background_color=[0, 0, 0, 0]))
-        select_all_shortcut = QShortcut(QKeySequence(Qt.CTRL | Qt.Key_A), self)
-        select_all_shortcut.activated.connect(
-            lambda: map_page_actions.select_all_children(self.state()))
-        QShortcut(QKeySequence(Qt.Key_E), self, commands.edit_selected_notes)
-        QShortcut(QKeySequence(Qt.CTRL | Qt.Key_E), self,
-                  commands.open_page_properties)
-        QShortcut(QKeySequence(Qt.Key_L), self, commands.start_arrow_creation)
-        # QShortcut(QKeySequence(Qt.Key_Escape), self, self.handle_esc_shortcut,
-        #           Qt.WidgetShortcut)
-        QShortcut(
-            QKeySequence(Qt.Key_A), self,
-            lambda: map_page_actions.autosize_selected_notes(self.state()))
-        QShortcut(QKeySequence('ctrl+Z'), self,
-                  lambda: map_page_actions.undo(self.state()))
-        QShortcut(QKeySequence('ctrl+shift+Z'), self,
-                  lambda: map_page_actions.redo(self.state()))
-        QShortcut(QKeySequence('ctrl+'), self,
-                  lambda: map_page_actions.redo(self.state()))
-        QShortcut(QKeySequence('ctrl+C'), self, commands.copy)
-        QShortcut(QKeySequence('ctrl+V'), self, commands.paste)
-        QShortcut(QKeySequence('ctrl+X'), self, commands.cut)
-        QShortcut(QKeySequence('ctrl+shift+V'), self, commands.paste_special)
-        QShortcut(QKeySequence('ctrl+Q'), self, commands.grab_screen_snippet)
-
-        # Color shifting
-        QShortcut(
-            QKeySequence('shift+1'), self,
-            lambda: map_page_actions.shift_selected_childrens_color(
-                self.state(),
-                fg_mask=(False, False, True, False),
-                bg_mask=(False, False, True, False)))
-        QShortcut(
-            QKeySequence('shift+2'), self,
-            lambda: map_page_actions.shift_selected_childrens_color(
-                self.state(),
-                fg_mask=(False, True, False, False),
-                bg_mask=(False, True, False, False)))
-        QShortcut(
-            QKeySequence('shift+3'), self,
-            lambda: map_page_actions.shift_selected_childrens_color(
-                self.state(),
-                fg_mask=(True, False, False, False),
-                bg_mask=(True, False, False, False)))
-        QShortcut(
-            QKeySequence('shift+4'), self, lambda: map_page_actions.
-            shift_selected_childrens_color(self.state(),
-                                           fg_mask=(True, True, True, False),
-                                           bg_mask=(True, True, True, False)))
-
-        QShortcut(
-            QKeySequence('shift+5'), self,
-            lambda: map_page_actions.shift_selected_childrens_color(
-                self.state(),
-                fg_mask=(False, False, False, False),
-                bg_mask=(False, False, False, True),
-                shift=-0.0333))
 
         # Widget config
         pal = self.palette()
@@ -953,6 +865,26 @@ class MapPageWidget(QWidget, MapPageView):
 
         self.handle_mouse_scroll(steps)
 
+    def handle_mouse_scroll(self, steps: int):
+        mouse_pos = Point2D(
+            self.mapFromGlobal(QCursor.pos()).x(),
+            self.mapFromGlobal(QCursor.pos()).y())
+        delta = MOVE_SPEED * steps
+        state = self.state()
+        current_height = state.viewport_height
+        current_center = state.viewport_center
+
+        new_height = max(
+            MIN_HEIGHT_SCALE,
+            min(current_height * math.exp(-delta * 0.1), MAX_HEIGHT_SCALE))
+
+        new_center = (current_center +
+                      (state.unproject_point(mouse_pos) - current_center) *
+                      (current_height / new_height - 1))
+
+        map_page_actions.update_viewport(state, new_center, new_height)
+        tab_actions.update_current_url(self.parent_tab.state())
+
     def resizeEvent(self, event):
         self.update()
         new_size = Point2D(event.size().width(), event.size().height())
@@ -1012,42 +944,40 @@ class MapPageWidget(QWidget, MapPageView):
                 nv_under_mouse = self.get_note_view_at(mouse_pos)
                 if nv_under_mouse:
                     child_under_mouse = nv_under_mouse
-                map_page_actions.update_child_selections(
-                    state, {child_under_mouse.state(): True})
+                    map_page_actions.update_child_selections(
+                        state, {child_under_mouse.state(): True})
 
         elif mode == MapPageMode.CHILD_MOVE:
             pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
             pos_delta /= self.state().height_scale_factor()
             map_page_actions.finish_child_move(self.state(), pos_delta)
 
-        elif mode == MapPageMode.NONE:
+        if mouse_pos == self._mouse_position_on_left_press:
             menu_entries = {}
             if ncs_under_mouse:
                 map_page_actions.update_child_selections(
                     self.state(), {nv.state(): True
                                    for nv in ncs_under_mouse})
-                menu_entries['Edit note'] = commands.edit_selected_notes
-                menu_entries['Copy'] = commands.copy
+                menu_entries['Edit note (E)'] = commands.edit_selected_notes
+                menu_entries['Copy (ctrl+C)'] = commands.copy
+                menu_entries['Cut (ctrl+X)'] = commands.cut
                 if pamet.clipboard.get_contents():
-                    menu_entries['Paste'] = commands.paste
-                menu_entries['Cut'] = commands.cut
+                    menu_entries['Paste (ctrl+V)'] = commands.paste
+                menu_entries['Delete (Del)'] = commands.delete_selected
             else:
-                menu_entries['New note'] = commands.create_new_note
+                menu_entries['New note(N)'] = commands.create_new_note
 
-            menu_entries['Paste special'] = commands.paste_special
-            menu_entries['New page'] = commands.create_new_page
-            menu_entries['Create arrow'] = commands.start_arrow_creation
+            menu_entries['Autosize (A)'] = commands.autosize_selected_notes
+            menu_entries[
+                'Paste special (ctrl+shift+V)'] = commands.paste_special
+            menu_entries['separator1'] = SEPARATOR
+            menu_entries['New page (ctrl+N)'] = commands.create_new_page
+            menu_entries['Create arrow (L)'] = commands.start_arrow_creation
 
             # Open the context menu with the tab as its parent
             context_menu = ContextMenuWidget(self.parent(),
                                              entries=menu_entries)
             context_menu.popup_on_mouse_pos()
-        else:
-            if mode == MapPageMode.CREATE_ARROW:
-                text = 'Cancel arrow creation'
-                menu_entries[
-                    text] = lambda: map_page_actions.abort_special_mode(
-                        self.state())
 
     def handle_esc_shortcut(self):
         if self.state().mode() != MapPageMode.NONE:

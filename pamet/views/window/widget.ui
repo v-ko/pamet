@@ -31,12 +31,311 @@
     </item>
    </layout>
   </widget>
+  <widget class="QMenuBar" name="menuBar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuPage">
+    <property name="title">
+     <string>Page</string>
+    </property>
+    <addaction name="actionNew_page"/>
+    <addaction name="actionGo_to_page"/>
+    <addaction name="separator"/>
+    <addaction name="actionPageProperties"/>
+    <addaction name="separator"/>
+    <addaction name="actionExport_as_static_web_page_beta"/>
+    <addaction name="actionRefresh"/>
+   </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <widget class="QMenu" name="menuColor">
+     <property name="title">
+      <string>Color</string>
+     </property>
+     <addaction name="actionColorSelectedBlue"/>
+     <addaction name="actionColorSelectedGreen"/>
+     <addaction name="actionColorSelectedRed"/>
+     <addaction name="actionColorSelectedBlack"/>
+     <addaction name="actionRemove_background"/>
+     <addaction name="separator"/>
+     <addaction name="actionBlue_shift"/>
+     <addaction name="actionGreen_shift"/>
+     <addaction name="actionRed_shift"/>
+     <addaction name="actionBlack_shift"/>
+     <addaction name="actionTransparency_shift"/>
+    </widget>
+    <addaction name="actionNew_note"/>
+    <addaction name="actionCreate_arrow"/>
+    <addaction name="actionEdit_note"/>
+    <addaction name="actionSelect_all"/>
+    <addaction name="separator"/>
+    <addaction name="actionCopy"/>
+    <addaction name="actionPaste"/>
+    <addaction name="actionPaste_special"/>
+    <addaction name="actionCut"/>
+    <addaction name="actionDelete_selected"/>
+    <addaction name="separator"/>
+    <addaction name="actionUndo"/>
+    <addaction name="actionRedo"/>
+    <addaction name="separator"/>
+    <addaction name="actionAutosize"/>
+    <addaction name="menuColor"/>
+   </widget>
+   <widget class="QMenu" name="menuOther">
+    <property name="title">
+     <string>Other</string>
+    </property>
+    <widget class="QMenu" name="menuNavigation">
+     <property name="title">
+      <string>Navigation</string>
+     </property>
+     <addaction name="actionForward"/>
+     <addaction name="actionBack"/>
+     <addaction name="actionToggle"/>
+    </widget>
+    <addaction name="actionGrab_screen_snippet"/>
+    <addaction name="actionGlobal_search"/>
+    <addaction name="actionOpen_command_palette"/>
+    <addaction name="separator"/>
+    <addaction name="actionOpen_user_settings"/>
+    <addaction name="actionOpen_repo_settings"/>
+    <addaction name="menuNavigation"/>
+    <addaction name="separator"/>
+    <addaction name="actionHelp"/>
+    <addaction name="actionAbout"/>
+   </widget>
+   <addaction name="menuPage"/>
+   <addaction name="menuEdit"/>
+   <addaction name="menuOther"/>
+  </widget>
+  <action name="actionNew_page">
+   <property name="text">
+    <string>New page</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+  </action>
+  <action name="actionGo_to_page">
+   <property name="text">
+    <string>Go to page</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+  </action>
+  <action name="actionRefresh">
+   <property name="text">
+    <string>Refresh</string>
+   </property>
+   <property name="shortcut">
+    <string>F5</string>
+   </property>
+  </action>
+  <action name="actionPageProperties">
+   <property name="text">
+    <string>Properties</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+E</string>
+   </property>
+  </action>
+  <action name="actionNew_note">
+   <property name="text">
+    <string>New note</string>
+   </property>
+   <property name="shortcut">
+    <string>N</string>
+   </property>
+  </action>
+  <action name="actionEdit_note">
+   <property name="text">
+    <string>Edit note</string>
+   </property>
+   <property name="shortcut">
+    <string>E</string>
+   </property>
+  </action>
+  <action name="actionDelete_selected">
+   <property name="text">
+    <string>Delete selected</string>
+   </property>
+   <property name="shortcut">
+    <string>Del</string>
+   </property>
+  </action>
+  <action name="actionColorSelectedRed">
+   <property name="text">
+    <string>Red</string>
+   </property>
+   <property name="shortcut">
+    <string>3</string>
+   </property>
+  </action>
+  <action name="actionColorSelectedGreen">
+   <property name="text">
+    <string>Green</string>
+   </property>
+   <property name="shortcut">
+    <string>2</string>
+   </property>
+  </action>
+  <action name="actionColorSelectedBlue">
+   <property name="text">
+    <string>Blue</string>
+   </property>
+   <property name="shortcut">
+    <string>1</string>
+   </property>
+  </action>
+  <action name="actionColorSelectedBlack">
+   <property name="text">
+    <string>Black</string>
+   </property>
+   <property name="shortcut">
+    <string>4</string>
+   </property>
+  </action>
+  <action name="actionRemove_background">
+   <property name="text">
+    <string>Remove background</string>
+   </property>
+   <property name="shortcut">
+    <string>5</string>
+   </property>
+  </action>
+  <action name="actionRed_shift">
+   <property name="text">
+    <string>Red shift</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+3</string>
+   </property>
+  </action>
+  <action name="actionGreen_shift">
+   <property name="text">
+    <string>Green shift</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+2</string>
+   </property>
+  </action>
+  <action name="actionBlue_shift">
+   <property name="text">
+    <string>Blue shift</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+1</string>
+   </property>
+  </action>
+  <action name="actionBlack_shift">
+   <property name="text">
+    <string>Black shift</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+4</string>
+   </property>
+  </action>
+  <action name="actionTransparency_shift">
+   <property name="text">
+    <string>Transparency shift</string>
+   </property>
+   <property name="shortcut">
+    <string>Shift+5</string>
+   </property>
+  </action>
+  <action name="actionGlobal_search">
+   <property name="text">
+    <string>Global search</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+F</string>
+   </property>
+  </action>
+  <action name="actionOpen_command_palette">
+   <property name="text">
+    <string>Open command palette</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+P</string>
+   </property>
+  </action>
+  <action name="actionGo_to_file">
+   <property name="text">
+    <string>Go to file</string>
+   </property>
+  </action>
+  <action name="actionOpen_user_settings">
+   <property name="text">
+    <string>Open user settings</string>
+   </property>
+  </action>
+  <action name="actionOpen_repo_settings">
+   <property name="text">
+    <string>Open repo settings</string>
+   </property>
+  </action>
+  <action name="actionExport_as_static_web_page_beta">
+   <property name="text">
+    <string>Export as static web page (beta)</string>
+   </property>
+  </action>
+  <action name="actionGrab_screen_snippet">
+   <property name="text">
+    <string>Grab screen snippet</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionForward">
+   <property name="text">
+    <string>Forward</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Right</string>
+   </property>
+  </action>
+  <action name="actionBack">
+   <property name="text">
+    <string>Back</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Left</string>
+   </property>
+  </action>
+  <action name="actionToggle">
+   <property name="text">
+    <string>Toggle</string>
+   </property>
+   <property name="shortcut">
+    <string>Backspace</string>
+   </property>
+  </action>
+  <action name="actionHelp">
+   <property name="text">
+    <string>Help</string>
+   </property>
+   <property name="shortcut">
+    <string>F1</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
   <action name="actionCopy">
    <property name="text">
-    <string>&amp;Copy</string>
-   </property>
-   <property name="toolTip">
-    <string>Copies notes to the internal clipboard, and copies their text to the regular clipboard.</string>
+    <string>Copy</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+C</string>
@@ -44,496 +343,71 @@
   </action>
   <action name="actionPaste">
    <property name="text">
-    <string>&amp;Paste</string>
-   </property>
-   <property name="toolTip">
-    <string>Pastes the notes from the internal clipboard.</string>
+    <string>Paste</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionPaste_special">
+   <property name="text">
+    <string>Paste special</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+V</string>
    </property>
   </action>
   <action name="actionCut">
    <property name="text">
     <string>Cut</string>
    </property>
-   <property name="toolTip">
-    <string>See the tooltip of &quot;Copy&quot;</string>
-   </property>
    <property name="shortcut">
     <string>Ctrl+X</string>
    </property>
   </action>
+  <action name="actionAutosize">
+   <property name="text">
+    <string>Autosize</string>
+   </property>
+   <property name="shortcut">
+    <string>A</string>
+   </property>
+  </action>
   <action name="actionUndo">
    <property name="text">
-    <string>&amp;Undo</string>
-   </property>
-   <property name="toolTip">
-    <string>Reverts the last action. The max is 30 undo steps. (note there is no Redo for now)</string>
+    <string>Undo</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Z</string>
    </property>
   </action>
-  <action name="actionHelp">
-   <property name="text">
-    <string>&amp;Help</string>
-   </property>
-   <property name="toolTip">
-    <string>Shows the help notefile.</string>
-   </property>
-   <property name="shortcut">
-    <string>F1</string>
-   </property>
-  </action>
-  <action name="actionAdd_new">
-   <property name="checkable">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Add another folder</string>
-   </property>
-  </action>
-  <action name="actionRemove_current">
-   <property name="text">
-    <string>&amp;Remove current</string>
-   </property>
-   <property name="toolTip">
-    <string>Remove the current folder (does not delete the notefiles from the disk)</string>
-   </property>
-  </action>
-  <action name="actionEdit_note">
-   <property name="text">
-    <string>&amp;Edit note</string>
-   </property>
-   <property name="shortcut">
-    <string>E</string>
-   </property>
-  </action>
-  <action name="actionNew_note">
-   <property name="text">
-    <string>&amp;New note</string>
-   </property>
-   <property name="toolTip">
-    <string>Create a new note</string>
-   </property>
-   <property name="shortcut">
-    <string>N</string>
-   </property>
-  </action>
-  <action name="actionNew_notefile">
-   <property name="checkable">
-    <bool>false</bool>
-   </property>
-   <property name="checked">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>&amp;New notefile</string>
-   </property>
-   <property name="toolTip">
-    <string>Create a new notefile on the disk and open it to add notes.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+N</string>
-   </property>
-  </action>
-  <action name="actionMake_link">
-   <property name="text">
-    <string>&amp;Make link</string>
-   </property>
-   <property name="toolTip">
-    <string>Link notes with arrows to visualize their connections.</string>
-   </property>
-   <property name="shortcut">
-    <string>L</string>
-   </property>
-  </action>
-  <action name="actionNext_notefile">
-   <property name="text">
-    <string>Next notefile</string>
-   </property>
-   <property name="toolTip">
-    <string>Switch to the next notefile in the alphabetical order.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+PgUp</string>
-   </property>
-  </action>
-  <action name="actionPrevious_notefile">
-   <property name="text">
-    <string>Previous notefile</string>
-   </property>
-   <property name="toolTip">
-    <string>Switch to the previous notefile in thealphabetical order.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+PgDown</string>
-   </property>
-  </action>
-  <action name="actionDelete_selected">
-   <property name="text">
-    <string>&amp;Delete selected</string>
-   </property>
-   <property name="toolTip">
-    <string>Delete selected notes.</string>
-   </property>
-   <property name="shortcut">
-    <string>Del</string>
-   </property>
-  </action>
-  <action name="actionZoom_in">
-   <property name="text">
-    <string>&amp;Zoom in</string>
-   </property>
-   <property name="toolTip">
-    <string>Change the height of the viewpoint over the canvas.</string>
-   </property>
-   <property name="shortcut">
-    <string>PgDown</string>
-   </property>
-  </action>
-  <action name="actionZoom_out">
-   <property name="text">
-    <string>Zoom &amp;out</string>
-   </property>
-   <property name="toolTip">
-    <string>Change the height of the viewpoint over the canvas.</string>
-   </property>
-   <property name="shortcut">
-    <string>PgUp</string>
-   </property>
-  </action>
-  <action name="actionMake_this_view_point_default_for_the_notefile">
-   <property name="text">
-    <string>&amp;Make this view point default for the notefile</string>
-   </property>
-   <property name="toolTip">
-    <string>Fix the current viewpoint (height excluded) in the notefile as default on program start.</string>
-   </property>
-  </action>
-  <action name="actionMake_this_notefile_appear_first_on_program_start">
-   <property name="text">
-    <string>Make this notefile appear first &amp;on program start</string>
-   </property>
-   <property name="toolTip">
-    <string>Marks the notefile as default on program start for its folder.</string>
-   </property>
-  </action>
-  <action name="actionClose">
-   <property name="text">
-    <string>Close</string>
-   </property>
-   <property name="shortcut">
-    <string>Q</string>
-   </property>
-  </action>
-  <action name="actionBulgarian">
-   <property name="text">
-    <string>Български</string>
-   </property>
-  </action>
-  <action name="actionEnglish">
-   <property name="text">
-    <string>&amp;English</string>
-   </property>
-   <property name="toolTip">
-    <string>Change the language to english.</string>
-   </property>
-  </action>
-  <action name="actionClear_settings_and_exit">
-   <property name="text">
-    <string>&amp;Clear settings and exit</string>
-   </property>
-   <property name="toolTip">
-    <string>Clear program settings and kill this instance.</string>
-   </property>
-  </action>
-  <action name="actionRename_notefile">
-   <property name="text">
-    <string>&amp;Rename notefile</string>
-   </property>
-   <property name="toolTip">
-    <string>Also changes all of the notes that link to it to the new name.</string>
-   </property>
-  </action>
-  <action name="actionDelete_notefile">
-   <property name="text">
-    <string>&amp;Delete notefile</string>
-   </property>
-   <property name="toolTip">
-    <string>Delete the notefile permanetly (on the disk too).</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Del</string>
-   </property>
-  </action>
-  <action name="actionColor_blue">
-   <property name="text">
-    <string>&amp;Color blue</string>
-   </property>
-   <property name="shortcut">
-    <string>1</string>
-   </property>
-  </action>
-  <action name="actionColor_green">
-   <property name="text">
-    <string>Color &amp;green</string>
-   </property>
-   <property name="shortcut">
-    <string>2</string>
-   </property>
-  </action>
-  <action name="actionColor_red">
-   <property name="text">
-    <string>Color &amp;red</string>
-   </property>
-   <property name="shortcut">
-    <string>3</string>
-   </property>
-  </action>
-  <action name="actionColor_black">
-   <property name="text">
-    <string>Color &amp;black</string>
-   </property>
-   <property name="shortcut">
-    <string>4</string>
-   </property>
-  </action>
-  <action name="actionMove_down">
-   <property name="text">
-    <string>&amp;Move down</string>
-   </property>
-   <property name="shortcut">
-    <string>Down</string>
-   </property>
-  </action>
-  <action name="actionMove_up">
-   <property name="text">
-    <string>Move &amp;up</string>
-   </property>
-   <property name="shortcut">
-    <string>Up</string>
-   </property>
-  </action>
-  <action name="actionMove_left">
-   <property name="text">
-    <string>Move &amp;left</string>
-   </property>
-   <property name="shortcut">
-    <string>Left</string>
-   </property>
-  </action>
-  <action name="actionMove_right">
-   <property name="text">
-    <string>Move &amp;right</string>
-   </property>
-   <property name="shortcut">
-    <string>Right</string>
-   </property>
-  </action>
-  <action name="actionSearch">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>&amp;Search </string>
-   </property>
-   <property name="toolTip">
-    <string>Search in all notes. Click in the results shown under the search field to go to the note.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+F</string>
-   </property>
-  </action>
-  <action name="actionSelect_all_notes">
-   <property name="text">
-    <string>S&amp;elect all notes</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+A</string>
-   </property>
-  </action>
-  <action name="actionJump_to_nearest_note">
-   <property name="text">
-    <string>&amp;Jump to nearest note</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+J</string>
-   </property>
-  </action>
-  <action name="actionDetails">
-   <property name="text">
-    <string>Details</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+D</string>
-   </property>
-  </action>
-  <action name="actionAbout">
-   <property name="text">
-    <string>&amp;About</string>
-   </property>
-  </action>
-  <action name="actionSelect_note_under_mouse">
-   <property name="text">
-    <string>Select note under mouse</string>
-   </property>
-   <property name="shortcut">
-    <string>Return</string>
-   </property>
-  </action>
-  <action name="actionCreate_note_from_the_clipboard_text">
-   <property name="text">
-    <string>Create &amp;note from the clipboard text</string>
-   </property>
-   <property name="toolTip">
-    <string>Create note from the text in the regular clipboard.</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+V</string>
-   </property>
-  </action>
-  <action name="actionTransparent_background">
-   <property name="text">
-    <string>&amp;Transparent background</string>
-   </property>
-   <property name="toolTip">
-    <string>Changes only the background color of the note to be transparent.</string>
-   </property>
-   <property name="shortcut">
-    <string>5</string>
-   </property>
-  </action>
-  <action name="actionSet_this_height_as_default">
-   <property name="text">
-    <string>&amp;Set this height as default</string>
-   </property>
-   <property name="toolTip">
-    <string>Set the current height as default for all files on startup.</string>
-   </property>
-   <property name="statusTip">
-    <string>Set the current height as default for all files on startup.</string>
-   </property>
-   <property name="whatsThis">
-    <string>Set the current height as default for all files on startup.</string>
-   </property>
-  </action>
-  <action name="actionCopy_donation_address">
-   <property name="text">
-    <string>&amp;Copy donation address</string>
-   </property>
-  </action>
-  <action name="actionSelect_all_red_notes">
-   <property name="text">
-    <string>Se&amp;lect all red notes</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
-   </property>
-  </action>
   <action name="actionRedo">
    <property name="text">
-    <string>&amp;Redo</string>
+    <string>Redo</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+Z</string>
    </property>
   </action>
-  <action name="actionCheck_for_updates">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>false</bool>
-   </property>
+  <action name="actionCreate_arrow">
    <property name="text">
-    <string>Check for updates</string>
-   </property>
-  </action>
-  <action name="actionDownload_it">
-   <property name="text">
-    <string>Download it</string>
-   </property>
-  </action>
-  <action name="actionGotoTab1">
-   <property name="text">
-    <string>gotoTab1</string>
+    <string>Create arrow</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+1</string>
+    <string>L</string>
    </property>
   </action>
-  <action name="actionGotoTab2">
+  <action name="actionSelect_all">
    <property name="text">
-    <string>gotoTab2</string>
+    <string>Select all</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+2</string>
-   </property>
-  </action>
-  <action name="actionSwitch_to_the_last_note_file">
-   <property name="text">
-    <string>S&amp;witch to the last note file</string>
-   </property>
-   <property name="shortcut">
-    <string>Backspace</string>
-   </property>
-  </action>
-  <action name="actionExport_all_as_web_notes">
-   <property name="text">
-    <string>&amp;Export all as web notes</string>
-   </property>
-  </action>
-  <action name="actionToggle_tags_view">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Toggle tags view</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+T</string>
-   </property>
-  </action>
-  <action name="actionToggle_tag">
-   <property name="text">
-    <string>Toggle tag</string>
-   </property>
-   <property name="shortcut">
-    <string>T</string>
-   </property>
-  </action>
-  <action name="actionUse_JSON_format">
-   <property name="text">
-    <string>Use JSON format</string>
-   </property>
-  </action>
-  <action name="actionMigrate_to_JSON_format">
-   <property name="text">
-    <string>Migrate to JSON format</string>
+    <string>Ctrl+A</string>
    </property>
   </action>
  </widget>
  <resources/>
- <connections>
-  <connection>
-   <sender>actionClose</sender>
-   <signal>triggered()</signal>
-   <receiver>actionToggle_tag</receiver>
-   <slot>toggle()</slot>
-   <hints>
-    <hint type="sourcelabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-    <hint type="destinationlabel">
-     <x>-1</x>
-     <y>-1</y>
-    </hint>
-   </hints>
-  </connection>
- </connections>
+ <connections/>
  <slots>
   <slot>edit_note()</slot>
   <slot>new_note()</slot>

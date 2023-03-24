@@ -69,5 +69,5 @@ class ImageNoteWidget(ImageLabel, NoteView):
         painter.begin(self)
         draw_link_decorations(self, painter)
         painter.end()
-        
+
         super().paintEvent(event)

@@ -1,10 +1,12 @@
 from typing import Callable, Union
 from PySide6.QtWidgets import QLabel, QMenu, QWidgetAction
 from PySide6.QtGui import QCursor, QKeySequence
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import Qt
 
 import fusion
 from fusion.libs.command import Command
+
+SEPARATOR = '---'
 
 
 def add_entries(menu: QMenu, entries):
@@ -26,6 +28,8 @@ def add_entries(menu: QMenu, entries):
                 menu.addAction(name, command, QKeySequence(binding.key))
             else:
                 menu.addAction(name, command)
+        elif command is SEPARATOR:
+            menu.addSeparator()
         else:
             raise Exception
 

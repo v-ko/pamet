@@ -27,15 +27,3 @@ class CornerWidget(QWidget):
         self.ui.navigationToggleButton.clicked.connect(
             lambda: tab_actions.navigation_toggle_last(self.window.current_tab(
             ).state()))
-
-        self.ui.menuButton.clicked.connect(self.open_main_menu)
-
-    def open_main_menu(self):
-        entries = {
-            'Page properties': commands.open_page_properties,
-            'Open user settings (JSON)': commands.open_user_settings_json,
-            'Open repo settings (JSON)': commands.open_repo_settings_json,
-            'Export as HTML page /*buggy*': commands.export_as_web_page,
-        }
-        context_menu = ContextMenuWidget(self, entries=entries)
-        context_menu.popup(self.ui.menuButton.rect().bottomRight())

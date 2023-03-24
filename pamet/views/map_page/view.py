@@ -345,16 +345,6 @@ class MapPageView(View):
                                                     anchor_note_id=note_id,
                                                     anchor_type=anchor_type)
 
-    def handle_mouse_scroll(self, steps: int):
-        delta = MOVE_SPEED * steps
-        current_height = self.state().viewport_height
-
-        new_height = max(MIN_HEIGHT_SCALE,
-                         min(current_height - delta, MAX_HEIGHT_SCALE))
-
-        map_page_actions.set_viewport_height(self.state(), new_height)
-        tab_actions.update_current_url(self.parent_tab.state())
-
     def left_mouse_double_click_event(self, mouse_pos: Point2D):
         if self.state().mode() == MapPageMode.CREATE_ARROW:
             map_page_actions.abort_special_mode(self.state())

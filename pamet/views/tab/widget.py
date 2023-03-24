@@ -46,14 +46,6 @@ class TabWidget(QWidget, View):
         self._semantic_search_widget = None
         self._page_widget_cache = {}  # By page_id
 
-        new_note_shortcut = QShortcut(QKeySequence('N'), self)
-        new_note_shortcut.activated.connect(commands.create_new_note)
-
-        new_page_shortcut = QShortcut(QKeySequence('ctrl+N'), self)
-        new_page_shortcut.activated.connect(commands.create_new_page)
-
-        QShortcut(QKeySequence('F5'), self, commands.refresh_page)
-
         self.ui.rightSidebarCloseButton.clicked.connect(
             lambda: tab_actions.close_page_properties(self.state()))
         self.ui.leftSidebarCloseButton.clicked.connect(

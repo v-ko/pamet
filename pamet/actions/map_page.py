@@ -111,10 +111,18 @@ def clear_child_selection(map_page_view_state: str):
     update_child_selections(map_page_view_state, selection_updates)
 
 
-@action('map_page.set_viewport_height')
+@action('map_page.set_viewport_height')  # Should be removed in future
 def set_viewport_height(map_page_view_state: MapPageViewState,
                         new_height: float):
     map_page_view_state.viewport_height = new_height
+    fsm.update_state(map_page_view_state)
+
+
+@action('map_page.update_viewport')
+def update_viewport(map_page_view_state: MapPageViewState,
+                    viewport_center: Point2D, viewport_height: float):
+    map_page_view_state.viewport_center = viewport_center
+    map_page_view_state.viewport_height = viewport_height
     fsm.update_state(map_page_view_state)
     # //glutPostRedisplay(); artefact, thank you for siteseeing
 
@@ -460,7 +468,6 @@ def open_page_properties(tab_state: TabViewState, focused_prop: str = None):
         fsm.update_state(properties_view_state)
 
     tab_state.page_edit_view_state = properties_view_state
-
     fsm.update_state(tab_state)
 
 

@@ -59,13 +59,6 @@
      </property>
     </widget>
    </item>
-   <item>
-    <widget class="QPushButton" name="menuButton">
-     <property name="text">
-      <string>Menu</string>
-     </property>
-    </widget>
-   </item>
   </layout>
  </widget>
  <resources/>
