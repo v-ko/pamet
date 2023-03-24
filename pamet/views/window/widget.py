@@ -123,7 +123,24 @@ class WindowWidget(QMainWindow, View):
             <p>Python version: {sys.version}</p>
             """)
 
+        def show_help_dialog():
+            QMessageBox.about(
+                self, 'Help', """
+            <h1>Help</h1>
+            <h3>Navigation</h3>
+            <p>Click and drag to pan around. Scroll to zoom in/out.</p>
+            <h3>Selection</h3>
+            <p>Right click and drag selects or moves notes.
+            Left-click with ctrl+shift does the same.</p>
+            <h3>Editing</h3>
+            <p>Double click to edit a note or create one.</p>
+            <h3>Other</h3>
+            <p>Check out the rest of the commands in the command palette
+            (ctrl+shift+P) or browse the menus</p>
+            """)
+
         self.ui.actionAbout.triggered.connect(show_about_dialog)
+        self.ui.actionHelp.triggered.connect(show_help_dialog)
 
         self.tab_widgets = {}
         self.command_widget: QWidget = None
