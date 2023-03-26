@@ -16,7 +16,7 @@ def create_default_page():
     pamet.insert_page(page)
 
     help_link_note = TextNote.in_page(page)
-    help_link_note.text = 'Mock help note'
+    help_link_note.text = 'Press F1 for help'
 
     rect = help_link_note.rect()
     rect.move_center(Point2D(0, 0))
