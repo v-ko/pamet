@@ -44,9 +44,6 @@
      <property name="text">
       <string>toggle</string>
      </property>
-     <property name="shortcut">
-      <string>Backspace</string>
-     </property>
     </widget>
    </item>
    <item>
