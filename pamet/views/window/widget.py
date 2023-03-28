@@ -53,6 +53,8 @@ class WindowWidget(QMainWindow, View):
         self.ui.actionRefresh.triggered.connect(commands.refresh_page)
         self.ui.actionPageProperties.triggered.connect(
             commands.open_page_properties)
+        self.ui.actionOpen_page_backups_folder.triggered.connect(
+            commands.open_page_backups_folder)
 
         # Note menu
         self.ui.actionNew_note.triggered.connect(commands.create_new_note)
@@ -101,6 +103,8 @@ class WindowWidget(QMainWindow, View):
             commands.open_user_settings_json)
         self.ui.actionOpen_repo_settings.triggered.connect(
             commands.open_repo_settings_json)
+        self.ui.actionOpen_repo_folder.triggered.connect(
+            commands.open_repository_folder)
         # Navigation
         self.ui.actionBack.triggered.connect(commands.navigate_back)
         self.ui.actionForward.triggered.connect(commands.navigate_forward)

@@ -165,6 +165,7 @@ def main(path: str, command: str):
 
         if service_started:
             app.aboutToQuit.connect(backup_service.stop)
+            pamet.desktop_app.set_backup_service(backup_service)
 
     # Experimental semantic search
     if repo_settings.semantic_search_enabled:

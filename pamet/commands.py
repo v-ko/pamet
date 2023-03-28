@@ -4,7 +4,7 @@ from typing import Tuple
 
 from PySide6.QtCore import QTimer, QUrl, Qt
 from PySide6.QtGui import QCursor, QDesktopServices
-from PySide6.QtWidgets import QApplication, QFileDialog
+from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 import fusion
 from fusion.util.point2d import Point2D
@@ -426,3 +426,33 @@ def navigate_forward():
 def toggle_between_last_two_pages():
     tab_view, _ = current_tab_and_page_views()
     tab_actions.navigation_toggle_last(tab_view.state())
+
+
+@command(title='Open page backups folder')
+def open_page_backups_folder():
+    tab_view, page_view = current_tab_and_page_views()
+    page_id = page_view.state().id
+    backup_service = pamet.desktop_app.backup_service()
+
+    if not backup_service:
+        QMessageBox.warning(
+            page_view, 'No backups',
+            ('Backup service not available. Have you enabled it '
+             'in the user settings?'))
+        return
+
+    page_backups_folder = backup_service.page_backup_folder(page_id)
+
+    if not page_backups_folder.exists():
+        QMessageBox.warning(page_view, 'No backups',
+                            'No backups folder present for this page')
+        return
+
+    path = Path(page_backups_folder)
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
+
+
+@command(title='Open repository folder')
+def open_repository_folder():
+    repo = pamet.sync_repo()
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(repo.path)))

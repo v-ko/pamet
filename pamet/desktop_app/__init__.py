@@ -22,9 +22,11 @@ icons = PametQtWidgetsCachedIcons()
 selection_overlay_qcolor = QColor(
     *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
 
-_media_store = None
-_default_note_font = None
 _app = None
+_media_store = None
+_backup_service = None
+
+_default_note_font = None
 script_runner = ScriptRunner()
 
 
@@ -83,15 +85,6 @@ def save_repo_settings(repo_settings: RepoSettings):
     config_path.write_text(config_str)
 
 
-def media_store():
-    return _media_store
-
-
-def set_media_store(new_media_store):
-    global _media_store
-    _media_store = new_media_store
-
-
 def default_note_font():
     return copy(_default_note_font)
 
@@ -108,3 +101,21 @@ def get_app() -> DesktopApp:
 def set_app(new_app):
     global _app
     _app = new_app
+
+
+def media_store():
+    return _media_store
+
+
+def set_media_store(new_media_store):
+    global _media_store
+    _media_store = new_media_store
+
+
+def backup_service() -> FSStorageBackupService:
+    return _backup_service
+
+
+def set_backup_service(backup_service_):
+    global _backup_service
+    _backup_service = backup_service_

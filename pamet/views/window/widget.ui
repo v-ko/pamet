@@ -48,6 +48,7 @@
     <addaction name="actionGo_to_page"/>
     <addaction name="separator"/>
     <addaction name="actionPageProperties"/>
+    <addaction name="actionOpen_page_backups_folder"/>
     <addaction name="separator"/>
     <addaction name="actionExport_as_static_web_page_beta"/>
     <addaction name="actionRefresh"/>
@@ -104,6 +105,7 @@
     <addaction name="actionGrab_screen_snippet"/>
     <addaction name="actionGlobal_search"/>
     <addaction name="actionOpen_command_palette"/>
+    <addaction name="actionOpen_repo_folder"/>
     <addaction name="separator"/>
     <addaction name="actionOpen_user_settings"/>
     <addaction name="actionOpen_repo_settings"/>
@@ -403,6 +405,16 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+A</string>
+   </property>
+  </action>
+  <action name="actionOpen_page_backups_folder">
+   <property name="text">
+    <string>Open backups folder</string>
+   </property>
+  </action>
+  <action name="actionOpen_repo_folder">
+   <property name="text">
+    <string>Open repository folder</string>
    </property>
   </action>
  </widget>
