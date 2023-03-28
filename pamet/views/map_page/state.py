@@ -47,7 +47,7 @@ class MapPageViewState(ViewState, Viewport, Page):
     drag_selected_children: set = field(default_factory=set)
     drag_select_rect_props: list = field(default_factory=list)
 
-    # Note resize related
+    # Note resize and drag related
     mouse_position_on_note_drag_start: Point2D = None
     note_resize_click_position: Point2D = None
     note_resize_delta_from_note_edge: Point2D = None

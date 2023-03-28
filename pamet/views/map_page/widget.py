@@ -14,7 +14,7 @@ from fusion.view import View
 from fusion import fsm as fsm
 
 from pamet import commands
-from pamet.constants import ARROW_EDGE_RAIDUS, GREEN_FG_COLOR, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MIN_HEIGHT_SCALE, MOVE_SPEED
+from pamet.constants import ARROW_EDGE_RAIDUS, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MIN_HEIGHT_SCALE, MOVE_SPEED
 from pamet.constants import ALIGNMENT_LINE_LENGTH, RESIZE_CIRCLE_RADIUS
 from pamet.constants import LONG_PRESS_TIMEOUT
 
@@ -27,7 +27,7 @@ from pamet.desktop_app.util import control_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
 from pamet.util import snap_to_grid
-from pamet.views.arrow.widget import ArrowView, ArrowViewState, ArrowWidget
+from pamet.views.arrow.widget import ArrowViewState, ArrowWidget
 from pamet.views.context_menu.widget import SEPARATOR, ContextMenuWidget
 from pamet.views.map_page.view import MapPageView
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
@@ -156,7 +156,7 @@ class MapPageWidget(QWidget, MapPageView):
     def note_views(self) -> List[View]:
         yield from self.note_widgets()
 
-    def arrow_views(self) -> List[ArrowView]:
+    def arrow_views(self) -> List[ArrowWidget]:
         yield from self.arrow_widgets()
 
     def on_state_change(self, change: Change):

@@ -51,20 +51,11 @@ class ArrowViewState(Arrow, ViewState):
         self.replace(**arrow_dict)
 
 
-class ArrowView(View):
-
-    def intersects_rect(self, rect: Rectangle) -> bool:
-        raise NotImplementedError
-
-    def intersects_circle(self, center: Point2D, radius: float) -> bool:
-        raise NotImplementedError
-
-
-class ArrowWidget(QObject, ArrowView):
+class ArrowWidget(QObject, View):
 
     def __init__(self, initial_state: ArrowViewState = None, parent=None):
         QObject.__init__(self, parent)
-        ArrowView.__init__(self, initial_state)
+        View.__init__(self, initial_state)
         self.map_page_view = parent
         self._anchor_subs_by_note_id = {}
         self._cached_curves = None

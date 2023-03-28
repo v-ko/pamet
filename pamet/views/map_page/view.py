@@ -17,7 +17,7 @@ from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.model.arrow import ArrowAnchorType
 from pamet.model.text_note import TextNote
-from pamet.views.arrow.widget import ArrowView
+from pamet.views.arrow.widget import ArrowWidget
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
 from pamet.views.note.base.view import NoteView
 
@@ -41,7 +41,7 @@ class MapPageView(View):
     def note_views(self) -> List[NoteView]:
         raise NotImplementedError
 
-    def arrow_views(self) -> List[ArrowView]:
+    def arrow_views(self) -> List[ArrowWidget]:
         raise NotImplementedError
 
     @property
@@ -96,14 +96,14 @@ class MapPageView(View):
         return None
 
     def get_arrow_views_at(
-            self, position: Point2D) -> Generator[ArrowView, None, None]:
+            self, position: Point2D) -> Generator[ArrowWidget, None, None]:
         unprojected_pos = self.state().unproject_point(position)
         for arrow_view in self.arrow_views():
             if arrow_view.intersects_circle(unprojected_pos,
                                             ARROW_SELECTION_RADIUS):
                 yield arrow_view
 
-    def get_arrow_view_at(self, position: Point2D) -> Union[ArrowView, None]:
+    def get_arrow_view_at(self, position: Point2D) -> Union[ArrowWidget, None]:
         for arrow_view in self.get_arrow_views_at(position):
             return arrow_view
         return None
