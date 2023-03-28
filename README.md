@@ -5,10 +5,6 @@ An infinite canvas for organizing information with text/images/links. Written us
 
 ## Installation
 
-### Windows options
-- From the [Windows store](https://www.microsoft.com/store/apps/9PB9T7G1PMSR)
-- By downloading the static build from [the Releases page](https://github.com/v-ko/pamet/releases/)
-
 ### Via pip
 Requires Python `>3.10`. If it's not available for your package manager(/app store) - you can use [pyenv](https://github.com/pyenv/pyenv).
 
