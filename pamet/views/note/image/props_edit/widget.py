@@ -172,7 +172,7 @@ class ImagePropsWidget(QWidget):
             # Done handler: remove reply, preview, save
             def on_complete():
                 # This handler is called after on_error if one occurres
-                if self._image_download_reply.error():
+                if self._image_download_reply.error() != QNetworkReply.NoError:
                     self.update_image_note_and_preview(
                         error=(f'Could not download image. Error:'
                                f' {self._image_download_reply.errorString()}'))

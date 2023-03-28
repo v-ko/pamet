@@ -80,7 +80,7 @@ class TextEditPropsWidget(QWidget):
             # Done handler: remove reply, preview, save
             def on_complete():
                 # This handler is called after on_error if one occurres
-                if self._image_download_reply.error():
+                if self._image_download_reply.error() != QNetworkReply.NoError:
                     self.ui.downloadInfoLabel.setText('Download error')
                     return
                 html = self._image_download_reply.readAll().toStdString()
