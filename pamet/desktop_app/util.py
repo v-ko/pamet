@@ -18,7 +18,6 @@ from fusion.logging import get_logger
 
 import pamet
 from pamet.constants import NO_SCALE_LINE_SPACING
-from pamet.desktop_app import media_store
 from pamet.util import resource_dir
 from pamet.util.url import Url
 
@@ -45,11 +44,11 @@ def current_tab() -> TabWidget:
 class TextLayout:
 
     def __init__(self):
-        self.data = []
+        self.lines = []
         self.is_elided = False
 
     def text(self):
-        return '\n'.join([text for text, line in self.data])
+        return '\n'.join([text for text, line in self.lines])
 
 
 def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
@@ -163,7 +162,7 @@ def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
             else:
                 line_text = '...'
 
-        text_layout.data.append((line_text, line_rect))
+        text_layout.lines.append((line_text, line_rect))
     return text_layout
 
 
@@ -273,6 +272,6 @@ def jpeg_blob_from_image(image: QImage, quality: int = 100) -> bytes:
 def resolve_media_url(url: Url):
     local_path = Path(url.path)
     if url.is_internal():
-        local_path = media_store().path_for_internal_uri(url)
+        local_path = pamet.desktop_app.media_store().path_for_internal_uri(url)
 
     return local_path

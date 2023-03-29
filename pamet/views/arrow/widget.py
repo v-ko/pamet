@@ -58,7 +58,11 @@ class ArrowWidget(QObject, View):
         View.__init__(self, initial_state)
         self.map_page_view = parent
         self._anchor_subs_by_note_id = {}
+
+        # Each curve has:
+        # start_point, first_control_point, second_control point, end_point
         self._cached_curves = None
+
         self._cached_path = None
 
         bind_and_apply_state(self,

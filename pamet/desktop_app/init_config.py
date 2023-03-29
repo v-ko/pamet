@@ -27,7 +27,6 @@ def configure_for_qt(app):
 
     copy_script_templates()
 
-    desktop_app.set_media_store(MediaStore(config.media_store_path))
     desktop_app.icons.load_all()
 
     _font_id = QFontDatabase.addApplicationFont(

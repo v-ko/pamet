@@ -414,7 +414,6 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
             json_str = json.dumps(page_state, ensure_ascii=False, indent=4)
         except Exception as e:
             raise e  # Or log error
-            return None
 
         return json_str
 

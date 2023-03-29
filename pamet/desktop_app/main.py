@@ -21,6 +21,7 @@ from pamet.services.backup import AnotherServiceAlreadyRunningException
 from pamet.services.backup import FSStorageBackupService
 from pamet.services.file_note_watcher import FileNoteWatcherService
 from pamet.services.local_server import LocalServer
+from pamet.services.media_store import MediaStore
 from pamet.services.other_pages_list_update import OtherPagesListUpdateService
 
 from pamet.services.search.fuzzy import FuzzySearchService
@@ -51,7 +52,11 @@ local_server_commands = {
 @click.command()
 @click.argument('path', type=click.Path(exists=True), required=False)
 @click.option('--command', type=click.Choice(local_server_commands.keys()))
-def main(path: str, command: str):
+@click.option('--config-path', type=click.Path())
+def main(path: str, command: str, config_path: str):
+    if config_path:
+        desktop_app.set_user_settings_path(Path(config_path))
+
     # Check if another instance is running
     local_server = LocalServer(commands=local_server_commands)
     if local_server.another_instance_is_running():
@@ -103,6 +108,8 @@ def main(path: str, command: str):
         desktop_app.save_repo_settings(repo_settings)
 
     pamet.set_sync_repo(fs_repo)
+    desktop_app.set_media_store(MediaStore(repo_settings.media_store_path))
+
     pamet.set_undo_service(
         UndoService(pamet_channels.entity_change_sets_per_TLA))
 

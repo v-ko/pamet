@@ -62,7 +62,7 @@ class FileWatcher:
 
         path = resolve_media_url(self.state.local_image_url)
         if not path.exists() or not path.parent.exists():
-            raise Exception(f'File does not exist: {path}')
+            return
         self._path = path
 
         self.set_mode(FileWatcherMode.WATCHING_FILE)

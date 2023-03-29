@@ -10,6 +10,7 @@ from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import RepoSettings, UserDesktopSettings
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
+from pamet.services.media_store import MediaStore
 from pamet.services.script_runner import ScriptRunner
 from pamet.desktop_app.config import pamet_data_folder_path
 
@@ -29,9 +30,18 @@ _backup_service = None
 _default_note_font = None
 script_runner = ScriptRunner()
 
+_config_path = None
+
+
+def set_user_settings_path(config_path: Path):
+    global _config_path
+    _config_path = config_path
+
 
 def user_settings_path() -> Path:
-    return pamet_data_folder_path / SETTINGS_JSON
+    if not _config_path:
+        return pamet_data_folder_path / SETTINGS_JSON
+    return _config_path
 
 
 def repo_settings_path(repo_path: Path) -> Path:
@@ -103,7 +113,7 @@ def set_app(new_app):
     _app = new_app
 
 
-def media_store():
+def media_store() -> MediaStore:
     return _media_store
 
 

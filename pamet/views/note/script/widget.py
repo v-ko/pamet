@@ -32,13 +32,11 @@ class ScriptNoteWidget(TextNoteWidget):
         painter = QPainter()
         painter.begin(self)
 
-        draw_text_lines(painter, self._elided_text_layout.data,
+        draw_text_lines(painter, self._elided_text_layout.lines,
                         self._alignment,
                         self.state().text_rect())
 
         # Draw the link decorations
-        pen = painter.pen()
-
         internal_border_rect = QRectF(self.rect())
         internal_border_rect.setSize(internal_border_rect.size() -
                                      QSizeF(1, 1))

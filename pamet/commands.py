@@ -1,12 +1,17 @@
 from __future__ import annotations
+from copy import deepcopy
+import json
 from pathlib import Path
+import shutil
 from typing import Tuple
+import uuid
 
 from PySide6.QtCore import QTimer, QUrl, Qt
 from PySide6.QtGui import QCursor, QDesktopServices
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
 
 import fusion
+from fusion.libs.entity import dump_to_dict
 from fusion.util.point2d import Point2D
 from fusion.libs.command import command
 from pamet import desktop_app, semantic_search_service
@@ -21,8 +26,12 @@ from pamet.constants import GREEN_FG_COLOR
 from pamet.desktop_app.util import current_window, current_tab
 from pamet.model.text_note import TextNote
 from pamet.util import resource_path
+from pamet.util.url import Url
+from pamet.views.arrow.widget import ArrowViewState
+from pamet.views.map_page.widget import MapPageWidget
 from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.image.widget import ImageNoteWidget
+from pamet.views.tab.widget import TabWidget
 
 log = fusion.get_logger(__name__)
 
@@ -202,92 +211,161 @@ def open_repo_settings_json():
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
 
 
-@command(title='Export as web page')
-def export_as_web_page():
+@command(title='Export as web page (new) (experimental)')
+def export_as_web_page_new():
+    # Get the serialized page
     tab_view, page_view = current_tab_and_page_views()
+    page_state = page_view.state()
 
-    note_elements = []
-    for nt_view in page_view.note_views():
-        # Skip images
-        if isinstance(nt_view, ImageNoteWidget):
+    page = pamet.page(page_state.id)
+    page_state = dump_to_dict(page)
+    # page_state['notes'] = [dump_to_dict(n) for n in page.notes()]
+    # page_state['arrows'] = [dump_to_dict(a) for a in page.arrows()]
+
+    # Ouput folder
+    user_settings = desktop_app.get_user_settings()
+    export_folder = Path(user_settings.static_export_folder)
+    page_exp_folder = export_folder / 'p' / page_state['id']
+
+    # clear the folder
+    if page_exp_folder.exists():
+        shutil.rmtree(page_exp_folder)
+    page_exp_folder.mkdir(parents=True)
+
+    # For each note create a dict with e.g. 'cache' key added with
+    note_dicts_by_id = {}
+    for note_view in page_view.note_views():
+        cache = {
+            'text_layout_data': {
+                'lines': [],
+                'alignment': 'center',
+                'is_elided': False,
+            },
+        }
+        note_view_state = note_view.state()
+
+        note = note_view_state.get_note()
+        note_dict = dump_to_dict(note)
+
+        if not note_dict['content']:
             continue
 
-        nv_state = nt_view.state()
-        r = nv_state.rect()
+        # - Text layout
+        if hasattr(note_view, '_elided_text_layout'):
+            cache['text_layout_data'] = deepcopy(
+                vars(note_view._elided_text_layout))
+            # Every line is a tuple of (text, rect)
+            # We'll convert it to just a list of texts
+            cache['text_layout_data']['lines'] = [
+                line[0] for line in cache['text_layout_data']['lines'] if line
+            ]
 
-        color_vals = [c * 100 for c in nv_state.color]
-        color_str = ', '.join([f'{c}%' for c in color_vals])
-        color_str = f'rgba({color_str})'
+            if hasattr(note_view_state, 'text'):  # Probably unnecessary
+                note_text = note_view_state.text
+            else:
+                note_text = ''
+            cache['text_layout_data']['alignment'] = ('\n' in note_text)
 
-        bg_color_vals = [c * 100 for c in nv_state.background_color]
-        bg_color_str = ', '.join([f'{c}%' for c in bg_color_vals])
-        bg_color_str = f'rgba({bg_color_str})'
+        note_dict['cache'] = cache
+        note_dicts_by_id[note.id] = note_dict
 
-        note_style = (f'top: {r.y()}; left: {r.x()};'
-                      f'width: {r.width()};height: {r.height()};')
-        note_style += f' color: {color_str};'
-        note_style += f' background: {bg_color_str};'
+        # - Media link mapping per page update
+        # (for local/internal files)
+        # Move the image to the static folder for the page
+        static_media_path = page_exp_folder / 'media'
+        static_media_path.mkdir(parents=True, exist_ok=True)
+        if hasattr(note, 'local_image_url'):
+            local_image_url: Url = note.local_image_url
+            if local_image_url.is_internal():
+                path = desktop_app.media_store().path_for_internal_uri(
+                    local_image_url)
+            else:
+                path = Path(local_image_url.path)
 
-        note_el_props = {
-            'id': nv_state.id,
-            'class': 'note',
-        }
-        if nv_state.url.is_external():
-            note_el_props['href'] = nv_state.url
-            note_style += f'border: 1px solid {color_str};'
+            if path.exists():
+                new_path: Path = static_media_path / path.name
+                if new_path.exists():  # Duplicate file names
+                    new_name = f'{path.stem}_{uuid.uuid4()}{path.suffix}'
+                    new_path = static_media_path / new_name
+                shutil.copy(path, new_path)
+                relative_path = new_path.relative_to(export_folder)
+                image_url = Path('/') / relative_path.as_posix()
+                note_dict['content']['image_url'] = str(image_url)
 
-        note_el_props['style'] = note_style
+            # Hide the local image url
+            note_dict['content'].pop('local_image_url', None)
 
-        props_str = ' '.join([f'{k}="{v}"' for k, v in note_el_props.items()])
-        # id="{nv_state.id}" class="note" style="{note_style}"
-        note_el = f'''
-        <a {props_str}>
-            {nt_view.displayed_text}
-        </a>
-        '''
-        note_elements.append(note_el)
+    # - Arrow control points, etc
+    arrow_dicts_by_id = {}
+    for arrow_view in page_view.arrow_views():
+        arrow = arrow_view.state().get_arrow()
+        arrow_dict = dump_to_dict(arrow)
 
-    note_elements_str = "\n".join(note_elements)
-    page_script = resource_path('static_page_src/script.js').read_text()
-    page_style = resource_path('static_page_src/style.css').read_text()
-    page_str = f'''
-    <html>
-        <head>
-            <style>
-            {page_style}
-            </style>
-        </head>
-        <body>
-            <div id="mapPage">
-{note_elements_str}
-            </div>
+        cache = {}
+        cache['curves'] = []
+        for curve in arrow_view._cached_curves:
+            points = [p.as_tuple() for p in curve]
+            cache['curves'].append(points)
+        arrow_dict['cache'] = cache
+        arrow_dicts_by_id[arrow.id] = arrow_dict
 
-            <script>
-                {page_script}
-            </script>
-        </body>
-    </html>
-    '''
+    # add page to the /pages.json (or whatever). Should be a list.
+    pages_json_path = export_folder / 'pages.json'
+    if pages_json_path.exists():
+        pages_json = json.loads(pages_json_path.read_text())
+    else:
+        pages_json = []
 
-    # Hackily present the file chooser modal
-    # (otherwise the app crashes when the modal is closed)
-    file_name = f'{tab_view.state().title}.html'
+    for page_json in pages_json:
+        if page_json['id'] == page_state['id']:
+            pages_json.remove(page_json)
+            break
 
-    def hackily_ask_for_path_and_save_file():
-        file_dialog = QFileDialog(parent=page_view)
-        path, _ = file_dialog.getSaveFileName(
-            None,
-            caption='Choose save path',
-            dir=file_name,
-            filter='*.html',
-        )
+    pages_json.append(page_state)
+    pages_json_path.write_text(json.dumps(pages_json, indent=4))
 
-        if not path:
-            return
-        path = Path(path)
-        path.write_text(page_str)
+    # # Write the notes.json
+    # notes_json_path = page_exp_folder / 'notes.json'
+    # notes_list = list(note_dicts_by_id.values())
+    # notes_json_path.write_text(json.dumps(notes_list, indent=4))
 
-    QTimer.singleShot(0, hackily_ask_for_path_and_save_file)
+    # # Write the arrows.json
+    # arrows_json_path = page_exp_folder / 'arrows.json'
+    # arrows_list = list(arrow_dicts_by_id.values())
+    # arrows_json_path.write_text(json.dumps(arrows_list, indent=4))
+
+    # Write to children.json
+    children_json_path = page_exp_folder / 'children.json'
+    notes_list = list(note_dicts_by_id.values())
+    arrows_list = list(arrow_dicts_by_id.values())
+    children_json = {
+        'notes': notes_list,
+        'arrows': arrows_list,
+    }
+    children_json_path.write_text(json.dumps(children_json, indent=4))
+
+    # Have you checked for private notes + to bundle static files set the
+    # web build folder in the user config
+    def hackily_show_info_and_open_folder_if_ok():
+        dialog_text = f"""
+        <p>Exported to <b>{export_folder}</b>
+        (User settings: static_export_folder)</p>
+        <p>If you don't have them already - download the static files from
+        <a href="https://pamet.misli.org/latest_build.zip">here</a>
+        and place them in the export folder.</p>
+        <br>
+        <p>Open the export folder?</p>
+        """
+        open_folder = QMessageBox.question(None,
+                                           'Exported',
+                                           dialog_text,
+                                           QMessageBox.Open
+                                           | QMessageBox.Cancel,
+                                           defaultButton=QMessageBox.Cancel)
+        if open_folder == QMessageBox.Ok:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(export_folder)))
+
+    QTimer.singleShot(100, hackily_show_info_and_open_folder_if_ok)
 
 
 @command(title='Grab screen snippet')

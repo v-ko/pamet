@@ -101,7 +101,7 @@ class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
         painter = QPainter()
         painter.begin(self)
 
-        draw_text_lines(painter, self._elided_text_layout.data,
+        draw_text_lines(painter, self._elided_text_layout.lines,
                         self._alignment,
                         self.state().text_rect())
         draw_link_decorations(self, painter)
