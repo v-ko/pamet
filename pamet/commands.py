@@ -362,7 +362,7 @@ def export_as_web_page_new():
                                            QMessageBox.Open
                                            | QMessageBox.Cancel,
                                            defaultButton=QMessageBox.Cancel)
-        if open_folder == QMessageBox.Ok:
+        if open_folder == QMessageBox.Open:
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(export_folder)))
 
     QTimer.singleShot(100, hackily_show_info_and_open_folder_if_ok)
