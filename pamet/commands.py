@@ -468,7 +468,8 @@ def black_shift_selected():
                                                     fg_mask=(True, True, True,
                                                              False),
                                                     bg_mask=(True, True, True,
-                                                             False))
+                                                             False),
+                                                    shift=0.25)
 
 
 @command(title='Shift selected note transparency')
