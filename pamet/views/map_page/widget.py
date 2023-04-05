@@ -880,7 +880,7 @@ class MapPageWidget(QWidget, MapPageView):
 
         new_center = (current_center +
                       (state.unproject_point(mouse_pos) - current_center) *
-                      (current_height / new_height - 1))
+                      (1 - new_height / current_height))
 
         map_page_actions.update_viewport(state, new_center, new_height)
         tab_actions.update_current_url(self.parent_tab.state())
