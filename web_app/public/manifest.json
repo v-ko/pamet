@@ -1,0 +1,22 @@
+{
+  "short_name": "Pamet",
+  "version": "0.1.1",
+  "name": "Pamet web",
+  "description": "An app for organizing thoughts and notes.",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "logo256.png",
+      "type": "image/png",
+      "sizes": "256x256"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

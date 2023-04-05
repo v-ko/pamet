@@ -34,3 +34,6 @@ classifiers = [
 
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"
+
+[tool.setuptools.packages.find]
+exclude = ["web_app*"]
