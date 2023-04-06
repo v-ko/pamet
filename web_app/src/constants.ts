@@ -1,4 +1,4 @@
-import { Color } from "./types/util";
+import { Color } from "./util";
 
 export const DEFAULT_TEXT_COLOR: Color = [0, 0, 1, 1];
 export const DEFAULT_BACKGROUND_COLOR: Color = [0, 0, 1, 0.1];

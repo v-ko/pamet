@@ -1,8 +1,8 @@
-import { ArrowData } from "../types/Arrow";
 
 import React, { FC, useMemo } from 'react';
 import { Point2D } from "../util/Point2D";
 import { color_to_css_rgba_string } from "../util";
+import { ArrowData } from '../model/Arrow';
 
 export enum ArrowAnchorType {
     NONE = 'none',

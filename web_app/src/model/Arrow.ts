@@ -1,5 +1,6 @@
+import { Color } from '../util';
+import { PointData } from '../util/Point2D';
 import { EntityData } from './Entity';
-import { Color, PointData } from './util';
 
 export type BezierCurve = [PointData, PointData, PointData, PointData]
 

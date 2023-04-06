@@ -1,22 +1,24 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, useContext } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import styled from 'styled-components';
+import { observer } from 'mobx-react-lite';
+import { makeAutoObservable } from 'mobx'
 
-import { NoteData } from '../types/Note';
-import { ArrowData } from '../types/Arrow';
-import { MapPageData } from '../types/MapPage';
 import { NoteComponent } from './note/Note';
 import { DEFAULT_BACKGROUND_COLOR, DEFAULT_EYE_HEIGHT, DEFAULT_TEXT_COLOR, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../constants';
 import { Point2D } from '../util/Point2D';
 import { Geometry, Viewport } from './Viewport';
-import { MapController } from '../controllers/MapController';
-import { Note } from '../model/Note';
+import { Note, NoteData } from '../model/Note';
 import { ArrowComponent, ArrowHeadComponent } from './Arrow';
+import { MapPageData } from '../model/MapPage';
+import { ArrowData } from '../model/Arrow';
+import { mapActions } from '../actions/map';
+
 type Status = 'loading' | 'error' | 'loaded';
 
 export const MapContainer = styled.div`
---map-scale: ${1 / DEFAULT_EYE_HEIGHT};
---map-translate-x: 0px;
---map-translate-y: 0px;
+--map-scale: ${props => 1 / props.viewportHeight};
+--map-translate-x: ${props => -props.viewportCenter.x}px;
+--map-translate-y: ${props => -props.viewportCenter.y}px;
 user-select: none;
 width: 100%;
 height: 100%;
@@ -26,13 +28,38 @@ touch-action: none;
 `;
 
 
-interface PageProps {
+export class MapPageViewState { //
+  // note_view_states: { [id: string]: NoteViewState } = {};
+  // arrow_view_states: { [id: string]: ArrowViewState } = {};
+
+  viewportCenter: Point2D = new Point2D(0, 0);
+  viewportHeight: number = DEFAULT_EYE_HEIGHT;
+
+  selection: Array<string> = [];
   page: MapPageData;
+
+  constructor(page: MapPageData) {
+    this.page = page;
+    // makeObservable(this);
+    makeAutoObservable(this);
+
+    // autorun(() => {
+    //   console.log(this.viewportCenter);
+    //   console.log(this.viewportHeight);
+    // });
+  }
 }
 
-const MapPageComponent = ({ page }: PageProps) => {
-  // Get all notes from the /pamet_presentation-6d903c80.pam4.json file
-  // and display them on the map, using reacts effect hook
+interface PageProps {
+  state: MapPageViewState;
+}
+
+export const MapPageComponent = observer(({ state }: PageProps) => {
+  const page = state.page;
+  const selection = state.selection;
+  const viewportCenter = state.viewportCenter;
+  const viewportHeight = state.viewportHeight;
+
   const [status, setStatus] = useState<Status>('loading');
   const [errorString, setErrorString] = useState<string>('');
 
@@ -51,15 +78,9 @@ const MapPageComponent = ({ page }: PageProps) => {
 
   const [geometry, setGeometry] = useState<Geometry>([
     0, 0, window.innerWidth, window.innerHeight]);
-  const [viewportCenter, setViewportCenter] = useState<Point2D>(new Point2D(0, 0));
-  const [viewportHeight, setViewportHeight] = useState<number>(DEFAULT_EYE_HEIGHT);
-  const [selection, setSelection] = useState<Array<string>>([]);
 
-  // const viewport = new Viewport(viewportCenter, viewportHeight, geometry)
   const viewport = useMemo(() => new Viewport(viewportCenter, viewportHeight, geometry),
     [viewportCenter, viewportHeight, geometry]);
-  const container_ref = useRef<HTMLElement>()
-  const controller = new MapController(selection, setSelection);
 
   // Update geometry on resize events
   useEffect(() => {
@@ -73,7 +94,7 @@ const MapPageComponent = ({ page }: PageProps) => {
     };
   }, []);
 
-  // Fetch notes
+  // Fetch page data. TEMPORARYLY HERE
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -110,34 +131,15 @@ const MapPageComponent = ({ page }: PageProps) => {
     fetchData();
   }, [page]);
 
-  const updateViewport = useCallback(() => {
-    // This css var can go in the MapContainer styled component ..?
-    // But we'll still set it through javascript because of the stuttering
-    // that happens when we set it through styled components
-    // In that case we can probably use the ref hook to get the element
-    let container = container_ref.current;
-    if (container === undefined) {
-      return;  // Yes, this happens
-    } else {
-      container.style.setProperty('--map-scale', `${1 / viewportHeight}`);
-      container.style.setProperty('--map-translate-x', `${-viewportCenter.x}px`);
-      container.style.setProperty('--map-translate-y', `${-viewportCenter.y}px`);
-    }
-
-  }, [viewportCenter, viewportHeight]);
-
-  useEffect(() => {
-    updateViewport();
-  }, [viewportHeight, viewportCenter, updateViewport]);
-
+  // Should be a command
   const copySelectedToClipboard = useCallback(() => {
     let selected_notes = notesData.filter((note) => selection.includes(note.id.toString()));
     let text = selected_notes.map((note) => note.content.text).join('\n\n');
     navigator.clipboard.writeText(text);
   }, [notesData, selection]);
 
-
   // Detect url anchor changes in order to update the viewport and note selection
+  // NOT TESTED
   useEffect(() => {
     const handleHashChange = () => {
       // Schema /p/:id?eye_at=height/center_x/center_y&selection=note_id1,note_id2#note_id3
@@ -149,8 +151,9 @@ const MapPageComponent = ({ page }: PageProps) => {
           let height = parseFloat(eye_at_params[0]);
           let center_x = parseFloat(eye_at_params[1]);
           let center_y = parseFloat(eye_at_params[2]);
-          setViewportHeight(height);
-          setViewportCenter(new Point2D(center_x, center_y));
+          mapActions.updateViewport(state, new Point2D(center_x, center_y), height);
+          // setViewportHeight(height);
+          // setViewportCenter(new Point2D(center_x, center_y));
         }
         // TODO: selection
       }
@@ -161,7 +164,8 @@ const MapPageComponent = ({ page }: PageProps) => {
         if (noteData !== undefined) {
           // Go to note center
           let note = new Note(noteData);
-          setViewportCenter(note.rect.center());
+          // setViewportCenter(note.rect.center());
+          mapActions.updateViewport(state, note.rect.center(), viewportHeight);
         }
       };
     };
@@ -170,33 +174,47 @@ const MapPageComponent = ({ page }: PageProps) => {
     return () => {
       window.removeEventListener("hashchange", handleHashChange);
     };
-  }, [notesData]);
+  }, [notesData, state, viewportHeight]);
 
-  const handleScroll = (event) => {
-    let new_height = viewportHeight * Math.exp((event.deltaY / 120) * 0.1);
-    new_height = Math.max(
-      MIN_HEIGHT_SCALE,
-      Math.min(new_height, MAX_HEIGHT_SCALE))
 
-    // new_center = (current_center +
-    //   (state.unproject_point(mouse_pos) - current_center) *
-    //   (current_height / new_height - 1))
-    let mouse_pos = new Point2D(event.clientX, event.clientY);
-    let mouse_pos_unproj = viewport.unprojectPoint(mouse_pos)
-    let new_center = viewportCenter.add(
-      mouse_pos_unproj.subtract(viewportCenter).multiply(
-        1 - new_height / viewportHeight))
-
-    setViewportHeight(new_height);
-    setViewportCenter(new_center);
-  };
-
+  // Mouse event handlers
   const handleMouseDown = useCallback((event) => {
     setMouseDown(true);
     setMousePosOnPress(new Point2D(event.clientX, event.clientY));
     setViewportCenterOnModeStart(viewportCenter);
   }, [viewportCenter]);
 
+  const handleMouseMove = useCallback((event) => {
+    let new_mouse_pos = new Point2D(event.clientX, event.clientY);
+    setMousePos(new_mouse_pos);
+    if (mouseDown) {
+      let delta = mousePosOnPress.subtract(new_mouse_pos);
+      let delta_unproj = delta.divide(viewport.heightScaleFactor());
+      let new_center = viewportCenterOnModeStart.add(delta_unproj);
+      mapActions.updateViewport(state, new_center, viewportHeight);
+    }
+  }, [mouseDown, mousePosOnPress, viewportCenterOnModeStart, viewport, viewportHeight, state]);
+
+  const handleMouseUp = useCallback((event) => {
+    setMouseDown(false);
+  }, []);
+
+  const handleWheel = (event) => {
+    let new_height = viewportHeight * Math.exp((event.deltaY / 120) * 0.1);
+    new_height = Math.max(
+      MIN_HEIGHT_SCALE,
+      Math.min(new_height, MAX_HEIGHT_SCALE))
+
+    let mouse_pos = new Point2D(event.clientX, event.clientY);
+    let mouse_pos_unproj = viewport.unprojectPoint(mouse_pos)
+    let new_center = viewportCenter.add(
+      mouse_pos_unproj.subtract(viewportCenter).multiply(
+        1 - new_height / viewportHeight))
+
+    mapActions.updateViewport(state, new_center, new_height);
+  };
+
+  // Touch event handlers
   const handleTouchStart = useCallback((event) => {
     // Only for single finger touch
     if (event.touches.length === 1) {
@@ -218,17 +236,6 @@ const MapPageComponent = ({ page }: PageProps) => {
     }
   }, [viewportCenter, viewportHeight]);
 
-  const handleMouseMove = useCallback((event) => {
-    let new_mouse_pos = new Point2D(event.clientX, event.clientY);
-    setMousePos(new_mouse_pos);
-    if (mouseDown) {
-      let delta = mousePosOnPress.subtract(new_mouse_pos);
-      let delta_unproj = delta.divide(viewport.heightScaleFactor());
-      let new_center = viewportCenterOnModeStart.add(delta_unproj);
-      setViewportCenter(new_center);
-    }
-  }, [mouseDown, mousePosOnPress, viewportCenterOnModeStart, viewport]);
-
   const handeTouchMove = useCallback((event) => {
     if (event.touches.length === 1) {
       let new_mouse_pos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
@@ -237,8 +244,9 @@ const MapPageComponent = ({ page }: PageProps) => {
         let delta = mousePosOnPress.subtract(new_mouse_pos);
         let delta_unproj = delta.divide(viewport.heightScaleFactor());
         let new_center = viewportCenterOnModeStart.add(delta_unproj);
-        setViewportCenter(new_center);
+        mapActions.updateViewport(state, new_center, viewportHeight);
       }
+
     } else if (event.touches.length === 2) {
       let touch1 = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
       let touch2 = new Point2D(event.touches[1].clientX, event.touches[1].clientY);
@@ -269,16 +277,13 @@ const MapPageComponent = ({ page }: PageProps) => {
           1 - new_height / pinchStartViewportHeight);
         new_center = new_center.add(correction)
 
-        setViewportHeight(new_height);
-        setViewportCenter(new_center);
+        mapActions.updateViewport(state, new_center, new_height);
+
       }
     }
   }, [mouseDown, mousePosOnPress, viewportCenterOnModeStart, viewport, geometry,
-    pinchStartViewportHeight, pinchStartDistance, pinchInProgress, initialPinchCenter]);
-
-  const handleMouseUp = useCallback((event) => {
-    setMouseDown(false);
-  }, []);
+    pinchStartViewportHeight, pinchStartDistance, pinchInProgress, initialPinchCenter,
+    state, viewportHeight]);
 
   const handleTouchEnd = useCallback((event) => {
     setMouseDown(false);
@@ -289,7 +294,7 @@ const MapPageComponent = ({ page }: PageProps) => {
     // let mouse_pos = new Point2D(event.clientX, event.clientY);
     if (event.target === event.currentTarget &&
       !(event.shiftKey || event.ctrlKey)) {
-      controller.clearSelection();
+      mapActions.clearSelection(state);
     }
   };
 
@@ -324,10 +329,20 @@ const MapPageComponent = ({ page }: PageProps) => {
   let vb_width = 200000;
   let vb_height = 200000;
 
+
+  const handleNoteClick = (event: MouseEvent, noteData: NoteData) => {
+    // if control pressed or shift pressed, add to selection else
+    // clear selection and select this note
+    if (!(event.ctrlKey || event.shiftKey)) {
+      mapActions.clearSelection(state);
+    }
+    mapActions.updateSelection(state, { [noteData.own_id]: true })
+  }
+
   return (
     <div
       style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
-      onWheel={handleScroll}
+      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
       onMouseUp={handleMouseUp}
@@ -338,13 +353,17 @@ const MapPageComponent = ({ page }: PageProps) => {
     >
       {/* This second onClick is hacky - I should check for a note under the
       mouse instad (to handle the cases when the click is on the MapContainer*/}
-      <MapContainer ref={container_ref} onClick={handleClick}>
+      <MapContainer
+        onClick={handleClick}
+        viewportCenter={viewportCenter}
+        viewportHeight={viewportHeight}
+      >
         {notesData.map((noteData) => (
           <NoteComponent
             key={noteData.id}
             noteData={noteData}
             selected={selection.includes(noteData.own_id)}
-            mapController={controller} />
+            handleClick={(event) => { handleNoteClick(event, noteData) }} />
         ))}
 
         <svg
@@ -370,14 +389,9 @@ const MapPageComponent = ({ page }: PageProps) => {
               arrowData={arrowData}
             />
           ))}
-
-
-          {/* debug touch positions. draw a circle at the pinchCenter */}
         </svg>
       </MapContainer>
 
     </div>
   );
-};
-
-export default MapPageComponent;
+});

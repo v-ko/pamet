@@ -1,26 +1,40 @@
-import MapPageComponent from "./components/MapPage";
 import "./App.css";
-import { useCallback, useContext, useEffect, useState } from "react";
-import { CurrentPageContext } from "./contexts";
-import { MapPageData } from "./types/MapPage";
+import { useCallback, useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+import { MapPageData } from "../../model/MapPage";
+import { MapPageComponent, MapPageViewState } from "../../components/MapPage";
 
 let HOME_PAGE_ID = "home";
 
 
-const App = () => {
+// // Define the app state with mobx and typescript
+// class AppState {
+//   // Define the state
+//   pages: MapPageData[] = [];
+//   currentPage: MapPageData | null = null;
+//   errorMessage: string | null = null;
+
+//   constructor() {
+//     makeAutoObservable(this);
+//   }
+
+//   setCurrentPage(page: MapPageData) {
+//     this.currentPage = page;
+//   }
+
+//   setErrorMessage(message: string) {
+//     this.errorMessage = message;
+//   }
+// }
+
+
+const App = observer(() => {
+
 
   // Get the pages from the server
   const [pages, setPages] = useState<MapPageData[]>([]);
   const [currentPage, setCurrentPage] = useState<MapPageData | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // const changePage = (pageId: string) => {
-  //   const page = pages.find((page) => page.id === pageId);
-
-  //   if (page) {
-  //     setCurrentPage(page);
-  //   }
-  // }
 
   // On url change (anchor, page change) - update page props
   const updatePageFromUrl = useCallback(() => {
@@ -89,13 +103,13 @@ const App = () => {
 
       {currentPage ? (
         // <CurrentPageContext.Provider value={{pageId: currentPage.id, changePage}}>
-        <MapPageComponent page={currentPage} />
+        <MapPageComponent state={new MapPageViewState(currentPage)} />
         // </CurrentPageContext.Provider>
       ) : (
         <div>No current page present. Error: {errorMessage}</div>
       )}
     </div>
   );
-};
+});
 
 export default App;

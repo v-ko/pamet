@@ -1,4 +1,6 @@
-import { Color } from "../types/util";
+export type Color = [number, number, number, number];
+export type SelectionDict = { [key: string]: boolean };
+
 
 export function color_to_css_rgba_string(color: Color){
     // Convert from [0, 1] to [0, 255]. The alpha channel stays in [0, 1]!

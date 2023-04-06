@@ -1,4 +1,6 @@
 // import { Point2D } from '../types/util';
+export type PointData = [number, number];
+
 export class Point2D {
   constructor(public x: number = 0, public y: number = 0) { }
 
