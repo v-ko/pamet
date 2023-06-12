@@ -38,7 +38,8 @@ class OtherPagesListUpdateService:
 
     @action('swap_duplicate_oplist_note_for_warning')
     def swap_duplicate_OPLNote_for_warning(self, note: OtherPageListNote):
-        note = TextNote().with_id(note.id)
+        new_note = TextNote().with_id(page_id=note.page_id, own_id=note.own_id)
+        new_note.replace_silent(**note.asdict())
         note.text = DUPLICATE_LIST_NOTE_WARNING
         pamet.update_note(note)
 
