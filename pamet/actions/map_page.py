@@ -27,9 +27,10 @@ from pamet.views.note.qt_helpers import minimal_nonelided_size
 log = fusion.get_logger(__name__)
 
 
-@action('map_page.start_mouse_drag_navigation')
+@action('map_page.start_mouse_drag_navigation')  # Deprecated
 def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
                                 mouse_position: Point2D, first_delta: Point2D):
+    log.warning('Deprecated action: map_page.start_mouse_drag_navigation')
     map_page_view_state.set_mode(MapPageMode.DRAG_NAVIGATION)
     map_page_view_state.drag_navigation_start_position = mouse_position
     map_page_view_state.viewport_position_on_press = \
@@ -37,6 +38,17 @@ def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
 
     fsm.update_state(map_page_view_state)
     mouse_drag_navigation_move(map_page_view_state, first_delta)
+
+
+@action('map_page.start_drag_navigation') 
+def start_drag_navigation(map_page_view_state: MapPageViewState,
+                          mouse_position: Point2D):
+    map_page_view_state.set_mode(MapPageMode.DRAG_NAVIGATION)
+    map_page_view_state.drag_navigation_start_position = mouse_position
+    map_page_view_state.viewport_position_on_press = \
+        map_page_view_state.viewport_center
+
+    fsm.update_state(map_page_view_state)
 
 
 @action('map_page.mouse_drag_navigation_move')
