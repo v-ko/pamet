@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pamet"
-version = "4.0.0.alpha15"
+version = "4.0.0.alpha16"
 description = "An app for organizing notes and thoughts"
 authors = [{ name = "Petko Dichev", email = "pditchev@gmail.com" }]
 license = { text = "GPLv3" }
@@ -22,7 +22,9 @@ dependencies = [
     'fastapi',
     'uvicorn',
     'sqlitedict',
-    'requests'
+    'requests',
+    'markdown',
+    'bleach',
 ]
 # readme =
 classifiers = [
@@ -34,6 +36,5 @@ classifiers = [
 
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"
-
 [tool.setuptools.packages.find]
 exclude = ["web_app*"]

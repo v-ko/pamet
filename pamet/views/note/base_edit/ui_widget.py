@@ -22,7 +22,8 @@ class Ui_BaseNoteEditWidget(object):
     def setupUi(self, BaseNoteEditWidget):
         if not BaseNoteEditWidget.objectName():
             BaseNoteEditWidget.setObjectName(u"BaseNoteEditWidget")
-        BaseNoteEditWidget.resize(640, 480)
+        BaseNoteEditWidget.resize(300, 250)
+        BaseNoteEditWidget.setMinimumSize(QSize(300, 225))
         self.verticalLayout = QVBoxLayout(BaseNoteEditWidget)
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setObjectName(u"verticalLayout")

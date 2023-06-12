@@ -28,7 +28,7 @@ class TextNoteViewState(NoteViewState, TextNote):
 @register_note_view_type(state_type=TextNoteViewState,
                          note_type=TextNote,
                          edit=False)
-class TextNoteWidget(QLabel, NoteView, LinkNoteViewMixin):
+class TextNoteWidget(NoteView, LinkNoteViewMixin, QLabel):
 
     def __init__(self, parent, initial_state):
         QLabel.__init__(self, parent=parent)

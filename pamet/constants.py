@@ -51,3 +51,69 @@ CONTROL_POINT_RADIUS = 15
 POTENTIAL_EDGE_RADIUS = CONTROL_POINT_RADIUS * 0.7
 
 MAX_NAVIGATION_HISTORY = 10000
+
+TOUR_PAGE_CONTENT = """# This is a tour page
+
+It's a markdown file that accompanies the pamet page.
+You can edit it by clicking the "Edit" button in the top right corner.
+
+## Main feature of the tour - parallel navigation
+When reading a tour page - when you scroll past a link to a pamet page - you'll get an instant preview.
+Note that links split the page into segments, which get rendered separately.
+
+### Example:
+Scroll past [this link](pamet:/p/{page_id}/#eye_at=40/0/0) to view the center of the page.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+And past [this one](pamet:/p/{page_id}/#eye_at=50/50/0) to view another position.
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+
+..
+
+.
+
+.
+
+.
+
+.
+
+.
+
+..
+
+.
+
+.
+
+.
+
+.
+
+.
+
+.
+"""

@@ -1,8 +1,10 @@
+from enum import Enum
 from PySide6.QtWidgets import QLabel, QWidget
 from PySide6.QtCore import Qt
 
 import fusion
 from fusion.libs.entity.change import Change
+from fusion.libs.state import ViewState
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
 
@@ -22,7 +24,12 @@ MIN_TAB_WIDTH = SIDEBAR_WIDTH * 1.1
 MAX_PAGE_CACHE_SIZE = 100
 
 
-class TabWidget(QWidget, View):
+class SidebarPosition(Enum):
+    LEFT = 1
+    RIGHT = 2
+
+
+class TabWidget(View, QWidget):
 
     def __init__(self, parent, initial_state):
         QWidget.__init__(self, parent=parent)
@@ -39,10 +46,18 @@ class TabWidget(QWidget, View):
         self._page_view = None
         self._page_subscription_id = None
         self.edit_view = None
+
         self._left_sidebar_widget = None
         self._right_sidebar_widget = None
+        self._sidebar_widgets_by_position = {
+            SidebarPosition.LEFT: None,
+            SidebarPosition.RIGHT: None
+        }
+
         self._search_widget = None
         self._semantic_search_widget = None
+        self._pane_widgets_by_type = {}
+
         self._page_widget_cache = {}  # By page_id
 
         self.ui.rightSidebarCloseButton.clicked.connect(
@@ -53,8 +68,6 @@ class TabWidget(QWidget, View):
         self.ui.commandLineEdit.hide()
         self.ui.leftSidebarContainer.hide()
 
-        self.page_not_found_label = QLabel('Page missing.', self)
-
         # The state should be managed by the window
         bind_and_apply_state(self,
                              initial_state,
@@ -63,7 +76,7 @@ class TabWidget(QWidget, View):
     def page_view(self) -> MapPageViewState:
         return self._page_view
 
-    def set_search_pane_state(self, pane_state: bool):
+    def set_search_pane_state(self, pane_state: ViewState):
         if pane_state:
             if type(pane_state) == SearchBarWidgetState:
                 if not self._search_widget:
@@ -147,7 +160,7 @@ class TabWidget(QWidget, View):
                 self.edit_view.show()
                 self.edit_view.setFocus()
 
-    def add_page_wideget_to_cache(self, page_widget: MapPageWidget):
+    def add_page_widget_to_cache(self, page_widget: MapPageWidget):
         self._page_widget_cache[page_widget.state().view_id] = page_widget
         if MAX_PAGE_CACHE_SIZE < len(self._page_widget_cache):
             page_id, page_widget = self._page_widget_cache.popitem()
@@ -166,14 +179,14 @@ class TabWidget(QWidget, View):
         state ids. When possible - those get reused.
         """
         if self._page_view:
-            self.ui.centralContainer.layout().removeWidget(self._page_view)
+            self.ui.mapPageContainer.layout().removeWidget(self._page_view)
             if isinstance(self._page_view, MapPageWidget):
-                self.add_page_wideget_to_cache(self._page_view)
+                self.add_page_widget_to_cache(self._page_view)
 
             self._page_view.hide()
 
         if not page_view_state:
-            page_widget = self.page_not_found_label
+            page_widget = QLabel('Page missing.', self)
         else:
             page_widget = self.cached_page_widget(page_view_state.view_id)
             if not page_widget:
@@ -181,7 +194,7 @@ class TabWidget(QWidget, View):
                                             initial_state=page_view_state)
         self._page_view = page_widget
 
-        self.ui.centralContainer.layout().addWidget(self._page_view)
+        self.ui.mapPageContainer.layout().addWidget(self._page_view)
         self._page_view.show()
 
         # Must be visible to accept focus, so queue on the main loop
@@ -191,6 +204,6 @@ class TabWidget(QWidget, View):
         if not self._page_view:
             return
 
-        self.ui.centralContainer.layout().removeWidget(self._page_view)
+        self.ui.mapPageContainer.layout().removeWidget(self._page_view)
         # self._page_view.deleteLater()
         self._page_view = None

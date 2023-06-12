@@ -260,3 +260,12 @@ def arrow(page_: Page | str, own_id: str):
 # ------------For changes--------------
 def apply_change(change: Change):
     return _sync_repo.apply_change(change)
+
+
+# Page tour helpers
+def page_tour(page_id: str) -> str | None:
+    page_tour_path = _sync_repo.page_folder(page_id) / 'tour.md'
+    if page_tour_path.exists():
+        return page_tour_path.read_text()
+    else:
+        return None

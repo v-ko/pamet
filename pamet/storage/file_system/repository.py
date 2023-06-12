@@ -98,6 +98,9 @@ class FSStorageRepository(PametInMemoryRepository, LegacyFSRepoReader):
     def path(self):
         return self._path
 
+    def page_folder(self, page_id: str) -> Path:
+        return self.path / 'p' / page_id
+
     # def start_watching(self):
     #     self._fs_observer = Observer()
     #     event_handler = FSWatchEventHandler(self)

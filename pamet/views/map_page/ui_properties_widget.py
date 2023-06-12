@@ -3,7 +3,7 @@
 ################################################################################
 ## Form generated from reading UI file 'properties_widget.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.3.1
+## Created by: Qt User Interface Compiler version 6.5.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
@@ -64,6 +64,18 @@ class Ui_MapPagePropertiesWidget(object):
 
         self.verticalLayout.addLayout(self.horizontalLayout_2)
 
+        self.line_2 = QFrame(MapPagePropertiesWidget)
+        self.line_2.setObjectName(u"line_2")
+        self.line_2.setFrameShape(QFrame.HLine)
+        self.line_2.setFrameShadow(QFrame.Sunken)
+
+        self.verticalLayout.addWidget(self.line_2)
+
+        self.editTourPageButton = QPushButton(MapPagePropertiesWidget)
+        self.editTourPageButton.setObjectName(u"editTourPageButton")
+
+        self.verticalLayout.addWidget(self.editTourPageButton)
+
         self.verticalSpacer = QSpacerItem(20, 274, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
@@ -88,6 +100,7 @@ class Ui_MapPagePropertiesWidget(object):
         self.saveButton.setShortcut(QCoreApplication.translate("MapPagePropertiesWidget", u"Ctrl+S", None))
 #endif // QT_CONFIG(shortcut)
         self.setAsHomePageCheckBox.setText(QCoreApplication.translate("MapPagePropertiesWidget", u"Set as home page when starting the app", None))
+        self.editTourPageButton.setText(QCoreApplication.translate("MapPagePropertiesWidget", u"Edit tour page", None))
         self.deleteButton.setText(QCoreApplication.translate("MapPagePropertiesWidget", u"Delete page", None))
     # retranslateUi
 

@@ -2,13 +2,16 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 from pathlib import Path
+import re
 import shutil
 from typing import Tuple
 import uuid
 
 from PySide6.QtCore import QTimer, QUrl, Qt
-from PySide6.QtGui import QCursor, QDesktopServices
+from PySide6.QtGui import QCursor, QDesktopServices, QGuiApplication
 from PySide6.QtWidgets import QApplication, QFileDialog, QMessageBox
+import bleach
+import markdown
 
 import fusion
 from fusion.libs.entity import dump_to_dict
@@ -21,19 +24,25 @@ from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
-from pamet.constants import GREEN_FG_COLOR
+from pamet.constants import GREEN_FG_COLOR, TOUR_PAGE_CONTENT
 
 from pamet.desktop_app.util import current_window, current_tab
+from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 from pamet.util import resource_path
 from pamet.util.url import Url
 from pamet.views.arrow.widget import ArrowViewState
+from pamet.views.map_page.state import MapPageViewState
 from pamet.views.map_page.widget import MapPageWidget
 from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.image.widget import ImageNoteWidget
 from pamet.views.tab.widget import TabWidget
 
 log = fusion.get_logger(__name__)
+
+ALLOWED_TAGS = set(bleach.sanitizer.ALLOWED_TAGS).union(
+    set(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'code',
+         'blockquote']))
 
 
 def current_tab_and_page_views() -> Tuple[TabWidget, MapPageWidget]:
@@ -211,7 +220,7 @@ def open_repo_settings_json():
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
 
 
-@command(title='Export as web page (new) (experimental)')
+@command(title='Export as web page (beta)')
 def export_as_web_page_new():
     # Get the serialized page
     tab_view, page_view = current_tab_and_page_views()
@@ -219,15 +228,103 @@ def export_as_web_page_new():
 
     page = pamet.page(page_state.id)
     page_state = dump_to_dict(page)
-    # page_state['notes'] = [dump_to_dict(n) for n in page.notes()]
-    # page_state['arrows'] = [dump_to_dict(a) for a in page.arrows()]
+
+    # Process the tour markdown if there's a tour on the page
+    tour_md = pamet.page_tour(page_state['id'])
+    if tour_md:
+        # Split into segments on each link like ![...](pamet:/p/{page_id}/[?...])
+        # and retreive the link ... NO!
+
+        # Split into segments using the meta tag.
+        def extract_segments(doc):
+            segments = []
+            pattern = r'<meta\s+name="(?P<name>[^"]+)"\s+content="(?P<content>[^"]+)"\s*>\s*(?P<text>.*?)\s*</meta>|(?P<text2>.*?)(?=<meta|\Z)'
+
+            for match in re.finditer(pattern, doc, re.DOTALL):
+                if match.group('name') is not None:
+                    metadata = {
+                        'name': match.group('name'),
+                        'content': match.group('content')
+                    }
+
+                    text = match.group('text')
+
+                    if metadata['name'] != 'pamet-tour-segment':
+                        log.warning(
+                            f'[export_as_web_page_note] Unknown metadata name:'
+                            f' {metadata["name"]}')
+                        continue
+
+                    if not text:
+                        continue
+
+                    segments.append({
+                        'link': metadata['content'],
+                        'markdown': text
+                    })
+                else:
+                    text = match.group('text2')
+                    if not text:
+                        continue
+                    segments.append({'link': None, 'markdown': text})
+
+            return segments
+
+        segments_md = extract_segments(tour_md)
+
+        # pattern = r'!\[.*\]\((pamet:/p/\w+(/\S*)*)\)'
+        # matches = re.finditer(pattern, tour_md)
+
+        # prev_end = 0
+
+        # texts = []
+        # links = []
+        # for match in matches:
+        #     start, end = match.span()
+        #     link = match.group(1)
+
+        #     segment_text = tour_md[prev_end:start]
+        #     texts.append(segment_text)
+        #     links.append(link)
+        #     prev_end = end
+
+        # final_segment_text = tour_md[prev_end:]
+        # texts.append(final_segment_text)
+
+        # # Generate dicst for each segment (associate the texts with the
+        # # links above them)
+        # segments_md = []
+        # if len(texts) != (len(links) + 1):
+        #     raise Exception('Error when splitting markdown into segments.')
+
+        # The first segment is just text
+        # segments_md.append({'link': None, 'markdown': texts.pop(0)})
+
+        # # The rest are text + link
+        # for text, link in zip(texts, links):
+        #     segments_md.append({'link': link, 'markdown': text})
+
+        # Process each segment
+        for segment in segments_md:
+            segment_md = segment.pop('markdown')
+
+            html = markdown.markdown(segment_md)
+
+            # Sanitize the HTML using the Bleach library
+            cleaned_html = bleach.clean(
+                html,
+                tags=ALLOWED_TAGS,
+                attributes=bleach.sanitizer.ALLOWED_ATTRIBUTES)
+            segment['html'] = cleaned_html
+
+    page_state['tour_segments'] = segments_md
 
     # Ouput folder
     user_settings = desktop_app.get_user_settings()
     export_folder = Path(user_settings.static_export_folder)
     page_exp_folder = export_folder / 'p' / page_state['id']
 
-    # clear the folder
+    # Clear the folder
     if page_exp_folder.exists():
         shutil.rmtree(page_exp_folder)
     page_exp_folder.mkdir(parents=True)
@@ -535,3 +632,58 @@ def open_page_backups_folder():
 def open_repository_folder():
     repo = pamet.sync_repo()
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(repo.path)))
+
+
+@command(title='Edit tour page')
+def edit_tour_page():
+    tab_view, page_view = current_tab_and_page_views()
+    page_id = page_view.state().id
+    repo = pamet.sync_repo()
+    tour_page_path = repo.page_folder(page_id) / 'tour.md'
+
+    # If the tour page doesn't exist, create it
+    if not tour_page_path.exists():
+        if not repo.page_folder(page_id).exists():
+            repo.page_folder(page_id).mkdir(parents=True)
+        page_content = TOUR_PAGE_CONTENT.format(page_id=page_id)
+        tour_page_path.write_text(page_content)
+
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(tour_page_path)))
+
+
+@command(title='Copy link to page')
+def copy_link_to_page():
+    _, page_view = current_tab_and_page_views()
+    page = page_view.get_page()
+    url = page.url()
+    QGuiApplication.clipboard().setText(str(url))
+
+
+@command(title='Copy link to this position')
+def copy_link_to_viewport():
+    _, page_view = current_tab_and_page_views()
+    page = page_view.get_page()
+    state: MapPageViewState = page_view.state()
+    url = page.url().with_anchor(eye_height=state.viewport_height,
+                                 eye_pos=state.viewport_center)
+    QGuiApplication.clipboard().setText(str(url))
+
+
+@command(title='Copy link to selected note')
+def copy_link_to_selected_note():
+    _, page_view = current_tab_and_page_views()
+    page = page_view.get_page()
+    state: MapPageViewState = page_view.state()
+    selected_note_view = None
+    for child in state.selected_children:
+        if isinstance(child, NoteViewState):
+            selected_note_view = child
+            break
+
+    if not selected_note_view:
+        QMessageBox().warning(page_view, 'No note selected',
+                              'Please select a note first')
+        return
+
+    url = page.url().with_anchor(note=selected_note_view.get_note())
+    QGuiApplication.clipboard().setText(str(url))

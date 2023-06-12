@@ -7,6 +7,7 @@ from fusion.view import View
 
 import pamet
 from pamet import actions
+from pamet import commands
 from pamet.model.page import Page
 from .ui_properties_widget import Ui_MapPagePropertiesWidget
 
@@ -50,6 +51,10 @@ class MapPagePropertiesWidget(QWidget, View):
             self._handle_home_page_toggle)
         self.ui.deleteButton.clicked.connect(self._handle_delete_button_click)
         self.ui.deleteButton.setStyleSheet('QButton {background-color: red;}')
+
+        # Open tour page button handler
+        self.ui.editTourPageButton.clicked.connect(
+            commands.edit_tour_page)
 
         bind_and_apply_state(self, initial_state, self.on_state_change)
 

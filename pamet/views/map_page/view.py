@@ -16,6 +16,7 @@ from pamet.actions import note as note_actions
 from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.model.arrow import ArrowAnchorType
+from pamet.model.page import Page
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowWidget
 from pamet.views.map_page.state import MapPageViewState, MapPageMode
@@ -44,9 +45,8 @@ class MapPageView(View):
     def arrow_views(self) -> List[ArrowWidget]:
         raise NotImplementedError
 
-    @property
-    def page(self):
-        return self.state().page.copy()
+    def get_page(self) -> Page:
+        return pamet.page(self.state().page_id)
 
     @property
     def viewport(self):
@@ -310,8 +310,9 @@ class MapPageView(View):
 
         if mode == MapPageMode.NONE:
             if self._left_mouse_is_pressed:
-                map_page_actions.start_mouse_drag_navigation(
-                    state, self._mouse_position_on_left_press, delta)
+                map_page_actions.start_drag_navigation(
+                    state, self._mouse_position_on_left_press)
+                map_page_actions.mouse_drag_navigation_move(state, delta)
 
         elif mode == MapPageMode.DRAG_SELECT:
             self._handle_move_on_drag_select(mouse_pos)

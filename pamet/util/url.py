@@ -98,7 +98,8 @@ class Url:
                 eye_height = DEFAULT_EYE_HEIGHT
             elif eye_pos is None:
                 eye_pos = Point2D(0, 0)
-            anchor = f'eye_at={eye_height}/{eye_pos.x()}/{eye_pos.y()}'
+            anchor = (f'eye_at={eye_height:.2f}/{eye_pos.x():.2f}/'
+                      f'{eye_pos.y():.2f}')
 
         if note:
             anchor = f'note={note.own_id}'

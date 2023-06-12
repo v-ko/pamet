@@ -31,7 +31,7 @@ class MapPageViewState(ViewState, Viewport, Page):
     note_view_states: set[NoteViewState] = field(default_factory=set)
     arrow_view_states: set[ArrowViewState] = field(default_factory=set)
 
-    geometry: Rectangle = Rectangle(0, 0, 500, 500)
+    geometry: Rectangle = field(default_factory=lambda: Rectangle(0, 0, 500, 500))
     viewport_center: Point2D = field(default_factory=Point2D)
     viewport_height: float = DEFAULT_EYE_HEIGHT
 
@@ -40,7 +40,7 @@ class MapPageViewState(ViewState, Viewport, Page):
     # drag_navigation_active: bool = False
     drag_navigation_start_position: Point2D = None
 
-    selected_children: set = field(default_factory=set)
+    selected_children: set[ViewState] = field(default_factory=set)
 
     # Field/drag selection
     mouse_position_on_drag_select_start: Point2D = None

@@ -28,7 +28,7 @@ class CardNoteViewState(FileNoteViewState, CardNote):
 @register_note_view_type(state_type=CardNoteViewState,
                          note_type=CardNote,
                          edit=False)
-class CardNoteWidget(QWidget, NoteView, LinkNoteViewMixin):
+class CardNoteWidget(NoteView, LinkNoteViewMixin, QWidget):
 
     def __init__(self, parent, initial_state):
         QWidget.__init__(self, parent)

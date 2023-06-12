@@ -11,7 +11,6 @@ class TabViewState(ViewState):
     title: str = ''
     page_view_state: MapPageViewState = field(default=None)
     note_edit_view_state: ViewState = None
-    # search_bar_state: ViewState = None
     creating_note: Note = None
 
     left_sidebar_state: ViewState = None

@@ -26,7 +26,7 @@ class ImageNoteViewState(FileNoteViewState, ImageNote):
 @register_note_view_type(state_type=ImageNoteViewState,
                          note_type=ImageNote,
                          edit=False)
-class ImageNoteWidget(ImageLabel, NoteView):
+class ImageNoteWidget(NoteView, ImageLabel):
 
     def __init__(self, parent, initial_state):
         ImageLabel.__init__(self, parent)
