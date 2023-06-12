@@ -2,7 +2,8 @@ import "./App.css";
 import { useCallback, useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 import { MapPageData } from "../../model/MapPage";
-import { MapPageComponent, MapPageViewState } from "../../components/MapPage";
+import { MapPageComponent } from "../../components/MapPage/MapPage";
+import { MapPageViewState } from "../../components/MapPage/MapPageViewState";
 
 let HOME_PAGE_ID = "home";
 
@@ -40,6 +41,7 @@ const App = observer(() => {
   const updatePageFromUrl = useCallback(() => {
 
     if (pages.length === 0) {
+      setCurrentPage(null);
       return;
     }
 
@@ -55,19 +57,30 @@ const App = observer(() => {
 
     // Get the page id from the URL (/p/:id)
     const url = window.location.href;
+    const urlPath = window.location.pathname;
+
+    // If we're at the index page, load home or first
+    if(urlPath === "/") {
+      setPageToHomeOrFirst();
+      return;
+
     // If the URL contains /p/ - load the page by id, else load the home page
-    if (url.includes("/p/")) {
-      const pageId = url.split("/p/")[1];
+    } else if (urlPath.includes("/p/")) {
+      const pageId = urlPath.split("/")[2];
 
       // Get the page from the pages array
       const page = pages.find((page) => page.id === pageId);
       if (page) {
         setCurrentPage(page);
       } else {
-        setPageToHomeOrFirst();
+        setErrorMessage(`Page with id ${pageId} not found`);
+        console.log("Page not found", pageId)
+        console.log("Pages", pages)
+        setCurrentPage(null);
       }
     } else {
-      setPageToHomeOrFirst();
+      console.log("Url not supported", urlPath)
+      setCurrentPage(null);
     }
   }, [pages]);
 

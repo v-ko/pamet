@@ -6,7 +6,7 @@ export const DEFAULT_BACKGROUND_COLOR: Color = [0, 0, 1, 0.1];
 export const MIN_HEIGHT_SCALE = 0.2
 export const MAX_HEIGHT_SCALE = 200
 
-export const DEFAULT_EYE_HEIGHT = 2
+export const DEFAULT_EYE_HEIGHT = 40
 
 export const NO_SCALE_LINE_SPACING = 20
 

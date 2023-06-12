@@ -1,9 +1,9 @@
-import { useMemo, useRef } from 'react';
+import { useRef } from 'react';
 import styled from 'styled-components';
 import { NOTE_MARGIN } from '../../constants';
-import { Note, NoteData } from '../../model/Note';
+import { NoteData } from '../../model/Note';
 import { color_to_css_rgba_string } from '../../util';
-import { Rectangle } from '../../util/Rectangle';
+import React from 'react';
 
 interface NoteComponentProps {
     noteData: NoteData;
@@ -12,17 +12,20 @@ interface NoteComponentProps {
 }
 
 export const NoteContainer = styled.a`
+    /* content-visibility: auto; */
+    /* will-change: transform; */
+
     text-decoration: none;
     position: absolute;
     display: flex;
     flex-wrap: wrap;
-    top: ${props => props.y}px;
+    /* top: ${props => props.y}px;
     left: ${props => props.x}px;
     width: ${props => props.width}px;
     height: ${props => props.height}px;
     color: ${props => props.color};
     background-color: ${props => props.backgroundColor};
-    ${props => props.isLink ? `border: 1px solid ${props.color}` : ''}
+    ${props => props.isLink ? `border: 1px solid ${props.color}` : ''} */
 `;
 
 const NoteText = styled.div`
@@ -50,9 +53,9 @@ const NoteText = styled.div`
 
 
 
-export const NoteComponent = ({ noteData, selected, handleClick }: NoteComponentProps) => {
+export const NoteComponent = React.memo(({ noteData, selected, handleClick }: NoteComponentProps) => {
     const self_ref = useRef<HTMLAnchorElement>(null);
-
+    // console.log('Rendering note', noteData.id)
     const [x, y, width, height] = noteData.geometry;
     const color = color_to_css_rgba_string(noteData.style.color)
     const backgroundColor = color_to_css_rgba_string(noteData.style.background_color)
@@ -81,13 +84,22 @@ export const NoteComponent = ({ noteData, selected, handleClick }: NoteComponent
             target={target}
             rel="noopener noreferrer"
             className="note"
-            x={x}
-            y={y}
-            width={width}
-            height={height}
-            color={color}
-            backgroundColor={backgroundColor}
-            isLink={!!noteData.content.url}
+            style= {{
+                top: y + 'px',
+                left: x + 'px',
+                width: width + 'px',
+                height: height  + 'px',
+                color: color,
+                backgroundColor: backgroundColor,
+                border: !!noteData.content.url ? `1px solid ${color}` : '',
+            }}
+            // x={x}
+            // y={y}
+            // width={width}
+            // height={height}
+            // color={color}
+            // backgroundColor={backgroundColor}
+            // isLink={!!noteData.content.url}
             isExternal={isExternal}
             onClick={handleClick}
         >
@@ -121,7 +133,16 @@ export const NoteComponent = ({ noteData, selected, handleClick }: NoteComponent
 
         </NoteContainer>
     );
-}
+}, (prevProps, nextProps) => {
+    // Just don't rerender the note ever
+    // TODO: When we start editing notes - there should be some mechanism to
+    // mark them for rerendering (e.g. a flag in the props or a timestamp in the
+    // note data, combined with a service that keeps track of the last time the
+    // note was rendered)
+    // Yeah, mmaybe just a service that keeps track of the last time the note was
+    // edited and the last time it was rendered.
+    return prevProps.selected === nextProps.selected;
+});
 
 
 // let EMPTY_LINE = '';

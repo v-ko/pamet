@@ -4,6 +4,10 @@ import App from './containers/app/App';
 import './index.css';
 import reportWebVitals from './reportWebVitals';
 
+// See the work log!
+// Otherwise the setup logic should be here, yes.
+
+
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );

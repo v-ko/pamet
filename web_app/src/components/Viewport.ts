@@ -1,3 +1,4 @@
+import { NO_SCALE_LINE_SPACING } from '../constants';
 import { Point2D } from '../util/Point2D';
 import { Rectangle } from '../util/Rectangle';
 
@@ -21,7 +22,7 @@ export class Viewport {
   }
 
   public heightScaleFactor(): number {
-    return 1 / this.height;
+    return NO_SCALE_LINE_SPACING / this.height;
   }
 
   public projectRect(rect: Rectangle): Rectangle {
