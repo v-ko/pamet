@@ -754,7 +754,8 @@ class MapPageWidget(QWidget, MapPageView):
              'True' if paint_urgently else 'False', self._paint_event_count))
 
         log.info(stats_text)
-        painter.drawText(10, 10, stats_text)
+        if LOGGING_LEVEL == LoggingLevels.DEBUG:
+            painter.drawText(10, 10, stats_text)
         painter.end()
 
         if paint_urgently and \
