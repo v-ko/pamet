@@ -8,6 +8,7 @@ from PySide6.QtCore import QEvent, QPointF, Qt, QPoint, QTimer, QRectF
 from PySide6.QtGui import QKeyEvent, QPainter, QPalette, QPen, QPicture, QImage, QColor, QBrush, QCursor
 
 import fusion
+from fusion.logging import LOGGING_LEVEL, LoggingLevels
 from fusion.util import Point2D, Rectangle
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
@@ -66,7 +67,7 @@ def image_cache_rect_unprojected(display_rect: Rectangle):
     return cache_rect
 
 
-class MapPageWidget(QWidget, MapPageView):
+class MapPageWidget(MapPageView, QWidget):
 
     def __init__(self, parent, initial_state: MapPageViewState):
         QWidget.__init__(self, parent=parent)
@@ -974,6 +975,17 @@ class MapPageWidget(QWidget, MapPageView):
             menu_entries['separator1'] = SEPARATOR
             menu_entries['New page (ctrl+N)'] = commands.create_new_page
             menu_entries['Create arrow (L)'] = commands.start_arrow_creation
+
+            copy_link_enties = {
+                'To this page': commands.copy_link_to_page,
+                'To this position': commands.copy_link_to_viewport,
+            }
+
+            if ncs_under_mouse:
+                copy_link_enties.update(
+                    {'To this note': commands.copy_link_to_selected_note})
+
+            menu_entries['Copy link'] = copy_link_enties
 
             # Open the context menu with the tab as its parent
             context_menu = ContextMenuWidget(self.parent(),
