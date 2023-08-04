@@ -18,7 +18,7 @@ class CommandPaletteViewState(ViewState):
     line_edit_text: str = ''
 
 
-class CommandPaletteWidget(QWidget, View):
+class CommandPaletteWidget(View, QWidget):
 
     def __init__(self, parent, initial_state: CommandPaletteViewState):
         QWidget.__init__(self, parent)

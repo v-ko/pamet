@@ -16,7 +16,7 @@ from pamet.desktop_app import icons
 from .ui_widget import Ui_BaseNoteEditWidget
 
 
-class BaseNoteEditWidget(QWidget, View):
+class BaseNoteEditWidget(View, QWidget):
 
     def __init__(self, parent: TabWidget, initial_state: NoteEditViewState):
         QWidget.__init__(self, parent=parent)

@@ -32,7 +32,7 @@ class CardEditViewState(NoteEditViewState):
 @register_note_view_type(state_type=CardEditViewState,
                          note_type=(TextNote, ImageNote, CardNote),
                          edit=True)
-class CardNoteEditWidget(BaseNoteEditWidget, AnchorEditWidgetMixin):
+class CardNoteEditWidget(AnchorEditWidgetMixin, BaseNoteEditWidget):
 
     def __init__(self, parent, initial_state: CardEditViewState):
         super().__init__(parent, initial_state)

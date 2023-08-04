@@ -21,7 +21,7 @@ class MapPagePropertiesViewState(ViewState):
         return self.id
 
 
-class MapPagePropertiesWidget(QWidget, View):
+class MapPagePropertiesWidget(View, QWidget):
 
     def __init__(self, tab_widget, initial_state):
         QWidget.__init__(self, parent=tab_widget)
