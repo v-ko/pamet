@@ -45,8 +45,10 @@ def get_children(page_id: str):
         arrow_dicts.append(arrow_dict)
 
     return {
-        'notes': note_dicts,
-        'arrows': arrow_dicts,
+        'data': {
+            'notes': note_dicts,
+            'arrows': arrow_dicts,
+        }
     }
 
 
@@ -95,10 +97,11 @@ async def apply_changes(request: Request):
         successfull_changes.append(change.id)
 
     if not failed_changes:
-        return HTTPException(status_code=207, detail={
-            'applied_changes': successfull_changes,
-            'errors': failed_changes,
-        })
+        return HTTPException(status_code=207,
+                             detail={
+                                 'applied_changes': successfull_changes,
+                                 'errors': failed_changes,
+                             })
     else:
         return {
             'applied_changes': successfull_changes,
