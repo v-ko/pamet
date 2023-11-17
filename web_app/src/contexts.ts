@@ -5,7 +5,6 @@ type CurrentPageContextData = {
     changePage: (pageId: string) => void
 }
 
-export const SelectionContext = createContext<Array<string>>([])
 export const CurrentPageContext = createContext<CurrentPageContextData> ({
     pageId: "",
     changePage: (pageId: string) => {}

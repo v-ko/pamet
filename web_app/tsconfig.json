@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es6",
     "lib": [
       "dom",
       "dom.iterable",
@@ -20,9 +20,11 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "noImplicitAny": false,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
   },
   "include": [
-    "src"
-  ]
+    "src",
+    "test"
+  ],
+
 }

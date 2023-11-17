@@ -93,16 +93,6 @@ class PametRepository(Repository):
         page_gid = page_.gid() if isinstance(page_, Page) else page_
         return self.find_one(gid=(page_gid, note_own_id))
 
-    # def notes(self, **kwargs) -> Generator[Note, None, None]:
-    #     if 'type' in kwargs:
-    #         raise Exception
-    #     return self.find(type=Note, **kwargs)
-
-    # def note(self, **kwargs):
-    #     if 'type' in kwargs:
-    #         raise Exception
-    #     return self.find_one(type=Note, **kwargs)
-
     # -------------Arrow CRUD-------------
     def insert_arrow(self, arrow_: Arrow, page: Page = None) -> Change:
         return self.insert_child(arrow_, page)
@@ -145,6 +135,7 @@ class PametRepository(Repository):
         if self.raw_entity_changes_channel:
             self.raw_entity_changes_channel.push(change)
 
+    # To be deprecated
     def write_to_disk(self):
         # TODO: This should be redundant when I implement the
         # Persistence Manager

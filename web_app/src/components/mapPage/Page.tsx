@@ -8,14 +8,16 @@ import { Point2D } from '../../util/Point2D';
 import { Note, NoteData } from '../../model/Note';
 import { ArrowComponent, ArrowHeadComponent } from '../Arrow';
 import { ArrowData } from '../../model/Arrow';
-import { AUTO_NAVIGATE_TRANSITION_DURATION, mapActions } from '../../actions/map';
+import { AUTO_NAVIGATE_TRANSITION_DURATION, mapActions } from '../../actions/page';
 import { TourComponent } from '../Tour';
 import { parsePametUrl } from '../../util';
-import { MapPageMode, MapPageViewState } from './MapPageViewState';
+import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from '../Viewport';
+import { getLogger } from '../../fusion/logging';
 
 type Status = 'loading' | 'error' | 'loaded';
 
+let log = getLogger('Page.tsx')
 
 const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
 
@@ -61,16 +63,16 @@ touch-action: none;
 user-select: none;
 `;
 
-interface PageProps {
-  state: MapPageViewState;
-}
+// interface PageProps {
+//   state: MapPageViewState;
+// }
 
 // function mousePosFromEvent(event: React.MouseEvent | React.TouchEvent): Point2D {
 //   if (event instanceof MouseEvent) {
 
 
-export const MapPageComponent = observer(({ state }: PageProps) => {
-  const page = state.page;
+export const MapPageComponent = observer(({ state }: { state: PageViewState }) => {
+  // const page = state.page;
   const selection = state.selection;
 
   const [status, setStatus] = useState<Status>('loading');
@@ -123,10 +125,10 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
     }
     let container = superContainerRef;
     // map point to state.geometry
-    let x = point.x - state.geometry[0];
-    let y = point.y - state.geometry[1];
+    let x = point.x - state.viewportGeometry[0];
+    let y = point.y - state.viewportGeometry[1];
     return new Point2D(x, y);
-  }, [state.geometry, superContainerRef]);
+  }, [state.viewportGeometry, superContainerRef]);
 
   const updateGeometry = useCallback(() => {
     if (superContainerRef === null) {
@@ -161,43 +163,6 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
     resizeObserver.observe(container);
     return () => resizeObserver.disconnect();
   }, [updateGeometry, superContainerRef]);
-
-  // Fetch page data. TEMPORARYLY HERE
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // fetch children from /p/:id/children
-        const response = await fetch('/p/' + page.id + '/children.json');
-        const data: { notes: NoteData[], arrows: ArrowData[] } = await response.json();
-        // Hacky way to add default colors to notes that don't have them
-        // (they should normally be present in the JSON file)
-        for (let note of data.notes) {
-          if (note.style.color === undefined) {
-            note.style.color = DEFAULT_TEXT_COLOR
-          }
-          if (note.style.background_color === undefined) {
-            note.style.background_color = DEFAULT_BACKGROUND_COLOR
-          }
-        }
-
-        // Populate the page_id and own_id fields (for convenience
-        // will probably be removed)
-        for (let note of data.notes) {
-          // id = [page_id, own_id]
-          note.page_id = note.id[0];
-          note.own_id = note.id[1];
-        }
-        setNotesData(data.notes)
-        setArrowsData(data.arrows)
-        setStatus('loaded');
-      } catch (error: any) {
-        setStatus('error');
-        setErrorString(error.message);
-      }
-    };
-
-    fetchData();
-  }, [page]);
 
   // Should be a command
   const copySelectedToClipboard = useCallback(() => {
@@ -261,7 +226,7 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
     // let new_mouse_pos = new Point2D(event.clientX, event.clientY);
     // setMousePos(new_mouse_pos);
     if (event.buttons === 1) {
-      if (state.mode === MapPageMode.DragNavigation) {
+      if (state.mode === PageMode.DragNavigation) {
         let delta = mousePosOnPress.subtract(new_mouse_pos);
         mapActions.dragNavigationMove(state, delta);
       }
@@ -272,7 +237,7 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
   const handleMouseUp = useCallback((event) => {
     // setMouseDown(false);
     // console.log('mouse up')
-    if (state.mode === MapPageMode.DragNavigation) {
+    if (state.mode === PageMode.DragNavigation) {
       mapActions.endDragNavigation(state);
     }
   }, [state]);
@@ -354,7 +319,7 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
         // M' = M * s, C' = C * s : M and C after the scale
         // V = (M - C) - (M' - C'): the vector of change for M
         // correction = - ( V ) = (M - C) - (M' - C') = (M - C) * (1 - s)
-        let old_viewport = new Viewport(state.viewportCenterOnModeStart as Point2D, pinchStartViewportHeight, state.geometry);
+        let old_viewport = new Viewport(state.viewportCenterOnModeStart as Point2D, pinchStartViewportHeight, state.viewportGeometry);
         let unprInitPinchCenter = old_viewport.unprojectPoint(initialPinchCenter);
         let focusDelta = unprInitPinchCenter.subtract(state.viewportCenterOnModeStart as Point2D);
         let correction = focusDelta.multiply(
@@ -370,7 +335,7 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
 
   const handleTouchEnd = useCallback((event) => {
     // setMouseDown(false);
-    if (state.mode === MapPageMode.DragNavigation) {
+    if (state.mode === PageMode.DragNavigation) {
       mapActions.endDragNavigation(state);
     }
     setPinchInProgress(false);
@@ -400,8 +365,8 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
     // So we need to infer what to do on reentry.
     // Currently only dragging navigation/selection can be resumed on reentry.
     // Everything else should be cancelled on mouseleave
-    if (state.mode === MapPageMode.DragNavigation ||
-      state.mode === MapPageMode.DragSelection) {
+    if (state.mode === PageMode.DragNavigation ||
+      state.mode === PageMode.DragSelection) {
       if (event.buttons === 0) {
         // Clear the state
         mapActions.endDragNavigation(state);
@@ -432,7 +397,7 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
 
   // Auto navigation animation effect
   useEffect(() => {
-    if (state.mode === MapPageMode.AutoNavigation) {
+    if (state.mode === PageMode.AutoNavigation) {
       // console.log('Auto navigation mode activated')
       setTimeout(() => {
         mapActions.updateAutoNavigation(state);
@@ -440,14 +405,14 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
     }
   }, [state.mode, state.autoNavAnimation, state.autoNavAnimation?.lastUpdateTime, state]);
 
-  // Rendering phase
-  if (status === 'loading') {
-    return <p>Loading...</p>;
-  }
+  // // Rendering phase
+  // if (status === 'loading') {
+  //   return <p>(Page) Loading...</p>;
+  // }
 
-  if (status === 'error') {
-    return <p>Error loading data. Message: {errorString}</p>;
-  }
+  // if (status === 'error') {
+  //   return <p>Error loading data. Message: {errorString}</p>;
+  // }
 
   // TODO: setup min/max viewport position.
   let vb_x = -100000;
@@ -466,7 +431,10 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
   //   viewportTransitionDuration = 0;  // Zero value removes the transition
   // }
 
-
+  log.info(`Rendering Page ${state.name} (id: ${state.id})`)
+  let noteCount = Array.from(state.noteViewStates.values()).length
+  let arrowCount = Array.from(state.arrowViewStates.values()).length
+  // log.info(`Notes count: ${noteCount}, Arrows count: ${arrowCount}`)
 
   return (
     <MapLayoutContainer>
@@ -485,6 +453,19 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
+        {/* A caption for diagnostics showing note and arrow count at the top-left */}
+        <text
+          x={10}
+          y={20}
+          style={{
+            fontSize: 15,
+            fontFamily: 'sans-serif',
+            pointerEvents: 'none',
+          }}
+        >
+          {`Note views: ${noteCount}, Arrow views: ${arrowCount}`}
+        </text>
+
         {/* This second onClick is hacky - I should check for a note under the
       mouse instad (to handle the cases when the click is on the MapContainer*/}
         <MapContainer
@@ -497,12 +478,14 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
             '--map-translate-y': -state.viewport.center.y + 'px',
           }}
         >
-          {notesData.map((noteData) => (
+
+
+          {Array.from(state.noteViewStates.values()).map((noteViewState) => (
             <NoteComponent
-              key={noteData.id}
-              noteData={noteData}
-              selected={selection.includes(noteData.own_id)}
-              handleClick={(event) => { handleNoteClick(event, noteData) }} />
+              key={noteViewState.id}
+              noteViewState={noteViewState}
+              // selected={selection.includes(noteViewState.own_id)}
+              handleClick={(event) => { handleNoteClick(event, noteViewState) }} />
           ))}
 
           <svg
@@ -518,14 +501,14 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
             }}
           >
             <defs>
-              {arrowsData.map((arrowData) => (
-                <ArrowHeadComponent key={arrowData.id} arrowData={arrowData} />
+              {Array.from(state.arrowViewStates.values()).map((arrow) => (
+                <ArrowHeadComponent key={arrow.id} arrow={arrow} />
               ))}
             </defs>
-            {arrowsData.map((arrowData) => (
+            {Array.from(state.arrowViewStates.values()).map((arrow) => (
               <ArrowComponent
-                key={arrowData.id}
-                arrowData={arrowData}
+                key={arrow.id}
+                arrow={arrow}
               />
             ))}
           </svg>
@@ -533,10 +516,10 @@ export const MapPageComponent = observer(({ state }: PageProps) => {
 
       </MapSuperContainer> {/*  map container container */}
 
-      {page.tour_segments &&
+      {state.tour_segments &&
         <TourComponent
           parentPageViewState={state}
-          segments={page.tour_segments}
+          segments={state.tour_segments}
         />
       }
     </MapLayoutContainer>

@@ -4,6 +4,18 @@ export type PointData = [number, number];
 export class Point2D {
   constructor(public x: number = 0, public y: number = 0) { }
 
+  static fromData(obj: PointData): Point2D {
+    return new Point2D(obj[0], obj[1]);
+  }
+
+  asData(): PointData {
+    return [this.x, this.y];
+  }
+
+  copy(): Point2D {
+    return new Point2D(this.x, this.y);
+  }
+
   toString(): string {
     return `<Point x=${this.x} y=${this.y}>`;
   }

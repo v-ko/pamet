@@ -13,10 +13,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
-import { TourSegment } from '../model/MapPage';
+import { TourSegment } from '../model/Page';
 import { parsePametUrl } from '../util';
-import { mapActions } from '../actions/map';
-import { MapPageViewState } from "./MapPage/MapPageViewState";
+import { mapActions } from '../actions/page';
+import { PageViewState } from "./mapPage/PageViewState";
 
 
 const MIN_SCROLL_BUFFER_POS = -100;
@@ -26,7 +26,7 @@ const PREFERED_FOCUS_LEVEL = 0.4;
 
 interface TourComponentViewProps {
     segments: TourSegment[];
-    parentPageViewState: MapPageViewState;
+    parentPageViewState: PageViewState;
 }
 
 export const TourContainer = styled.div`

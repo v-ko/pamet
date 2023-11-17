@@ -1,30 +1,22 @@
 
-import React, { FC, useMemo } from 'react';
+import { FC, useMemo } from 'react';
 import { Point2D } from "../util/Point2D";
 import { color_to_css_rgba_string } from "../util";
-import { ArrowData } from '../model/Arrow';
-
-export enum ArrowAnchorType {
-    NONE = 'none',
-    AUTO = 'auto',
-    MID_LEFT = 'mid_left',
-    TOP_MID = 'top_mid',
-    MID_RIGHT = 'mid_right',
-    BOTTOM_MID = 'bottom_mid',
-}
+import { ArrowViewState } from './ArrowViewState';
 
 export interface ArrowProps {
-    arrowData: ArrowData;
+    arrow: ArrowViewState;
 }
 
 const ARROW_HAND_LENGTH = 20;
 const SLOPE_POINT_DISTANCE = ARROW_HAND_LENGTH / 2;
 const ARROW_HAND_ANGLE = 25;  // Degrees
 
-export const ArrowComponent: FC<ArrowProps> = ({ arrowData }) => {
+
+export const ArrowComponent: FC<ArrowProps> = ({ arrow: arrowViewState }: ArrowProps) => {
 
     const svg_path = useMemo(() => {
-        const curves = arrowData.cache.curves;
+        const curves = arrowViewState.bezierCurveParams;
         const path: string[] = [];
         for (let i = 0; i < curves.length; i++) {
             const curveData = curves[i];
@@ -39,32 +31,32 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrowData }) => {
         }
 
         return path.join(' ');
-    }, [arrowData]);
+    }, [arrowViewState]);
 
-    let color = color_to_css_rgba_string(arrowData.color)
-    let line_thickness = arrowData.line_thickness;
+    let color = color_to_css_rgba_string(arrowViewState.color)
+    let line_thickness = arrowViewState.line_thickness;
 
     return (
-            <path d={svg_path}
-                stroke={color}
-                fill="none"
-                strokeWidth={line_thickness}
-                markerEnd={`url(#arrowhead-${arrowData.id})`}
-            />
+        <path d={svg_path}
+            stroke={color}
+            fill="none"
+            strokeWidth={line_thickness}
+            markerEnd={`url(#arrowhead-${arrowViewState.id})`}
+        />
     )
 }
 
 
-export const ArrowHeadComponent: FC<ArrowProps> = ({ arrowData }) => {
+export const ArrowHeadComponent: FC<ArrowProps> = ({ arrow }) => {
 
     return (
-        <marker id={`arrowhead-${arrowData.id}`}
-        markerWidth="10" markerHeight="7"
-        refX="10" refY="3.5" orient="auto">
+        <marker id={`arrowhead-${arrow.id}`}
+            markerWidth="10" markerHeight="7"
+            refX="10" refY="3.5" orient="auto">
 
-        <polygon points="0 0, 10 3.5, 0 7"
-          stroke={color_to_css_rgba_string(arrowData.color)}
-        />
-      </marker>
+            <polygon points="0 0, 10 3.5, 0 7"
+                stroke={color_to_css_rgba_string(arrow.color)}
+            />
+        </marker>
     )
 }

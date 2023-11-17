@@ -1,25 +1,26 @@
 import { SelectionDict } from "../util";
-import { action, makeObservable } from "mobx";
-import { MapPageMode, MapPageViewState, ViewportAutoNavAnimation } from "../components/MapPage/MapPageViewState";
+import { makeObservable } from "mobx";
+import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/mapPage/PageViewState";
 import { Point2D } from "../util/Point2D";
+import { action } from "../fusion/libs/action";
 
 
 export const AUTO_NAVIGATE_TRANSITION_DURATION = 0.5; // seconds
 
 
 class MapActions {
-  constructor() {
-    makeObservable(this);
-  }
+  // constructor() {
+  //   makeObservable(this);
+  // }
 
   @action
-  updateGeometry(state: MapPageViewState, geometry: [number, number, number, number]) {
-    state.geometry = geometry;
+  updateGeometry(state: PageViewState, geometry: [number, number, number, number]) {
+    state.viewportGeometry = geometry;
   }
 
   @action
   updateViewport(
-    state: MapPageViewState,
+    state: PageViewState,
     viewportCenter: Point2D,
     viewportHeight: number) {
 
@@ -29,17 +30,17 @@ class MapActions {
 
   @action
   startDragNavigation(
-    state: MapPageViewState,
+    state: PageViewState,
     startPosition: Point2D) {
 
-    state.set_mode(MapPageMode.DragNavigation);
+    state.set_mode(PageMode.DragNavigation);
     state.dragNavigationStartPosition = startPosition;
     state.viewportCenterOnModeStart = state.viewportCenter;
   }
 
   @action
   dragNavigationMove(
-    state: MapPageViewState,
+    state: PageViewState,
     delta: Point2D) {
 
     let delta_unproj = delta.divide(state.viewport.heightScaleFactor());
@@ -48,12 +49,12 @@ class MapActions {
   }
 
   @action
-  endDragNavigation(state: MapPageViewState) {
-    state.set_mode(MapPageMode.None);
+  endDragNavigation(state: PageViewState) {
+    state.set_mode(PageMode.None);
   }
 
   @action
-  updateSelection = (state: MapPageViewState, selectionDict: SelectionDict) => {
+  updateSelection(state: PageViewState, selectionDict: SelectionDict) {
     // Add all keys that are true to the selection
     let newSelection: Array<string> = state.selection;
     for (let key in selectionDict) {
@@ -67,7 +68,7 @@ class MapActions {
   };
 
   @action
-  clearSelection = (state: MapPageViewState) => {
+  clearSelection(state: PageViewState) {
     let selectionDict: SelectionDict = {};
     for (let noteId of state.selection) {
       selectionDict[noteId] = false;
@@ -76,12 +77,12 @@ class MapActions {
   };
 
   @action
-  startAutoNavigation = (
-    state: MapPageViewState,
+  startAutoNavigation(
+    state: PageViewState,
     viewportCenter: Point2D,
-    viewportHeight: number) => {
+    viewportHeight: number) {
 
-    state.mode = MapPageMode.AutoNavigation;
+    state.mode = PageMode.AutoNavigation;
     let animation: ViewportAutoNavAnimation = {
       startCenter: state.viewportCenter,
       endCenter: viewportCenter,
@@ -95,7 +96,7 @@ class MapActions {
   };
 
   @action
-  updateAutoNavigation = (state: MapPageViewState) => {
+  updateAutoNavigation(state: PageViewState) {
     if (state.autoNavAnimation) {
       let animation = state.autoNavAnimation;
       if (animation) {
@@ -133,13 +134,13 @@ class MapActions {
   }
 
   @action
-  finishAutoNavigation = (state: MapPageViewState) => {
+  finishAutoNavigation(state: PageViewState) {
     if (state.autoNavAnimation) {
       state.viewportCenter = state.autoNavAnimation.endCenter;
       state.viewportHeight = state.autoNavAnimation.endHeight;
       state.autoNavAnimation = null;
     }
-    state.mode = MapPageMode.None;
+    state.mode = PageMode.None;
   }
 }
 

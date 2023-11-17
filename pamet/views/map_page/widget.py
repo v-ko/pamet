@@ -109,7 +109,7 @@ class MapPageWidget(MapPageView, QWidget):
         self.subscriptions.append(
             pamet.channels.entity_changes_by_id.subscribe(
                 self.handle_page_change, index_val=self.state().page_id))
-        # Subscribe to note changes
+        # Subscribe to child note and arrow changes
         self.subscriptions.append(
             pamet.channels.entity_changes_by_parent_gid.subscribe(
                 self.handle_page_child_change, index_val=self.state().page_id))

@@ -14,6 +14,7 @@ export class Viewport {
     this.center = view_center;
     this.height = view_height;
     this.geometry = viewport_geometry;
+
   }
 
   public toString(): string {

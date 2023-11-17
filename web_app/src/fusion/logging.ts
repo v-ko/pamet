@@ -1,5 +1,5 @@
 
-let LOG_LEVEL = 2;  // 0: info, 1: warning, 2: error
+let LOG_LEVEL = 0;  // 0: info, 1: warning, 2: error
 
 class Logger {
     name: string;
@@ -25,6 +25,6 @@ class Logger {
 }
 
 
-export function get_logger(name) {
+export function getLogger(name) {
     return new Logger(name);
 }

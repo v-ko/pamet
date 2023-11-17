@@ -20,9 +20,9 @@ from pamet.model.page import Page
 from pamet.services.backup import AnotherServiceAlreadyRunningException
 from pamet.services.backup import FSStorageBackupService
 from pamet.services.file_note_watcher import FileNoteWatcherService
-from pamet.services.local_server import LocalServer
 from pamet.services.media_store import MediaStore
 from pamet.services.other_pages_list_update import OtherPagesListUpdateService
+from pamet.services.rest_api.desktop import DesktopServer
 
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
@@ -57,14 +57,14 @@ def main(path: str, command: str, config_path: str):
     if config_path:
         desktop_app.set_user_settings_path(Path(config_path))
 
-    # Check if another instance is running
-    local_server = LocalServer(commands=local_server_commands)
+    # Check if another instance is running and/or start the local server
+    local_server = DesktopServer(commands=local_server_commands)
     if local_server.another_instance_is_running():
         port = local_server.get_port_from_lock_file()
         if command:
-            LocalServer.send_command(port, command)
+            DesktopServer.send_command(port, command)
         else:
-            LocalServer.send_command(port, 'raise_window')
+            DesktopServer.send_command(port, 'raise_window')
         return
     else:
         local_server.start()
