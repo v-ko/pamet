@@ -2,7 +2,7 @@
 import { FC, useMemo } from 'react';
 import { Point2D } from "../util/Point2D";
 import { color_to_css_rgba_string } from "../util";
-import { ArrowViewState } from './ArrowViewState';
+import { ArrowViewState, BezierCurve } from './ArrowViewState';
 
 export interface ArrowProps {
     arrow: ArrowViewState;
@@ -16,15 +16,15 @@ const ARROW_HAND_ANGLE = 25;  // Degrees
 export const ArrowComponent: FC<ArrowProps> = ({ arrow: arrowViewState }: ArrowProps) => {
 
     const svg_path = useMemo(() => {
-        const curves = arrowViewState.bezierCurveParams;
+        const curves: BezierCurve[] = arrowViewState.bezierCurveParams;
         const path: string[] = [];
         for (let i = 0; i < curves.length; i++) {
             const curveData = curves[i];
             const bezierCurve = {
-                start: new Point2D(curveData[0][0], curveData[0][1]),
-                control1: new Point2D(curveData[1][0], curveData[1][1]),
-                control2: new Point2D(curveData[2][0], curveData[2][1]),
-                end: new Point2D(curveData[3][0], curveData[3][1]),
+                start: curveData[0],
+                control1: curveData[1],
+                control2: curveData[2],
+                end: curveData[3],
             }
             path.push(`M ${bezierCurve.start.x} ${bezierCurve.start.y}`);
             path.push(`C ${bezierCurve.control1.x} ${bezierCurve.control1.y} ${bezierCurve.control2.x} ${bezierCurve.control2.y} ${bezierCurve.end.x} ${bezierCurve.end.y}`);
