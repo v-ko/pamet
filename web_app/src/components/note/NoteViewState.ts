@@ -1,5 +1,5 @@
 import { computed, makeObservable, observable } from "mobx";
-import { Note, NoteData } from "../../model/Note";
+import { Note } from "../../model/Note";
 import { calculateTextLayout } from "../../util";
 import { pamet } from "../../facade";
 import { Change } from "../../fusion/Change";

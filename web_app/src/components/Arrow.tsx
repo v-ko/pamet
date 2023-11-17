@@ -1,17 +1,11 @@
 
 import { FC, useMemo } from 'react';
-import { Point2D } from "../util/Point2D";
 import { color_to_css_rgba_string } from "../util";
 import { ArrowViewState, BezierCurve } from './ArrowViewState';
 
 export interface ArrowProps {
     arrow: ArrowViewState;
 }
-
-const ARROW_HAND_LENGTH = 20;
-const SLOPE_POINT_DISTANCE = ARROW_HAND_LENGTH / 2;
-const ARROW_HAND_ANGLE = 25;  // Degrees
-
 
 export const ArrowComponent: FC<ArrowProps> = ({ arrow: arrowViewState }: ArrowProps) => {
 

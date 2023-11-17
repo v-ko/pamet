@@ -63,14 +63,6 @@ touch-action: none;
 user-select: none;
 `;
 
-// interface PageProps {
-//   state: MapPageViewState;
-// }
-
-// function mousePosFromEvent(event: React.MouseEvent | React.TouchEvent): Point2D {
-//   if (event instanceof MouseEvent) {
-
-
 export const MapPageComponent = observer(({ state }: { state: PageViewState }) => {
   // const page = state.page;
   const selection = state.selection;
