@@ -1,10 +1,10 @@
-import { RepositoryClient } from "./BaseRepositoryClient";
-import { getLogger } from "../logging";
-import { PageQueryFilter } from "../../facade";
-import { Page, PageData } from "../../model/Page";
-import { Note } from "../../model/Note";
-import { Arrow } from "../../model/Arrow";
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../../constants";
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../constants";
+import { PageQueryFilter } from "../facade";
+import { Page, PageData } from "../model/Page";
+import { Note } from "../model/Note";
+import { Arrow } from "../model/Arrow";
+import { getLogger } from "../fusion/logging";
+import { RepositoryClient } from "../fusion/storage/BaseRepositoryClient";
 
 let log = getLogger('ApiClient');
 

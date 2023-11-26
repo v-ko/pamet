@@ -1,4 +1,4 @@
-import { ObservableMap, computed, makeAutoObservable, makeObservable, observable } from 'mobx';
+import { ObservableMap, computed, makeObservable, observable } from 'mobx';
 import { DEFAULT_EYE_HEIGHT } from '../../constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
@@ -6,7 +6,6 @@ import { Viewport } from '../Viewport';
 import { NoteViewState } from '../note/NoteViewState';
 import { ArrowViewState } from '../ArrowViewState';
 import { pamet } from '../../facade';
-import { Note } from '../../model/Note';
 import { getLogger } from '../../fusion/logging';
 
 let log = getLogger('PageViewState');

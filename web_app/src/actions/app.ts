@@ -1,4 +1,3 @@
-import { makeObservable } from "mobx";
 import { WebAppState } from "../containers/app/App";
 import { pamet } from "../facade";
 import { getLogger } from "../fusion/logging";

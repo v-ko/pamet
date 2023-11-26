@@ -21,10 +21,10 @@
     "jsx": "react-jsx",
     "noImplicitAny": false,
     "experimentalDecorators": true,
+    "preserveSymlinks": true
   },
   "include": [
     "src",
     "test"
   ],
-
 }

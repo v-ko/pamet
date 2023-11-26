@@ -1,5 +1,4 @@
 import { SelectionDict } from "../util";
-import { makeObservable } from "mobx";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/mapPage/PageViewState";
 import { Point2D } from "../util/Point2D";
 import { action } from "../fusion/libs/action";

@@ -11,20 +11,10 @@ interface NoteComponentProps {
 }
 
 export const NoteContainer = styled.a`
-    /* content-visibility: auto; */
-    /* will-change: transform; */
-
     text-decoration: none;
     position: absolute;
     display: flex;
     flex-wrap: wrap;
-    /* top: ${props => props.y}px;
-    left: ${props => props.x}px;
-    width: ${props => props.width}px;
-    height: ${props => props.height}px;
-    color: ${props => props.color};
-    background-color: ${props => props.backgroundColor};
-    ${props => props.isLink ? `border: 1px solid ${props.color}` : ''} */
 `;
 
 const NoteText = styled.div`
@@ -93,13 +83,6 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 backgroundColor: backgroundColor,
                 border: !!state.content.url ? `1px solid ${color}` : '',
             }}
-            // x={x}
-            // y={y}
-            // width={width}
-            // height={height}
-            // color={color}
-            // backgroundColor={backgroundColor}
-            // isLink={!!noteData.content.url}
             isExternal={isExternal}
             onClick={handleClick}
         >

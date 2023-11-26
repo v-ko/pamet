@@ -1,15 +1,14 @@
 import { WebAppState } from "./containers/app/App";
+import { Channel, addChannel } from './fusion/libs/channel';
+import { getLogger } from './fusion/logging';
+import { Repository, SearchFilter } from './fusion/storage/BaseRepository';
+import { InMemoryRepository } from './fusion/storage/InMemoryRepository';
+import { ActionState } from './fusion/libs/action';
 import { Change } from "./fusion/Change";
-import { Entity, EntityData } from "./fusion/libs/Entity";
-import { Channel, addChannel } from "./fusion/libs/channel";
-import { getLogger } from "./fusion/logging";
-import { ApiClient } from "./fusion/storage/ApiClient";
-import { Repository, SearchFilter } from "./fusion/storage/BaseRepository";
-import { InMemoryRepository } from "./fusion/storage/InMemoryRepository";
 import { PametRepository } from "./storage/base";
-import { ActionState } from "./fusion/libs/action";
-import { spy } from "mobx";
-
+import { fusion } from "./fusion"
+import { Entity, EntityData } from "./fusion/libs/Entity";
+import { ApiClient } from "./storage/ApiClient";
 
 const log = getLogger('facade');
 
@@ -26,7 +25,6 @@ export class PametFacade extends PametRepository {
     rawChagesChannel: Channel;
     rawChagesByIdChannel: Channel;
     rawChagesByParentIdChannel: Channel;
-    rootActionEventsChannel: Channel;
     rawChangesPlusRootActionEventsChannel: Channel;
     entityChangeListPerRootActionChannel: Channel;
 
@@ -41,25 +39,14 @@ export class PametFacade extends PametRepository {
         this.rawChagesByIdChannel = addChannel('rawChangesById', (change) => change.entity.id);
         this.rawChagesByParentIdChannel = addChannel('rawChangesByParentId', (change) => change.entity.parentId);
 
-        // Catch start/end of root actions and push them to the rootActionEventsChannel
-        this.rootActionEventsChannel = addChannel('rootActionEvents');
-
-        // addMiddleware(this._appState, this._actionParsingMiddleware); // Alternatively use spy
-        // spy(this._actionParsingMiddleware);
-
-        // Test action middleware by logging
-        this.rootActionEventsChannel.subscribe((actionState: ActionState) => {
-            log.info(`Action ${actionState.name} ${actionState.runState}`);
-        });
-
         // Merge the rawChangesChannel and the rootActionEventsChannel
         this.rawChangesPlusRootActionEventsChannel = addChannel('rawChangesPlusRootActionEvents');
-        // this.rawChagesChannel.subscribe((change: Change) => {
-        //     this.rawChangesPlusRootActionEventsChannel.push(change);
-        // });
-        // this.rootActionEventsChannel.subscribe((actionState: ActionState) => {
-        //     this.rawChangesPlusRootActionEventsChannel.push(actionState);
-        // });
+        this.rawChagesChannel.subscribe((change: Change) => {
+            this.rawChangesPlusRootActionEventsChannel.push(change);
+        });
+        fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
+            this.rawChangesPlusRootActionEventsChannel.push(actionState);
+        });
 
         // Group changes per root action
         this.entityChangeListPerRootActionChannel = addChannel('entityChangeListPerRootAction');
@@ -89,7 +76,6 @@ export class PametFacade extends PametRepository {
 
     _pushChangeToRawChannels(change: Change) {
         this.rawChagesChannel.push(change);
-        this.rawChangesPlusRootActionEventsChannel.push(change);
         this.rawChagesByIdChannel.push(change);
         this.rawChagesByParentIdChannel.push(change);
     }
@@ -124,9 +110,9 @@ export class PametFacade extends PametRepository {
                     let arrows = children.arrows
 
                     notes.forEach((note) => {
-                        if(note.own_id === 'e0bc336c'){
-                        console.log('note', note)
-                    }
+                        if (note.own_id === 'e0bc336c') {
+                            console.log('note', note)
+                        }
                         this._syncRepo.insertOne(note)
                     })
                     arrows.forEach((arrow) => {

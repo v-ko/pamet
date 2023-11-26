@@ -1,9 +1,8 @@
 import "./App.css";
 import { observer } from "mobx-react-lite";
-import { PageData } from "../../model/Page";
 import { MapPageComponent } from "../../components/mapPage/Page";
-import { PageViewState as PageViewState } from "../../components/mapPage/PageViewState";
-import { computed, makeAutoObservable, makeObservable, observable } from "mobx";
+import { PageViewState } from "../../components/mapPage/PageViewState";
+import { computed, makeObservable, observable } from "mobx";
 import { pamet } from "../../facade";
 import { getLogger } from "../../fusion/logging";
 
