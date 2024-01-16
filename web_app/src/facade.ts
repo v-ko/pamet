@@ -1,9 +1,9 @@
 import { WebAppState } from "./containers/app/App";
-import { Channel, addChannel } from './fusion/libs/channel';
+import { Channel, addChannel } from './fusion/libs/Channel';
 import { getLogger } from './fusion/logging';
 import { Repository, SearchFilter } from './fusion/storage/BaseRepository';
 import { InMemoryRepository } from './fusion/storage/InMemoryRepository';
-import { ActionState } from './fusion/libs/action';
+import { ActionState } from './fusion/libs/Action';
 import { Change } from "./fusion/Change";
 import { PametRepository } from "./storage/base";
 import { fusion } from "./fusion"
@@ -66,6 +66,9 @@ export class PametFacade extends PametRepository {
 
         // Test the entityChangeListPerRootActionChannel by logging
         this.entityChangeListPerRootActionChannel.subscribe((changeList: Array<Change>) => {
+            // if (!changeList.length) {
+            //     return;
+            // }
             // List all changes
             log.info('Changes:');
             changeList.forEach((change) => {
@@ -134,6 +137,10 @@ export class PametFacade extends PametRepository {
 
     setRepo(repo: Repository) {
         this._syncRepo = repo;
+    }
+
+    apiClient() {
+        return this._apiClient;
     }
 
     // Implement the Repository interface to use the InMemoryRepository

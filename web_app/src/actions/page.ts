@@ -1,16 +1,20 @@
 import { SelectionDict } from "../util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/mapPage/PageViewState";
 import { Point2D } from "../util/Point2D";
-import { action } from "../fusion/libs/action";
+// import { action } from "../fusion/libs/Action";
+import { action, makeObservable } from "mobx";
 
+import { getLogger } from "../fusion/logging";
+
+let log = getLogger('MapActions');
 
 export const AUTO_NAVIGATE_TRANSITION_DURATION = 0.5; // seconds
 
 
 class MapActions {
-  // constructor() {
-  //   makeObservable(this);
-  // }
+  constructor() {
+    makeObservable(this);
+  }
 
   @action
   updateGeometry(state: PageViewState, geometry: [number, number, number, number]) {
@@ -32,24 +36,26 @@ class MapActions {
     state: PageViewState,
     startPosition: Point2D) {
 
-    state.set_mode(PageMode.DragNavigation);
+    state.setMode(PageMode.DragNavigation);
     state.dragNavigationStartPosition = startPosition;
     state.viewportCenterOnModeStart = state.viewportCenter;
   }
 
   @action
-  dragNavigationMove(
-    state: PageViewState,
-    delta: Point2D) {
+  dragNavigationMove(state: PageViewState, delta: Point2D) {
 
-    let delta_unproj = delta.divide(state.viewport.heightScaleFactor());
-    let new_center = state.viewportCenterOnModeStart?.add(delta_unproj) as Point2D;
-    state.viewportCenter = new_center;
+    if (state.viewportCenterOnModeStart === null) {
+      log.error('dragNavigationMove called without viewportCenterOnModeStart');
+      return;
+    }
+
+    let deltaUnprojected = delta.divide(state.viewport.heightScaleFactor());
+    state.viewportCenter = state.viewportCenterOnModeStart.add(deltaUnprojected);
   }
 
   @action
   endDragNavigation(state: PageViewState) {
-    state.set_mode(PageMode.None);
+    state.setMode(PageMode.None);
   }
 
   @action

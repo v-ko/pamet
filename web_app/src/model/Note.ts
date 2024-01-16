@@ -11,6 +11,7 @@ export interface NoteContent {
     text?: string;
     url?: string;
     image_url?: string;
+    local_image_url?: string;
 }
 export interface NoteStyle {
     color: Color;

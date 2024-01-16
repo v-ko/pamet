@@ -316,37 +316,37 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         reachedWordIdx += usedWords;
         let lineText = wordsOnLine.join(' ');
 
-        // tmp log
-        if (truncateLine || addEllipsis) {
-            log.info('trunc, addEllipsis', truncateLine, addEllipsis)
-            log.info('line before truncate', lineText)
-        }
+        // // tmp log
+        // if (truncateLine || addEllipsis) {
+        //     log.info('trunc, addEllipsis', truncateLine, addEllipsis)
+        //     log.info('line before truncate', lineText)
+        // }
 
         if (truncateLine) {
             let width = textRect.width() - ellipsisWidth;
             lineText = truncateText(lineText, width, canvasContext);
         }
 
-        if (truncateLine || addEllipsis) { //tmp log
-            log.info('line after truncate', lineText)
-        }
+        // if (truncateLine || addEllipsis) { //tmp log
+        //     log.info('line after truncate', lineText)
+        // }
 
         if (addEllipsis) {
             textLayout.is_elided = true;
             lineText = lineText + ELLIPSIS;
         }
 
-        if (truncateLine || addEllipsis) { //tmp log
-            log.info('line after ellipsis', lineText)
-        }
+        // if (truncateLine || addEllipsis) { //tmp log
+        //     log.info('line after ellipsis', lineText)
+        // }
 
         textLayout.data.push([lineText, lineRect]);
     }
-    // tmp debug
-    if (text.startsWith('Elide')) {
-        log.info('textLayout', textLayout)
-        log.info('rect', textRect)
-    }
+    // // tmp debug
+    // if (text.startsWith('Elide')) {
+    //     log.info('textLayout', textLayout)
+    //     log.info('rect', textRect)
+    // }
     return textLayout.toData();
 }
 

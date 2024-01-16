@@ -1,25 +1,23 @@
-import { useState, useEffect, useMemo, useCallback, useRef, useLayoutEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { observer } from 'mobx-react-lite';
 
 import { NoteComponent } from '../note/Note';
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_EYE_HEIGHT, DEFAULT_TEXT_COLOR, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../constants';
+import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../constants';
 import { Point2D } from '../../util/Point2D';
-import { Note, NoteData } from '../../model/Note';
+import { NoteData } from '../../model/Note';
 import { ArrowComponent, ArrowHeadComponent } from '../Arrow';
-import { ArrowData } from '../../model/Arrow';
-import { AUTO_NAVIGATE_TRANSITION_DURATION, mapActions } from '../../actions/page';
+import { mapActions } from '../../actions/page';
 import { TourComponent } from '../Tour';
-import { parsePametUrl } from '../../util';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from '../Viewport';
 import { getLogger } from '../../fusion/logging';
 
-type Status = 'loading' | 'error' | 'loaded';
 
 let log = getLogger('Page.tsx')
 
-const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
+// const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
+// type Status = 'loading' | 'error' | 'loaded';
 
 export const MapLayoutContainer = styled.div`
 width: 100%;
@@ -42,9 +40,6 @@ min-width: 30px;
 `
 
 export const MapContainer = styled.div`
-/* --map-scale: ${props => 1 / props.viewport.height};
---map-translate-x: ${props => -props.viewport.center.x}px;
---map-translate-y: ${props => -props.viewport.center.y}px; */
 
 width: ${props => props.viewport.geometry[2]}px;
 height: ${props => props.viewport.geometry[3]}px;
@@ -53,7 +48,6 @@ height: 100%;
 
 transform:  scale(var(--map-scale)) translate(var(--map-translate-x), var(--map-translate-y)) translate(50%, 50%); //
 backface-visibility: hidden;  // Fixes rendering artefact bug
-
 
 // Transitions are very inefficient (at small scale coefficients)
 // So we disable them for now
@@ -64,41 +58,17 @@ user-select: none;
 `;
 
 export const MapPageComponent = observer(({ state }: { state: PageViewState }) => {
-  // const page = state.page;
-  const selection = state.selection;
-
-  const [status, setStatus] = useState<Status>('loading');
-  const [errorString, setErrorString] = useState<string>('');
-
-  const [notesData, setNotesData] = useState<NoteData[]>([]);
-  const [arrowsData, setArrowsData] = useState<ArrowData[]>([]);
-
-  // const [mousePos, setMousePos] = useState<Point2D>(new Point2D(0, 0));
-  // const [mouseDown, setMouseDown] = useState<boolean>(false);
   const [mousePosOnPress, setMousePosOnPress] = useState<Point2D>(new Point2D(0, 0));
-  // const [viewportCenterOnModeStart, setViewportCenterOnModeStart] = useState<Point2D>(new Point2D(0, 0));
 
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
   const [pinchInProgress, setPinchInProgress] = useState<boolean>(false);
   const [pinchStartViewportHeight, setPinchStartViewportHeight] = useState<number>(DEFAULT_EYE_HEIGHT);
   const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D(0, 0));
 
-  // TODO: fix this to init with the container size
-  // const [geometry, setGeometry] = useState<Geometry>([
-  //   0, 0, window.innerWidth, window.innerHeight]);
-
-  // const viewport = useMemo(() => new Viewport(viewportCenter, viewportHeight, geometry),
-  //   [viewportCenter, viewportHeight, geometry]);
-
-  // const superContainerRef = useRef<HTMLDivElement>(null);
-  // console.log("superContainerRef.current", superContainerRef.current);
-
   // Define the superContainerRef as a ref callback setting a state ref
   // because I only get a null ref in the useEffect hook
   // https://reactjs.org/docs/hooks-faq.html#how-can-i-measure-a-dom-node
   const [superContainerRef, setSuperContainerRef] = useState<HTMLDivElement | null>(null);
-
-  // use a ref callback instead
   const superContainerRefCallback = useCallback((node: HTMLDivElement) => {
     if (node !== null) {
       console.log("superContainerRefCallback", node);
@@ -115,7 +85,6 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
       console.log("[mapClientPointToSuperContainer] superContainerRef is null")
       return new Point2D(0, 0);
     }
-    let container = superContainerRef;
     // map point to state.geometry
     let x = point.x - state.viewportGeometry[0];
     let y = point.y - state.viewportGeometry[1];
@@ -158,10 +127,11 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
   // Should be a command
   const copySelectedToClipboard = useCallback(() => {
-    let selected_notes = notesData.filter((note) => selection.includes(note.id.toString()));
+    let notesData = Array.from(state.noteViewStates.values()).map((note) => note.data);
+    let selected_notes = notesData.filter((note) => state.selection.includes(note.id.toString()));
     let text = selected_notes.map((note) => note.content.text).join('\n\n');
     navigator.clipboard.writeText(text);
-  }, [notesData, selection]);
+  }, [state.noteViewStates, state.selection]);
 
   // // Detect url anchor changes in order to update the viewport and note selection
   // // NOT TESTED
@@ -445,18 +415,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {/* A caption for diagnostics showing note and arrow count at the top-left */}
-        <text
-          x={10}
-          y={20}
-          style={{
-            fontSize: 15,
-            fontFamily: 'sans-serif',
-            pointerEvents: 'none',
-          }}
-        >
-          {`Note views: ${noteCount}, Arrow views: ${arrowCount}`}
-        </text>
+
 
         {/* This second onClick is hacky - I should check for a note under the
       mouse instad (to handle the cases when the click is on the MapContainer*/}
@@ -514,6 +473,18 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           segments={state.tour_segments}
         />
       }
+      {/* A caption for diagnostics showing note and arrow count at the top-left */}
+      <p
+        style={{
+          position: 'absolute',
+          margin: '10px',
+          fontSize: '15px',
+          fontFamily: 'sans-serif',
+          pointerEvents: 'none',
+        }}
+      >
+        {`Note views: ${noteCount}, Arrow views: ${arrowCount}`}
+      </p>
     </MapLayoutContainer>
   );
 });

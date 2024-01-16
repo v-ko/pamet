@@ -1,16 +1,17 @@
 import { WebAppState } from "../containers/app/App";
 import { pamet } from "../facade";
 import { getLogger } from "../fusion/logging";
-import { action } from "../fusion/libs/action";
+import { action } from "../fusion/libs/Action";
+import { makeObservable } from "mobx";
 
 let HOME_PAGE_ID = "home";
 
 let log = getLogger("WebAppActions");
 
 export class WebAppActions {
-    // constructor() {
-    //     makeObservable(this);
-    // }
+    constructor() {
+        makeObservable(this);
+    }
 
     // @action
     // setCurrentUrlPath(state: WebAppState, urlPath: string) {

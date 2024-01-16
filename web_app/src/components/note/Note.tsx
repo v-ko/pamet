@@ -4,6 +4,10 @@ import { NOTE_MARGIN } from '../../constants';
 import { color_to_css_rgba_string } from '../../util';
 import { observer } from 'mobx-react-lite';
 import { NoteViewState } from './NoteViewState';
+import { pamet } from '../../facade';
+import { getLogger } from '../../fusion/logging';
+
+let log = getLogger('NoteComponent');
 
 interface NoteComponentProps {
     noteViewState: NoteViewState;
@@ -51,12 +55,11 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
     }
     const color = color_to_css_rgba_string(state.style.color)
     const backgroundColor = color_to_css_rgba_string(state.style.background_color)
-    const imageUrl = state.content.image_url;
 
+    // Handling the url
     let isExternal = true;
-
     // If the url is with a pamet:/ schema - convert it to a local file path
-    let href  = state.content.url;
+    let href = state.content.url;
     if (href && href.startsWith('pamet:/')) {
         href = href.replace('pamet:/', '/');
         isExternal = false;
@@ -67,6 +70,36 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
         target = '_blank';
     }
 
+    // Handling the image
+    // There's image_url and local_image_url. The qt desktop app downloaded
+    // everything and gave it a local_image_url. The web app might not.
+    // Cases to handle:
+    // No local_image_url: show image_url
+    // local_image_url starts with pamet:/ - get it with the api
+    // (it'll be like /p/{page_id}/media/{path:path})
+    // local_image_url starts with / - use the API desktop/fs/{path} endpoint
+
+    let imageUrl = state.content.local_image_url || state.content.image_url;
+    let imageSrc = imageUrl;
+    // let apiBaseUrl = pamet.apiClient().endpointUrl('/');
+
+    // if (imageUrl) {
+    //     log.info('imageUrl', imageUrl)
+    // }
+
+    if (imageUrl && imageUrl.startsWith('pamet:/')) {
+        imageSrc = imageUrl.replace('pamet:/', '/');
+        imageSrc = pamet.apiClient().endpointUrl(imageSrc);
+        isExternal = false;
+    } else if (imageUrl && imageUrl.startsWith('/')) {
+        imageSrc = pamet.apiClient().endpointUrl('desktop/fs') + imageUrl;
+        isExternal = false;
+    }
+
+    // if (imageUrl) {
+    //     log.info('NoteComponentBase', 'imageSrc', imageSrc, 'isExternal', isExternal)
+    // }
+
     return (
         <NoteContainer
             ref={self_ref}
@@ -74,11 +107,11 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
             target={target}
             rel="noopener noreferrer"
             className="note"
-            style= {{
+            style={{
                 top: y + 'px',
                 left: x + 'px',
                 width: width + 'px',
-                height: height  + 'px',
+                height: height + 'px',
                 color: color,
                 backgroundColor: backgroundColor,
                 border: !!state.content.url ? `1px solid ${color}` : '',
@@ -86,13 +119,14 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
             isExternal={isExternal}
             onClick={handleClick}
         >
-            {imageUrl && <img src={imageUrl} alt={"Loading..."} style={{
+            {imageSrc && <img src={imageSrc} alt={"Loading..."} style={{
                 maxWidth: "100%",
                 maxHeight: "100%",
                 objectFit: "contain",
                 flexGrow: 1,
                 alignSelf: "center",
-                objectPosition: "top left"}} />}
+                objectPosition: "center"
+            }} />}
             {state.textLayoutData && <NoteText
                 color={color}
                 padding={NOTE_MARGIN}

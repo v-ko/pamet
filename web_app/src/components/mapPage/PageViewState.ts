@@ -86,8 +86,8 @@ export class PageViewState extends Page {
 
     populateChildViewStates() {
         // Get the entities
-        const notes = Array.from(pamet.notes({ parent_id: this.id }))
-        const arrows = Array.from(pamet.arrows({ parent_id: this.id }))
+        const notes = Array.from(pamet.notes({ parentId: this.id }))
+        const arrows = Array.from(pamet.arrows({ parentId: this.id }))
 
         // Create view states for each entity ()
         notes.forEach((note) => {
@@ -124,16 +124,16 @@ export class PageViewState extends Page {
         }
     }
 
-    clear_mode() {
+    clearMode() {
         this.mode = PageMode.None;
 
         this.dragNavigationStartPosition = null;
         this.viewportCenterOnModeStart = null;
     }
 
-    set_mode(mode: PageMode) {
+    setMode(mode: PageMode) {
         if (this.mode !== PageMode.None) {
-            this.clear_mode();
+            this.clearMode();
         }
         this.mode = mode;
     }
