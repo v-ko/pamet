@@ -25,6 +25,7 @@ dependencies = [
     'requests',
     'markdown',
     'bleach',
+    'watchdog',
 ]
 # readme =
 classifiers = [
