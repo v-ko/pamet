@@ -40,7 +40,7 @@ def start_mouse_drag_navigation(map_page_view_state: MapPageViewState,
     mouse_drag_navigation_move(map_page_view_state, first_delta)
 
 
-@action('map_page.start_drag_navigation') 
+@action('map_page.start_drag_navigation')
 def start_drag_navigation(map_page_view_state: MapPageViewState,
                           mouse_position: Point2D):
     map_page_view_state.set_mode(MapPageMode.DRAG_NAVIGATION)

@@ -1,5 +1,3 @@
-from email import header
-import json
 from pathlib import Path
 from random import randint
 import threading
@@ -35,6 +33,7 @@ class DesktopServer:
 
     def __init__(
         self,
+        media_store_path: Path | str,
         port: int = None,
         commands: dict = None,
         config_dir: Path | str = None,
@@ -42,6 +41,7 @@ class DesktopServer:
         web_app_debug_server_host: str = None,
     ):
         threading.Thread.__init__(self)
+        self.media_store_path = Path(media_store_path)
         self.commands = commands or {}
         self.config_dir = config_dir or pamet_data_folder_path
 
@@ -98,7 +98,8 @@ class DesktopServer:
             pages = [dump_to_dict(page) for page in pamet.pages()]
 
             # set nocache headers
-            responce.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'  # noqa: E501
+            responce.headers[
+                'Cache-Control'] = 'no-cache, no-store, must-revalidate'  # noqa: E501
             responce.headers['Pragma'] = 'no-cache'
             responce.headers['Expires'] = '0'
 
@@ -123,14 +124,30 @@ class DesktopServer:
                 arrow_dicts.append(arrow_dict)
 
             # set nocache headers
-            responce.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'  # noqa: E501
+            responce.headers[
+                'Cache-Control'] = 'no-cache, no-store, must-revalidate'  # noqa: E501
             responce.headers['Pragma'] = 'no-cache'
             responce.headers['Expires'] = '0'
 
             return envelope({
-                    'notes': note_dicts,
-                    'arrows': arrow_dicts,
-                })
+                'notes': note_dicts,
+                'arrows': arrow_dicts,
+            })
+
+        @self.app.get('/desktop/fs/{path:path}')
+        def get_file(path: str):
+            file_path = Path('/') / path
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail='File not found')
+            return FileResponse(file_path)
+
+        @self.app.get('/p/{page_id}/media/{path:path}')
+        def get_media(page_id: str, path: str):
+            file_path = self.media_store_path / page_id / path
+
+            if not file_path.exists():
+                raise HTTPException(status_code=404, detail='File not found')
+            return FileResponse(file_path)
 
     @property
     def port(self):

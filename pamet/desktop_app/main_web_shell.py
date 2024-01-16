@@ -45,13 +45,6 @@ def main(path: str, command: str, config_path: str, web_build_dir: str):
     else:
         port = DesktopServer.DEFAULT_PORT
 
-    local_server = DesktopServer(
-        port=port,
-        # commands=local_server_commands,
-        web_app_static_build_path=web_build_dir,
-        # web_app_debug_server_host='http://localhost',
-    )
-
     repo_path = Path(path)
     log.info('Using repository: %s' % repo_path)
 
@@ -74,6 +67,14 @@ def main(path: str, command: str, config_path: str, web_build_dir: str):
     repo_settings = desktop_app.get_repo_settings(repo_path)
     if repo_settings.changes_present:
         desktop_app.save_repo_settings(repo_settings)
+
+    local_server = DesktopServer(
+        media_store_path=repo_settings.media_store_path,
+        port=port,
+        # commands=local_server_commands,
+        web_app_static_build_path=web_build_dir,
+        # web_app_debug_server_host='http://localhost',
+    )
 
     pamet.set_sync_repo(fs_repo)
     desktop_app.set_media_store(MediaStore(repo_settings.media_store_path))
