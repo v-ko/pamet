@@ -47,19 +47,19 @@ const NoteText = styled.div`
 
 export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteComponentProps) => {
     const self_ref = useRef<HTMLAnchorElement>(null);
-    // console.log('Rendering note', noteData.id)
-    const [x, y, width, height] = state.geometry;
-    if (state.style.color === undefined) {
+    const note = state.note;
+    const [x, y, width, height] = note.geometry;
+    if (note.style.color === undefined) {
         console.log('Style is undefined for note', state);
         return null;
     }
-    const color = color_to_css_rgba_string(state.style.color)
-    const backgroundColor = color_to_css_rgba_string(state.style.background_color)
+    const color = color_to_css_rgba_string(note.style.color)
+    const backgroundColor = color_to_css_rgba_string(note.style.background_color)
 
     // Handling the url
     let isExternal = true;
     // If the url is with a pamet:/ schema - convert it to a local file path
-    let href = state.content.url;
+    let href = note.content.url;
     if (href && href.startsWith('pamet:/')) {
         href = href.replace('pamet:/', '/');
         isExternal = false;
@@ -79,7 +79,7 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
     // (it'll be like /p/{page_id}/media/{path:path})
     // local_image_url starts with / - use the API desktop/fs/{path} endpoint
 
-    let imageUrl = state.content.local_image_url || state.content.image_url;
+    let imageUrl = note.content.local_image_url || note.content.image_url;
     let imageSrc = imageUrl;
     // let apiBaseUrl = pamet.apiClient().endpointUrl('/');
 
@@ -114,7 +114,7 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 height: height + 'px',
                 color: color,
                 backgroundColor: backgroundColor,
-                border: !!state.content.url ? `1px solid ${color}` : '',
+                border: !!note.content.url ? `1px solid ${color}` : '',
             }}
             isExternal={isExternal}
             onClick={handleClick}

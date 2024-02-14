@@ -1,4 +1,4 @@
-import { Arrow, ArrowAnchorType } from '../model/Arrow';
+import { Arrow, ArrowAnchorType, ArrowData } from '../model/Arrow';
 import { computed, makeObservable, observable } from 'mobx';
 import { NoteViewState } from './note/NoteViewState';
 import { getLogger } from '../fusion/logging';
@@ -22,66 +22,73 @@ function specialSigmoid(x: number): number {
     return 1 / (1 + Math.exp(-x / (CP_BASE_DISTANCE / 2) + 5));
 }
 
-export class ArrowViewState extends Arrow {
+export class ArrowViewState {
+    _arrowData: ArrowData;
     headAnchorNoteViewState: NoteViewState | null = null;
     tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
 
     constructor(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null, pathCalculationPrecision: number) {
-        super(arrow._data);
+        this._arrowData = arrow.data();
         this.headAnchorNoteViewState = headAnchorNoteViewState;
         this.tailAnchorNoteViewState = tailAnchorNoteViewState;
 
         makeObservable(this, {
-            _data: observable,
+            _arrowData: observable,
+            arrow: computed,
             headAnchorNoteViewState: observable,
             tailAnchorNoteViewState: observable,
             bezierCurveParams: computed,
             bezierCurveArrayMidpoints: computed,
         });
     }
-
+    get arrow(): Arrow {
+        return new Arrow(this._arrowData);
+    }
     updateFromArrow(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null) {
-        Object.keys(this._data).forEach(key => {
-            this._data[key] = arrow._data[key];
-        });
+        // Object.keys(this._data).forEach(key => {
+        //     this._data[key] = arrow._data[key];
+        // });
+        this._arrowData = arrow.data();
         this.headAnchorNoteViewState = headAnchorNoteViewState;
         this.tailAnchorNoteViewState = tailAnchorNoteViewState;
     }
 
     get bezierCurveParams(): BezierCurve[] {
+        let arrow = this.arrow
+
         // Determine the tail anchor position
         let tailAnchorPos: Point2D;
-        if (this.hasTailAnchor()) {
+        if (arrow.hasTailAnchor()) {
             if (this.tailAnchorNoteViewState) {
-                if (this.tail_anchor) {
-                    tailAnchorPos = this.tailAnchorNoteViewState.arrowAnchor(this.tailAnchorType);
+                if (arrow.tail_anchor) {
+                    tailAnchorPos = this.tailAnchorNoteViewState.note.arrowAnchor(arrow.tailAnchorType);
                 } else {
                     throw new Error('Tail anchor is set, but tail anchor type is not');
                 }
             } else {
                 throw new Error('Tail anchor is set, but tail anchor note view state is not');
             }
-        } else if (this.tail_point) {
-            tailAnchorPos = this.tail_point;
+        } else if (arrow.tail_point) {
+            tailAnchorPos = arrow.tail_point;
         } else {
             throw new Error('Neither tail anchor nor tail point are set');
         }
 
         // Determine the head anchor position
         let headAnchorPos: Point2D;
-        if (this.hasHeadAnchor()) {
+        if (arrow.hasHeadAnchor()) {
             if (this.headAnchorNoteViewState) {
-                if (this.head_anchor) {
-                    headAnchorPos = this.headAnchorNoteViewState.arrowAnchor(this.headAnchorType);
+                if (arrow.head_anchor) {
+                    headAnchorPos = this.headAnchorNoteViewState.note.arrowAnchor(arrow.headAnchorType);
                 } else {
                     throw new Error('Head anchor is set, but head anchor type is not');
                 }
             } else {
                 throw new Error('Head anchor is set, but head anchor note view state is not');
             }
-        } else if (this.head_point) {
-            headAnchorPos = this.head_point;
+        } else if (arrow.head_point) {
+            headAnchorPos = arrow.head_point;
         } else {
             throw new Error('Neither head anchor nor head point are set');
         }
@@ -143,12 +150,13 @@ export class ArrowViewState extends Arrow {
     }
 
     calculateBezierCurveParams(tailPoint: Point2D, headPoint: Point2D): BezierCurve[] {
+        let arrow = this.arrow;
         let curves: BezierCurve[] = [];
         // Determine the secondPoint of the first curve
         // That's either the first mid point, or the head point (if no midpoints)
         let secondPoint: Point2D;
-        if (this.mid_points.length) {
-            secondPoint = this.mid_points[0];
+        if (arrow.mid_points.length) {
+            secondPoint = arrow.mid_points[0];
         } else if (headPoint) {
             secondPoint = headPoint;
         } else {
@@ -157,10 +165,10 @@ export class ArrowViewState extends Arrow {
 
         // If the anchor type for the tail is AUTO - infer it
         let tailAnchorType: ArrowAnchorType;
-        if (this.hasTailAnchor() && this.tailAnchorType === ArrowAnchorType.AUTO) {
-            tailAnchorType = this.inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState!.rect);
+        if (arrow.hasTailAnchor() && arrow.tailAnchorType === ArrowAnchorType.AUTO) {
+            tailAnchorType = this.inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState!.note.rect);
         } else {
-            tailAnchorType = this.tailAnchorType;
+            tailAnchorType = arrow.tailAnchorType;
         }
 
         let controlPointDistance = this.cpDistanceForSegment(tailPoint, secondPoint);
@@ -169,15 +177,15 @@ export class ArrowViewState extends Arrow {
         // Add the second control point for the first curve
         // and all the middle curves (if any), excluding the last control point
         let prevPoint: Point2D = tailPoint;
-        for (let idx = 0; idx < this.mid_points.length; idx++) {
-            let currentPoint = this.mid_points[idx];
+        for (let idx = 0; idx < arrow.mid_points.length; idx++) {
+            let currentPoint = arrow.mid_points[idx];
 
             /// If we're at the last point
             let nextPoint: Point2D;
-            if (idx + 1 === this.mid_points.length) {
+            if (idx + 1 === arrow.mid_points.length) {
                 nextPoint = headPoint;
             } else {
-                nextPoint = this.mid_points[idx + 1];
+                nextPoint = arrow.mid_points[idx + 1];
             }
 
             // Calculate alpha (see the schematic for details)
@@ -224,15 +232,15 @@ export class ArrowViewState extends Arrow {
 
         // If the head anchor type is AUTO - infer it
         let headAnchorType: ArrowAnchorType;
-        if (this.hasHeadAnchor() && this.headAnchorType === ArrowAnchorType.AUTO) {
-            headAnchorType = this.inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState!.rect);
+        if (arrow.hasHeadAnchor() && arrow.headAnchorType === ArrowAnchorType.AUTO) {
+            headAnchorType = this.inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState!.note.rect);
         } else {
-            headAnchorType = this.headAnchorType;
+            headAnchorType = arrow.headAnchorType;
         }
 
         // Add the second control point for the last curve
         let lastControlPoint: Point2D;
-        if (!this.mid_points.length) {
+        if (!arrow.mid_points.length) {
             lastControlPoint = this.calculalteTerminalControlPoint(headPoint, tailPoint, controlPointDistance, headAnchorType);
         } else {
             lastControlPoint = this.calculalteTerminalControlPoint(headPoint, secondPoint, controlPointDistance, headAnchorType);
@@ -282,7 +290,7 @@ export class ArrowViewState extends Arrow {
 
     edgeAt(position: Point2D): number | null {
         let realPos = position;
-        let indices = this.allEdgeIndices();
+        let indices = this.arrow.allEdgeIndices();
         for (let idx of indices) {
             let point = this.edgePointPos(idx);
 

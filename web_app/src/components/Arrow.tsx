@@ -4,10 +4,10 @@ import { color_to_css_rgba_string } from "../util";
 import { ArrowViewState, BezierCurve } from './ArrowViewState';
 
 export interface ArrowProps {
-    arrow: ArrowViewState;
+    arrowViewState: ArrowViewState;
 }
 
-export const ArrowComponent: FC<ArrowProps> = ({ arrow: arrowViewState }: ArrowProps) => {
+export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState }: ArrowProps) => {
 
     const svg_path = useMemo(() => {
         const curves: BezierCurve[] = arrowViewState.bezierCurveParams;
@@ -27,29 +27,30 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrow: arrowViewState }: ArrowP
         return path.join(' ');
     }, [arrowViewState]);
 
-    let color = color_to_css_rgba_string(arrowViewState.color)
-    let line_thickness = arrowViewState.line_thickness;
+    let arrow = arrowViewState.arrow;
+    let color = color_to_css_rgba_string(arrow.color)
+    let line_thickness = arrow.line_thickness;
 
     return (
         <path d={svg_path}
             stroke={color}
             fill="none"
             strokeWidth={line_thickness}
-            markerEnd={`url(#arrowhead-${arrowViewState.id})`}
+            markerEnd={`url(#arrowhead-${arrow.id})`}
         />
     )
 }
 
 
-export const ArrowHeadComponent: FC<ArrowProps> = ({ arrow }) => {
+export const ArrowHeadComponent: FC<ArrowProps> = ({ arrowViewState }) => {
 
     return (
-        <marker id={`arrowhead-${arrow.id}`}
+        <marker id={`arrowhead-${arrowViewState.arrow.id}`}
             markerWidth="10" markerHeight="7"
             refX="10" refY="3.5" orient="auto">
 
             <polygon points="0 0, 10 3.5, 0 7"
-                stroke={color_to_css_rgba_string(arrow.color)}
+                stroke={color_to_css_rgba_string(arrowViewState.arrow.color)}
             />
         </marker>
     )

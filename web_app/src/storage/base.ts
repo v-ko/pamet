@@ -18,10 +18,10 @@ export abstract class PametRepository extends Repository {
     }
     pages(filter: SearchFilter = {}): Generator<Page>{
         filter.type = Page
-        return this.find(filter)
+        return this.find(filter) as Generator<Page>
     }
     page(page_id: string): Page | undefined {
-        return this.findOne({id: page_id})
+        return this.findOne({id: page_id}) as Page | undefined
     }
 
     // Note CRUD
@@ -36,7 +36,7 @@ export abstract class PametRepository extends Repository {
     }
     notes(filter: SearchFilter = {}): Generator<Note>{
         filter.type = Note
-        return this.find(filter)
+        return this.find(filter) as Generator<Note>
     }
 
     //Arrow CRUD
@@ -51,6 +51,6 @@ export abstract class PametRepository extends Repository {
     }
     arrows(filter: SearchFilter = {}): Generator<Arrow>{
         filter.type = Arrow
-        return this.find(filter)
+        return this.find(filter) as Generator<Arrow>
     }
 }

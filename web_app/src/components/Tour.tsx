@@ -16,7 +16,7 @@ import styled from 'styled-components';
 import { TourSegment } from '../model/Page';
 import { parsePametUrl } from '../util';
 import { mapActions } from '../actions/page';
-import { PageViewState } from "./mapPage/PageViewState";
+import { PageViewState } from "./canvas/PageViewState";
 
 
 const MIN_SCROLL_BUFFER_POS = -100;

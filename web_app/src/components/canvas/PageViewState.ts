@@ -1,4 +1,4 @@
-import { ObservableMap, computed, makeObservable, observable } from 'mobx';
+import { ObservableMap, computed, makeObservable, observable, reaction } from 'mobx';
 import { DEFAULT_EYE_HEIGHT } from '../../constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
@@ -35,7 +35,9 @@ export enum PageMode {
 }
 
 
-export class PageViewState extends Page {
+export class PageViewState {
+    _pageData: PageData;
+
     noteViewStates: ObservableMap<string, NoteViewState>;
     arrowViewStates: ObservableMap<string, ArrowViewState>;
     mode: PageMode = PageMode.None;
@@ -55,17 +57,16 @@ export class PageViewState extends Page {
 
     autoNavAnimation: ViewportAutoNavAnimation | null = null;
 
-    constructor(page: PageData) {
-        super(page);
+    constructor(page: Page) {
+        this._pageData = page.data();
         this.noteViewStates = new ObservableMap<string, NoteViewState>();
         this.arrowViewStates = new ObservableMap<string, ArrowViewState>();
 
         this.populateChildViewStates();
 
         makeObservable(this, {
-            _data: observable,
-            name: computed,
-            tour_segments: computed,
+            _pageData: observable,
+            page: computed,
             noteViewStates: observable,
             arrowViewStates: observable,
             mode: observable,
@@ -79,15 +80,50 @@ export class PageViewState extends Page {
             viewport: computed
         });
 
-        // Subscribe to page updates and child note add/remove changes
-        pamet.rawChagesByIdChannel.subscribe(this.handlePageChange, this.id);
-        pamet.rawChagesByParentIdChannel.subscribe(this.handleChildChange, this.id);
+        // // Subscribe to page updates and child note add/remove changes
+        // pamet.rawChagesByIdChannel.subscribe(this.handlePageChange, this.id);
+        // pamet.rawChagesByParentIdChannel.subscribe(this.handleChildChange, this.id);
+
+        // reaction(
+        //     () => pamet.perParentIndex.get(this.page.id),
+        //     pageChildren => {
+        //         // Remove NoteViewStates for notes that have been removed
+        //         // for (let [id, noteViewState] of this.noteViewStates) {
+        //         //     if (!children.includes(id)) {
+        //         //         this.noteViewStates.delete(id);
+        //         //     }
+        //         // }
+
+        //         // If there's a view state without a child entity, remove it
+        //         for (let) {
+        //             if ()
+        //         }
+
+        //         // Add NoteViewStates for new notes
+        //         for (let note of this.page.notes) {
+        //             if (!this.noteViewStates.has(note.id)) {
+        //                 this.noteViewStates.set(note.id, new NoteViewState(note));
+        //             }
+        //         }
+
+        //         // Add/remove arrow view states
+
+        //     }
+        // );
+    }
+
+    viewStateForPageChild(childId: string): NoteViewState | ArrowViewState | null {
+        return this.noteViewStates.get(childId) || this.arrowViewStates.get(childId) || null;
+    }
+
+    get page() {
+        return new Page(this._pageData);
     }
 
     populateChildViewStates() {
         // Get the entities
-        const notes = Array.from(pamet.notes({ parentId: this.id }))
-        const arrows = Array.from(pamet.arrows({ parentId: this.id }))
+        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
+        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
 
         // Create view states for each entity ()
         notes.forEach((note) => {
@@ -109,7 +145,7 @@ export class PageViewState extends Page {
             let pathCalcPrecision = this.viewport.heightScaleFactor();
             this.arrowViewStates.set(arrow.own_id, new ArrowViewState(arrow, headNVS, tailNVS, pathCalcPrecision))
         })
-        log.info(`Populated page ${this.id} with ${notes.length} notes and ${arrows.length} arrows`)
+        log.info(`Populated page ${this.page.id} with ${notes.length} notes and ${arrows.length} arrows`)
     }
 
     handlePageChange = (change: any) => {

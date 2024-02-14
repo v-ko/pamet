@@ -127,7 +127,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
   // Should be a command
   const copySelectedToClipboard = useCallback(() => {
-    let notesData = Array.from(state.noteViewStates.values()).map((note) => note.data);
+    let notesData = Array.from(state.noteViewStates.values()).map((noteVS) => noteVS.note.data());
     let selected_notes = notesData.filter((note) => state.selection.includes(note.id.toString()));
     let text = selected_notes.map((note) => note.content.text).join('\n\n');
     navigator.clipboard.writeText(text);
@@ -393,7 +393,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   //   viewportTransitionDuration = 0;  // Zero value removes the transition
   // }
 
-  log.info(`Rendering Page ${state.name} (id: ${state.id})`)
+  log.info(`Rendering Page ${state.page.name} (id: ${state.page.id})`)
   let noteCount = Array.from(state.noteViewStates.values()).length
   let arrowCount = Array.from(state.arrowViewStates.values()).length
   // log.info(`Notes count: ${noteCount}, Arrows count: ${arrowCount}`)
@@ -433,10 +433,10 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
           {Array.from(state.noteViewStates.values()).map((noteViewState) => (
             <NoteComponent
-              key={noteViewState.id}
+              key={noteViewState.note.id}
               noteViewState={noteViewState}
               // selected={selection.includes(noteViewState.own_id)}
-              handleClick={(event) => { handleNoteClick(event, noteViewState) }} />
+              handleClick={(event) => { handleNoteClick(event, noteViewState.note.data()) }} />
           ))}
 
           <svg
@@ -452,14 +452,14 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
             }}
           >
             <defs>
-              {Array.from(state.arrowViewStates.values()).map((arrow) => (
-                <ArrowHeadComponent key={arrow.id} arrow={arrow} />
+              {Array.from(state.arrowViewStates.values()).map((arrowVS) => (
+                <ArrowHeadComponent key={arrowVS.arrow.id} arrowViewState={arrowVS} />
               ))}
             </defs>
-            {Array.from(state.arrowViewStates.values()).map((arrow) => (
+            {Array.from(state.arrowViewStates.values()).map((arrowVS) => (
               <ArrowComponent
-                key={arrow.id}
-                arrow={arrow}
+                key={arrowVS.arrow.id}
+                arrowViewState={arrowVS}
               />
             ))}
           </svg>
@@ -467,10 +467,10 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
       </MapSuperContainer> {/*  map container container */}
 
-      {state.tour_segments &&
+      {state.page.tour_segments &&
         <TourComponent
           parentPageViewState={state}
-          segments={state.tour_segments}
+          segments={state.page.tour_segments}
         />
       }
       {/* A caption for diagnostics showing note and arrow count at the top-left */}
