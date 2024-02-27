@@ -5,7 +5,6 @@ export interface PageChildData extends EntityData {
     own_id: string;
 }
 
-// @entityType
 export class PageChild<T extends PageChildData> extends Entity<T> implements PageChildData {
 
     get id(): string {

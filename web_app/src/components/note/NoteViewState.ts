@@ -8,6 +8,9 @@ import { DEFAULT_NOTE_FONT_FAMILY, DEFAULT_NOTE_FONT_FAMILY_GENERIC, DEFAULT_NOT
 
 let log = getLogger('NoteViewState.ts');
 
+export const defaultFontString = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_LINE_HEIGHT}px ` +
+    `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
+    `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
 
 export interface TextLayoutData {
     lines: string[];
@@ -17,27 +20,18 @@ export interface TextLayoutData {
 
 
 export class NoteViewState {
-    _noteData: NoteData;
+    _noteData!: NoteData; // initialized in updateFromNote
     selected: boolean = false;
 
     constructor(note: Note) {
-        this._noteData = note.data();
+        this.updateFromNote(note);
 
         makeObservable(this, {
             _noteData: observable,
             note: computed,
-            // content: computed,
-            // geometry: computed,
-            // style: computed,
-            // created: computed,
-            // modified: computed,
-            // tags: computed,
             selected: observable,
             textLayoutData: computed
         });
-
-        // // Register to note updates
-        // pamet.rawChagesByIdChannel.subscribe(this.handleNoteUpdate, note.id);
 
         // Reimplement the above with a reaction
         reaction(() => pamet.noteStore.get(note.id), (note_: Note | undefined) => {
@@ -53,18 +47,10 @@ export class NoteViewState {
         return new Note(this._noteData);
     }
     updateFromNote(note: Note) {
-        // Object.keys(note._data).forEach((key) => {
-        //     this._data[key] = note._data[key];
-        // });
         this._noteData = note.data();
     }
     get textLayoutData(): TextLayoutData {
-        // TMP?
-        const fontString = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_LINE_HEIGHT}px ` +
-            `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
-            `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
-
-        return calculateTextLayout(this.note.content.text || '', this.note.textRect(), fontString);
+        return calculateTextLayout(this.note.content.text || '', this.note.textRect(), defaultFontString);
     }
     handleNoteUpdate = (change: Change) => {
         if (change.isUpdate()) {

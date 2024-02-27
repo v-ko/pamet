@@ -7,6 +7,10 @@ import { NoteViewState } from '../note/NoteViewState';
 import { ArrowViewState } from '../ArrowViewState';
 import { pamet } from '../../facade';
 import { getLogger } from '../../fusion/logging';
+import { Note } from '../../model/Note';
+import { Arrow } from '../../model/Arrow';
+import { InternalLinkNoteViewState } from '../note/InternalLinkNVS';
+import { InternalLinkNote } from '../../model/InternalLinkNote';
 
 let log = getLogger('PageViewState');
 
@@ -38,8 +42,8 @@ export enum PageMode {
 export class PageViewState {
     _pageData: PageData;
 
-    noteViewStates: ObservableMap<string, NoteViewState>;
-    arrowViewStates: ObservableMap<string, ArrowViewState>;
+    noteViewStatesByOwnId: ObservableMap<string, NoteViewState>;
+    arrowViewStatesByOwnId: ObservableMap<string, ArrowViewState>;
     mode: PageMode = PageMode.None;
 
     viewportCenter: Point2D = new Point2D(0, 0);
@@ -58,17 +62,23 @@ export class PageViewState {
     autoNavAnimation: ViewportAutoNavAnimation | null = null;
 
     constructor(page: Page) {
-        this._pageData = page.data();
-        this.noteViewStates = new ObservableMap<string, NoteViewState>();
-        this.arrowViewStates = new ObservableMap<string, ArrowViewState>();
+        console.log('PageViewState page', page)
 
-        this.populateChildViewStates();
+        this._pageData = page.data();
+        this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
+        this.arrowViewStatesByOwnId = new ObservableMap<string, ArrowViewState>();
+
+        // Do an initial update of the note and arrow view states
+        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
+        this._updateNoteViewStatesFromNotes(notes);
+        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
+        this._updateArrowViewStatesFromStore(arrows);
 
         makeObservable(this, {
             _pageData: observable,
             page: computed,
-            noteViewStates: observable,
-            arrowViewStates: observable,
+            noteViewStatesByOwnId: observable,
+            arrowViewStatesByOwnId: observable,
             mode: observable,
             viewportCenter: observable,
             viewportHeight: observable,
@@ -84,68 +94,130 @@ export class PageViewState {
         // pamet.rawChagesByIdChannel.subscribe(this.handlePageChange, this.id);
         // pamet.rawChagesByParentIdChannel.subscribe(this.handleChildChange, this.id);
 
-        // reaction(
-        //     () => pamet.perParentIndex.get(this.page.id),
-        //     pageChildren => {
-        //         // Remove NoteViewStates for notes that have been removed
-        //         // for (let [id, noteViewState] of this.noteViewStates) {
-        //         //     if (!children.includes(id)) {
-        //         //         this.noteViewStates.delete(id);
-        //         //     }
-        //         // }
+        // React on page changes
+        reaction(
+            () => pamet.page(this.page.id),
+            (page) => {
+                if (page) {
+                    this._pageData = page.data();
+                }
+            }
+        );
 
-        //         // If there's a view state without a child entity, remove it
-        //         for (let) {
-        //             if ()
-        //         }
+        // Update noteViewStates when notes are added or removed
+        reaction(
+            () => pamet.find({ parentId: this.page.id, type: Note }) as Generator<Note>,
+            notes => {
+                this._updateNoteViewStatesFromNotes(notes)
+            }
+        );
 
-        //         // Add NoteViewStates for new notes
-        //         for (let note of this.page.notes) {
-        //             if (!this.noteViewStates.has(note.id)) {
-        //                 this.noteViewStates.set(note.id, new NoteViewState(note));
-        //             }
-        //         }
-
-        //         // Add/remove arrow view states
-
-        //     }
-        // );
+        // Update arrowViewStates when arrows are added or removed
+        reaction(
+            () => pamet.find({ parentId: this.page.id, type: Arrow }) as Generator<Arrow>,
+            arrows => {
+                this._updateArrowViewStatesFromStore(arrows)
+            }
+        );
     }
 
-    viewStateForPageChild(childId: string): NoteViewState | ArrowViewState | null {
-        return this.noteViewStates.get(childId) || this.arrowViewStates.get(childId) || null;
+    _updateNoteViewStatesFromNotes(notes: Iterable<Note>) {
+        //map encoding enumeration
+        // enum EntryMarker {
+        //     NotePresent = 0,
+        //     NoteRemoved = 1,
+        //     NoteAdded = 2,
+        //     NoteTypeUpdated = 3,
+        // }
+        console.log('Updating note view states from notes', notes)
+
+        let nvsHasNoteMap = new Map<string, boolean>();
+        for (let note of notes) {
+            nvsHasNoteMap.set(note.own_id, true);
+        }
+
+        // Remove NoteViewStates for notes that have been removed
+        for (let noteOwnId of this.noteViewStatesByOwnId.keys()) {
+            if (!nvsHasNoteMap.has(noteOwnId)) {
+                // console.log('REMOVING note', noteOwnId)
+                this.noteViewStatesByOwnId.delete(noteOwnId);
+            }
+        }
+
+        // Add NoteViewStates for new notes
+        for (let note of notes) {
+            if (!this.noteViewStatesByOwnId.has(note.own_id)) {
+                // console.log('ADDING note', note.own_id)
+                this.noteViewStatesByOwnId.set(note.own_id, this._newNVS_forNote(note));
+            }
+        }
+    }
+
+    _newNVS_forNote(note: Note): NoteViewState {
+        console.log('newNVS_forNote', note)
+        if (note instanceof InternalLinkNote) {
+            return new InternalLinkNoteViewState(note);
+        } else {
+            return new NoteViewState(note);
+        }
+    }
+
+    _updateArrowViewStatesFromStore(arrows: Iterable<Arrow>) {
+        let arrowavsHasArrowMap = new Map<string, boolean>();
+        for (let arrow of arrows) {
+            arrowavsHasArrowMap.set(arrow.own_id, true);
+        }
+
+        // Remove ArrowViewStates for arrows that have been removed
+        for (let arrowOwnId of this.arrowViewStatesByOwnId.keys()) {
+            if (!arrowavsHasArrowMap.has(arrowOwnId)) {
+                // console.log('REMOVING arrow', arrowOwnId)
+                this.arrowViewStatesByOwnId.delete(arrowOwnId);
+            }
+        }
+
+        // Add ArrowViewStates for new arrows
+        for (let arrow of arrows) {
+            if (!this.arrowViewStatesByOwnId.has(arrow.own_id)) {
+                // console.log('ADDING arrow', arrow.own_id)
+                let missingAnchorVS = false;
+
+                let headNVS: NoteViewState | null = null;
+                if (arrow.head_note_id) {
+                    headNVS = this.noteViewStatesByOwnId.get(arrow.head_note_id) || null
+                    if (!headNVS) {
+                        missingAnchorVS = true;
+                        log.error('HEAD NOTE NOT FOUND', arrow.head_note_id)
+                    }
+                }
+
+                let tailNVS: NoteViewState | null = null;
+                if (arrow.tail_note_id) {
+                    tailNVS = this.noteViewStatesByOwnId.get(arrow.tail_note_id) || null
+                    if (!tailNVS) {
+                        missingAnchorVS = true;
+                        log.error('TAIL NOTE NOT FOUND', arrow.tail_note_id)
+                    }
+                }
+
+                if (missingAnchorVS) {
+                    log.error('Arrow not added due to missing anchor view state')
+                    continue;
+                }
+
+                let pathCalcPrecision = this.viewport.heightScaleFactor();
+                this.arrowViewStatesByOwnId.set(arrow.own_id, new ArrowViewState(arrow, headNVS, tailNVS, pathCalcPrecision));
+            }
+        }
+
+    }
+
+    viewStateForPageChild(childOwnId: string): NoteViewState | ArrowViewState | null {
+        return this.noteViewStatesByOwnId.get(childOwnId) || this.arrowViewStatesByOwnId.get(childOwnId) || null;
     }
 
     get page() {
         return new Page(this._pageData);
-    }
-
-    populateChildViewStates() {
-        // Get the entities
-        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
-        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
-
-        // Create view states for each entity ()
-        notes.forEach((note) => {
-            this.noteViewStates.set(note.own_id, new NoteViewState(note))
-        })
-        arrows.forEach((arrow) => {
-            let headNVS: NoteViewState | null = null;
-            // = this.noteViewStates.get(arrow.head_note_id) || null
-            if (arrow.head_note_id) {
-                headNVS = this.noteViewStates.get(arrow.head_note_id) || null
-            }
-
-            // let tailNVS = this.noteViewStates.get(arrow.tail_note_id) || null
-            let tailNVS: NoteViewState | null = null;
-            if (arrow.tail_note_id) {
-                tailNVS = this.noteViewStates.get(arrow.tail_note_id) || null
-            }
-
-            let pathCalcPrecision = this.viewport.heightScaleFactor();
-            this.arrowViewStates.set(arrow.own_id, new ArrowViewState(arrow, headNVS, tailNVS, pathCalcPrecision))
-        })
-        log.info(`Populated page ${this.page.id} with ${notes.length} notes and ${arrows.length} arrows`)
     }
 
     handlePageChange = (change: any) => {
@@ -154,11 +226,11 @@ export class PageViewState {
         }
     }
 
-    handleChildChange = (change: any) => {
-        if (change.isUpdate()) {
-            console.log('Child update', change);
-        }
-    }
+    // handleChildChange = (change: any) => {
+    //     if (change.isUpdate()) {
+    //         console.log('Child update', change);
+    //     }
+    // }
 
     clearMode() {
         this.mode = PageMode.None;

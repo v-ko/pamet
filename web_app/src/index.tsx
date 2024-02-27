@@ -8,6 +8,24 @@ import { PametFacade, pamet } from './facade';
 import { WebAppActions } from './actions/app';
 import { getLogger } from './fusion/logging';
 
+
+// Imports that are required to just activate decorators. Might be removed when
+// some extensions logic is implemented
+import { TextNote } from './model/TextNote';
+import { CardNote } from './model/CardNote';
+import { ImageNote } from './model/ImageNote';
+import { OtherPageListNote } from './model/OtherPageListNote';
+import { ScriptNote } from './model/ScriptNote';
+import { InternalLinkNote } from './model/InternalLinkNote';
+let dummyImports: any[] = [];
+dummyImports.push(TextNote);
+dummyImports.push(CardNote);
+dummyImports.push(ImageNote);
+dummyImports.push(OtherPageListNote);
+dummyImports.push(ScriptNote);
+dummyImports.push(InternalLinkNote);
+
+
 // The setup logic is here, yes.
 // let persistenceManager = new PersistenceManagerService();
 // pamet.setRepo(persistenceManager);
@@ -54,6 +72,12 @@ pamet.loadAllEntitiesTMP(() => {
         console.log("Url not supported", urlPath)
         WebAppActions.setCurrentPage(app_state, null);
     }
+    console.log('Stores:')
+    console.log('pageStore', pamet.pageStore)
+    console.log('noteStore', pamet.noteStore)
+    console.log('arrowStore', pamet.arrowStore)
+    console.log('noteStoresByParentId', pamet.noteStoresByParentId)
+    console.log('arrowStoresByParentId', pamet.arrowStoresByParentId)
 });
 
 root.render(

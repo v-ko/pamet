@@ -5,6 +5,7 @@ import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { getLogger } from "../fusion/logging";
 import { BaseApiClient } from "../fusion/storage/BaseApiClient";
+import { loadFromDict } from "../fusion/libs/Entity";
 
 let log = getLogger('ApiClient');
 
@@ -37,34 +38,50 @@ export class ApiClient extends BaseApiClient {
         // Convert the id in format [page_id, own_id] to
         // page_id and own_id to be compatible with the
         // Note and Arrow data structures
-        function convertIdAndFillStyle(childData) {
+        // Convert notes to internal links where needed.
+
+        // This should be translated to a db migration when the main web
+        // app is finished and the final integration begins.
+        function tmpDynamicMigration(childData) {
             let [page_id, own_id] = childData.id;
             if (page_id === undefined || own_id === undefined) {
-                throw new Error('FUCK')
+                throw new Error('Bad id')
             }
             childData.page_id = page_id;
             childData.own_id = own_id;
             delete childData.id;
 
             // Fill style where missing
-            if (childData.style === undefined){
+            if (childData.style === undefined) {
                 childData.style = {}
             }
-            if (childData.style.color === undefined){
+            if (childData.style.color === undefined) {
                 childData.style.color = [...DEFAULT_TEXT_COLOR]
             }
-            if (childData.style.background_color === undefined){
+            if (childData.style.background_color === undefined) {
                 childData.style.background_color = [...DEFAULT_BACKGROUND_COLOR]
+            }
+
+            // Convert notes to internal links where needed.
+            if (['TextNote', 'CardNote', 'ImageNote'].includes(childData.type_name)) {
+                if (childData.content === undefined) {
+                    throw new Error('Content is missing')
+                } else if (childData.content.url) {
+                    let url: string = childData.content.url
+                    if (url.startsWith('pamet:/p')) {
+                        childData.type_name = 'InternalLinkNote'
+                    }
+                }
             }
 
             return childData;
         }
 
         let notes = notesData.map((noteData: any) => {
-            return new Note(convertIdAndFillStyle(noteData));
+            return loadFromDict(tmpDynamicMigration(noteData));
         });
         let arrows = arrowsData.map((arrowData: any) => {
-            return new Arrow(convertIdAndFillStyle(arrowData));
+            return loadFromDict(tmpDynamicMigration(arrowData));
         })
         return {
             notes: notes,

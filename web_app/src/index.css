@@ -28,3 +28,25 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+div .note-text {
+  flex-grow: 8;
+  align-self: center;
+  min-height: 20px;
+  min-width: 20px;
+  width: min-content;
+  height: min-content;
+
+  overflow: visible;
+  text-decoration: none;
+
+  /* justify text in center */
+  display: flex;
+  text-align: center;
+  align-items: center;
+  justify-content: center;
+
+  font-family: 'Open Sans', sans-serif;
+  font-size: 18px;
+  line-height: 20px;
+}

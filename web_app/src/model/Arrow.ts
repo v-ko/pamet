@@ -30,7 +30,7 @@ export interface ArrowData extends PageChildData {
 }
 
 // Use camelCase for property names
-@entityType
+@entityType('Arrow')
 export class Arrow extends PageChild<ArrowData> implements ArrowData {
     get tail_coords(): PointData | null {
         return this._data.tail_coords;

@@ -51,7 +51,7 @@ export class WebAppActions {
     static setPageToHomeOrFirst(state: WebAppState) {
         let page = pamet.findOne({id: HOME_PAGE_ID});
         if (!page) {
-            log.warning("No home page found");
+            log.info("No home page found");
             page = pamet.pages().next().value;
             if(page === undefined) {
                 throw new Error("No pages found");

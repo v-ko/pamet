@@ -34,7 +34,7 @@ export class WebAppState {
     if(!page) {
       return null;
     }
-    let pageViewState = new PageViewState(page.data);
+    let pageViewState = new PageViewState(page);
     return pageViewState
   }
 }

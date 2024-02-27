@@ -1,51 +1,24 @@
 import { useRef } from 'react';
-import styled from 'styled-components';
 import { NOTE_MARGIN } from '../../constants';
 import { color_to_css_rgba_string } from '../../util';
 import { observer } from 'mobx-react-lite';
 import { NoteViewState } from './NoteViewState';
 import { pamet } from '../../facade';
 import { getLogger } from '../../fusion/logging';
+import { trace } from 'mobx';
+import React from 'react';
 
 let log = getLogger('NoteComponent');
 
 interface NoteComponentProps {
     noteViewState: NoteViewState;
-    handleClick: (event: MouseEvent) => void;
+    handleClick: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
 }
-
-export const NoteContainer = styled.a`
-    text-decoration: none;
-    position: absolute;
-    display: flex;
-    flex-wrap: wrap;
-`;
-
-const NoteText = styled.div`
-    flex-grow: 8;
-    align-self: center;
-    min-height: 20px;
-    min-width: 20px;
-    width: min-content;
-    height: min-content;
-
-    overflow: hidden;
-    text-decoration: none;
-
-    //justify text in center
-    display: flex;
-    text-align: center;
-    align-items: center;
-    justify-content: center;
-
-    font-family: 'Open Sans', sans-serif;
-    font-size: 18px;
-    line-height: 20px;
-    color: ${props => props.color};
-`;
 
 
 export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteComponentProps) => {
+    // trace(true)
+
     const self_ref = useRef<HTMLAnchorElement>(null);
     const note = state.note;
     const [x, y, width, height] = note.geometry;
@@ -101,12 +74,12 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
     // }
 
     return (
-        <NoteContainer
+        <a
             ref={self_ref}
             href={href}
             target={target}
             rel="noopener noreferrer"
-            className="note"
+            className="note note-container"
             style={{
                 top: y + 'px',
                 left: x + 'px',
@@ -115,8 +88,12 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 color: color,
                 backgroundColor: backgroundColor,
                 border: !!note.content.url ? `1px solid ${color}` : '',
+                textDecoration: 'none',
+                position: 'absolute',
+                display: 'flex',
+                flexWrap: 'wrap',
             }}
-            isExternal={isExternal}
+            // isExternal={isExternal}
             onClick={handleClick}
         >
             {imageSrc && <img src={imageSrc} alt={"Loading..."} style={{
@@ -127,10 +104,12 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 alignSelf: "center",
                 objectPosition: "center"
             }} />}
-            {state.textLayoutData && <NoteText
-                color={color}
-                padding={NOTE_MARGIN}
-            >{state.textLayoutData.lines.join('\n')}</NoteText>}
+            {state.textLayoutData && <div
+                className="note-text"
+                style={{color: color,
+                    padding: NOTE_MARGIN}}
+                // padding={NOTE_MARGIN}
+            >{state.textLayoutData.lines.join('\n')}</div>}
 
             {/* Draw a div with a yellow border around the selected note */}
             {/* do not use a custom component, just vanilla div and css-in-js*/}
@@ -145,20 +124,19 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 }}
             />}
 
-
-        </NoteContainer>
+        </a>
     );
 }
 
-// export const NoteComponent = React.memo(observer(NoteComponentBase), (prevProps, nextProps) => { // That's react memo related
-//     // Just don't rerender the note ever
-//     // TODO: When we start editing notes - there should be some mechanism to
-//     // mark them for rerendering (e.g. a flag in the props or a timestamp in the
-//     // note data, combined with a service that keeps track of the last time the
-//     // note was rendered)
-//     // Yeah, mmaybe just a service that keeps track of the last time the note was
-//     // edited and the last time it was rendered.
-//     return prevProps.selected === nextProps.selected;
-// });
+export const NoteComponent = React.memo(observer(NoteComponentBase), (prevProps, nextProps) => { // That's react memo related
+    // Just don't rerender the note ever
+    // TODO: When we start editing notes - there should be some mechanism to
+    // mark them for rerendering (e.g. a flag in the props or a timestamp in the
+    // note data, combined with a service that keeps track of the last time the
+    // note was rendered)
+    // Yeah, mmaybe just a service that keeps track of the last time the note was
+    // edited and the last time it was rendered.
+    return prevProps.noteViewState.selected === nextProps.noteViewState.selected;
+});
 
-export const NoteComponent = observer(NoteComponentBase);
+// export const NoteComponent = observer(NoteComponentBase);

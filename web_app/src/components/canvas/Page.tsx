@@ -12,6 +12,7 @@ import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from '../Viewport';
 import { getLogger } from '../../fusion/logging';
+import { trace } from 'mobx';
 
 
 let log = getLogger('Page.tsx')
@@ -58,6 +59,8 @@ user-select: none;
 `;
 
 export const MapPageComponent = observer(({ state }: { state: PageViewState }) => {
+  // trace(true)
+
   const [mousePosOnPress, setMousePosOnPress] = useState<Point2D>(new Point2D(0, 0));
 
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
@@ -71,7 +74,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   const [superContainerRef, setSuperContainerRef] = useState<HTMLDivElement | null>(null);
   const superContainerRefCallback = useCallback((node: HTMLDivElement) => {
     if (node !== null) {
-      console.log("superContainerRefCallback", node);
+      // console.log("superContainerRefCallback", node);
       setSuperContainerRef(node);
     }
   }, []);
@@ -127,11 +130,11 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
   // Should be a command
   const copySelectedToClipboard = useCallback(() => {
-    let notesData = Array.from(state.noteViewStates.values()).map((noteVS) => noteVS.note.data());
+    let notesData = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS.note.data());
     let selected_notes = notesData.filter((note) => state.selection.includes(note.id.toString()));
     let text = selected_notes.map((note) => note.content.text).join('\n\n');
     navigator.clipboard.writeText(text);
-  }, [state.noteViewStates, state.selection]);
+  }, [state.noteViewStatesByOwnId, state.selection]);
 
   // // Detect url anchor changes in order to update the viewport and note selection
   // // NOT TESTED
@@ -212,7 +215,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
     let mouse_pos = mapClientPointToSuperContainer(
       new Point2D(event.clientX, event.clientY));
-    console.log(mouse_pos)
+    // console.log(mouse_pos)
     let mouse_pos_unproj = state.viewport.unprojectPoint(mouse_pos)
     let new_center = state.viewportCenter.add(
       mouse_pos_unproj.subtract(state.viewportCenter).multiply(
@@ -311,7 +314,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   };
 
 
-  const handleNoteClick = (event: MouseEvent, noteData: NoteData) => {
+  const handleNoteClick = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, noteData: NoteData) => {
     // if control pressed or shift pressed, add to selection else
     // clear selection and select this note
     if (!(event.ctrlKey || event.shiftKey)) {
@@ -393,9 +396,9 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   //   viewportTransitionDuration = 0;  // Zero value removes the transition
   // }
 
-  log.info(`Rendering Page ${state.page.name} (id: ${state.page.id})`)
-  let noteCount = Array.from(state.noteViewStates.values()).length
-  let arrowCount = Array.from(state.arrowViewStates.values()).length
+  // log.info(`Rendering Page ${state.page.name} (id: ${state.page.id})`)
+  let noteCount = Array.from(state.noteViewStatesByOwnId.values()).length
+  let arrowCount = Array.from(state.arrowViewStatesByOwnId.values()).length
   // log.info(`Notes count: ${noteCount}, Arrows count: ${arrowCount}`)
 
   return (
@@ -431,7 +434,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
         >
 
 
-          {Array.from(state.noteViewStates.values()).map((noteViewState) => (
+          {Array.from(state.noteViewStatesByOwnId.values()).map((noteViewState) => (
             <NoteComponent
               key={noteViewState.note.id}
               noteViewState={noteViewState}
@@ -452,11 +455,11 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
             }}
           >
             <defs>
-              {Array.from(state.arrowViewStates.values()).map((arrowVS) => (
+              {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
                 <ArrowHeadComponent key={arrowVS.arrow.id} arrowViewState={arrowVS} />
               ))}
             </defs>
-            {Array.from(state.arrowViewStates.values()).map((arrowVS) => (
+            {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
               <ArrowComponent
                 key={arrowVS.arrow.id}
                 arrowViewState={arrowVS}

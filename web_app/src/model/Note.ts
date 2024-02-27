@@ -31,8 +31,9 @@ export interface NoteData extends PageChildData {
     tags: string[];
 }
 
-@entityType
+@entityType('Note')
 export class Note extends PageChild<NoteData> implements NoteData {
+    static readonly className: string = 'Note';
 
     get rect(): Rectangle {
         return new Rectangle(...this._data.geometry);
