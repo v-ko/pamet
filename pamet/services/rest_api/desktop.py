@@ -113,14 +113,12 @@ class DesktopServer:
 
             note_dicts = []
             for note in pamet.notes(page_id):
-                note_dict = note.asdict()
-                note_dict['type'] = type(note).__name__
+                note_dict = dump_to_dict(note)
                 note_dicts.append(note_dict)
 
             arrow_dicts = []
             for arrow in pamet.arrows(page_id):
-                arrow_dict = arrow.asdict()
-                arrow_dict['type'] = type(arrow).__name__
+                arrow_dict = dump_to_dict(arrow)
                 arrow_dicts.append(arrow_dict)
 
             # set nocache headers

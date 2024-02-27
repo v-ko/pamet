@@ -2,6 +2,7 @@ from pathlib import Path
 import click
 import fusion
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
+from PySide6.QtGui import QDesktopServices
 
 from pamet import commands, desktop_app
 import pamet
@@ -87,17 +88,21 @@ def main(path: str, command: str, config_path: str, web_build_dir: str):
     #         DesktopServer.send_command(port, 'raise_window')
     #     return
     # else:
-        # local_server.start()
+    # local_server.start()
 
     local_server.start()
 
     app = DesktopApp()
     app.aboutToQuit.connect(local_server.stop)
 
-    web_shell = WebShellWindow(
-        endpoint=f'http://localhost:{local_server.port}')
+    # web_shell = WebShellWindow(
+    #     endpoint=f'http://localhost:{local_server.port}')
 
-    web_shell.show()
+    # web_shell.show()
+
+    # Open the browser at the local server's address, using Qt desktop services
+    url = f'http://localhost:{3000}'  # local_server.port
+    QDesktopServices.openUrl(url)
     app.exec()
 
 

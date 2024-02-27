@@ -1,6 +1,7 @@
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fusion.libs.entity import dump_to_dict
 from fusion.libs.entity.change import Change
 
 from pamet.storage.file_system.repository import FSStorageRepository
@@ -34,14 +35,12 @@ def get_children(page_id: str):
 
     note_dicts = []
     for note in repo.notes(page_id):
-        note_dict = note.asdict()
-        note_dict['type'] = type(note).__name__
+        note_dict = dump_to_dict(note)
         note_dicts.append(note_dict)
 
     arrow_dicts = []
     for arrow in repo.arrows(page_id):
-        arrow_dict = arrow.asdict()
-        arrow_dict['type'] = type(arrow).__name__
+        arrow_dict = dump_to_dict(arrow)
         arrow_dicts.append(arrow_dict)
 
     return {

@@ -57,8 +57,22 @@ def main(path: str, command: str, config_path: str):
     if config_path:
         desktop_app.set_user_settings_path(Path(config_path))
 
+    # Load configs and repo path
+    user_config = desktop_app.get_user_settings()
+
+    if path:
+        repo_path = Path(path)
+    else:
+        repo_path = Path(user_config.repository_path)
+    log.info('Using repository: %s' % repo_path)
+
+    repo_settings = desktop_app.get_repo_settings(repo_path)
+
     # Check if another instance is running and/or start the local server
-    local_server = DesktopServer(commands=local_server_commands)
+    local_server = DesktopServer(
+        commands=local_server_commands,
+        media_store_path=repo_settings.media_store_path)
+
     if local_server.another_instance_is_running():
         port = local_server.get_port_from_lock_file()
         if command:
@@ -73,20 +87,13 @@ def main(path: str, command: str, config_path: str):
     app.aboutToQuit.connect(local_server.stop)
 
     configure_for_qt(app)
-    # Load the config
-    user_config = desktop_app.get_user_settings()
+
     # If there's changes after the load it means that some default is not saved
     # to disk or some other irregularity has been handled by the config class
     if user_config.changes_present:
         desktop_app.save_user_settings(user_config)
 
     # Init the repo
-    if path:
-        repo_path = Path(path)
-    else:
-        repo_path = Path(user_config.repository_path)
-    log.info('Using repository: %s' % repo_path)
-
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path,
                                            queue_save_on_change=True)
@@ -103,8 +110,7 @@ def main(path: str, command: str, config_path: str):
     else:
         fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
-    repo_settings = desktop_app.get_repo_settings(repo_path)
-    if repo_settings.changes_present:
+    if repo_settings.changes_present():
         desktop_app.save_repo_settings(repo_settings)
 
     pamet.set_sync_repo(fs_repo)
@@ -187,8 +193,7 @@ def main(path: str, command: str, config_path: str):
         set_semantic_search_service(semantic_search_service)
 
     fusion.set_main_loop_exception_handler(
-        lambda e: app.present_exception(e, title='Main loop exception')
-    )
+        lambda e: app.present_exception(e, title='Main loop exception'))
 
     # Watch files that have previews in notes and update them
     file_note_watcher_service = FileNoteWatcherService()
