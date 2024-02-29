@@ -1,10 +1,11 @@
+import { PageChildViewState } from "../components/canvas/PageChildViewState";
 import { TextLayoutData } from "../components/note/NoteViewState";
 import { getLogger } from "../fusion/logging";
 import { Point2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
 
 export type Color = [number, number, number, number];
-export type SelectionDict = { [key: string]: boolean };
+export type SelectionDict = Map<PageChildViewState, boolean>;
 
 let log = getLogger('util/index.ts');
 
@@ -350,19 +351,6 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
     return textLayout.toData();
 }
 
-// class Point2D {
-//     x: number;
-//     y: number;
-
-//     constructor(x: number = 0, y: number = 0) {
-//         this.x = x;
-//         this.y = y;
-//     }
-
-//     distanceTo(point: Point2D): number {
-//         return Math.sqrt((point.x - this.x) ** 2 + (point.y - this.y) ** 2);
-//     }
-// }
 
 function bezierPoint(t: number, P0: Point2D, P1: Point2D, P2: Point2D, P3: Point2D): Point2D {
     const u = 1 - t;
@@ -384,7 +372,7 @@ function bezierPoint(t: number, P0: Point2D, P1: Point2D, P2: Point2D, P3: Point
 }
 
 export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point2D, cp2: Point2D, endPoint: Point2D, precision_k: number = 1): Point2D {
-    // Dynamically determine the number of segments
+    // Approximate the number of segments based on the distance between start/end/control points
     let pathLength = startPoint.distanceTo(cp1) + cp1.distanceTo(cp2) + cp2.distanceTo(endPoint);
     let numSegments = Math.ceil(pathLength / (1 / precision_k)); // Adjust the divisor to balance performance and accuracy
 
@@ -420,4 +408,19 @@ export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point
     }
 
     return bezierPoint(t, startPoint, cp1, cp2, endPoint);
+}
+
+export function bezierCurvePoints(startPoint: Point2D, cp1: Point2D, cp2: Point2D, endPoint: Point2D, precision_k: number = 1): Point2D[] {
+    // Approximate the number of segments based on the distance between start/end/control points
+    let pathLength = startPoint.distanceTo(cp1) + cp1.distanceTo(cp2) + cp2.distanceTo(endPoint);
+    let numSegments = Math.ceil(pathLength / (1 / precision_k)); // Adjust the divisor to balance performance and accuracy
+
+    let points: Point2D[] = [];
+    for (let i = 1; i <= numSegments; i++) {
+        let t = i / numSegments;
+        let currentPoint = bezierPoint(t, startPoint, cp1, cp2, endPoint);
+        points.push(currentPoint);
+    }
+
+    return points;
 }
