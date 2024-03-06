@@ -10,7 +10,7 @@ let log = getLogger("WebAppActions");
 
 export class WebAppActions {
     constructor() {
-        makeObservable(this);
+        makeObservable(this); // This is not applied since no instance is created
     }
 
     // @action

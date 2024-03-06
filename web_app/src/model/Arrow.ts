@@ -1,5 +1,5 @@
 import { entityType } from '../fusion/libs/Entity';
-import { Color } from '../util';
+import { ColorData } from '../util';
 import { Point2D, PointData } from '../util/Point2D';
 import { PageChild, PageChildData } from './PageChild';
 
@@ -21,7 +21,7 @@ export interface ArrowData extends PageChildData {
     tail_note_id: string | null;
     head_anchor: string;
     tail_anchor: string;
-    color: Color;
+    color: ColorData;
     line_type: string;
     line_thickness: number;
     line_function_name: string;
@@ -59,7 +59,7 @@ export class Arrow extends PageChild<ArrowData> implements ArrowData {
     get tail_anchor(): string {
         return this._data.tail_anchor;
     }
-    get color(): Color {
+    get color(): ColorData {
         return this._data.color;
     }
     get line_type(): string {

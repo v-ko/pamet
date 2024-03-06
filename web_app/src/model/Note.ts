@@ -1,4 +1,4 @@
-import { Color } from "../util";
+import { ColorData } from "../util";
 import { Rectangle } from "../util/Rectangle";
 
 import { entityType } from "../fusion/libs/Entity";
@@ -14,8 +14,8 @@ export interface NoteContent {
     local_image_url?: string;
 }
 export interface NoteStyle {
-    color: Color;
-    background_color: Color;
+    color: ColorData;
+    background_color: ColorData;
 }
 
 export interface NoteMetadata {
@@ -35,7 +35,7 @@ export interface NoteData extends PageChildData {
 export class Note extends PageChild<NoteData> implements NoteData {
     static readonly className: string = 'Note';
 
-    get rect(): Rectangle {
+    rect(): Rectangle {
         return new Rectangle(...this._data.geometry);
     }
     get geometry(): [number, number, number, number] {
@@ -67,14 +67,14 @@ export class Note extends PageChild<NoteData> implements NoteData {
         if (forSize !== null) {
             size = forSize;
         } else {
-            size = this.rect.size();
+            size = this.rect().size();
         }
         size = size.subtract(new Point2D(2 * NOTE_MARGIN, 2 * NOTE_MARGIN));
         return new Rectangle(NOTE_MARGIN, NOTE_MARGIN, size.x, size.y);
     }
 
     arrowAnchor(anchorType: ArrowAnchorType): Point2D {
-        const rect = this.rect;
+        const rect = this.rect();
         switch (anchorType) {
             case ArrowAnchorType.MID_LEFT:
                 return rect.topLeft().add(new Point2D(0, rect.height() / 2));

@@ -87,6 +87,11 @@ export class PametFacade extends PametRepository {
                 log.info(change);
             });
         });
+
+        // Testing: log the actions channel
+        fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
+            log.info('actionState', actionState);
+        });
     }
 
     _pushChangeToRawChannels(change: Change) {

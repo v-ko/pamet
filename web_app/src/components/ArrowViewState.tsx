@@ -5,6 +5,8 @@ import { getLogger } from '../fusion/logging';
 import { Point2D } from '../util/Point2D';
 import { Rectangle } from '../util/Rectangle';
 import { approximateMidpointOfBezierCurve } from '../util';
+import { PageChildViewState } from './canvas/PageChildViewState';
+import paper from 'paper';
 
 let log = getLogger('ArrowViewState');
 
@@ -22,13 +24,15 @@ function specialSigmoid(x: number): number {
     return 1 / (1 + Math.exp(-x / (CP_BASE_DISTANCE / 2) + 5));
 }
 
-export class ArrowViewState {
+export class ArrowViewState extends PageChildViewState {
     _arrowData: ArrowData;
     headAnchorNoteViewState: NoteViewState | null = null;
     tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
 
     constructor(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null, pathCalculationPrecision: number) {
+        super();
+
         this._arrowData = arrow.data();
         this.headAnchorNoteViewState = headAnchorNoteViewState;
         this.tailAnchorNoteViewState = tailAnchorNoteViewState;
@@ -40,6 +44,7 @@ export class ArrowViewState {
             tailAnchorNoteViewState: observable,
             bezierCurveParams: computed,
             bezierCurveArrayMidpoints: computed,
+            paperPath: computed,
         });
     }
     get arrow(): Arrow {
@@ -166,7 +171,7 @@ export class ArrowViewState {
         // If the anchor type for the tail is AUTO - infer it
         let tailAnchorType: ArrowAnchorType;
         if (arrow.hasTailAnchor() && arrow.tailAnchorType === ArrowAnchorType.AUTO) {
-            tailAnchorType = this.inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState!.note.rect);
+            tailAnchorType = this.inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState!.note.rect());
         } else {
             tailAnchorType = arrow.tailAnchorType;
         }
@@ -233,7 +238,7 @@ export class ArrowViewState {
         // If the head anchor type is AUTO - infer it
         let headAnchorType: ArrowAnchorType;
         if (arrow.hasHeadAnchor() && arrow.headAnchorType === ArrowAnchorType.AUTO) {
-            headAnchorType = this.inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState!.note.rect);
+            headAnchorType = this.inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState!.note.rect());
         } else {
             headAnchorType = arrow.headAnchorType;
         }
@@ -307,20 +312,25 @@ export class ArrowViewState {
         return null;
     }
 
-    //     def intersects_circle(self, center: Point2D, radius: float) -> bool:
-    //         if not self._cached_path:
-    //             return False
 
-    //         path = QPainterPath()
-    //         path.addEllipse(QPointF(*center.as_tuple()), radius, radius)
-    //         return self._cached_path.intersects(path)
+    get paperPath(): paper.Path {
+        let path = new paper.Path();
+        let curves = this.bezierCurveParams;
+        for (let curve of curves) {
+            path.moveTo(curve[0]);
+            path.cubicCurveTo(curve[1], curve[2], curve[3]);
+        }
+        return path;
+    }
 
-    //     def intersects_rect(self, rect: Rectangle) -> bool:
-    //         if not self._cached_path:
-    //             return False
+    intersectsCircle(center: Point2D, radius: number): boolean {
+        let path = this.paperPath;
+        let circlePath = new paper.Path.Circle(center, radius);
+        return path.intersects(circlePath);
+    }
 
-    //         selector_rect = QRectF(*rect.as_tuple())
-    //         return self._cached_path.intersects(selector_rect)
-
-
+    intersectsRect(rect: Rectangle): boolean {
+        let path = this.paperPath;
+        return path.intersects(new paper.Path.Rectangle(rect.topLeft(), rect.bottomRight()));
+    }
 }

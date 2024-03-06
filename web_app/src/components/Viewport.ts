@@ -1,29 +1,31 @@
 import { NO_SCALE_LINE_SPACING } from '../constants';
 import { Point2D } from '../util/Point2D';
+import { RectangleData } from '../util/Rectangle';
 import { Rectangle } from '../util/Rectangle';
 
 
-export type Geometry = [number, number, number, number];
-
 export class Viewport {
   public center: Point2D;
-  public height: number;
-  public geometry: Geometry;
+  public eye_height: number;
+  public geometry: RectangleData;
 
-  constructor(view_center: Point2D, view_height: number, viewport_geometry: Geometry) {
+  constructor(view_center: Point2D, eye_height: number, viewport_geometry: RectangleData) {
     this.center = view_center;
-    this.height = view_height;
+    this.eye_height = eye_height;
     this.geometry = viewport_geometry;
+  }
 
+  get pixelSpaceRect(): Rectangle {
+    return new Rectangle(this.geometry[0], this.geometry[1], this.geometry[2], this.geometry[3]);
   }
 
   public toString(): string {
-    const info = `center=${this.center.toString()} height=${this.height}`;
+    const info = `center=${this.center.toString()} height=${this.eye_height}`;
     return `<Viewport ${info}>`;
   }
 
   public heightScaleFactor(): number {
-    return NO_SCALE_LINE_SPACING / this.height;
+    return NO_SCALE_LINE_SPACING / this.eye_height;
   }
 
   public projectRect(rect: Rectangle): Rectangle {

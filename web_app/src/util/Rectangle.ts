@@ -1,6 +1,8 @@
 import { Point2D } from "./Point2D"
 
 
+export type RectangleData = [number, number, number, number];
+
 export class Rectangle {
     constructor(
         public x: number,
@@ -16,7 +18,7 @@ export class Rectangle {
         const h = Math.abs(size.y)
         return new Rectangle(x, y, w, h)
     }
-    data(): [number, number, number, number] {
+    data(): RectangleData {
         return [this.x, this.y, this.w, this.h]
     }
     equals(other: Rectangle): boolean {
@@ -159,7 +161,7 @@ export class Rectangle {
         return ((this.x <= point.x && point.x <= this.right()) &&
                 (this.y <= point.y && point.y <= this.bottom()))
     }
-    props(): [number, number, number, number] {
+    props(): RectangleData {
         return [this.x, this.y, this.w, this.h]
     }
 }
