@@ -4,13 +4,13 @@ import { getLogger } from "../fusion/logging";
 import { Point2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
 
-export type Color = [number, number, number, number];
+export type ColorData = [number, number, number, number];
 export type SelectionDict = Map<PageChildViewState, boolean>;
 
 let log = getLogger('util/index.ts');
 
 
-export function color_to_css_rgba_string(color: Color) {
+export function color_to_css_rgba_string(color: ColorData) {
     // Convert from [0, 1] to [0, 255]. The alpha channel stays in [0, 1]!
     let r = Math.round(color[0] * 255)
     let g = Math.round(color[1] * 255)
@@ -85,27 +85,6 @@ class TextLayout {
         }
     }
 }
-// def elide_text(text, text_rect: Rectangle, font: QFont) -> TextLayout:
-//     font_metrics = QFontMetrics(font)
-
-//     # Get the needed parameters
-//     line_spacing = NO_SCALE_LINE_SPACING
-
-//     # Replace tabs with spaces
-//     text = text.replace('\t', '    ')
-
-//     # Get the y coordinates of the lines
-//     line_vpositions = []
-//     line_y = text_rect.top()
-//     while line_y <= text_rect.bottom() - line_spacing:
-//         line_vpositions.append(line_y)
-//         line_y += line_spacing
-
-// !!! UNTESTED !!!
-// Work left:
-// Implement a React context for the canvas (or pass a ref from the map page)
-// Finish the effect for calculating the elided text
-// Implement the TSX code for rendering the text
 
 // Init the canvas
 let canvas: HTMLCanvasElement;
@@ -113,29 +92,6 @@ let canvasContext: CanvasRenderingContext2D;
 let ELLIPSIS = '...';
 let ellipsisWidth = 0;
 let spaceWidth = 0;
-
-
-// const elideWord = (word: string, target_width: number, ctx: CanvasRenderingContext2D) => {
-//     // Add an ellipsis to the end of the word
-//     let wordWidth = ctx.measureText(word).width;
-//     let widthLeft = target_width - wordWidth - ellipsisWidth;
-//     if (target_width <= ellipsisWidth) {
-//         return ellipsis;
-//     }
-
-//     // Go through ellipsis positions to find the first that fits
-//     // Start from the end of the word and go backwards
-//     let ellipsisPos = word.length;
-//     while (ellipsisPos > 0) {
-//         let wordPart = word.slice(0, ellipsisPos);
-//         let wordPartWidth = ctx.measureText(wordPart).width;
-//         if (wordPartWidth <= widthLeft) {
-//             return wordPart + ellipsis;
-//         }
-//         ellipsisPos -= 1;
-//     }
-//     return ellipsis;
-// };
 
 const truncateText = (text: string, targetWidth: number, ctx: CanvasRenderingContext2D) => {
     if (targetWidth <= 0) {
@@ -410,17 +366,3 @@ export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point
     return bezierPoint(t, startPoint, cp1, cp2, endPoint);
 }
 
-export function bezierCurvePoints(startPoint: Point2D, cp1: Point2D, cp2: Point2D, endPoint: Point2D, precision_k: number = 1): Point2D[] {
-    // Approximate the number of segments based on the distance between start/end/control points
-    let pathLength = startPoint.distanceTo(cp1) + cp1.distanceTo(cp2) + cp2.distanceTo(endPoint);
-    let numSegments = Math.ceil(pathLength / (1 / precision_k)); // Adjust the divisor to balance performance and accuracy
-
-    let points: Point2D[] = [];
-    for (let i = 1; i <= numSegments; i++) {
-        let t = i / numSegments;
-        let currentPoint = bezierPoint(t, startPoint, cp1, cp2, endPoint);
-        points.push(currentPoint);
-    }
-
-    return points;
-}

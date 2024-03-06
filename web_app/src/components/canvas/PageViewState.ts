@@ -1,8 +1,9 @@
-import { ObservableMap, computed, makeObservable, observable, reaction } from 'mobx';
-import { DEFAULT_EYE_HEIGHT } from '../../constants';
+import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction } from 'mobx';
+import { ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
 import { Viewport } from '../Viewport';
+import { RectangleData } from '../../util/Rectangle';
 import { NoteViewState } from '../note/NoteViewState';
 import { ArrowViewState } from '../ArrowViewState';
 import { pamet } from '../../facade';
@@ -11,6 +12,8 @@ import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
 import { InternalLinkNoteViewState } from '../note/InternalLinkNVS';
 import { InternalLinkNote } from '../../model/InternalLinkNote';
+import { PageChildViewState } from './PageChildViewState';
+import { Rectangle } from '../../util/Rectangle';
 
 let log = getLogger('PageViewState');
 
@@ -50,14 +53,17 @@ export class PageViewState {
     viewportHeight: number = DEFAULT_EYE_HEIGHT;
     viewportGeometry: [number, number, number, number] = [0, 0, 0, 0];
 
-    // Helper props
+    //
     viewportCenterOnModeStart: Point2D | null = null;
 
     // Drag navigation
     dragNavigationStartPosition: Point2D | null = null;
 
-    //
-    selection: Array<string> = [];
+    // Selection related
+    selectedChildren: ObservableSet<PageChildViewState> = observable.set();
+    mousePositionOnDragSelectionStart: Point2D | null = null;
+    dragSelectionRectData: RectangleData | null = null;
+    dragSelectedChildren: ObservableSet<PageChildViewState> = observable.set();
 
     autoNavAnimation: ViewportAutoNavAnimation | null = null;
 
@@ -85,7 +91,10 @@ export class PageViewState {
             viewportGeometry: observable,
             viewportCenterOnModeStart: observable,
             dragNavigationStartPosition: observable,
-            selection: observable,
+            selectedChildren: observable,
+            mousePositionOnDragSelectionStart: observable,
+            dragSelectionRectData: observable,
+            dragSelectedChildren: observable,
             autoNavAnimation: observable,
             viewport: computed
         });
@@ -117,6 +126,14 @@ export class PageViewState {
             () => pamet.find({ parentId: this.page.id, type: Arrow }) as Generator<Arrow>,
             arrows => {
                 this._updateArrowViewStatesFromStore(arrows)
+            }
+        );
+
+        // Test selectedChildren updates TMP
+        reaction(
+            () => this.selectedChildren.values(),
+            selectedChildren => {
+                    console.log('selectedChildren TEST', Array.from(selectedChildren))
             }
         );
     }
@@ -154,7 +171,7 @@ export class PageViewState {
     }
 
     _newNVS_forNote(note: Note): NoteViewState {
-        console.log('newNVS_forNote', note)
+        // console.log('newNVS_forNote', note)
         if (note instanceof InternalLinkNote) {
             return new InternalLinkNoteViewState(note);
         } else {
@@ -237,9 +254,15 @@ export class PageViewState {
 
         this.dragNavigationStartPosition = null;
         this.viewportCenterOnModeStart = null;
+
+        // Drag select related
+        this.mousePositionOnDragSelectionStart = null;
+        this.dragSelectionRectData = null;
+        this.dragSelectedChildren.clear();
     }
 
     setMode(mode: PageMode) {
+        log.info('Setting page mode', mode)
         if (this.mode !== PageMode.None) {
             this.clearMode();
         }
@@ -248,5 +271,39 @@ export class PageViewState {
 
     get viewport() {  // Todo: make this a computed property?
         return new Viewport(this.viewportCenter, this.viewportHeight, this.viewportGeometry);
+    }
+
+    *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
+        for (let noteViewState of this.noteViewStatesByOwnId.values()) {
+            if (radius > 0) {
+                let intersectRect = noteViewState.note.rect()
+                intersectRect.setSize(intersectRect.size().add(new Point2D(radius, radius)))
+                intersectRect.setTopLeft(intersectRect.topLeft().subtract(new Point2D(radius, radius)))
+            }
+            if (noteViewState.note.rect().contains(position)) {
+                yield noteViewState;
+            }
+        }
+    }
+    noteViewStateAt(position: Point2D): NoteViewState | null {
+        for (let noteViewState of this.noteViewsAt(position)) {
+            return noteViewState;
+        }
+        return null;
+    }
+
+    *arrowsViewsAt(position: Point2D): Generator<ArrowViewState> {
+        for (let arrowVS of this.arrowViewStatesByOwnId.values()) {
+            if (arrowVS.intersectsCircle(position, ARROW_SELECTION_RADIUS)) {
+                yield arrowVS;
+            }
+        }
+    }
+
+    arrowViewStateAt(position: Point2D): ArrowViewState | null {
+        for (let arrowViewState of this.arrowsViewsAt(position)) {
+            return arrowViewState;
+        }
+        return null;
     }
 }

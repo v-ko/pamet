@@ -80,6 +80,7 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
             target={target}
             rel="noopener noreferrer"
             className="note note-container"
+            draggable={false}
             style={{
                 top: y + 'px',
                 left: x + 'px',
@@ -108,12 +109,11 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 className="note-text"
                 style={{color: color,
                     padding: NOTE_MARGIN}}
-                // padding={NOTE_MARGIN}
             >{state.textLayoutData.lines.join('\n')}</div>}
 
             {/* Draw a div with a yellow border around the selected note */}
             {/* do not use a custom component, just vanilla div and css-in-js*/}
-            {state.selected && <div
+            {/* {state.selected && <div
                 style={{
                     position: 'absolute',
                     top: 0,
@@ -122,7 +122,7 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                     height: '100%',
                     border: '4px solid yellow',
                 }}
-            />}
+            />} */}
 
         </a>
     );
@@ -136,7 +136,8 @@ export const NoteComponent = React.memo(observer(NoteComponentBase), (prevProps,
     // note was rendered)
     // Yeah, mmaybe just a service that keeps track of the last time the note was
     // edited and the last time it was rendered.
-    return prevProps.noteViewState.selected === nextProps.noteViewState.selected;
+    return prevProps.noteViewState === nextProps.noteViewState;
+    // return prevProps.noteViewState.selected === nextProps.noteViewState.selected;
 });
 
 // export const NoteComponent = observer(NoteComponentBase);

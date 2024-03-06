@@ -5,6 +5,7 @@ import { pamet } from "../../facade";
 import { Change } from "../../fusion/Change";
 import { getLogger } from "../../fusion/logging";
 import { DEFAULT_NOTE_FONT_FAMILY, DEFAULT_NOTE_FONT_FAMILY_GENERIC, DEFAULT_NOTE_FONT_SIZE, DEFAULT_NOTE_LINE_HEIGHT } from "../../constants";
+import { PageChildViewState } from "../canvas/PageChildViewState";
 
 let log = getLogger('NoteViewState.ts');
 
@@ -19,17 +20,16 @@ export interface TextLayoutData {
 }
 
 
-export class NoteViewState {
+export class NoteViewState extends PageChildViewState {
     _noteData!: NoteData; // initialized in updateFromNote
-    selected: boolean = false;
 
     constructor(note: Note) {
+        super();
         this.updateFromNote(note);
 
         makeObservable(this, {
             _noteData: observable,
             note: computed,
-            selected: observable,
             textLayoutData: computed
         });
 

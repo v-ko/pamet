@@ -1,10 +1,13 @@
-import { SelectionDict } from "../util";
+import { SelectionDict as SelectionMap } from "../util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/canvas/PageViewState";
 import { Point2D } from "../util/Point2D";
-// import { action } from "../fusion/libs/Action";
-import { action, makeObservable } from "mobx";
+
+import { makeObservable } from "mobx";
+import { action } from "mobx"
 
 import { getLogger } from "../fusion/logging";
+import { Rectangle } from "../util/Rectangle";
+// import { action } from "../fusion/libs/Action";
 
 let log = getLogger('MapActions');
 
@@ -59,26 +62,27 @@ class MapActions {
   }
 
   @action
-  updateSelection(state: PageViewState, selectionDict: SelectionDict) {
+  updateSelection(state: PageViewState, selectionMap: SelectionMap) {
+    console.log('[updateSelection]', state, selectionMap);
     // Add all keys that are true to the selection
-    let newSelection: Array<string> = state.selection;
-    for (let key in selectionDict) {
-      if (selectionDict[key] && !state.selection.includes(key)) {
-        newSelection.push(key);
+    for (let [pageChild, selected] of selectionMap) {
+      // let selected = selectionMap.get(pageChild);
+      if (selected === true) { // && !state.selectedChildren.has(pageChild)
+        state.selectedChildren.add(pageChild);
+      } else {
+        state.selectedChildren.delete(pageChild);
       }
     }
-    // Remove all keys that are false from the selection
-    newSelection = newSelection.filter((key) => selectionDict[key] !== false);
-    state.selection = newSelection;
   };
 
   @action
   clearSelection(state: PageViewState) {
-    let selectionDict: SelectionDict = {};
-    for (let noteId of state.selection) {
-      selectionDict[noteId] = false;
+    console.log('[clearSelection]');
+    let selectionMap: SelectionMap = new Map();
+    for (let noteVS of state.selectedChildren) {
+      selectionMap.set(noteVS, false);
     }
-    this.updateSelection(state, selectionDict);
+    this.updateSelection(state, selectionMap);
   };
 
   @action
@@ -128,7 +132,7 @@ class MapActions {
         let newHeight = startHeight + (endHeight - startHeight) * timingFunction(t);
         mapActions.updateViewport(state, newCenter, newHeight);
         if (t === 1) {
-          mapActions.finishAutoNavigation(state);
+          mapActions.endAutoNavigation(state);
         }
         let lastUpdateTime = Date.now();
         // console.log('lastUpdateTime', lastUpdateTime)
@@ -139,13 +143,57 @@ class MapActions {
   }
 
   @action
-  finishAutoNavigation(state: PageViewState) {
+  endAutoNavigation(state: PageViewState) {
     if (state.autoNavAnimation) {
       state.viewportCenter = state.autoNavAnimation.endCenter;
       state.viewportHeight = state.autoNavAnimation.endHeight;
       state.autoNavAnimation = null;
     }
     state.mode = PageMode.None;
+  }
+
+  @action
+  startDragSelection(state: PageViewState, startPosition: Point2D) {
+    state.mode = PageMode.DragSelection;
+    state.mousePositionOnDragSelectionStart = startPosition;
+  }
+
+  @action
+  updateDragSelection(state: PageViewState, pointerPosition: Point2D) {
+    if (state.mousePositionOnDragSelectionStart === null) {
+      log.error('updateDragSelection called without mousePositionOnDragSelectionStart');
+      return;
+    }
+    console.log('updateDragSelection', state.mousePositionOnDragSelectionStart, pointerPosition);
+    let selectionRectangle = Rectangle.fromPoints(state.mousePositionOnDragSelectionStart, pointerPosition);
+    let unprojectedRect = state.viewport.unprojectRect(selectionRectangle);
+
+    state.dragSelectionRectData = selectionRectangle.data();
+    state.dragSelectedChildren.clear();
+
+    // Get notes in the area
+    for (let noteVS of state.noteViewStatesByOwnId.values()) {
+      let noteRect = noteVS.note.rect();
+      if (unprojectedRect.intersects(noteRect)) {
+        state.dragSelectedChildren.add(noteVS);
+      }
+    }
+
+    // Get the arrows in the area
+    for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
+      if (arrowVS.intersectsRect(unprojectedRect)) {
+        state.dragSelectedChildren.add(arrowVS);
+      }
+    }
+  }
+
+  @action
+  endDragSelection(state: PageViewState) {
+    // Add dragSelectedChildren to selectedChildren
+    for (let child of state.dragSelectedChildren) {
+      state.selectedChildren.add(child);
+    }
+    state.clearMode();
   }
 }
 

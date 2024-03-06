@@ -1,7 +1,9 @@
-import { Color } from "./util";
+import { ColorData } from "./util";
 
-export const DEFAULT_TEXT_COLOR: Color = [0, 0, 1, 1];
-export const DEFAULT_BACKGROUND_COLOR: Color = [0, 0, 1, 0.1];
+export const DEFAULT_TEXT_COLOR: ColorData = [0, 0, 1, 1];
+export const DEFAULT_BACKGROUND_COLOR: ColorData = [0, 0, 1, 0.1];
+export const SELECTION_OVERLAY_COLOR: ColorData = [1, 1, 0, 0.5];
+export const DRAG_SELECT_COLOR: ColorData = [0.39, 0.39, 0.39, 0.2];
 
 export const MIN_HEIGHT_SCALE = 0.2
 export const MAX_HEIGHT_SCALE = 200
@@ -25,3 +27,11 @@ export const DEFAULT_NOTE_FONT_SIZE = 18
 export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
 export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'
 export const DEFAULT_NOTE_LINE_HEIGHT = 20
+
+export const ARROW_SELECTION_RADIUS = 10
+
+export const ARROW_EDGE_RAIDUS = 25
+export const DEFAULT_ARROW_THICKNESS = 1.5
+export const ARROW_SELECTION_THICKNESS_DELTA = 3.5
+export const CONTROL_POINT_RADIUS = 15
+export const POTENTIAL_EDGE_RADIUS = CONTROL_POINT_RADIUS * 0.7

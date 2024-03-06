@@ -5,9 +5,10 @@ import { ArrowViewState, BezierCurve } from './ArrowViewState';
 
 export interface ArrowProps {
     arrowViewState: ArrowViewState;
+    clickHandler?: (event: React.MouseEvent<SVGPathElement, MouseEvent>) => void;
 }
 
-export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState }: ArrowProps) => {
+export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState, clickHandler }: ArrowProps) => {
 
     const svg_path = useMemo(() => {
         const curves: BezierCurve[] = arrowViewState.bezierCurveParams;
@@ -32,12 +33,21 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState }: ArrowProps) =
     let line_thickness = arrow.line_thickness;
 
     return (
+        <g>
         <path d={svg_path}
             stroke={color}
             fill="none"
             strokeWidth={line_thickness}
             markerEnd={`url(#arrowhead-${arrow.id})`}
         />
+        {/* click path with a wider stroke width */}
+        <path d={svg_path}
+            stroke="transparent"
+            fill="none"
+            strokeWidth={line_thickness + 10}
+            onClick={clickHandler}
+        />
+        </g>
     )
 }
 

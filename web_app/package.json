@@ -11,6 +11,7 @@
     "@types/react-dom": "^18.0.10",
     "mobx": "^6.9.0",
     "mobx-react-lite": "^3.4.3",
+    "paper": "^0.12.17",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
@@ -24,7 +25,6 @@
     "test": "craco test",
     "eject": "react-scripts eject"
   },
-
   "eslintConfig": {
     "extends": [
       "react-app",
