@@ -1,11 +1,11 @@
-import { Arrow, ArrowAnchorType, ArrowData } from '../model/Arrow';
+import { Arrow, ArrowAnchorType, ArrowData } from '../../model/Arrow';
 import { computed, makeObservable, observable } from 'mobx';
-import { NoteViewState } from './note/NoteViewState';
-import { getLogger } from '../fusion/logging';
-import { Point2D } from '../util/Point2D';
-import { Rectangle } from '../util/Rectangle';
-import { approximateMidpointOfBezierCurve } from '../util';
-import { PageChildViewState } from './canvas/PageChildViewState';
+import { NoteViewState } from '../note/NoteViewState';
+import { getLogger } from '../../fusion/logging';
+import { Point2D } from '../../util/Point2D';
+import { Rectangle } from '../../util/Rectangle';
+import { approximateMidpointOfBezierCurve } from '../../util';
+import { PageChildViewState } from '../canvas/PageChildViewState';
 import paper from 'paper';
 
 let log = getLogger('ArrowViewState');
@@ -29,6 +29,7 @@ export class ArrowViewState extends PageChildViewState {
     headAnchorNoteViewState: NoteViewState | null = null;
     tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
+    _paperPath: paper.Path | null = null;
 
     constructor(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null, pathCalculationPrecision: number) {
         super();
@@ -49,6 +50,9 @@ export class ArrowViewState extends PageChildViewState {
     }
     get arrow(): Arrow {
         return new Arrow(this._arrowData);
+    }
+    pageChild(): Arrow {
+        return this.arrow;
     }
     updateFromArrow(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null) {
         // Object.keys(this._data).forEach(key => {
@@ -314,23 +318,32 @@ export class ArrowViewState extends PageChildViewState {
 
 
     get paperPath(): paper.Path {
-        let path = new paper.Path();
+        if (this._paperPath !== null) {
+            this._paperPath.remove();
+        }
+        this._paperPath = new paper.Path();
         let curves = this.bezierCurveParams;
         for (let curve of curves) {
-            path.moveTo(curve[0]);
-            path.cubicCurveTo(curve[1], curve[2], curve[3]);
+            this._paperPath.moveTo(curve[0]);
+            this._paperPath.cubicCurveTo(curve[1], curve[2], curve[3]);
         }
-        return path;
+        return this._paperPath;
     }
 
     intersectsCircle(center: Point2D, radius: number): boolean {
         let path = this.paperPath;
         let circlePath = new paper.Path.Circle(center, radius);
-        return path.intersects(circlePath);
+        let intersects = path.intersects(circlePath);
+        circlePath.remove();
+        return intersects;
     }
 
     intersectsRect(rect: Rectangle): boolean {
         let path = this.paperPath;
-        return path.intersects(new paper.Path.Rectangle(rect.topLeft(), rect.bottomRight()));
+        let pRect = new paper.Rectangle(rect.topLeft(), rect.bottomRight());
+        let pItem = new paper.Path.Rectangle(pRect);
+        let intersects = path.intersects(pItem) || path.isInside(pRect);
+        pItem.remove();
+        return intersects;
     }
 }

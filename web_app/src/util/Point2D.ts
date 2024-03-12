@@ -8,7 +8,7 @@ export class Point2D {
     return new Point2D(obj[0], obj[1]);
   }
 
-  asData(): PointData {
+  data(): PointData {
     return [this.x, this.y];
   }
 

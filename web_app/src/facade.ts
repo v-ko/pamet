@@ -32,7 +32,6 @@ export class PametFacade extends PametRepository {
     private _appState?: WebAppState;
     private _changeBufferForRootAction: Array<Change> = [];
 
-
     rawChagesChannel: Channel;
     rawChagesByIdChannel: Channel;
     rawChagesByParentIdChannel: Channel;
@@ -92,6 +91,15 @@ export class PametFacade extends PametRepository {
         fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
             log.info('actionState', actionState);
         });
+
+    }
+
+    pametSchemaToHttpUrl(url: string): string {
+        if (!url.startsWith('pamet:')) {
+            throw Error('Invalid media url: ' + url)
+        }
+        url = url.slice('pamet:'.length);
+        return this._apiClient.endpointUrl(url);
     }
 
     _pushChangeToRawChannels(change: Change) {
@@ -113,7 +121,6 @@ export class PametFacade extends PametRepository {
     //     this.rootActionEventsChannel.push(actionState);
     // }
     // Reimplement the above to use mobx spy
-
 
     setWebAppState(state: WebAppState) {
         this._appState = state;

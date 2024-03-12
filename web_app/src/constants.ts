@@ -35,3 +35,7 @@ export const DEFAULT_ARROW_THICKNESS = 1.5
 export const ARROW_SELECTION_THICKNESS_DELTA = 3.5
 export const CONTROL_POINT_RADIUS = 15
 export const POTENTIAL_EDGE_RADIUS = CONTROL_POINT_RADIUS * 0.7
+
+// Page render and cache related
+export const MAX_RENDER_TIME = 0.017  // (in seconds) ~60 fps
+export const IMAGE_CACHE_PADDING = 3

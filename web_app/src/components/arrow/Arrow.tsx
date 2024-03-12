@@ -1,6 +1,6 @@
 
 import { FC, useMemo } from 'react';
-import { color_to_css_rgba_string } from "../util";
+import { color_to_css_rgba_string } from "../../util";
 import { ArrowViewState, BezierCurve } from './ArrowViewState';
 
 export interface ArrowProps {

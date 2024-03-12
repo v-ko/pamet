@@ -1,27 +1,18 @@
 import { computed, makeObservable, observable, reaction } from "mobx";
-import { Note, NoteData } from "../../model/Note";
-import { calculateTextLayout } from "../../util";
+import { Note } from "../../model/Note";
+import { TextLayoutData, calculateTextLayout } from "../../util";
 import { pamet } from "../../facade";
 import { Change } from "../../fusion/Change";
 import { getLogger } from "../../fusion/logging";
-import { DEFAULT_NOTE_FONT_FAMILY, DEFAULT_NOTE_FONT_FAMILY_GENERIC, DEFAULT_NOTE_FONT_SIZE, DEFAULT_NOTE_LINE_HEIGHT } from "../../constants";
 import { PageChildViewState } from "../canvas/PageChildViewState";
+import { defaultFontString, textRect } from "./NoteCanvasView";
+import { SerializedEntity, dumpToDict, loadFromDict } from "../../fusion/libs/Entity";
 
 let log = getLogger('NoteViewState.ts');
 
-export const defaultFontString = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_LINE_HEIGHT}px ` +
-    `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
-    `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
-
-export interface TextLayoutData {
-    lines: string[];
-    is_elided: boolean;
-    alignment: string;
-}
-
 
 export class NoteViewState extends PageChildViewState {
-    _noteData!: NoteData; // initialized in updateFromNote
+    _noteData!: SerializedEntity; // initialized in updateFromNote
 
     constructor(note: Note) {
         super();
@@ -44,17 +35,21 @@ export class NoteViewState extends PageChildViewState {
         });
     }
     get note(): Note {
-        return new Note(this._noteData);
+        return loadFromDict(this._noteData) as Note
+    }
+    pageChild(): Note {
+        return this.note;
     }
     updateFromNote(note: Note) {
-        this._noteData = note.data();
+        this._noteData = dumpToDict(note);
     }
     get textLayoutData(): TextLayoutData {
-        return calculateTextLayout(this.note.content.text || '', this.note.textRect(), defaultFontString);
+        return calculateTextLayout(this.note.content.text || '', textRect(this.note.rect()), defaultFontString);
     }
     handleNoteUpdate = (change: Change) => {
         if (change.isUpdate()) {
             log.info('Note update', change);
         }
     }
+
 }

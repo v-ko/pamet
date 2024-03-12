@@ -164,7 +164,7 @@ class MapActions {
       log.error('updateDragSelection called without mousePositionOnDragSelectionStart');
       return;
     }
-    console.log('updateDragSelection', state.mousePositionOnDragSelectionStart, pointerPosition);
+    // console.log('updateDragSelection', state.mousePositionOnDragSelectionStart, pointerPosition);
     let selectionRectangle = Rectangle.fromPoints(state.mousePositionOnDragSelectionStart, pointerPosition);
     let unprojectedRect = state.viewport.unprojectRect(selectionRectangle);
 

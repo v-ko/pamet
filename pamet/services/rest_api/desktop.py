@@ -141,9 +141,11 @@ class DesktopServer:
 
         @self.app.get('/p/{page_id}/media/{path:path}')
         def get_media(page_id: str, path: str):
+
             file_path = self.media_store_path / page_id / path
 
             if not file_path.exists():
+                log.error(f'File not found: {file_path}')
                 raise HTTPException(status_code=404, detail='File not found')
             return FileResponse(file_path)
 

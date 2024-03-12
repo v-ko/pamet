@@ -1,17 +1,22 @@
 import { ColorData } from "../util";
 import { Rectangle } from "../util/Rectangle";
 
-import { entityType } from "../fusion/libs/Entity";
 import { PageChild, PageChildData } from "./PageChild";
 import { Point2D } from "../util/Point2D";
-import { NOTE_MARGIN } from "../constants";
 import { ArrowAnchorType } from "./Arrow";
+
+export interface ImageMetadata {
+    url: string;
+    width: number;
+    height: number;
+}
 
 export interface NoteContent {
     text?: string;
     url?: string;
-    image_url?: string;
-    local_image_url?: string;
+    // image_url?: string; // remove that
+    // local_image_url?: string; //refactor that to 'image'
+    image?: ImageMetadata;
 }
 export interface NoteStyle {
     color: ColorData;
@@ -31,10 +36,8 @@ export interface NoteData extends PageChildData {
     tags: string[];
 }
 
-@entityType('Note')
+// @entityType('Note')
 export class Note extends PageChild<NoteData> implements NoteData {
-    static readonly className: string = 'Note';
-
     rect(): Rectangle {
         return new Rectangle(...this._data.geometry);
     }
@@ -61,18 +64,6 @@ export class Note extends PageChild<NoteData> implements NoteData {
     get content(): NoteContent {
         return this._data.content;
     }
-
-    textRect(forSize: Point2D | null = null): Rectangle {
-        let size: Point2D;
-        if (forSize !== null) {
-            size = forSize;
-        } else {
-            size = this.rect().size();
-        }
-        size = size.subtract(new Point2D(2 * NOTE_MARGIN, 2 * NOTE_MARGIN));
-        return new Rectangle(NOTE_MARGIN, NOTE_MARGIN, size.x, size.y);
-    }
-
     arrowAnchor(anchorType: ArrowAnchorType): Point2D {
         const rect = this.rect();
         switch (anchorType) {
