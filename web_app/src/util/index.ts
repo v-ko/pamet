@@ -1,5 +1,4 @@
 import { PageChildViewState } from "../components/canvas/PageChildViewState";
-import { TextLayoutData } from "../components/note/NoteViewState";
 import { getLogger } from "../fusion/logging";
 import { Point2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
@@ -8,6 +7,14 @@ export type ColorData = [number, number, number, number];
 export type SelectionDict = Map<PageChildViewState, boolean>;
 
 let log = getLogger('util/index.ts');
+
+type TextAlignment = 'left' | 'center' | 'right';
+
+export interface TextLayoutData {
+    lines: string[];
+    is_elided: boolean;
+    alignment: TextAlignment;
+}
 
 
 export function color_to_css_rgba_string(color: ColorData) {
@@ -66,13 +73,12 @@ export function parsePametUrl(url_string: string): PametUrlProps {
     }
 }
 
-
 let EMPTY_TOKEN = '';
 
 class TextLayout {
     data: [string, Rectangle][] = [];
     is_elided: boolean = false;
-    align: string = 'center';
+    align: TextAlignment = 'center';
 
     text(): string {
         return this.data.join('\n');
@@ -130,7 +136,6 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         if (!canvas || !canvasContext) {
             throw new Error('Failed to get canvas context');
         }
-
     }
 
     // Set the font
@@ -266,7 +271,7 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
                 if (atLastLine && !atLastWord) {
                     addEllipsis = true;
                 }
-                // break; should break anyway
+                break; //should break anyway
             }
         }
 
@@ -297,7 +302,17 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         //     log.info('line after ellipsis', lineText)
         // }
 
+
         textLayout.data.push([lineText, lineRect]);
+
+        // Avoid adding empty lines at the end
+        if (wordsLeft.length === 0) {
+            if (wordsOnLine.length === 0) {
+                textLayout.data.pop();
+            }
+            break;
+        }
+
     }
     // // tmp debug
     // if (text.startsWith('Elide')) {
@@ -365,4 +380,48 @@ export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point
 
     return bezierPoint(t, startPoint, cp1, cp2, endPoint);
 }
+export function drawCrossingDiagonals(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    spacing: number
+) {
+    ctx.save();
+    ctx.lineWidth = 1;
 
+    const diagonalCount = Math.ceil((width + height) / spacing);
+
+    for (let i = 0; i <= diagonalCount; i++) {
+        let offset = i * spacing;
+
+        // Calculate start and end points for lines from bottom-left to top-right (\)
+        let startX_BLtoTR = x + (offset < height ? 0 : offset - height);
+        let startY_BLtoTR = y + (offset < height ? height - offset : 0);
+        let endX_BLtoTR = x + (offset < width ? offset : width);
+        let endY_BLtoTR = y + (offset < width ? height : height - (offset - width));
+
+        // Calculate start and end points for lines from top-left to bottom-right (/)
+        let startX_TLtoBR = x + (offset < height ? 0 : offset - height);
+        let startY_TLtoBR = y + (offset < height ? offset : height);
+        let endX_TLtoBR = x + (offset < width ? offset : width);
+        let endY_TLtoBR = y + (offset < width ? 0 : offset - width);
+
+        // Draw lines from bottom-left to top-right (\)
+        ctx.beginPath();
+        ctx.moveTo(startX_BLtoTR, startY_BLtoTR);
+        ctx.lineTo(endX_BLtoTR, endY_BLtoTR);
+        ctx.stroke();
+        ctx.closePath();
+
+        // Draw lines from top-left to bottom-right (/)
+        ctx.beginPath();
+        ctx.moveTo(startX_TLtoBR, startY_TLtoBR);
+        ctx.lineTo(endX_TLtoBR, endY_TLtoBR);
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    ctx.restore();
+}

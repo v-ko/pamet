@@ -55,7 +55,7 @@ class NoteViewCache:
         self.should_rerender_image_cache: bool = True
 
 
-def image_cache_rect_unprojected(display_rect: Rectangle):
+def image_cache_rect_projected(display_rect: Rectangle):
     '''Project and round down to the pixel grid'''
     cache_rect = display_rect.toRect()
 
@@ -368,7 +368,7 @@ class MapPageWidget(MapPageView, QWidget):
                                       display_rect: Rectangle):
         painter = QPainter()
 
-        cache_rect = image_cache_rect_unprojected(display_rect)
+        cache_rect = image_cache_rect_projected(display_rect)
         nv_cache = self._note_widget_cache(child.view_id)
 
         pcommand_cache = nv_cache.pcommand_cache
@@ -511,7 +511,7 @@ class MapPageWidget(MapPageView, QWidget):
             # Allocate the image_cache. Done on resize, but not e.g. panning
             if nw_cache.should_reallocate_image_cache:
                 image_cache_memory_allocations += 1
-                cache_rect = image_cache_rect_unprojected(display_rect)
+                cache_rect = image_cache_rect_projected(display_rect)
 
                 render_img = QImage(cache_rect.size(),
                                     QImage.Format_ARGB32_Premultiplied)
@@ -562,7 +562,7 @@ class MapPageWidget(MapPageView, QWidget):
                 reused_expired_caches += 1
 
             # Draw the cached redering of the component
-            cache_rect = image_cache_rect_unprojected(display_rect)
+            cache_rect = image_cache_rect_projected(display_rect)
             painter.drawImage(cache_rect, render_img)
 
             # Load test

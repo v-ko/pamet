@@ -1,31 +1,25 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, RefObject } from 'react';
 import styled from 'styled-components';
 import { observer } from 'mobx-react-lite';
 
-import { NoteComponent } from '../note/Note';
-import { ARROW_SELECTION_THICKNESS_DELTA, DEFAULT_EYE_HEIGHT, DRAG_SELECT_COLOR, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, SELECTION_OVERLAY_COLOR } from '../../constants';
+import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../constants';
 import { Point2D } from '../../util/Point2D';
-import { ArrowComponent, ArrowHeadComponent } from '../Arrow';
 import { mapActions } from '../../actions/page';
 import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
-import { Viewport } from '../Viewport';
+import { Viewport } from './Viewport';
 import { getLogger } from '../../fusion/logging';
-import { autorun, set, trace } from 'mobx';
+import { reaction } from 'mobx';
 import { NoteViewState } from '../note/NoteViewState';
 import React from 'react';
 import paper from 'paper';
-import { Color } from 'paper/dist/paper-core';
+import { CanvasPageRenderer } from './canvasPageRenderer';
 import { PageChildViewState } from './PageChildViewState';
-import { ArrowViewState } from '../ArrowViewState';
-import { color_to_css_rgba_string } from '../../util';
-import { Rectangle } from '../../util/Rectangle';
+import { pamet } from '../../facade';
 
 
 let log = getLogger('Page.tsx')
 
-const selectionColor = color_to_css_rgba_string(SELECTION_OVERLAY_COLOR);
-const dragSelectRectColor = color_to_css_rgba_string(DRAG_SELECT_COLOR);
 // const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
 // type Status = 'loading' | 'error' | 'loaded';
 
@@ -56,7 +50,7 @@ height: ${props => props.viewport.geometry[3]}px;
 width: 100%;
 height: 100%;
 
-transform:  scale(var(--map-scale)) translate(var(--map-translate-x), var(--map-translate-y)) translate(50%, 50%); //
+transform:  scale(var(--map-scale)) translate(var(--map-translate-x), var(--map-translate-y));
 backface-visibility: hidden;  // Fixes rendering artefact bug
 
 // Transitions are very inefficient (at small scale coefficients)
@@ -79,7 +73,12 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D(0, 0));
 
   const superContainerRef = useRef<HTMLDivElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const paperCanvasRef = useRef<HTMLCanvasElement>(null);
+
+  const [cacheService, setCacheService] = useState(new CanvasPageRenderer());
+
 
   const mapClientPointToSuperContainer = useCallback((point: Point2D): Point2D => {
     // Needed since the mapContainer is transformed and does not yield
@@ -93,23 +92,80 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     return new Point2D(x, y);
   }, [state.viewportGeometry]); // superContainerRef
 
-  // Initial setup - init paperjs
-  useEffect(() => {
+  const canvasCtx = useCallback(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
       console.log("[useEffect] canvas is null")
+      return null;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    if (ctx === null) {
+      console.log("[useEffect] canvas context is null")
+      return null;
+    }
+    return ctx;
+  }
+    , [canvasRef]);
+
+  // Initial setup - init paperjs
+  useEffect(() => {
+    console.log("[useEffect] INTO INIT")
+    const paperCanvas = paperCanvasRef.current;
+    if (paperCanvas === null) {
+      console.log("[useEffect] canvas is null")
       return;
     }
-    paper.setup(canvas);
-  }, []);
+    paper.setup(paperCanvas);
+    paper.view.autoUpdate = false;
+
+
+    // Initial render
+    setTimeout(() => {
+      console.log("[useEffect.setTimeout] INTO TIMEOUT")
+      let ctx = canvasCtx()
+      if (ctx === null) {
+        console.log("[useEffect] canvas context is null")
+        return;
+      }
+      cacheService.renderPage(state, ctx);
+    }, 1);
+
+  }, [state, canvasCtx, paperCanvasRef, cacheService]);
 
   const updateGeometryHandler = useCallback(() => {
+    console.log("[updateGeometry] called")
     let container = superContainerRef.current;
     if (container === null) {
       console.log("[updateGeometry] mapContainerRef is null")
       return;
     }
     let boundingRect = container.getBoundingClientRect();
+
+    //Adjust canvas size
+    const canvas = canvasRef.current;
+    if (canvas === null) {
+      console.log("[useEffect] canvas is null")
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    if (ctx === null) {
+      console.log("[useEffect] canvas context is null")
+      return;
+    }
+
+    // Adjust for device pixel ratio, otherwise small objects will be blurry
+    let dpr = window.devicePixelRatio || 1;
+
+    // Set the canvas size in real coordinates
+    // let pixelSpaceRect = state.viewport.projectedBounds();
+    canvas.width = boundingRect.width * dpr;
+    canvas.height = boundingRect.height * dpr;
+
+    // Update viewport geometry
 
     mapActions.updateGeometry(
       state,
@@ -138,78 +194,56 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
   // Render all non-component-based shapes on the canvas
   useEffect(() => {
-    const setupProjectionMatrix = () => {
-      let pixelSpaceRect = state.viewport.pixelSpaceRect;
-      paper.view.viewSize = new paper.Size(pixelSpaceRect.width(), pixelSpaceRect.height());
-      // Update global transformation matrix
-      // Reset the transformation matrix
-      paper.view.matrix.reset();
-      // Translate to the center of the canvas
-      paper.view.translate(new paper.Point(pixelSpaceRect.width() / 2, pixelSpaceRect.height() / 2));
+    // const setupPaperProjectionMatrix = () => {
+    //   let pixelSpaceRect = state.viewport.projectedBounds();
+    //   paper.view.viewSize = new paper.Size(pixelSpaceRect.width(), pixelSpaceRect.height());
+    //   // Update global transformation matrix
+    //   // Reset the transformation matrix
+    //   paper.view.matrix.reset();
+    //   // Translate to the center of the canvas
+    //   // paper.view.translate(new paper.Point(pixelSpaceRect.width() / 2, pixelSpaceRect.height() / 2));
 
-      // Scale the canvas
-      paper.view.scale(state.viewport.heightScaleFactor());
-      // Translate to the center of the viewport
-      paper.view.translate(new paper.Point(-state.viewport.center.x, -state.viewport.center.y));
+    //   // Scale the canvas
+    //   paper.view.scale(state.viewport.heightScaleFactor());
+    //   // Translate to the center of the viewport
+    //   paper.view.translate(new paper.Point(-state.viewport.xReal, -state.viewport.yReal));
+    // }
+
+    const canvas = canvasRef.current;
+    if (canvas === null) {
+      console.log("[useEffect] canvas is null")
+      return;
     }
 
-    const disposer = autorun(() => {
-      // console.log('Rendering non-component-based shapes overlay', state.selectedChildren)
+    const ctx = canvas.getContext('2d');
 
-      // Clear the canvas
-      paper.project.clear();
-      paper.view.matrix.reset();
-      setupProjectionMatrix();
+    if (ctx === null) {
+      console.log("[useEffect] canvas context is null")
+      return;
+    }
 
-      // Draw elements in pixel space. We have to unproject them explicitly
-      // Otherwise we'd have to setup paperjs Groups and specify parents for
-      // each element
-
-      // Draw drag selection rectangle
-      if (state.mode === PageMode.DragSelection && state.dragSelectionRectData !== null) {
-        let [x, y, width, height] = state.dragSelectionRectData
-        let selectionRect = state.viewport.unprojectRect(new Rectangle(x, y, width, height));
-        let paperRect = new paper.Rectangle(...selectionRect.data());
-        let selectionRectPath = new paper.Path.Rectangle(paperRect);
-        selectionRectPath.fillColor = new Color(dragSelectRectColor);
+    const renderDisposer = reaction(() => {
+      // Trigger on all of these
+      return {
+        viewport: state.viewport,
+        selectedChildren: state.selectedChildren.values(),
+        dragSelectionRectData: state.dragSelectionRectData,
+        mode: state.mode,
+        dragSelectedChildren: state.dragSelectedChildren,
+        arrowViewStatesByOwnId: state.arrowViewStatesByOwnId,
+        noteViewStatesByOwnId: state.noteViewStatesByOwnId,
       }
+    },
+      () => {
+        // let selectedc = state.selectedChildren.values();
+        cacheService.renderPage(state, ctx);
+      });
 
-      // Draw elemnts in real space
-
-      // Draw selected children
-      const drawSelectionOverlay = (childVS: PageChildViewState) => {
-        if (childVS instanceof NoteViewState) {
-          let noteVS = childVS;
-          let noteRect = noteVS.note.rect();
-          let rect = new paper.Path.Rectangle(
-            new paper.Rectangle(
-              new paper.Point(noteRect.x, noteRect.y),
-              new paper.Size(noteRect.width(), noteRect.height())
-            )
-          );
-          rect.fillColor = new Color(selectionColor);
-        } else if (childVS instanceof ArrowViewState) {
-          let arrowVS = childVS;
-          let path = arrowVS.paperPath
-          path.strokeWidth = arrowVS.arrow.line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
-          path.strokeColor = new Color(selectionColor);
-        }
-      }
-
-      // If drag selection is active - add drag selected children to the selection
-      if (state.mode === PageMode.DragSelection) {
-        for (const childVS of state.dragSelectedChildren) {
-          drawSelectionOverlay(childVS);
-        }
-      }
-
-      for (const childVS of state.selectedChildren) {
-        drawSelectionOverlay(childVS);
-      }
-    });
-
-    return () => disposer();
-  }, [state.viewport, state.selectedChildren, state.dragSelectionRectData, state.mode, state.dragSelectedChildren]);
+    return () => {
+      renderDisposer();
+      // imgRefUpdateDisposer();
+    }
+  }, [state, cacheService, canvasRef]);
 
   // // Should be a command
   // const copySelectedToClipboard = useCallback(() => {
@@ -254,7 +288,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     }
 
     // If ctrl is pressed - toggle selection of the child under the mouse
-    if (event.ctrlKey && !event.shiftKey ) {
+    if (event.ctrlKey && !event.shiftKey) {
       if (childUnderMouse !== null) {
         let nvs_selected = state.selectedChildren.has(childUnderMouse);
         mapActions.updateSelection(state, new Map([[childUnderMouse, !nvs_selected]]));
@@ -275,13 +309,20 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
         mapActions.updateSelection(state, selectionMap);
       }
     }
-
-    // mapActions.startDragNavigation(state, mousePos)
   }, [state, mapClientPointToSuperContainer]);
 
   const handleMouseMove = useCallback((event) => {
     let new_mouse_pos = mapClientPointToSuperContainer(
       new Point2D(event.clientX, event.clientY));
+
+    // // Test css navigation speed without rerender
+    // if (mapContainerRef.current !== null) {
+    //   mapContainerRef.current.style.setProperty('--map-translate-x', -new_mouse_pos.x * 3 + 'px');
+    //   mapContainerRef.current.style.setProperty('--map-translate-y', -new_mouse_pos.y * 3 + 'px');
+    //   // test scale too 100px mouse pos = x2 scale
+    //   mapContainerRef.current.style.setProperty('--map-scale', 1 / (new_mouse_pos.y / 100) + '');
+    //   // console.log('Mouse pos', new_mouse_pos.x, new_mouse_pos.y)
+    // }
 
     if (event.buttons === 1) {
       // console.log('mouse move, left button', PageMode[state.mode])
@@ -495,6 +536,17 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   let arrowCount = Array.from(state.arrowViewStatesByOwnId.values()).length
   // log.info(`Notes count: ${noteCount}, Arrows count: ${arrowCount}`)
 
+  // We'll crate hidden img elements for notes with images and use them in the
+  // canvas renderer
+  let imageUrls: string[] = []
+  for (let noteVS of state.noteViewStatesByOwnId.values()) {
+    let note = noteVS.note
+    if (note.content.image !== undefined) {
+      let url = note.content.image.url;
+      imageUrls.push(pamet.pametSchemaToHttpUrl(url));
+    }
+  }
+
   return (
     <MapLayoutContainer>
       <MapSuperContainer
@@ -518,16 +570,19 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
         <MapContainer
           onClick={handleClickOnPage}
           viewport={state.viewport}
+          ref={mapContainerRef}
           // transformTransitionDuration={viewportTransitionDuration}
           style={{
             '--map-scale': state.viewport.heightScaleFactor(),
-            '--map-translate-x': -state.viewport.center.x + 'px',
-            '--map-translate-y': -state.viewport.center.y + 'px',
+            '--map-translate-x': -state.viewport.xReal + 'px',
+            '--map-translate-y': -state.viewport.yReal + 'px',
+            // '--map-translate-x': -state.viewport.center.x + 'px',
+            // '--map-translate-y': -state.viewport.center.y + 'px',
           }}
         >
 
-
-          {Array.from(state.noteViewStatesByOwnId.values()).map((noteViewState) => (
+          {/* Leave those in for SEO? */}
+          {/* {Array.from(state.noteViewStatesByOwnId.values()).map((noteViewState) => (
             <NoteComponent
               key={noteViewState.note.id}
               noteViewState={noteViewState}
@@ -558,13 +613,13 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
                 clickHandler={(event) => { console.log('Arrow clicked', arrowVS.arrow.id) }}
               />
             ))}
-          </svg>
+          </svg> */}
 
 
         </MapContainer>
         {/* A canvas with the size vb (large) on which the selection overlays  will be drawn */}
         <canvas
-          id="selection-overlay"
+          id="render-canvas"
           style={{
             position: 'fixed',
             left: `0vw`,
@@ -576,6 +631,19 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           }}
           ref={canvasRef}
         />
+        <canvas
+          id="selection-overlay2"
+          style={{
+            position: 'fixed',
+            left: `0vw`,
+            top: `0vh`,
+            width: `100vw`,
+            height: `100vh`,
+            pointerEvents: 'none',
+            zIndex: 1000,
+          }}
+          ref={paperCanvasRef}
+        />
       </MapSuperContainer> {/*  map container container */}
 
       {state.page.tour_segments &&
@@ -584,18 +652,24 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           segments={state.page.tour_segments}
         />
       }
-      {/* A caption for diagnostics showing note and arrow count at the top-left */}
-      <p
-        style={{
-          position: 'absolute',
-          margin: '10px',
-          fontSize: '15px',
-          fontFamily: 'sans-serif',
-          pointerEvents: 'none',
-        }}
-      >
-        {`Note views: ${noteCount}, Arrow views: ${arrowCount}`}
-      </p>
+
+      {/* Image elements (to be used by the cache renderer)
+      pamet.parseMediaUrl(url!)
+      */}
+      {Array.from(imageUrls)
+        .map((url) => (
+        <img
+          key={url}
+          src={url}
+          alt=""
+          style={{ display: 'none' }}
+          onError={(event) => {
+            log.error('Image load error', event)
+          }
+          }
+        />
+      ))}
+
     </MapLayoutContainer>
   );
 });

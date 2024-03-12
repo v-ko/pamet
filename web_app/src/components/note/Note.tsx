@@ -52,23 +52,18 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
     // (it'll be like /p/{page_id}/media/{path:path})
     // local_image_url starts with / - use the API desktop/fs/{path} endpoint
 
-    let imageUrl = note.content.local_image_url || note.content.image_url;
-    let imageSrc = imageUrl;
+    let image = note.content.image
+    let imageSrc: string | undefined = undefined;
     // let apiBaseUrl = pamet.apiClient().endpointUrl('/');
 
     // if (imageUrl) {
     //     log.info('imageUrl', imageUrl)
     // }
 
-    if (imageUrl && imageUrl.startsWith('pamet:/')) {
-        imageSrc = imageUrl.replace('pamet:/', '/');
-        imageSrc = pamet.apiClient().endpointUrl(imageSrc);
-        isExternal = false;
-    } else if (imageUrl && imageUrl.startsWith('/')) {
-        imageSrc = pamet.apiClient().endpointUrl('desktop/fs') + imageUrl;
+    if (image ) {
+        imageSrc = pamet.pametSchemaToHttpUrl(image.url);
         isExternal = false;
     }
-
     // if (imageUrl) {
     //     log.info('NoteComponentBase', 'imageSrc', imageSrc, 'isExternal', isExternal)
     // }
@@ -110,20 +105,6 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 style={{color: color,
                     padding: NOTE_MARGIN}}
             >{state.textLayoutData.lines.join('\n')}</div>}
-
-            {/* Draw a div with a yellow border around the selected note */}
-            {/* do not use a custom component, just vanilla div and css-in-js*/}
-            {/* {state.selected && <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    border: '4px solid yellow',
-                }}
-            />} */}
-
         </a>
     );
 }

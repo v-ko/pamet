@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt, QPoint, QSize
 from PySide6.QtGui import QShortcut, QKeySequence
 from PySide6.QtWidgets import QMessageBox, QPushButton, QWidget
 
-from fusion.libs.entity import load_from_dict
+from fusion.libs.entity import dump_to_dict, load_from_dict
 from fusion.view import View
 from pamet.actions import note as note_actions
 from pamet.note_view_lib import note_types_with_assiciated_views
@@ -84,7 +84,7 @@ class BaseNoteEditWidget(View, QWidget):
     def _handle_dev_button_click(self):
         note = self.state().get_note()
         if note:
-            note_dict_str = json.dumps(note.asdict(),
+            note_dict_str = json.dumps(dump_to_dict(note),
                                        indent=4,
                                        ensure_ascii=False)
         else:

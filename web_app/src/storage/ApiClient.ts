@@ -11,7 +11,6 @@ let log = getLogger('ApiClient');
 
 
 export class ApiClient extends BaseApiClient {
-
     // Get pages metadata
     async pages(filter: PageQueryFilter = {}): Promise<Array<Page>> {
         let url = this.endpointUrl('pages');
@@ -72,6 +71,34 @@ export class ApiClient extends BaseApiClient {
                         childData.type_name = 'InternalLinkNote'
                     }
                 }
+            }
+
+            // Set empty content where missing
+            if (childData.content === undefined) {
+                childData.content = {}
+            }
+
+            // Convert image metadata to the new schema
+            let local_image_url = childData.content.local_image_url;
+            if (local_image_url !== undefined) {
+                delete childData.content.local_image_url;
+
+                if (local_image_url.startsWith('pamet:/p')) { // local media
+                    childData.content.image = {
+                        url: local_image_url,
+                        width: 0,
+                        height: 0,
+                    }
+                } else {
+                    childData.content.image = { // file system media
+                        url: 'pamet:/desktop/fs' + local_image_url,
+                        width: 0,
+                        height: 0,
+                    }
+                }
+            }
+            if (childData.content.image_url === undefined) {
+                delete childData.content.image_url
             }
 
             return childData;

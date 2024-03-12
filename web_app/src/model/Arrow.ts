@@ -87,7 +87,7 @@ export class Arrow extends PageChild<ArrowData> implements ArrowData {
 
     set tail_point(point: Point2D | null) {
         if (point) {
-            this._data.tail_coords = point.asData();
+            this._data.tail_coords = point.data();
         } else {
             this._data.tail_coords = null;
         }
@@ -102,7 +102,7 @@ export class Arrow extends PageChild<ArrowData> implements ArrowData {
 
     set head_point(point: Point2D | null) {
         if (point) {
-            this._data.head_coords = point.asData();
+            this._data.head_coords = point.data();
         } else {
             this._data.head_coords = null;
         }
@@ -114,7 +114,7 @@ export class Arrow extends PageChild<ArrowData> implements ArrowData {
         return Point2D.fromData(this.mid_point_coords[idx]);
     }
     replace_midpoints(midpoint_list: Point2D[]) {
-        this._data.mid_point_coords = midpoint_list.map((mp) => mp.asData());
+        this._data.mid_point_coords = midpoint_list.map((mp) => mp.data());
     }
     // get_color(): Color {
     //   return Color.fromData(this.color);

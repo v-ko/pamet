@@ -2,18 +2,15 @@ import { ObservableMap, ObservableSet, computed, makeObservable, observable, rea
 import { ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
-import { Viewport } from '../Viewport';
+import { Viewport } from './Viewport';
 import { RectangleData } from '../../util/Rectangle';
 import { NoteViewState } from '../note/NoteViewState';
-import { ArrowViewState } from '../ArrowViewState';
+import { ArrowViewState } from '../arrow/ArrowViewState';
 import { pamet } from '../../facade';
 import { getLogger } from '../../fusion/logging';
 import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
-import { InternalLinkNoteViewState } from '../note/InternalLinkNVS';
-import { InternalLinkNote } from '../../model/InternalLinkNote';
 import { PageChildViewState } from './PageChildViewState';
-import { Rectangle } from '../../util/Rectangle';
 
 let log = getLogger('PageViewState');
 
@@ -99,10 +96,6 @@ export class PageViewState {
             viewport: computed
         });
 
-        // // Subscribe to page updates and child note add/remove changes
-        // pamet.rawChagesByIdChannel.subscribe(this.handlePageChange, this.id);
-        // pamet.rawChagesByParentIdChannel.subscribe(this.handleChildChange, this.id);
-
         // React on page changes
         reaction(
             () => pamet.page(this.page.id),
@@ -128,24 +121,9 @@ export class PageViewState {
                 this._updateArrowViewStatesFromStore(arrows)
             }
         );
-
-        // Test selectedChildren updates TMP
-        reaction(
-            () => this.selectedChildren.values(),
-            selectedChildren => {
-                    console.log('selectedChildren TEST', Array.from(selectedChildren))
-            }
-        );
     }
 
     _updateNoteViewStatesFromNotes(notes: Iterable<Note>) {
-        //map encoding enumeration
-        // enum EntryMarker {
-        //     NotePresent = 0,
-        //     NoteRemoved = 1,
-        //     NoteAdded = 2,
-        //     NoteTypeUpdated = 3,
-        // }
         console.log('Updating note view states from notes', notes)
 
         let nvsHasNoteMap = new Map<string, boolean>();
@@ -165,17 +143,8 @@ export class PageViewState {
         for (let note of notes) {
             if (!this.noteViewStatesByOwnId.has(note.own_id)) {
                 // console.log('ADDING note', note.own_id)
-                this.noteViewStatesByOwnId.set(note.own_id, this._newNVS_forNote(note));
+                this.noteViewStatesByOwnId.set(note.own_id, new NoteViewState(note));
             }
-        }
-    }
-
-    _newNVS_forNote(note: Note): NoteViewState {
-        // console.log('newNVS_forNote', note)
-        if (note instanceof InternalLinkNote) {
-            return new InternalLinkNoteViewState(note);
-        } else {
-            return new NoteViewState(note);
         }
     }
 
@@ -243,12 +212,6 @@ export class PageViewState {
         }
     }
 
-    // handleChildChange = (change: any) => {
-    //     if (change.isUpdate()) {
-    //         console.log('Child update', change);
-    //     }
-    // }
-
     clearMode() {
         this.mode = PageMode.None;
 
@@ -269,18 +232,22 @@ export class PageViewState {
         this.mode = mode;
     }
 
-    get viewport() {  // Todo: make this a computed property?
-        return new Viewport(this.viewportCenter, this.viewportHeight, this.viewportGeometry);
+    get viewport() {
+        let viewport = new Viewport(new Point2D(0, 0), this.viewportHeight, this.viewportGeometry);
+        viewport.setDevicePixelRatio(window.devicePixelRatio)
+        viewport.moveRealCenterTo(this.viewportCenter);
+        return viewport;
     }
 
     *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
         for (let noteViewState of this.noteViewStatesByOwnId.values()) {
+            let note = noteViewState.note;
             if (radius > 0) {
-                let intersectRect = noteViewState.note.rect()
+                let intersectRect = note.rect()
                 intersectRect.setSize(intersectRect.size().add(new Point2D(radius, radius)))
                 intersectRect.setTopLeft(intersectRect.topLeft().subtract(new Point2D(radius, radius)))
             }
-            if (noteViewState.note.rect().contains(position)) {
+            if (note.rect().contains(position)) {
                 yield noteViewState;
             }
         }
