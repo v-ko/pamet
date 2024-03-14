@@ -897,11 +897,12 @@ class MapPageWidget(MapPageView, QWidget):
 
                 if nv_under_mouse or arrow_view_under_mouse:
                     child_under_mouse = nv_under_mouse or arrow_view_under_mouse
-                    # if not ctrl_pressed and not shift_pressed:
-                    #     map_page_actions.clear_child_selection(state)
-                    #     if child_under_mouse:
-                    #         map_page_actions.update_child_selections(
-                    #             state, {child_under_mouse.state(): True})
+                    if not ctrl_pressed and not shift_pressed and \
+                            child_under_mouse.state() not in state.selected_children:
+                        map_page_actions.clear_child_selection(state)
+                        if child_under_mouse:
+                            map_page_actions.update_child_selections(
+                                state, {child_under_mouse.state(): True})
 
                     map_page_actions.update_child_selections(
                         state, {child_under_mouse.state(): True})
