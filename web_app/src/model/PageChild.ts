@@ -1,4 +1,4 @@
-import { Entity, EntityData, entityType } from "../fusion/libs/Entity";
+import { Entity, EntityData } from "../fusion/libs/Entity";
 
 export interface PageChildData extends EntityData {
     page_id: string;
