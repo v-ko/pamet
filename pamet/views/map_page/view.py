@@ -39,6 +39,10 @@ class MapPageView(View):
     def _left_mouse_is_pressed(self):
         return QGuiApplication.mouseButtons() & Qt.LeftButton
 
+    @property
+    def _right_mouse_is_pressed(self):
+        return QGuiApplication.mouseButtons() & Qt.RightButton
+
     def note_views(self) -> List[NoteView]:
         raise NotImplementedError
 
@@ -108,7 +112,8 @@ class MapPageView(View):
             return arrow_view
         return None
 
-    def resize_circle_intersect(self, position: Point2D):
+    def resize_circle_intersect(self,
+                                position: Point2D) -> Union[NoteView, None]:
         for nc in self.note_views():
             unprojected_pos = self.state().unproject_point(position)
             resize_circle_center = nc.state().rect().bottom_right()

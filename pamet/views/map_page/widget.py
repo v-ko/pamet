@@ -24,7 +24,7 @@ from pamet.desktop_app import selection_overlay_qcolor
 from pamet.actions import map_page as map_page_actions
 from pamet.actions import tab as tab_actions
 from pamet.desktop_app.mime_data_utils import entities_from_mime_data
-from pamet.desktop_app.util import control_is_pressed
+from pamet.desktop_app.util import control_is_pressed, shift_is_pressed
 from pamet.model.arrow import Arrow, ArrowAnchorType
 from pamet.model.note import Note
 from pamet.util import snap_to_grid
@@ -770,18 +770,49 @@ class MapPageWidget(MapPageView, QWidget):
             self.handle_left_mouse_long_press(Point2D(new_pos.x(),
                                                       new_pos.y()))
 
+    # def mousePressEvent(self, event):
+    #     self._mouse_press_position = event.pos()
+    #     mouse_pos = Point2D(event.pos().x(), event.pos().y())
+    #     state = self.state()
+
+    #     QTimer.singleShot(LONG_PRESS_TIMEOUT * 1000, self.check_for_long_press)
+
+    #     if event.button() is Qt.LeftButton:
+
+    #         # If there's an arrow selected
+    #         # check if an arrow edge is under the mouse
+
+    #         if state.arrow_with_visible_cps:
+    #             arrow_widget = self.arrow_widget(
+    #                 state.arrow_with_visible_cps.view_id)
+
+    #             edge_under_mouse_idx = arrow_widget.edge_at(mouse_pos)
+    #             if edge_under_mouse_idx is not None:
+    #                 map_page_actions.start_arrow_edge_drag(
+    #                     state, mouse_pos, edge_under_mouse_idx)
+    #                 return
+
+    #         self.handle_left_mouse_press(mouse_pos)
+
+    #     elif event.button() is Qt.RightButton:
+    #         self.handle_right_mouse_press(
+    #             Point2D(event.pos().x(),
+    #                     event.pos().y()))
+
     def mousePressEvent(self, event):
+        # Hacky reimplementation to test the common navigation and editing
+        # pattern. Don't reuse it in the web implementation
         self._mouse_press_position = event.pos()
         mouse_pos = Point2D(event.pos().x(), event.pos().y())
         state = self.state()
-
-        QTimer.singleShot(LONG_PRESS_TIMEOUT * 1000, self.check_for_long_press)
+        child_under_mouse = self.get_arrow_view_at(mouse_pos)
+        resize_nv = self.resize_circle_intersect(mouse_pos)
 
         if event.button() is Qt.LeftButton:
+            self._mouse_position_on_left_press = copy(mouse_pos)
 
             # If there's an arrow selected
             # check if an arrow edge is under the mouse
-
             if state.arrow_with_visible_cps:
                 arrow_widget = self.arrow_widget(
                     state.arrow_with_visible_cps.view_id)
@@ -792,30 +823,127 @@ class MapPageWidget(MapPageView, QWidget):
                         state, mouse_pos, edge_under_mouse_idx)
                     return
 
-            self.handle_left_mouse_press(mouse_pos)
+            # Check for resize initiation
+            if resize_nv:
+                resize_nv_state = resize_nv.state()
+                if resize_nv_state not in state.selected_children:
+                    map_page_actions.update_child_selections(
+                        state, {resize_nv_state: True})
 
-        elif event.button() is Qt.RightButton:
-            self.handle_right_mouse_press(
-                Point2D(event.pos().x(),
-                        event.pos().y()))
+                resize_circle_center = resize_nv_state.rect().bottom_right()
+                rcc_projected = state.project_point(resize_circle_center)
+                map_page_actions.start_notes_resize(state,
+                                                    resize_nv_state.get_note(),
+                                                    mouse_pos, rcc_projected)
+                return
 
-    def mouseReleaseEvent(self, event):
-        mouse_pos = Point2D(event.pos().x(), event.pos().y())
-        if event.button() is Qt.LeftButton:
-            self.handle_left_mouse_release(mouse_pos)
+            # Check for items under the mouse and save their proximities
+            unproj_mouse_pos = state.unproject_point(mouse_pos)
+            nv_under_mouse = self.get_note_view_at(mouse_pos)
+            if nv_under_mouse:
+                child_under_mouse = nv_under_mouse
+            resize_nv = self.resize_circle_intersect(mouse_pos)
 
-        elif event.button() is Qt.MiddleButton:
-            self.middle_click_event(mouse_pos)
+            if state.mode() == MapPageMode.CREATE_ARROW:
+                anchor_props = self.arrow_anchor_at(mouse_pos)
+                note_id, anchor_type = anchor_props or (None,
+                                                        ArrowAnchorType.NONE)
+                map_page_actions.arrow_creation_click(
+                    state,
+                    fixed_pos=unproj_mouse_pos,
+                    anchor_note_id=note_id,
+                    anchor_type=anchor_type)
+                return
 
-        elif event.button() is Qt.RightButton:
-            self.handle_right_mouse_release(mouse_pos)
+            elif event.button() is Qt.RightButton:
+                # Do literally nothing. Well, just save the mouse position.
+                # Navigation starts on mouse move, and context menu - on release
+                pass
 
     def mouseMoveEvent(self, event):
         old_nvs_under_mouse = copy(self._note_views_under_mouse)
         mouse_pos = Point2D(event.pos().x(), event.pos().y())
+        press_pos = Point2D(self._mouse_press_position.x(),
+                            self._mouse_press_position.y())
+        state = self.state()
+        mode = state.mode()
+        delta = press_pos - mouse_pos
+        unproj_mouse_pos = state.unproject_point(mouse_pos)
+        self._note_views_under_mouse = list(self.get_note_views_at(mouse_pos))
+        ctrl_pressed = control_is_pressed()
+        shift_pressed = shift_is_pressed()
+        nv_under_mouse = self.get_note_view_at(mouse_pos)
+        if nv_under_mouse:
+            child_under_mouse = nv_under_mouse
 
-        self.handle_mouse_move(mouse_pos)
+        if mode == MapPageMode.NONE:
+            if self._right_mouse_is_pressed:
+                map_page_actions.start_drag_navigation(
+                    state, self._mouse_position_on_left_press)
+                map_page_actions.mouse_drag_navigation_move(state, delta)
 
+            elif self._left_mouse_is_pressed:
+                nv_under_mouse = self.get_note_view_at(press_pos)
+                arrow_view_under_mouse = self.get_arrow_view_at(mouse_pos)
+
+                # If there's a note - prefer ignore the arrow
+                if arrow_view_under_mouse and not nv_under_mouse:
+                    # Ignore  arrows that are not free floating on both sides
+                    av_state = arrow_view_under_mouse.state()
+                    if av_state.tail_coords and av_state.head_coords:
+                        pass
+                    else:
+                        arrow_view_under_mouse = None
+
+                if nv_under_mouse or arrow_view_under_mouse:
+                    child_under_mouse = nv_under_mouse or arrow_view_under_mouse
+                    # if not ctrl_pressed and not shift_pressed:
+                    #     map_page_actions.clear_child_selection(state)
+                    #     if child_under_mouse:
+                    #         map_page_actions.update_child_selections(
+                    #             state, {child_under_mouse.state(): True})
+
+                    map_page_actions.update_child_selections(
+                        state, {child_under_mouse.state(): True})
+                    map_page_actions.start_child_move(state, press_pos)
+                    map_page_actions.moved_child_view_update(state, delta)
+                    return
+
+                map_page_actions.clear_child_selection(state)
+                map_page_actions.start_drag_select(state, mouse_pos)
+
+        elif mode == MapPageMode.DRAG_SELECT:
+            self._handle_move_on_drag_select(mouse_pos)
+
+        elif mode == MapPageMode.NOTE_RESIZE:
+            new_size = self._new_note_size_on_resize(mouse_pos)
+            map_page_actions.resize_note_views(state, new_size)
+
+        elif mode == MapPageMode.CHILD_MOVE:
+            pos_delta = mouse_pos - self._mouse_position_on_left_press
+            pos_delta /= state.height_scale_factor()
+            map_page_actions.moved_child_view_update(state, pos_delta)
+
+        elif mode == MapPageMode.DRAG_NAVIGATION:
+            map_page_actions.mouse_drag_navigation_move(state, delta)
+
+        elif mode == MapPageMode.CREATE_ARROW:
+            anchor_props = self.arrow_anchor_at(mouse_pos)
+            note_id, anchor_type = anchor_props or (None, ArrowAnchorType.NONE)
+            map_page_actions.arrow_creation_move(state,
+                                                 fixed_pos=unproj_mouse_pos,
+                                                 anchor_note_id=note_id,
+                                                 anchor_type=anchor_type)
+
+        elif mode == MapPageMode.ARROW_EDGE_DRAG:
+            anchor_props = self.arrow_anchor_at(mouse_pos)
+            note_id, anchor_type = anchor_props or (None, ArrowAnchorType.NONE)
+            map_page_actions.arrow_edge_drag_update(state,
+                                                    fixed_pos=unproj_mouse_pos,
+                                                    anchor_note_id=note_id,
+                                                    anchor_type=anchor_type)
+
+        # Update view for snapping the arrow on creation
         if self._note_views_under_mouse != old_nvs_under_mouse:
             if self.state().mode() == MapPageMode.CREATE_ARROW:
                 self.update()
@@ -823,6 +951,158 @@ class MapPageWidget(MapPageView, QWidget):
         # Prompt updates for the clipboard outline visualization
         if control_is_pressed():
             self.update()
+
+    def mouseReleaseEvent(self, event):
+        state = self.state()
+        mouse_pos = Point2D(event.pos().x(), event.pos().y())
+        press_pos = Point2D(self._mouse_press_position.x(),
+                            self._mouse_press_position.y())
+        ctrl_pressed = control_is_pressed()
+        shift_pressed = shift_is_pressed()
+        child_under_mouse = self.get_arrow_view_at(mouse_pos)
+        nv_under_mouse = self.get_note_view_at(mouse_pos)
+        if nv_under_mouse:
+            child_under_mouse = nv_under_mouse
+
+        if event.button() is Qt.LeftButton:
+            state: MapPageViewState = self.state()
+            mode = state.mode()
+            unproj_mouse_pos = state.unproject_point(mouse_pos)
+
+            if mode == MapPageMode.DRAG_SELECT:
+                same_pos = state.mouse_position_on_drag_select_start == mouse_pos
+                map_page_actions.stop_drag_select(state, mouse_pos)
+                # If no drag select has happened, but it was just a click - add
+                # the note under the mouse to the selection.
+                if same_pos:
+
+                    map_page_actions.update_child_selections(
+                        state, {child_under_mouse.state(): True})
+
+            elif mode == MapPageMode.NOTE_RESIZE:
+                new_size = self._new_note_size_on_resize(mouse_pos)
+                map_page_actions.finish_notes_resize(self.state(), new_size,
+                                                     mouse_pos)
+
+            elif mode == MapPageMode.CHILD_MOVE:
+                pos_delta = mouse_pos - state.mouse_position_on_note_drag_start
+                pos_delta /= self.state().height_scale_factor()
+                map_page_actions.finish_child_move(self.state(), pos_delta)
+
+            elif mode == MapPageMode.DRAG_NAVIGATION:
+                map_page_actions.finish_mouse_drag_navigation(self.state())
+                tab_actions.update_current_url(self.parent_tab.state())
+
+            elif mode == MapPageMode.ARROW_EDGE_DRAG:
+                anchor_props = self.arrow_anchor_at(mouse_pos)
+                note_id, anchor_type = anchor_props or (None,
+                                                        ArrowAnchorType.NONE)
+                map_page_actions.finish_arrow_edge_drag(
+                    state,
+                    fixed_pos=unproj_mouse_pos,
+                    anchor_note_id=note_id,
+                    anchor_type=anchor_type)
+
+            elif mode == MapPageMode.NONE:
+
+                if ctrl_pressed and not shift_pressed:
+                    if child_under_mouse:
+                        nc_selected = child_under_mouse.state() in self.state(
+                        ).selected_children
+                        map_page_actions.update_child_selections(
+                            state,
+                            {child_under_mouse.state(): not nc_selected})
+                elif shift_pressed or (ctrl_pressed and shift_pressed):
+                    # Select the note under the mouse (if it's not already so)
+                    if child_under_mouse:
+                        nc_selected = child_under_mouse.state() in self.state(
+                        ).selected_children
+                        if not nc_selected:
+                            map_page_actions.update_child_selections(
+                                state, {child_under_mouse.state(): True})
+
+                # Clear selection (or reduce it to the note under the mouse)
+                if not ctrl_pressed and not shift_pressed:
+                    map_page_actions.clear_child_selection(state)
+
+                    if child_under_mouse:
+                        map_page_actions.update_child_selections(
+                            state, {child_under_mouse.state(): True})
+
+        elif event.button() is Qt.MiddleButton:
+            self.middle_click_event(mouse_pos)
+
+        elif event.button() is Qt.RightButton:
+            if mouse_pos == press_pos:
+                menu_entries = {}
+                ncs_under_mouse = list(self.get_note_views_at(mouse_pos))
+
+                if ncs_under_mouse:
+                    map_page_actions.clear_child_selection(state)
+                    map_page_actions.update_child_selections(
+                        state, {nv.state(): True
+                                for nv in ncs_under_mouse})
+                    menu_entries[
+                        'Edit note (E)'] = commands.edit_selected_notes
+                    menu_entries['Copy (ctrl+C)'] = commands.copy
+                    menu_entries['Cut (ctrl+X)'] = commands.cut
+                    if pamet.clipboard.get_contents():
+                        menu_entries['Paste (ctrl+V)'] = commands.paste
+                    menu_entries['Delete (Del)'] = commands.delete_selected
+                else:
+                    menu_entries['New note(N)'] = commands.create_new_note
+
+                menu_entries['Autosize (A)'] = commands.autosize_selected_notes
+                menu_entries[
+                    'Paste special (ctrl+shift+V)'] = commands.paste_special
+                menu_entries['separator1'] = SEPARATOR
+                menu_entries['New page (ctrl+N)'] = commands.create_new_page
+                menu_entries[
+                    'Create arrow (L)'] = commands.start_arrow_creation
+
+                copy_link_entries = {
+                    'To this page': commands.copy_link_to_page,
+                    'To this position': commands.copy_link_to_viewport,
+                }
+
+                if ncs_under_mouse:
+                    copy_link_entries.update(
+                        {'To this note': commands.copy_link_to_selected_note})
+
+                menu_entries['Copy link'] = copy_link_entries
+
+                # Open the context menu with the tab as its parent
+                context_menu = ContextMenuWidget(self.parent(),
+                                                 entries=menu_entries)
+                context_menu.popup_on_mouse_pos()
+
+        if state.mode() == MapPageMode.DRAG_NAVIGATION:
+            map_page_actions.finish_mouse_drag_navigation(state)
+
+    # def mouseReleaseEvent(self, event):
+    #     mouse_pos = Point2D(event.pos().x(), event.pos().y())
+    #     if event.button() is Qt.LeftButton:
+    #         self.handle_left_mouse_release(mouse_pos)
+
+    #     elif event.button() is Qt.MiddleButton:
+    #         self.middle_click_event(mouse_pos)
+
+    #     elif event.button() is Qt.RightButton:
+    #         self.handle_right_mouse_release(mouse_pos)
+
+    # def mouseMoveEvent(self, event):
+    #     old_nvs_under_mouse = copy(self._note_views_under_mouse)
+    #     mouse_pos = Point2D(event.pos().x(), event.pos().y())
+
+    #     self.handle_mouse_move(mouse_pos)
+
+    #     if self._note_views_under_mouse != old_nvs_under_mouse:
+    #         if self.state().mode() == MapPageMode.CREATE_ARROW:
+    #             self.update()
+
+    #     # Prompt updates for the clipboard outline visualization
+    #     if control_is_pressed():
+    #         self.update()
 
     def touchEvent(self, event):
         print(event)
@@ -976,16 +1256,16 @@ class MapPageWidget(MapPageView, QWidget):
             menu_entries['New page (ctrl+N)'] = commands.create_new_page
             menu_entries['Create arrow (L)'] = commands.start_arrow_creation
 
-            copy_link_enties = {
+            copy_link_entries = {
                 'To this page': commands.copy_link_to_page,
                 'To this position': commands.copy_link_to_viewport,
             }
 
             if ncs_under_mouse:
-                copy_link_enties.update(
+                copy_link_entries.update(
                     {'To this note': commands.copy_link_to_selected_note})
 
-            menu_entries['Copy link'] = copy_link_enties
+            menu_entries['Copy link'] = copy_link_entries
 
             # Open the context menu with the tab as its parent
             context_menu = ContextMenuWidget(self.parent(),
