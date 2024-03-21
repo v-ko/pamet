@@ -3,6 +3,8 @@ An infinite canvas for organizing information with text/images/links. Written us
 
 ⚠ **Still in alpha** ⚠ - you'll probably encounter GUI bugs, but the data storage/saving is stable.
 
+The transition to a web stack is under [active development](https://github.com/users/v-ko/projects/1).
+
 ## Installation
 
 ### Via pip
