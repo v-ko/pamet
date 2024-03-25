@@ -872,9 +872,9 @@ class MapPageWidget(MapPageView, QWidget):
         self._note_views_under_mouse = list(self.get_note_views_at(mouse_pos))
         ctrl_pressed = control_is_pressed()
         shift_pressed = shift_is_pressed()
-        nv_under_mouse = self.get_note_view_at(mouse_pos)
-        if nv_under_mouse:
-            child_under_mouse = nv_under_mouse
+        nv_under_mouse = self.get_note_view_at(mouse_pos)  # this is redundant?
+        if nv_under_mouse:                                  #
+            child_under_mouse = nv_under_mouse              #
 
         if mode == MapPageMode.NONE:
             if self._right_mouse_is_pressed:
@@ -900,7 +900,7 @@ class MapPageWidget(MapPageView, QWidget):
                     if not ctrl_pressed and not shift_pressed and \
                             child_under_mouse.state() not in state.selected_children:
                         map_page_actions.clear_child_selection(state)
-                        if child_under_mouse:
+                        if child_under_mouse: # redundant - there's always one
                             map_page_actions.update_child_selections(
                                 state, {child_under_mouse.state(): True})
 
@@ -966,7 +966,6 @@ class MapPageWidget(MapPageView, QWidget):
             child_under_mouse = nv_under_mouse
 
         if event.button() is Qt.LeftButton:
-            state: MapPageViewState = self.state()
             mode = state.mode()
             unproj_mouse_pos = state.unproject_point(mouse_pos)
 
@@ -975,7 +974,7 @@ class MapPageWidget(MapPageView, QWidget):
                 map_page_actions.stop_drag_select(state, mouse_pos)
                 # If no drag select has happened, but it was just a click - add
                 # the note under the mouse to the selection.
-                if same_pos:
+                if same_pos: # This probably never gets triggered and is useless
 
                     map_page_actions.update_child_selections(
                         state, {child_under_mouse.state(): True})

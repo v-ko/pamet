@@ -7,6 +7,7 @@ import { action } from "mobx"
 
 import { getLogger } from "../fusion/logging";
 import { Rectangle } from "../util/Rectangle";
+import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../constants";
 // import { action } from "../fusion/libs/Action";
 
 let log = getLogger('MapActions');
@@ -25,11 +26,10 @@ class MapActions {
   }
 
   @action
-  updateViewport(
-    state: PageViewState,
-    viewportCenter: Point2D,
-    viewportHeight: number) {
-
+  updateViewport(state: PageViewState, viewportCenter: Point2D, viewportHeight: number) {
+    viewportHeight = Math.max(
+      MIN_HEIGHT_SCALE,
+      Math.min(viewportHeight, MAX_HEIGHT_SCALE))
     state.viewportCenter = viewportCenter
     state.viewportHeight = viewportHeight
   }
@@ -170,6 +170,8 @@ class MapActions {
 
     state.dragSelectionRectData = selectionRectangle.data();
     state.dragSelectedChildren.clear();
+
+
 
     // Get notes in the area
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
