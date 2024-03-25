@@ -277,13 +277,9 @@ export class CanvasPageRenderer {
             return elapsedT > MAX_RENDER_TIME * 1000;
         }
 
-        if (state.mode === PageMode.DragSelection && state.dragSelectionRectData !== null) {
-            ctx.fillStyle = dragSelectRectColor;
-            ctx.fillRect(...state.dragSelectionRectData);
-        }
-
         // Clear the canvas
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.resetTransform(); // may be redundant, but why not
 
         // Draw elemnts in pixel space
         // Draw drag selection rectangle

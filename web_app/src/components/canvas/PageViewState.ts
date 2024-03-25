@@ -213,6 +213,7 @@ export class PageViewState {
     }
 
     clearMode() {
+        log.info('Clearing page mode')
         this.mode = PageMode.None;
 
         this.dragNavigationStartPosition = null;
@@ -225,10 +226,13 @@ export class PageViewState {
     }
 
     setMode(mode: PageMode) {
-        log.info('Setting page mode', mode)
         if (this.mode !== PageMode.None) {
             this.clearMode();
         }
+        if (mode === this.mode) {
+            return;
+        }
+        log.info('Setting page mode', mode, 'from ', this.mode)
         this.mode = mode;
     }
 
