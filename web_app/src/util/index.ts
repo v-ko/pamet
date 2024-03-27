@@ -8,15 +8,6 @@ export type SelectionDict = Map<PageChildViewState, boolean>;
 
 let log = getLogger('util/index.ts');
 
-type TextAlignment = 'left' | 'center' | 'right';
-
-export interface TextLayoutData {
-    lines: string[];
-    is_elided: boolean;
-    alignment: TextAlignment;
-}
-
-
 export function color_to_css_rgba_string(color: ColorData) {
     // Convert from [0, 1] to [0, 255]. The alpha channel stays in [0, 1]!
     let r = Math.round(color[0] * 255)
@@ -75,20 +66,26 @@ export function parsePametUrl(url_string: string): PametUrlProps {
 
 let EMPTY_TOKEN = '';
 
-class TextLayout {
-    data: [string, Rectangle][] = [];
+type TextAlignment = 'left' | 'center' | 'right';
+
+export class TextLayout {
+    textRect: Rectangle;
+    _linesData: [string, Rectangle][] = [];
     is_elided: boolean = false;
-    align: TextAlignment = 'center';
+    alignment: TextAlignment = 'center';
+
+    constructor(textRect: Rectangle) {
+        this.textRect = textRect;
+    }
 
     text(): string {
-        return this.data.join('\n');
+        return this._linesData.join('\n');
     }
-    toData(): TextLayoutData {
-        return {
-            lines: this.data.map((line) => line[0]),
-            is_elided: this.is_elided,
-            alignment: this.align,
-        }
+    get lines(): string[] {
+        return this._linesData.map((lineData) => lineData[0]);
+    }
+    get lineRects(): Rectangle[] {
+        return this._linesData.map((lineData) => lineData[1]);
     }
 }
 
@@ -127,7 +124,7 @@ const truncateText = (text: string, targetWidth: number, ctx: CanvasRenderingCon
     return text.slice(0, right);
 };
 
-export function calculateTextLayout(text: string, textRect: Rectangle, font: string): TextLayoutData {
+export function calculateTextLayout(text: string, textRect: Rectangle, font: string): TextLayout {
     // font: css font string
 
     if (!canvas || !canvasContext) {
@@ -158,17 +155,17 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         line_y += lineSpacing;
     }
 
-    let textLayout = new TextLayout();
+    let textLayout = new TextLayout(textRect);
 
     // In case for some reason the text rect is too small to fit any text
     if (!lineVPositions.length && text) {
         textLayout.is_elided = true;
-        return textLayout.toData();
+        return textLayout;
     }
 
     // If there's a line break in the text: mark the alignment as left
     if (text.includes('\n')) {
-        textLayout.align = 'left';
+        textLayout.alignment = 'left';
     }
 
     // Divide the text into words and "mark" the ones ending with an
@@ -303,12 +300,12 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         // }
 
 
-        textLayout.data.push([lineText, lineRect]);
+        textLayout._linesData.push([lineText, lineRect]);
 
         // Avoid adding empty lines at the end
         if (wordsLeft.length === 0) {
             if (wordsOnLine.length === 0) {
-                textLayout.data.pop();
+                textLayout._linesData.pop();
             }
             break;
         }
@@ -319,7 +316,7 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
     //     log.info('textLayout', textLayout)
     //     log.info('rect', textRect)
     // }
-    return textLayout.toData();
+    return textLayout;
 }
 
 

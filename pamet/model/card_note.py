@@ -1,4 +1,3 @@
-
 from copy import copy
 from typing import Tuple
 from fusion.util.point2d import Point2D
@@ -14,6 +13,7 @@ IMAGE_PORTION_FOR_HORIZONTAL_ALIGN = 0.8
 
 @entity_type
 class CardNote(ImageNote, TextNote):
+
     def image_and_text_rects(self,
                              for_size: Point2D = None
                              ) -> Tuple[Rectangle, Rectangle]:
@@ -34,6 +34,7 @@ class CardNote(ImageNote, TextNote):
             note_size = for_size
         else:
             note_size = self.size()
+
         note_aspect_ratio = note_size.x() / note_size.y()
         ar_delta = note_aspect_ratio - image_aspect_ratio
         if ar_delta > MIN_AR_DELTA_FOR_HORIZONTAL_ALIGN:

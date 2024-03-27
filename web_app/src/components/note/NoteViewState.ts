@@ -1,6 +1,6 @@
 import { computed, makeObservable, observable, reaction } from "mobx";
 import { Note } from "../../model/Note";
-import { TextLayoutData, calculateTextLayout } from "../../util";
+import { TextLayout, calculateTextLayout } from "../../util";
 import { pamet } from "../../facade";
 import { Change } from "../../fusion/Change";
 import { getLogger } from "../../fusion/logging";
@@ -43,7 +43,7 @@ export class NoteViewState extends PageChildViewState {
     updateFromNote(note: Note) {
         this._noteData = dumpToDict(note);
     }
-    get textLayoutData(): TextLayoutData {
+    get textLayoutData(): TextLayout {
         return calculateTextLayout(this.note.content.text || '', textRect(this.note.rect()), defaultFontString);
     }
     handleNoteUpdate = (change: Change) => {

@@ -1,6 +1,10 @@
 from __future__ import annotations
 from importlib import resources
 import importlib.metadata
+# from pathlib import Path
+
+# from pamet import desktop_app
+# from pamet.storage.file_system.repository import FSStorageRepository
 
 __version__ = importlib.metadata.version(__package__)
 
@@ -164,6 +168,21 @@ def set_async_repo(repo: Repository):
     _persistence_manager.async_repo = repo
 
     # Here the persistence manager should be connected to the entityTLA channel
+
+
+# def load_repo_from_user_config():
+#     user_config = desktop_app.get_user_settings()
+#     repo_path = Path(user_config.repository_path)
+#     # Init the repo
+#     if repo_path.exists():
+#         fs_repo = FSStorageRepository.open(repo_path,
+#                                            queue_save_on_change=False)
+#         fs_repo.load_all_pages()
+#     else:
+#         log.error('Repo folder was missing. Creating it.')
+#         fs_repo = FSStorageRepository.new(repo_path,
+#                                           queue_save_on_change=False)
+#     set_sync_repo(fs_repo)
 
 
 # ------------Finds-----------------
