@@ -7,8 +7,7 @@ import { NoteCanvasView, BorderType, defaultFontString, textRect } from "./NoteC
 
 const MISSING_PAGE_TITLE = '(missing)'
 
-export class InternalLinkCanvasView extends NoteCanvasView {
-
+export class InternalLinkNoteCanvasView extends NoteCanvasView {
 
     render(context: CanvasRenderingContext2D) {
         this.drawBackground(context);
@@ -16,6 +15,7 @@ export class InternalLinkCanvasView extends NoteCanvasView {
         // Get page name
         let found = true;
         let note = this.noteViewState.note as InternalLinkNote
+        let noteRect = note.rect();
         let pageId = note.targetPageId()
         let page: Page | undefined;
         if (pageId !== undefined) {
@@ -33,7 +33,7 @@ export class InternalLinkCanvasView extends NoteCanvasView {
         } else {
             text = MISSING_PAGE_TITLE
         }
-        let textLayout = calculateTextLayout(text, textRect(this.noteViewState.note.rect()), defaultFontString)
+        let textLayout = calculateTextLayout(text, textRect(noteRect), defaultFontString)
         this.drawText(context, textLayout);
 
         if (found) {
@@ -44,4 +44,4 @@ export class InternalLinkCanvasView extends NoteCanvasView {
     }
 }
 
-registerElementView(InternalLinkNote, InternalLinkCanvasView)
+registerElementView(InternalLinkNote, InternalLinkNoteCanvasView)

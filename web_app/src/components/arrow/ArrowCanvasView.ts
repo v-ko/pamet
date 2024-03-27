@@ -1,13 +1,13 @@
 import { color_to_css_rgba_string } from "../../util";
 import { Point2D } from "../../util/Point2D";
-import { NoteCanvasView } from "../note/NoteCanvasView";
+import { BaseCanvasView } from "../note/BaseCanvasView";
 import { ArrowViewState } from "./ArrowViewState";
 
 let ARROW_HAND_LENGTH = 20;
 let ARROW_HAND_ANGLE =  25 ; // 25 degrees
 let INCLINATION_MEASURE_AT = ARROW_HAND_LENGTH / 2; // units before the end
 
-export class ArrowCanvasView extends NoteCanvasView {
+export class ArrowCanvasView extends BaseCanvasView {
     get arrowViewState(): ArrowViewState {
         return this.elementViewState as ArrowViewState;
     }

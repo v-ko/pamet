@@ -17,9 +17,11 @@ import { ImageNote } from './model/ImageNote';
 import { OtherPageListNote } from './model/OtherPageListNote';
 import { ScriptNote } from './model/ScriptNote';
 import { InternalLinkNote } from './model/InternalLinkNote';
-import { TextNoteCanvasView } from './components/note/TextNoteCanvasView';
-import { ImageNoteCanvasView } from './components/note/ImageNoteCanvasView';
-import { InternalLinkCanvasView } from './components/note/InternalLinkCanvasView';
+import { InternalLinkNoteCanvasView } from './components/note/InternalLinkCanvasView';
+import { ExternalLinkNote } from './model/ExternalLinkNote';
+import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
+import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
+import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
 dummyImports.push(CardNote);
@@ -27,9 +29,11 @@ dummyImports.push(ImageNote);
 dummyImports.push(OtherPageListNote);
 dummyImports.push(ScriptNote);
 dummyImports.push(InternalLinkNote);
-dummyImports.push(TextNoteCanvasView)
-dummyImports.push(ImageNoteCanvasView)
-dummyImports.push(InternalLinkCanvasView)
+dummyImports.push(ExternalLinkNote);
+dummyImports.push(InternalLinkNoteCanvasView)
+dummyImports.push(ExternalLinkNoteCanvasView)
+dummyImports.push(ScriptNoteCanvasView)
+dummyImports.push(CardNoteCanvasView)
 
 
 // The setup logic is here, yes.

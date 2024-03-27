@@ -42,6 +42,9 @@ export class ApiClient extends BaseApiClient {
         // This should be translated to a db migration when the main web
         // app is finished and the final integration begins.
         function tmpDynamicMigration(childData) {
+            // Additional tasks for the migration:
+            // - Add size metadata for images where it's missing
+
             let [page_id, own_id] = childData.id;
             if (page_id === undefined || own_id === undefined) {
                 throw new Error('Bad id')
@@ -69,6 +72,8 @@ export class ApiClient extends BaseApiClient {
                     let url: string = childData.content.url
                     if (url.startsWith('pamet:/p')) {
                         childData.type_name = 'InternalLinkNote'
+                    } else {
+                        childData.type_name = 'ExternalLinkNote'
                     }
                 }
             }
@@ -78,26 +83,65 @@ export class ApiClient extends BaseApiClient {
                 childData.content = {}
             }
 
+            // Set empty metadata where missing
+            if (childData.metadata === undefined) {
+                childData.metadata = {}
+            }
+
             // Convert image metadata to the new schema
+            // Load image metadata and delete the field
+            let image_size = childData.metadata.image_size
+            let image_md5 = childData.metadata.image_md5
+
+            let image_width: number | undefined = undefined;
+            let image_height: number | undefined = undefined;
+
+            if (image_size !== undefined) {
+                [image_width, image_height] = image_size;
+                delete childData.metadata.image_size;
+            }
+
+            if (image_md5 !== undefined) {
+                delete childData.metadata.image_md5;
+            }
+
+            // Local image url is either an internal url or a fs path
             let local_image_url = childData.content.local_image_url;
             if (local_image_url !== undefined) {
                 delete childData.content.local_image_url;
 
+                if (image_width === undefined) {
+                    log.error('Unexpected: note with local_image_url has no image_size', childData)
+                    image_width = 0;
+                    // This would cause bad rendering if the image is a card note, but that's
+                    // a very rare case. During the migration those should be covered
+                }
+                if (image_height === undefined) {
+                    image_height = 0;
+                }
+
                 if (local_image_url.startsWith('pamet:/p')) { // local media
                     childData.content.image = {
                         url: local_image_url,
-                        width: 0,
-                        height: 0,
+                        width: image_width,
+                        height: image_height,
                     }
                 } else {
                     childData.content.image = { // file system media
                         url: 'pamet:/desktop/fs' + local_image_url,
-                        width: 0,
-                        height: 0,
+                        width: image_width,
+                        height: image_height,
                     }
                 }
+                console.log('IMAGE_SIZE', image_width, image_height)
             }
-            if (childData.content.image_url === undefined) {
+
+            // Image url (in the v4 schema) is either a local path or a remote url
+
+            if (childData.content.image_url !== undefined) {
+                if (childData.content.image === undefined) {
+                    log.error('Unexpected: note with image_url has no local_image_url')
+                }
                 delete childData.content.image_url
             }
 
