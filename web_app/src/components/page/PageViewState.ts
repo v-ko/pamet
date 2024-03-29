@@ -10,7 +10,8 @@ import { pamet } from '../../facade';
 import { getLogger } from '../../fusion/logging';
 import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
-import { PageChildViewState } from './PageChildViewState';
+import { ElementViewState as CanvasElementViewState } from './ElementViewState';
+import { EditComponentState } from '../note/EditComponent';
 
 let log = getLogger('PageViewState');
 
@@ -42,31 +43,35 @@ export enum PageMode {
 export class PageViewState {
     _pageData: PageData;
 
+    // Elements
     noteViewStatesByOwnId: ObservableMap<string, NoteViewState>;
     arrowViewStatesByOwnId: ObservableMap<string, ArrowViewState>;
-    mode: PageMode = PageMode.None;
 
+    // Viewport
     viewportCenter: Point2D = new Point2D(0, 0);
     viewportHeight: number = DEFAULT_EYE_HEIGHT;
     viewportGeometry: [number, number, number, number] = [0, 0, 0, 0];
 
-    //
+    // Common
+    mode: PageMode = PageMode.None;
     viewportCenterOnModeStart: Point2D | null = null;
 
     // Drag navigation
     dragNavigationStartPosition: Point2D | null = null;
 
     // Selection related
-    selectedChildren: ObservableSet<PageChildViewState> = observable.set();
+    selectedElements: ObservableSet<CanvasElementViewState> = observable.set();
     mousePositionOnDragSelectionStart: Point2D | null = null;
     dragSelectionRectData: RectangleData | null = null;
-    dragSelectedChildren: ObservableSet<PageChildViewState> = observable.set();
+    dragSelectedElements: ObservableSet<CanvasElementViewState> = observable.set();
 
+    // Auto navigation (out of order. Check if it's salvageable)
     autoNavAnimation: ViewportAutoNavAnimation | null = null;
 
-    constructor(page: Page) {
-        console.log('PageViewState page', page)
+    // Edit window
+    noteEditWindowState: EditComponentState | null = null;
 
+    constructor(page: Page) {
         this._pageData = page.data();
         this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
         this.arrowViewStatesByOwnId = new ObservableMap<string, ArrowViewState>();
@@ -88,10 +93,10 @@ export class PageViewState {
             viewportGeometry: observable,
             viewportCenterOnModeStart: observable,
             dragNavigationStartPosition: observable,
-            selectedChildren: observable,
+            selectedElements: observable,
             mousePositionOnDragSelectionStart: observable,
             dragSelectionRectData: observable,
-            dragSelectedChildren: observable,
+            dragSelectedElements: observable,
             autoNavAnimation: observable,
             viewport: computed
         });
@@ -124,7 +129,7 @@ export class PageViewState {
     }
 
     _updateNoteViewStatesFromNotes(notes: Iterable<Note>) {
-        console.log('Updating note view states from notes', notes)
+        // console.log('Updating note view states from notes', notes)
 
         let nvsHasNoteMap = new Map<string, boolean>();
         for (let note of notes) {
@@ -198,18 +203,12 @@ export class PageViewState {
 
     }
 
-    viewStateForPageChild(childOwnId: string): NoteViewState | ArrowViewState | null {
-        return this.noteViewStatesByOwnId.get(childOwnId) || this.arrowViewStatesByOwnId.get(childOwnId) || null;
+    viewStateForElement(elementOwnId: string): NoteViewState | ArrowViewState | null {
+        return this.noteViewStatesByOwnId.get(elementOwnId) || this.arrowViewStatesByOwnId.get(elementOwnId) || null;
     }
 
     get page() {
         return new Page(this._pageData);
-    }
-
-    handlePageChange = (change: any) => {
-        if (change.isUpdate()) {
-            console.log('Page update', change);
-        }
     }
 
     clearMode() {
@@ -222,7 +221,7 @@ export class PageViewState {
         // Drag select related
         this.mousePositionOnDragSelectionStart = null;
         this.dragSelectionRectData = null;
-        this.dragSelectedChildren.clear();
+        this.dragSelectedElements.clear();
     }
 
     setMode(mode: PageMode) {

@@ -1,6 +1,6 @@
 import { ArrowViewState } from "../arrow/ArrowViewState";
 import { Viewport } from "./Viewport";
-import { PageChildViewState } from "./PageChildViewState";
+import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
 import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTION_OVERLAY_COLOR } from "../../constants";
@@ -107,8 +107,8 @@ export class CanvasPageRenderer {
         return viewport.unprojectRect(nvsCacheRectReal);
     }
 
-    drawElement(context: CanvasRenderingContext2D, elementVS: PageChildViewState) {
-        let element = elementVS.pageChild();
+    drawElement(context: CanvasRenderingContext2D, elementVS: ElementViewState) {
+        let element = elementVS.element();
         let ViewType: ElementView<any>;
         try {
             ViewType = getElementView(element.constructor as any);
@@ -434,7 +434,7 @@ export class CanvasPageRenderer {
             }
         }
 
-        const drawSelectionOverlay = (childVS: PageChildViewState) => {
+        const drawSelectionOverlay = (childVS: ElementViewState) => {
             if (childVS instanceof NoteViewState) {
                 ctx.fillStyle = selectionColor;
                 ctx.fillRect(...childVS.note.rect().data());
@@ -454,12 +454,12 @@ export class CanvasPageRenderer {
 
         // If drag selection is active - add drag selected children to the selection
         if (state.mode === PageMode.DragSelection) {
-            for (const childVS of state.dragSelectedChildren) {
+            for (const childVS of state.dragSelectedElements) {
                 drawSelectionOverlay(childVS);
             }
         }
 
-        for (const childVS of state.selectedChildren) {
+        for (const childVS of state.selectedElements) {
             drawSelectionOverlay(childVS);
         }
 

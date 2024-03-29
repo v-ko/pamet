@@ -1,10 +1,10 @@
-import { PageChildViewState } from "../components/canvas/PageChildViewState";
+import { ElementViewState } from "../components/page/ElementViewState";
 import { getLogger } from "../fusion/logging";
 import { Point2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
 
 export type ColorData = [number, number, number, number];
-export type SelectionDict = Map<PageChildViewState, boolean>;
+export type SelectionDict = Map<ElementViewState, boolean>;
 
 let log = getLogger('util/index.ts');
 

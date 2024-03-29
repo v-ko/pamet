@@ -15,8 +15,8 @@ import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import { TourSegment } from '../model/Page';
 import { parsePametUrl } from '../util';
-import { mapActions } from '../actions/page';
-import { PageViewState } from "./canvas/PageViewState";
+import { pageActions } from '../actions/page';
+import { PageViewState } from "./page/PageViewState";
 
 
 const MIN_SCROLL_BUFFER_POS = -100;
@@ -321,7 +321,7 @@ export const TourComponent = ({ segments, parentPageViewState }: TourComponentVi
             let link_data = parsePametUrl(segment.link);
             console.log('Viewport: ', link_data.viewportCenter, link_data.viewportHeight, '')
             if (link_data.viewportCenter && link_data.viewportHeight) {
-                mapActions.startAutoNavigation(
+                pageActions.startAutoNavigation(
                     parentPageViewState,
                     link_data.viewportCenter,
                     link_data.viewportHeight)

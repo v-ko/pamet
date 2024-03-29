@@ -1,7 +1,7 @@
 import { ColorData } from "../util";
 import { Rectangle } from "../util/Rectangle";
 
-import { PageChild, PageChildData } from "./PageChild";
+import { PametElement, PametElementData } from "./Element";
 import { Point2D } from "../util/Point2D";
 import { ArrowAnchorType } from "./Arrow";
 
@@ -25,7 +25,7 @@ export interface NoteStyle {
 
 export interface NoteMetadata {
 }
-export interface NoteData extends PageChildData {
+export interface NoteData extends PametElementData {
     own_id: string;
     content: NoteContent;
     geometry: [number, number, number, number];
@@ -37,7 +37,7 @@ export interface NoteData extends PageChildData {
 }
 
 // @entityType('Note')
-export class Note extends PageChild<NoteData> implements NoteData {
+export class Note extends PametElement<NoteData> implements NoteData {
     rect(): Rectangle {
         return new Rectangle(...this._data.geometry);
     }

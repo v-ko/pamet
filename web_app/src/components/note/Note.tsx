@@ -12,11 +12,11 @@ let log = getLogger('NoteComponent');
 
 interface NoteComponentProps {
     noteViewState: NoteViewState;
-    handleClick: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
+    // handleClick: (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>) => void;
 }
 
 
-export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteComponentProps) => {
+export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) => {
     // trace(true)
 
     const self_ref = useRef<HTMLAnchorElement>(null);
@@ -90,7 +90,7 @@ export const NoteComponentBase = ({ noteViewState: state, handleClick }: NoteCom
                 flexWrap: 'wrap',
             }}
             // isExternal={isExternal}
-            onClick={handleClick}
+            // onClick={handleClick}
         >
             {imageSrc && <img src={imageSrc} alt={"Loading..."} style={{
                 maxWidth: "100%",

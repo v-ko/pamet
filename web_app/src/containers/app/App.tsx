@@ -1,7 +1,7 @@
 import "./App.css";
 import { observer } from "mobx-react-lite";
-import { MapPageComponent } from "../../components/canvas/Page";
-import { PageViewState } from "../../components/canvas/PageViewState";
+import { PageView } from "../../components/page/PageView";
+import { PageViewState } from "../../components/page/PageViewState";
 import { computed, makeObservable, observable } from "mobx";
 import { pamet } from "../../facade";
 import { getLogger } from "../../fusion/logging";
@@ -56,7 +56,7 @@ const WebApp = observer(({ state }: { state: WebAppState}) => {
       {state.loading && <div>Loading...</div>}
 
       {/* If page data - display the page */}
-      {pageViewState && <MapPageComponent state={pageViewState} />}
+      {pageViewState && <PageView state={pageViewState} />}
     </div>
   );
 });

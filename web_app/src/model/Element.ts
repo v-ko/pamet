@@ -1,11 +1,11 @@
 import { Entity, EntityData } from "../fusion/libs/Entity";
 
-export interface PageChildData extends EntityData {
+export interface PametElementData extends EntityData {
     page_id: string;
     own_id: string;
 }
 
-export class PageChild<T extends PageChildData> extends Entity<T> implements PageChildData {
+export class PametElement<T extends PametElementData> extends Entity<T> implements PametElementData {
 
     get id(): string {
         if (this._data.page_id === undefined || this._data.own_id === undefined){

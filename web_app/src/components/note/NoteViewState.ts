@@ -4,14 +4,14 @@ import { TextLayout, calculateTextLayout } from "../../util";
 import { pamet } from "../../facade";
 import { Change } from "../../fusion/Change";
 import { getLogger } from "../../fusion/logging";
-import { PageChildViewState } from "../canvas/PageChildViewState";
+import { ElementViewState } from "../page/ElementViewState";
 import { defaultFontString, textRect } from "./NoteCanvasView";
 import { SerializedEntity, dumpToDict, loadFromDict } from "../../fusion/libs/Entity";
 
 let log = getLogger('NoteViewState.ts');
 
 
-export class NoteViewState extends PageChildViewState {
+export class NoteViewState extends ElementViewState {
     _noteData!: SerializedEntity; // initialized in updateFromNote
 
     constructor(note: Note) {
@@ -37,7 +37,7 @@ export class NoteViewState extends PageChildViewState {
     get note(): Note {
         return loadFromDict(this._noteData) as Note
     }
-    pageChild(): Note {
+    element(): Note {
         return this.note;
     }
     updateFromNote(note: Note) {

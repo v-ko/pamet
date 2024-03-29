@@ -133,7 +133,6 @@ export class ApiClient extends BaseApiClient {
                         height: image_height,
                     }
                 }
-                console.log('IMAGE_SIZE', image_width, image_height)
             }
 
             // Image url (in the v4 schema) is either a local path or a remote url

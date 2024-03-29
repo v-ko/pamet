@@ -1,11 +1,11 @@
-import { PageChildViewState } from "../canvas/PageChildViewState";
-import { CanvasPageRenderer } from "../canvas/canvasPageRenderer";
+import { ElementViewState } from "../page/ElementViewState";
+import { CanvasPageRenderer } from "../page/DirectRenderer";
 
 export class BaseCanvasView {
     renderer: CanvasPageRenderer;
-    elementViewState: PageChildViewState;
+    elementViewState: ElementViewState;
 
-    constructor(renderer: CanvasPageRenderer, elementViewState: PageChildViewState) {
+    constructor(renderer: CanvasPageRenderer, elementViewState: ElementViewState) {
         this.renderer = renderer;
         this.elementViewState = elementViewState;
     }

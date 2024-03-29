@@ -5,7 +5,7 @@ import { getLogger } from '../../fusion/logging';
 import { Point2D } from '../../util/Point2D';
 import { Rectangle } from '../../util/Rectangle';
 import { approximateMidpointOfBezierCurve } from '../../util';
-import { PageChildViewState } from '../canvas/PageChildViewState';
+import { ElementViewState } from '../page/ElementViewState';
 import paper from 'paper';
 
 let log = getLogger('ArrowViewState');
@@ -24,7 +24,7 @@ function specialSigmoid(x: number): number {
     return 1 / (1 + Math.exp(-x / (CP_BASE_DISTANCE / 2) + 5));
 }
 
-export class ArrowViewState extends PageChildViewState {
+export class ArrowViewState extends ElementViewState {
     _arrowData: ArrowData;
     headAnchorNoteViewState: NoteViewState | null = null;
     tailAnchorNoteViewState: NoteViewState | null = null;
@@ -51,7 +51,7 @@ export class ArrowViewState extends PageChildViewState {
     get arrow(): Arrow {
         return new Arrow(this._arrowData);
     }
-    pageChild(): Arrow {
+    element(): Arrow {
         return this.arrow;
     }
     updateFromArrow(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null) {

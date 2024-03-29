@@ -10,7 +10,8 @@ const DECORATION_EDGE = 10;
 export class ExternalLinkNoteCanvasView extends CardNoteCanvasView {
     render(context: CanvasRenderingContext2D) {
         super.render(context);
-
+        this.drawBorder(context);
+        
         // Fill a triangle in the upper right corner of the note
         let note = this.noteViewState.note as ExternalLinkNote;
         let p1 = note.rect().topRight();

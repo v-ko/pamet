@@ -4,21 +4,19 @@ import { observer } from 'mobx-react-lite';
 
 import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../constants';
 import { Point2D } from '../../util/Point2D';
-import { mapActions } from '../../actions/page';
+import { pageActions } from '../../actions/page';
 import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
 import { getLogger } from '../../fusion/logging';
 import { reaction } from 'mobx';
-import { NoteViewState } from '../note/NoteViewState';
 import React from 'react';
 import paper from 'paper';
-import { CanvasPageRenderer } from './canvasPageRenderer';
-import { PageChildViewState } from './PageChildViewState';
+import { CanvasPageRenderer } from './DirectRenderer';
+import { ElementViewState } from './ElementViewState';
 import { pamet } from '../../facade';
 import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
-import { ArrowComponent, ArrowHeadComponent } from '../arrow/Arrow';
-import { NoteComponent } from '../note/Note';
+import { CanvasReactComponent } from './ReactRenderingComponent';
 
 
 let log = getLogger('Page.tsx')
@@ -26,7 +24,7 @@ let log = getLogger('Page.tsx')
 // const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
 // type Status = 'loading' | 'error' | 'loaded';
 
-export const MapLayoutContainer = styled.div`
+export const PageViewStyled = styled.div`
 width: 100%;
 height: 100%;
 overflow: hidden;
@@ -37,7 +35,7 @@ display: flex;
 }
 `;
 
-export const MapSuperContainer = styled.div`
+export const PageOverlay = styled.div`
 content-visibility: auto;
 flex-grow: 1;
 flex-shrink: 1;
@@ -46,25 +44,8 @@ touch-action: none;
 min-width: 30px;
 `
 
-export const MapContainer = styled.div`
-
-width: ${props => props.viewport.geometry[2]}px;
-height: ${props => props.viewport.geometry[3]}px;
-width: 100%;
-height: 100%;
-
-transform:  scale(var(--map-scale)) translate(var(--map-translate-x), var(--map-translate-y));
-backface-visibility: hidden;  // Fixes rendering artefact bug
-
-// Transitions are very inefficient (at small scale coefficients)
-// So we disable them for now
-/* ${props => props.transformTransitionDuration > 0 ?
-    `transition: transform ${props.transformTransitionDuration}s;` : ''} */
-touch-action: none;
-user-select: none;
-`;
-
-export const MapPageComponent = observer(({ state }: { state: PageViewState }) => {
+export const PageView = observer(({ state }: { state: PageViewState }) => {
+  /**  */
   // trace(true)
 
   const [mousePosOnPress, setMousePosOnPress] = useState<Point2D>(new Point2D(0, 0));
@@ -80,7 +61,6 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D(0, 0));
 
   const superContainerRef = useRef<HTMLDivElement>(null);
-  const mapContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paperCanvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -116,16 +96,16 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     paper.view.autoUpdate = false;
 
 
-    // Initial render
-    setTimeout(() => {
-      console.log("[useEffect.setTimeout] INTO TIMEOUT")
-      let ctx = canvasCtx()
-      if (ctx === null) {
-        console.log("[useEffect] canvas context is null")
-        return;
-      }
-      cacheService.renderPage(state, ctx);
-    }, 1);
+    // // Initial render
+    // setTimeout(() => {
+    //   console.log("[useEffect.setTimeout] INTO TIMEOUT")
+    //   let ctx = canvasCtx()
+    //   if (ctx === null) {
+    //     console.log("[useEffect] canvas context is null")
+    //     return;
+    //   }
+    //   cacheService.renderPage(state, ctx);
+    // }, 1);
 
   }, [state, canvasCtx, paperCanvasRef, cacheService]);
 
@@ -133,7 +113,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     console.log("[updateGeometry] called")
     let container = superContainerRef.current;
     if (container === null) {
-      console.log("[updateGeometry] mapContainerRef is null")
+      console.log("[updateGeometry] superContainerRef is null")
       return;
     }
     let boundingRect = container.getBoundingClientRect();
@@ -156,13 +136,12 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     let dpr = window.devicePixelRatio || 1;
 
     // Set the canvas size in real coordinates
-    // let pixelSpaceRect = state.viewport.projectedBounds();
     canvas.width = boundingRect.width * dpr;
     canvas.height = boundingRect.height * dpr;
 
     // Update viewport geometry
 
-    mapActions.updateGeometry(
+    pageActions.updateGeometry(
       state,
       [boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height]);
     console.log("Resized to ", boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height);
@@ -177,7 +156,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     // of the superContainer
     let container = superContainerRef.current;
     if (container === null) {
-      console.log("[updateGeometry] mapContainerRef is null")
+      console.log("[updateGeometry] superContainerRef is null")
       return;
     }
 
@@ -187,23 +166,8 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   }, [updateGeometryHandler, superContainerRef]);
 
 
-  // Render all non-component-based shapes on the canvas
+  // Call the direct renderer on the relevant state changes
   useEffect(() => {
-    // const setupPaperProjectionMatrix = () => {
-    //   let pixelSpaceRect = state.viewport.projectedBounds();
-    //   paper.view.viewSize = new paper.Size(pixelSpaceRect.width(), pixelSpaceRect.height());
-    //   // Update global transformation matrix
-    //   // Reset the transformation matrix
-    //   paper.view.matrix.reset();
-    //   // Translate to the center of the canvas
-    //   // paper.view.translate(new paper.Point(pixelSpaceRect.width() / 2, pixelSpaceRect.height() / 2));
-
-    //   // Scale the canvas
-    //   paper.view.scale(state.viewport.heightScaleFactor());
-    //   // Translate to the center of the viewport
-    //   paper.view.translate(new paper.Point(-state.viewport.xReal, -state.viewport.yReal));
-    // }
-
     const canvas = canvasRef.current;
     if (canvas === null) {
       console.log("[useEffect] canvas is null")
@@ -221,16 +185,15 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
       // Trigger on all of these
       return {
         viewport: state.viewport,
-        selectedChildren: state.selectedChildren.values(),
+        selectedElements: state.selectedElements.values(),
         dragSelectionRectData: state.dragSelectionRectData,
         mode: state.mode,
-        dragSelectedChildren: state.dragSelectedChildren,
+        dragSelectedElements: state.dragSelectedElements,
         arrowViewStatesByOwnId: state.arrowViewStatesByOwnId,
         noteViewStatesByOwnId: state.noteViewStatesByOwnId,
       }
     },
       () => {
-        // let selectedc = state.selectedChildren.values();
         cacheService.renderPage(state, ctx);
       });
 
@@ -269,23 +232,9 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   }, []);
 
   const handleMouseMove = useCallback((event) => {
-
-    // // Test css navigation speed without rerender
-    // if (mapContainerRef.current !== null) {
-    //   mapContainerRef.current.style.setProperty('--map-translate-x', -new_mouse_pos.x * 3 + 'px');
-    //   mapContainerRef.current.style.setProperty('--map-translate-y', -new_mouse_pos.y * 3 + 'px');
-    //   // test scale too 100px mouse pos = x2 scale
-    //   mapContainerRef.current.style.setProperty('--map-scale', 1 / (new_mouse_pos.y / 100) + '');
-    //   // console.log('Mouse pos', new_mouse_pos.x, new_mouse_pos.y)
-    // }
-
-    // let mousePos = mapClientPointToSuperContainer(
-    //   new Point2D(event.clientX, event.clientY));
     let mousePos = new Point2D(event.clientX, event.clientY);
     let pressPos = mousePosOnPress;
     let delta = pressPos.subtract(mousePos);
-    let ctrlIsPressed = event.ctrlKey;
-    let shiftIsPressed = event.shiftKey;
 
     // if (event.buttons === 1) {
     //   console.log('mouse move, left button', PageMode[state.mode])
@@ -293,49 +242,24 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
     if (state.mode === PageMode.None) {
       if (rightMouseIsPressed) {
-        mapActions.startDragNavigation(state, pressPos)
-        mapActions.dragNavigationMove(state, delta)
+        pageActions.startDragNavigation(state, pressPos)
+        pageActions.dragNavigationMove(state, delta)
         navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D(event.movementX, event.movementY));
       } else if (leftMouseIsPressed) {
-        // let nvs_underMouse = state.noteViewStateAt(mousePos)
-        // let arrowVS_underMouse = state.arrowViewStateAt(mousePos)
 
-        // // If there's just an arrow under the mouse (for moving?)
-        // if (arrowVS_underMouse && !nvs_underMouse) {
-        //   // Ignore arrows that are not free floating
-        //   let arrow = arrowVS_underMouse.arrow
-        //   if (arrow.tail_coords !== null && arrow.head_coords !== null) {
-        //     // pass
-        //   } else {
-        //     arrowVS_underMouse = null
-        //   }
-        // }
-
-        // // If there's a note - prefer it over the arrow
-        // if (nvs_underMouse !== null || arrowVS_underMouse !== null) {
-        //   let childUnderMouse = nvs_underMouse || arrowVS_underMouse
-        //   if (!ctrlIsPressed && !shiftIsPressed && !state.selectedChildren.has(childUnderMouse!)){
-        //     mapActions.clearSelection(state);
-        //     mapActions.updateSelection(state, new Map([[childUnderMouse!, true]]));
-        //   }
-
-        //   //... this is needed for drag-move
-        // }
-        mapActions.clearSelection(state);
-        mapActions.startDragSelection(state, pressPos);
-        mapActions.updateDragSelection(state, mousePos);
+        pageActions.clearSelection(state);
+        pageActions.startDragSelection(state, pressPos);
+        pageActions.updateDragSelection(state, mousePos);
       }
     } else if (state.mode === PageMode.DragNavigation) {
-      mapActions.dragNavigationMove(state, delta);
+      pageActions.dragNavigationMove(state, delta);
     } else if (state.mode === PageMode.DragSelection) {
-      mapActions.updateDragSelection(state, mousePos);
+      pageActions.updateDragSelection(state, mousePos);
     }
     // }
   }, [leftMouseIsPressed, mousePosOnPress, navDeviceAutoSwitcher, rightMouseIsPressed, state]);
 
   const handleMouseUp = useCallback((event) => {
-    // let mousePos = mapClientPointToSuperContainer(
-    //   new Point2D(event.clientX, event.clientY));
     let mousePos = new Point2D(event.clientX, event.clientY);
 
     let pressPos = mousePosOnPress;
@@ -343,28 +267,28 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     let ctrlPressed = event.ctrlKey;
     let shiftPressed = event.shiftKey;
 
-    let childUnderMouse: PageChildViewState | null = state.arrowViewStateAt(realPos)
+    let elementUnderMouse: ElementViewState | null = state.arrowViewStateAt(realPos)
     let noteVS_underMouse = state.noteViewStateAt(realPos)
     if (noteVS_underMouse !== null) {
-      childUnderMouse = noteVS_underMouse;
+      elementUnderMouse = noteVS_underMouse;
     }
 
-    console.log('Mouse up', PageMode[state.mode], 'button', event.button, childUnderMouse)
+    console.log('Mouse up', PageMode[state.mode], 'button', event.button, elementUnderMouse)
 
     event.preventDefault();
     if (event.button === 0) { // Left press
       setLeftMouseIsPressed(false);
       if (state.mode === PageMode.None) {
         if (ctrlPressed && !shiftPressed) { // Toggle selection
-          if (childUnderMouse !== null) {
-            let nvs_selected = state.selectedChildren.has(childUnderMouse);
-            mapActions.updateSelection(state, new Map([[childUnderMouse, !nvs_selected]]));
+          if (elementUnderMouse !== null) {
+            let nvs_selected = state.selectedElements.has(elementUnderMouse);
+            pageActions.updateSelection(state, new Map([[elementUnderMouse, !nvs_selected]]));
           }
         } else if (shiftPressed || (ctrlPressed && shiftPressed)) { // Add to selection
-          if (childUnderMouse !== null) {
-            let nvs_selected = state.selectedChildren.has(childUnderMouse);
+          if (elementUnderMouse !== null) {
+            let nvs_selected = state.selectedElements.has(elementUnderMouse);
             if (!nvs_selected) {
-              mapActions.updateSelection(state, new Map([[childUnderMouse, true]]));
+              pageActions.updateSelection(state, new Map([[elementUnderMouse, true]]));
 
             }
           }
@@ -372,19 +296,19 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
 
         if (!ctrlPressed && !shiftPressed) {
           // Clear selection (or reduce it to the note under the mouse)
-          mapActions.clearSelection(state);
-          if (childUnderMouse !== null) {
-            let selectionMap = new Map([[childUnderMouse, true]]);
-            mapActions.updateSelection(state, selectionMap);
+          pageActions.clearSelection(state);
+          if (elementUnderMouse !== null) {
+            let selectionMap = new Map([[elementUnderMouse, true]]);
+            pageActions.updateSelection(state, selectionMap);
           }
         }
       }
 
       else if (state.mode === PageMode.DragNavigation) {
-        mapActions.endDragNavigation(state);
+        pageActions.endDragNavigation(state);
       } else if (state.mode === PageMode.DragSelection) {
 
-        mapActions.endDragSelection(state);
+        pageActions.endDragSelection(state);
 
       }
     }
@@ -395,7 +319,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
       }
 
       if (state.mode === PageMode.DragNavigation) {
-        mapActions.endDragNavigation(state);
+        pageActions.endDragNavigation(state);
       }
     }
     // console.log('mouse up')
@@ -422,14 +346,14 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
         mouse_pos_unproj.subtract(state.viewportCenter).multiply(
           1 - new_height / state.viewportHeight))
 
-      mapActions.updateViewport(state, new_center, new_height);
+      pageActions.updateViewport(state, new_center, new_height);
     } else if (navDeviceAutoSwitcher.device === NavigationDevice.TOUCHPAD) {
       let delta = new Point2D(event.deltaX, event.deltaY);
       // mapActions.startDragNavigation(state, mousePos);
       // mapActions.dragNavigationMove(state, delta);
       // mapActions.endDragNavigation(state);
       let newViewportCenter = state.viewportCenter.add(delta.divide(state.viewport.heightScaleFactor()));
-      mapActions.updateViewport(state, newViewportCenter, state.viewportHeight);
+      pageActions.updateViewport(state, newViewportCenter, state.viewportHeight);
     }
   }, [state, navDeviceAutoSwitcher]);
 
@@ -439,7 +363,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     if (event.touches.length === 1) {
       let touchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
       setMousePosOnPress(touchPos);
-      mapActions.startDragSelection(state, touchPos)
+      pageActions.startDragSelection(state, touchPos)
     } else if (event.touches.length === 2) {
       // The pinch gesture navigation is a combination of dragging and zooming
       // so we enter DragNavigation mode and also update the viewport height
@@ -457,15 +381,14 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
       setInitialPinchCenter(initPinchCenter);
       console.log('Initial pinch center', initPinchCenter)
 
-      mapActions.startDragNavigation(state, initPinchCenter)
+      pageActions.startDragNavigation(state, initPinchCenter)
     }
   }, [state]);
 
   const handeTouchMove = useCallback((event) => {
     if (event.touches.length === 1) {
       let newTouchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
-      // let delta = mousePosOnLeftPress.subtract(newTouchPos);
-      mapActions.updateDragSelection(state, newTouchPos);
+      pageActions.updateDragSelection(state, newTouchPos);
 
     } else if (event.touches.length === 2) {
       let touch1 = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
@@ -497,7 +420,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           1 - new_height / pinchStartViewportHeight);
         new_center = new_center.add(correction)
 
-        mapActions.updateViewport(state, new_center, new_height);
+        pageActions.updateViewport(state, new_center, new_height);
 
       }
     }
@@ -507,18 +430,11 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   const handleTouchEnd = useCallback((event) => {
     // setMouseDown(false);
     if (state.mode === PageMode.DragNavigation) {
-      mapActions.endDragNavigation(state);
+      pageActions.endDragNavigation(state);
     }
     setPinchInProgress(false);
   }, [state]);
 
-  const handleClickOnPage = (event: React.MouseEvent) => {
-
-  };
-
-  const handleClickOnNote = (event: React.MouseEvent<HTMLAnchorElement, MouseEvent>, noteVS: NoteViewState) => {
-
-  }
 
   const handleMouseEnter = (event: MouseEvent) => {
     // If the mouse is not pressed and we're in some mode, then
@@ -531,7 +447,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
       state.mode === PageMode.DragSelection) {
       if (event.buttons === 0) {
         // Clear the state
-        mapActions.endDragNavigation(state);
+        pageActions.endDragNavigation(state);
       }
     }
   }
@@ -540,24 +456,31 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     // Clear the mode (for most modes), to avoid weird behavior
     // currently those are not implemented actually
   }
+
+  // Add native handlers for key/shortcut and wheel events
   useEffect(() => {
     // Existing keydown handler remains unchanged
     const handleKeyDown = (event) => {
+
       if (event.key === 'c' && event.ctrlKey) {
+        // event.preventDefault();
         // copySelectedToClipboard();
       }
       else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
-        event.preventDefault();
         // Zoom in
-        mapActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
+        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
+        event.preventDefault();
       } else if (event.ctrlKey && event.key === '-') { // Minus key
-        event.preventDefault();
         // Zoom out
-        mapActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
-      } else if (event.ctrlKey && event.key === '0') { // Zero key
+        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
         event.preventDefault();
+      } else if (event.ctrlKey && event.key === '0') { // Zero key
         // Reset zoom level
-        console.log('Custom reset zoom logic');
+        // event.preventDefault();
+      } else if (event.key === 'n') {
+        // Start note creation
+        pageActions.startNoteCreation(state, state.viewportCenter);
+        event.preventDefault();
       }
     };
 
@@ -572,38 +495,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
     };
   }, [state, handleWheel]);
 
-  // Auto navigation animation effect
-  useEffect(() => {
-    if (state.mode === PageMode.AutoNavigation) {
-      // console.log('Auto navigation mode activated')
-      setTimeout(() => {
-        mapActions.updateAutoNavigation(state);
-      }, 0);
-    }
-  }, [state.mode, state.autoNavAnimation, state.autoNavAnimation?.lastUpdateTime, state]);
-
-  // // Those are needed for the React note rendering
-  // let vb_x = -100000;
-  // let vb_y = -100000;
-  // let vb_width = 200000;
-  // let vb_height = 200000;
-
-  // // Setup the transitions on navigation
-  // let viewportTransitionDuration = DEFAULT_VIEWPORT_TRANSITION_T;
-  // if (state.mode === MapPageMode.AutoNavigation) {
-  //   viewportTransitionDuration = AUTO_NAVIGATE_TRANSITION_DURATION;
-  // }
-
-  // // Hacky fix: transitions hang on Chrome on large height values
-  // if (state.viewport.height > 5) {
-  //   viewportTransitionDuration = 0;  // Zero value removes the transition
-  // }
-
-  // debug info
-  // log.info(`Rendering Page ${state.page.name} (id: ${state.page.id})`)
-  // let noteCount = Array.from(state.noteViewStatesByOwnId.values()).length
-  // let arrowCount = Array.from(state.arrowViewStatesByOwnId.values()).length
-  // log.info(`Notes count: ${noteCount}, Arrows count: ${arrowCount}`)
+  // Rendering related
 
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
@@ -617,10 +509,9 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
   }
 
   return (
-    <MapLayoutContainer>
-      <MapSuperContainer
+    <PageViewStyled>
+      <PageOverlay
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
-        id="map-super-container"
         ref={superContainerRef}
 
         // we watch for mouse events here, to get them in pixel space coords
@@ -631,62 +522,15 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
         onTouchEnd={handleTouchEnd}
         onMouseMove={handleMouseMove}
         onTouchMove={handeTouchMove}
-        onClick={handleClickOnPage}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
       >
 
+        {/* Old pamet-canvas element rendering */}
+        {/* <CanvasReactComponent state={state} /> */}
 
-        <MapContainer
-          onClick={handleClickOnPage}
-          viewport={state.viewport}
-          ref={mapContainerRef}
-          // transformTransitionDuration={viewportTransitionDuration}
-          style={{
-            '--map-scale': state.viewport.heightScaleFactor(),
-            '--map-translate-x': -state.viewport.xReal + 'px',
-            '--map-translate-y': -state.viewport.yReal + 'px',
-            // '--map-translate-x': -state.viewport.center.x + 'px',
-            // '--map-translate-y': -state.viewport.center.y + 'px',
-          }}
-        >
-
-          {/* {Array.from(state.noteViewStatesByOwnId.values()).map((noteViewState) => (
-            <NoteComponent
-              key={noteViewState.note.id}
-              noteViewState={noteViewState}
-              handleClick={(event) => { handleClickOnNote(event, noteViewState) }} />
-          ))}
-
-          <svg
-            viewBox={`${vb_x} ${vb_y} ${vb_width} ${vb_height}`}
-            style={{
-              position: 'absolute',
-              left: `${vb_x}`,
-              top: `${vb_y}`,
-              width: `${vb_width}`,
-              height: `${vb_height}`,
-              pointerEvents: 'none',
-              outline: '100px solid red',
-            }}
-          >
-            <defs>
-              {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
-                <ArrowHeadComponent key={arrowVS.arrow.id} arrowViewState={arrowVS} />
-              ))}
-            </defs>
-            {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
-              <ArrowComponent
-                key={arrowVS.arrow.id}
-                arrowViewState={arrowVS}
-                clickHandler={(event) => { console.log('Arrow clicked', arrowVS.arrow.id) }}
-              />
-            ))}
-          </svg> */}
-
-
-        </MapContainer>
+        {/* Canvas to do the direct rendering on */}
         <canvas
           id="render-canvas"
           style={{
@@ -700,6 +544,8 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           }}
           ref={canvasRef}
         />
+
+        {/* Dummy canvas for paperjs */}
         <canvas
           id="paperjs-canvas"
           style={{
@@ -713,7 +559,7 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           }}
           ref={paperCanvasRef}
         />
-      </MapSuperContainer> {/*  map container container */}
+      </PageOverlay> {/*  map container container */}
 
       {state.page.tour_segments &&
         <TourComponent
@@ -738,6 +584,6 @@ export const MapPageComponent = observer(({ state }: { state: PageViewState }) =
           />
         ))}
 
-    </MapLayoutContainer>
+    </PageViewStyled>
   );
 });

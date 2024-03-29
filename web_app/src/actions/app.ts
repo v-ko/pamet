@@ -2,34 +2,19 @@ import { WebAppState } from "../containers/app/App";
 import { pamet } from "../facade";
 import { getLogger } from "../fusion/logging";
 import { action } from "../fusion/libs/Action";
-import { makeObservable } from "mobx";
 
 let HOME_PAGE_ID = "home";
 
 let log = getLogger("WebAppActions");
 
-export class WebAppActions {
-    constructor() {
-        makeObservable(this); // This is not applied since no instance is created
-    }
-
-    // @action
-    // setCurrentUrlPath(state: WebAppState, urlPath: string) {
-    //     state.currentUrlPath = urlPath;
-    // }
-
+class AppActions {
     @action
-    static setLoading(state: WebAppState, loading: boolean) {
+    setLoading(state: WebAppState, loading: boolean) {
         state.loading = loading;
-        // if (loading) {
-        //     state.errorMessage = 'Loading...';
-        // } else {
-        //     state.errorMessage = '';
-        // }
     }
 
     @action
-    static setCurrentPage(state: WebAppState, pageId: string | null) {
+    setCurrentPage(state: WebAppState, pageId: string | null) {
         console.log(`Changing current page to ${pageId}`)
         if (pageId === null) {
             state.currentPageId = null
@@ -43,12 +28,12 @@ export class WebAppActions {
     }
 
     @action
-    static setErrorMessage(state: WebAppState, message: string) {
+    setErrorMessage(state: WebAppState, message: string) {
         state.errorMessage = message;
     }
 
     @action
-    static setPageToHomeOrFirst(state: WebAppState) {
+    setPageToHomeOrFirst(state: WebAppState) {
         let page = pamet.findOne({id: HOME_PAGE_ID});
         if (!page) {
             log.info("No home page found");
@@ -57,6 +42,8 @@ export class WebAppActions {
                 throw new Error("No pages found");
             }
         }
-        WebAppActions.setCurrentPage(state, page.id);
+        appActions.setCurrentPage(state, page.id);
     }
 }
+
+export const appActions = new AppActions();

@@ -5,7 +5,7 @@ import './index.css';
 import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './facade';
 // import { PersistenceManagerService } from './services/persistenceManager';
-import { WebAppActions } from './actions/app';
+import { appActions } from './actions/app';
 import { getLogger } from './fusion/logging';
 
 
@@ -22,6 +22,8 @@ import { ExternalLinkNote } from './model/ExternalLinkNote';
 import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
 import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
+import { fusion } from './fusion';
+import { ActionState } from './fusion/libs/Action';
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
 dummyImports.push(CardNote);
@@ -57,12 +59,12 @@ let app_state = new WebAppState();
 pamet.setWebAppState(app_state);
 pamet.loadAllEntitiesTMP(() => {
     log.info("Loaded all entities")
-    WebAppActions.setLoading(app_state, false);
+    appActions.setLoading(app_state, false);
 
     let urlPath = window.location.pathname;
     // If we're at the index page, load home or first
     if (urlPath === "/") {
-        WebAppActions.setPageToHomeOrFirst(app_state);
+        appActions.setPageToHomeOrFirst(app_state);
 
         // If the URL contains /p/ - load the page by id, else load the home page
     } else if (urlPath.includes("/p/")) {
@@ -71,16 +73,16 @@ pamet.loadAllEntitiesTMP(() => {
         // Get the page from the pages array
         const page = pamet.findOne({ id: pageId });
         if (page) {
-            WebAppActions.setCurrentPage(app_state, page.id);
+            appActions.setCurrentPage(app_state, page.id);
         } else {
-            WebAppActions.setErrorMessage(app_state, `Page with id ${pageId} not found`);
+            appActions.setErrorMessage(app_state, `Page with id ${pageId} not found`);
             console.log("Page not found", pageId)
             // console.log("Pages", pages)
-            WebAppActions.setCurrentPage(app_state, null);
+            appActions.setCurrentPage(app_state, null);
         }
     } else {
         console.log("Url not supported", urlPath)
-        WebAppActions.setCurrentPage(app_state, null);
+        appActions.setCurrentPage(app_state, null);
     }
     console.log('Stores:')
     console.log('pageStore', pamet.pageStore)
@@ -89,6 +91,12 @@ pamet.loadAllEntitiesTMP(() => {
     console.log('noteStoresByParentId', pamet.noteStoresByParentId)
     console.log('arrowStoresByParentId', pamet.arrowStoresByParentId)
 });
+
+// Testing: log the actions channel
+fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
+    log.info(`Action ${actionState.name} ${actionState.runState}`);
+});
+
 
 root.render(
     <React.StrictMode>

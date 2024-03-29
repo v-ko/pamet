@@ -45,7 +45,7 @@ describe('NoteContainer', () => {
         }));
 
         render(
-            <NoteComponentBase noteViewState={noteViewState} handleClick={mockHandleClick} />
+            <NoteComponentBase noteViewState={noteViewState} />
         );
         let element = screen.getByText('First line', { exact: false })
         fireEvent.click(element);

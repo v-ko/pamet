@@ -66,7 +66,7 @@ export class PametFacade extends PametRepository {
                 if (changeOrActionState.started) {
                     this._changeBufferForRootAction = [];
                 }
-                else if (changeOrActionState.completed) {
+                else if (changeOrActionState.completed && this._changeBufferForRootAction.length > 0) {
                     this.entityChangeListPerRootActionChannel.push(this._changeBufferForRootAction);
                 }
             }
@@ -86,12 +86,6 @@ export class PametFacade extends PametRepository {
                 log.info(change);
             });
         });
-
-        // Testing: log the actions channel
-        fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
-            log.info('actionState', actionState);
-        });
-
     }
 
     pametSchemaToHttpUrl(url: string): string {
@@ -139,7 +133,7 @@ export class PametFacade extends PametRepository {
                     let notes = children.notes;
                     let arrows = children.arrows;
 
-                    console.log('Loading children for page', page.id, 'notes', notes, 'arrows', arrows)
+                    // console.log('Loading children for page', page.id, 'notes', notes, 'arrows', arrows)
 
                     notes.forEach((note) => {
                         this._loadOneNote(note);
@@ -181,7 +175,7 @@ export class PametFacade extends PametRepository {
         // Update the per parent index
         let perParentStore = this.noteStoresByParentId.get(note.parentId);
         if (perParentStore === undefined) {
-            console.log('creating noteStoresByParentId for', note.parentId)
+            // console.log('creating noteStoresByParentId for', note.parentId)
             perParentStore = new ObservableMap();
             this.noteStoresByParentId.set(note.parentId, perParentStore);
         }

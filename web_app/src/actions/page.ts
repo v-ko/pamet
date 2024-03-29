@@ -1,24 +1,22 @@
 import { SelectionDict as SelectionMap } from "../util";
-import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/canvas/PageViewState";
+import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/page/PageViewState";
 import { Point2D } from "../util/Point2D";
 
-import { makeObservable } from "mobx";
-import { action } from "mobx"
+// import { makeObservable } from "mobx";
+// import { action } from "mobx"
+import { action } from "../fusion/libs/Action";
 
 import { getLogger } from "../fusion/logging";
 import { Rectangle } from "../util/Rectangle";
 import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../constants";
-// import { action } from "../fusion/libs/Action";
+import { EditComponentState } from "../components/note/EditComponent";
 
 let log = getLogger('MapActions');
 
 export const AUTO_NAVIGATE_TRANSITION_DURATION = 0.5; // seconds
 
 
-class MapActions {
-  constructor() {
-    makeObservable(this);
-  }
+class PageActions {
 
   @action
   updateGeometry(state: PageViewState, geometry: [number, number, number, number]) {
@@ -68,9 +66,9 @@ class MapActions {
     for (let [pageChild, selected] of selectionMap) {
       // let selected = selectionMap.get(pageChild);
       if (selected === true) { // && !state.selectedChildren.has(pageChild)
-        state.selectedChildren.add(pageChild);
+        state.selectedElements.add(pageChild);
       } else {
-        state.selectedChildren.delete(pageChild);
+        state.selectedElements.delete(pageChild);
       }
     }
   };
@@ -79,7 +77,7 @@ class MapActions {
   clearSelection(state: PageViewState) {
     console.log('[clearSelection]');
     let selectionMap: SelectionMap = new Map();
-    for (let noteVS of state.selectedChildren) {
+    for (let noteVS of state.selectedElements) {
       selectionMap.set(noteVS, false);
     }
     this.updateSelection(state, selectionMap);
@@ -130,9 +128,9 @@ class MapActions {
         let newCenter = startCenter.add(
           endCenter.subtract(startCenter).multiply(timingFunction(t)));
         let newHeight = startHeight + (endHeight - startHeight) * timingFunction(t);
-        mapActions.updateViewport(state, newCenter, newHeight);
+        pageActions.updateViewport(state, newCenter, newHeight);
         if (t === 1) {
-          mapActions.endAutoNavigation(state);
+          pageActions.endAutoNavigation(state);
         }
         let lastUpdateTime = Date.now();
         // console.log('lastUpdateTime', lastUpdateTime)
@@ -169,7 +167,7 @@ class MapActions {
     let unprojectedRect = state.viewport.unprojectRect(selectionRectangle);
 
     state.dragSelectionRectData = selectionRectangle.data();
-    state.dragSelectedChildren.clear();
+    state.dragSelectedElements.clear();
 
 
 
@@ -177,14 +175,14 @@ class MapActions {
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
       let noteRect = noteVS.note.rect();
       if (unprojectedRect.intersects(noteRect)) {
-        state.dragSelectedChildren.add(noteVS);
+        state.dragSelectedElements.add(noteVS);
       }
     }
 
     // Get the arrows in the area
     for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
       if (arrowVS.intersectsRect(unprojectedRect)) {
-        state.dragSelectedChildren.add(arrowVS);
+        state.dragSelectedElements.add(arrowVS);
       }
     }
   }
@@ -192,11 +190,17 @@ class MapActions {
   @action
   endDragSelection(state: PageViewState) {
     // Add dragSelectedChildren to selectedChildren
-    for (let child of state.dragSelectedChildren) {
-      state.selectedChildren.add(child);
+    for (let child of state.dragSelectedElements) {
+      state.selectedElements.add(child);
     }
     state.clearMode();
   }
+
+  @action
+  startNoteCreation(state: PageViewState, position: Point2D) {
+    let editWindowState = new EditComponentState();
+    state.noteEditWindowState = editWindowState;
+  }
 }
 
-export const mapActions = new MapActions();
+export const pageActions = new PageActions();

@@ -1,7 +1,7 @@
 import { entityType } from '../fusion/libs/Entity';
 import { ColorData } from '../util';
 import { Point2D, PointData } from '../util/Point2D';
-import { PageChild, PageChildData } from './PageChild';
+import { PametElement, PametElementData } from './Element';
 
 
 export enum ArrowAnchorType {
@@ -13,7 +13,7 @@ export enum ArrowAnchorType {
     BOTTOM_MID = 'bottom_mid'
 }
 
-export interface ArrowData extends PageChildData {
+export interface ArrowData extends PametElementData {
     tail_coords: PointData | null;
     head_coords: PointData | null;
     mid_point_coords: PointData[];
@@ -31,7 +31,7 @@ export interface ArrowData extends PageChildData {
 
 // Use camelCase for property names
 @entityType('Arrow')
-export class Arrow extends PageChild<ArrowData> implements ArrowData {
+export class Arrow extends PametElement<ArrowData> implements ArrowData {
     get tail_coords(): PointData | null {
         return this._data.tail_coords;
     }
