@@ -1,8 +1,11 @@
 import { registerElementView } from "../../elementViewLibrary";
 import { ScriptNote } from "../../model/ScriptNote";
-import { calculateTextLayout, color_to_css_rgba_string } from "../../util";
+import { color_to_css_rgba_string } from "../../util";
+import { calculateTextLayout } from "./util";
 import { Point2D } from "../../util/Point2D";
-import { NoteCanvasView, defaultFontString, textRect } from "./NoteCanvasView";
+import { NoteCanvasView } from "./NoteCanvasView";
+import { textRect } from "./util";
+import { DEFAULT_FONT_STRING } from "../../constants";
 
 const TRIANGLE_BASE = 10;
 const TRIANGLE_SPACING = 3;
@@ -12,7 +15,7 @@ export class ScriptNoteCanvasView extends NoteCanvasView {
         let note = this.noteViewState.note as ScriptNote
         let noteRect = note.rect();
         let text = note.content.text || '';
-        let textLayout = calculateTextLayout(text, textRect(noteRect), defaultFontString);
+        let textLayout = calculateTextLayout(text, textRect(noteRect), DEFAULT_FONT_STRING);
 
         this.drawBackground(context);
         this.drawText(context, textLayout);

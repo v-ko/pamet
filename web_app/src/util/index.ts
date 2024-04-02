@@ -1,12 +1,22 @@
 import { ElementViewState } from "../components/page/ElementViewState";
+import { ALIGNMENT_GRID_UNIT } from "../constants";
 import { getLogger } from "../fusion/logging";
-import { Point2D } from "./Point2D";
+import { Point2D, Vector2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
 
 export type ColorData = [number, number, number, number];
 export type SelectionDict = Map<ElementViewState, boolean>;
 
 let log = getLogger('util/index.ts');
+
+
+export function snapToGrid(x: number): number {
+    return Math.round(x / ALIGNMENT_GRID_UNIT) * ALIGNMENT_GRID_UNIT;
+}
+
+export function snapVectorToGrid<T extends Vector2D>(v: T): T {
+    return v.divide(ALIGNMENT_GRID_UNIT).round().multiply(ALIGNMENT_GRID_UNIT);
+}
 
 export function color_to_css_rgba_string(color: ColorData) {
     // Convert from [0, 1] to [0, 255]. The alpha channel stays in [0, 1]!
@@ -16,7 +26,6 @@ export function color_to_css_rgba_string(color: ColorData) {
     let color_string = `rgba(${r}, ${g}, ${b}, ${color[3]})`
     return color_string
 }
-
 
 export interface PametUrlProps {
     page_id?: string,
@@ -64,14 +73,14 @@ export function parsePametUrl(url_string: string): PametUrlProps {
     }
 }
 
-let EMPTY_TOKEN = '';
+export let EMPTY_TOKEN = '';
 
 type TextAlignment = 'left' | 'center' | 'right';
 
 export class TextLayout {
     textRect: Rectangle;
     _linesData: [string, Rectangle][] = [];
-    is_elided: boolean = false;
+    isElided: boolean = false;
     alignment: TextAlignment = 'center';
 
     constructor(textRect: Rectangle) {
@@ -89,14 +98,8 @@ export class TextLayout {
     }
 }
 
-// Init the canvas
-let canvas: HTMLCanvasElement;
-let canvasContext: CanvasRenderingContext2D;
-let ELLIPSIS = '...';
-let ellipsisWidth = 0;
-let spaceWidth = 0;
 
-const truncateText = (text: string, targetWidth: number, ctx: CanvasRenderingContext2D) => {
+export const truncateText = (text: string, targetWidth: number, ctx: CanvasRenderingContext2D) => {
     if (targetWidth <= 0) {
         return '';
     }
@@ -123,202 +126,6 @@ const truncateText = (text: string, targetWidth: number, ctx: CanvasRenderingCon
     // So we return the word part that corresponds to this length
     return text.slice(0, right);
 };
-
-export function calculateTextLayout(text: string, textRect: Rectangle, font: string): TextLayout {
-    // font: css font string
-
-    if (!canvas || !canvasContext) {
-        canvas = document.createElement('canvas');
-        canvasContext = canvas.getContext('2d')!;
-        if (!canvas || !canvasContext) {
-            throw new Error('Failed to get canvas context');
-        }
-    }
-
-    // Set the font
-    canvasContext.font = font;
-
-    ellipsisWidth = canvasContext.measureText(ELLIPSIS).width;
-    spaceWidth = canvasContext.measureText(' ').width;
-
-    // Get the needed parameters
-    let lineSpacing = 20;
-
-    // ?? Replace tabs with 4 spaces for consistent visualization (May not be the best place)
-    text = text.replace('\t', '    ');
-
-    // Get the y coordinates of the lines
-    let lineVPositions: number[] = [];
-    let line_y = textRect.top();
-    while (line_y <= (textRect.bottom() - lineSpacing)) {
-        lineVPositions.push(line_y);
-        line_y += lineSpacing;
-    }
-
-    let textLayout = new TextLayout(textRect);
-
-    // In case for some reason the text rect is too small to fit any text
-    if (!lineVPositions.length && text) {
-        textLayout.is_elided = true;
-        return textLayout;
-    }
-
-    // If there's a line break in the text: mark the alignment as left
-    if (text.includes('\n')) {
-        textLayout.alignment = 'left';
-    }
-
-    // Divide the text into words and "mark" the ones ending with an
-    // EoL char (by keeping their indexes in eol_word_indices)
-    let words: string[] = [];
-    let eolWordIndices: number[] = [];
-    for (let line of text.split('\n')) {
-        // If the line is empty - push a special token
-        // (and mark its index as an EoL word)
-        let words_on_line: string[];
-
-        if (!line) {
-            words_on_line = [EMPTY_TOKEN]
-        } else {
-            words_on_line = line.split(' ');
-        }
-        words = words.concat(words_on_line);
-        let lastWordIndex = words.length - 1;
-        eolWordIndices.push(lastWordIndex);
-    }
-
-    // Start filling the available lines one by one
-    let reachedWordIdx = 0;
-
-    // For every available line: iterate through words until there's no
-    // more space on the line
-    for (let lineIdx = 0; lineIdx < lineVPositions.length; lineIdx++) {
-        let lineY = lineVPositions[lineIdx];
-        let wordsLeft = words.slice(reachedWordIdx);
-
-        // If we've used all the words - there's nothing to do
-        if (!wordsLeft) {
-            break;
-        }
-
-        // Find the coordinates and dimentions of the line
-        let lineRect = new Rectangle(textRect.left(), lineY, textRect.width(), lineSpacing);
-
-        // Fill the line word by word
-        let wordsOnLine: string[] = [];
-        let widthLeft = textRect.width();
-        let usedWords = 0;
-
-        let truncateLine = false;
-        let addEllipsis = false;
-
-        for (let wordIdxOnLine = 0; wordIdxOnLine < wordsLeft.length; wordIdxOnLine++) {
-            let atLastLine = lineIdx === (lineVPositions.length - 1);
-            let atLastWord = wordIdxOnLine === (wordsLeft.length - 1);
-
-            // Get the advance if we add the current word
-            let advanceWithCurrentWord = canvasContext.measureText(wordsLeft[wordIdxOnLine]).width;
-            if (wordIdxOnLine !== 0) { // Add the space width if not at the first word
-                advanceWithCurrentWord += spaceWidth;
-            }
-
-            // If there's room for the next word - add it and continue
-            // (if it's the last word - the loop will break afterwards)
-            if (widthLeft >= advanceWithCurrentWord) {
-                widthLeft -= advanceWithCurrentWord;
-                wordsOnLine.push(wordsLeft[wordIdxOnLine]);
-                usedWords += 1;
-
-            } else {
-                // If there's no room to add an elided word:
-                // Elide only if we're at the last line or
-                // if there's a single
-
-                // // Add the word anyway
-                // wordsOnLine.push(wordsLeft[wordIdxOnLine]);
-                // usedWords += 1;
-                // truncateLine = true;
-                // addEllipsis = true;
-
-                if (atLastLine) {
-                    if (widthLeft < ellipsisWidth) { // There's no room for a partial/elided word
-                        truncateLine = true;
-                        addEllipsis = true;
-                    } else { // There's room for a partial/elided word
-                        wordsOnLine.push(wordsLeft[wordIdxOnLine]);
-                        usedWords += 1;
-                        truncateLine = true;
-                        addEllipsis = true;
-                    }
-                } else if (wordIdxOnLine === 0) {
-                    // If it's the first word on the line and it's just too long
-                    // elide it
-                    usedWords += 1;
-
-                    wordsOnLine.push(wordsLeft[wordIdxOnLine]);
-                    truncateLine = true;
-                    addEllipsis = true;
-                } // Else (there's no room for the word and we're not on the
-                // last line) - we break (=word-wrap) and continue to the next line
-                break;
-            }
-
-            // Check if we're on EoL (because of a line break in the text)
-            if (eolWordIndices.includes(reachedWordIdx + wordIdxOnLine)) {
-                if (atLastLine && !atLastWord) {
-                    addEllipsis = true;
-                }
-                break; //should break anyway
-            }
-        }
-
-        reachedWordIdx += usedWords;
-        let lineText = wordsOnLine.join(' ');
-
-        // // tmp log
-        // if (truncateLine || addEllipsis) {
-        //     log.info('trunc, addEllipsis', truncateLine, addEllipsis)
-        //     log.info('line before truncate', lineText)
-        // }
-
-        if (truncateLine) {
-            let width = textRect.width() - ellipsisWidth;
-            lineText = truncateText(lineText, width, canvasContext);
-        }
-
-        // if (truncateLine || addEllipsis) { //tmp log
-        //     log.info('line after truncate', lineText)
-        // }
-
-        if (addEllipsis) {
-            textLayout.is_elided = true;
-            lineText = lineText + ELLIPSIS;
-        }
-
-        // if (truncateLine || addEllipsis) { //tmp log
-        //     log.info('line after ellipsis', lineText)
-        // }
-
-
-        textLayout._linesData.push([lineText, lineRect]);
-
-        // Avoid adding empty lines at the end
-        if (wordsLeft.length === 0) {
-            if (wordsOnLine.length === 0) {
-                textLayout._linesData.pop();
-            }
-            break;
-        }
-
-    }
-    // // tmp debug
-    // if (text.startsWith('Elide')) {
-    //     log.info('textLayout', textLayout)
-    //     log.info('rect', textRect)
-    // }
-    return textLayout;
-}
-
 
 function bezierPoint(t: number, P0: Point2D, P1: Point2D, P2: Point2D, P3: Point2D): Point2D {
     const u = 1 - t;

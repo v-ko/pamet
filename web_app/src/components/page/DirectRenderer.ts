@@ -30,7 +30,7 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     let note = noteVS.note;
     ctx.strokeStyle = color_to_css_rgba_string(note.style.color);
     let rect = note.rect();
-    drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width(), rect.height(), 20);
+    drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
 }
 
 
@@ -58,7 +58,7 @@ export class CanvasPageRenderer {
     // }
 
     getImage(src: string): HTMLImageElement | null {
-        console.log('-----------------getImage', src)
+        // console.log('-----------------getImage', src)
         let img = document.querySelector(`img[src="${src}"]`) as HTMLImageElement;
         return img;
     }
@@ -161,7 +161,7 @@ export class CanvasPageRenderer {
             return false;
         }
         let offscreenCanvas = new OffscreenCanvas(
-            cacheRectAfterDPR.width(), cacheRectAfterDPR.height());
+            cacheRectAfterDPR.width, cacheRectAfterDPR.height);
 
         let ctx = offscreenCanvas.getContext('2d') as CanvasRenderingContext2D | null;
         if (!ctx) {
@@ -189,7 +189,7 @@ export class CanvasPageRenderer {
         ctx.restore()
 
         let imageBitmap = offscreenCanvas.transferToImageBitmap();
-        if (imageBitmap.width !== cacheRectAfterDPR.width() || imageBitmap.height !== cacheRectAfterDPR.height()) {
+        if (imageBitmap.width !== cacheRectAfterDPR.width || imageBitmap.height !== cacheRectAfterDPR.height) {
             log.error('Image bitmap size does not match cache rect size', imageBitmap, cacheRectAfterDPR);
         } else {
         }
@@ -233,7 +233,7 @@ export class CanvasPageRenderer {
         // mainCtx.imageSmoothingQuality = 'low'
         mainCtx.drawImage(
             imageBitmap,
-            cacheRectReal.x, cacheRectReal.y, cacheRectReal.width(), cacheRectReal.height()
+            cacheRectReal.x, cacheRectReal.y, cacheRectReal.width, cacheRectReal.height
         )
 
         mainCtx.restore()
@@ -357,7 +357,7 @@ export class CanvasPageRenderer {
             const cacheRectAfterDPR = this.cacheRectAfterDPR(noteVS, state.viewport);
             if (imageBitmap !== undefined) {
                 cachePresent = true;
-                sizeMatches = imageBitmap.width === cacheRectAfterDPR.width() && imageBitmap.height === cacheRectAfterDPR.height();
+                sizeMatches = imageBitmap.width === cacheRectAfterDPR.width && imageBitmap.height === cacheRectAfterDPR.height;
             } else {
                 cachePresent = false;
                 sizeMatches = false;

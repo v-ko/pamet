@@ -1,4 +1,6 @@
-html, .app, #root{
+html,
+.app,
+#root {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -49,4 +51,16 @@ div .note-text {
   font-family: 'Open Sans', sans-serif;
   font-size: 18px;
   line-height: 20px;
+}
+
+.page-view {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    flex-flow: column-reverse;
+  }
 }

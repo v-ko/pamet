@@ -38,6 +38,9 @@ export abstract class PametRepository extends Repository {
         filter.type = Note
         return this.find(filter) as Generator<Note>
     }
+    note(note_id: string): Note | undefined {
+        return this.findOne({id: note_id}) as Note | undefined
+    }
 
     //Arrow CRUD
     insertArrow(arrow: Arrow): Change {

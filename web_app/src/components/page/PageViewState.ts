@@ -12,6 +12,7 @@ import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
 import { EditComponentState } from '../note/EditComponent';
+import { Size } from '../../util/Size';
 
 let log = getLogger('PageViewState');
 
@@ -36,12 +37,14 @@ export enum PageMode {
     ChildMove,
     CreateArrow,
     ArrowEdgeDrag,
-    AutoNavigation
+    AutoNavigation,
+    DraggingEditWindow
 }
 
 
 export class PageViewState {
     _pageData: PageData;
+    _notesStore: ObservableMap<string, Note>;
 
     // Elements
     noteViewStatesByOwnId: ObservableMap<string, NoteViewState>;
@@ -54,7 +57,9 @@ export class PageViewState {
 
     // Common
     mode: PageMode = PageMode.None;
-    viewportCenterOnModeStart: Point2D | null = null;
+    viewportCenterOnModeStart: Point2D = new Point2D(0, 0);
+    realMousePositionOnCanvas: Point2D | null = null;
+    // mouseButtons: number = 0;
 
     // Drag navigation
     dragNavigationStartPosition: Point2D | null = null;
@@ -73,6 +78,13 @@ export class PageViewState {
 
     constructor(page: Page) {
         this._pageData = page.data();
+
+        let notesStore = pamet.noteStoresByParentId.get(page.id);
+        if (notesStore === undefined) {
+            throw new Error('No notes store found for page ' + page.id)
+        }
+        this._notesStore = notesStore;
+
         this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
         this.arrowViewStatesByOwnId = new ObservableMap<string, ArrowViewState>();
 
@@ -85,19 +97,27 @@ export class PageViewState {
         makeObservable(this, {
             _pageData: observable,
             page: computed,
+
             noteViewStatesByOwnId: observable,
             arrowViewStatesByOwnId: observable,
-            mode: observable,
+
             viewportCenter: observable,
             viewportHeight: observable,
             viewportGeometry: observable,
+
+            mode: observable,
             viewportCenterOnModeStart: observable,
+            realMousePositionOnCanvas: observable,
+
             dragNavigationStartPosition: observable,
             selectedElements: observable,
             mousePositionOnDragSelectionStart: observable,
             dragSelectionRectData: observable,
             dragSelectedElements: observable,
             autoNavAnimation: observable,
+
+            noteEditWindowState: observable,
+
             viewport: computed
         });
 
@@ -113,8 +133,9 @@ export class PageViewState {
 
         // Update noteViewStates when notes are added or removed
         reaction(
-            () => pamet.find({ parentId: this.page.id, type: Note }) as Generator<Note>,
+            () => this._notesStore.values(),
             notes => {
+                console.log('Notes changed', notes)
                 this._updateNoteViewStatesFromNotes(notes)
             }
         );
@@ -123,13 +144,30 @@ export class PageViewState {
         reaction(
             () => pamet.find({ parentId: this.page.id, type: Arrow }) as Generator<Arrow>,
             arrows => {
+                console.log('Arrows changed', arrows)
                 this._updateArrowViewStatesFromStore(arrows)
             }
         );
     }
 
+    notesStore(): ObservableMap<string, Note> {
+        let store = pamet.noteStoresByParentId.get(this.page.id);
+        if (!store) {
+            throw new Error('[PageViewState] Notes store not found for page ' + this.page.id)
+        }
+        return store;
+    }
+
+    // get leftButtonPressed() {
+    //     return (this.mouseButtons & 1) !== 0;
+    // }
+
+    // get rightButtonPressed() {
+    //     return (this.mouseButtons & 2) !== 0;
+    // }
+
     _updateNoteViewStatesFromNotes(notes: Iterable<Note>) {
-        // console.log('Updating note view states from notes', notes)
+        console.log('Updating note view states from notes', notes)
 
         let nvsHasNoteMap = new Map<string, boolean>();
         for (let note of notes) {
@@ -216,7 +254,6 @@ export class PageViewState {
         this.mode = PageMode.None;
 
         this.dragNavigationStartPosition = null;
-        this.viewportCenterOnModeStart = null;
 
         // Drag select related
         this.mousePositionOnDragSelectionStart = null;
@@ -247,7 +284,7 @@ export class PageViewState {
             let note = noteViewState.note;
             if (radius > 0) {
                 let intersectRect = note.rect()
-                intersectRect.setSize(intersectRect.size().add(new Point2D(radius, radius)))
+                intersectRect.setSize(intersectRect.size().add(new Size(radius, radius)))
                 intersectRect.setTopLeft(intersectRect.topLeft().subtract(new Point2D(radius, radius)))
             }
             if (note.rect().contains(position)) {

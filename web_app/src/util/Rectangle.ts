@@ -1,4 +1,5 @@
 import { Point2D } from "./Point2D"
+import { Size } from "./Size";
 
 
 export type RectangleData = [number, number, number, number];
@@ -25,18 +26,22 @@ export class Rectangle {
         return this.data() === other.data()
     }
 
-    width(): number {
+    get width(): number {
         return this.w
     }
-    height(): number {
+    get height(): number {
         return this.h
     }
-    size(): Point2D {
-        return new Point2D(this.w, this.h)
+    set width(newWidth: number) {
+        this.w = newWidth
     }
-    setSize(new_size: Point2D) {
-        this.w = new_size.x
-        this.h = new_size.y
+
+    size(): Size {
+        return new Size(this.w, this.h)
+    }
+    setSize(new_size: Size) {
+        this.w = new_size.width
+        this.h = new_size.height
     }
     setWidth(new_width: number) {
         this.w = new_width
@@ -83,31 +88,6 @@ export class Rectangle {
         return new Point2D(this.left(), this.bottom())
     }
 
-
-//     def center(self) -> Point2D:
-//         return self.top_left() + self.size() / 2
-
-//     def area(self) -> Point2D:
-//         return self.width() * self. height()
-
-//     def intersection(self, other: 'Rectangle') -> Union['Rectangle', None]:
-//         """Calculate the intersection of two rectangles
-
-//         Returns:
-//             Rectangle: The intersection between two rectangles. If the
-//                        intersection is not a rectangle - returns None.
-//         """
-//         a, b = self, other
-//         x1 = max(min(a.x(), a.right()), min(b.x(), b.right()))
-//         y1 = max(min(a.y(), a.bottom()), min(b.y(), b.bottom()))
-//         x2 = min(max(a.x(), a.right()), max(b.x(), b.right()))
-//         y2 = min(max(a.y(), a.bottom()), max(b.y(), b.bottom()))
-
-//         if not (x1 < x2 and y1 < y2):
-//             return None
-
-//         return type(self)(x1, y1, x2 - x1, y2 - y1)
-
     center(): Point2D {
         return this.topLeft().add(this.size().divide(2))
     }
@@ -128,27 +108,6 @@ export class Rectangle {
 
         return new Rectangle(x1, y1, x2 - x1, y2 - y1)
     }
-
-//     def intersects(self, other: 'Rectangle') -> bool:
-//         """Returns True if there's an intersection with the given rectangle
-//         otherwise returns False
-//         """
-//         if self.intersection(other):
-//             return True
-//         else:
-//             return False
-
-//     def contains(self, point: Point2D) -> bool:
-//         """Returns True if the rectangle contains the point, otherwise False
-//         """
-//         return ((self.x() <= point.x() <= self.right()) and
-//                 (self.y() <= point.y() <= self.bottom()))
-
-//     def as_tuple(self) -> Tuple[float, float, float, float]:
-//         """Returns a list with the rectangle parameters ([x, y, w, h])
-//         """
-//         return (self._x, self._y, self._w, self._h)
-
 
     intersects(other: Rectangle): boolean {
         if (this.intersection(other)) {

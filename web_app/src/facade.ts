@@ -102,22 +102,15 @@ export class PametFacade extends PametRepository {
         this.rawChagesByParentIdChannel.push(change);
     }
 
-    // _actionParsingMiddleware = (call, next) => {
-    //     let actionState = new ActionState(call.name);
-    //     actionState.setStarted();
-
-    //     this.rootActionEventsChannel.push(actionState);
-
-    //     next(call);
-
-    //     actionState = actionState.copy();
-    //     actionState.setCompleted();
-    //     this.rootActionEventsChannel.push(actionState);
-    // }
-    // Reimplement the above to use mobx spy
-
     setWebAppState(state: WebAppState) {
         this._appState = state;
+    }
+
+    get appState(): WebAppState {
+        if (!this._appState) {
+            throw new Error('WebAppState not set');
+        }
+        return this._appState;
     }
 
     loadAllEntitiesTMP(callback_done: () => void) {
@@ -126,7 +119,7 @@ export class PametFacade extends PametRepository {
 
             // Map over the pages and return an array of promises
             const promises = pages.map((page) => {
-                this.pageStore.set(page.id, page);
+                this._loadPage(page);
 
                 // Return a promise that resolves when the children are loaded
                 return this._apiClient.children(page.id).then((children) => {
@@ -152,21 +145,25 @@ export class PametFacade extends PametRepository {
 
     }
 
-    // repo() {
-    //     return this._syncRepo;
-    // }
-
-    // setRepo(repo: Repository) {
-    //     this._syncRepo = repo;
-    // }
-
-
-
     apiClient() {
         return this._apiClient;
     }
 
+    _loadPage(page: Page) {
+        if (this.pageStore.has(page.id)) {
+            throw new Error('Page with id ' + page.id + ' already exists');
+        }
+        this.pageStore.set(page.id, page);
+
+        // Create a note store for the page
+        if (this.noteStoresByParentId.get(page.id) !== undefined) {
+            throw new Error('Note store for page with id ' + page.id + ' already exists');
+        }
+        this.noteStoresByParentId.set(page.id, new ObservableMap());
+    }
+
     _loadOneNote(note: Note) {
+        console.log('loading note', note)
         if (this.noteStore.has(note.id)) {
             throw new Error('Note with id ' + note.id + ' already exists');
         }
@@ -175,9 +172,7 @@ export class PametFacade extends PametRepository {
         // Update the per parent index
         let perParentStore = this.noteStoresByParentId.get(note.parentId);
         if (perParentStore === undefined) {
-            // console.log('creating noteStoresByParentId for', note.parentId)
-            perParentStore = new ObservableMap();
-            this.noteStoresByParentId.set(note.parentId, perParentStore);
+            throw new Error('Notes by parent id ' + note.parentId + ' does not exist');
         }
         perParentStore.set(note.id, note);
     }
@@ -206,7 +201,7 @@ export class PametFacade extends PametRepository {
             if (this.pageStore.has(entity.id)) {
                 throw new Error('Page with id ' + entity.id + ' already exists');
             }
-            this.pageStore.set(entity.id, entity);
+            this._loadPage(entity);
         }
         else if (entity instanceof Note) {
             this._loadOneNote(entity);
@@ -368,6 +363,7 @@ export class PametFacade extends PametRepository {
         let change = Change.delete(oldState);
         if (entity instanceof Page) {
             this.pageStore.delete(entity.id);
+            // Remove notes store for the page?
         }
         else if (entity instanceof Note) {
             this.noteStore.delete(entity.id);
@@ -390,14 +386,6 @@ export class PametFacade extends PametRepository {
         this.rawChagesChannel.push(change);
         return change;
     }
-
-    // Entity CRUD
-
-
-    // Pages CRUD
-    // pages(filter){
-
-    // }
 }
 
 export const pamet = new PametFacade();

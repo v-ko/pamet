@@ -1,15 +1,18 @@
-import { SelectionDict as SelectionMap } from "../util";
+import { SelectionDict as SelectionMap, snapVectorToGrid } from "../util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/page/PageViewState";
 import { Point2D } from "../util/Point2D";
 
-// import { makeObservable } from "mobx";
-// import { action } from "mobx"
 import { action } from "../fusion/libs/Action";
 
 import { getLogger } from "../fusion/logging";
 import { Rectangle } from "../util/Rectangle";
 import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../constants";
 import { EditComponentState } from "../components/note/EditComponent";
+import { pamet } from "../facade";
+import { Note } from "../model/Note";
+import { TextNote } from "../model/TextNote";
+import { minimalNonelidedSize } from "../components/note/util";
+import { NoteViewState } from "../components/note/NoteViewState";
 
 let log = getLogger('MapActions');
 
@@ -32,6 +35,18 @@ class PageActions {
     state.viewportHeight = viewportHeight
   }
 
+  // Don't include the mouse tracking with the user actions. We need it for
+  // the commands though (e.g. creating a note via command)
+  @action({ name: 'setRealMousePositionOnCanvas', issuer: 'PageView' })
+  updateMousePosition(state: PageViewState, pixelSpaceMousePos: Point2D | null) {
+    if (pixelSpaceMousePos === null) {
+      state.realMousePositionOnCanvas = null;
+      return;
+    }
+    let realMousePos = state.viewport.unprojectPoint(pixelSpaceMousePos);
+    state.realMousePositionOnCanvas = realMousePos;
+  }
+
   @action
   startDragNavigation(
     state: PageViewState,
@@ -44,12 +59,6 @@ class PageActions {
 
   @action
   dragNavigationMove(state: PageViewState, delta: Point2D) {
-
-    if (state.viewportCenterOnModeStart === null) {
-      log.error('dragNavigationMove called without viewportCenterOnModeStart');
-      return;
-    }
-
     let deltaUnprojected = delta.divide(state.viewport.heightScaleFactor());
     state.viewportCenter = state.viewportCenterOnModeStart.add(deltaUnprojected);
   }
@@ -61,7 +70,6 @@ class PageActions {
 
   @action
   updateSelection(state: PageViewState, selectionMap: SelectionMap) {
-    console.log('[updateSelection]', state, selectionMap);
     // Add all keys that are true to the selection
     for (let [pageChild, selected] of selectionMap) {
       // let selected = selectionMap.get(pageChild);
@@ -75,7 +83,6 @@ class PageActions {
 
   @action
   clearSelection(state: PageViewState) {
-    console.log('[clearSelection]');
     let selectionMap: SelectionMap = new Map();
     for (let noteVS of state.selectedElements) {
       selectionMap.set(noteVS, false);
@@ -197,9 +204,109 @@ class PageActions {
   }
 
   @action
-  startNoteCreation(state: PageViewState, position: Point2D) {
-    let editWindowState = new EditComponentState();
+  startNoteCreation(state: PageViewState, realPosition: Point2D) {
+    let pixSpacePosition = state.viewport.projectPoint(realPosition);
+    let note = TextNote.default(state.page.id);
+    let noteRect = note.rect()
+    noteRect.setTopLeft(realPosition)
+    note.setRect(noteRect)
+
+    let editWindowState = new EditComponentState(pixSpacePosition, note);
     state.noteEditWindowState = editWindowState;
+  }
+
+  @action
+  startEditingNote(state: PageViewState, note: Note) {
+    let spawnPos = state.viewport.projectPoint(note.rect().topLeft());
+    let editWindowState = new EditComponentState(spawnPos, note);
+    state.noteEditWindowState = editWindowState;
+  }
+
+  @action
+  saveEditedNote(state: PageViewState, note: Note) {
+    let editWS = state.noteEditWindowState;
+
+    if (editWS === null) {
+      throw Error('saveEditedNote called without noteEditWindowState')
+    }
+
+    // If creating
+    if (editWS.creatingNote) {
+      let newNote = note;
+      // Autosize the note
+      let minimalSize = minimalNonelidedSize(newNote);
+      let rect = newNote.rect();
+      rect.setSize(snapVectorToGrid(minimalSize));
+      rect.setTopLeft(snapVectorToGrid(rect.topLeft()));
+      newNote.setRect(rect);
+      pamet.insertNote(newNote);
+
+    } else { // If editing
+      let editedNote = note;
+      pamet.updateNote(editedNote);
+    }
+    state.noteEditWindowState = null;
+  }
+
+  @action
+  abortEditingNote(state: PageViewState) {
+    state.noteEditWindowState = null;
+  }
+
+  @action
+  startEditWindowDrag(state: PageViewState, clickPos: Point2D) {
+    state.setMode(PageMode.DraggingEditWindow);
+    let editWS = state.noteEditWindowState!;
+    if (editWS === null) {
+      log.error('startEditWindowDrag called without noteEditWindowState');
+      return;
+    }
+
+    editWS.isBeingDragged = true;
+    editWS.dragStartClickPos = clickPos;
+    editWS.topLeftOnDragStart = editWS.center;
+  }
+
+  @action
+  updateEditWindowDrag(state: PageViewState, mousePos: Point2D) {
+    let editWS = state.noteEditWindowState!;
+    if (editWS === null) {
+      log.error('updateEditWindowDrag called without noteEditWindowState');
+      return;
+    }
+    let delta = mousePos.subtract(editWS.dragStartClickPos);
+    editWS.center = editWS.topLeftOnDragStart.add(delta);
+  }
+
+  @action
+  endEditWindowDrag(state: PageViewState) {
+    state.clearMode();
+  }
+
+  @action
+  clearMode(state: PageViewState) {
+    state.clearMode();
+  }
+
+  @action
+  autoSizeSelectedNotes(state: PageViewState) {
+    for (let elementVS of state.selectedElements) {
+      if (!(elementVS instanceof NoteViewState)) { // Skip arrows
+        continue;
+      }
+      let noteVS = elementVS as NoteViewState;
+      let note = noteVS.note;
+      let minimalSize = minimalNonelidedSize(note);
+      let rect = note.rect();
+      let newSize = snapVectorToGrid(minimalSize)
+
+      if (rect.size().equals(newSize)) {  // Skip if the size is the same
+        continue;
+      }
+      rect.setSize(newSize);
+      note.setRect(rect);
+      pamet.updateNote(note);
+    }
   }
 }
 

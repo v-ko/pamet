@@ -1,26 +1,33 @@
 import { Entity, EntityData } from "../fusion/libs/Entity";
 
 export interface PametElementData extends EntityData {
-    page_id: string;
-    own_id: string;
+    // page_id: string;
+    // own_id: string;
 }
+
+export function elementId(page_id: string, own_id: string): string {
+    return `${page_id}-${own_id}`
+}
+
+export function elementPageId(id: string): string {
+    return id.split('-')[0]
+}
+
+export function elementOwnId(id: string): string {
+    return id.split('-')[1]
+}
+
 
 export class PametElement<T extends PametElementData> extends Entity<T> implements PametElementData {
 
-    get id(): string {
-        if (this._data.page_id === undefined || this._data.own_id === undefined){
-            console.log(this)
-            throw new Error('FUCK')
-        }
-        return `${this._data.page_id}-${this._data.own_id}`
-    }
+
     get page_id(): string {
-        return this._data.page_id;
+        return elementPageId(this.id);
     }
     get own_id(): string {
-        return this._data.own_id;
+        return elementOwnId(this.id);
     }
     get parentId(): string {
-        return this._data.page_id;
+        return this.page_id
     }
 }

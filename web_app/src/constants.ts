@@ -27,6 +27,12 @@ export const DEFAULT_NOTE_FONT_SIZE = 18
 export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
 export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'
 export const DEFAULT_NOTE_LINE_HEIGHT = 20
+export const PREFERRED_TEXT_NOTE_ASPECT_RATIO = 5
+
+
+export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_LINE_HEIGHT}px ` +
+    `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
+    `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
 
 export const ARROW_SELECTION_RADIUS = 10
 
@@ -38,4 +44,5 @@ export const POTENTIAL_EDGE_RADIUS = CONTROL_POINT_RADIUS * 0.7
 
 // Page render and cache related
 export const MAX_RENDER_TIME = 0.017  // (in seconds) ~60 fps
-export const IMAGE_CACHE_PADDING = 3
+export const IMAGE_CACHE_PADDING = 3;
+

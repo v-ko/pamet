@@ -9,14 +9,19 @@ import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
 import { getLogger } from '../../fusion/logging';
-import { reaction } from 'mobx';
+import { reaction, runInAction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
 import { CanvasPageRenderer } from './DirectRenderer';
 import { ElementViewState } from './ElementViewState';
 import { pamet } from '../../facade';
 import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
-import { CanvasReactComponent } from './ReactRenderingComponent';
+// import { CanvasReactComponent } from './ReactRenderingComponent';
+import { commands } from '../../commands';
+import EditComponent from '../note/EditComponent';
+import { NoteViewState } from '../note/NoteViewState';
+import { Size } from '../../util/Size';
+import { Note } from '../../model/Note';
 
 
 let log = getLogger('Page.tsx')
@@ -24,16 +29,6 @@ let log = getLogger('Page.tsx')
 // const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
 // type Status = 'loading' | 'error' | 'loaded';
 
-export const PageViewStyled = styled.div`
-width: 100%;
-height: 100%;
-overflow: hidden;
-display: flex;
-@media (max-width: 768px) {
-  flex-direction: column;
-  flex-flow: column-reverse;
-}
-`;
 
 export const PageOverlay = styled.div`
 content-visibility: auto;
@@ -44,16 +39,35 @@ touch-action: none;
 min-width: 30px;
 `
 
+export class MouseState {
+  buttons: number = 0;
+  position: Point2D = new Point2D(0, 0);
+  positionOnPress: Point2D = new Point2D(0, 0);
+  buttonsOnLeave: number = 0;
+
+  get rightIsPressed() {
+    return (this.buttons & 2) !== 0;
+  }
+  get leftIsPressed() {
+    return (this.buttons & 1) !== 0;
+  }
+  applyPressEvent(event: React.MouseEvent) {
+    this.positionOnPress = new Point2D(event.clientX, event.clientY);
+    this.buttons = event.buttons;
+  }
+  applyMoveEvent(event: React.MouseEvent) {
+    this.position = new Point2D(event.clientX, event.clientY);
+  }
+  applyReleaseEvent(event: React.MouseEvent) {
+    this.buttons = event.buttons;
+  }
+}
+
 export const PageView = observer(({ state }: { state: PageViewState }) => {
   /**  */
   // trace(true)
 
-  const [mousePosOnPress, setMousePosOnPress] = useState<Point2D>(new Point2D(0, 0));
-
-  const [leftMouseIsPressed, setLeftMouseIsPressed] = useState<boolean>(false);
-  const [mousePosOnLeftPress, setMousePosOnLeftPress] = useState<Point2D>(new Point2D(0, 0));
-
-  const [rightMouseIsPressed, setRightMouseIsPressed] = useState<boolean>(false);
+  const [mouse] = useState(new MouseState());
 
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
   const [pinchInProgress, setPinchInProgress] = useState<boolean>(false);
@@ -64,27 +78,36 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paperCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [cacheService, setCacheService] = useState(new CanvasPageRenderer());
-  const [navDeviceAutoSwitcher, setNavDeviceAutoSwitcher] = useState(new NavigationDeviceAutoSwitcher());
+  const [cacheService] = useState(new CanvasPageRenderer());
+  const [navDeviceAutoSwitcher] = useState(new NavigationDeviceAutoSwitcher());
 
   const canvasCtx = useCallback(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[useEffect] canvas is null")
+      console.log("[canvasCtx] canvas is null")
       return null;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[useEffect] canvas context is null")
+      console.log("[canvasCtx] canvas context is null")
       return null;
     }
     return ctx;
   }
     , [canvasRef]);
 
-  // Initial setup - init paperjs
+  // Initial setup -
+  useEffect(() => {
+    if (!superContainerRef.current) {
+      console.error('superContainerRef is null')
+      return;
+    }
+    superContainerRef.current.focus()
+  }, [superContainerRef]);
+
+  // init paperjs
   useEffect(() => {
     console.log("[useEffect] INTO INIT")
     const paperCanvas = paperCanvasRef.current;
@@ -94,18 +117,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
     paper.setup(paperCanvas);
     paper.view.autoUpdate = false;
-
-
-    // // Initial render
-    // setTimeout(() => {
-    //   console.log("[useEffect.setTimeout] INTO TIMEOUT")
-    //   let ctx = canvasCtx()
-    //   if (ctx === null) {
-    //     console.log("[useEffect] canvas context is null")
-    //     return;
-    //   }
-    //   cacheService.renderPage(state, ctx);
-    // }, 1);
 
   }, [state, canvasCtx, paperCanvasRef, cacheService]);
 
@@ -219,33 +230,31 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // let mousePos = mapClientPointToSuperContainer(new Point2D(event.clientX, event.clientY));
     let mousePos = new Point2D(event.clientX, event.clientY);
 
-    setMousePosOnPress(mousePos);
+    mouse.applyPressEvent(event);
     if (event.button === 2) {
-      setRightMouseIsPressed(true);
+      // setRightMouseIsPressed(true);
     }
     if (event.button === 0) {
-      setLeftMouseIsPressed(true);
-      setMousePosOnLeftPress(mousePos);
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y)
 
-  }, []);
+  }, [mouse]);
 
   const handleMouseMove = useCallback((event) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
-    let pressPos = mousePosOnPress;
+    let pressPos = mouse.positionOnPress;
     let delta = pressPos.subtract(mousePos);
 
-    // if (event.buttons === 1) {
-    //   console.log('mouse move, left button', PageMode[state.mode])
-    // }
+    pageActions.updateMousePosition(state, mousePos);
 
     if (state.mode === PageMode.None) {
-      if (rightMouseIsPressed) {
+      if (mouse.rightIsPressed) {
         pageActions.startDragNavigation(state, pressPos)
         pageActions.dragNavigationMove(state, delta)
         navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D(event.movementX, event.movementY));
-      } else if (leftMouseIsPressed) {
+      } else if (mouse.leftIsPressed) {
+        console.log('Mouse move', PageMode[state.mode], 'left button')
+        console.log('leftmouseispressed', mouse.leftIsPressed)
 
         pageActions.clearSelection(state);
         pageActions.startDragSelection(state, pressPos);
@@ -255,14 +264,15 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.dragNavigationMove(state, delta);
     } else if (state.mode === PageMode.DragSelection) {
       pageActions.updateDragSelection(state, mousePos);
+    } else if (state.mode === PageMode.DraggingEditWindow) {
+      pageActions.updateEditWindowDrag(state, mousePos);
     }
-    // }
-  }, [leftMouseIsPressed, mousePosOnPress, navDeviceAutoSwitcher, rightMouseIsPressed, state]);
+  }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
   const handleMouseUp = useCallback((event) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
 
-    let pressPos = mousePosOnPress;
+    let pressPos = mouse.positionOnPress;
     let realPos = state.viewport.unprojectPoint(mousePos);
     let ctrlPressed = event.ctrlKey;
     let shiftPressed = event.shiftKey;
@@ -276,8 +286,10 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     console.log('Mouse up', PageMode[state.mode], 'button', event.button, elementUnderMouse)
 
     event.preventDefault();
-    if (event.button === 0) { // Left press
-      setLeftMouseIsPressed(false);
+    mouse.buttons = event.buttons;
+
+    if (event.button === 0) { // Left press (different from the .buttons left button index, because fu)
+      console.log()
       if (state.mode === PageMode.None) {
         if (ctrlPressed && !shiftPressed) { // Toggle selection
           if (elementUnderMouse !== null) {
@@ -307,13 +319,12 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       else if (state.mode === PageMode.DragNavigation) {
         pageActions.endDragNavigation(state);
       } else if (state.mode === PageMode.DragSelection) {
-
         pageActions.endDragSelection(state);
-
+      } else if (state.mode === PageMode.DraggingEditWindow) {
+        pageActions.endEditWindowDrag(state);
       }
     }
     if (event.button === 2) { // Right press
-      setRightMouseIsPressed(false);
       if (mousePos.equals(pressPos)) {
         alert('Context menu not implemented yet')
       }
@@ -322,10 +333,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         pageActions.endDragNavigation(state);
       }
     }
-    // console.log('mouse up')
-
-
-  }, [state, mousePosOnPress]);
+  }, [state, mouse.positionOnPress, mouse]);
 
   const handleWheel = useCallback((event) => {
     event.preventDefault();
@@ -349,9 +357,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.updateViewport(state, new_center, new_height);
     } else if (navDeviceAutoSwitcher.device === NavigationDevice.TOUCHPAD) {
       let delta = new Point2D(event.deltaX, event.deltaY);
-      // mapActions.startDragNavigation(state, mousePos);
-      // mapActions.dragNavigationMove(state, delta);
-      // mapActions.endDragNavigation(state);
       let newViewportCenter = state.viewportCenter.add(delta.divide(state.viewport.heightScaleFactor()));
       pageActions.updateViewport(state, newViewportCenter, state.viewportHeight);
     }
@@ -362,7 +367,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // Only for single finger touch
     if (event.touches.length === 1) {
       let touchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
-      setMousePosOnPress(touchPos);
+      mouse.positionOnPress = touchPos;  // Revize this
       pageActions.startDragSelection(state, touchPos)
     } else if (event.touches.length === 2) {
       // The pinch gesture navigation is a combination of dragging and zooming
@@ -383,7 +388,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
       pageActions.startDragNavigation(state, initPinchCenter)
     }
-  }, [state]);
+  }, [state, mouse]);
 
   const handeTouchMove = useCallback((event) => {
     if (event.touches.length === 1) {
@@ -406,16 +411,16 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         // Move the center according to the pinch center
         let delta = initialPinchCenter.subtract(newPinchCenter);
         let delta_unproj = delta.divide(state.viewport.heightScaleFactor());
-        let new_center = state.viewportCenterOnModeStart?.add(delta_unproj) as Point2D;
+        let new_center = state.viewportCenterOnModeStart.add(delta_unproj);
 
         // Apply the correction to make the zoom focused on the pinch center
         // M - mouse pos (unprojected), C - viewport center. s - scale
         // M' = M * s, C' = C * s : M and C after the scale
         // V = (M - C) - (M' - C'): the vector of change for M
         // correction = - ( V ) = (M - C) - (M' - C') = (M - C) * (1 - s)
-        let old_viewport = new Viewport(state.viewportCenterOnModeStart as Point2D, pinchStartViewportHeight, state.viewportGeometry);
+        let old_viewport = new Viewport(state.viewportCenterOnModeStart, pinchStartViewportHeight, state.viewportGeometry);
         let unprInitPinchCenter = old_viewport.unprojectPoint(initialPinchCenter);
-        let focusDelta = unprInitPinchCenter.subtract(state.viewportCenterOnModeStart as Point2D);
+        let focusDelta = unprInitPinchCenter.subtract(state.viewportCenterOnModeStart);
         let correction = focusDelta.multiply(
           1 - new_height / pinchStartViewportHeight);
         new_center = new_center.add(correction)
@@ -435,6 +440,12 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     setPinchInProgress(false);
   }, [state]);
 
+  const handleMouseLeave = (event: MouseEvent) => {
+    // Clear the mode (for most modes), to avoid weird behavior
+    // currently those are not implemented actually
+    pageActions.updateMousePosition(state, null);
+    mouse.buttonsOnLeave = event.buttons;
+  }
 
   const handleMouseEnter = (event: MouseEvent) => {
     // If the mouse is not pressed and we're in some mode, then
@@ -443,46 +454,87 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // So we need to infer what to do on reentry.
     // Currently only dragging navigation/selection can be resumed on reentry.
     // Everything else should be cancelled on mouseleave
-    if (state.mode === PageMode.DragNavigation ||
-      state.mode === PageMode.DragSelection) {
-      if (event.buttons === 0) {
-        // Clear the state
-        pageActions.endDragNavigation(state);
-      }
+
+    console.log('MOUSE ENTER!!')
+
+    // Update the mouse position in the state
+    pageActions.updateMousePosition(state, new Point2D(event.clientX, event.clientY));
+
+    // If the mouse was released outside of the page, we need to clear the mode
+    if (mouse.buttonsOnLeave > event.buttons) {
+      log.info('Mouse buttons released off-window. Clearing mode')
+      pageActions.clearMode(state);
+      mouse.buttons = 0;
     }
   }
 
-  const handleMouseLeave = (event: MouseEvent) => {
-    // Clear the mode (for most modes), to avoid weird behavior
-    // currently those are not implemented actually
-  }
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    console.log('KEY PRESSED', event.code)
+    if (event.key === 'c' && event.ctrlKey) {
+      // event.preventDefault();
+      // copySelectedToClipboard();
+    }
+    else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
+      // Zoom in
+      pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
+      event.preventDefault();
+    } else if (event.ctrlKey && event.key === '-') { // Minus key
+      // Zoom out
+      pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
+      event.preventDefault();
+    } else if (event.ctrlKey && event.key === '0') { // Zero key
+      // Reset zoom level
+      // event.preventDefault();
+    } else if (event.code === 'KeyN') {
+      // Start note creation
+      commands.createNewNote();
+      event.preventDefault();
+    } else if (event.code === 'KeyA' && event.ctrlKey) {
+      // Select all
+      event.preventDefault();
+      let selectionMap = new Map();
+      for (let noteVS of state.noteViewStatesByOwnId.values()) {
+        selectionMap.set(noteVS, true);
+      }
+      for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
+        selectionMap.set(arrowVS, true);
+      }
+      pageActions.updateSelection(state, selectionMap);
+    } else if (event.code === 'KeyA') {
+      // Auto-size selected notes
+      pageActions.autoSizeSelectedNotes(state);
+    } else if (event.code === 'KeyY') {  // Dummy resize for testing auto-size
+      runInAction(() => {
+        console.log('Running dummy resize')
+        for (let element of state.selectedElements.values()) {
+          if (element instanceof NoteViewState) {
+            let note = element.note;
+            let rect = note.rect();
+            rect.setSize(new Size(200, 200));
+            note.setRect(rect);
+            pamet.updateNote(note);
+          }
+        }
+      });
+    } else if (event.code === 'KeyE') {
+      // Start editing the selected note
+      let selectedNote: Note | null = null;
+      for (let element of state.selectedElements.values()) {
+        if (element instanceof NoteViewState) {
+          selectedNote = element.note;
+          break;
+        }
+      }
+      if (selectedNote !== null) {
+        pageActions.startEditingNote(state, selectedNote);
+      }
+    }
+  }, [state]);
 
   // Add native handlers for key/shortcut and wheel events
   useEffect(() => {
     // Existing keydown handler remains unchanged
-    const handleKeyDown = (event) => {
 
-      if (event.key === 'c' && event.ctrlKey) {
-        // event.preventDefault();
-        // copySelectedToClipboard();
-      }
-      else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
-        // Zoom in
-        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
-        event.preventDefault();
-      } else if (event.ctrlKey && event.key === '-') { // Minus key
-        // Zoom out
-        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
-        event.preventDefault();
-      } else if (event.ctrlKey && event.key === '0') { // Zero key
-        // Reset zoom level
-        // event.preventDefault();
-      } else if (event.key === 'n') {
-        // Start note creation
-        pageActions.startNoteCreation(state, state.viewportCenter);
-        event.preventDefault();
-      }
-    };
 
     // Add both event listeners
     window.addEventListener("keydown", handleKeyDown);
@@ -493,27 +545,62 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [state, handleWheel]);
+  }, [state, handleWheel, handleKeyDown]);
 
+  const handleDoubleClick = (event: React.MouseEvent) => {
+    let mousePos = new Point2D(event.clientX, event.clientY);
+    let realPos = state.viewport.unprojectPoint(mousePos);
+    let noteVS_underMouse = state.noteViewStateAt(realPos)
+    if (noteVS_underMouse !== null) {
+      pageActions.startEditingNote(state, noteVS_underMouse.note);
+    } else {
+      let realMousePos = state.viewport.unprojectPoint(mousePos);
+      pageActions.startNoteCreation(state, realMousePos);
+    }
+  }
+
+  // Edit-window related.
+  // The mouse event handling is tricky, since it's nicer to use the title-bar
+  // onDown/Up/.. signals (we can't make the whole component transparent to
+  // pointer events, since it has a lot of functionality). So we catch the
+  // mouseDown and mouseUp events on the title-bar handle and trigger the
+  // edit-window-drag events accodingly. Also we update the mouse state, because
+  // we need to properly handle enter/leave events (and offscreen mouse release)
+  const handleEditWindowDragHandlePress = (event: React.MouseEvent) => {
+    event.preventDefault();
+    let mousePos = new Point2D(event.clientX, event.clientY);
+    mouse.applyPressEvent(event);
+    pageActions.startEditWindowDrag(state, mousePos);
+  }
+  const handleEditWindowDragHandleRelease = (event: React.MouseEvent) => {
+    event.preventDefault();
+    mouse.applyReleaseEvent(event);
+    pageActions.endEditWindowDrag(state);
+  }
   // Rendering related
 
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
-  let imageUrls: string[] = []
+  let imageUrls: Set<string> = new Set();
   for (let noteVS of state.noteViewStatesByOwnId.values()) {
     let note = noteVS.note
     if (note.content.image !== undefined) {
       let url = note.content.image.url;
-      imageUrls.push(pamet.pametSchemaToHttpUrl(url));
+      imageUrls.add(pamet.pametSchemaToHttpUrl(url));
     }
   }
 
   return (
-    <PageViewStyled>
+    <main
+      className='page-view'  // index.css
+
+    >
       <PageOverlay
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
         ref={superContainerRef}
-
+        tabIndex={0}  // To make the page focusable
+        onKeyDown={handleKeyDown}
+        onDoubleClick={handleDoubleClick}
         // we watch for mouse events here, to get them in pixel space coords
         // onWheel={handleWheel} << this is added with useEffect in order to use passve: false
         onMouseDown={handleMouseDown}
@@ -568,6 +655,21 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         />
       }
 
+      {/* Edit window (if open) */}
+      {state.noteEditWindowState &&
+        <EditComponent
+          state={state.noteEditWindowState}
+          onTitlebarPress={handleEditWindowDragHandlePress}
+          onTitlebarRelease={handleEditWindowDragHandleRelease}
+          onCancel={() => {
+            pageActions.abortEditingNote(state)
+          }}
+          onSave={(note) => {
+            pageActions.saveEditedNote(state, note)
+          }}
+        />
+      }
+
       {/* Image elements (to be used by the cache renderer)
       pamet.parseMediaUrl(url!)
       */}
@@ -584,6 +686,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           />
         ))}
 
-    </PageViewStyled>
+    </main>
   );
 });
