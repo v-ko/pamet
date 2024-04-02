@@ -6,6 +6,7 @@ import { Arrow } from "../model/Arrow";
 import { getLogger } from "../fusion/logging";
 import { BaseApiClient } from "../fusion/storage/BaseApiClient";
 import { loadFromDict } from "../fusion/libs/Entity";
+import { elementId } from "../model/Element";
 
 let log = getLogger('ApiClient');
 
@@ -49,9 +50,7 @@ export class ApiClient extends BaseApiClient {
             if (page_id === undefined || own_id === undefined) {
                 throw new Error('Bad id')
             }
-            childData.page_id = page_id;
-            childData.own_id = own_id;
-            delete childData.id;
+            childData.id = elementId(page_id, own_id);
 
             // Fill style where missing
             if (childData.style === undefined) {

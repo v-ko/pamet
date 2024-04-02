@@ -1,11 +1,12 @@
 import { computed, makeObservable, observable, reaction } from "mobx";
 import { Note } from "../../model/Note";
-import { TextLayout, calculateTextLayout } from "../../util";
+import { TextLayout } from "../../util";
+import { calculateTextLayout } from "./util";
 import { pamet } from "../../facade";
 import { Change } from "../../fusion/Change";
 import { getLogger } from "../../fusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
-import { defaultFontString, textRect } from "./NoteCanvasView";
+import { DEFAULT_FONT_STRING } from "../../constants";
 import { SerializedEntity, dumpToDict, loadFromDict } from "../../fusion/libs/Entity";
 
 let log = getLogger('NoteViewState.ts');
@@ -44,7 +45,7 @@ export class NoteViewState extends ElementViewState {
         this._noteData = dumpToDict(note);
     }
     get textLayoutData(): TextLayout {
-        return calculateTextLayout(this.note.content.text || '', textRect(this.note.rect()), defaultFontString);
+        return calculateTextLayout(this.note.text, this.note.textRect(), DEFAULT_FONT_STRING);
     }
     handleNoteUpdate = (change: Change) => {
         if (change.isUpdate()) {

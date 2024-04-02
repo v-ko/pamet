@@ -4,6 +4,7 @@ import { Rectangle } from "../util/Rectangle";
 import { PametElement, PametElementData } from "./Element";
 import { Point2D } from "../util/Point2D";
 import { ArrowAnchorType } from "./Arrow";
+import { textRect } from "../components/note/util";
 
 export interface ImageMetadata {
     url: string;
@@ -26,7 +27,6 @@ export interface NoteStyle {
 export interface NoteMetadata {
 }
 export interface NoteData extends PametElementData {
-    own_id: string;
     content: NoteContent;
     geometry: [number, number, number, number];
     style: NoteStyle;
@@ -36,10 +36,17 @@ export interface NoteData extends PametElementData {
     tags: string[];
 }
 
+export interface SerializedNote extends NoteData {
+    type_name: string;
+}
+
 // @entityType('Note')
 export class Note extends PametElement<NoteData> implements NoteData {
     rect(): Rectangle {
         return new Rectangle(...this._data.geometry);
+    }
+    setRect(rect: Rectangle) {
+        this._data.geometry = rect.data();
     }
     get geometry(): [number, number, number, number] {
         return this._data.geometry;
@@ -68,16 +75,22 @@ export class Note extends PametElement<NoteData> implements NoteData {
         const rect = this.rect();
         switch (anchorType) {
             case ArrowAnchorType.MID_LEFT:
-                return rect.topLeft().add(new Point2D(0, rect.height() / 2));
+                return rect.topLeft().add(new Point2D(0, rect.height / 2));
             case ArrowAnchorType.TOP_MID:
-                return rect.topLeft().add(new Point2D(rect.width() / 2, 0));
+                return rect.topLeft().add(new Point2D(rect.width / 2, 0));
             case ArrowAnchorType.MID_RIGHT:
-                return rect.topRight().add(new Point2D(0, rect.height() / 2));
+                return rect.topRight().add(new Point2D(0, rect.height / 2));
             case ArrowAnchorType.BOTTOM_MID:
-                return rect.bottomLeft().add(new Point2D(rect.width() / 2, 0));
+                return rect.bottomLeft().add(new Point2D(rect.width / 2, 0));
             default:
                 throw new Error('Invalid anchor type');
         }
     }
 
+    get text(): string {
+        return this._data.content.text || '';
+    }
+    textRect(): Rectangle {
+        return textRect(this.rect());
+    }
 }

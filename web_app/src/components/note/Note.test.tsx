@@ -40,8 +40,6 @@ describe('NoteContainer', () => {
             modified: '2021-01-01',
             metadata: {},
             tags: [],
-            page_id: '11111',
-            own_id: '22222',
         }));
 
         render(

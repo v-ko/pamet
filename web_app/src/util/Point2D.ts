@@ -1,8 +1,35 @@
 // import { Point2D } from '../types/util';
 export type PointData = [number, number];
 
-export class Point2D {
+export class Vector2D {
   constructor(public x: number = 0, public y: number = 0) { }
+
+  equals(other: Vector2D): boolean {
+    return this.x === other.x && this.y === other.y;
+  }
+
+  add(other: Vector2D): this {
+    return new (this.constructor as any)(this.x + other.x, this.y + other.y);
+  }
+
+  subtract(other: Vector2D): this {
+    return new (this.constructor as any)(this.x - other.x, this.y - other.y);
+  }
+
+  divide(k: number): this {
+    return new (this.constructor as any)(this.x / k, this.y / k);
+  }
+
+  round(): this {
+    return new (this.constructor as any)(Math.round(this.x), Math.round(this.y));
+  }
+
+  multiply(k: number): this {
+    return new (this.constructor as any)(this.x * k, this.y * k);
+  }
+}
+
+export class Point2D  extends Vector2D {
 
   static fromData(obj: PointData): Point2D {
     return new Point2D(obj[0], obj[1]);
@@ -18,30 +45,6 @@ export class Point2D {
 
   toString(): string {
     return `<Point x=${this.x} y=${this.y}>`;
-  }
-
-  equals(other: Point2D): boolean {
-    return this.x === other.x && this.y === other.y;
-  }
-
-  add(other: Point2D): Point2D {
-    return new Point2D(this.x + other.x, this.y + other.y);
-  }
-
-  subtract(other: Point2D): Point2D {
-    return new Point2D(this.x - other.x, this.y - other.y);
-  }
-
-  divide(k: number): Point2D {
-    return new Point2D(this.x / k, this.y / k);
-  }
-
-  round(): Point2D {
-    return new Point2D(Math.round(this.x), Math.round(this.y));
-  }
-
-  multiply(k: number): Point2D {
-    return new Point2D(this.x * k, this.y * k);
   }
 
   distanceTo(point: Point2D): number {
