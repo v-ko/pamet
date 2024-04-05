@@ -13,32 +13,33 @@ let log = getLogger("App");
 // Define the app state with mobx and typescript
 export class WebAppState {
   // Define the state
-  currentPageId: string | null = null;
+  // currentPageId: string | null = null;
+  currentPageViewState: PageViewState | null = null;
   errorMessage: string | null = null;
   currentUrlPath: string | null = null;
   loading: boolean = true
 
   constructor() {
     makeObservable(this, {
-      currentPageId: observable,
+      // currentPageId: observable,
       errorMessage: observable,
       currentUrlPath: observable,
       loading: observable,
-      currentPageViewState: computed
+      currentPageViewState: observable
     });
   }
 
-  get currentPageViewState(): PageViewState | null {
-    if (!this.currentPageId) {
-      return null;
-    }
-    let page = pamet.page(this.currentPageId);
-    if (!page) {
-      return null;
-    }
-    let pageViewState = new PageViewState(page);
-    return pageViewState
-  }
+  // get currentPageViewState(): PageViewState | null {
+  //   if (!this.currentPageId) {
+  //     return null;
+  //   }
+  //   let page = pamet.page(this.currentPageId);
+  //   if (!page) {
+  //     return null;
+  //   }
+  //   let pageViewState = new PageViewState(page);
+  //   return pageViewState
+  // }
 }
 
 
@@ -75,6 +76,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         console.log("Url not supported", urlPath)
         appActions.setCurrentPage(state, null);
       }
+
     });
   }, [state]);
 
