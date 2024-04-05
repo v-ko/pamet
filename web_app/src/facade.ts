@@ -300,7 +300,7 @@ export class PametFacade extends PametRepository {
         }
 
         // Filter the collected matches based on otherFilters and yield the valid ones
-        for (let match of matches) {
+        for (let match of matches as Record<string, any>[]) {
             let matchIsValid = true;
             for (let key in otherFilters) {
                 if (match[key] !== otherFilters[key]) {
@@ -309,7 +309,7 @@ export class PametFacade extends PametRepository {
                 }
             }
             if (matchIsValid) {
-                yield match;
+                yield match as Entity<EntityData>;
             }
         }
     }
@@ -339,7 +339,7 @@ export class PametFacade extends PametRepository {
             if (!noteStoreForPageId) {
                 throw new Error('Notes by parent id ' + entity.parentId + ' does not exist');
             }
-            noteStoreForPageId[entity.id] = entity;
+            noteStoreForPageId.set(entity.id, entity);
         }
         else if (entity instanceof Arrow) {
             this.arrowStore.set(entity.id, entity);
@@ -348,7 +348,7 @@ export class PametFacade extends PametRepository {
             if (!arrowStoreForPageId) {
                 throw new Error('Arrows by parent id ' + entity.parentId + ' does not exist');
             }
-            arrowStoreForPageId[entity.id] = entity;
+            arrowStoreForPageId.set(entity.id, entity)
         }
 
         this.rawChagesChannel.push(change);
@@ -372,7 +372,7 @@ export class PametFacade extends PametRepository {
             if (!noteStoreForPageId) {
                 throw new Error('Notes by parent id ' + entity.parentId + ' does not exist');
             }
-            delete noteStoreForPageId[entity.id]
+            noteStoreForPageId.delete(entity.id);
         }
         else if (entity instanceof Arrow) {
             this.arrowStore.delete(entity.id);
@@ -381,7 +381,7 @@ export class PametFacade extends PametRepository {
             if (!arrowStoreForPageId) {
                 throw new Error('Arrows by parent id ' + entity.parentId + ' does not exist');
             }
-            delete arrowStoreForPageId[entity.id]
+            arrowStoreForPageId.delete(entity.id);
         }
         this.rawChagesChannel.push(change);
         return change;

@@ -171,7 +171,7 @@ export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point
     // Binary search to find the midpoint
     let lower = 0;
     let upper = 1;
-    let t, currentLength;
+    let t = 0, currentLength;
     while (upper - lower > 1e-5) { // Adjust the epsilon for precision
         t = (lower + upper) / 2;
         currentLength = calculateLengthUpToPoint(t);

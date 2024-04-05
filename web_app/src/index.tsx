@@ -2,7 +2,7 @@ import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
 import WebApp, { WebAppState } from './containers/app/App';
 import './index.css';
-import reportWebVitals from './reportWebVitals';
+// import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './facade';
 import { getLogger } from './fusion/logging';
 
@@ -70,4 +70,4 @@ root.render(
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+// reportWebVitals();
