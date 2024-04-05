@@ -40,7 +40,8 @@ export class EditComponentState {
     makeObservable(this, {
       center: observable,
       targetNote: observable,
-      creatingNote: computed
+      isBeingDragged: observable,
+      creatingNote: computed,
     });
   }
 
@@ -289,6 +290,7 @@ const EditComponent: React.FC<EditComponentProps> = observer((
           <textarea
             // placeholder="Enter text here"
             autoFocus
+            defaultValue={state.targetNote.content.text}
             onChange={(e) => {
               setNoteData({
                 ...noteData,
@@ -306,9 +308,7 @@ const EditComponent: React.FC<EditComponentProps> = observer((
               borderWidth: '2px',
               borderRadius: '5px',
             }}
-          >
-            {state.targetNote.content.text}
-          </textarea>
+          />
         </div>
       </div>
 

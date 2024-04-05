@@ -259,6 +259,12 @@ export class PageViewState {
         this.mousePositionOnDragSelectionStart = null;
         this.dragSelectionRectData = null;
         this.dragSelectedElements.clear();
+
+        // Edit window related
+        let editWS = this.noteEditWindowState!;
+        if (editWS !== null) {
+            editWS.isBeingDragged = false;
+        }
     }
 
     setMode(mode: PageMode) {
