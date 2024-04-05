@@ -46,7 +46,6 @@ export class WebAppState {
 const WebApp = observer(({ state }: { state: WebAppState }) => {
 
   const errorMessage = state.errorMessage;
-  let pageViewState = state.currentPageViewState;
 
   useEffect(() => {
     pamet.loadAllEntitiesTMP(() => {
@@ -80,6 +79,15 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
     });
   }, [state]);
 
+  // Change the title when the current page changes
+  useEffect(() => {
+    if (state.currentPageViewState) {
+      document.title = state.currentPageViewState.page.name;
+    } else {
+      document.title = "Pamet";
+    }
+  }, [state.currentPageViewState]);
+
   return (
     <div className="app">
       {/* If error message - display it */}
@@ -89,7 +97,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       {state.loading && <div>Loading...</div>}
 
       {/* If page data - display the page */}
-      {pageViewState && <PageView state={pageViewState} />}
+      {state.currentPageViewState && <PageView state={state.currentPageViewState} />}
     </div>
   );
 });
