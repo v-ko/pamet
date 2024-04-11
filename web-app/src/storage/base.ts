@@ -1,6 +1,6 @@
 
-import { Change } from '../fusion/Change'
-import { Repository, SearchFilter } from '../fusion/storage/BaseRepository'
+import { Change } from 'pyfusion/Change'
+import { Repository, SearchFilter } from 'pyfusion/storage/BaseRepository'
 import { Arrow } from '../model/Arrow'
 import { Note } from '../model/Note'
 import { Page } from '../model/Page'

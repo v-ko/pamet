@@ -2,8 +2,8 @@
   "compilerOptions": {
     "composite": true,
     "skipLibCheck": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "ES6",
+    "moduleResolution": "Node",
     "allowSyntheticDefaultImports": true,
     "strict": true
   },

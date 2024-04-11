@@ -1,10 +1,11 @@
 import { useRef } from 'react';
-import { NOTE_MARGIN } from '../../constants';
-import { color_to_css_rgba_string } from '../../util';
+import { NOTE_MARGIN } from '../../constants.js';
+import { color_to_css_rgba_string } from '../../util/index.js';
 import { observer } from 'mobx-react-lite';
-import { NoteViewState } from './NoteViewState';
-import { pamet } from '../../facade';
-import { getLogger } from '../../fusion/logging';
+import { NoteViewState } from './NoteViewState.js';
+import { pamet } from '../../facade.js';
+import { getLogger } from 'pyfusion/logging.js';
+
 import { trace } from 'mobx';
 import React from 'react';
 

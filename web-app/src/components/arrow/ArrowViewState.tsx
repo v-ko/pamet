@@ -1,7 +1,7 @@
 import { Arrow, ArrowAnchorType, ArrowData } from '../../model/Arrow';
 import { computed, makeObservable, observable } from 'mobx';
 import { NoteViewState } from '../note/NoteViewState';
-import { getLogger } from '../../fusion/logging';
+import { getLogger } from 'pyfusion/logging';
 import { Point2D } from '../../util/Point2D';
 import { Rectangle } from '../../util/Rectangle';
 import { approximateMidpointOfBezierCurve } from '../../util';

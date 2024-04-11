@@ -4,7 +4,7 @@ import WebApp, { WebAppState } from './containers/app/App';
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './facade';
-import { getLogger } from './fusion/logging';
+import { getLogger } from 'pyfusion/logging';
 
 
 // Imports that are required to just activate decorators. Might be removed when
@@ -20,8 +20,8 @@ import { ExternalLinkNote } from './model/ExternalLinkNote';
 import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
 import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
-import { fusion } from './fusion';
-import { ActionState } from './fusion/libs/Action';
+import { fusion } from 'pyfusion/index';
+import { ActionState } from 'pyfusion/libs/Action';
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
 dummyImports.push(CardNote);

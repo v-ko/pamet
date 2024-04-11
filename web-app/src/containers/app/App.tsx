@@ -4,7 +4,7 @@ import { PageView } from "../../components/page/PageView";
 import { PageViewState } from "../../components/page/PageViewState";
 import { computed, makeObservable, observable } from "mobx";
 import { pamet } from "../../facade";
-import { getLogger } from "../../fusion/logging";
+import { getLogger } from "pyfusion/logging";
 import { appActions } from "../../actions/app";
 import { useEffect } from "react";
 

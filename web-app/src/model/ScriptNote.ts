@@ -1,4 +1,4 @@
-import { entityType } from "../fusion/libs/Entity";
+import { entityType } from "pyfusion/libs/Entity";
 import { Note } from "./Note";
 
 @entityType('ScriptNote')

@@ -1,4 +1,5 @@
 from pathlib import Path
+import signal
 import click
 import fusion
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
@@ -9,7 +10,7 @@ import pamet
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.web_shell import WebShellWindow
 from pamet.services.media_store import MediaStore
-from pamet.services.rest_api.desktop import DesktopServer
+from pamet.services.rest_api.desktop import DEFAULT_PORT, DesktopServer
 from pamet.storage.file_system.repository import FSStorageRepository
 
 log = fusion.get_logger(__name__)
@@ -38,13 +39,19 @@ local_server_commands = {
 @click.option('--config-path', type=click.Path())
 @click.option('--web-build-dir', type=click.Path())
 def main(path: str, command: str, config_path: str, web_build_dir: str):
+    # Catch interrupts with qt
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     # Check if another instance is running and/or start the local server
     debugging = bool(LOGGING_LEVEL == LoggingLevels.DEBUG.value)
     if debugging:
         port = 3333
         print(f'Debugging mode. Setting desktop server port to {port}')
     else:
-        port = DesktopServer.DEFAULT_PORT
+        port = DEFAULT_PORT
+
+    if not path:
+        raise Exception('Path to the repository is required')
 
     repo_path = Path(path)
     log.info('Using repository: %s' % repo_path)

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "pyfusion/*": [
+        "fusion/js-src/src/*"
+      ]
+    }
+  },
+  // "include": [
+  //   "web-app/src/**/*",
+  //   "fusion/js-src/src/**/*"
+  // ],
+
+  "references": [
+    {
+      "path": "./web-app"
+    },
+    {
+      "path": "./fusion/js-src"
+    }
+  ],
+}

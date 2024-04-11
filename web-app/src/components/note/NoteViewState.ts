@@ -3,11 +3,11 @@ import { Note } from "../../model/Note";
 import { TextLayout } from "../../util";
 import { calculateTextLayout } from "./util";
 import { pamet } from "../../facade";
-import { Change } from "../../fusion/Change";
-import { getLogger } from "../../fusion/logging";
+import { Change } from "pyfusion/Change";
+import { getLogger } from "pyfusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../constants";
-import { SerializedEntity, dumpToDict, loadFromDict } from "../../fusion/libs/Entity";
+import { SerializedEntity, dumpToDict, loadFromDict } from "pyfusion/libs/Entity";
 
 let log = getLogger('NoteViewState.ts');
 

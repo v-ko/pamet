@@ -1,4 +1,4 @@
-import { entityType } from '../fusion/libs/Entity';
+import { entityType } from 'pyfusion/libs/Entity';
 import { ColorData } from '../util';
 import { Point2D, PointData } from '../util/Point2D';
 import { PametElement, PametElementData } from './Element';

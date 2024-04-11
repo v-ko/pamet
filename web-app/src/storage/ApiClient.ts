@@ -3,9 +3,9 @@ import { PageQueryFilter } from "../facade";
 import { Page, PageData } from "../model/Page";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
-import { getLogger } from "../fusion/logging";
-import { BaseApiClient } from "../fusion/storage/BaseApiClient";
-import { loadFromDict } from "../fusion/libs/Entity";
+import { getLogger } from "pyfusion/logging";
+import { BaseApiClient } from "pyfusion/storage/BaseApiClient";
+import { SerializedEntity, loadFromDict } from "pyfusion/libs/Entity";
 import { elementId } from "../model/Element";
 
 let log = getLogger('ApiClient');
@@ -42,7 +42,7 @@ export class ApiClient extends BaseApiClient {
 
         // This should be translated to a db migration when the main web
         // app is finished and the final integration begins.
-        function tmpDynamicMigration(childData) {
+        function tmpDynamicMigration(childData: Record<string, any>) {
             // Additional tasks for the migration:
             // - Add size metadata for images where it's missing
 
@@ -147,10 +147,10 @@ export class ApiClient extends BaseApiClient {
         }
 
         let notes = notesData.map((noteData: any) => {
-            return loadFromDict(tmpDynamicMigration(noteData));
+            return loadFromDict(tmpDynamicMigration(noteData) as SerializedEntity);
         });
         let arrows = arrowsData.map((arrowData: any) => {
-            return loadFromDict(tmpDynamicMigration(arrowData));
+            return loadFromDict(tmpDynamicMigration(arrowData) as SerializedEntity);
         })
         return {
             notes: notes,

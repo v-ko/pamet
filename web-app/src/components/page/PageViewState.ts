@@ -7,7 +7,7 @@ import { RectangleData } from '../../util/Rectangle';
 import { NoteViewState } from '../note/NoteViewState';
 import { ArrowViewState } from '../arrow/ArrowViewState';
 import { pamet } from '../../facade';
-import { getLogger } from '../../fusion/logging';
+import { getLogger } from 'pyfusion/logging';
 import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';

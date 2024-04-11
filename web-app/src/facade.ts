@@ -1,13 +1,13 @@
 import { WebAppState } from "./containers/app/App";
-import { Channel, addChannel } from './fusion/libs/Channel';
-import { getLogger } from './fusion/logging';
-import { SearchFilter } from './fusion/storage/BaseRepository';
-// import { InMemoryRepository } from './fusion/storage/InMemoryRepository';
-import { ActionState } from './fusion/libs/Action';
-import { Change } from "./fusion/Change";
+import { Channel, addChannel } from 'pyfusion/libs/Channel';
+import { getLogger } from 'pyfusion/logging';
+import { SearchFilter } from 'pyfusion/storage/BaseRepository';
+// import { InMemoryRepository } from 'pyfusion/storage/InMemoryRepository';
+import { ActionState } from 'pyfusion/libs/Action';
+import { Change } from "pyfusion/Change";
 import { PametRepository } from "./storage/base";
-import { fusion } from "./fusion"
-import { Entity, EntityData } from "./fusion/libs/Entity";
+import { fusion } from "pyfusion/index"
+import { Entity, EntityData } from "pyfusion/libs/Entity";
 import { ApiClient } from "./storage/ApiClient";
 import { ObservableMap } from "mobx";
 import { Page } from "./model/Page";

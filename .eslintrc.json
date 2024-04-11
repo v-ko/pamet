@@ -1,7 +1,9 @@
 {
+    "root": true,
     "env": {
         "browser": true,
-        "es2021": true
+        "es2021": true,
+        "jest": true
     },
     "extends": [
         "eslint:recommended",
@@ -25,6 +27,8 @@
         "@typescript-eslint/prefer-as-const": "warn",
         "@typescript-eslint/no-unused-vars": "warn",
         "@typescript-eslint/no-var-requires": "warn",
+        "@typescript-eslint/no-explicit-any": "off",
+        "no-extra-boolean-cast": "off"
         // "no-use-before-define": "warn",
         // "no-undef": "warn",
         // "no-redeclare": "warn",
