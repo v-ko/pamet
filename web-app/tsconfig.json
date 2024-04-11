@@ -1,0 +1,52 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES6",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2020",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ES6",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "Node",
+    // "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    // "noEmit": true,
+    "jsx": "react-jsx",
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    // "noImplicitAny": true,
+    // "noImplicitReturns": true,
+
+    // // Custom
+    // "paths": {
+    //   "../fusion/*": [
+    //     "../fusion/js-src/src/*"
+    //   ]
+    // },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "preserveSymlinks": true,
+    "composite": true,
+    "declaration": true,
+    // "rootDir": "src",
+    "outDir": "dist" /* Specify an output folder for all emitted files. */
+  },
+  // "include": [
+  //   "src"
+  // ],
+  "references": [
+    {
+      "path": "../fusion/js-src"
+    }
+  ]
+}
