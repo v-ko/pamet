@@ -11,9 +11,9 @@ export class ExternalLinkNoteCanvasView extends CardNoteCanvasView {
     render(context: CanvasRenderingContext2D) {
         super.render(context);
         this.drawBorder(context);
-        
+
         // Fill a triangle in the upper right corner of the note
-        let note = this.noteViewState.note as ExternalLinkNote;
+        let note = this.noteViewState.note() as ExternalLinkNote;
         let p1 = note.rect().topRight();
         let p2 = p1.add(new Point2D(-DECORATION_EDGE, 0));
         let p3 = p1.add(new Point2D(0, DECORATION_EDGE));

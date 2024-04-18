@@ -17,15 +17,6 @@ class AppActions {
     @action
     setCurrentPage(state: WebAppState, pageId: string | null) {
         console.log(`Changing current page to ${pageId}`)
-        // if (pageId === null) {
-        //     state.currentPageId = null
-        //     return
-        // }
-        // let page = pamet.page(pageId)
-        // if (!page) {
-        //     throw new Error(`Page ${pageId} does not exist`)
-        // }
-        // state.currentPageId = page.id
         if (!pageId) {
             return null;
         }
@@ -33,10 +24,10 @@ class AppActions {
 
         if (page) {
             state.currentPageViewState = new PageViewState(page);
+            state.currentPageViewState.createElementViewStates();
         } else {
             state.currentPageViewState = null;
         }
-
     }
 
     @action

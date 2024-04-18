@@ -47,7 +47,7 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
 
             {Array.from(state.noteViewStatesByOwnId.values()).map((noteViewState) => (
                 <NoteComponent
-                    key={noteViewState.note.id}
+                    key={noteViewState.note().id}
                     noteViewState={noteViewState}
                     // handleClick={(event) => { handleClickOnNote(event, noteViewState) }}
                     />
@@ -67,14 +67,14 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
             >
                 <defs>
                     {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
-                        <ArrowHeadComponent key={arrowVS.arrow.id} arrowViewState={arrowVS} />
+                        <ArrowHeadComponent key={arrowVS.arrow().id} arrowViewState={arrowVS} />
                     ))}
                 </defs>
                 {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
                     <ArrowComponent
-                        key={arrowVS.arrow.id}
+                        key={arrowVS.arrow().id}
                         arrowViewState={arrowVS}
-                        clickHandler={(event) => { console.log('Arrow clicked', arrowVS.arrow.id) }}
+                        clickHandler={(event) => { console.log('Arrow clicked', arrowVS.arrow().id) }}
                     />
                 ))}
             </svg>

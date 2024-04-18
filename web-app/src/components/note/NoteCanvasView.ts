@@ -29,7 +29,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     }
 
     drawBackground(context: CanvasRenderingContext2D) {
-        let note = this.noteViewState.note;
+        let note = this.noteViewState.note();
         let backgroundColor = color_to_css_rgba_string(note.style.background_color);
         context.fillStyle = backgroundColor;
         context.fillRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
@@ -39,7 +39,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
         context.save()
 
-        let note = this.noteViewState.note;
+        let note = this.noteViewState.note();
         let color = color_to_css_rgba_string(note.style.color);
 
         const textRect_ = textRect(textLayout.textRect)
@@ -87,7 +87,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     }
 
     drawBorder(context: CanvasRenderingContext2D, borderType: BorderType = BorderType.Solid) {
-        let note = this.noteViewState.note;
+        let note = this.noteViewState.note();
         context.save()
         context.strokeStyle = color_to_css_rgba_string(note.style.color);
         context.lineWidth = 1;
@@ -99,7 +99,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     }
 
     drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
-        let note = this.noteViewState.note;
+        let note = this.noteViewState.note();
         let noteRect = note.rect();
         let imageMetadata = note.content.image;
         if (imageMetadata === undefined) {

@@ -21,13 +21,25 @@ export enum DrawMode {
     PATTERN
 }
 
+
+export interface DrawStats {
+    total: number,
+    reused: number,
+    reusedDirty: number,
+    deNovoRedraw: number,
+    deNovoClean: number,
+    direct: number,
+    pattern: number,
+    render_time: number
+}
+
 const MIN_RERENDER_TIME = 5; // ms
 
 const selectionColor = color_to_css_rgba_string(SELECTION_OVERLAY_COLOR);
 const dragSelectRectColor = color_to_css_rgba_string(DRAG_SELECT_COLOR);
 
 function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
-    let note = noteVS.note;
+    let note = noteVS.note();
     ctx.strokeStyle = color_to_css_rgba_string(note.style.color);
     let rect = note.rect();
     drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
@@ -86,7 +98,7 @@ export class CanvasPageRenderer {
     }
 
     displayRect(noteVS: NoteViewState, viewport: Viewport): Rectangle {
-        let rect = viewport.projectRect(noteVS.note.rect());
+        let rect = viewport.projectRect(noteVS.note().rect());
         return rect;
     }
 
@@ -315,16 +327,6 @@ export class CanvasPageRenderer {
         // Draw notes
         let viewportRect = state.viewport.realBounds()
 
-        interface DrawStats {
-            total: number,
-            reused: number,
-            reusedDirty: number,
-            deNovoRedraw: number,
-            deNovoClean: number,
-            direct: number,
-            pattern: number,
-            render_time: number
-        }
         let drawStats: DrawStats = {
             total: 0,
             reused: 0,
@@ -342,7 +344,7 @@ export class CanvasPageRenderer {
         let withNoCache = new Set<NoteViewState>(); // nvs in the viewport without cache
         for (const noteVS of state.noteViewStatesByOwnId.values()) {
             // Skip if the note is outside the viewport
-            if (!viewportRect.intersects(noteVS.note.rect())) {
+            if (!viewportRect.intersects(noteVS.note().rect())) {
                 continue;
             }
 
@@ -437,11 +439,11 @@ export class CanvasPageRenderer {
         const drawSelectionOverlay = (childVS: ElementViewState) => {
             if (childVS instanceof NoteViewState) {
                 ctx.fillStyle = selectionColor;
-                ctx.fillRect(...childVS.note.rect().data());
+                ctx.fillRect(...childVS.note().rect().data());
 
             } else if (childVS instanceof ArrowViewState) {
                 ctx.strokeStyle = selectionColor;
-                ctx.lineWidth = childVS.arrow.line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
+                ctx.lineWidth = childVS.arrow().line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
                 for (let curve of childVS.bezierCurveParams) {
                     ctx.beginPath();
                     ctx.moveTo(curve[0].x, curve[0].y);

@@ -28,7 +28,8 @@
         "@typescript-eslint/no-unused-vars": "warn",
         "@typescript-eslint/no-var-requires": "warn",
         "@typescript-eslint/no-explicit-any": "off",
-        "no-extra-boolean-cast": "off"
+        "no-extra-boolean-cast": "off",
+        "no-empty": "off"
         // "no-use-before-define": "warn",
         // "no-undef": "warn",
         // "no-redeclare": "warn",

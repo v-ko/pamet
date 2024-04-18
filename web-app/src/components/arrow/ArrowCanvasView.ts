@@ -1,5 +1,4 @@
 import { color_to_css_rgba_string } from "../../util";
-import { Point2D } from "../../util/Point2D";
 import { BaseCanvasView } from "../note/BaseCanvasView";
 import { ArrowViewState } from "./ArrowViewState";
 
@@ -12,7 +11,7 @@ export class ArrowCanvasView extends BaseCanvasView {
         return this.elementViewState as ArrowViewState;
     }
     render(context: CanvasRenderingContext2D) {
-        let arrow = this.arrowViewState.arrow;
+        let arrow = this.arrowViewState.arrow();
 
         // Draw the arrow line/path
         for (let curve of this.arrowViewState.bezierCurveParams) {

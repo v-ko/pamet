@@ -22,6 +22,7 @@ import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
 import { fusion } from 'pyfusion/index';
 import { ActionState } from 'pyfusion/libs/Action';
+import { appActions } from './actions/app';
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
 dummyImports.push(CardNote);
@@ -51,12 +52,45 @@ let app_state = new WebAppState();
 
 pamet.setWebAppState(app_state);
 
+// Initial entity load (TMP, will be done by the sync service)
+const afterLoad = () => {
+    log.info("Loaded all entities")
+
+    appActions.setLoading(app_state, false);
+
+    let urlPath = window.location.pathname;
+    // If we're at the index page, load home or first
+    if (urlPath === "/") {
+        appActions.setPageToHomeOrFirst(app_state);
+
+        // If the URL contains /p/ - load the page by id, else load the home page
+    } else if (urlPath.includes("/p/")) {
+        const pageId = urlPath.split("/")[2];
+
+        // Get the page from the pages array
+        const page = pamet.findOne({ id: pageId });
+        if (page) {
+            appActions.setCurrentPage(app_state, page.id);
+        } else {
+            appActions.setErrorMessage(app_state, `Page with id ${pageId} not found`);
+            console.log("Page not found", pageId)
+            // console.log("Pages", pages)
+            appActions.setCurrentPage(app_state, null);
+        }
+    } else {
+        console.log("Url not supported", urlPath)
+        appActions.setCurrentPage(app_state, null);
+    }
+}
+
+pamet.loadAllEntitiesTMP(afterLoad);
+
 // Testing: log the actions channel
 fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
-    if (actionState.issuer !== 'user'){
+    if (actionState.issuer !== 'user') {
         return;
     }
-    log.info(`Action ${actionState.name} ${actionState.runState}`);
+    log.info(`rootActionEventsChannel: ${actionState.name} ${actionState.runState}`);
 });
 
 root.render(

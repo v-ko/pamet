@@ -12,7 +12,7 @@ const TRIANGLE_SPACING = 3;
 
 export class ScriptNoteCanvasView extends NoteCanvasView {
     render(context: CanvasRenderingContext2D) {
-        let note = this.noteViewState.note as ScriptNote
+        let note = this.noteViewState.note() as ScriptNote
         let noteRect = note.rect();
         let text = note.content.text || '';
         let textLayout = calculateTextLayout(text, textRect(noteRect), DEFAULT_FONT_STRING);
