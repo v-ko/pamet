@@ -1,23 +1,19 @@
 # Pamet
 An infinite canvas for organizing information with text/images/links. Written using Qt for Python.
 
-⚠ **Still in alpha** ⚠ - you'll probably encounter GUI bugs, but the data storage/saving is stable.
+⚠ **Still in alpha** ⚠ - you'll probably encounter GUI bugs, but the data storage/saving is stable. Development is transitioning to web technologies for the front end currently. You can check out the progress (here)[https://github.com/users/v-ko/projects/1]
 
 The transition to a web stack is under [active development](https://github.com/users/v-ko/projects/1).
 
 ## Installation
 
-### Via pip
+### Via desktop version via pip
 Requires Python `>3.10`. If it's not available for your package manager(/app store) - you can use [pyenv](https://github.com/pyenv/pyenv).
 
 `pip install pamet` , start with `pamet`
 
 ### From source
-- Clone the [Fusion](https://github.com/v-ko/fusion) and Pamet repos.
-- Run `pip install .` (with the respective repo as current working dir).
-    * If you want a development install run `pip install -e .` instead. Install Fusion first (otherwise it'll get pulled from PyPI). Also it would be best to do it in a virtual environment if you want to run the release version in parallel
-
-- A Flatpak is in the works but I hit an [issue](https://github.com/flatpak/flatpak/issues/5103) there.
+Will update the instructions soon. The app is transitioning to web technologies. The legacy desktop vesrsion is under minimal maintenence mode and will not be developed further.
 
 ## Usage
 - Ctrl+shift+P for the command palette
