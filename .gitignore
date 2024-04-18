@@ -15,6 +15,7 @@ __pycache__
 .vscode
 .VSCodeCounter
 .qt_for_python
+.vite
 
 dist
 build

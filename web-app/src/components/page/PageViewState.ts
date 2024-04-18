@@ -43,8 +43,7 @@ export enum PageMode {
 
 
 export class PageViewState {
-    _pageData: PageData;
-    _notesStore: ObservableMap<string, Note>;
+    _pageData!: PageData;
 
     // Elements
     noteViewStatesByOwnId: ObservableMap<string, NoteViewState>;
@@ -77,22 +76,11 @@ export class PageViewState {
     noteEditWindowState: EditComponentState | null = null;
 
     constructor(page: Page) {
-        this._pageData = page.data();
+        this.updateFromPage(page);
 
-        let notesStore = pamet.noteStoresByParentId.get(page.id);
-        if (notesStore === undefined) {
-            throw new Error('No notes store found for page ' + page.id)
-        }
-        this._notesStore = notesStore;
 
         this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
         this.arrowViewStatesByOwnId = new ObservableMap<string, ArrowViewState>();
-
-        // Do an initial update of the note and arrow view states
-        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
-        this._updateNoteViewStatesFromNotes(notes);
-        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
-        this._updateArrowViewStatesFromStore(arrows);
 
         makeObservable(this, {
             _pageData: observable,
@@ -121,50 +109,119 @@ export class PageViewState {
             viewport: computed
         });
 
-        // React on page changes
-        reaction(
-            () => pamet.page(this.page.id),
-            (page) => {
-                if (page) {
-                    this._pageData = page.data();
+    }
+
+    updateFromPage(page: Page) {
+        this._pageData = page.data();
+    }
+
+    createElementViewStates() {
+        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
+        this._updateNoteViewStatesFromNotes(notes);
+        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
+        this._updateArrowViewStatesFromStore(arrows);
+    }
+
+    addViewStateForElement(element: Note | Arrow) {
+        if (element instanceof Note) {
+            if (this.noteViewStatesByOwnId.has(element.own_id)) {
+                log.error('Note already exists in page view state', element)
+                return;
+            }
+            let nvs = new NoteViewState(element);
+            this.noteViewStatesByOwnId.set(element.own_id, nvs);
+
+        } else if (element instanceof Arrow) {
+            if (this.arrowViewStatesByOwnId.has(element.own_id)) {
+                log.error('Arrow already exists in page view state', element)
+                return;
+            }
+            let missingAnchorVS = false;
+            let headNVS: NoteViewState | null = null;
+            if (element.head_note_id) {
+                headNVS = this.noteViewStatesByOwnId.get(element.head_note_id) || null
+                if (!headNVS) {
+                    missingAnchorVS = true;
+                    log.error('HEAD NOTE NOT FOUND', element.head_note_id)
                 }
             }
-        );
 
-        // Update noteViewStates when notes are added or removed
-        reaction(
-            () => this._notesStore.values(),
-            notes => {
-                console.log('Notes changed', notes)
-                this._updateNoteViewStatesFromNotes(notes)
+            let tailNVS: NoteViewState | null = null;
+            if (element.tail_note_id) {
+                tailNVS = this.noteViewStatesByOwnId.get(element.tail_note_id) || null
+                if (!tailNVS) {
+                    missingAnchorVS = true;
+                    log.error('TAIL NOTE NOT FOUND', element.tail_note_id)
+                }
             }
-        );
 
-        // Update arrowViewStates when arrows are added or removed
-        reaction(
-            () => pamet.find({ parentId: this.page.id, type: Arrow }) as Generator<Arrow>,
-            arrows => {
-                console.log('Arrows changed', arrows)
-                this._updateArrowViewStatesFromStore(arrows)
+            if (missingAnchorVS) {
+                log.error('Arrow not added due to missing anchor view state')
+                return;
             }
-        );
-    }
 
-    notesStore(): ObservableMap<string, Note> {
-        let store = pamet.noteStoresByParentId.get(this.page.id);
-        if (!store) {
-            throw new Error('[PageViewState] Notes store not found for page ' + this.page.id)
+            this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element, headNVS, tailNVS));
         }
-        return store;
     }
 
-    // get leftButtonPressed() {
-    //     return (this.mouseButtons & 1) !== 0;
-    // }
+    removeViewStateForElement(element: Note | Arrow) {
+        if (element instanceof Note) {
+            this.noteViewStatesByOwnId.delete(element.own_id);
+        } else if (element instanceof Arrow) {
+            this.arrowViewStatesByOwnId.delete(element.own_id);
+        }
+    }
 
-    // get rightButtonPressed() {
-    //     return (this.mouseButtons & 2) !== 0;
-    // }
+    updateEVS_fromElement(element: Note | Arrow) {
+        if (element instanceof Note) {
+            let nvs = this.noteViewStatesByOwnId.get(element.own_id);
+            if (nvs === undefined) {
+                log.error('Note view state not found for note', element)
+                return;
+            }
+            nvs.updateFromNote(element);
+        } else if (element instanceof Arrow) {
+            let avs = this.arrowViewStatesByOwnId.get(element.own_id);
+            if (avs === undefined) {
+                log.error('Arrow view state not found for arrow', element)
+                return;
+            }
+
+            // Get anchors if any
+            let headNVS_: NoteViewState | null;
+            let tailNVS_: NoteViewState | null;
+            try {
+                let { headNVS, tailNVS } = this.noteVS_anchorsForArrow(element);
+                headNVS_ = headNVS;
+                tailNVS_ = tailNVS;
+            } catch (e) {
+                log.error('Error getting anchors for arrow', element)
+                return;
+            }
+            avs.updateFromArrow(element, headNVS_, tailNVS_);
+        }
+    }
+
+    noteVS_anchorsForArrow(arrow: Arrow) {
+
+        let headNVS: NoteViewState | null = null;
+        if (arrow.head_note_id) {
+            headNVS = this.noteViewStatesByOwnId.get(arrow.head_note_id) || null
+            if (!headNVS) {
+                throw Error('Head note not found ' + arrow.head_note_id)
+            }
+        }
+
+        let tailNVS: NoteViewState | null = null;
+        if (arrow.tail_note_id) {
+            tailNVS = this.noteViewStatesByOwnId.get(arrow.tail_note_id) || null
+            if (!tailNVS) {
+                throw Error('Tail note not found ' + arrow.tail_note_id)
+            }
+        }
+
+        return { headNVS, tailNVS }
+    }
 
     _updateNoteViewStatesFromNotes(notes: Iterable<Note>) {
         console.log('Updating note view states from notes', notes)
@@ -178,7 +235,7 @@ export class PageViewState {
         for (let noteOwnId of this.noteViewStatesByOwnId.keys()) {
             if (!nvsHasNoteMap.has(noteOwnId)) {
                 // console.log('REMOVING note', noteOwnId)
-                this.noteViewStatesByOwnId.delete(noteOwnId);
+                this.removeViewStateForElement(this.noteViewStatesByOwnId.get(noteOwnId)!.note());
             }
         }
 
@@ -186,7 +243,7 @@ export class PageViewState {
         for (let note of notes) {
             if (!this.noteViewStatesByOwnId.has(note.own_id)) {
                 // console.log('ADDING note', note.own_id)
-                this.noteViewStatesByOwnId.set(note.own_id, new NoteViewState(note));
+                this.addViewStateForElement(note);
             }
         }
     }
@@ -201,44 +258,16 @@ export class PageViewState {
         for (let arrowOwnId of this.arrowViewStatesByOwnId.keys()) {
             if (!arrowavsHasArrowMap.has(arrowOwnId)) {
                 // console.log('REMOVING arrow', arrowOwnId)
-                this.arrowViewStatesByOwnId.delete(arrowOwnId);
+                this.removeViewStateForElement(this.arrowViewStatesByOwnId.get(arrowOwnId)!.arrow());
             }
         }
 
         // Add ArrowViewStates for new arrows
         for (let arrow of arrows) {
             if (!this.arrowViewStatesByOwnId.has(arrow.own_id)) {
-                // console.log('ADDING arrow', arrow.own_id)
-                let missingAnchorVS = false;
-
-                let headNVS: NoteViewState | null = null;
-                if (arrow.head_note_id) {
-                    headNVS = this.noteViewStatesByOwnId.get(arrow.head_note_id) || null
-                    if (!headNVS) {
-                        missingAnchorVS = true;
-                        log.error('HEAD NOTE NOT FOUND', arrow.head_note_id)
-                    }
-                }
-
-                let tailNVS: NoteViewState | null = null;
-                if (arrow.tail_note_id) {
-                    tailNVS = this.noteViewStatesByOwnId.get(arrow.tail_note_id) || null
-                    if (!tailNVS) {
-                        missingAnchorVS = true;
-                        log.error('TAIL NOTE NOT FOUND', arrow.tail_note_id)
-                    }
-                }
-
-                if (missingAnchorVS) {
-                    log.error('Arrow not added due to missing anchor view state')
-                    continue;
-                }
-
-                let pathCalcPrecision = this.viewport.heightScaleFactor();
-                this.arrowViewStatesByOwnId.set(arrow.own_id, new ArrowViewState(arrow, headNVS, tailNVS, pathCalcPrecision));
+                this.addViewStateForElement(arrow);
             }
         }
-
     }
 
     viewStateForElement(elementOwnId: string): NoteViewState | ArrowViewState | null {
@@ -287,7 +316,7 @@ export class PageViewState {
 
     *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
         for (let noteViewState of this.noteViewStatesByOwnId.values()) {
-            let note = noteViewState.note;
+            let note = noteViewState.note();
             if (radius > 0) {
                 let intersectRect = note.rect()
                 intersectRect.setSize(intersectRect.size().add(new Size(radius, radius)))

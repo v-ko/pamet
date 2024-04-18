@@ -200,8 +200,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         dragSelectionRectData: state.dragSelectionRectData,
         mode: state.mode,
         dragSelectedElements: state.dragSelectedElements,
-        arrowViewStatesByOwnId: state.arrowViewStatesByOwnId,
-        noteViewStatesByOwnId: state.noteViewStatesByOwnId,
+        arrowViewStatesByOwnId: state.arrowViewStatesByOwnId.values(),
+        noteViewStatesByOwnId: state.noteViewStatesByOwnId.values(),
       }
     },
       () => {
@@ -240,7 +240,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   }, [mouse]);
 
-  const handleMouseMove = useCallback((event) => {
+  const handleMouseMove = useCallback((event: React.MouseEvent) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
     let pressPos = mouse.positionOnPress;
     let delta = pressPos.subtract(mousePos);
@@ -269,7 +269,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
-  const handleMouseUp = useCallback((event) => {
+  const handleMouseUp = useCallback((event: React.MouseEvent) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
 
     let pressPos = mouse.positionOnPress;
@@ -335,7 +335,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
   }, [state, mouse.positionOnPress, mouse]);
 
-  const handleWheel = useCallback((event) => {
+  const handleWheel = useCallback((event: WheelEvent) => {
     event.preventDefault();
     navDeviceAutoSwitcher.registerScrollEvent(new Point2D(event.deltaX, event.deltaY));
 
@@ -363,7 +363,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [state, navDeviceAutoSwitcher]);
 
   // Touch event handlers
-  const handleTouchStart = useCallback((event) => {
+  const handleTouchStart = useCallback((event: React.TouchEvent) => {
     // Only for single finger touch
     if (event.touches.length === 1) {
       let touchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
@@ -390,7 +390,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
   }, [state, mouse]);
 
-  const handeTouchMove = useCallback((event) => {
+  const handeTouchMove = useCallback((event: React.TouchEvent) => {
     if (event.touches.length === 1) {
       let newTouchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
       pageActions.updateDragSelection(state, newTouchPos);
@@ -432,7 +432,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [state, pinchStartViewportHeight, pinchStartDistance,
     pinchInProgress, initialPinchCenter]);
 
-  const handleTouchEnd = useCallback((event) => {
+  const handleTouchEnd = useCallback((event: React.TouchEvent) => {
     // setMouseDown(false);
     if (state.mode === PageMode.DragNavigation) {
       pageActions.endDragNavigation(state);
@@ -440,14 +440,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     setPinchInProgress(false);
   }, [state]);
 
-  const handleMouseLeave = (event: MouseEvent) => {
+  const handleMouseLeave = (event: React.MouseEvent) => {
     // Clear the mode (for most modes), to avoid weird behavior
     // currently those are not implemented actually
     pageActions.updateMousePosition(state, null);
     mouse.buttonsOnLeave = event.buttons;
   }
 
-  const handleMouseEnter = (event: MouseEvent) => {
+  const handleMouseEnter = (event: React.MouseEvent) => {
     // If the mouse is not pressed and we're in some mode, then
     // in most cases the user has moved the mouse out of the page and back
     // and if the button was released outside of the page - we won't know.
@@ -508,7 +508,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         console.log('Running dummy resize')
         for (let element of state.selectedElements.values()) {
           if (element instanceof NoteViewState) {
-            let note = element.note;
+            let note = element.note();
             let rect = note.rect();
             rect.setSize(new Size(200, 200));
             note.setRect(rect);
@@ -519,9 +519,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     } else if (event.code === 'KeyE') {
       // Start editing the selected note
       let selectedNote: Note | null = null;
-      for (let element of state.selectedElements.values()) {
-        if (element instanceof NoteViewState) {
-          selectedNote = element.note;
+      for (let elementVS of state.selectedElements.values()) {
+        if (elementVS instanceof NoteViewState) {
+          selectedNote = elementVS.note();
           break;
         }
       }
@@ -552,7 +552,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     let realPos = state.viewport.unprojectPoint(mousePos);
     let noteVS_underMouse = state.noteViewStateAt(realPos)
     if (noteVS_underMouse !== null) {
-      pageActions.startEditingNote(state, noteVS_underMouse.note);
+      pageActions.startEditingNote(state, noteVS_underMouse.note());
     } else {
       let realMousePos = state.viewport.unprojectPoint(mousePos);
       pageActions.startNoteCreation(state, realMousePos);
@@ -583,7 +583,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // canvas renderer
   let imageUrls: Set<string> = new Set();
   for (let noteVS of state.noteViewStatesByOwnId.values()) {
-    let note = noteVS.note
+    let note = noteVS.note()
     if (note.content.image !== undefined) {
       let url = note.content.image.url;
       imageUrls.add(pamet.pametSchemaToHttpUrl(url));
@@ -599,7 +599,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
         ref={superContainerRef}
         tabIndex={0}  // To make the page focusable
-        onKeyDown={handleKeyDown}
+        // onKeyDown={handleKeyDown}
         onDoubleClick={handleDoubleClick}
         // we watch for mouse events here, to get them in pixel space coords
         // onWheel={handleWheel} << this is added with useEffect in order to use passve: false

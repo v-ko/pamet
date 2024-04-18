@@ -12,7 +12,7 @@ import { DEFAULT_FONT_STRING } from "../../constants";
 export class CardNoteCanvasView extends NoteCanvasView {
 
     render(context: CanvasRenderingContext2D) {
-        let note = this.noteViewState.note as CardNote;
+        let note = this.noteViewState.note() as CardNote;
         let noteRect = note.rect();
 
         let hasText = note.content.text !== undefined

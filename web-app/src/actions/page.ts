@@ -1,4 +1,4 @@
-import { SelectionDict as SelectionMap, snapVectorToGrid } from "../util";
+import * as util from "../util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/page/PageViewState";
 import { Point2D } from "../util/Point2D";
 
@@ -69,7 +69,7 @@ class PageActions {
   }
 
   @action
-  updateSelection(state: PageViewState, selectionMap: SelectionMap) {
+  updateSelection(state: PageViewState, selectionMap: util.SelectionDict) {
     // Add all keys that are true to the selection
     for (let [pageChild, selected] of selectionMap) {
       // let selected = selectionMap.get(pageChild);
@@ -79,16 +79,16 @@ class PageActions {
         state.selectedElements.delete(pageChild);
       }
     }
-  };
+  }
 
   @action
   clearSelection(state: PageViewState) {
-    let selectionMap: SelectionMap = new Map();
+    let selectionMap: util.SelectionDict = new Map();
     for (let noteVS of state.selectedElements) {
       selectionMap.set(noteVS, false);
     }
     this.updateSelection(state, selectionMap);
-  };
+  }
 
   @action
   startAutoNavigation(
@@ -107,7 +107,7 @@ class PageActions {
       timingFunctionName: 'linear',
     };
     state.autoNavAnimation = animation;
-  };
+  }
 
   @action
   updateAutoNavigation(state: PageViewState) {
@@ -123,9 +123,11 @@ class PageActions {
         let timingFunctionName = animation.timingFunctionName;
         let timingFunction;
         if (timingFunctionName === 'linear') {
-          timingFunction = (t) => {
+          timingFunction = (t: any) => {
             return t;
           }
+        } else {
+          throw Error('Timing function not implemented')
         }
         let currentTime = Date.now();
         let t = (currentTime - startTime) / duration;
@@ -180,7 +182,7 @@ class PageActions {
 
     // Get notes in the area
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
-      let noteRect = noteVS.note.rect();
+      let noteRect = noteVS.note().rect();
       if (unprojectedRect.intersects(noteRect)) {
         state.dragSelectedElements.add(noteVS);
       }
@@ -236,8 +238,8 @@ class PageActions {
       // Autosize the note
       let minimalSize = minimalNonelidedSize(newNote);
       let rect = newNote.rect();
-      rect.setSize(snapVectorToGrid(minimalSize));
-      rect.setTopLeft(snapVectorToGrid(rect.topLeft()));
+      rect.setSize(util.snapVectorToGrid(minimalSize));
+      rect.setTopLeft(util.snapVectorToGrid(rect.topLeft()));
       newNote.setRect(rect);
       pamet.insertNote(newNote);
 
@@ -295,10 +297,10 @@ class PageActions {
         continue;
       }
       let noteVS = elementVS as NoteViewState;
-      let note = noteVS.note;
+      let note = noteVS.note();
       let minimalSize = minimalNonelidedSize(note);
       let rect = note.rect();
-      let newSize = snapVectorToGrid(minimalSize)
+      let newSize = util.snapVectorToGrid(minimalSize)
 
       if (rect.size().equals(newSize)) {  // Skip if the size is the same
         continue;

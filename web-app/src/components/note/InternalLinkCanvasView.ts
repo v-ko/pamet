@@ -12,7 +12,7 @@ export class InternalLinkNoteCanvasView extends NoteCanvasView {
         this.drawBackground(context);
 
         // Get page name
-        let note = this.noteViewState.note as InternalLinkNote
+        let note = this.noteViewState.note() as InternalLinkNote
         let text = note.text
         let textLayout = calculateTextLayout(text, textRect(note.rect()), DEFAULT_FONT_STRING)
         this.drawText(context, textLayout);

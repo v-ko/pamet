@@ -2,8 +2,6 @@ import { computed, makeObservable, observable, reaction } from "mobx";
 import { Note } from "../../model/Note";
 import { TextLayout } from "../../util";
 import { calculateTextLayout } from "./util";
-import { pamet } from "../../facade";
-import { Change } from "pyfusion/Change";
 import { getLogger } from "pyfusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../constants";
@@ -21,36 +19,27 @@ export class NoteViewState extends ElementViewState {
 
         makeObservable(this, {
             _noteData: observable,
-            note: computed,
+            _note: computed,
             textLayoutData: computed
         });
-
-        // Reimplement the above with a reaction
-        reaction(() => pamet.noteStore.get(note.id), (note_: Note | undefined) => {
-            if (note_ === undefined) {
-                log.error('Could not update note component props, note not found, id:', note.id);
-                return;
-            }
-            this.updateFromNote(note_);
-            this.handleNoteUpdate(Change.update(note, note_)); // TMP
-        });
     }
-    get note(): Note {
+
+    // Used to make use of mobx.computed, while making it visible that
+    // the returned note is a new computed object, rather than a mutable property
+    get _note(): Note {
         return loadFromDict(this._noteData) as Note
     }
+    note(): Note {
+        return this._note
+    }
     element(): Note {
-        return this.note;
+        return this.note();
     }
     updateFromNote(note: Note) {
         this._noteData = dumpToDict(note);
     }
     get textLayoutData(): TextLayout {
-        return calculateTextLayout(this.note.text, this.note.textRect(), DEFAULT_FONT_STRING);
+        let note = this.note();
+        return calculateTextLayout(note.text, note.textRect(), DEFAULT_FONT_STRING);
     }
-    handleNoteUpdate = (change: Change) => {
-        if (change.isUpdate()) {
-            log.info('Note update', change);
-        }
-    }
-
 }

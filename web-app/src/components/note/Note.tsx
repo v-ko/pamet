@@ -21,7 +21,7 @@ export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) 
     // trace(true)
 
     const self_ref = useRef<HTMLAnchorElement>(null);
-    const note = state.note;
+    const note = state.note();
     const [x, y, width, height] = note.geometry;
     if (note.style.color === undefined) {
         console.log('Style is undefined for note', state);
