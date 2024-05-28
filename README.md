@@ -29,7 +29,9 @@ Will update the instructions soon. The app is transitioning to web technologies.
 - Paste special with ctrl+shift+V (imports links and multiple notes) - will be improved
 
 ![screenshot](https://misli.org/static/presentation/pamet_demo_page_screenshot.png)
-![screenshot](https://misli.org/static/presentation/pamet_demo.gif)
+
+https://github.com/v-ko/pamet/assets/3106360/c1d0f848-4e98-4c20-8d5e-5c7764e9c9d4
+
 
 ## Testing
 There are unit tests for some of the functionality and testing for the actions(=controller) which are not precise but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
