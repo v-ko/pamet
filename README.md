@@ -1,9 +1,7 @@
 # Pamet
 An infinite canvas for organizing information with text/images/links. Written using Qt for Python.
 
-⚠ **Still in alpha** ⚠ - you'll probably encounter GUI bugs, but the data storage/saving is stable. Development is transitioning to web technologies for the front end currently. You can check out the progress (here)[https://github.com/users/v-ko/projects/1]
-
-The transition to a web stack is under [active development](https://github.com/users/v-ko/projects/1).
+⚠ **Still in alpha** ⚠ - you'll probably encounter GUI bugs, but the data storage/saving is stable. Development is transitioning to web technologies for the front end currently. You can check out the progress [here](https://github.com/users/v-ko/projects/1)
 
 ## Installation
 
