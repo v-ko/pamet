@@ -5,7 +5,7 @@ import { observer } from 'mobx-react-lite';
 import { Rectangle } from '../../util/Rectangle';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Note, SerializedNote } from '../../model/Note';
-import { pamet } from '../../facade';
+import { pamet } from '../../core/facade';
 import { dumpToDict, loadFromDict } from 'pyfusion/libs/Entity';
 import { currentTime, timestamp } from 'pyfusion/util';
 import { getLogger } from 'pyfusion/logging';

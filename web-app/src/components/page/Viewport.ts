@@ -1,4 +1,4 @@
-import { NO_SCALE_LINE_SPACING } from '../../constants';
+import { NO_SCALE_LINE_SPACING } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { RectangleData } from '../../util/Rectangle';
 import { Rectangle } from '../../util/Rectangle';

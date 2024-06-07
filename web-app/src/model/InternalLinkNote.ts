@@ -1,4 +1,4 @@
-import { pamet } from "../facade";
+import { pamet } from "../core/facade";
 import { entityType } from "pyfusion/libs/Entity";
 import { Note } from "./Note";
 import { Page } from "./Page";

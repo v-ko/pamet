@@ -1,5 +1,5 @@
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../constants";
-import { PageQueryFilter } from "../facade";
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../core/constants";
+import { PageQueryFilter } from "../core/facade";
 import { Page, PageData } from "../model/Page";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";

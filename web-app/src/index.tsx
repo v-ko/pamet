@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import WebApp, { WebAppState } from './containers/app/App';
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
-import { PametFacade, pamet } from './facade';
+import { PametFacade, pamet } from './core/facade';
 import { getLogger } from 'pyfusion/logging';
 
 
@@ -50,11 +50,13 @@ const PametContext = createContext<PametFacade>(pamet);
 (window as any).pamet = pamet; // For debugging
 
 
-// Set app view state (be explicit and avoid circular deps)
+// Configure pamet
 let app_state = new WebAppState()
-
 pamet.setAppViewState(app_state)
 pamet.setFrontendDomainStore(new FrontendDomainStore(app_state))
+
+// Load user
+
 
 // Initial entity load (TMP, will be done by the sync service)
 const afterLoad = () => {

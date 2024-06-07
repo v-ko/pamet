@@ -1,13 +1,12 @@
 import { InMemoryStore } from "pyfusion/storage/InMemoryStore"
-import { PametStore as PametStore } from "./base";
+import { PametStore as PametStore } from "./PametStore";
 import { SearchFilter, Store as Store } from "pyfusion/storage/BaseStore"
 import { Entity, EntityData } from "pyfusion/libs/Entity";
 import { Change, Delta } from "pyfusion/Change";
 import { WebAppState } from "../containers/app/App";
-import { applyChangesToViewModel } from "../facade";
+import { applyChangesToViewModel } from "../core/facade";
 import { registerRootActionCompletedHook } from "pyfusion/libs/Action";
 import { getLogger } from "pyfusion/logging";
-import { RepositoryServiceWrapper } from "./RepositoryService";
 
 let log = getLogger('FrontendDomainStore');
 
@@ -42,10 +41,14 @@ export class FrontendDomainStore extends PametStore {
         let autoCommit = true;
         if (autoCommit) {
             registerRootActionCompletedHook(() => {
+                if (this._uncommittedChanges.length === 0) {
+                    return;
+                }
                 log.info('registerRootActionCompletedHook triggered. Committing changes:');
                 this._uncommittedChanges.forEach((change) => {
                     log.info(change);
                 });
+                this.clearUncommittedChanges();
             });
         }
     }

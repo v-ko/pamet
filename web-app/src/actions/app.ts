@@ -1,5 +1,5 @@
 import { WebAppState } from "../containers/app/App";
-import { pamet } from "../facade";
+import { pamet } from "../core/facade";
 import { getLogger } from "pyfusion/logging";
 import { action } from "pyfusion/libs/Action";
 import { PageViewState } from "../components/page/PageViewState";

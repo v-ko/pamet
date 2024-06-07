@@ -1,4 +1,4 @@
-import { registerElementView } from "../../elementViewLibrary";
+import { registerElementView } from "../elementViewLibrary";
 import { ExternalLinkNote } from "../../model/ExternalLinkNote";
 import { color_to_css_rgba_string } from "../../util";
 import { Point2D } from "../../util/Point2D";

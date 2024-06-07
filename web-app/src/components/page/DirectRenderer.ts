@@ -3,11 +3,11 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTION_OVERLAY_COLOR } from "../../constants";
+import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTION_OVERLAY_COLOR } from "../../core/constants";
 import { getLogger } from "pyfusion/logging";
 import { color_to_css_rgba_string, drawCrossingDiagonals } from "../../util";
 import { Rectangle } from "../../util/Rectangle";
-import { ElementView, getElementView } from "../../elementViewLibrary";
+import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
 
 let log = getLogger('CanvasCacheService');

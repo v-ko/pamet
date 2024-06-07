@@ -4,7 +4,7 @@ import { TextLayout } from "../../util";
 import { calculateTextLayout } from "./util";
 import { getLogger } from "pyfusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
-import { DEFAULT_FONT_STRING } from "../../constants";
+import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { SerializedEntity, dumpToDict, loadFromDict } from "pyfusion/libs/Entity";
 
 let log = getLogger('NoteViewState.ts');

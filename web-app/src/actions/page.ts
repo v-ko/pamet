@@ -6,9 +6,9 @@ import { action } from "pyfusion/libs/Action";
 
 import { getLogger } from "pyfusion/logging";
 import { Rectangle } from "../util/Rectangle";
-import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../constants";
+import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../core/constants";
 import { EditComponentState } from "../components/note/EditComponent";
-import { pamet } from "../facade";
+import { pamet } from "../core/facade";
 import { Note } from "../model/Note";
 import { TextNote } from "../model/TextNote";
 import { minimalNonelidedSize } from "../components/note/util";

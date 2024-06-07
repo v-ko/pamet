@@ -1,9 +1,9 @@
 import { useRef } from 'react';
-import { NOTE_MARGIN } from '../../constants.js';
+import { NOTE_MARGIN } from '../../core/constants.js';
 import { color_to_css_rgba_string } from '../../util/index.js';
 import { observer } from 'mobx-react-lite';
 import { NoteViewState } from './NoteViewState.js';
-import { pamet } from '../../facade.js';
+import { pamet } from '../../core/facade.js';
 import { getLogger } from 'pyfusion/logging.js';
 
 import { trace } from 'mobx';

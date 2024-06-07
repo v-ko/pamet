@@ -1,18 +1,19 @@
-import { WebAppState } from "./containers/app/App";
+import { WebAppState } from "../containers/app/App";
 import { Channel, addChannel } from 'pyfusion/libs/Channel';
 import { getLogger } from 'pyfusion/logging';
 import { Store, SearchFilter } from 'pyfusion/storage/BaseStore';
 import { Change } from "pyfusion/Change";
-import { PametStore } from "./storage/base";
+import { PametStore } from "../storage/PametStore";
 import { Entity, EntityData } from "pyfusion/libs/Entity";
-import { ApiClient } from "./storage/ApiClient";
-import { Page } from "./model/Page";
-import { appActions } from "./actions/app";
-import { Note } from "./model/Note";
-import { Arrow } from "./model/Arrow";
+import { ApiClient } from "../storage/ApiClient";
+import { Page } from "../model/Page";
+import { appActions } from "../actions/app";
+import { Note } from "../model/Note";
+import { Arrow } from "../model/Arrow";
 import { FrontendStoreResyncService } from "./services/ResyncManager";
-import { FrontendDomainStore } from "./storage/FrontendDomainStore";
-import { RepositoryServiceWrapper } from "./storage/RepositoryService";
+import { FrontendDomainStore } from "../storage/FrontendDomainStore";
+import { RepositoryServiceWrapper } from "../storage/RepositoryService";
+import { InMemoryStore } from "pyfusion/storage/InMemoryStore";
 
 const log = getLogger('facade');
 
@@ -22,7 +23,7 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 export class PametFacade extends PametStore {
-    private _frontendDomainStore: FrontendDomainStore | undefined;
+    private _frontendDomainStore: Store = new InMemoryStore();
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | undefined;
     private _changeBufferForRootAction: Array<Change> = [];
@@ -96,16 +97,10 @@ export class PametFacade extends PametStore {
     // }
 
     setAppViewState(state: WebAppState) {
-        if (this._appViewState) {
-            throw new Error('WebAppState already set');
-        }
         this._appViewState = state;
     }
 
     setFrontendDomainStore(store: FrontendDomainStore) {
-        if (this._frontendDomainStore) {
-            throw new Error('FrontendDomainStore already set');
-        }
         this._frontendDomainStore = store;
     }
 
@@ -155,7 +150,11 @@ export class PametFacade extends PametStore {
     }
 
     _loadOne(entity: Entity<EntityData>) {
-        this._frontendDomainStore._loadOne(entity);
+        try{
+            this._frontendDomainStore.insertOne(entity);
+        } catch (e) {
+            console.log('Error loading entity', entity, e)
+        }
     }
 
     insertOne(entity: Entity<EntityData>): Change {

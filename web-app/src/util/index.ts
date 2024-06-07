@@ -1,5 +1,5 @@
 import { ElementViewState } from "../components/page/ElementViewState";
-import { ALIGNMENT_GRID_UNIT } from "../constants";
+import { ALIGNMENT_GRID_UNIT } from "../core/constants";
 import { getLogger } from "pyfusion/logging";
 import { Point2D, Vector2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";

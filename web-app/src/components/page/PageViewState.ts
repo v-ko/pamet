@@ -1,12 +1,12 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction } from 'mobx';
-import { ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../constants';
+import { ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
 import { Viewport } from './Viewport';
 import { RectangleData } from '../../util/Rectangle';
 import { NoteViewState } from '../note/NoteViewState';
 import { ArrowViewState } from '../arrow/ArrowViewState';
-import { pamet } from '../../facade';
+import { pamet } from '../../core/facade';
 import { getLogger } from 'pyfusion/logging';
 import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
