@@ -13,7 +13,7 @@ class PametCommands {
         console.log('createNewNote command executed')
 
         // Get the real mouse pos on canvas (if it's over the viewport)
-        let pageVS = pamet.appState.currentPageViewState;
+        let pageVS = pamet.appViewState.currentPageViewState;
         if (pageVS === null) {
             log.error('Trying to create a note with not page view state');
             return;
@@ -34,7 +34,7 @@ class PametCommands {
     @command('Auto-size selected notes')
     autoSizeSelectedNotes() {
         console.log('autoSizeSelectedNotes command executed')
-        let pageVS = pamet.appState.currentPageViewState;
+        let pageVS = pamet.appViewState.currentPageViewState;
         if (pageVS === null) {
             log.error('Trying to auto-size notes with no page view state');
             return;

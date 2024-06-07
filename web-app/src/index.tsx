@@ -23,6 +23,8 @@ import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
 import { fusion } from 'pyfusion/index';
 import { ActionState } from 'pyfusion/libs/Action';
 import { appActions } from './actions/app';
+import { FrontendDomainStore } from './storage/FrontendDomainStore';
+
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
 dummyImports.push(CardNote);
@@ -47,10 +49,12 @@ const root = ReactDOM.createRoot(
 const PametContext = createContext<PametFacade>(pamet);
 (window as any).pamet = pamet; // For debugging
 
-// Create the app state with the appropriate page from the URL
-let app_state = new WebAppState();
 
-pamet.setWebAppState(app_state);
+// Set app view state (be explicit and avoid circular deps)
+let app_state = new WebAppState()
+
+pamet.setAppViewState(app_state)
+pamet.setFrontendDomainStore(new FrontendDomainStore(app_state))
 
 // Initial entity load (TMP, will be done by the sync service)
 const afterLoad = () => {
@@ -96,7 +100,7 @@ fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
 root.render(
     <React.StrictMode>
         <PametContext.Provider value={pamet}>
-            <WebApp state={app_state} />
+            <WebApp state={pamet.appViewState} />
         </PametContext.Provider>
     </React.StrictMode>
 );

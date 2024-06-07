@@ -1,18 +1,18 @@
 import { WebAppState } from "./containers/app/App";
 import { Channel, addChannel } from 'pyfusion/libs/Channel';
 import { getLogger } from 'pyfusion/logging';
-import { Repository, SearchFilter } from 'pyfusion/storage/BaseRepository';
-import { InMemoryRepository } from 'pyfusion/storage/InMemoryRepository';
-import { ActionState } from 'pyfusion/libs/Action';
+import { Store, SearchFilter } from 'pyfusion/storage/BaseStore';
 import { Change } from "pyfusion/Change";
-import { PametRepository } from "./storage/base";
-import { fusion } from "pyfusion/index"
+import { PametStore } from "./storage/base";
 import { Entity, EntityData } from "pyfusion/libs/Entity";
 import { ApiClient } from "./storage/ApiClient";
 import { Page } from "./model/Page";
 import { appActions } from "./actions/app";
 import { Note } from "./model/Note";
 import { Arrow } from "./model/Arrow";
+import { FrontendStoreResyncService } from "./services/ResyncManager";
+import { FrontendDomainStore } from "./storage/FrontendDomainStore";
+import { RepositoryServiceWrapper } from "./storage/RepositoryService";
 
 const log = getLogger('facade');
 
@@ -20,63 +20,65 @@ const log = getLogger('facade');
 export interface PageQueryFilter { [key: string]: any }
 
 
-export class PametFacade extends PametRepository {
-    private _syncRepo: Repository;
-    private _apiClient: ApiClient;
-    private _appState?: WebAppState;
-    private _changeBufferForRootAction: Array<Change> = [];
 
-    rawChagesChannel: Channel;
-    rawChagesByIdChannel: Channel;
-    rawChagesByParentIdChannel: Channel;
-    rawChangesPlusRootActionEventsChannel: Channel;
-    entityChangeListPerRootActionChannel: Channel;
+export class PametFacade extends PametStore {
+    private _frontendDomainStore: FrontendDomainStore | undefined;
+    private _apiClient: ApiClient;
+    private _appViewState: WebAppState | undefined;
+    private _changeBufferForRootAction: Array<Change> = [];
+    // private _storeResyncService: FrontendStoreResyncService;
+
+    // rawChangesChannel: Channel;
+    // rawChangesByIdChannel: Channel;
+    // rawChagesByParentIdChannel: Channel;
+    // rawChangesPlusRootActionEventsChannel: Channel;
+    // entityChangeListPerRootActionChannel: Channel;
 
     constructor() {
         super()
-        this._syncRepo = new InMemoryRepository();
-
         this._apiClient = new ApiClient('http://localhost', 3333, '', true);
+        // this._repoService = new RepositoryServiceWrapper();
 
-        // Setup the change communication pipeline
-        // The CRUD methods push changes to the rawChangesChannel
-        this.rawChagesChannel = addChannel('rawChanges');
-        this.rawChagesByIdChannel = addChannel('rawChangesById', (change) => change.entity.id);
-        this.rawChagesByParentIdChannel = addChannel('rawChangesByParentId', (change) => change.entity.parentId);
 
-        // Merge the rawChangesChannel and the rootActionEventsChannel
-        this.rawChangesPlusRootActionEventsChannel = addChannel('rawChangesPlusRootActionEvents');
-        this.rawChagesChannel.subscribe((change: Change) => {
-            this.rawChangesPlusRootActionEventsChannel.push(change);
-        });
-        fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
-            this.rawChangesPlusRootActionEventsChannel.push(actionState);
-        });
+        // // Setup the change communication pipeline
+        // // The CRUD methods push changes to the rawChangesChannel
+        // this.rawChangesChannel = addChannel('rawChanges');
+        // this.rawChangesByIdChannel = addChannel('rawChangesById', (change) => change.entity.id);
+        // this.rawChagesByParentIdChannel = addChannel('rawChangesByParentId', (change) => change.entity.parentId);
 
-        // Group changes per root action
-        this.entityChangeListPerRootActionChannel = addChannel('entityChangeListPerRootAction');
-        this.rawChangesPlusRootActionEventsChannel.subscribe((changeOrActionState: Change | ActionState) => {
-            if (changeOrActionState instanceof ActionState) {
-                if (changeOrActionState.started) {
-                    this._changeBufferForRootAction = [];
-                }
-                else if (changeOrActionState.completed && this._changeBufferForRootAction.length > 0) {
-                    this.entityChangeListPerRootActionChannel.push(this._changeBufferForRootAction);
-                }
-            }
-            else {
-                this._changeBufferForRootAction.push(changeOrActionState);
-            }
-        });
+        // // Merge the rawChangesChannel and the rootActionEventsChannel
+        // this.rawChangesPlusRootActionEventsChannel = addChannel('rawChangesPlusRootActionEvents');
+        // this.rawChangesChannel.subscribe((change: Change) => {
+        //     this.rawChangesPlusRootActionEventsChannel.push(change);
+        // });
+        // fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
+        //     this.rawChangesPlusRootActionEventsChannel.push(actionState);
+        // });
 
-        // Test the entityChangeListPerRootActionChannel by logging
-        this.entityChangeListPerRootActionChannel.subscribe((changeList: Array<Change>) => {
-            // List all changes
-            log.info('entityChangeListPerRootActionChannel channel changes:');
-            changeList.forEach((change) => {
-                log.info(change);
-            });
-        });
+        // // Group changes per root action
+        // this.entityChangeListPerRootActionChannel = addChannel('entityChangeListPerRootAction');
+        // this.rawChangesPlusRootActionEventsChannel.subscribe((changeOrActionState: Change | ActionState) => {
+        //     if (changeOrActionState instanceof ActionState) {
+        //         if (changeOrActionState.started) {
+        //             this._changeBufferForRootAction = [];
+        //         }
+        //         else if (changeOrActionState.completed && this._changeBufferForRootAction.length > 0) {
+        //             this.entityChangeListPerRootActionChannel.push(this._changeBufferForRootAction);
+        //         }
+        //     }
+        //     else {
+        //         this._changeBufferForRootAction.push(changeOrActionState);
+        //     }
+        // });
+
+        // // Test the entityChangeListPerRootActionChannel by logging
+        // this.entityChangeListPerRootActionChannel.subscribe((changeList: Array<Change>) => {
+        //     // List all changes
+        //     log.info('entityChangeListPerRootActionChannel channel changes:');
+        //     changeList.forEach((change) => {
+        //         log.info(change);
+        //     });
+        // });
     }
 
     pametSchemaToHttpUrl(url: string): string {
@@ -87,21 +89,35 @@ export class PametFacade extends PametRepository {
         return this._apiClient.endpointUrl(url);
     }
 
-    _pushChangeToRawChannels(change: Change) {
-        this.rawChagesChannel.push(change);
-        this.rawChagesByIdChannel.push(change);
-        this.rawChagesByParentIdChannel.push(change);
+    // _pushChangeToRawChannels(change: Change) {
+    //     this.rawChangesChannel.push(change);
+    //     this.rawChangesByIdChannel.push(change);
+    //     this.rawChagesByParentIdChannel.push(change);
+    // }
+
+    setAppViewState(state: WebAppState) {
+        if (this._appViewState) {
+            throw new Error('WebAppState already set');
+        }
+        this._appViewState = state;
     }
 
-    setWebAppState(state: WebAppState) {
-        this._appState = state;
+    setFrontendDomainStore(store: FrontendDomainStore) {
+        if (this._frontendDomainStore) {
+            throw new Error('FrontendDomainStore already set');
+        }
+        this._frontendDomainStore = store;
     }
 
-    get appState(): WebAppState {
-        if (!this._appState) {
+    get appViewState(): WebAppState {
+        if (!this._appViewState) {
             throw new Error('WebAppState not set');
         }
-        return this._appState;
+        return this._appViewState;
+    }
+
+    apiClient() {
+        return this._apiClient;
     }
 
     loadAllEntitiesTMP(callback_done: () => void) {
@@ -136,96 +152,77 @@ export class PametFacade extends PametRepository {
             // Wait for all the promises to resolve, then call callback_done
             Promise.all(promises).then(callback_done);
         });
-
-
-    }
-
-    apiClient() {
-        return this._apiClient;
     }
 
     _loadOne(entity: Entity<EntityData>) {
-        // Will be removed when the load/sync service is implemented
-        try{
-        this._syncRepo.insertOne(entity);
-        } catch (e) {
-            console.log('Error loading entity', entity, e)
-        }
+        this._frontendDomainStore._loadOne(entity);
     }
 
-    // Implement the Repository interface to use the InMemoryRepository
     insertOne(entity: Entity<EntityData>): Change {
-        let change = this._syncRepo.insertOne(entity);
-        this.applyChangesToViewStates([change]);
-        this.rawChagesChannel.push(change);
-        return change;
+        return this._frontendDomainStore.insertOne(entity);
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        let change = this._syncRepo.updateOne(entity);
-        this.applyChangesToViewStates([change]);
-        this.rawChagesChannel.push(change);
-        return change;
+        return this._frontendDomainStore.updateOne(entity);
     }
+
     removeOne(entity: Entity<EntityData>): Change {
-        let change = this._syncRepo.removeOne(entity);
-        this.applyChangesToViewStates([change]);
-        this.rawChagesChannel.push(change);
-        return change;
+        return this._frontendDomainStore.removeOne(entity);
     }
 
     find(filter: SearchFilter = {}): Generator<Entity<EntityData>> {
-        return this._syncRepo.find(filter);
+        return this._frontendDomainStore.find(filter);
     }
 
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
-        return this._syncRepo.findOne(filter);
+        return this._frontendDomainStore.findOne(filter);
     }
+}
 
-    applyChangesToViewStates(changes: Array<Change>) {
-        /** A reducer-like function to map entity changes to ViewStates
-         * Will be used synchrously from the facade entity CRUD methods (inside actions)
-         * And will be used by the domain store watcher service (responcible for
-         * updating the view states after external domain store changes)
-         */
-        console.log('Applying changes to view states', changes)
-        for (let change of changes) {
-            // if page
-            let entity = change.lastState;
-            if (entity instanceof Page) {
-                // get current page vs
-                let pageVS = this.appState.currentPageViewState;
-                if (!pageVS || pageVS.page.id !== entity.id) {
-                    continue;
-                }
 
-                // if (change.isCreate()) // pass
-                if (change.isDelete()) {
-                    // remove
-                    if (pageVS.page.id === entity.id) { // If current is removed
-                        appActions.setPageToHomeOrFirst(this.appState);
-                    }
-                }
-                else if (change.isUpdate()) {
-                    // update data
-                    pageVS.updateFromPage(entity);
+export function applyChangesToViewModel(appState:WebAppState, changes: Array<Change>) {
+    /** A reducer-like function to map entity changes to ViewStates
+     * Will be used synchrously from the facade entity CRUD methods (inside actions)
+     * And will be used by the domain store watcher service (responcible for
+     * updating the view states after external domain store changes)
+     */
+    console.log('Applying changes to view states', changes)
+    for (let change of changes) {
+        // if page
+        let entity = change.lastState;
+        if (entity instanceof Page) {
+            // get current page vs
+            let pageVS = appState.currentPageViewState;
+            if (!pageVS || pageVS.page.id !== entity.id) {
+                continue;
+            }
+
+            // if (change.isCreate()) // pass
+            if (change.isDelete()) {
+                // remove
+                if (pageVS.page.id === entity.id) { // If current is removed
+                    appActions.setPageToHomeOrFirst(appState);
                 }
             }
-            else if (entity instanceof Note || entity instanceof Arrow) {
-                // get current page vs
-                let pageVS = this.appState.currentPageViewState;
-                if (!pageVS || pageVS.page.id !== entity.parentId) {
-                    continue;
-                }
+            else if (change.isUpdate()) {
+                // update data
+                pageVS.updateFromPage(entity);
+            }
+        }
+        else if (entity instanceof Note || entity instanceof Arrow) {
+            // get current page vs
+            let pageVS = appState.currentPageViewState;
+            if (!pageVS || pageVS.page.id !== entity.parentId) {
+                continue;
+            }
 
-                if (change.isCreate()) {
-                    pageVS.addViewStateForElement(entity);
-                }else if (change.isDelete()) {
-                    pageVS.removeViewStateForElement(entity);
-                }
-                else if (change.isUpdate()) {
-                    pageVS.updateEVS_fromElement(entity);
-                }
+            if (change.isCreate()) {
+                pageVS.addViewStateForElement(entity);
+            }else if (change.isDelete()) {
+                pageVS.removeViewStateForElement(entity);
+            }
+            else if (change.isUpdate()) {
+                pageVS.updateEVS_fromElement(entity);
             }
         }
     }

@@ -1,11 +1,17 @@
 
 import { Change } from 'pyfusion/Change'
-import { Repository, SearchFilter } from 'pyfusion/storage/BaseRepository'
+import { Store, SearchFilter } from 'pyfusion/storage/BaseStore'
 import { Arrow } from '../model/Arrow'
 import { Note } from '../model/Note'
 import { Page } from '../model/Page'
 
-export abstract class PametRepository extends Repository {
+export interface SerializedPametDomainStoreState {
+    pages: Page[];
+    notes: Note[];
+    arrows: Arrow[];
+}
+
+export abstract class PametStore extends Store {
     // Page CRUD
     insertPage(page: Page): Change {
         return this.insertOne(page)

@@ -1,10 +1,12 @@
 import "./App.css";
+import { useEffect } from "react";
+import { makeObservable, observable } from "mobx";
 import { observer } from "mobx-react-lite";
+
 import { PageView } from "../../components/page/PageView";
 import { PageViewState } from "../../components/page/PageViewState";
-import { makeObservable, observable } from "mobx";
+
 import { getLogger } from "pyfusion/logging";
-import { useEffect } from "react";
 
 let log = getLogger("App");
 

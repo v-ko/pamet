@@ -1,8 +1,8 @@
-import { InMemoryRepository } from "pyfusion/storage/InMemoryRepository";
-import { PametRepository } from "./base";
+// import { InMemoryStore } from "pyfusion/storage/InMemoryStore";
+// import { PametStore } from "./base";
 
-class PametInMemoryRepo extends PametRepository {
-    constructor() {
-        super(new InMemoryRepository());
-    }
-}
+// export class PametInMemoryStore extends PametStore {
+//     constructor() {
+//         super(new InMemoryStore());
+//     }
+// }
