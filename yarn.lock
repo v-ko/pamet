@@ -4359,6 +4359,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"comlink@npm:^4.4.1":
+  version: 4.4.1
+  resolution: "comlink@npm:4.4.1"
+  checksum: 10c0/a7a2004030768d13ec9373f780aa0edae57616095cb453ec8950d9f97e5fa654c0e84030ac87173b818843a04a5fa9ce9749d48b6bd453cfbfb5e6a9ebb6b2ff
+  languageName: node
+  linkType: hard
+
 "common-ancestor-path@npm:^1.0.1":
   version: 1.0.1
   resolution: "common-ancestor-path@npm:1.0.1"
@@ -10247,6 +10254,7 @@ __metadata:
     "@types/babel__preset-env": "npm:^7"
     "@types/jest": "npm:^29.5.12"
     babel-jest: "npm:^29.7.0"
+    comlink: "npm:^4.4.1"
     jest: "npm:^29.7.0"
     ts-jest: "npm:^29.1.2"
     typescript: "npm:^5.4.4"

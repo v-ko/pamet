@@ -23,5 +23,8 @@
     "dev": "yarn workspace web-app run dev",
     "test": "jest",
     "test:packages": "yarn workspaces foreach run test"
+  },
+  "dependencies": {
+    "comlink": "^4.4.1"
   }
 }
