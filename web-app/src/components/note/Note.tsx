@@ -83,7 +83,7 @@ export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) 
                 width: width + 'px',
                 height: height + 'px',
                 color: color,
-                backgroundColor: backgroundColor,
+                background: backgroundColor,
                 border: !!note.content.url ? `1px solid ${color}` : '',
                 textDecoration: 'none',
                 position: 'absolute',

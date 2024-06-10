@@ -1,6 +1,6 @@
 import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
-import WebApp, { WebAppState } from './containers/app/App';
+import WebApp, { PageError, WebAppState } from './containers/app/App';
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './core/facade';
@@ -24,6 +24,8 @@ import { fusion } from 'pyfusion/index';
 import { ActionState } from 'pyfusion/libs/Action';
 import { appActions } from './actions/app';
 import { FrontendDomainStore } from './storage/FrontendDomainStore';
+import { PametConfig } from './config/Config';
+import { LocalStorageConfigAdapter } from './config/LocalStorageConfigAdapter';
 
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
@@ -55,8 +57,23 @@ let app_state = new WebAppState()
 pamet.setAppViewState(app_state)
 pamet.setFrontendDomainStore(new FrontendDomainStore(app_state))
 
-// Load user
+const config = new PametConfig(new LocalStorageConfigAdapter())
+pamet.setConfig(config)
 
+// Check if the device is set - if missing - generate metadata
+let deviceData = config.deviceData;
+if (!deviceData) {
+    deviceData = {
+        id: crypto.randomUUID(),
+        name: "WebApp",
+    }
+    config.deviceData = deviceData;
+}
+
+// Setup state updates on config updates
+config.setUpdateHandler(() => {
+    appActions.updateAppStateFromConfig(app_state);
+});
 
 // Initial entity load (TMP, will be done by the sync service)
 const afterLoad = () => {
@@ -78,10 +95,8 @@ const afterLoad = () => {
         if (page) {
             appActions.setCurrentPage(app_state, page.id);
         } else {
-            appActions.setErrorMessage(app_state, `Page with id ${pageId} not found`);
-            console.log("Page not found", pageId)
-            // console.log("Pages", pages)
-            appActions.setCurrentPage(app_state, null);
+            log.warning(`Page with id ${pageId} not found`);
+            appActions.setCurrentPage(app_state, null, PageError.NOT_FOUND);
         }
     } else {
         console.log("Url not supported", urlPath)

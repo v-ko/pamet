@@ -7,22 +7,28 @@ import { PageView } from "../../components/page/PageView";
 import { PageViewState } from "../../components/page/PageViewState";
 
 import { getLogger } from "pyfusion/logging";
+import { UserData } from "web-app/src/model/User";
+import { DeviceData } from "web-app/src/model/Device";
 
 let log = getLogger("App");
 
-// Define the app state with mobx and typescript
+export enum PageError {
+  NONE = 0,
+  NOT_FOUND = 1
+}
+
 export class WebAppState {
-  // Define the state
-  // currentPageId: string | null = null;
+  device: DeviceData | null = null;
+  user: UserData | null = null;
+
   currentPageViewState: PageViewState | null = null;
-  errorMessage: string | null = null;
+  pageError: PageError = PageError.NONE;
   currentUrlPath: string | null = null;
   loading: boolean = true
 
   constructor() {
     makeObservable(this, {
-      // currentPageId: observable,
-      errorMessage: observable,
+      pageError: observable,
       currentUrlPath: observable,
       loading: observable,
       currentPageViewState: observable
@@ -32,8 +38,11 @@ export class WebAppState {
 
 
 const WebApp = observer(({ state }: { state: WebAppState }) => {
-  // const [entityLoadCalled, setEntityLoadCalled] = useState(false);
-  const errorMessage = state.errorMessage;
+  let errorMessage: string = '';
+
+  if (state.pageError === PageError.NOT_FOUND) {
+    errorMessage = "Page not found";
+  }
 
 
   // Change the title when the current page changes

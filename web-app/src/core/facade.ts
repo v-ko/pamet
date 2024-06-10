@@ -1,5 +1,4 @@
 import { WebAppState } from "../containers/app/App";
-import { Channel, addChannel } from 'pyfusion/libs/Channel';
 import { getLogger } from 'pyfusion/logging';
 import { Store, SearchFilter } from 'pyfusion/storage/BaseStore';
 import { Change } from "pyfusion/Change";
@@ -10,10 +9,9 @@ import { Page } from "../model/Page";
 import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
-import { FrontendStoreResyncService } from "./services/ResyncManager";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
-import { RepositoryServiceWrapper } from "../storage/RepositoryService";
 import { InMemoryStore } from "pyfusion/storage/InMemoryStore";
+import { PametConfig } from "../config/Config";
 
 const log = getLogger('facade');
 
@@ -25,9 +23,10 @@ export interface PageQueryFilter { [key: string]: any }
 export class PametFacade extends PametStore {
     private _frontendDomainStore: Store = new InMemoryStore();
     private _apiClient: ApiClient;
-    private _appViewState: WebAppState | undefined;
+    private _appViewState: WebAppState | null = null;
     private _changeBufferForRootAction: Array<Change> = [];
     // private _storeResyncService: FrontendStoreResyncService;
+    private _config: PametConfig | null = null;
 
     // rawChangesChannel: Channel;
     // rawChangesByIdChannel: Channel;
@@ -39,7 +38,6 @@ export class PametFacade extends PametStore {
         super()
         this._apiClient = new ApiClient('http://localhost', 3333, '', true);
         // this._repoService = new RepositoryServiceWrapper();
-
 
         // // Setup the change communication pipeline
         // // The CRUD methods push changes to the rawChangesChannel
@@ -104,11 +102,22 @@ export class PametFacade extends PametStore {
         this._frontendDomainStore = store;
     }
 
+    setConfig(config: PametConfig) {
+        this._config = config;
+    }
+
     get appViewState(): WebAppState {
         if (!this._appViewState) {
             throw new Error('WebAppState not set');
         }
         return this._appViewState;
+    }
+
+    get config(): PametConfig {
+        if (!this._config) {
+            throw new Error('Config not set');
+        }
+        return this._config;
     }
 
     apiClient() {

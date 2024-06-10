@@ -1,4 +1,4 @@
-import { WebAppState } from "../containers/app/App";
+import { PageError, WebAppState } from "../containers/app/App";
 import { pamet } from "../core/facade";
 import { getLogger } from "pyfusion/logging";
 import { action } from "pyfusion/libs/Action";
@@ -15,7 +15,7 @@ class AppActions {
     }
 
     @action
-    setCurrentPage(state: WebAppState, pageId: string | null) {
+    setCurrentPage(state: WebAppState, pageId: string | null, pageError: PageError = PageError.NONE) {
         console.log(`Changing current page to ${pageId}`)
         if (!pageId) {
             return null;
@@ -28,11 +28,7 @@ class AppActions {
         } else {
             state.currentPageViewState = null;
         }
-    }
-
-    @action
-    setErrorMessage(state: WebAppState, message: string) {
-        state.errorMessage = message;
+        state.pageError = pageError;
     }
 
     @action
@@ -46,6 +42,22 @@ class AppActions {
             }
         }
         appActions.setCurrentPage(state, page.id);
+    }
+
+    @action
+    updateAppStateFromConfig(state: WebAppState) {
+        // Device
+
+        // User
+        let user = pamet.config.userData;
+        if (user === undefined) {
+            state.user = null;
+        } else {
+            state.user = user;
+        }
+
+        // Settings?
+        // Projects
     }
 }
 

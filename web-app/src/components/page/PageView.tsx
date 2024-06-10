@@ -22,6 +22,7 @@ import EditComponent from '../note/EditComponent';
 import { NoteViewState } from '../note/NoteViewState';
 import { Size } from '../../util/Size';
 import { Note } from '../../model/Note';
+import Panel from './Panel';
 
 
 let log = getLogger('Page.tsx')
@@ -37,6 +38,13 @@ flex-shrink: 1;
 overflow: hidden;
 touch-action: none;
 min-width: 30px;
+`
+
+// Vertical line component
+const VerticalSeparator = styled.div`
+  width: 1px;
+  height: 1em;
+  background: rgba(0,0,0,0.2);
 `
 
 export class MouseState {
@@ -627,7 +635,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
             width: `100vw`,
             height: `100vh`,
             pointerEvents: 'none',
-            zIndex: 1000,
+            zIndex: 1001,
           }}
           ref={canvasRef}
         />
@@ -646,6 +654,54 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           }}
           ref={paperCanvasRef}
         />
+
+        {/* Main panel - logo, project name, save state, help button */}
+        <Panel align='top-left'>
+
+          <div
+            style={{
+              fontSize: '1.1em',
+              fontWeight: 400,
+              cursor: 'pointer',
+            }}
+            onClick={() => { alert('Not implemented yet') }}
+            title="Go to projects"
+          >PAMET</div>
+          <VerticalSeparator />
+
+          <div
+            style={{
+              cursor: 'pointer'
+            }}
+            onClick={() => { alert('Not implemented yet') }}
+            title="Project properties"
+          >-default-</div>
+          <img src="/src/resources/icons/cloud-off.svg" alt="Not saved" />
+          <VerticalSeparator />
+          <img src="/src/resources/icons/share-2.svg" alt="Share" />
+          <VerticalSeparator />
+          <div
+            title='Main menu'
+            style={{
+              fontSize: '1.2em',
+              textAlign: 'center',
+              cursor: 'pointer',
+            }}
+            onClick={() => { alert('Not implemented yet') }}
+          >
+            ☰
+          </div>
+
+        </Panel>
+
+        <Panel align='top-right'>
+          <img src="/src/resources/icons/help-circle.svg" alt="Help" />
+          <VerticalSeparator />
+          <div>{state.page.name}</div>
+          <VerticalSeparator />
+          <img src="/src/resources/icons/account-circle.svg" alt="Login/Sign up" />
+        </Panel>
+
       </PageOverlay> {/*  map container container */}
 
       {state.page.tour_segments &&

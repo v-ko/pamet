@@ -166,7 +166,7 @@ const EditComponent: React.FC<EditComponentProps> = observer((
       style={{
         left: left,
         top: top,
-        opacity: state.isBeingDragged ? 0.6 : 1,
+        background: `rgba(255, 255, 255, ${state.isBeingDragged ? 0.6 : 1})`,
         pointerEvents: state.isBeingDragged ? 'none' : 'auto',
 
         position: 'absolute',
@@ -178,12 +178,12 @@ const EditComponent: React.FC<EditComponentProps> = observer((
         minWidth: '300px',
         maxWidth: '95%',
 
-        backgroundColor: 'white',
         border: '1px solid black',
         borderRadius: '5px',
         display: 'grid',
         gridTemplateColumns: '100%',
         gridTemplateRows: '30px 50px auto 50px',
+        zIndex: 1003
       }}>
       {/* Title bar */}
       <div

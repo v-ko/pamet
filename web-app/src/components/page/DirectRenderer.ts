@@ -476,11 +476,14 @@ export class CanvasPageRenderer {
         // Overview
 
         // Draw stats
+        let pixelSpaceRect = state.viewport.projectedBounds();
         ctx.save()
         ctx.resetTransform()
         ctx.fillStyle = 'black';
         ctx.font = '15px sans-serif';
-        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, 10, 20);
+        let xStats = 10;
+        let yStats = pixelSpaceRect.height - 10;
+        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
         ctx.restore()
 
         // Call the next render if some notes have not been fully rendered
