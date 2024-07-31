@@ -1,0 +1,3 @@
+[submodule "fusion"]
+	path = fusion
+	url = https://github.com/v-ko/fusion
