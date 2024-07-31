@@ -1,7 +1,7 @@
 import { BaseConfigAdapter } from "./BaseConfigAdapter";
 
 export class LocalStorageConfigAdapter extends BaseConfigAdapter {
-    private _handler = () => {};
+    private _handler = () => { };
 
     getJSON(key: string): any | undefined {
         return localStorage.getItem(key);
@@ -10,16 +10,16 @@ export class LocalStorageConfigAdapter extends BaseConfigAdapter {
     setJSON(key: string, value: string | undefined): void {
         if (value === undefined) {
             localStorage.removeItem(key);
-            return;
+        } else {
+            localStorage.setItem(key, value);
         }
-        localStorage.setItem(key, value);
         // Trigger update, since only remote updates trigger the storage events
         this._handler();
     }
-
+    keys(): string[] {
+        return Object.keys(localStorage);
+    }
     setUpdateHandler(handler: () => void) {
-        super.setUpdateHandler(handler);
-
         this._handler = handler; // For local updates
 
         // Listen for updates from other tabs
@@ -28,8 +28,5 @@ export class LocalStorageConfigAdapter extends BaseConfigAdapter {
                 handler();
             }
         });
-    }
-    keys(): string[] {
-        return Object.keys(localStorage);
     }
 }

@@ -29,12 +29,10 @@ interface PanelProps {
 // Functional React component that utilizes StyledPanel with type annotations
 const Panel: React.FC<PanelProps> = ({ align, children }) => {
   const stopPropagation = (event: React.MouseEvent<HTMLDivElement>) => {
-    console.log('Panel clicked');
     // Prevents the event from bubbling up to the parent elements
     event.stopPropagation();
   };
   const stopTouchPropagation = (event: React.TouchEvent<HTMLDivElement>) => {
-    console.log('Panel touched');
     // Prevents the event from bubbling up to the parent elements
     event.stopPropagation();
   };

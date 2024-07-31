@@ -208,7 +208,7 @@ class PageActions {
   @action
   startNoteCreation(state: PageViewState, realPosition: Point2D) {
     let pixSpacePosition = state.viewport.projectPoint(realPosition);
-    let note = TextNote.default(state.page.id);
+    let note = TextNote.createNew(state.page.id);
     let noteRect = note.rect()
     noteRect.setTopLeft(realPosition)
     note.setRect(noteRect)

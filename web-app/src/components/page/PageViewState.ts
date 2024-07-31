@@ -56,7 +56,7 @@ export class PageViewState {
 
     // Common
     mode: PageMode = PageMode.None;
-    viewportCenterOnModeStart: Point2D = new Point2D(0, 0);
+    viewportCenterOnModeStart: Point2D = new Point2D(0, 0); // In real coords
     realMousePositionOnCanvas: Point2D | null = null;
     // mouseButtons: number = 0;
 
@@ -117,9 +117,9 @@ export class PageViewState {
 
     createElementViewStates() {
         const notes = Array.from(pamet.notes({ parentId: this.page.id }))
-        this._updateNoteViewStatesFromNotes(notes);
+        this._updateNoteViewStates(notes);
         const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
-        this._updateArrowViewStatesFromStore(arrows);
+        this._updateArrowViewStates(arrows);
     }
 
     addViewStateForElement(element: Note | Arrow) {
@@ -223,7 +223,7 @@ export class PageViewState {
         return { headNVS, tailNVS }
     }
 
-    _updateNoteViewStatesFromNotes(notes: Iterable<Note>) {
+    _updateNoteViewStates(notes: Iterable<Note>) {
         console.log('Updating note view states from notes', notes)
 
         let nvsHasNoteMap = new Map<string, boolean>();
@@ -248,7 +248,7 @@ export class PageViewState {
         }
     }
 
-    _updateArrowViewStatesFromStore(arrows: Iterable<Arrow>) {
+    _updateArrowViewStates(arrows: Iterable<Arrow>) {
         let arrowavsHasArrowMap = new Map<string, boolean>();
         for (let arrow of arrows) {
             arrowavsHasArrowMap.set(arrow.own_id, true);
@@ -308,8 +308,8 @@ export class PageViewState {
     }
 
     get viewport() {
-        let viewport = new Viewport(new Point2D(0, 0), this.viewportHeight, this.viewportGeometry);
-        viewport.setDevicePixelRatio(window.devicePixelRatio)
+        let viewport = Viewport.fromProjectedGeometry(this.viewportGeometry, this.viewportHeight);
+        viewport.setDevicePixelRatio(window.devicePixelRatio) // was not used
         viewport.moveRealCenterTo(this.viewportCenter);
         return viewport;
     }

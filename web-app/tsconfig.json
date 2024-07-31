@@ -6,7 +6,8 @@
     "lib": [
       "ES2020",
       "DOM",
-      "DOM.Iterable"
+      "DOM.Iterable",
+      "WebWorker"
     ],
     "module": "ES6",
     "skipLibCheck": true,
@@ -19,20 +20,16 @@
     "allowSyntheticDefaultImports": true,
     // "noEmit": true,
     "jsx": "react-jsx",
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,
-    "noUnusedParameters": true,
+    "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     // "noImplicitAny": true,
     // "noImplicitReturns": true,
 
     // // Custom
-    // "paths": {
-    //   "../fusion/*": [
-    //     "../fusion/js-src/src/*"
-    //   ]
-    // },
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "preserveSymlinks": true,

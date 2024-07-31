@@ -8,7 +8,7 @@
 // . Maybe 30-70% of the screen height), then holds in place until we reach the
 // end of the page. Then it moves to the bottom (in order to focus the last
 // segments).
-// The links are e.g. pamet:/p/{page_id}/?eye_at={height}/{+}/{y}#note_id={}
+// The links are e.g. pamet:/p/{page_id}/?eye_at={height}/{x}/{y}#note={note_id}
 // (and in markdown of course [text](link))
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';

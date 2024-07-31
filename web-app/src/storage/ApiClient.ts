@@ -5,7 +5,7 @@ import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { getLogger } from "pyfusion/logging";
 import { BaseApiClient } from "pyfusion/storage/BaseApiClient";
-import { SerializedEntity, loadFromDict } from "pyfusion/libs/Entity";
+import { SerializedEntityData, loadFromDict } from "pyfusion/libs/Entity";
 import { elementId } from "../model/Element";
 
 let log = getLogger('ApiClient');
@@ -147,10 +147,10 @@ export class ApiClient extends BaseApiClient {
         }
 
         let notes = notesData.map((noteData: any) => {
-            return loadFromDict(tmpDynamicMigration(noteData) as SerializedEntity);
+            return loadFromDict(tmpDynamicMigration(noteData) as SerializedEntityData);
         });
         let arrows = arrowsData.map((arrowData: any) => {
-            return loadFromDict(tmpDynamicMigration(arrowData) as SerializedEntity);
+            return loadFromDict(tmpDynamicMigration(arrowData) as SerializedEntityData);
         })
         return {
             notes: notes,

@@ -10,7 +10,7 @@ export interface PageData extends EntityData {
   name: string;
   created: string;
   modified: string;
-  tour_segments: TourSegment[];
+  // tour_segments: TourSegment[];
 }
 
 @entityType('Page')
@@ -62,7 +62,7 @@ export class Page extends Entity<PageData> implements PageData {
   set modified(newDt: string) {
     this._data.modified = newDt;
   }
-  get tour_segments(): TourSegment[] {
-    return this._data.tour_segments;
-  }
+  // get tour_segments(): TourSegment[] {
+  //   return this._data.tour_segments;
+  // }
 }

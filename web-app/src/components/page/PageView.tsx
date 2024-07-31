@@ -23,6 +23,10 @@ import { NoteViewState } from '../note/NoteViewState';
 import { Size } from '../../util/Size';
 import { Note } from '../../model/Note';
 import Panel from './Panel';
+import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
+import shareIconUrl from '../../resources/icons/share-2.svg';
+import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
+import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
 
 
 let log = getLogger('Page.tsx')
@@ -86,7 +90,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paperCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [cacheService] = useState(new CanvasPageRenderer());
+  const [renderer] = useState(new CanvasPageRenderer());
   const [navDeviceAutoSwitcher] = useState(new NavigationDeviceAutoSwitcher());
 
   const canvasCtx = useCallback(() => {
@@ -126,7 +130,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     paper.setup(paperCanvas);
     paper.view.autoUpdate = false;
 
-  }, [state, canvasCtx, paperCanvasRef, cacheService]);
+  }, [state, canvasCtx, paperCanvasRef, renderer]);
 
   const updateGeometryHandler = useCallback(() => {
     console.log("[updateGeometry] called")
@@ -213,14 +217,18 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       }
     },
       () => {
-        cacheService.renderPage(state, ctx);
+        try{
+          renderer.renderPage(state, ctx);
+        } catch (e) {
+          log.error('Error rendering page:', e)
+        }
       });
 
     return () => {
       renderDisposer();
       // imgRefUpdateDisposer();
     }
-  }, [state, cacheService, canvasRef]);
+  }, [state, renderer, canvasRef]);
 
   // // Should be a command
   // const copySelectedToClipboard = useCallback(() => {
@@ -426,7 +434,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         // M' = M * s, C' = C * s : M and C after the scale
         // V = (M - C) - (M' - C'): the vector of change for M
         // correction = - ( V ) = (M - C) - (M' - C') = (M - C) * (1 - s)
-        let old_viewport = new Viewport(state.viewportCenterOnModeStart, pinchStartViewportHeight, state.viewportGeometry);
+        let old_viewport = new Viewport(state.viewportGeometry, pinchStartViewportHeight);
+        old_viewport.moveRealCenterTo(state.viewportCenterOnModeStart)
         let unprInitPinchCenter = old_viewport.unprojectPoint(initialPinchCenter);
         let focusDelta = unprInitPinchCenter.subtract(state.viewportCenterOnModeStart);
         let correction = focusDelta.multiply(
@@ -536,6 +545,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       if (selectedNote !== null) {
         pageActions.startEditingNote(state, selectedNote);
       }
+    } else if (event.code === 'KeyH'){
+      alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation (may not be implemented)')
     }
   }, [state]);
 
@@ -676,9 +687,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
             onClick={() => { alert('Not implemented yet') }}
             title="Project properties"
           >-default-</div>
-          <img src="/src/resources/icons/cloud-off.svg" alt="Not saved" />
+          <img src={cloudOffIconUrl} alt="Not saved" />
           <VerticalSeparator />
-          <img src="/src/resources/icons/share-2.svg" alt="Share" />
+          <img src={shareIconUrl} alt="Share" />
           <VerticalSeparator />
           <div
             title='Main menu'
@@ -695,21 +706,21 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         </Panel>
 
         <Panel align='top-right'>
-          <img src="/src/resources/icons/help-circle.svg" alt="Help" />
+          <img src={helpCircleIconUrl} alt="Help" />
           <VerticalSeparator />
           <div>{state.page.name}</div>
           <VerticalSeparator />
-          <img src="/src/resources/icons/account-circle.svg" alt="Login/Sign up" />
+          <img src={accountCircleIconUrl} alt="Login/Sign up" />
         </Panel>
 
       </PageOverlay> {/*  map container container */}
 
-      {state.page.tour_segments &&
+      {/* {state.page.tour_segments &&
         <TourComponent
           parentPageViewState={state}
           segments={state.page.tour_segments}
         />
-      }
+      } */}
 
       {/* Edit window (if open) */}
       {state.noteEditWindowState &&

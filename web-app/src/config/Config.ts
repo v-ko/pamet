@@ -1,5 +1,6 @@
-import { DeviceData } from "../model/Device";
-import { UserData } from "../model/User";
+import { DeviceData } from "../model/config/Device";
+import { ProjectData } from "../model/config/Project";
+import { UserData } from "../model/config/User";
 import { BaseConfigAdapter } from "./BaseConfigAdapter";
 
 export class PametConfig {
@@ -44,6 +45,34 @@ export class PametConfig {
     }
     set deviceData(deviceData: DeviceData) {
         this._adapter.set('device', deviceData);
+    }
+
+    projectData(projectId: string): ProjectData {
+        // For the current user
+        let userData = this.userData;
+        if (!userData) {
+            throw new Error("User data not found");
+        }
+        let project = userData.projects.find(p => p.id === projectId);
+        if (!project) {
+            throw new Error(`Project with ID ${projectId} not found`);
+        }
+        return project;
+    }
+    updateProjectData(projectData: ProjectData) {
+        // For the current user
+        let userData = this.userData;
+        if (!userData) {
+            throw new Error("User data not found");
+        }
+        let projects = userData.projects;
+        let index = projects.findIndex(p => p.id === projectData.id);
+        if (index === -1) {
+            throw new Error(`Project with ID ${projectData.id} not found`);
+        }
+        projects[index] = projectData;
+        userData.projects = projects;
+        this.userData = userData;
     }
 }
 

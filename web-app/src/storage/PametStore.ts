@@ -5,11 +5,6 @@ import { Arrow } from '../model/Arrow'
 import { Note } from '../model/Note'
 import { Page } from '../model/Page'
 
-export interface SerializedPametDomainStoreState {
-    pages: Page[];
-    notes: Note[];
-    arrows: Arrow[];
-}
 
 export abstract class PametStore extends Store {
     // Page CRUD

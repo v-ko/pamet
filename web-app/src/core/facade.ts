@@ -1,4 +1,4 @@
-import { WebAppState } from "../containers/app/App";
+import { ProjectError, WebAppState } from "../containers/app/App";
 import { getLogger } from 'pyfusion/logging';
 import { Store, SearchFilter } from 'pyfusion/storage/BaseStore';
 import { Change } from "pyfusion/Change";
@@ -10,8 +10,13 @@ import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
-import { InMemoryStore } from "pyfusion/storage/InMemoryStore";
 import { PametConfig } from "../config/Config";
+import { StorageService, StorageServiceActualInterface } from "../storage/StorageService";
+import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
+import { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
+import { RoutingService } from "../services/RoutingService";
+import { registerRootActionCompletedHook } from "pyfusion/libs/Action";
+import { ProjectData } from "../model/config/Project";
 
 const log = getLogger('facade');
 
@@ -21,63 +26,29 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 export class PametFacade extends PametStore {
-    private _frontendDomainStore: Store = new InMemoryStore();
+    private _frontendDomainStore: FrontendDomainStore | null = null;
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
     private _changeBufferForRootAction: Array<Change> = [];
-    // private _storeResyncService: FrontendStoreResyncService;
     private _config: PametConfig | null = null;
-
-    // rawChangesChannel: Channel;
-    // rawChangesByIdChannel: Channel;
-    // rawChagesByParentIdChannel: Channel;
-    // rawChangesPlusRootActionEventsChannel: Channel;
-    // entityChangeListPerRootActionChannel: Channel;
+    private _storageService: StorageService | null = null;
+    private _projectManagerSubscriptionId: number | null = null;
+    router: RoutingService = new RoutingService();
 
     constructor() {
         super()
         this._apiClient = new ApiClient('http://localhost', 3333, '', true);
-        // this._repoService = new RepositoryServiceWrapper();
 
-        // // Setup the change communication pipeline
-        // // The CRUD methods push changes to the rawChangesChannel
-        // this.rawChangesChannel = addChannel('rawChanges');
-        // this.rawChangesByIdChannel = addChannel('rawChangesById', (change) => change.entity.id);
-        // this.rawChagesByParentIdChannel = addChannel('rawChangesByParentId', (change) => change.entity.parentId);
-
-        // // Merge the rawChangesChannel and the rootActionEventsChannel
-        // this.rawChangesPlusRootActionEventsChannel = addChannel('rawChangesPlusRootActionEvents');
-        // this.rawChangesChannel.subscribe((change: Change) => {
-        //     this.rawChangesPlusRootActionEventsChannel.push(change);
-        // });
-        // fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
-        //     this.rawChangesPlusRootActionEventsChannel.push(actionState);
-        // });
-
-        // // Group changes per root action
-        // this.entityChangeListPerRootActionChannel = addChannel('entityChangeListPerRootAction');
-        // this.rawChangesPlusRootActionEventsChannel.subscribe((changeOrActionState: Change | ActionState) => {
-        //     if (changeOrActionState instanceof ActionState) {
-        //         if (changeOrActionState.started) {
-        //             this._changeBufferForRootAction = [];
-        //         }
-        //         else if (changeOrActionState.completed && this._changeBufferForRootAction.length > 0) {
-        //             this.entityChangeListPerRootActionChannel.push(this._changeBufferForRootAction);
-        //         }
-        //     }
-        //     else {
-        //         this._changeBufferForRootAction.push(changeOrActionState);
-        //     }
-        // });
-
-        // // Test the entityChangeListPerRootActionChannel by logging
-        // this.entityChangeListPerRootActionChannel.subscribe((changeList: Array<Change>) => {
-        //     // List all changes
-        //     log.info('entityChangeListPerRootActionChannel channel changes:');
-        //     changeList.forEach((change) => {
-        //         log.info(change);
-        //     });
-        // });
+        // Register rootAction hook to auto-commit / save
+        registerRootActionCompletedHook(() => {
+            // Better do the registration here, so that we don't have to worry
+            // about unregistering when swapping out the FDS
+            if (!this._frontendDomainStore) {
+                // log.warning('No frontend domain store set');
+                return;
+            }
+            this.frontendDomainStore.saveUncommitedChanges()
+        });
     }
 
     pametSchemaToHttpUrl(url: string): string {
@@ -88,34 +59,40 @@ export class PametFacade extends PametStore {
         return this._apiClient.endpointUrl(url);
     }
 
-    // _pushChangeToRawChannels(change: Change) {
-    //     this.rawChangesChannel.push(change);
-    //     this.rawChangesByIdChannel.push(change);
-    //     this.rawChagesByParentIdChannel.push(change);
-    // }
-
-    setAppViewState(state: WebAppState) {
-        this._appViewState = state;
-    }
-
-    setFrontendDomainStore(store: FrontendDomainStore) {
-        this._frontendDomainStore = store;
+    get frontendDomainStore(): FrontendDomainStore {
+        if (!this._frontendDomainStore) {
+            throw Error('Frontend domain store not set');
+        }
+        return this._frontendDomainStore;
     }
 
     setConfig(config: PametConfig) {
         this._config = config;
+        appActions.updateAppStateFromConfig(this.appViewState);
+        config.setUpdateHandler(() => {
+            appActions.updateAppStateFromConfig(this.appViewState);
+        });
     }
 
     get appViewState(): WebAppState {
         if (!this._appViewState) {
-            throw new Error('WebAppState not set');
+            throw Error('WebAppState not set');
         }
         return this._appViewState;
     }
 
+    setAppViewState(state: WebAppState) {
+        if (this._appViewState) {
+            // Set appViewState only once to avoid bad reference retention
+            // e.g. in the config update handler subscription
+            throw Error('AppViewState already set');
+        }
+        this._appViewState = state;
+    }
+
     get config(): PametConfig {
         if (!this._config) {
-            throw new Error('Config not set');
+            throw Error('Config not set');
         }
         return this._config;
     }
@@ -124,72 +101,145 @@ export class PametFacade extends PametStore {
         return this._apiClient;
     }
 
-    loadAllEntitiesTMP(callback_done: () => void) {
-        console.log('Loading all entities')
-        // Load page metadata, then load the children for all pages
-        this._apiClient.pages().then((pages) => {
-
-            // Map over the pages and return an array of promises
-            const promises = pages.map((page) => {
-                // this._loadPage(page);
-                this._loadOne(page);
-
-                // Return a promise that resolves when the children are loaded
-                return this._apiClient.children(page.id).then((children) => {
-                    let notes = children.notes;
-                    let arrows = children.arrows;
-
-                    // console.log('Loading children for page', page.id, 'notes', notes, 'arrows', arrows)
-
-                    notes.forEach((note) => {
-                        // this._loadOneNote(note);
-                        this._loadOne(note);
-                    });
-
-                    arrows.forEach((arrow) => {
-                        // this._loadOneArrow(arrow);
-                        this._loadOne(arrow);
-                    });
-                });
-            });
-
-            // Wait for all the promises to resolve, then call callback_done
-            Promise.all(promises).then(callback_done);
-        });
+    get storageService() {
+        if (!this._storageService) {
+            throw Error('Storage service not set');
+        }
+        return this._storageService;
+    }
+    setStorageService(storageService: StorageService) {
+        this._storageService = storageService;
     }
 
-    _loadOne(entity: Entity<EntityData>) {
-        try{
-            this._frontendDomainStore.insertOne(entity);
+    async setCurrentProject(projectId: string | null): Promise<void> {
+        // Load the project storage manager in the storage service
+        // Swap out the frontend domain store (+ initial state) and connect
+        // it to the storage manager (auto-save, confirm save, get remote commits)
+
+        let device = this.config.deviceData;
+        const appState = this.appViewState;
+
+        if (!device) {
+            throw Error('Device not set');
+        }
+
+        if (appState.currentProject) {
+            // Check if a change is needed at all
+            if (appState.currentProject.id === projectId) {
+                return;
+            }
+            // Else start the process of swapping the project
+
+            // Unload the last project
+            log.info('Unloading project', appState.currentProject.id);
+            this._frontendDomainStore = null
+            await pamet.storageService.unloadProject(appState.currentProject.id);
+        }
+
+        // Mark the local storage as unavailable
+        appActions.setLocalStorageState(appState, { available: false });
+
+        // let repoManagerConfig: ProjectStorageConfig = {
+        //     currentBranchName: device.id,
+        //     storageAdapterConfig: {
+        //         name: 'InMemory' as StorageAdapterNames, // I really want to remove this cast
+        //         args: {
+        //             defaultBranchName: device.id, // For testing purposes
+        //         }
+        //     }
+        // }
+
+        let repoManagerConfig: ProjectStorageConfig = {
+            currentBranchName: device.id,
+            storageAdapterConfig: {
+                name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
+                args: {
+                    defaultBranchName: device.id, // For testing purposes
+                }
+            }
+        }
+
+        if (projectId === null) {
+            appActions.setCurrentProject(pamet.appViewState, null);
+            return;
+        }
+
+        log.info('Loading project', projectId);
+        let domainStore = new FrontendDomainStore()
+        this._frontendDomainStore = domainStore;
+
+        // Repo update handler
+        let repoUpdateHandler = (repoUpdate: RepoUpdate) => {
+            // This handler will be called whenever the repo is updated
+            domainStore.receiveRepoUpdate(repoUpdate)
+        }
+
+        // Load the new project and connect it to the Frontend domain store
+        await this.storageService.loadProject(projectId, repoManagerConfig, repoUpdateHandler)
+        // Load the entities after loading the repo
+        let headState = await this.storageService.headState(projectId)
+        this._frontendDomainStore.loadData(headState);
+
+        appActions.setLocalStorageState(appState, { available: true });
+
+        try {
+            let projectData = this.project(projectId);
+            appActions.setCurrentProject(appState, projectData);
         } catch (e) {
-            console.log('Error loading entity', entity, e)
+            appActions.setCurrentProject(appState, null, ProjectError.NOT_FOUND);
+        }
+    }
+
+    projects(): ProjectData[] {
+        let userData = this.config.userData;
+        if (!userData) {
+            throw Error('User data not set');
+        }
+        return userData.projects;
+    }
+
+    project(projectId: string): ProjectData {
+        return this.config.projectData(projectId);
+    }
+    currentProject() {
+        return this.appViewState.currentProject;
+    }
+    updateProject(projectData: ProjectData) {
+        // Update in the config
+        this.config.updateProjectData(projectData);
+
+        // If it's the current one - update in the appViewState
+        let currentProject = this.appViewState.currentProject;
+        if (currentProject && currentProject.id === projectData.id) {
+            appActions.setCurrentProject(this.appViewState, projectData);
         }
     }
 
     insertOne(entity: Entity<EntityData>): Change {
-        return this._frontendDomainStore.insertOne(entity);
+        return this.frontendDomainStore.insertOne(entity);
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        return this._frontendDomainStore.updateOne(entity);
+        return this.frontendDomainStore.updateOne(entity);
     }
 
     removeOne(entity: Entity<EntityData>): Change {
-        return this._frontendDomainStore.removeOne(entity);
+        return this.frontendDomainStore.removeOne(entity);
     }
 
     find(filter: SearchFilter = {}): Generator<Entity<EntityData>> {
-        return this._frontendDomainStore.find(filter);
+        return this.frontendDomainStore.find(filter);
     }
 
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
-        return this._frontendDomainStore.findOne(filter);
+        return this.frontendDomainStore.findOne(filter);
     }
 }
 
 
-export function applyChangesToViewModel(appState:WebAppState, changes: Array<Change>) {
-    /** A reducer-like function to map entity changes to ViewStates
+export function updateViewModelFromChanges(appState: WebAppState, changes: Array<Change>) {
+    /**
+     * A reducer-like function to map entity changes to ViewStates
      * Will be used synchrously from the facade entity CRUD methods (inside actions)
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
@@ -198,39 +248,48 @@ export function applyChangesToViewModel(appState:WebAppState, changes: Array<Cha
     for (let change of changes) {
         // if page
         let entity = change.lastState;
+
+        let currentPageVS = appState.currentPageViewState
+        if (!currentPageVS) {
+            continue
+        }
+
         if (entity instanceof Page) {
-            // get current page vs
-            let pageVS = appState.currentPageViewState;
-            if (!pageVS || pageVS.page.id !== entity.id) {
-                continue;
-            }
+
 
             // if (change.isCreate()) // pass
             if (change.isDelete()) {
                 // remove
-                if (pageVS.page.id === entity.id) { // If current is removed
-                    appActions.setPageToHomeOrFirst(appState);
+
+                // If current is removed - go to the project
+
+                if (currentPageVS.page.id === entity.id) {
+                    let projectId = appState.currentProjectId;
+                    if (projectId === null) {
+                        throw Error('No project set');
+                    }
+                    pamet.router.setRoute({ projectId: projectId });
                 }
             }
             else if (change.isUpdate()) {
                 // update data
-                pageVS.updateFromPage(entity);
+                currentPageVS.updateFromPage(entity);
             }
         }
         else if (entity instanceof Note || entity instanceof Arrow) {
             // get current page vs
-            let pageVS = appState.currentPageViewState;
-            if (!pageVS || pageVS.page.id !== entity.parentId) {
+            if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
+                // Skip processing if the parent of the element is not open
                 continue;
             }
 
             if (change.isCreate()) {
-                pageVS.addViewStateForElement(entity);
-            }else if (change.isDelete()) {
-                pageVS.removeViewStateForElement(entity);
+                currentPageVS.addViewStateForElement(entity);
+            } else if (change.isDelete()) {
+                currentPageVS.removeViewStateForElement(entity);
             }
             else if (change.isUpdate()) {
-                pageVS.updateEVS_fromElement(entity);
+                currentPageVS.updateEVS_fromElement(entity);
             }
         }
     }

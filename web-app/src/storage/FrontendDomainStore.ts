@@ -1,12 +1,13 @@
 import { InMemoryStore } from "pyfusion/storage/InMemoryStore"
 import { PametStore as PametStore } from "./PametStore";
-import { SearchFilter, Store as Store } from "pyfusion/storage/BaseStore"
+import { SearchFilter, SerializedStoreData, Store as Store, deltaFromChanges } from "pyfusion/storage/BaseStore"
 import { Entity, EntityData } from "pyfusion/libs/Entity";
-import { Change, Delta } from "pyfusion/Change";
-import { WebAppState } from "../containers/app/App";
-import { applyChangesToViewModel } from "../core/facade";
-import { registerRootActionCompletedHook } from "pyfusion/libs/Action";
+import { Change } from "pyfusion/Change";
+import { updateViewModelFromChanges, pamet } from "../core/facade";
+import { action } from "pyfusion/libs/Action";
 import { getLogger } from "pyfusion/logging";
+import { Delta, DeltaData } from "pyfusion/storage/Delta";
+import type { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
 
 let log = getLogger('FrontendDomainStore');
 
@@ -25,45 +26,27 @@ export class FrontendDomainStore extends PametStore {
      *
      */
     private _store: Store;
-    private _appState: WebAppState;
-    // private _repoService: RepositoryServiceWrapper;
 
     private _uncommittedChanges: Change[] = [];
-    private _expectedDeltas: Delta[] = []; // Sent to the repo service to create commits with
+    private _expectedDeltas: DeltaData[] = []; // Sent to the repo service to create commits with
 
-    constructor(appState: WebAppState) {
+    constructor() {
         super()
         this._store = new InMemoryStore();
-        this._appState = appState;
-        // this._repoService = repositoryService
+    }
 
-        // Register rootAction hook to auto-commit - THIS SHOULD GO IN THE FACADE
-        let autoCommit = true;
-        if (autoCommit) {
-            registerRootActionCompletedHook(() => {
-                if (this._uncommittedChanges.length === 0) {
-                    return;
-                }
-                log.info('registerRootActionCompletedHook triggered. Committing changes:');
-                this._uncommittedChanges.forEach((change) => {
-                    log.info(change);
-                });
-                this.clearUncommittedChanges();
-            });
-        }
+    loadData(data: SerializedStoreData): void {
+        this._store.loadData(data);
     }
 
     get uncommittedChanges(): Change[] {
         return this._uncommittedChanges;
     }
-    clearUncommittedChanges() {
-        this._uncommittedChanges = [];
-    }
 
     _loadOne(entity: Entity<EntityData>) {
         // Will be removed when the load/sync service is implemented
-        try{
-        this._store.insertOne(entity);
+        try {
+            this._store.insertOne(entity);
         } catch (e) {
             console.log('Error loading entity', entity, e)
         }
@@ -71,21 +54,25 @@ export class FrontendDomainStore extends PametStore {
 
     // Implement the Repository interface to use the InMemoryRepository
     insertOne(entity: Entity<EntityData>): Change {
+        log.info('Inserting entity', entity);
+        console.trace()
         let change = this._store.insertOne(entity);
-        applyChangesToViewModel(this._appState, [change]);
+        updateViewModelFromChanges(pamet.appViewState, [change]);
         this._uncommittedChanges.push(change);
         return change;
     }
 
     updateOne(entity: Entity<EntityData>): Change {
+        log.info('Updating entity', entity);
         let change = this._store.updateOne(entity);
-        applyChangesToViewModel(this._appState, [change]);
+        updateViewModelFromChanges(pamet.appViewState, [change]);
         this._uncommittedChanges.push(change);
         return change;
     }
     removeOne(entity: Entity<EntityData>): Change {
+        log.info('Removing entity', entity);
         let change = this._store.removeOne(entity);
-        applyChangesToViewModel(this._appState, [change]);
+        updateViewModelFromChanges(pamet.appViewState, [change]);
         this._uncommittedChanges.push(change);
         return change;
     }
@@ -98,10 +85,76 @@ export class FrontendDomainStore extends PametStore {
         return this._store.findOne(filter);
     }
 
-    _requestCommitCreation(delta: Delta) {
-        log.info('Requesting commit creation for delta:', delta);
-        this._expectedDeltas.push(delta);
+    // Logic for committing, confirming commit creation and acceptiong new commits
+    saveUncommitedChanges() {
+        // To be called at the end of actions. Register as middleware in the facade
 
+        // Produce delta from uncommitted changes
+        if (this._uncommittedChanges.length === 0) {
+            return;
+        }
+
+        log.info('Saving uncommited changes. Count:', this._uncommittedChanges.length)
+
+        let delta = deltaFromChanges(this._uncommittedChanges);
+        this._uncommittedChanges = []
+        this._expectedDeltas.push(delta.data);
+
+        // Send the delta to the storage service
+        let currentProject = pamet.currentProject();
+        if (!currentProject) {
+            throw Error('No current project set');
+        }
+        pamet.storageService.commit(currentProject.id, delta.data, 'Auto-commit')
     }
 
+    @action({issuer: 'service'})
+    receiveRepoUpdate(repoUpdate: RepoUpdate) {
+        log.info('Received repo update', repoUpdate);
+        //     // Check if the update is expected
+        //     // If expected - skip the commits that match the expected deltas
+        //     // Else - revert the local changes and apply the received commits
+        //     // (which will include the local changes with conclicting changes
+        //     // overriden)
+        //     let deltas: Delta[] = []
+        //     let externalDeltas: Delta[] = []
+        //     for (let commitData of repoUpdate.commits) {
+        //         let deltaData = commitData.deltaData;
+        //         if (deltaData === undefined) {
+        //             throw Error('Received undefined delta data')
+        //         }
+        //         let delta = new Delta(deltaData);
+
+        //         // If no expected deltas: add to external
+        //         if (this._expectedDeltas.length === 0) {
+        //             externalDeltas.push(delta)
+        //         } else {  // Else if expecting
+        //             let expectedDelta = this._expectedDeltas.shift();
+        //             // - If match - continue (don't apply commit, and delta removed from expected)
+
+        //             // - If mismatch - clear expected deltas
+
+        //         }
+
+        // Simpler: always revert and reapply. mobx will reduce changes already
+        // sent to the views
+
+        // Revert local changes by applying them in reversed order
+        for (let change of this._uncommittedChanges) {
+            this._store.applyChange(change.reversed())
+        }
+
+        // Apply external delta (which will include the local changes)
+        let changes: Change[] = []
+        for (let commitData of repoUpdate.newCommits) {
+            let deltaData = commitData.deltaData;
+            if (deltaData === undefined) {
+                throw Error('Received undefined delta data')
+            }
+            let delta = new Delta(deltaData);
+            let changes_ = this._store.applyDelta(delta)
+            changes.push(...changes_)
+        }
+        updateViewModelFromChanges(pamet.appViewState, changes);
+    }
 }

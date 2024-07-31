@@ -4,27 +4,62 @@ import { RectangleData } from '../../util/Rectangle';
 import { Rectangle } from '../../util/Rectangle';
 
 
+function unprojectX(xOnScreen: number, viewportLeftReal: number, heightScaleFactor: number): number {
+  xOnScreen /= heightScaleFactor;
+  return xOnScreen + viewportLeftReal;
+}
+function unprojectY(yOnScreen: number, viewportTopReal: number, heightScaleFactor: number): number {
+  yOnScreen /= heightScaleFactor;
+  return yOnScreen + viewportTopReal;
+}
+
+export interface ViewportData {
+  eyeHeight: number;
+  realGeometry: RectangleData;
+}
+
 export class Viewport {
-  public xReal: number;
-  public yReal: number;
-  public eye_height: number;
-  public geometry: RectangleData;
+  public eyeHeight: number;
+  private _realGeometry: RectangleData;
+
   private dpr: number = 1; // device pixel ratio
 
-  constructor(realTopLeft: Point2D, eye_height: number, viewport_geometry: RectangleData) {
-    this.xReal = realTopLeft.x;
-    this.yReal = realTopLeft.y;
-
-    this.eye_height = eye_height;
-    this.geometry = viewport_geometry; // In projected space
+  constructor(realGeometry: RectangleData, eye_height: number) {
+    this._realGeometry = realGeometry;
+    this.eyeHeight = eye_height;
   }
 
+  static fromProjectedGeometry(projected: RectangleData, eye_height: number): Viewport {
+    const heightScaleFactor = NO_SCALE_LINE_SPACING / eye_height;
+    let realGeometry: RectangleData = [
+      unprojectX(projected[0], 0, heightScaleFactor),
+      unprojectY(projected[1], 0, heightScaleFactor),
+      projected[2] / heightScaleFactor,
+      projected[3] / heightScaleFactor
+    ]
+    return new Viewport(realGeometry, eye_height);
+  }
+
+  // Getters
+  get xReal(): number {
+    return this._realGeometry[0];
+  }
+  get yReal(): number {
+    return this._realGeometry[1];
+  }
+  projectedBounds(): Rectangle {
+    return this.projectRect(this.realBounds());
+  }
+
+  realBounds(): Rectangle {
+    return new Rectangle(this._realGeometry[0], this._realGeometry[1], this._realGeometry[2], this._realGeometry[3])
+  }
   get xProjected(): number {
-    return this.geometry[1];
+    return this.projectX(this.xReal);
   }
 
   get yProjected(): number {
-    return this.geometry[0];
+    return this.projectY(this.yReal);
   }
 
   get realCenter(): Point2D {
@@ -32,9 +67,18 @@ export class Viewport {
   }
 
   public heightScaleFactor(): number {
-    return NO_SCALE_LINE_SPACING / this.eye_height;
+    return NO_SCALE_LINE_SPACING / this.eyeHeight;
   }
 
+  // Setters
+
+  moveRealCenterTo(new_center: Point2D) {
+    const half_size = this.realBounds().size().divide(2);
+    this._realGeometry[0] = new_center.x - half_size.x;
+    this._realGeometry[1] = new_center.y - half_size.y;
+  }
+
+  // Device pixel ratio related
   get devicePixelRatio(): number {
     return this.dpr;
   }
@@ -42,32 +86,38 @@ export class Viewport {
     this.dpr = dpr;
   }
 
-  moveRealCenterTo(new_center: Point2D) {
-    const half_size = this.realBounds().size().divide(2);
-    this.xReal = new_center.x - half_size.x;
-    this.yReal = new_center.y - half_size.y;
-  }
-
-  projectedBounds(): Rectangle {
-    return new Rectangle(this.geometry[0], this.geometry[1], this.geometry[2], this.geometry[3]);
-  }
-
-  realBounds(): Rectangle {
-    return this.unprojectRect(this.projectedBounds());
-  }
-
+  // Helpers
   public toString(): string {
-    const info = `topLeft=${this.xReal},${this.yReal} height=${this.eye_height}`;
+    const info = `topLeft=${this.xReal},${this.yReal} height=${this.eyeHeight}`;
     return `<Viewport ${info}>`;
   }
 
-  public projectRect(rect: Rectangle): Rectangle {
-    const top_left = this.projectPoint(rect.topLeft());
-    const bottom_right = this.projectPoint(rect.bottomRight());
-    return Rectangle.fromPoints(top_left, bottom_right);
+  // Transformation functions
+  public projectX(xOnPage: number): number {
+    xOnPage -= this.xReal;
+    xOnPage *= this.heightScaleFactor();
+    return xOnPage;
   }
 
-  public projectPoint(point: Point2D): Point2D {
+  public projectY(yOnPage: number): number {
+    yOnPage -= this.yReal;
+    yOnPage *= this.heightScaleFactor();
+    return yOnPage;
+  }
+
+  public unprojectX(xOnScreen: number): number {
+    xOnScreen /= this.heightScaleFactor();
+    return xOnScreen + this.xReal;
+  }
+
+  public unprojectY(yOnScreen: number): number {
+    yOnScreen /= this.heightScaleFactor();
+    yOnScreen = yOnScreen + this.yReal;
+    return yOnScreen;
+
+  }
+
+  public projectPoint(point: Point2D): Point2D {  // TODO: optimize this
     const x = this.projectX(point.x);
     const y = this.projectY(point.y);
     return new Point2D(x, y);
@@ -79,40 +129,15 @@ export class Viewport {
     return new Point2D(x, y);
   }
 
+  public projectRect(rect: Rectangle): Rectangle {
+    const top_left = this.projectPoint(rect.topLeft());
+    const bottom_right = this.projectPoint(rect.bottomRight());
+    return Rectangle.fromPoints(top_left, bottom_right);
+  }
+
   public unprojectRect(rect: Rectangle): Rectangle {
     const top_left = this.unprojectPoint(rect.topLeft());
     const bottom_right = this.unprojectPoint(rect.bottomRight());
     return Rectangle.fromPoints(top_left, bottom_right);
-  }
-
-  public projectX(xOnPage: number): number {
-    // xOnPage -= this.center.x;
-    xOnPage -= this.xReal;
-    xOnPage *= this.heightScaleFactor();
-    // xOnPage = xOnPage + this.geometry[2] / 2;
-    return xOnPage;
-  }
-
-  public projectY(yOnPage: number): number {
-    // yOnPage -= this.center.y;
-    yOnPage -= this.yReal;
-    yOnPage *= this.heightScaleFactor();
-    // yOnPage = yOnPage + this.geometry[3] / 2;
-    return yOnPage;
-  }
-
-  public unprojectX(xOnScreen: number): number {
-    // xOnScreen -= this.geometry[2] / 2;
-    xOnScreen /= this.heightScaleFactor();
-    // return xOnScreen + this.center.x;
-    return xOnScreen + this.xReal;
-  }
-
-  public unprojectY(yOnScreen: number): number {
-    // yOnScreen -= this.geometry[3] / 2;
-    yOnScreen /= this.heightScaleFactor();
-    // yOnScreen = yOnScreen + this.center.y;
-    yOnScreen = yOnScreen + this.yReal;
-    return yOnScreen;
   }
 }

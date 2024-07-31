@@ -260,17 +260,11 @@ export class CanvasPageRenderer {
 
 
     renderPage(state: PageViewState, context: CanvasRenderingContext2D) {
-
         // Debounce redundant rendering
         if (this.renderTimeout !== null) {
             return;
         }
         this.renderTimeout = setTimeout(() => {
-            // let context = this.context;
-            // if (context === null) {
-            //     log.error('Canvas context is null');
-            //     return;
-            // }
             this.renderTimeout = null;
             this._render(state, context);
         }, MIN_RERENDER_TIME);

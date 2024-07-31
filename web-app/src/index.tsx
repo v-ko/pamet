@@ -4,7 +4,7 @@ import WebApp, { PageError, WebAppState } from './containers/app/App';
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './core/facade';
-import { getLogger } from 'pyfusion/logging';
+import { getLogger, setupWebWorkerLoggingChannel } from 'pyfusion/logging';
 
 
 // Imports that are required to just activate decorators. Might be removed when
@@ -23,9 +23,11 @@ import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
 import { fusion } from 'pyfusion/index';
 import { ActionState } from 'pyfusion/libs/Action';
 import { appActions } from './actions/app';
-import { FrontendDomainStore } from './storage/FrontendDomainStore';
 import { PametConfig } from './config/Config';
 import { LocalStorageConfigAdapter } from './config/LocalStorageConfigAdapter';
+import { ProjectData } from './model/config/Project';
+import { createId, currentTime, timestamp } from 'pyfusion/util';
+import { StorageService, StorageServiceActual } from './storage/StorageService';
 
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
@@ -51,60 +53,121 @@ const root = ReactDOM.createRoot(
 const PametContext = createContext<PametFacade>(pamet);
 (window as any).pamet = pamet; // For debugging
 
-
 // Configure pamet
 let app_state = new WebAppState()
 pamet.setAppViewState(app_state)
-pamet.setFrontendDomainStore(new FrontendDomainStore(app_state))
 
 const config = new PametConfig(new LocalStorageConfigAdapter())
 pamet.setConfig(config)
+
+// Setup the user and device configs. For now the simplest possible setup:
+// Generate device if none. Generate anonymous user and default project and page if none
 
 // Check if the device is set - if missing - generate metadata
 let deviceData = config.deviceData;
 if (!deviceData) {
     deviceData = {
-        id: crypto.randomUUID(),
+        id: "device-" + crypto.randomUUID(),
         name: "WebApp",
     }
     config.deviceData = deviceData;
 }
 
-// Setup state updates on config updates
+// Check for user. If none - create
+let userData = config.userData;
+if (!userData) {
+    userData = {
+        id: "user-" + crypto.randomUUID(),
+        name: "Anonymous",
+        projects: []
+    }
+    config.userData = userData;
+}
+
+// Check for projects. If none - create a default one
+let projects = userData.projects;
+if (!projects || projects.length === 0) {
+    let project: ProjectData = {
+        id: createId(8),
+        name: "Notebook",
+        owner: userData.id,
+        description: 'Default project',
+        created: timestamp(currentTime())
+    }
+    userData.projects = [project];
+    config.userData = userData;
+}
+
+// Setup state updates on config updates and do an initial update
+// This should be more integrated with mobx
+appActions.updateAppStateFromConfig(app_state);
 config.setUpdateHandler(() => {
     appActions.updateAppStateFromConfig(app_state);
 });
 
-// Initial entity load (TMP, will be done by the sync service)
-const afterLoad = () => {
-    log.info("Loaded all entities")
+// // Setup the sync service
+setupWebWorkerLoggingChannel();
 
-    appActions.setLoading(app_state, false);
+// Create a storage service in the main thread
+let storageService = StorageService.inMainThread();
+pamet.setStorageService(storageService);
+console.log('tet')
+// Determine the route and do an initial update
+// let route = pamet.router.currentRoute()
+// appActions.applyRoute(app_state, route);
+console.log('tet')
 
-    let urlPath = window.location.pathname;
-    // If we're at the index page, load home or first
-    if (urlPath === "/") {
-        appActions.setPageToHomeOrFirst(app_state);
+// Setup automatic handling
+pamet.router.handleRouteChange(true);
+pamet.router.reachRouteOrAutoassist(pamet.router.currentRoute())
 
-        // If the URL contains /p/ - load the page by id, else load the home page
-    } else if (urlPath.includes("/p/")) {
-        const pageId = urlPath.split("/")[2];
+// Load the default project - in applyRoute
 
-        // Get the page from the pages array
-        const page = pamet.findOne({ id: pageId });
-        if (page) {
-            appActions.setCurrentPage(app_state, page.id);
-        } else {
-            log.warning(`Page with id ${pageId} not found`);
-            appActions.setCurrentPage(app_state, null, PageError.NOT_FOUND);
-        }
-    } else {
-        console.log("Url not supported", urlPath)
-        appActions.setCurrentPage(app_state, null);
-    }
-}
 
-pamet.loadAllEntitiesTMP(afterLoad);
+// // Start loading the storage service in the service worker
+// // When/if done successfully - swap it out
+// StorageService.serviceWorkerProxy().then((serviceWorkerStorageService) => {
+//     pamet.setStorageService(serviceWorkerStorageService);
+//     log.info("Service worker storage service loaded");
+// }).catch((e) => {
+//     log.error("Error loading service worker storage service", e);
+// });
+
+
+// // Disconnect on app close
+// window.addEventListener('beforeunload', () => {
+//     storageService.disconnect();
+// });
+
+// // Initial entity load (TMP, will be done by the sync service)
+// const afterLoad = () => {
+//     log.info("Loaded all entities")
+
+//     appActions.setLoading(app_state, false);
+
+//     let urlPath = window.location.pathname;
+//     // If we're at the index page, load home or first
+//     if (urlPath === "/") {
+//         appActions.setPageToHomeOrFirst(app_state);
+
+//         // If the URL contains /p/ - load the page by id, else load the home page
+//     } else if (urlPath.includes("/p/")) {
+//         const pageId = urlPath.split("/")[2];
+
+//         // Get the page from the pages array
+//         const page = pamet.findOne({ id: pageId });
+//         if (page) {
+//             appActions.setCurrentPage(app_state, page.id);
+//         } else {
+//             log.warning(`Page with id ${pageId} not found`);
+//             appActions.setCurrentPage(app_state, null, PageError.NOT_FOUND);
+//         }
+//     } else {
+//         console.log("Url not supported", urlPath)
+//         appActions.setCurrentPage(app_state, null);
+//     }
+// }
+// pamet.loadAllEntitiesTMP(afterLoad);
 
 // Testing: log the actions channel
 fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
@@ -114,6 +177,7 @@ fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
     log.info(`rootActionEventsChannel: ${actionState.name} ${actionState.runState}`);
 });
 
+// Render the app
 root.render(
     <React.StrictMode>
         <PametContext.Provider value={pamet}>
