@@ -8,6 +8,7 @@ import { approximateMidpointOfBezierCurve } from '../../util';
 import { ElementViewState } from '../page/ElementViewState';
 import paper from 'paper';
 import { SerializedEntityData, dumpToDict, loadFromDict } from 'pyfusion/libs/Entity';
+import { pamet } from '../../core/facade';
 
 let log = getLogger('ArrowViewState');
 
@@ -49,7 +50,14 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get _arrow(): Arrow {
-        return loadFromDict(this._arrowData) as Arrow;
+        // let arrowData = { ...this._arrowData };
+        // return loadFromDict(this._arrowData) as Arrow;
+        // return loadFromDict(arrowData) as Arrow;ю
+        let arrow = pamet.findOne({id: this._arrowData.id});
+        if (arrow === undefined) {
+            throw Error('Arrow not found');
+        }
+        return arrow as Arrow;
     }
     arrow(): Arrow {
         return this._arrow;
@@ -115,16 +123,16 @@ export class ArrowViewState extends ElementViewState {
 
 
     calculalteTerminalControlPoint(terminalPoint: Point2D, adjacentPoint: Point2D, controlPointDistance: number, anchorType: ArrowAnchorType): Point2D {
-        if (anchorType === ArrowAnchorType.NONE) {
+        if (anchorType === ArrowAnchorType.none) {
             let k = controlPointDistance / terminalPoint.distanceTo(adjacentPoint);
             return terminalPoint.add(adjacentPoint.subtract(terminalPoint).multiply(k));
-        } else if (anchorType === ArrowAnchorType.MID_LEFT) {
+        } else if (anchorType === ArrowAnchorType.mid_left) {
             return terminalPoint.subtract(new Point2D(controlPointDistance, 0));
-        } else if (anchorType === ArrowAnchorType.TOP_MID) {
+        } else if (anchorType === ArrowAnchorType.top_mid) {
             return terminalPoint.subtract(new Point2D(0, controlPointDistance));
-        } else if (anchorType === ArrowAnchorType.MID_RIGHT) {
+        } else if (anchorType === ArrowAnchorType.mid_right) {
             return terminalPoint.add(new Point2D(controlPointDistance, 0));
-        } else if (anchorType === ArrowAnchorType.BOTTOM_MID) {
+        } else if (anchorType === ArrowAnchorType.bottom_mid) {
             return terminalPoint.add(new Point2D(0, controlPointDistance));
         } else {
             throw Error('Invalid anchor type');
@@ -134,23 +142,23 @@ export class ArrowViewState extends ElementViewState {
     inferArrowAnchorType(adjacentPoint: Point2D, noteRect: Rectangle): ArrowAnchorType {
         // If the adjacent point is to the left or right - set a side anchor
         if (adjacentPoint.x < noteRect.left()) {
-            return ArrowAnchorType.MID_LEFT;
+            return ArrowAnchorType.mid_left;
         } else if (adjacentPoint.x > noteRect.right()) {
-            return ArrowAnchorType.MID_RIGHT;
+            return ArrowAnchorType.mid_right;
         } else {
             // If the point is directly above or below the note - set a
             // top/bottom anchor
             if (adjacentPoint.y < noteRect.top()) {
-                return ArrowAnchorType.TOP_MID;
+                return ArrowAnchorType.top_mid;
             } else if (adjacentPoint.y > noteRect.bottom()) {
-                return ArrowAnchorType.BOTTOM_MID;
+                return ArrowAnchorType.bottom_mid;
             } else {
                 // If the adjacent point is inside the note_rect - set either
                 // a top or bottom anchor (arbitrary, its ugly either way)
                 if (adjacentPoint.y < noteRect.center().y) {
-                    return ArrowAnchorType.TOP_MID;
+                    return ArrowAnchorType.top_mid;
                 } else {
-                    return ArrowAnchorType.BOTTOM_MID;
+                    return ArrowAnchorType.bottom_mid;
                 }
             }
         }
@@ -177,7 +185,7 @@ export class ArrowViewState extends ElementViewState {
 
         // If the anchor type for the tail is AUTO - infer it
         let tailAnchorType: ArrowAnchorType;
-        if (arrow.hasTailAnchor() && arrow.tailAnchorType === ArrowAnchorType.AUTO) {
+        if (arrow.hasTailAnchor() && arrow.tailAnchorType === ArrowAnchorType.auto) {
             tailAnchorType = this.inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState!.note().rect());
         } else {
             tailAnchorType = arrow.tailAnchorType;
@@ -244,7 +252,7 @@ export class ArrowViewState extends ElementViewState {
 
         // If the head anchor type is AUTO - infer it
         let headAnchorType: ArrowAnchorType;
-        if (arrow.hasHeadAnchor() && arrow.headAnchorType === ArrowAnchorType.AUTO) {
+        if (arrow.hasHeadAnchor() && arrow.headAnchorType === ArrowAnchorType.auto) {
             headAnchorType = this.inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState!.note().rect());
         } else {
             headAnchorType = arrow.headAnchorType;

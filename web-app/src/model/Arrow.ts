@@ -5,12 +5,12 @@ import { PametElement, PametElementData } from './Element';
 
 
 export enum ArrowAnchorType {
-    NONE = 'none',
-    AUTO = 'auto',
-    MID_LEFT = 'mid_left',
-    TOP_MID = 'top_mid',
-    MID_RIGHT = 'mid_right',
-    BOTTOM_MID = 'bottom_mid'
+    none,
+    auto,
+    mid_left,
+    top_mid,
+    mid_right,
+    bottom_mid,
 }
 
 export interface ArrowData extends PametElementData {
@@ -19,8 +19,8 @@ export interface ArrowData extends PametElementData {
     mid_point_coords: PointData[];
     head_note_id: string | null;
     tail_note_id: string | null;
-    head_anchor: string;
-    tail_anchor: string;
+    head_anchor: ArrowAnchorType;
+    tail_anchor: ArrowAnchorType;
     color: ColorData;
     line_type: string;
     line_thickness: number;
@@ -53,10 +53,10 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
     set tail_note_id(new_id: string | null) {
         this._data.tail_note_id = new_id;
     }
-    get head_anchor(): string {
+    get head_anchor(): ArrowAnchorType {
         return this._data.head_anchor;
     }
-    get tail_anchor(): string {
+    get tail_anchor(): ArrowAnchorType {
         return this._data.tail_anchor;
     }
     get color(): ColorData {
@@ -123,14 +123,14 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
     //   this._data.color = color.asData();
     // }
     get tailAnchorType(): ArrowAnchorType {
-        return ArrowAnchorType[this.tail_anchor];
+        return this.tail_anchor;
     }
 
     set tailAnchorType(new_type: ArrowAnchorType) {
         this._data.tail_anchor = new_type;
     }
     get headAnchorType(): ArrowAnchorType {
-        return ArrowAnchorType[this.head_anchor];
+        return this.head_anchor;
     }
     set headAnchorType(new_type: ArrowAnchorType) {
         this._data.head_anchor = new_type;
@@ -180,7 +180,7 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
             fixed_pos = null;
         }
 
-        if (fixed_pos && anchor_type != ArrowAnchorType.NONE) {
+        if (fixed_pos && anchor_type != ArrowAnchorType.none) {
             throw new Error('fixed_pos and anchor_type != ArrowAnchorType.NONE');
         }
 
@@ -210,7 +210,7 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
             fixed_pos = null;
         }
 
-        if (fixed_pos && anchor_type != ArrowAnchorType.NONE) {
+        if (fixed_pos && anchor_type != ArrowAnchorType.none) {
             throw new Error('fixed_pos and anchor_type != ArrowAnchorType.NONE');
         }
 

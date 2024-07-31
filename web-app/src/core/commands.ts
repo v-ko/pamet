@@ -41,6 +41,17 @@ class PametCommands {
         }
         pageActions.autoSizeSelectedNotes(pageVS);
     }
+
+    @command('Delete selected notes and arrows')
+    deleteSelectedNotesAndArrows() {
+        console.log('deleteSelectedNotesAndArrows command executed')
+        let pageVS = pamet.appViewState.currentPageViewState;
+        if (pageVS === null) {
+            log.error('Trying to delete notes with no page view state');
+            return;
+        }
+        pageActions.deleteSelectedElements(pageVS);
+    }
 }
 
 export const commands = new PametCommands();

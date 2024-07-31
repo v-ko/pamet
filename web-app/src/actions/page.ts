@@ -13,6 +13,8 @@ import { Note } from "../model/Note";
 import { TextNote } from "../model/TextNote";
 import { minimalNonelidedSize } from "../components/note/util";
 import { NoteViewState } from "../components/note/NoteViewState";
+import { PametElement, PametElementData } from "../model/Element";
+import { Arrow } from "../model/Arrow";
 
 let log = getLogger('MapActions');
 
@@ -74,20 +76,21 @@ class PageActions {
     for (let [pageChild, selected] of selectionMap) {
       // let selected = selectionMap.get(pageChild);
       if (selected === true) { // && !state.selectedChildren.has(pageChild)
-        state.selectedElements.add(pageChild);
+        state.selectedElementsVS.add(pageChild);
       } else {
-        state.selectedElements.delete(pageChild);
+        state.selectedElementsVS.delete(pageChild);
       }
     }
   }
 
   @action
   clearSelection(state: PageViewState) {
-    let selectionMap: util.SelectionDict = new Map();
-    for (let noteVS of state.selectedElements) {
-      selectionMap.set(noteVS, false);
-    }
-    this.updateSelection(state, selectionMap);
+    // let selectionMap: util.SelectionDict = new Map();
+    // for (let noteVS of state.selectedElementsVS) {
+    //   selectionMap.set(noteVS, false);
+    // }
+    // this.updateSelection(state, selectionMap);
+    state.selectedElementsVS.clear();
   }
 
   @action
@@ -176,7 +179,7 @@ class PageActions {
     let unprojectedRect = state.viewport.unprojectRect(selectionRectangle);
 
     state.dragSelectionRectData = selectionRectangle.data();
-    state.dragSelectedElements.clear();
+    state.dragSelectedElementsVS.clear();
 
 
 
@@ -184,14 +187,14 @@ class PageActions {
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
       let noteRect = noteVS.note().rect();
       if (unprojectedRect.intersects(noteRect)) {
-        state.dragSelectedElements.add(noteVS);
+        state.dragSelectedElementsVS.add(noteVS);
       }
     }
 
     // Get the arrows in the area
     for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
       if (arrowVS.intersectsRect(unprojectedRect)) {
-        state.dragSelectedElements.add(arrowVS);
+        state.dragSelectedElementsVS.add(arrowVS);
       }
     }
   }
@@ -199,8 +202,8 @@ class PageActions {
   @action
   endDragSelection(state: PageViewState) {
     // Add dragSelectedChildren to selectedChildren
-    for (let child of state.dragSelectedElements) {
-      state.selectedElements.add(child);
+    for (let child of state.dragSelectedElementsVS) {
+      state.selectedElementsVS.add(child);
     }
     state.clearMode();
   }
@@ -292,7 +295,7 @@ class PageActions {
 
   @action
   autoSizeSelectedNotes(state: PageViewState) {
-    for (let elementVS of state.selectedElements) {
+    for (let elementVS of state.selectedElementsVS) {
       if (!(elementVS instanceof NoteViewState)) { // Skip arrows
         continue;
       }
@@ -309,6 +312,55 @@ class PageActions {
       note.setRect(rect);
       pamet.updateNote(note);
     }
+  }
+
+  @action
+  deleteElements(elements: PametElement<PametElementData>[]) {
+    // Split into notes and arrows and where a note has connected arrows -
+    // add them for removal too
+    let notesForRemoval: Note[] = [];
+    let arrowsForRemoval: Arrow[] = [];
+    let noteIds = new Set<string>(); // For checking if the note has a connected arrow
+
+    for (let element of elements) {
+      if (element instanceof Note) {
+        notesForRemoval.push(element)
+      } else if (element instanceof Arrow) {
+        arrowsForRemoval.push(element)
+      }
+    }
+
+    // Get the page id (should be the same for all notes)
+    let pageId = notesForRemoval[0].parentId;
+    let isSame = notesForRemoval.every((note) => note.parentId === pageId);
+    if (!isSame) {
+      throw Error('Trying to delete notes from different pages')
+    }
+
+    // Get the arrows that are connected to the notes (check just one page)
+    let allArrows = pamet.arrows({parentId: pageId});
+    for (let arrow of allArrows) {
+      // If the arrow has tail/head in the notesForRemoval - add it of removal
+      if (arrow.tail_note_id && noteIds.has(arrow.tail_note_id) ||
+        arrow.head_note_id && noteIds.has(arrow.head_note_id)) {
+        arrowsForRemoval.push(arrow);
+      }
+    }
+
+    // Remove the elements
+    for (let note of notesForRemoval) {
+      pamet.removeNote(note);
+    }
+    for (let arrow of arrowsForRemoval) {
+      pamet.removeArrow(arrow);
+    }
+  }
+
+  @action
+  deleteSelectedElements(state: PageViewState){
+    let elements = Array.from(state.selectedElementsVS).map((elementVS) => elementVS.element());
+    this.deleteElements(elements);
+    this.clearSelection(state);
   }
 }
 
