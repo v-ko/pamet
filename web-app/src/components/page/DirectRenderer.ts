@@ -3,11 +3,11 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTION_OVERLAY_COLOR } from "../../constants";
+import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTION_OVERLAY_COLOR } from "../../core/constants";
 import { getLogger } from "pyfusion/logging";
 import { color_to_css_rgba_string, drawCrossingDiagonals } from "../../util";
 import { Rectangle } from "../../util/Rectangle";
-import { ElementView, getElementView } from "../../elementViewLibrary";
+import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
 
 let log = getLogger('CanvasCacheService');
@@ -260,17 +260,11 @@ export class CanvasPageRenderer {
 
 
     renderPage(state: PageViewState, context: CanvasRenderingContext2D) {
-
         // Debounce redundant rendering
         if (this.renderTimeout !== null) {
             return;
         }
         this.renderTimeout = setTimeout(() => {
-            // let context = this.context;
-            // if (context === null) {
-            //     log.error('Canvas context is null');
-            //     return;
-            // }
             this.renderTimeout = null;
             this._render(state, context);
         }, MIN_RERENDER_TIME);
@@ -476,11 +470,14 @@ export class CanvasPageRenderer {
         // Overview
 
         // Draw stats
+        let pixelSpaceRect = state.viewport.projectedBounds();
         ctx.save()
         ctx.resetTransform()
         ctx.fillStyle = 'black';
         ctx.font = '15px sans-serif';
-        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, 10, 20);
+        let xStats = 10;
+        let yStats = pixelSpaceRect.height - 10;
+        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
         ctx.restore()
 
         // Call the next render if some notes have not been fully rendered

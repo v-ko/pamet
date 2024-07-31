@@ -1,12 +1,12 @@
 import { NoteViewState } from "./NoteViewState";
-import { NO_SCALE_LINE_SPACING } from "../../constants";
+import { NO_SCALE_LINE_SPACING } from "../../core/constants";
 import { TextLayout, color_to_css_rgba_string } from "../../util";
 import { calculateTextLayout } from "./util";
 import { Point2D } from "../../util/Point2D";
 import { Rectangle } from "../../util/Rectangle";
 import { BaseCanvasView } from "./BaseCanvasView";
-import { pamet } from "../../facade";
-import { DEFAULT_FONT_STRING } from "../../constants";
+import { pamet } from "../../core/facade";
+import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { textRect, imageRect } from "./util";
 import { Size } from "../../util/Size";
 

@@ -1,4 +1,4 @@
-import { ALIGNMENT_GRID_UNIT, DEFAULT_FONT_STRING, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH, NOTE_MARGIN, PREFERRED_TEXT_NOTE_ASPECT_RATIO } from "../../constants";
+import { ALIGNMENT_GRID_UNIT, DEFAULT_FONT_STRING, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH, NOTE_MARGIN, PREFERRED_TEXT_NOTE_ASPECT_RATIO } from "../../core/constants";
 import { Note } from "../../model/Note";
 import { ImageNote } from "../../model/ImageNote";
 import { Rectangle } from "../../util/Rectangle";

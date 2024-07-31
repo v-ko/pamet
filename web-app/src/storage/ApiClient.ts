@@ -1,11 +1,11 @@
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../constants";
-import { PageQueryFilter } from "../facade";
+import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../core/constants";
+import { PageQueryFilter } from "../core/facade";
 import { Page, PageData } from "../model/Page";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { getLogger } from "pyfusion/logging";
 import { BaseApiClient } from "pyfusion/storage/BaseApiClient";
-import { SerializedEntity, loadFromDict } from "pyfusion/libs/Entity";
+import { SerializedEntityData, loadFromDict } from "pyfusion/libs/Entity";
 import { elementId } from "../model/Element";
 
 let log = getLogger('ApiClient');
@@ -147,10 +147,10 @@ export class ApiClient extends BaseApiClient {
         }
 
         let notes = notesData.map((noteData: any) => {
-            return loadFromDict(tmpDynamicMigration(noteData) as SerializedEntity);
+            return loadFromDict(tmpDynamicMigration(noteData) as SerializedEntityData);
         });
         let arrows = arrowsData.map((arrowData: any) => {
-            return loadFromDict(tmpDynamicMigration(arrowData) as SerializedEntity);
+            return loadFromDict(tmpDynamicMigration(arrowData) as SerializedEntityData);
         })
         return {
             notes: notes,

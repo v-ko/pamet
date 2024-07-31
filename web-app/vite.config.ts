@@ -4,17 +4,19 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  root: 'src',
   build: {
     sourcemap: true,
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+  ],
   server: {
     port: 3000,
   },
   resolve: {
-    // preserveSymlinks: true,
     alias: {
-      'pyfusion': path.resolve(__dirname,'../fusion/js-src/src'),
+      'pyfusion': path.resolve(__dirname, '../fusion/js-src/src'),
     },
   },
 })

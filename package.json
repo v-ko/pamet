@@ -21,7 +21,10 @@
   "packageManager": "yarn@4.1.1",
   "scripts": {
     "dev": "yarn workspace web-app run dev",
-    "test": "jest",
+    "test": "jest --detect-open-handles",
     "test:packages": "yarn workspaces foreach run test"
+  },
+  "dependencies": {
+    "comlink": "^4.4.1"
   }
 }

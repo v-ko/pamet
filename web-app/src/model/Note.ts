@@ -40,8 +40,9 @@ export interface SerializedNote extends NoteData {
     type_name: string;
 }
 
-// @entityType('Note')
+// @entityType('Note') - no, this is just a base class
 export class Note extends PametElement<NoteData> implements NoteData {
+    // This is only a base class, static helpers should go in the subclasses
     rect(): Rectangle {
         return new Rectangle(...this._data.geometry);
     }

@@ -7,7 +7,7 @@ import { Rectangle } from '../../util/Rectangle';
 import { approximateMidpointOfBezierCurve } from '../../util';
 import { ElementViewState } from '../page/ElementViewState';
 import paper from 'paper';
-import { SerializedEntity, dumpToDict, loadFromDict } from 'pyfusion/libs/Entity';
+import { SerializedEntityData, dumpToDict, loadFromDict } from 'pyfusion/libs/Entity';
 
 let log = getLogger('ArrowViewState');
 
@@ -26,7 +26,7 @@ function specialSigmoid(x: number): number {
 }
 
 export class ArrowViewState extends ElementViewState {
-    _arrowData!: SerializedEntity;
+    _arrowData!: SerializedEntityData;
     headAnchorNoteViewState: NoteViewState | null = null;
     tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
@@ -76,15 +76,15 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.tail_anchor) {
                     tailAnchorPos = this.tailAnchorNoteViewState.note().arrowAnchor(arrow.tailAnchorType);
                 } else {
-                    throw new Error('Tail anchor is set, but tail anchor type is not');
+                    throw Error('Tail anchor is set, but tail anchor type is not');
                 }
             } else {
-                throw new Error('Tail anchor is set, but tail anchor note view state is not');
+                throw Error('Tail anchor is set, but tail anchor note view state is not');
             }
         } else if (arrow.tail_point) {
             tailAnchorPos = arrow.tail_point;
         } else {
-            throw new Error('Neither tail anchor nor tail point are set');
+            throw Error('Neither tail anchor nor tail point are set');
         }
 
         // Determine the head anchor position
@@ -94,15 +94,15 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.head_anchor) {
                     headAnchorPos = this.headAnchorNoteViewState.note().arrowAnchor(arrow.headAnchorType);
                 } else {
-                    throw new Error('Head anchor is set, but head anchor type is not');
+                    throw Error('Head anchor is set, but head anchor type is not');
                 }
             } else {
-                throw new Error('Head anchor is set, but head anchor note view state is not');
+                throw Error('Head anchor is set, but head anchor note view state is not');
             }
         } else if (arrow.head_point) {
             headAnchorPos = arrow.head_point;
         } else {
-            throw new Error('Neither head anchor nor head point are set');
+            throw Error('Neither head anchor nor head point are set');
         }
 
         if (tailAnchorPos.equals(headAnchorPos)) {
@@ -127,7 +127,7 @@ export class ArrowViewState extends ElementViewState {
         } else if (anchorType === ArrowAnchorType.BOTTOM_MID) {
             return terminalPoint.add(new Point2D(0, controlPointDistance));
         } else {
-            throw new Error('Invalid anchor type');
+            throw Error('Invalid anchor type');
         }
     }
 
@@ -172,7 +172,7 @@ export class ArrowViewState extends ElementViewState {
         } else if (headPoint) {
             secondPoint = headPoint;
         } else {
-            throw new Error('Neither mid points nor head point are set');
+            throw Error('Neither mid points nor head point are set');
         }
 
         // If the anchor type for the tail is AUTO - infer it

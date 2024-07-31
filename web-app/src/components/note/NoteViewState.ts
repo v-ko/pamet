@@ -4,14 +4,14 @@ import { TextLayout } from "../../util";
 import { calculateTextLayout } from "./util";
 import { getLogger } from "pyfusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
-import { DEFAULT_FONT_STRING } from "../../constants";
-import { SerializedEntity, dumpToDict, loadFromDict } from "pyfusion/libs/Entity";
+import { DEFAULT_FONT_STRING } from "../../core/constants";
+import { SerializedEntityData, dumpToDict, loadFromDict } from "pyfusion/libs/Entity";
 
 let log = getLogger('NoteViewState.ts');
 
 
 export class NoteViewState extends ElementViewState {
-    _noteData!: SerializedEntity; // initialized in updateFromNote
+    _noteData!: SerializedEntityData; // initialized in updateFromNote
 
     constructor(note: Note) {
         super();
