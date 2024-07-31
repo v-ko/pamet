@@ -208,10 +208,10 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // Trigger on all of these
       return {
         viewport: state.viewport,
-        selectedElements: state.selectedElements.values(),
+        selectedElements: state.selectedElementsVS.values(),
         dragSelectionRectData: state.dragSelectionRectData,
         mode: state.mode,
-        dragSelectedElements: state.dragSelectedElements,
+        dragSelectedElements: state.dragSelectedElementsVS,
         arrowViewStatesByOwnId: state.arrowViewStatesByOwnId.values(),
         noteViewStatesByOwnId: state.noteViewStatesByOwnId.values(),
       }
@@ -309,12 +309,12 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       if (state.mode === PageMode.None) {
         if (ctrlPressed && !shiftPressed) { // Toggle selection
           if (elementUnderMouse !== null) {
-            let nvs_selected = state.selectedElements.has(elementUnderMouse);
+            let nvs_selected = state.selectedElementsVS.has(elementUnderMouse);
             pageActions.updateSelection(state, new Map([[elementUnderMouse, !nvs_selected]]));
           }
         } else if (shiftPressed || (ctrlPressed && shiftPressed)) { // Add to selection
           if (elementUnderMouse !== null) {
-            let nvs_selected = state.selectedElements.has(elementUnderMouse);
+            let nvs_selected = state.selectedElementsVS.has(elementUnderMouse);
             if (!nvs_selected) {
               pageActions.updateSelection(state, new Map([[elementUnderMouse, true]]));
 
@@ -523,7 +523,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     } else if (event.code === 'KeyY') {  // Dummy resize for testing auto-size
       runInAction(() => {
         console.log('Running dummy resize')
-        for (let element of state.selectedElements.values()) {
+        for (let element of state.selectedElementsVS.values()) {
           if (element instanceof NoteViewState) {
             let note = element.note();
             let rect = note.rect();
@@ -536,7 +536,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     } else if (event.code === 'KeyE') {
       // Start editing the selected note
       let selectedNote: Note | null = null;
-      for (let elementVS of state.selectedElements.values()) {
+      for (let elementVS of state.selectedElementsVS.values()) {
         if (elementVS instanceof NoteViewState) {
           selectedNote = elementVS.note();
           break;
@@ -547,6 +547,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       }
     } else if (event.code === 'KeyH'){
       alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation (may not be implemented)')
+    } else if (event.code === 'Delete') {
+      // Delete selected notes and arrows
+      pageActions.deleteSelectedElements(state);
     }
   }, [state]);
 

@@ -64,10 +64,10 @@ export class PageViewState {
     dragNavigationStartPosition: Point2D | null = null;
 
     // Selection related
-    selectedElements: ObservableSet<CanvasElementViewState> = observable.set();
+    selectedElementsVS: ObservableSet<CanvasElementViewState> = observable.set();
     mousePositionOnDragSelectionStart: Point2D | null = null;
     dragSelectionRectData: RectangleData | null = null;
-    dragSelectedElements: ObservableSet<CanvasElementViewState> = observable.set();
+    dragSelectedElementsVS: ObservableSet<CanvasElementViewState> = observable.set();
 
     // Auto navigation (out of order. Check if it's salvageable)
     autoNavAnimation: ViewportAutoNavAnimation | null = null;
@@ -98,10 +98,10 @@ export class PageViewState {
             realMousePositionOnCanvas: observable,
 
             dragNavigationStartPosition: observable,
-            selectedElements: observable,
+            selectedElementsVS: observable,
             mousePositionOnDragSelectionStart: observable,
             dragSelectionRectData: observable,
-            dragSelectedElements: observable,
+            dragSelectedElementsVS: observable,
             autoNavAnimation: observable,
 
             noteEditWindowState: observable,
@@ -287,7 +287,7 @@ export class PageViewState {
         // Drag select related
         this.mousePositionOnDragSelectionStart = null;
         this.dragSelectionRectData = null;
-        this.dragSelectedElements.clear();
+        this.dragSelectedElementsVS.clear();
 
         // Edit window related
         let editWS = this.noteEditWindowState!;

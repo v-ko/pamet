@@ -6,6 +6,7 @@ import { getLogger } from "pyfusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { SerializedEntityData, dumpToDict, loadFromDict } from "pyfusion/libs/Entity";
+import { pamet } from '../../core/facade';
 
 let log = getLogger('NoteViewState.ts');
 
@@ -27,7 +28,17 @@ export class NoteViewState extends ElementViewState {
     // Used to make use of mobx.computed, while making it visible that
     // the returned note is a new computed object, rather than a mutable property
     get _note(): Note {
-        return loadFromDict(this._noteData) as Note
+        // We need to copy the _data, since it's wrapped in a mobx.observable
+        // and we want to drop the wrapper
+        // https://mobx.js.org/observable-state.html#converting-observables-back-to-vanilla-javascript-collections
+        // let noteData = {...this._noteData};
+        // return loadFromDict(noteData) as Note
+        // return loadFromDict(this._noteData) as Note
+        let note = pamet.findOne({id: this._noteData.id});
+        if (note === null) {
+            throw new Error(`Note with id ${this._noteData.id} not found`);
+        }
+        return note as Note;
     }
     note(): Note {
         return this._note

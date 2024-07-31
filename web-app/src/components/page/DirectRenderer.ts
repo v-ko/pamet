@@ -450,12 +450,12 @@ export class CanvasPageRenderer {
 
         // If drag selection is active - add drag selected children to the selection
         if (state.mode === PageMode.DragSelection) {
-            for (const childVS of state.dragSelectedElements) {
+            for (const childVS of state.dragSelectedElementsVS) {
                 drawSelectionOverlay(childVS);
             }
         }
 
-        for (const childVS of state.selectedElements) {
+        for (const childVS of state.selectedElementsVS) {
             drawSelectionOverlay(childVS);
         }
 

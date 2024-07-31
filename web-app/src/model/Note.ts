@@ -75,13 +75,13 @@ export class Note extends PametElement<NoteData> implements NoteData {
     arrowAnchor(anchorType: ArrowAnchorType): Point2D {
         const rect = this.rect();
         switch (anchorType) {
-            case ArrowAnchorType.MID_LEFT:
+            case ArrowAnchorType.mid_left:
                 return rect.topLeft().add(new Point2D(0, rect.height / 2));
-            case ArrowAnchorType.TOP_MID:
+            case ArrowAnchorType.top_mid:
                 return rect.topLeft().add(new Point2D(rect.width / 2, 0));
-            case ArrowAnchorType.MID_RIGHT:
+            case ArrowAnchorType.mid_right:
                 return rect.topRight().add(new Point2D(0, rect.height / 2));
-            case ArrowAnchorType.BOTTOM_MID:
+            case ArrowAnchorType.bottom_mid:
                 return rect.bottomLeft().add(new Point2D(rect.width / 2, 0));
             default:
                 throw new Error('Invalid anchor type');
