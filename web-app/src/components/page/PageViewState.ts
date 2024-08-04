@@ -7,7 +7,7 @@ import { RectangleData } from '../../util/Rectangle';
 import { NoteViewState } from '../note/NoteViewState';
 import { ArrowViewState } from '../arrow/ArrowViewState';
 import { pamet } from '../../core/facade';
-import { getLogger } from 'pyfusion/logging';
+import { getLogger } from 'fusion/logging';
 import { Note } from '../../model/Note';
 import { Arrow } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
@@ -275,7 +275,12 @@ export class PageViewState {
     }
 
     get page() {
-        return new Page(this._pageData);
+        let page = pamet.findOne({ id: this._pageData.id });
+        if (page === null) {
+            throw new Error(`Page with id ${this._pageData.id} not found`);
+        }
+        return page as Page;
+        // return new Page(this._pageData);  the wrapped (observable) pageData causes problems
     }
 
     clearMode() {

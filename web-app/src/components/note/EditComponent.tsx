@@ -6,9 +6,9 @@ import { Rectangle } from '../../util/Rectangle';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Note, SerializedNote } from '../../model/Note';
 import { pamet } from '../../core/facade';
-import { dumpToDict, loadFromDict } from 'pyfusion/libs/Entity';
-import { currentTime, timestamp } from 'pyfusion/util';
-import { getLogger } from 'pyfusion/logging';
+import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
+import { currentTime, timestamp } from 'fusion/util';
+import { getLogger } from 'fusion/logging';
 
 let log = getLogger('EditComponent');
 

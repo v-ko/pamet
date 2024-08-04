@@ -1,11 +1,11 @@
-import { computed, makeObservable, observable, reaction } from "mobx";
+import { computed, makeObservable, observable } from "mobx";
 import { Note } from "../../model/Note";
 import { TextLayout } from "../../util";
 import { calculateTextLayout } from "./util";
-import { getLogger } from "pyfusion/logging";
+import { getLogger } from "fusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
-import { SerializedEntityData, dumpToDict, loadFromDict } from "pyfusion/libs/Entity";
+import { SerializedEntityData, dumpToDict, loadFromDict } from "fusion/libs/Entity";
 import { pamet } from '../../core/facade';
 
 let log = getLogger('NoteViewState.ts');
@@ -34,6 +34,7 @@ export class NoteViewState extends ElementViewState {
         // let noteData = {...this._noteData};
         // return loadFromDict(noteData) as Note
         // return loadFromDict(this._noteData) as Note
+        // Or just use the pamet object
         let note = pamet.findOne({id: this._noteData.id});
         if (note === null) {
             throw new Error(`Note with id ${this._noteData.id} not found`);

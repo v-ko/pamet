@@ -8,7 +8,7 @@ import { pageActions } from '../../actions/page';
 import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
-import { getLogger } from 'pyfusion/logging';
+import { getLogger } from 'fusion/logging';
 import { reaction, runInAction } from 'mobx';
 import React from 'react';
 import paper from 'paper';

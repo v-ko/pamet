@@ -4,7 +4,7 @@ import WebApp, { PageError, WebAppState } from './containers/app/App';
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './core/facade';
-import { getLogger, setupWebWorkerLoggingChannel } from 'pyfusion/logging';
+import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 
 
 // Imports that are required to just activate decorators. Might be removed when
@@ -20,13 +20,13 @@ import { ExternalLinkNote } from './model/ExternalLinkNote';
 import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
 import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
-import { fusion } from 'pyfusion/index';
-import { ActionState } from 'pyfusion/libs/Action';
+import { fusion } from 'fusion/index';
+import { ActionState } from 'fusion/libs/Action';
 import { appActions } from './actions/app';
 import { PametConfig } from './config/Config';
 import { LocalStorageConfigAdapter } from './config/LocalStorageConfigAdapter';
 import { ProjectData } from './model/config/Project';
-import { createId, currentTime, timestamp } from 'pyfusion/util';
+import { createId, currentTime, timestamp } from 'fusion/util';
 import { StorageService, StorageServiceActual } from './storage/StorageService';
 
 let dummyImports: any[] = [];

@@ -1,10 +1,10 @@
-import { getLogger } from "pyfusion/logging";
-import { BaseAsyncRepository, BranchMetadata } from "pyfusion/storage/BaseRepository";
-import { Commit, CommitData } from "pyfusion/storage/Commit";
+import { getLogger } from "fusion/logging";
+import { BaseAsyncRepository, BranchMetadata } from "fusion/storage/BaseRepository";
+import { Commit, CommitData } from "fusion/storage/Commit";
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { DeltaData } from "pyfusion/storage/Delta";
-import { inferRepoChangesFromGraphUpdate } from "pyfusion/storage/SyncUtils";
-import { CommitGraph } from "pyfusion/storage/CommitGraph";
+import { DeltaData } from "fusion/storage/Delta";
+import { inferRepoChangesFromGraphUpdate } from "fusion/storage/SyncUtils";
+import { CommitGraph } from "fusion/storage/CommitGraph";
 
 
 let log = getLogger('IndexedDB_storageAdapter');

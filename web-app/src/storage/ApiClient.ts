@@ -3,9 +3,9 @@ import { PageQueryFilter } from "../core/facade";
 import { Page, PageData } from "../model/Page";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
-import { getLogger } from "pyfusion/logging";
-import { BaseApiClient } from "pyfusion/storage/BaseApiClient";
-import { SerializedEntityData, loadFromDict } from "pyfusion/libs/Entity";
+import { getLogger } from "fusion/logging";
+import { BaseApiClient } from "fusion/storage/BaseApiClient";
+import { SerializedEntityData, loadFromDict } from "fusion/libs/Entity";
 import { elementId } from "../model/Element";
 
 let log = getLogger('ApiClient');

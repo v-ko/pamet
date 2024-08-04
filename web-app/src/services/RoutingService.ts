@@ -1,4 +1,4 @@
-import { getLogger } from "pyfusion/logging";
+import { getLogger } from "fusion/logging";
 import { appActions } from "../actions/app";
 import { projectActions } from "../actions/project";
 import { pamet } from "../core/facade";

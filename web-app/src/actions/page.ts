@@ -2,9 +2,9 @@ import * as util from "../util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/page/PageViewState";
 import { Point2D } from "../util/Point2D";
 
-import { action } from "pyfusion/libs/Action";
+import { action } from "fusion/libs/Action";
 
-import { getLogger } from "pyfusion/logging";
+import { getLogger } from "fusion/logging";
 import { Rectangle } from "../util/Rectangle";
 import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../core/constants";
 import { EditComponentState } from "../components/note/EditComponent";

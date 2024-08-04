@@ -1,7 +1,7 @@
 import { pageActions } from "../actions/page";
 import { pamet } from "./facade";
-import { command } from "pyfusion/libs/Command";
-import { getLogger } from "pyfusion/logging";
+import { command } from "fusion/libs/Command";
+import { getLogger } from "fusion/logging";
 import { Point2D } from "../util/Point2D";
 
 let log = getLogger('PametCommands');

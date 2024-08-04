@@ -1,5 +1,5 @@
-import { Entity, EntityData, entityType } from "pyfusion/libs/Entity"
-import { timestamp } from 'pyfusion/util.js';
+import { Entity, EntityData, entityType } from "fusion/libs/Entity"
+import { timestamp } from 'fusion/util.js';
 
 export interface TourSegment {
   link: string;

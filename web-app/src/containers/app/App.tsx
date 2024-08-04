@@ -6,7 +6,7 @@ import { observer } from "mobx-react-lite";
 import { PageView } from "../../components/page/PageView";
 import { PageViewState } from "../../components/page/PageViewState";
 
-import { getLogger } from "pyfusion/logging";
+import { getLogger } from "fusion/logging";
 import { DeviceData } from "web-app/src/model/config/Device";
 import { UserData } from "web-app/src/model/config/User";
 import { pamet } from "../../core/facade";

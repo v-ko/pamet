@@ -1,5 +1,5 @@
 import { textRect } from "../components/note/util";
-import { entityType } from "pyfusion/libs/Entity";
+import { entityType } from "fusion/libs/Entity";
 import { Rectangle } from "../util/Rectangle";
 import { Note } from "./Note";
 

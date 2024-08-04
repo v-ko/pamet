@@ -1,4 +1,4 @@
-import { entityType } from "pyfusion/libs/Entity";
+import { entityType } from "fusion/libs/Entity";
 import { Note } from "./Note";
 
 @entityType('ExternalLinkNote')

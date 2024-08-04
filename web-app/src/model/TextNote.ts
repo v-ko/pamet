@@ -1,6 +1,6 @@
 import { DEFAULT_BACKGROUND_COLOR, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR } from "../core/constants";
-import { entityType, getEntityId } from "pyfusion/libs/Entity";
-import { currentTime, timestamp } from "pyfusion/util";
+import { entityType, getEntityId } from "fusion/libs/Entity";
+import { currentTime, timestamp } from "fusion/util";
 import { elementId } from "./Element";
 import { Note } from "./Note";
 import { RectangleData } from "../util/Rectangle";

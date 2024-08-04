@@ -1,9 +1,9 @@
-import { action } from "pyfusion/libs/Action";
+import { action } from "fusion/libs/Action";
 import type { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
 import { WebAppState } from "../containers/app/App";
 import { pamet } from "../core/facade";
 import { Page, PageData } from "../model/Page";
-import { createId, currentTime, timestamp } from "pyfusion/util";
+import { createId, currentTime, timestamp } from "fusion/util";
 import { Note } from "../model/Note";
 import { minimalNonelidedSize } from "../components/note/util";
 import { TextNote } from "../model/TextNote";

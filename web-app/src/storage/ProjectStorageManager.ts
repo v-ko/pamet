@@ -1,9 +1,9 @@
-import { BaseAsyncRepository, RepoUpdate } from "pyfusion/storage/BaseRepository";
+import { BaseAsyncRepository, RepoUpdate } from "fusion/storage/BaseRepository";
 import { IndexedDBRepository } from "./IndexedDB_storageAdapter";
 import { StorageServiceActual } from "./StorageService";
-import { AsyncInMemoryRepository } from "pyfusion/storage/AsyncInMemoryRepo";
-import { getLogger } from "pyfusion/logging";
-import { autoMergeForSync } from "pyfusion/storage/SyncUtils";
+import { AsyncInMemoryRepository } from "fusion/storage/AsyncInMemoryRepo";
+import { getLogger } from "fusion/logging";
+import { autoMergeForSync } from "fusion/storage/SyncUtils";
 
 let log = getLogger('ProjectStorageManager');
 

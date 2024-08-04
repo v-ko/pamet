@@ -1,12 +1,12 @@
-import { InMemoryStore } from "pyfusion/storage/InMemoryStore"
+import { InMemoryStore } from "fusion/storage/InMemoryStore"
 import { PametStore as PametStore } from "./PametStore";
-import { SearchFilter, SerializedStoreData, Store as Store, deltaFromChanges } from "pyfusion/storage/BaseStore"
-import { Entity, EntityData } from "pyfusion/libs/Entity";
-import { Change } from "pyfusion/Change";
+import { SearchFilter, SerializedStoreData, Store as Store, deltaFromChanges } from "fusion/storage/BaseStore"
+import { Entity, EntityData } from "fusion/libs/Entity";
+import { Change } from "fusion/Change";
 import { updateViewModelFromChanges, pamet } from "../core/facade";
-import { action } from "pyfusion/libs/Action";
-import { getLogger } from "pyfusion/logging";
-import { Delta, DeltaData } from "pyfusion/storage/Delta";
+import { action } from "fusion/libs/Action";
+import { getLogger } from "fusion/logging";
+import { Delta, DeltaData } from "fusion/storage/Delta";
 import type { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
 
 let log = getLogger('FrontendDomainStore');

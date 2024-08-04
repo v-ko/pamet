@@ -1,12 +1,11 @@
 import * as Comlink from 'comlink';
-import { Commit } from "pyfusion/storage/Commit";
 import { ProjectStorageManager, ProjectStorageConfig } from './ProjectStorageManager';
-import { SerializedStoreData } from 'pyfusion/storage/BaseStore';
-import { Delta, DeltaData } from 'pyfusion/storage/Delta';
-import { getLogger } from "pyfusion/logging";
+import { SerializedStoreData } from 'fusion/storage/BaseStore';
+import { Delta, DeltaData } from 'fusion/storage/Delta';
+import { getLogger } from "fusion/logging";
 import serviceWorkerUrl from "../service-worker?url"
 import { RepoUpdate } from '../../../fusion/js-src/src/storage/BaseRepository';
-import { createId } from 'pyfusion/util';
+import { createId } from 'fusion/util';
 
 let log = getLogger('StorageService')
 

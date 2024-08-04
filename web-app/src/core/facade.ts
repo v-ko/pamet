@@ -1,9 +1,9 @@
 import { ProjectError, WebAppState } from "../containers/app/App";
-import { getLogger } from 'pyfusion/logging';
-import { Store, SearchFilter } from 'pyfusion/storage/BaseStore';
-import { Change } from "pyfusion/Change";
+import { getLogger } from 'fusion/logging';
+import { Store, SearchFilter } from 'fusion/storage/BaseStore';
+import { Change } from "fusion/Change";
 import { PametStore } from "../storage/PametStore";
-import { Entity, EntityData } from "pyfusion/libs/Entity";
+import { Entity, EntityData } from "fusion/libs/Entity";
 import { ApiClient } from "../storage/ApiClient";
 import { Page } from "../model/Page";
 import { appActions } from "../actions/app";
@@ -15,7 +15,7 @@ import { StorageService, StorageServiceActualInterface } from "../storage/Storag
 import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
 import { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
 import { RoutingService } from "../services/RoutingService";
-import { registerRootActionCompletedHook } from "pyfusion/libs/Action";
+import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
 
 const log = getLogger('facade');

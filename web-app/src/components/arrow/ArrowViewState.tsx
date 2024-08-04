@@ -1,13 +1,13 @@
 import { Arrow, ArrowAnchorType } from '../../model/Arrow';
 import { computed, makeObservable, observable } from 'mobx';
 import { NoteViewState } from '../note/NoteViewState';
-import { getLogger } from 'pyfusion/logging';
+import { getLogger } from 'fusion/logging';
 import { Point2D } from '../../util/Point2D';
 import { Rectangle } from '../../util/Rectangle';
 import { approximateMidpointOfBezierCurve } from '../../util';
 import { ElementViewState } from '../page/ElementViewState';
 import paper from 'paper';
-import { SerializedEntityData, dumpToDict, loadFromDict } from 'pyfusion/libs/Entity';
+import { SerializedEntityData, dumpToDict } from 'fusion/libs/Entity';
 import { pamet } from '../../core/facade';
 
 let log = getLogger('ArrowViewState');
@@ -50,9 +50,7 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get _arrow(): Arrow {
-        // let arrowData = { ...this._arrowData };
         // return loadFromDict(this._arrowData) as Arrow;
-        // return loadFromDict(arrowData) as Arrow;ю
         let arrow = pamet.findOne({id: this._arrowData.id});
         if (arrow === undefined) {
             throw Error('Arrow not found');

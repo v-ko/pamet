@@ -1,8 +1,8 @@
 import { PageError, ProjectError, WebAppState } from "../containers/app/App";
 import type { LocalStorageState } from "../containers/app/App";
 import { pamet } from "../core/facade";
-import { getLogger } from "pyfusion/logging";
-import { action } from "pyfusion/libs/Action";
+import { getLogger } from "fusion/logging";
+import { action } from "fusion/libs/Action";
 import { PageViewState } from "../components/page/PageViewState";
 import type { ProjectData } from "../model/config/Project";
 import { Page } from "../model/Page";
