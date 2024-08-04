@@ -1,5 +1,5 @@
 {
-  "extends": "../tsconfig.json",
+  // "extends": "../tsconfig.json",
   "compilerOptions": {
     "target": "ES6",
     "useDefineForClassFields": true,
@@ -19,12 +19,11 @@
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     // "noEmit": true,
-    "jsx": "react-jsx",
 
     /* Linting */
     "strict": true,
-    "noUnusedLocals": false,
-    "noUnusedParameters": false,
+    // "noUnusedLocals": false,
+    // "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     // "noImplicitAny": true,
     // "noImplicitReturns": true,
@@ -38,12 +37,12 @@
     // "rootDir": "src",
     "outDir": "dist" /* Specify an output folder for all emitted files. */
   },
-  // "include": [
-  //   "src"
-  // ],
-  "references": [
-    {
-      "path": "../fusion/js-src"
-    }
-  ]
+  "include": [
+    "vite.config.ts"
+  ],
+  // "references": [
+  //   {
+  //     "path": "../fusion/js-src"
+  //   }
+  // ]
 }

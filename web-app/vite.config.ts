@@ -16,7 +16,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'pyfusion': path.resolve(__dirname, '../fusion/js-src/src'),
+      'fusion': path.resolve(__dirname, '../fusion/js-src/src'),
     },
   },
 })

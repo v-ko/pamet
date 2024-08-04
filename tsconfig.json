@@ -2,15 +2,15 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "pyfusion/*": [
+      "fusion/*": [
         "fusion/js-src/src/*"
       ]
-    }
+    },
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "esModuleInterop": true,
+    "jsx": "react-jsx",
   },
-  // "include": [
-  //   "web-app/src/**/*",
-  //   "fusion/js-src/src/**/*"
-  // ],
 
   "references": [
     {
