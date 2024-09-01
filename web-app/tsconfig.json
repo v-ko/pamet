@@ -1,6 +1,12 @@
 {
-  // "extends": "../tsconfig.json",
   "compilerOptions": {
+    "composite": true,
+    "rootDir": "../",
+    "paths": {
+      "fusion/*": [ // VScode does not find declarations without that
+        "../fusion/js-src/src/*"
+      ]
+    },
     "target": "ES6",
     "useDefineForClassFields": true,
     "lib": [
@@ -10,6 +16,7 @@
       "WebWorker"
     ],
     "module": "ES6",
+    "jsx": "react-jsx",  // Also VSCode mandated
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -22,27 +29,18 @@
 
     /* Linting */
     "strict": true,
-    // "noUnusedLocals": false,
-    // "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
-    // "noImplicitAny": true,
-    // "noImplicitReturns": true,
 
     // // Custom
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "preserveSymlinks": true,
-    "composite": true,
     "declaration": true,
-    // "rootDir": "src",
     "outDir": "dist" /* Specify an output folder for all emitted files. */
   },
   "include": [
-    "vite.config.ts"
+    "vite.config.ts",
+    "src/**/*",  // VScode does not find declarations without that
+    "../fusion/js-src/src/**/*"
   ],
-  // "references": [
-  //   {
-  //     "path": "../fusion/js-src"
-  //   }
-  // ]
 }
