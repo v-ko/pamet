@@ -4,7 +4,6 @@ import { getLogger } from "fusion/logging";
 import { Point2D, Vector2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
 
-export type ColorData = [number, number, number, number];
 export type SelectionDict = Map<ElementViewState, boolean>;
 
 let log = getLogger('util/index.ts');
@@ -16,15 +15,6 @@ export function snapToGrid(x: number): number {
 
 export function snapVectorToGrid<T extends Vector2D>(v: T): T {
     return v.divide(ALIGNMENT_GRID_UNIT).round().multiply(ALIGNMENT_GRID_UNIT);
-}
-
-export function color_to_css_rgba_string(color: ColorData) {
-    // Convert from [0, 1] to [0, 255]. The alpha channel stays in [0, 1]!
-    let r = Math.round(color[0] * 255)
-    let g = Math.round(color[1] * 255)
-    let b = Math.round(color[2] * 255)
-    let color_string = `rgba(${r}, ${g}, ${b}, ${color[3]})`
-    return color_string
 }
 
 export interface PametUrlProps {

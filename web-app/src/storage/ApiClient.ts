@@ -1,4 +1,3 @@
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_TEXT_COLOR } from "../core/constants";
 import { PageQueryFilter } from "../core/facade";
 import { Page, PageData } from "../model/Page";
 import { Note } from "../model/Note";
@@ -7,6 +6,8 @@ import { getLogger } from "fusion/logging";
 import { BaseApiClient } from "fusion/storage/BaseApiClient";
 import { SerializedEntityData, loadFromDict } from "fusion/libs/Entity";
 import { elementId } from "../model/Element";
+import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
+import { old_color_to_role } from "../util/Color";
 
 let log = getLogger('ApiClient');
 
@@ -52,15 +53,29 @@ export class ApiClient extends BaseApiClient {
             }
             childData.id = elementId(page_id, own_id);
 
-            // Fill style where missing
+            // Fill style where missing and convert colors to roles
             if (childData.style === undefined) {
                 childData.style = {}
             }
+
+            // This migration should be applied only to data with the old schema
+            if (childData.style.color_role !== undefined) {
+                throw new Error('Unexpected: color_role is already set')
+            }
+            if (childData.style.background_color_role !== undefined) {
+                throw new Error('Unexpected: background_color_role is already set')
+            }
+
+            // Convert colors to roles (or fill with defaults)
             if (childData.style.color === undefined) {
-                childData.style.color = [...DEFAULT_TEXT_COLOR]
+                childData.style.color_role = DEFAULT_TEXT_COLOR_ROLE
+            } else{
+                childData.style.color_role = old_color_to_role(childData.style.color)
             }
             if (childData.style.background_color === undefined) {
-                childData.style.background_color = [...DEFAULT_BACKGROUND_COLOR]
+                childData.style.background_color_role = DEFAULT_BACKGROUND_COLOR_ROLE
+            } else {
+                childData.style.background_color_role = old_color_to_role(childData.style.background_color)
             }
 
             // Convert notes to internal links where needed.

@@ -90,7 +90,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const paperCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  const [renderer] = useState(new CanvasPageRenderer());
   const [navDeviceAutoSwitcher] = useState(new NavigationDeviceAutoSwitcher());
 
   const canvasCtx = useCallback(() => {
@@ -130,7 +129,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     paper.setup(paperCanvas);
     paper.view.autoUpdate = false;
 
-  }, [state, canvasCtx, paperCanvasRef, renderer]);
+  }, [state, canvasCtx, paperCanvasRef]);
 
   const updateGeometryHandler = useCallback(() => {
     console.log("[updateGeometry] called")
@@ -205,6 +204,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
 
     const renderDisposer = reaction(() => {
+      // Get note and arrow changes by accessing the computed elements
+      let notes = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS._noteData)
+      let arrows = Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => arrowVS._arrowData);
       // Trigger on all of these
       return {
         viewport: state.viewport,
@@ -212,13 +214,13 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         dragSelectionRectData: state.dragSelectionRectData,
         mode: state.mode,
         dragSelectedElements: state.dragSelectedElementsVS,
-        arrowViewStatesByOwnId: state.arrowViewStatesByOwnId.values(),
-        noteViewStatesByOwnId: state.noteViewStatesByOwnId.values(),
+        notes: notes,
+        arrows: arrows
       }
     },
       () => {
         try{
-          renderer.renderPage(state, ctx);
+          state.renderer.renderPage(state, ctx);
         } catch (e) {
           log.error('Error rendering page:', e)
         }
@@ -228,7 +230,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       renderDisposer();
       // imgRefUpdateDisposer();
     }
-  }, [state, renderer, canvasRef]);
+  }, [state, canvasRef]);
 
   // // Should be a command
   // const copySelectedToClipboard = useCallback(() => {
@@ -550,6 +552,23 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     } else if (event.code === 'Delete') {
       // Delete selected notes and arrows
       pageActions.deleteSelectedElements(state);
+
+      // Colors
+    } else if (event.code === 'Digit1') {
+      // Set primary color to selected elements
+      commands.colorSelectedElementsPrimary();
+    } else if (event.code === 'Digit2') {
+      // Set error color to selected elements
+      commands.colorSelectedElementsSuccess();
+    } else if (event.code === 'Digit3') {
+      // Set success color to selected elements
+      commands.colorSelectedElementsError();
+    } else if (event.code === 'Digit4') {
+      // Set neutral color
+      commands.colorSelectedElementsSurfaceDim();
+    } else if (event.code === 'Digit5') {
+      // Remove note background
+      commands.setNoteBackgroundToTransparent();
     }
   }, [state]);
 

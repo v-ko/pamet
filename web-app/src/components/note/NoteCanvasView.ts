@@ -1,6 +1,7 @@
 import { NoteViewState } from "./NoteViewState";
 import { NO_SCALE_LINE_SPACING } from "../../core/constants";
-import { TextLayout, color_to_css_rgba_string } from "../../util";
+import { TextLayout } from "../../util";
+import { color_role_to_hex_color } from "../../util/Color";
 import { calculateTextLayout } from "./util";
 import { Point2D } from "../../util/Point2D";
 import { Rectangle } from "../../util/Rectangle";
@@ -9,6 +10,9 @@ import { pamet } from "../../core/facade";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { textRect, imageRect } from "./util";
 import { Size } from "../../util/Size";
+import { getLogger } from "fusion/logging";
+
+let log = getLogger('NoteCanvasView');
 
 
 
@@ -30,7 +34,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
     drawBackground(context: CanvasRenderingContext2D) {
         let note = this.noteViewState.note();
-        let backgroundColor = color_to_css_rgba_string(note.style.background_color);
+        let backgroundColor = color_role_to_hex_color(note.style.background_color_role);
         context.fillStyle = backgroundColor;
         context.fillRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
     }
@@ -40,7 +44,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         context.save()
 
         let note = this.noteViewState.note();
-        let color = color_to_css_rgba_string(note.style.color);
+        let color = color_role_to_hex_color(note.style.color_role);
 
         const textRect_ = textRect(textLayout.textRect)
         const textTopLeft = textRect_.topLeft();
@@ -89,7 +93,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     drawBorder(context: CanvasRenderingContext2D, borderType: BorderType = BorderType.Solid) {
         let note = this.noteViewState.note();
         context.save()
-        context.strokeStyle = color_to_css_rgba_string(note.style.color);
+        context.strokeStyle = color_role_to_hex_color(note.style.color_role);
         context.lineWidth = 1;
         if (borderType === BorderType.Dashed) {
             context.setLineDash([10, 5]);

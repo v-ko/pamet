@@ -3,14 +3,15 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTION_OVERLAY_COLOR } from "../../core/constants";
+import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { getLogger } from "fusion/logging";
-import { color_to_css_rgba_string, drawCrossingDiagonals } from "../../util";
+import { drawCrossingDiagonals } from "../../util";
+import { color_role_to_hex_color } from "../../util/Color";
 import { Rectangle } from "../../util/Rectangle";
 import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
 
-let log = getLogger('CanvasCacheService');
+let log = getLogger('DirectRenderer');
 
 const MAX_CACHE_IMAGE_DIM = 1024;
 
@@ -35,12 +36,12 @@ export interface DrawStats {
 
 const MIN_RERENDER_TIME = 5; // ms
 
-const selectionColor = color_to_css_rgba_string(SELECTION_OVERLAY_COLOR);
-const dragSelectRectColor = color_to_css_rgba_string(DRAG_SELECT_COLOR);
+const selectionColor = color_role_to_hex_color(SELECTED_ITEM_OVERLAY_COLOR_ROLE);
+const dragSelectRectColor = color_role_to_hex_color(DRAG_SELECT_COLOR_ROLE);
 
 function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     let note = noteVS.note();
-    ctx.strokeStyle = color_to_css_rgba_string(note.style.color);
+    ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
     let rect = note.rect();
     drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
 }
@@ -271,7 +272,7 @@ export class CanvasPageRenderer {
     }
 
     _render(state: PageViewState, ctx: CanvasRenderingContext2D) {
-        // console.log('Rendering at', state.viewport, 'last render time', this.lastRenderStart);
+        // console.log('Rendering at', state.viewport);
 
         let dpr = state.viewport.devicePixelRatio;
         //Debug: time the rendering
@@ -308,9 +309,9 @@ export class CanvasPageRenderer {
         // let viewportTopLeft = state.viewport.top
         ctx.translate(-state.viewport.xReal, -state.viewport.yReal);
 
-        // Draw test rect
-        ctx.fillStyle = 'red';
-        ctx.fillRect(0, 0, 100, 100);
+        // // Draw test rect
+        // ctx.fillStyle = 'red';
+        // ctx.fillRect(0, 0, 100, 100);
 
         // Draw viewport boundaries
         ctx.strokeStyle = 'black';

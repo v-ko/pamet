@@ -1,18 +1,18 @@
-import { computed, makeObservable, observable } from "mobx";
-import { Note } from "../../model/Note";
+import { computed, makeObservable, observable, reaction } from "mobx";
+import { Note, SerializedNote } from "../../model/Note";
 import { TextLayout } from "../../util";
 import { calculateTextLayout } from "./util";
 import { getLogger } from "fusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
-import { SerializedEntityData, dumpToDict, loadFromDict } from "fusion/libs/Entity";
+import { dumpToDict } from "fusion/libs/Entity";
 import { pamet } from '../../core/facade';
 
 let log = getLogger('NoteViewState.ts');
 
 
 export class NoteViewState extends ElementViewState {
-    _noteData!: SerializedEntityData; // initialized in updateFromNote
+    _noteData!: SerializedNote; // initialized in updateFromNote
 
     constructor(note: Note) {
         super();
@@ -22,6 +22,13 @@ export class NoteViewState extends ElementViewState {
             _noteData: observable,
             _note: computed,
             textLayoutData: computed
+        });
+
+        reaction(() => {
+            return {content: this._noteData.content, style: this._noteData.style}
+        }, () => {
+            log.info('Note data changed', this._noteData);
+            pamet.appViewState.currentPageViewState?._renderer.deleteNvsCache(this);
         });
     }
 
@@ -48,7 +55,7 @@ export class NoteViewState extends ElementViewState {
         return this.note();
     }
     updateFromNote(note: Note) {
-        this._noteData = dumpToDict(note);
+        this._noteData = dumpToDict(note) as SerializedNote;
     }
     get textLayoutData(): TextLayout {
         let note = this.note();

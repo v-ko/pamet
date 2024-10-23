@@ -1,5 +1,4 @@
 import { entityType } from 'fusion/libs/Entity';
-import { ColorData } from '../util';
 import { Point2D, PointData } from '../util/Point2D';
 import { PametElement, PametElementData } from './Element';
 
@@ -21,7 +20,7 @@ export interface ArrowData extends PametElementData {
     tail_note_id: string | null;
     head_anchor: ArrowAnchorType;
     tail_anchor: ArrowAnchorType;
-    color: ColorData;
+    color_role: string;
     line_type: string;
     line_thickness: number;
     line_function_name: string;
@@ -59,8 +58,11 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
     get tail_anchor(): ArrowAnchorType {
         return this._data.tail_anchor;
     }
-    get color(): ColorData {
-        return this._data.color;
+    get color_role(): string {
+        return this._data.color_role;
+    }
+    set color_role(new_role: string) {
+        this._data.color_role = new_role;
     }
     get line_type(): string {
         return this._data.line_type;

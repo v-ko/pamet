@@ -13,6 +13,7 @@ import { Arrow } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
 import { EditComponentState } from '../note/EditComponent';
 import { Size } from '../../util/Size';
+import { CanvasPageRenderer } from './DirectRenderer';
 
 let log = getLogger('PageViewState');
 
@@ -44,6 +45,7 @@ export enum PageMode {
 
 export class PageViewState {
     _pageData!: PageData;
+    _renderer: CanvasPageRenderer;
 
     // Elements
     noteViewStatesByOwnId: ObservableMap<string, NoteViewState>;
@@ -77,7 +79,7 @@ export class PageViewState {
 
     constructor(page: Page) {
         this.updateFromPage(page);
-
+        this._renderer = new CanvasPageRenderer();
 
         this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
         this.arrowViewStatesByOwnId = new ObservableMap<string, ArrowViewState>();
@@ -109,10 +111,18 @@ export class PageViewState {
             viewport: computed
         });
 
+        // test note updat reaction
+        reaction(() => Array.from(this.noteViewStatesByOwnId.values()).map((noteVS) => noteVS._noteData), (values) => {
+            log.info('Note view states changed', values);
+        });
     }
 
     updateFromPage(page: Page) {
         this._pageData = page.data();
+    }
+
+    get renderer() {
+        return this._renderer;
     }
 
     createElementViewStates() {

@@ -94,7 +94,7 @@ export class ProjectStorageManager {
         return this.config.currentBranchName
     }
     async init() {
-        log.info('Init', this.currentBranchName)
+        log.info('Initializing project storage manager for branch', this.currentBranchName)
         // Setup the in-mem storage
         const branchName = this.config.currentBranchName
 

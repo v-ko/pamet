@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { NOTE_MARGIN } from '../../core/constants.js';
-import { color_to_css_rgba_string } from '../../util/index.js';
+import { color_role_to_hex_color } from "../../util/Color.js";
 import { observer } from 'mobx-react-lite';
 import { NoteViewState } from './NoteViewState.js';
 import { pamet } from '../../core/facade.js';
@@ -23,12 +23,12 @@ export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) 
     const self_ref = useRef<HTMLAnchorElement>(null);
     const note = state.note();
     const [x, y, width, height] = note.geometry;
-    if (note.style.color === undefined) {
+    if (note.style.color_role === undefined) {
         console.log('Style is undefined for note', state);
         return null;
     }
-    const color = color_to_css_rgba_string(note.style.color)
-    const backgroundColor = color_to_css_rgba_string(note.style.background_color)
+    const color = color_role_to_hex_color(note.style.color_role)
+    const backgroundColor = color_role_to_hex_color(note.style.background_color_role)
 
     // Handling the url
     let isExternal = true;

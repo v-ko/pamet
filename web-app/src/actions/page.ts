@@ -15,6 +15,7 @@ import { minimalNonelidedSize } from "../components/note/util";
 import { NoteViewState } from "../components/note/NoteViewState";
 import { PametElement, PametElementData } from "../model/Element";
 import { Arrow } from "../model/Arrow";
+import { ArrowViewState } from "../components/arrow/ArrowViewState";
 
 let log = getLogger('MapActions');
 
@@ -338,7 +339,7 @@ class PageActions {
     }
 
     // Get the arrows that are connected to the notes (check just one page)
-    let allArrows = pamet.arrows({parentId: pageId});
+    let allArrows = pamet.arrows({ parentId: pageId });
     for (let arrow of allArrows) {
       // If the arrow has tail/head in the notesForRemoval - add it of removal
       if (arrow.tail_note_id && noteIds.has(arrow.tail_note_id) ||
@@ -357,10 +358,41 @@ class PageActions {
   }
 
   @action
-  deleteSelectedElements(state: PageViewState){
+  deleteSelectedElements(state: PageViewState) {
     let elements = Array.from(state.selectedElementsVS).map((elementVS) => elementVS.element());
     this.deleteElements(elements);
     this.clearSelection(state);
+  }
+
+  @action
+  colorSelectedNotes(state: PageViewState, colorRole: string | null, backgroundColorRole: string | null) {
+    for (let elementVS of state.selectedElementsVS) {
+      if (!(elementVS instanceof NoteViewState)) { // Skip arrows
+        continue;
+      }
+      let noteVS = elementVS as NoteViewState;
+      let note = noteVS.note();
+      if (colorRole !== null) {
+        note.style.color_role = colorRole;
+      }
+      if (backgroundColorRole !== null) {
+        note.style.background_color_role = backgroundColorRole;
+      }
+      pamet.updateNote(note);
+    }
+  }
+
+  @action
+  colorSelectedArrows(state: PageViewState, colorRole: string) {
+    for (let elementVS of state.selectedElementsVS) {
+      if (!(elementVS instanceof ArrowViewState)) { // Skip notes
+        continue;
+      }
+      let arrowVS = elementVS as ArrowViewState;
+      let arrow = arrowVS.arrow();
+      arrow.color_role = colorRole;
+      pamet.updateArrow(arrow);
+    }
   }
 }
 

@@ -1,10 +1,9 @@
-import { DEFAULT_BACKGROUND_COLOR, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR } from "../core/constants";
+import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
 import { entityType, getEntityId } from "fusion/libs/Entity";
 import { currentTime, timestamp } from "fusion/util";
 import { elementId } from "./Element";
 import { Note } from "./Note";
 import { RectangleData } from "../util/Rectangle";
-import { ColorData } from "../util";
 
 @entityType('TextNote')
 export class TextNote extends Note {
@@ -19,8 +18,8 @@ export class TextNote extends Note {
             },
             geometry: [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT] as RectangleData,
             style: {
-                background_color: [...DEFAULT_BACKGROUND_COLOR] as ColorData,
-                color: [...DEFAULT_TEXT_COLOR] as ColorData,
+                background_color_role: DEFAULT_BACKGROUND_COLOR_ROLE,
+                color_role: DEFAULT_TEXT_COLOR_ROLE,
             },
             created: timestamp(currentTime()),
             modified:  timestamp(currentTime()),
