@@ -1,4 +1,4 @@
-import { color_to_css_rgba_string } from "../../util";
+import { color_role_to_hex_color } from "../../util/Color";
 import { BaseCanvasView } from "../note/BaseCanvasView";
 import { ArrowViewState } from "./ArrowViewState";
 
@@ -16,7 +16,7 @@ export class ArrowCanvasView extends BaseCanvasView {
         // Draw the arrow line/path
         for (let curve of this.arrowViewState.bezierCurveParams) {
             context.beginPath();
-            context.strokeStyle = color_to_css_rgba_string(arrow.color);
+            context.strokeStyle = color_role_to_hex_color(arrow.color_role);
             context.lineWidth = arrow.line_thickness;
             context.moveTo(curve[0].x, curve[0].y);
             context.bezierCurveTo(curve[1].x, curve[1].y, curve[2].x, curve[2].y, curve[3].x, curve[3].y);
@@ -36,7 +36,7 @@ export class ArrowCanvasView extends BaseCanvasView {
         let handEnd = arrowHandBase.rotate(ARROW_HAND_ANGLE, endPoint);
         let handEnd2 = arrowHandBase.rotate(-ARROW_HAND_ANGLE, endPoint);
         context.beginPath();
-        context.strokeStyle = color_to_css_rgba_string(arrow.color);
+        context.strokeStyle = color_role_to_hex_color(arrow.color_role);
         context.lineWidth = arrow.line_thickness;
         context.moveTo(endPoint.x, endPoint.y);
         context.lineTo(handEnd.x, handEnd.y);

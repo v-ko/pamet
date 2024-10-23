@@ -36,7 +36,7 @@ export class IndexedDBRepository extends BaseAsyncRepository {
     constructor(localBranchName: string) {
         super();
         this._localBranchName = localBranchName;
-        log.info('Creating IndexedDBRepository for branch:', localBranchName)
+        log.info('Instantiating IndexedDBRepository for branch:', localBranchName)
     }
 
     async init(localBranchName: string) {

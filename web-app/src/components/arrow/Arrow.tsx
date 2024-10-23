@@ -1,6 +1,6 @@
 
 import { FC, useMemo } from 'react';
-import { color_to_css_rgba_string } from "../../util";
+import { color_role_to_hex_color } from "../../util/Color";
 import { ArrowViewState, BezierCurve } from './ArrowViewState';
 
 export interface ArrowProps {
@@ -28,8 +28,8 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState, clickHandler }:
         return path.join(' ');
     }, [arrowViewState]);
 
-    let arrow = arrowViewState.arrow;
-    let color = color_to_css_rgba_string(arrow.color)
+    let arrow = arrowViewState.arrow();
+    let color = color_role_to_hex_color(arrow.color_role)
     let line_thickness = arrow.line_thickness;
 
     return (
@@ -55,12 +55,12 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState, clickHandler }:
 export const ArrowHeadComponent: FC<ArrowProps> = ({ arrowViewState }) => {
 
     return (
-        <marker id={`arrowhead-${arrowViewState.arrow.id}`}
+        <marker id={`arrowhead-${arrowViewState.arrow().id}`}
             markerWidth="10" markerHeight="7"
             refX="10" refY="3.5" orient="auto">
 
             <polygon points="0 0, 10 3.5, 0 7"
-                stroke={color_to_css_rgba_string(arrowViewState.arrow.color)}
+                stroke={color_role_to_hex_color(arrowViewState.arrow().color_role)}
             />
         </marker>
     )

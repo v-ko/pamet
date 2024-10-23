@@ -1,6 +1,6 @@
 import { registerElementView } from "../elementViewLibrary";
 import { ExternalLinkNote } from "../../model/ExternalLinkNote";
-import { color_to_css_rgba_string } from "../../util";
+import { color_role_to_hex_color } from "../../util/Color";
 import { Point2D } from "../../util/Point2D";
 import { CardNoteCanvasView } from "./CardNoteCanvasView";
 
@@ -19,7 +19,7 @@ export class ExternalLinkNoteCanvasView extends CardNoteCanvasView {
         let p3 = p1.add(new Point2D(0, DECORATION_EDGE));
 
         context.save();
-        context.fillStyle = color_to_css_rgba_string(note.style.color);
+        context.fillStyle = color_role_to_hex_color(note.style.color_role);
         context.beginPath();
         context.moveTo(p1.x, p1.y);
         context.lineTo(p2.x, p2.y);

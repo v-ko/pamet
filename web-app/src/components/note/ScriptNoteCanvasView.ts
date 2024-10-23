@@ -1,6 +1,6 @@
 import { registerElementView } from "../elementViewLibrary";
 import { ScriptNote } from "../../model/ScriptNote";
-import { color_to_css_rgba_string } from "../../util";
+import { color_role_to_hex_color } from "../../util/Color";
 import { calculateTextLayout } from "./util";
 import { Point2D } from "../../util/Point2D";
 import { NoteCanvasView } from "./NoteCanvasView";
@@ -34,7 +34,7 @@ export class ScriptNoteCanvasView extends NoteCanvasView {
             p1.y + TRIANGLE_BASE / 2);
 
         context.save();
-        context.fillStyle = color_to_css_rgba_string(note.style.color);
+        context.fillStyle = color_role_to_hex_color(note.style.color_role);
         context.beginPath();
         context.moveTo(p1.x, p1.y);
         context.lineTo(p2.x, p2.y);

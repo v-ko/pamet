@@ -78,12 +78,14 @@ export class StorageService {
     _repoSubscriptions: { [key: string]: number } = {}; // track subs for this instance
 
     static inMainThread(): StorageService {
+        log.info('Creating storage service in main thread')
         let service = new StorageService();
         service._service = new StorageServiceActual();
         return service;
     }
 
     static async serviceWorkerProxy(): Promise<StorageService> {
+        log.info('Creating service worker proxy')
         let service = new StorageService();
         await service._setupProxy();
         return service;

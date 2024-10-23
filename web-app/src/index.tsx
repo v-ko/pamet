@@ -111,11 +111,9 @@ setupWebWorkerLoggingChannel();
 // Create a storage service in the main thread
 let storageService = StorageService.inMainThread();
 pamet.setStorageService(storageService);
-console.log('tet')
 // Determine the route and do an initial update
 // let route = pamet.router.currentRoute()
 // appActions.applyRoute(app_state, route);
-console.log('tet')
 
 // Setup automatic handling
 pamet.router.handleRouteChange(true);

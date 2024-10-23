@@ -1,9 +1,4 @@
-import { ColorData } from "../util";
-
-export const DEFAULT_TEXT_COLOR: ColorData = [0, 0, 1, 1];
-export const DEFAULT_BACKGROUND_COLOR: ColorData = [0, 0, 1, 0.1];
-export const SELECTION_OVERLAY_COLOR: ColorData = [1, 1, 0, 0.5];
-export const DRAG_SELECT_COLOR: ColorData = [0.39, 0.39, 0.39, 0.2];
+import { HexColorData } from "../util/Color";
 
 export const MIN_HEIGHT_SCALE = 0.2
 export const MAX_HEIGHT_SCALE = 200
@@ -29,7 +24,6 @@ export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'
 export const DEFAULT_NOTE_LINE_HEIGHT = 20
 export const PREFERRED_TEXT_NOTE_ASPECT_RATIO = 5
 
-
 export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_LINE_HEIGHT}px ` +
     `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
     `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
@@ -46,3 +40,25 @@ export const POTENTIAL_EDGE_RADIUS = CONTROL_POINT_RADIUS * 0.7
 export const MAX_RENDER_TIME = 0.017  // (in seconds) ~60 fps
 export const IMAGE_CACHE_PADDING = 3;
 
+// Colors
+export const DEFAULT_TEXT_COLOR_ROLE = 'onPrimary'
+export const DEFAULT_BACKGROUND_COLOR_ROLE = 'primary'
+export const SELECTED_ITEM_OVERLAY_COLOR_ROLE = 'itemSelectionOverlay'
+export const DRAG_SELECT_COLOR_ROLE = 'interactiveSelectionMask'
+
+// Hardcoded color roles. Will be made dynamic at some point.
+// Naming: Use Material-like color roles  https://m3.material.io/styles/color/roles
+export const COLOR_ROLE_MAP: { [key: string]: HexColorData } = {
+    'primary': '#0000ff1a', // blue transparent background
+    'onPrimary': '#0000ff', // blue text
+    'error': '#ff00001a', // red transparent background
+    'onError': '#ff0000', // red text
+    'success': '#00ff001a', // green transparent background
+    'onSuccess': '#00a33c', // green text
+    'surface': '#ffffff', // white background
+    'onSurface': '#000000', // black text
+    'surfaceDim': '#0000001a', // black transparent background
+    'itemSelectionOverlay': '#ffff0080',  // yellow transparent selection overlay
+    'interactiveSelectionMask': '#64646433',  // grey transparent selection mask
+    'transparent': '#00000000'  // transparent
+}

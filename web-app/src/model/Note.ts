@@ -1,4 +1,3 @@
-import { ColorData } from "../util";
 import { Rectangle } from "../util/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
@@ -20,8 +19,8 @@ export interface NoteContent {
     image?: ImageMetadata;
 }
 export interface NoteStyle {
-    color: ColorData;
-    background_color: ColorData;
+    color_role: string;
+    background_color_role: string;
 }
 
 export interface NoteMetadata {
