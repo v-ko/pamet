@@ -182,8 +182,6 @@ class PageActions {
     state.dragSelectionRectData = selectionRectangle.data();
     state.dragSelectedElementsVS.clear();
 
-
-
     // Get notes in the area
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
       let noteRect = noteVS.note().rect();

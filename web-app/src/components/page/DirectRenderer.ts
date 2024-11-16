@@ -23,12 +23,13 @@ export enum DrawMode {
 }
 
 
-export interface DrawStats {
+export interface ElementDrawStats {
     total: number,
     reused: number,
     reusedDirty: number,
     deNovoRedraw: number,
     deNovoClean: number,
+    deNovoAll: number,
     direct: number,
     pattern: number,
     render_time: number
@@ -271,10 +272,65 @@ export class CanvasPageRenderer {
         }, MIN_RERENDER_TIME);
     }
 
+    _applyProjectionMatrix(state: PageViewState, ctx: CanvasRenderingContext2D) {
+        // Apply DPR correction
+        let dpr = state.viewport.devicePixelRatio;
+        ctx.scale(dpr, dpr);
+        // Scale to the zoom level
+        let heightScaleFactor = state.viewport.heightScaleFactor();
+        ctx.scale(heightScaleFactor, heightScaleFactor);
+        // Translate
+        ctx.translate(-state.viewport.xReal, -state.viewport.yReal);
+    }
+
     _render(state: PageViewState, ctx: CanvasRenderingContext2D) {
         // console.log('Rendering at', state.viewport);
 
-        let dpr = state.viewport.devicePixelRatio;
+        // Clear the canvas
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.resetTransform(); // may be redundant, but why not
+
+        // Draw drag selection rectangle
+        if (state.mode === PageMode.DragSelection && state.dragSelectionRectData !== null) {
+            ctx.fillStyle = dragSelectRectColor;
+            ctx.fillRect(...state.dragSelectionRectData);
+        }
+
+        // // Draw test rect
+        // ctx.fillStyle = 'red';
+        // ctx.fillRect(0, 0, 100, 100);
+
+        // // Draw viewport boundaries (for debugging)
+        // ctx.strokeStyle = 'black';
+        // ctx.lineWidth = 1;
+        // ctx.strokeRect(...state.viewport.realBounds().data());
+
+        // Draw elements
+        this._drawElements(state, ctx);
+
+        // Draw selection overlays
+        // Setup the projection matrix
+        ctx.save()
+        this._applyProjectionMatrix(state, ctx);
+
+        // If drag selection is active - add drag selected children to the selection
+        if (state.mode === PageMode.DragSelection) {
+            for (const childVS of state.dragSelectedElementsVS) {
+                this._drawSelectionOverlay(ctx, childVS);
+            }
+        }
+
+        for (const childVS of state.selectedElementsVS) {
+            this._drawSelectionOverlay(ctx, childVS);
+        }
+
+        ctx.restore()
+    }
+
+    _drawElements(state: PageViewState, ctx: CanvasRenderingContext2D) {
+        ctx.save()
+        this._applyProjectionMatrix(state, ctx);
+
         //Debug: time the rendering
         let paintStartT = performance.now();
 
@@ -284,50 +340,16 @@ export class CanvasPageRenderer {
             return elapsedT > MAX_RENDER_TIME * 1000;
         }
 
-        // Clear the canvas
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-        ctx.resetTransform(); // may be redundant, but why not
-
-        // Draw elemnts in pixel space
-        // Draw drag selection rectangle
-        if (state.mode === PageMode.DragSelection && state.dragSelectionRectData !== null) {
-            ctx.fillStyle = dragSelectRectColor;
-            ctx.fillRect(...state.dragSelectionRectData);
-        }
-
-        // Draw elemnts in real space
-
-        // Setup the projection matrix
-        ctx.save()
-        ctx.scale(dpr, dpr);
-        // // Translate to the center of the screen in pixel space
-        // ctx.translate(pixelSpaceRect.width() / 2, pixelSpaceRect.height() / 2);
-        // Scale to the zoom level
-        let heightScaleFactor = state.viewport.heightScaleFactor();
-        ctx.scale(heightScaleFactor, heightScaleFactor);
-        // Translate to the center of the viewport
-        // let viewportTopLeft = state.viewport.top
-        ctx.translate(-state.viewport.xReal, -state.viewport.yReal);
-
-        // // Draw test rect
-        // ctx.fillStyle = 'red';
-        // ctx.fillRect(0, 0, 100, 100);
-
-        // Draw viewport boundaries
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(...state.viewport.realBounds().data());
-
-
         // Draw notes
         let viewportRect = state.viewport.realBounds()
 
-        let drawStats: DrawStats = {
+        let drawStats: ElementDrawStats = {
             total: 0,
             reused: 0,
             reusedDirty: 0,
             deNovoRedraw: 0,
             deNovoClean: 0,
+            deNovoAll: 0,
             direct: 0,
             pattern: 0,
             render_time: 0
@@ -379,10 +401,10 @@ export class CanvasPageRenderer {
         }
 
         // Update the cache while there is time left or for minimum 2 notes
-        let denovoRendered = 0;
-        // Start with notes with no cache with priority
+        // Render notes with no cache (with priority)
+        let dpr = state.viewport.devicePixelRatio;
         for (const noteVS of withNoCache) {
-            if (noTimeLeft() && denovoRendered >= 2) {
+            if (noTimeLeft() && drawStats.deNovoAll >= 2) {
                 renderPattern(ctx, noteVS);
                 drawStats.pattern++;
                 continue;
@@ -390,7 +412,7 @@ export class CanvasPageRenderer {
             let successful = this.renderNoteView_toCache(ctx, noteVS, state.viewport, dpr);
             if (successful) {
                 this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
-                denovoRendered++;
+                drawStats.deNovoAll++;
                 drawStats.deNovoClean++;
             } else {
                 this.drawElement(ctx, noteVS)
@@ -399,7 +421,7 @@ export class CanvasPageRenderer {
         }
         // Update those with expired cache or draw them if no time is left
         for (const noteVS of withExpiredCache) {
-            if (noTimeLeft() && denovoRendered >= 2) {
+            if (noTimeLeft() && drawStats.deNovoAll >= 2) {
                 this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
                 drawStats.reusedDirty++;
                 continue;
@@ -407,7 +429,7 @@ export class CanvasPageRenderer {
             let successful = this.renderNoteView_toCache(ctx, noteVS, state.viewport, dpr);
             if (successful) {
                 this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
-                denovoRendered++;
+                drawStats.deNovoAll++;
                 drawStats.deNovoRedraw++;
             } else {
                 this.drawElement(ctx, noteVS)
@@ -418,7 +440,7 @@ export class CanvasPageRenderer {
 
         // Draw arrows
         for (const arrowVS of state.arrowViewStatesByOwnId.values()) {
-            // Skip if the arrow is outside the viewport
+            // Skip if the arrow is outside the viewport | does not really speed up anything
             // if (!arrowVS.intersectsRect(viewportRect)) {
             //     continue;
             // }
@@ -431,35 +453,7 @@ export class CanvasPageRenderer {
             }
         }
 
-        const drawSelectionOverlay = (childVS: ElementViewState) => {
-            if (childVS instanceof NoteViewState) {
-                ctx.fillStyle = selectionColor;
-                ctx.fillRect(...childVS.note().rect().data());
-
-            } else if (childVS instanceof ArrowViewState) {
-                ctx.strokeStyle = selectionColor;
-                ctx.lineWidth = childVS.arrow().line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
-                for (let curve of childVS.bezierCurveParams) {
-                    ctx.beginPath();
-                    ctx.moveTo(curve[0].x, curve[0].y);
-                    ctx.bezierCurveTo(curve[1].x, curve[1].y, curve[2].x, curve[2].y, curve[3].x, curve[3].y);
-                    ctx.stroke();
-                    ctx.closePath();
-                }
-            }
-        }
-
-        // If drag selection is active - add drag selected children to the selection
-        if (state.mode === PageMode.DragSelection) {
-            for (const childVS of state.dragSelectedElementsVS) {
-                drawSelectionOverlay(childVS);
-            }
-        }
-
-        for (const childVS of state.selectedElementsVS) {
-            drawSelectionOverlay(childVS);
-        }
-
+        // Restore the projection matrix
         ctx.restore()
 
         // Debug: time the rendering
@@ -482,14 +476,31 @@ export class CanvasPageRenderer {
         ctx.restore()
 
         // Call the next render if some notes have not been fully rendered
-        if (denovoRendered > 0 || drawStats.pattern > 0) {
+        if (drawStats.deNovoAll > 0 || drawStats.pattern > 0) {
             this.requestFollowupRender(state, ctx, dpr);
         } else {
             this._followupRenderSteps = 0;
         }
-
-        return drawStats;
     }
+
+    _drawSelectionOverlay(ctx: CanvasRenderingContext2D, childVS: ElementViewState) {
+        if (childVS instanceof NoteViewState) {
+            ctx.fillStyle = selectionColor;
+            ctx.fillRect(...childVS.note().rect().data());
+
+        } else if (childVS instanceof ArrowViewState) {
+            ctx.strokeStyle = selectionColor;
+            ctx.lineWidth = childVS.arrow().line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
+            for (let curve of childVS.bezierCurveParams) {
+                ctx.beginPath();
+                ctx.moveTo(curve[0].x, curve[0].y);
+                ctx.bezierCurveTo(curve[1].x, curve[1].y, curve[2].x, curve[2].y, curve[3].x, curve[3].y);
+                ctx.stroke();
+                ctx.closePath();
+            }
+        }
+    }
+
 
     requestFollowupRender(state: PageViewState, context: CanvasRenderingContext2D, dpr: number) {
         this._followupRenderSteps++;
