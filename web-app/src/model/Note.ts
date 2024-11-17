@@ -86,6 +86,14 @@ export class Note extends PametElement<NoteData> implements NoteData {
                 throw new Error('Invalid anchor type');
         }
     }
+    anchorIn(point: Point2D, radius: number): ArrowAnchorType {
+        for (const anchorType of [ArrowAnchorType.mid_left, ArrowAnchorType.top_mid, ArrowAnchorType.mid_right, ArrowAnchorType.bottom_mid]) {
+            if (point.distanceTo(this.arrowAnchor(anchorType)) < radius) {
+                return anchorType;
+            }
+        }
+        return ArrowAnchorType.none;
+    }
 
     get text(): string {
         return this._data.content.text || '';

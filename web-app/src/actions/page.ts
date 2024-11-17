@@ -40,14 +40,13 @@ class PageActions {
 
   // Don't include the mouse tracking with the user actions. We need it for
   // the commands though (e.g. creating a note via command)
-  @action({ name: 'setRealMousePositionOnCanvas', issuer: 'PageView' })
+  @action({ name: 'updateProjectedMousePosition', issuer: 'PageView' })
   updateMousePosition(state: PageViewState, pixelSpaceMousePos: Point2D | null) {
     if (pixelSpaceMousePos === null) {
-      state.realMousePositionOnCanvas = null;
+      state.projectedMousePosition = null;
       return;
     }
-    let realMousePos = state.viewport.unprojectPoint(pixelSpaceMousePos);
-    state.realMousePositionOnCanvas = realMousePos;
+    state.projectedMousePosition = pixelSpaceMousePos;
   }
 
   @action
@@ -320,6 +319,7 @@ class PageActions {
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
+    let pageId: string = elements[0].parentId;
 
     for (let element of elements) {
       if (element instanceof Note) {
@@ -327,13 +327,11 @@ class PageActions {
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }
-    }
 
-    // Get the page id (should be the same for all notes)
-    let pageId = notesForRemoval[0].parentId;
-    let isSame = notesForRemoval.every((note) => note.parentId === pageId);
-    if (!isSame) {
-      throw Error('Trying to delete notes from different pages')
+      // Verify pageId
+      if (element.parentId !== pageId) {
+        throw Error('Trying to delete elements from different pages')
+      }
     }
 
     // Get the arrows that are connected to the notes (check just one page)

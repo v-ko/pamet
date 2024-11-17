@@ -18,6 +18,9 @@ export const MIN_NOTE_HEIGHT = 3 * AGU
 export const MAX_NOTE_WIDTH = 192 * AGU
 export const MAX_NOTE_HEIGHT = 192 * AGU
 
+export const RESIZE_CIRCLE_RADIUS = 2 * AGU
+export const ARROW_ANCHOR_SUGGEST_RADIUS = 2 * AGU
+
 export const DEFAULT_NOTE_FONT_SIZE = 18
 export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
 export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'

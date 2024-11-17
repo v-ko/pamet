@@ -3,6 +3,7 @@ import { pamet } from "./facade";
 import { command } from "fusion/libs/Command";
 import { getLogger } from "fusion/logging";
 import { Point2D } from "../util/Point2D";
+import { arrowActions } from "../actions/arrow";
 
 let log = getLogger('PametCommands');
 
@@ -18,13 +19,13 @@ class PametCommands {
             log.error('Trying to create a note with not page view state');
             return;
         }
-        let mousePos = pageVS.realMousePositionOnCanvas;
+        let mousePos = pageVS.projectedMousePosition;
         let creationPos: Point2D;
 
         if (mousePos === null) {
             creationPos = pageVS.viewport.realCenter;
         } else {
-            creationPos = mousePos;
+            creationPos = pageVS.viewport.unprojectPoint(mousePos);
         }
 
         // Create a new note
@@ -115,6 +116,17 @@ class PametCommands {
         }
         pageActions.colorSelectedNotes(pageVS, null, 'transparent');
         pageActions.clearSelection(pageVS);
+    }
+
+    @command('Create arrow')
+    createArrow() {
+        console.log('createArrow command executed')
+        let pageVS = pamet.appViewState.currentPageViewState;
+        if (pageVS === null) {
+            log.error('Trying to create arrow with no page view state');
+            return;
+        }
+        arrowActions.startArrowCreation(pageVS);
     }
 }
 

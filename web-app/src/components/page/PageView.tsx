@@ -12,11 +12,9 @@ import { getLogger } from 'fusion/logging';
 import { reaction, runInAction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
-import { CanvasPageRenderer } from './DirectRenderer';
 import { ElementViewState } from './ElementViewState';
 import { pamet } from '../../core/facade';
 import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
-// import { CanvasReactComponent } from './ReactRenderingComponent';
 import { commands } from '../../core/commands';
 import EditComponent from '../note/EditComponent';
 import { NoteViewState } from '../note/NoteViewState';
@@ -27,6 +25,7 @@ import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
 import shareIconUrl from '../../resources/icons/share-2.svg';
 import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
 import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
+import { arrowActions } from '../../actions/arrow';
 
 
 let log = getLogger('Page.tsx')
@@ -188,7 +187,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [updateGeometryHandler, superContainerRef]);
 
 
-  // Call the direct renderer on the relevant state changes
+  // Setup the rendering mobx reaction
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
@@ -207,7 +206,17 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // Get note and arrow changes by accessing the computed elements
       let notes = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS._noteData)
       let arrows = Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => arrowVS._arrowData);
-      // Trigger on all of these
+
+      let mousePosIfRelevant: Point2D | null = null;
+      // Trigger rendering if the mouse pos has changed AND it's
+      // in a mode where that's significant.
+      if (state.mode === PageMode.CreateArrow) {
+        mousePosIfRelevant = state.projectedMousePosition;
+      } else  {
+        mousePosIfRelevant = null;
+      }
+
+      // Trigger on changes in all of the below
       return {
         viewport: state.viewport,
         selectedElements: state.selectedElementsVS.values(),
@@ -215,7 +224,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         mode: state.mode,
         dragSelectedElements: state.dragSelectedElementsVS,
         notes: notes,
-        arrows: arrows
+        arrows: arrows,
+        mousePosIfRelevant: mousePosIfRelevant,
       }
     },
       () => {
@@ -253,6 +263,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // setRightMouseIsPressed(true);
     }
     if (event.button === 0) {
+      if (state.mode === PageMode.CreateArrow) {
+        arrowActions.arrowCreationClick(state, mousePos);
+      }
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y)
 
@@ -489,6 +502,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     console.log('KEY PRESSED', event.code)
+    let preventDefault = true;
     if (event.key === 'c' && event.ctrlKey) {
       // event.preventDefault();
       // copySelectedToClipboard();
@@ -496,18 +510,30 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
       // Zoom in
       pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
-      event.preventDefault();
     } else if (event.ctrlKey && event.key === '-') { // Minus key
       // Zoom out
       pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
-      event.preventDefault();
     } else if (event.ctrlKey && event.key === '0') { // Zero key
       // Reset zoom level
-      // event.preventDefault();
+      pageActions.updateViewport(state, state.viewportCenter, 1);
     } else if (event.code === 'KeyN') {
       // Start note creation
       commands.createNewNote();
-      event.preventDefault();
+    } else if (event.code === 'KeyE') {
+      // Start editing the selected note
+      let selectedNote: Note | null = null;
+      for (let elementVS of state.selectedElementsVS.values()) {
+        if (elementVS instanceof NoteViewState) {
+          selectedNote = elementVS.note();
+          break;
+        }
+      }
+      if (selectedNote !== null) {
+        pageActions.startEditingNote(state, selectedNote);
+      }
+    } else if (event.code === 'KeyL') {
+      // Start note creation
+      arrowActions.startArrowCreation(state);
     } else if (event.code === 'KeyA' && event.ctrlKey) {
       // Select all
       event.preventDefault();
@@ -535,18 +561,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           }
         }
       });
-    } else if (event.code === 'KeyE') {
-      // Start editing the selected note
-      let selectedNote: Note | null = null;
-      for (let elementVS of state.selectedElementsVS.values()) {
-        if (elementVS instanceof NoteViewState) {
-          selectedNote = elementVS.note();
-          break;
-        }
-      }
-      if (selectedNote !== null) {
-        pageActions.startEditingNote(state, selectedNote);
-      }
+    } else if (event.code === 'Escape'){
+      pageActions.clearMode(state);
     } else if (event.code === 'KeyH'){
       alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation (may not be implemented)')
     } else if (event.code === 'Delete') {
@@ -569,6 +585,11 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     } else if (event.code === 'Digit5') {
       // Remove note background
       commands.setNoteBackgroundToTransparent();
+    } else {
+      preventDefault = false;
+    }
+    if (preventDefault) {
+      event.preventDefault(); // is this correct?
     }
   }, [state]);
 
@@ -634,7 +655,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   return (
     <main
       className='page-view'  // index.css
-
+      // Set cursor to cross if we're in arrow creation mode
+      style={{ cursor: state.mode === PageMode.CreateArrow ? 'crosshair' : 'default' }}
     >
       <PageOverlay
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}

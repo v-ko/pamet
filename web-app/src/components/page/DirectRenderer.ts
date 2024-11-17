@@ -3,13 +3,14 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
+import { ARROW_ANCHOR_SUGGEST_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { getLogger } from "fusion/logging";
 import { drawCrossingDiagonals } from "../../util";
 import { color_role_to_hex_color } from "../../util/Color";
 import { Rectangle } from "../../util/Rectangle";
 import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
+import { ArrowAnchorType } from "../../model/Arrow";
 
 let log = getLogger('DirectRenderer');
 
@@ -296,6 +297,14 @@ export class CanvasPageRenderer {
             ctx.fillRect(...state.dragSelectionRectData);
         }
 
+        // Draw elements
+        this._drawElements(state, ctx);
+
+        // Draw stuff in real space
+        // Setup the projection matrix
+        ctx.save()
+        this._applyProjectionMatrix(state, ctx);
+
         // // Draw test rect
         // ctx.fillStyle = 'red';
         // ctx.fillRect(0, 0, 100, 100);
@@ -305,14 +314,7 @@ export class CanvasPageRenderer {
         // ctx.lineWidth = 1;
         // ctx.strokeRect(...state.viewport.realBounds().data());
 
-        // Draw elements
-        this._drawElements(state, ctx);
-
         // Draw selection overlays
-        // Setup the projection matrix
-        ctx.save()
-        this._applyProjectionMatrix(state, ctx);
-
         // If drag selection is active - add drag selected children to the selection
         if (state.mode === PageMode.DragSelection) {
             for (const childVS of state.dragSelectedElementsVS) {
@@ -322,6 +324,39 @@ export class CanvasPageRenderer {
 
         for (const childVS of state.selectedElementsVS) {
             this._drawSelectionOverlay(ctx, childVS);
+        }
+
+        // Draw anchor suggestions (when creating an arrow)
+        if (state.mode === PageMode.CreateArrow && state.projectedMousePosition) {
+            // Draw the first anchor circle found under the mouse
+            let realMousePos = state.viewport.unprojectPoint(state.projectedMousePosition);
+            let anchorSuggestion = state.anchorSuggestionAt(realMousePos);
+            if (anchorSuggestion.onAnchor) {
+                let note = anchorSuggestion.noteViewState.note();
+                let anchorPosition = anchorSuggestion.position;
+
+                // Draw the circle
+                ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(anchorPosition.x, anchorPosition.y, ARROW_ANCHOR_SUGGEST_RADIUS, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.closePath();
+            }
+
+            // Draw the currently created arrow
+            if (state.newArrowViewState !== null) {
+                console.log('Drawing new arrow', state.newArrowViewState);
+                // Head should be null, and we want to set it to the mouse pos
+                let arrow = state.newArrowViewState.arrow()
+                arrow.setHead(realMousePos, null, ArrowAnchorType.none);
+                let newArrowVS = new ArrowViewState(
+                    arrow,
+                    state.newArrowViewState.headAnchorNoteViewState,
+                    state.newArrowViewState.tailAnchorNoteViewState)
+                let view = new ArrowCanvasView(this, newArrowVS);
+                view.render(ctx);
+            }
         }
 
         ctx.restore()
@@ -484,6 +519,7 @@ export class CanvasPageRenderer {
     }
 
     _drawSelectionOverlay(ctx: CanvasRenderingContext2D, childVS: ElementViewState) {
+        // Expects the ctx to be in the real space
         if (childVS instanceof NoteViewState) {
             ctx.fillStyle = selectionColor;
             ctx.fillRect(...childVS.note().rect().data());

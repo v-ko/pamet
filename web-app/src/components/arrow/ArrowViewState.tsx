@@ -1,5 +1,5 @@
-import { Arrow, ArrowAnchorType } from '../../model/Arrow';
-import { computed, makeObservable, observable } from 'mobx';
+import { Arrow, ArrowAnchorType, ArrowData } from '../../model/Arrow';
+import { computed, makeObservable, observable, toJS } from 'mobx';
 import { NoteViewState } from '../note/NoteViewState';
 import { getLogger } from 'fusion/logging';
 import { Point2D } from '../../util/Point2D';
@@ -7,8 +7,6 @@ import { Rectangle } from '../../util/Rectangle';
 import { approximateMidpointOfBezierCurve } from '../../util';
 import { ElementViewState } from '../page/ElementViewState';
 import paper from 'paper';
-import { SerializedEntityData, dumpToDict } from 'fusion/libs/Entity';
-import { pamet } from '../../core/facade';
 
 let log = getLogger('ArrowViewState');
 
@@ -27,7 +25,7 @@ function specialSigmoid(x: number): number {
 }
 
 export class ArrowViewState extends ElementViewState {
-    _arrowData!: SerializedEntityData;
+    _arrowData!: ArrowData;
     headAnchorNoteViewState: NoteViewState | null = null;
     tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
@@ -50,12 +48,13 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get _arrow(): Arrow {
-        // return loadFromDict(this._arrowData) as Arrow;
-        let arrow = pamet.findOne({id: this._arrowData.id});
-        if (arrow === undefined) {
-            throw Error('Arrow not found');
-        }
-        return arrow as Arrow;
+        let arrowData = toJS(this._arrowData) as ArrowData;
+        return new Arrow(arrowData);
+        // let arrow = pamet.findOne({id: this._arrowData.id});
+        // if (arrow === undefined) {
+        //     throw Error('Arrow not found');
+        // }
+        // return arrow as Arrow;
     }
     arrow(): Arrow {
         return this._arrow;
@@ -67,7 +66,9 @@ export class ArrowViewState extends ElementViewState {
         // Object.keys(this._data).forEach(key => {
         //     this._data[key] = arrow._data[key];
         // });
-        this._arrowData = dumpToDict(arrow);
+        // this._arrowData = dumpToDict(arrow);
+        this._arrowData = arrow.data();
+
         this.headAnchorNoteViewState = headAnchorNoteViewState;
         this.tailAnchorNoteViewState = tailAnchorNoteViewState;
     }
@@ -87,8 +88,8 @@ export class ArrowViewState extends ElementViewState {
             } else {
                 throw Error('Tail anchor is set, but tail anchor note view state is not');
             }
-        } else if (arrow.tail_point) {
-            tailAnchorPos = arrow.tail_point;
+        } else if (arrow.tail_coords) {
+            tailAnchorPos = Point2D.fromData(arrow.tail_coords);
         } else {
             throw Error('Neither tail anchor nor tail point are set');
         }
@@ -105,8 +106,8 @@ export class ArrowViewState extends ElementViewState {
             } else {
                 throw Error('Head anchor is set, but head anchor note view state is not');
             }
-        } else if (arrow.head_point) {
-            headAnchorPos = arrow.head_point;
+        } else if (arrow.head_coords) {
+            headAnchorPos = Point2D.fromData(arrow.head_coords);
         } else {
             throw Error('Neither head anchor nor head point are set');
         }
@@ -282,7 +283,6 @@ export class ArrowViewState extends ElementViewState {
         return midPoints;
     }
 
-    // *** TUK *** !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     edgePointPos(edgeIndex: number): Point2D {
         /** Returns the edge point position for the given index
          * Those include the tail, midpoints and head
