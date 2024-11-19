@@ -3,7 +3,7 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ARROW_ANCHOR_SUGGEST_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { getLogger } from "fusion/logging";
 import { drawCrossingDiagonals } from "../../util";
 import { color_role_to_hex_color } from "../../util/Color";
@@ -339,7 +339,7 @@ export class CanvasPageRenderer {
                 ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
                 ctx.lineWidth = 1;
                 ctx.beginPath();
-                ctx.arc(anchorPosition.x, anchorPosition.y, ARROW_ANCHOR_SUGGEST_RADIUS, 0, 2 * Math.PI);
+                ctx.arc(anchorPosition.x, anchorPosition.y, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, 0, 2 * Math.PI);
                 ctx.stroke();
                 ctx.closePath();
             }
@@ -356,6 +356,33 @@ export class CanvasPageRenderer {
                     state.newArrowViewState.tailAnchorNoteViewState)
                 let view = new ArrowCanvasView(this, newArrowVS);
                 view.render(ctx);
+            }
+        }
+
+        // When a single arrow is selected - draw the control points for editing
+        let selectedArrowVS = state.selectedElementsVS.values().next().value;
+        if (selectedArrowVS instanceof ArrowViewState && state.selectedElementsVS.size === 1) {
+            // Display control points and suggested control points
+            let arrow = selectedArrowVS.arrow();
+
+            ctx.strokeStyle = color_role_to_hex_color(arrow.color_role);
+            ctx.lineWidth = 1;
+
+            // Display control points
+            for (let cpIndex of arrow.edge_indices()) {
+                let cp = selectedArrowVS.edgePointPos(cpIndex);
+                ctx.beginPath();
+                ctx.arc(cp.x, cp.y, ARROW_CONTROL_POINT_RADIUS, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.closePath();
+            }
+            // Display potential control points
+            for (let cpIndex of arrow.potential_edge_indices()) {
+                let cp = selectedArrowVS.edgePointPos(cpIndex);
+                ctx.beginPath();
+                ctx.arc(cp.x, cp.y, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, 0, 2 * Math.PI);
+                ctx.stroke();
+                ctx.closePath();
             }
         }
 
@@ -525,15 +552,9 @@ export class CanvasPageRenderer {
             ctx.fillRect(...childVS.note().rect().data());
 
         } else if (childVS instanceof ArrowViewState) {
-            ctx.strokeStyle = selectionColor;
-            ctx.lineWidth = childVS.arrow().line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
-            for (let curve of childVS.bezierCurveParams) {
-                ctx.beginPath();
-                ctx.moveTo(curve[0].x, curve[0].y);
-                ctx.bezierCurveTo(curve[1].x, curve[1].y, curve[2].x, curve[2].y, curve[3].x, curve[3].y);
-                ctx.stroke();
-                ctx.closePath();
-            }
+            // Render the arrow selection overlay
+            let arrowView = new ArrowCanvasView(this, childVS);
+            arrowView.renderSelectionOverlay(ctx);
         }
     }
 

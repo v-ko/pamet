@@ -1,5 +1,5 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
-import { ARROW_ANCHOR_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../core/constants';
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
 import { Viewport } from './Viewport';
@@ -383,11 +383,11 @@ export class PageViewState {
 
         // Check note view states under the mouse (with margin for anchor)
         let closestDistance = Number.MAX_VALUE;
-        for (let noteVS of this.noteViewsAt(realPosition, ARROW_ANCHOR_SUGGEST_RADIUS)) {
+        for (let noteVS of this.noteViewsAt(realPosition, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS)) {
             let note = noteVS.note();
 
             // Check if the click is on a note anchor
-            let anchorUnderMouse = note.anchorIn(realPosition, ARROW_ANCHOR_SUGGEST_RADIUS);
+            let anchorUnderMouse = note.anchorIn(realPosition, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS);
             if (anchorUnderMouse !== ArrowAnchorType.none) {
                 // Click is on a note anchor
                 let anchorPosition = note.arrowAnchor(anchorUnderMouse);

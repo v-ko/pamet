@@ -274,7 +274,6 @@ export class ArrowViewState extends ElementViewState {
         let midPoints: Point2D[] = [];
 
         let precision = 1;
-        throw Error('Not implemented')
 
         for (let curve of curves) {
             let midPoint = approximateMidpointOfBezierCurve(curve[0], curve[1], curve[2], curve[3], precision);
@@ -309,6 +308,9 @@ export class ArrowViewState extends ElementViewState {
     }
 
     edgeAt(position: Point2D): number | null {
+        /** Returns the edge index at the given real position if there's a
+         * control point there or a suggested one.
+         */
         let realPos = position;
         let indices = this.arrow().allEdgeIndices();
         for (let idx of indices) {

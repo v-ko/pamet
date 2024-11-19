@@ -1,6 +1,9 @@
+import { ARROW_SELECTION_THICKNESS_DELTA, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { color_role_to_hex_color } from "../../util/Color";
 import { BaseCanvasView } from "../note/BaseCanvasView";
 import { ArrowViewState } from "./ArrowViewState";
+
+const selectionColor = color_role_to_hex_color(SELECTED_ITEM_OVERLAY_COLOR_ROLE);
 
 let ARROW_HAND_LENGTH = 20;
 let ARROW_HAND_ANGLE =  25 ; // 25 degrees
@@ -10,19 +13,9 @@ export class ArrowCanvasView extends BaseCanvasView {
     get arrowViewState(): ArrowViewState {
         return this.elementViewState as ArrowViewState;
     }
-    render(context: CanvasRenderingContext2D) {
-        let arrow = this.arrowViewState.arrow();
 
-        // Draw the arrow line/path
-        for (let curve of this.arrowViewState.bezierCurveParams) {
-            context.beginPath();
-            context.strokeStyle = color_role_to_hex_color(arrow.color_role);
-            context.lineWidth = arrow.line_thickness;
-            context.moveTo(curve[0].x, curve[0].y);
-            context.bezierCurveTo(curve[1].x, curve[1].y, curve[2].x, curve[2].y, curve[3].x, curve[3].y);
-            context.stroke();
-            context.closePath();
-        }
+    _renderArrowHead(context: CanvasRenderingContext2D) {
+        let arrow = this.arrowViewState.arrow();
 
         // Draw the arrow head - get the point at an ARROW_HAND_LENGTH from the
         // end of the path and get the inclination of the path using that
@@ -36,13 +29,46 @@ export class ArrowCanvasView extends BaseCanvasView {
         let handEnd = arrowHandBase.rotate(ARROW_HAND_ANGLE, endPoint);
         let handEnd2 = arrowHandBase.rotate(-ARROW_HAND_ANGLE, endPoint);
         context.beginPath();
-        context.strokeStyle = color_role_to_hex_color(arrow.color_role);
-        context.lineWidth = arrow.line_thickness;
         context.moveTo(endPoint.x, endPoint.y);
         context.lineTo(handEnd.x, handEnd.y);
         context.moveTo(endPoint.x, endPoint.y);
         context.lineTo(handEnd2.x, handEnd2.y);
         context.stroke();
         context.closePath();
+    }
+
+    _drawArrowBody(context: CanvasRenderingContext2D) {
+        let arrow = this.arrowViewState.arrow();
+
+        // Draw the arrow line/path
+        for (let curve of this.arrowViewState.bezierCurveParams) {
+            context.beginPath();
+            context.moveTo(curve[0].x, curve[0].y);
+            context.bezierCurveTo(curve[1].x, curve[1].y, curve[2].x, curve[2].y, curve[3].x, curve[3].y);
+            context.stroke();
+            context.closePath();
+        }
+    }
+
+    render(context: CanvasRenderingContext2D) {
+        let arrow = this.arrowViewState.arrow();
+
+        context.save();
+        context.strokeStyle = color_role_to_hex_color(arrow.color_role);
+        context.lineWidth = arrow.line_thickness;
+        this._drawArrowBody(context);
+        this._renderArrowHead(context);
+        context.restore();
+    }
+
+    renderSelectionOverlay(context: CanvasRenderingContext2D) {
+        let arrow = this.arrowViewState.arrow();
+
+        context.save();
+        context.strokeStyle = selectionColor;
+        context.lineWidth = arrow.line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
+        this._drawArrowBody(context);
+        this._renderArrowHead(context);
+        context.restore();
     }
 }
