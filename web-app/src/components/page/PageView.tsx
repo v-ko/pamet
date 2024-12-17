@@ -257,15 +257,17 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     event.preventDefault();
     // let mousePos = mapClientPointToSuperContainer(new Point2D(event.clientX, event.clientY));
     let mousePos = new Point2D(event.clientX, event.clientY);
-
     mouse.applyPressEvent(event);
-    if (event.button === 2) {
-      // setRightMouseIsPressed(true);
-    }
-    if (event.button === 0) {
-      if (state.mode === PageMode.CreateArrow) {
+
+
+    if (event.button === 0) { // left mouse
+      if (state.mode === PageMode.None) {
+        //
+      } else if (state.mode === PageMode.CreateArrow) {
         arrowActions.arrowCreationClick(state, mousePos);
       }
+    } else if (event.button === 2) { // right mouse
+      // setRightMouseIsPressed(true);
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y)
 
@@ -285,7 +287,31 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D(event.movementX, event.movementY));
       } else if (mouse.leftIsPressed) {
         console.log('Mouse move', PageMode[state.mode], 'left button')
-        console.log('leftmouseispressed', mouse.leftIsPressed)
+
+        // If a single arrow is selected - its control points are visible
+        // If the user drags a suggested control point - we create it
+        // In any case - we start the arrow control point drag
+        let editableArrow = state.arrowVS_withVisibleControlPoints()
+        if (editableArrow !== null) {
+          console.log('IN EDIT EDGE DRAG')
+          // Check if we've clicked on an arrow control point
+          // Go through all arrows
+          let realPressPos = state.viewport.unprojectPoint(pressPos);
+          let controlPointIndex = editableArrow.controlPointAt(realPressPos);
+          if (controlPointIndex !== null) {
+            console.log('CONTROL POINT INDEX', controlPointIndex)
+            if (controlPointIndex % 1 !== 0) {
+              // Whole indices are control points (.5 are suggested ones)
+              arrowActions.createControlPointAndStartDrag(state, realPressPos, controlPointIndex);
+            } else {
+              // Dragging an existing control point
+              arrowActions.startArrowEdgeDrag(state, controlPointIndex);
+            }
+            // Update the drag position
+            arrowActions.arrowEdgeDrag(state, mousePos);
+          }
+          return;
+        }
 
         pageActions.clearSelection(state);
         pageActions.startDragSelection(state, pressPos);
@@ -297,6 +323,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.updateDragSelection(state, mousePos);
     } else if (state.mode === PageMode.DraggingEditWindow) {
       pageActions.updateEditWindowDrag(state, mousePos);
+    } else if (state.mode === PageMode.ArrowEdgeDrag) {
+      arrowActions.arrowEdgeDrag(state, mousePos);
     }
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
@@ -353,6 +381,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         pageActions.endDragSelection(state);
       } else if (state.mode === PageMode.DraggingEditWindow) {
         pageActions.endEditWindowDrag(state);
+      } else if (state.mode === PageMode.ArrowEdgeDrag) {
+        arrowActions.endArrowEdgeDrag(state, mousePos);
       }
     }
     if (event.button === 2) { // Right press
@@ -564,7 +594,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     } else if (event.code === 'Escape'){
       pageActions.clearMode(state);
     } else if (event.code === 'KeyH'){
-      alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation (may not be implemented)')
+      commands.showHelp();
     } else if (event.code === 'Delete') {
       // Delete selected notes and arrows
       pageActions.deleteSelectedElements(state);
@@ -612,12 +642,26 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const handleDoubleClick = (event: React.MouseEvent) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
     let realPos = state.viewport.unprojectPoint(mousePos);
+
+    // If an arrow is selected and a control point is under the mouse - delete it
+    let editableArrowVS = state.arrowVS_withVisibleControlPoints()
+    if (editableArrowVS !== null) {
+      let controlPointIndex = editableArrowVS.controlPointAt(realPos);
+      // Whole indices are control points (.5 are suggested ones)
+      if (controlPointIndex !== null && controlPointIndex % 1 === 0) {
+        arrowActions.deleteControlPoint(editableArrowVS, controlPointIndex);
+        return;
+      }
+    }
+
     let noteVS_underMouse = state.noteViewStateAt(realPos)
     if (noteVS_underMouse !== null) {
       pageActions.startEditingNote(state, noteVS_underMouse.note());
+      return;
     } else {
       let realMousePos = state.viewport.unprojectPoint(mousePos);
       pageActions.startNoteCreation(state, realMousePos);
+      return;
     }
   }
 
@@ -750,7 +794,10 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         </Panel>
 
         <Panel align='top-right'>
-          <img src={helpCircleIconUrl} alt="Help" />
+          <img src={helpCircleIconUrl} alt="Help"
+          style={{ cursor: 'pointer' }}
+          onClick={() => { commands.showHelp(); }}
+          />
           <VerticalSeparator />
           <div>{state.page.name}</div>
           <VerticalSeparator />

@@ -85,11 +85,6 @@ class PageActions {
 
   @action
   clearSelection(state: PageViewState) {
-    // let selectionMap: util.SelectionDict = new Map();
-    // for (let noteVS of state.selectedElementsVS) {
-    //   selectionMap.set(noteVS, false);
-    // }
-    // this.updateSelection(state, selectionMap);
     state.selectedElementsVS.clear();
   }
 
@@ -324,6 +319,7 @@ class PageActions {
     for (let element of elements) {
       if (element instanceof Note) {
         notesForRemoval.push(element)
+        noteIds.add(element.own_id)
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }

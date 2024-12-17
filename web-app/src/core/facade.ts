@@ -19,6 +19,7 @@ import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
 
 const log = getLogger('facade');
+const completedActionsLogger = getLogger('User action completed');
 
 // Make that more specific as the API clears up
 export interface PageQueryFilter { [key: string]: any }
@@ -48,6 +49,14 @@ export class PametFacade extends PametStore {
                 return;
             }
             this.frontendDomainStore.saveUncommitedChanges()
+        });
+
+        // Register logger to root actions hooks
+        registerRootActionCompletedHook((rootAction) => {
+            if (rootAction.issuer !== 'user') {
+                return;
+            }
+            completedActionsLogger.info(rootAction.name);
         });
     }
 

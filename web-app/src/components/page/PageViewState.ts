@@ -9,7 +9,7 @@ import { ArrowViewState } from '../arrow/ArrowViewState';
 import { pamet } from '../../core/facade';
 import { getLogger } from 'fusion/logging';
 import { Note } from '../../model/Note';
-import { Arrow, ArrowAnchorType } from '../../model/Arrow';
+import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorType } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
 import { EditComponentState } from '../note/EditComponent';
 import { Size } from '../../util/Size';
@@ -77,8 +77,11 @@ export class PageViewState {
     // Edit window
     noteEditWindowState: EditComponentState | null = null;
 
+    // Arrow related
     // Arrow creation
     newArrowViewState: ArrowViewState | null = null;
+    // Arrow editing
+    draggedEdgeIndex: number | null = null;
 
     constructor(page: Page) {
         this.updateFromPage(page);
@@ -149,28 +152,28 @@ export class PageViewState {
                 log.error('Arrow already exists in page view state', element)
                 return;
             }
-            let missingAnchorVS = false;
             let headNVS: NoteViewState | null = null;
             if (element.head_note_id) {
                 headNVS = this.noteViewStatesByOwnId.get(element.head_note_id) || null
                 if (!headNVS) {
-                    missingAnchorVS = true;
-                    log.error('Arrow head note not found', element.head_note_id)
+                    log.error('Arrow head note not found', element.head_note_id, 'setting head to (0, 0)')
+                    element.setHead(new Point2D(0, 0), null, ArrowAnchorType.none)
                 }
+            } else if(element.headAnchorType !== ArrowAnchorType.none) {
+                log.error('No headd note id, but anchor is not fixed. Overwriting in view state.')
+                element.setHead(new Point2D(0, 0), null, ArrowAnchorType.none)
             }
 
             let tailNVS: NoteViewState | null = null;
             if (element.tail_note_id) {
                 tailNVS = this.noteViewStatesByOwnId.get(element.tail_note_id) || null
                 if (!tailNVS) {
-                    missingAnchorVS = true;
-                    log.error('Arrow tail note not found', element.tail_note_id)
+                    log.error('Arrow tail note not found', element.tail_note_id, 'setting tail to (0, 0)')
+                    element.setTail(new Point2D(0, 0), null, ArrowAnchorType.none)
                 }
-            }
-
-            if (missingAnchorVS) {
-                log.error('Arrow not added due to missing anchor view state')
-                return;
+            } else if(element.tailAnchorType !== ArrowAnchorType.none) {
+                log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
+                element.setTail(new Point2D(0, 0), null, ArrowAnchorType.none)
             }
 
             this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element, headNVS, tailNVS));
@@ -294,7 +297,6 @@ export class PageViewState {
 
     clearMode() {
         log.info('Clearing page mode')
-        this.mode = PageMode.None;
 
         this.dragNavigationStartPosition = null;
 
@@ -313,6 +315,23 @@ export class PageViewState {
         if (this.newArrowViewState !== null) {
             this.newArrowViewState = null;
         }
+        // If arrow edge was being dragged - restore the arrow view state
+        // Since we make direct changes to it in the drag mode
+        if (this.mode === PageMode.ArrowEdgeDrag) {
+            let editedArrowVS = this.arrowVS_withVisibleControlPoints();
+            if (editedArrowVS === null) {
+                log.error('Arrow edge drag mode but no arrow view state with control points visible')
+                return;
+            }
+            let arrow = pamet.findOne({id: editedArrowVS!.arrow().id});
+            if (!(arrow instanceof Arrow)) {
+                log.error('Arrow not found for cp-dragged arrow with id', editedArrowVS.arrow().id)
+                return;
+            }
+            this.updateEVS_fromElement(arrow);
+        }
+
+        this.mode = PageMode.None;
     }
 
     setMode(mode: PageMode) {
@@ -368,7 +387,7 @@ export class PageViewState {
         return null;
     }
 
-    anchorSuggestionAt(realPosition: Point2D): AnchorOnNoteSuggestion {
+    noteAnchorSuggestionAt(realPosition: Point2D): AnchorOnNoteSuggestion {
         /* Returns the closest anchor suggestion for the given position
         * If the hit is on an anchor - returns the params of the anchor
         * If the hit is on a note - returns the noteViewState and sets the
@@ -387,10 +406,10 @@ export class PageViewState {
             let note = noteVS.note();
 
             // Check if the click is on a note anchor
-            let anchorUnderMouse = note.anchorIn(realPosition, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS);
+            let anchorUnderMouse = anchorIntersectsCircle(note, realPosition, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS);
             if (anchorUnderMouse !== ArrowAnchorType.none) {
                 // Click is on a note anchor
-                let anchorPosition = note.arrowAnchor(anchorUnderMouse);
+                let anchorPosition = arrowAnchorPosition(note, anchorUnderMouse);
                 let distance = anchorPosition.distanceTo(realPosition);
                 if (distance < closestDistance) {
                     closestDistance = distance;
@@ -414,6 +433,18 @@ export class PageViewState {
         let suggestion = new AnchorOnNoteSuggestion(
             closestAnchorType, closestNoteVS, closestAnchorPosition);
         return suggestion;
+    }
+
+    arrowVS_withVisibleControlPoints(): ArrowViewState | null {
+        // If there's only one element selected and it's an arrow - then the
+        // control points should be visible
+        if (this.selectedElementsVS.size === 1) {
+            let selectedElement = this.selectedElementsVS.values().next().value;
+            if (selectedElement instanceof ArrowViewState) {
+                return selectedElement;
+            }
+        }
+        return null;
     }
 }
 

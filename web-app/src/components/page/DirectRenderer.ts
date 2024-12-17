@@ -10,7 +10,7 @@ import { color_role_to_hex_color } from "../../util/Color";
 import { Rectangle } from "../../util/Rectangle";
 import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
-import { ArrowAnchorType } from "../../model/Arrow";
+import { arrowAnchorPosition, ArrowAnchorType } from "../../model/Arrow";
 
 let log = getLogger('DirectRenderer');
 
@@ -326,22 +326,28 @@ export class CanvasPageRenderer {
             this._drawSelectionOverlay(ctx, childVS);
         }
 
-        // Draw anchor suggestions (when creating an arrow)
+        // Draw anchor suggestions (when creating an arrow) and new arrow
         if (state.mode === PageMode.CreateArrow && state.projectedMousePosition) {
-            // Draw the first anchor circle found under the mouse
+            // Draw anchor suggestions
             let realMousePos = state.viewport.unprojectPoint(state.projectedMousePosition);
-            let anchorSuggestion = state.anchorSuggestionAt(realMousePos);
-            if (anchorSuggestion.onAnchor) {
+            let anchorSuggestion = state.noteAnchorSuggestionAt(realMousePos);
+            if (anchorSuggestion.onAnchor || anchorSuggestion.onNote) {
                 let note = anchorSuggestion.noteViewState.note();
-                let anchorPosition = anchorSuggestion.position;
 
-                // Draw the circle
-                ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(anchorPosition.x, anchorPosition.y, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, 0, 2 * Math.PI);
-                ctx.stroke();
-                ctx.closePath();
+                for (let anchorType of
+                    [ArrowAnchorType.mid_left, ArrowAnchorType.top_mid,
+                    ArrowAnchorType.mid_right, ArrowAnchorType.bottom_mid]) {
+                    console.log('Drawing anchor suggestion', anchorType, Object.values(ArrowAnchorType));
+                    let anchorPosition = arrowAnchorPosition(note, anchorType as ArrowAnchorType);
+
+                    // Draw the circle
+                    ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(anchorPosition.x, anchorPosition.y, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, 0, 2 * Math.PI);
+                    ctx.stroke();
+                    ctx.closePath();
+                }
             }
 
             // Draw the currently created arrow
@@ -360,25 +366,25 @@ export class CanvasPageRenderer {
         }
 
         // When a single arrow is selected - draw the control points for editing
-        let selectedArrowVS = state.selectedElementsVS.values().next().value;
-        if (selectedArrowVS instanceof ArrowViewState && state.selectedElementsVS.size === 1) {
+        let editableArrowVS = state.arrowVS_withVisibleControlPoints();
+        if (editableArrowVS !== null) {
             // Display control points and suggested control points
-            let arrow = selectedArrowVS.arrow();
+            let arrow = editableArrowVS.arrow();
 
             ctx.strokeStyle = color_role_to_hex_color(arrow.color_role);
             ctx.lineWidth = 1;
 
             // Display control points
-            for (let cpIndex of arrow.edge_indices()) {
-                let cp = selectedArrowVS.edgePointPos(cpIndex);
+            for (let cpIndex of arrow.edgeIndices()) {
+                let cp = editableArrowVS.controlPointPosition(cpIndex);
                 ctx.beginPath();
                 ctx.arc(cp.x, cp.y, ARROW_CONTROL_POINT_RADIUS, 0, 2 * Math.PI);
                 ctx.stroke();
                 ctx.closePath();
             }
             // Display potential control points
-            for (let cpIndex of arrow.potential_edge_indices()) {
-                let cp = selectedArrowVS.edgePointPos(cpIndex);
+            for (let cpIndex of arrow.potentialEdgeIndices()) {
+                let cp = editableArrowVS.controlPointPosition(cpIndex);
                 ctx.beginPath();
                 ctx.arc(cp.x, cp.y, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, 0, 2 * Math.PI);
                 ctx.stroke();

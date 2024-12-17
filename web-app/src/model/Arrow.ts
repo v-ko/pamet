@@ -139,7 +139,7 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
     get_midpoint(idx: number): Point2D {
         return Point2D.fromData(this.mid_point_coords[idx]);
     }
-    replace_midpoints(midpoint_list: Point2D[]) {
+    replaceMidpoints(midpoint_list: Point2D[]) {
         this._data.mid_point_coords = midpoint_list.map((mp) => mp.data());
     }
     // get_color(): Color {
@@ -173,25 +173,23 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
     // def edge_indices(self):
     //     mid_edge_count = 2 + len(self.mid_points)
     //     return list(range(mid_edge_count))
-    edge_indices(): number[] {
+    edgeIndices(): number[] {
         let mid_edge_count = 2 + this.mid_points.length;
         return Array.from(Array(mid_edge_count).keys());
     }
     // def potential_edge_indices(self):
     //     return [i + 0.5 for i in self.edge_indices()[:-1]]
-    potential_edge_indices(): number[] {
-        return this.edge_indices().map((i) => i + 0.5).slice(0, -1);
+    potentialEdgeIndices(): number[] {
+        return this.edgeIndices().map((i) => i + 0.5).slice(0, -1);
     }
     // def all_edge_indices(self):
     //     return sorted(self.edge_indices() + self.potential_edge_indices())
     allEdgeIndices(): number[] {
-        return this.edge_indices().concat(this.potential_edge_indices()).sort();
+        return this.edgeIndices().concat(this.potentialEdgeIndices()).sort();
     }
     setTail(fixed_pos: Point2D | null, anchorNote: Note | null, anchor_type: ArrowAnchorType) {
-        if (fixed_pos && anchorNote) {
-            // The fixed pos is almost always propagated
-            // but if there's an anchor note - it takes precedence
-            fixed_pos = null;
+        if ((fixed_pos && anchorNote) || (!fixed_pos && !anchorNote)) {
+            throw new Error('Exactly one of fixed_pos or anchorNote should be set');
         }
 
         if (fixed_pos && anchor_type != ArrowAnchorType.none) {
@@ -203,10 +201,8 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
         this.tailAnchorType = anchor_type;
     }
     setHead(fixed_pos: Point2D | null, anchorNote: Note | null, anchor_type: ArrowAnchorType) {
-        if (fixed_pos && anchorNote) {
-            // The fixed pos is almost always propagated
-            // but if there's an anchor note - it takes precedence
-            fixed_pos = null;
+        if ((fixed_pos && anchorNote) || (!fixed_pos && !anchorNote)) {
+            throw new Error('Exactly one of fixed_pos or anchorNote should be set');
         }
 
         if (fixed_pos && anchor_type != ArrowAnchorType.none) {
@@ -217,4 +213,29 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
         this._data.head_note_id = anchorNote ? anchorNote.own_id : null;
         this.headAnchorType = anchor_type;
     }
+}
+
+export function arrowAnchorPosition(note: Note, anchorType: ArrowAnchorType): Point2D {
+    const rect = note.rect();
+    switch (anchorType) {
+        case ArrowAnchorType.mid_left:
+            return rect.topLeft().add(new Point2D(0, rect.height / 2));
+        case ArrowAnchorType.top_mid:
+            return rect.topLeft().add(new Point2D(rect.width / 2, 0));
+        case ArrowAnchorType.mid_right:
+            return rect.topRight().add(new Point2D(0, rect.height / 2));
+        case ArrowAnchorType.bottom_mid:
+            return rect.bottomLeft().add(new Point2D(rect.width / 2, 0));
+        default:
+            throw new Error('Invalid anchor type' + anchorType);
+    }
+}
+
+export function anchorIntersectsCircle(note: Note, point: Point2D, radius: number): ArrowAnchorType {
+    for (const anchorType of [ArrowAnchorType.mid_left, ArrowAnchorType.top_mid, ArrowAnchorType.mid_right, ArrowAnchorType.bottom_mid]) {
+        if (point.distanceTo(arrowAnchorPosition(note, anchorType)) < radius) {
+            return anchorType;
+        }
+    }
+    return ArrowAnchorType.none;
 }
