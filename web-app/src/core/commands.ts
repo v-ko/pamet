@@ -63,7 +63,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onPrimary', 'primary');
-        pageActions.colorSelectedArrows(pageVS, 'primary');
+        pageActions.colorSelectedArrows(pageVS, 'onPrimary');
         pageActions.clearSelection(pageVS);
     }
 
@@ -76,7 +76,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onError', 'error');
-        pageActions.colorSelectedArrows(pageVS, 'error');
+        pageActions.colorSelectedArrows(pageVS, 'onError');
         pageActions.clearSelection(pageVS);
     }
 
@@ -89,7 +89,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onSuccess', 'success');
-        pageActions.colorSelectedArrows(pageVS, 'success');
+        pageActions.colorSelectedArrows(pageVS, 'onSuccess');
         pageActions.clearSelection(pageVS);
     }
 
@@ -102,7 +102,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onSurface', 'surfaceDim');
-        pageActions.colorSelectedArrows(pageVS, 'surfaceDim');
+        pageActions.colorSelectedArrows(pageVS, 'onSurface');
         pageActions.clearSelection(pageVS);
     }
 
@@ -127,6 +127,11 @@ class PametCommands {
             return;
         }
         arrowActions.startArrowCreation(pageVS);
+    }
+
+    @command('Show help')
+    showHelp() {
+        alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation.')
     }
 }
 
