@@ -375,7 +375,7 @@ export class CanvasPageRenderer {
             ctx.lineWidth = 1;
 
             // Display control points
-            for (let cpIndex of arrow.edgeIndices()) {
+            for (let cpIndex of arrow.controlPointIndices()) {
                 let cp = editableArrowVS.controlPointPosition(cpIndex);
                 ctx.beginPath();
                 ctx.arc(cp.x, cp.y, ARROW_CONTROL_POINT_RADIUS, 0, 2 * Math.PI);
@@ -383,7 +383,7 @@ export class CanvasPageRenderer {
                 ctx.closePath();
             }
             // Display potential control points
-            for (let cpIndex of arrow.potentialEdgeIndices()) {
+            for (let cpIndex of arrow.potentialControlPointIndices()) {
                 let cp = editableArrowVS.controlPointPosition(cpIndex);
                 ctx.beginPath();
                 ctx.arc(cp.x, cp.y, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, 0, 2 * Math.PI);

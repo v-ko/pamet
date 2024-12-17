@@ -37,7 +37,7 @@ export enum PageMode {
     NoteResize,
     ChildMove,
     CreateArrow,
-    ArrowEdgeDrag,
+    ArrowControlPointDrag,
     AutoNavigation,
     DraggingEditWindow
 }
@@ -81,7 +81,7 @@ export class PageViewState {
     // Arrow creation
     newArrowViewState: ArrowViewState | null = null;
     // Arrow editing
-    draggedEdgeIndex: number | null = null;
+    draggedControlPointIndex: number | null = null;
 
     constructor(page: Page) {
         this.updateFromPage(page);
@@ -315,12 +315,12 @@ export class PageViewState {
         if (this.newArrowViewState !== null) {
             this.newArrowViewState = null;
         }
-        // If arrow edge was being dragged - restore the arrow view state
+        // If arrow control point was being dragged - restore the arrow view state
         // Since we make direct changes to it in the drag mode
-        if (this.mode === PageMode.ArrowEdgeDrag) {
+        if (this.mode === PageMode.ArrowControlPointDrag) {
             let editedArrowVS = this.arrowVS_withVisibleControlPoints();
             if (editedArrowVS === null) {
-                log.error('Arrow edge drag mode but no arrow view state with control points visible')
+                log.error('Arrow control point drag mode but no arrow view state with control points visible')
                 return;
             }
             let arrow = pamet.findOne({id: editedArrowVS!.arrow().id});

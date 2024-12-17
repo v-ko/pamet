@@ -170,22 +170,15 @@ export class Arrow extends PametElement<ArrowData> implements ArrowData {
     hasHeadAnchor(): boolean {
         return !!this.head_note_id;
     }
-    // def edge_indices(self):
-    //     mid_edge_count = 2 + len(self.mid_points)
-    //     return list(range(mid_edge_count))
-    edgeIndices(): number[] {
-        let mid_edge_count = 2 + this.mid_points.length;
-        return Array.from(Array(mid_edge_count).keys());
+    controlPointIndices(): number[] {
+        let midPointCount = 2 + this.mid_points.length;
+        return Array.from(Array(midPointCount).keys());
     }
-    // def potential_edge_indices(self):
-    //     return [i + 0.5 for i in self.edge_indices()[:-1]]
-    potentialEdgeIndices(): number[] {
-        return this.edgeIndices().map((i) => i + 0.5).slice(0, -1);
+    potentialControlPointIndices(): number[] {
+        return this.controlPointIndices().map((i) => i + 0.5).slice(0, -1);
     }
-    // def all_edge_indices(self):
-    //     return sorted(self.edge_indices() + self.potential_edge_indices())
-    allEdgeIndices(): number[] {
-        return this.edgeIndices().concat(this.potentialEdgeIndices()).sort();
+    allControlPointIndices(): number[] {
+        return this.controlPointIndices().concat(this.potentialControlPointIndices()).sort();
     }
     setTail(fixed_pos: Point2D | null, anchorNote: Note | null, anchor_type: ArrowAnchorType) {
         if ((fixed_pos && anchorNote) || (!fixed_pos && !anchorNote)) {

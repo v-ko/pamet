@@ -293,22 +293,20 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         // In any case - we start the arrow control point drag
         let editableArrow = state.arrowVS_withVisibleControlPoints()
         if (editableArrow !== null) {
-          console.log('IN EDIT EDGE DRAG')
           // Check if we've clicked on an arrow control point
           // Go through all arrows
           let realPressPos = state.viewport.unprojectPoint(pressPos);
           let controlPointIndex = editableArrow.controlPointAt(realPressPos);
           if (controlPointIndex !== null) {
-            console.log('CONTROL POINT INDEX', controlPointIndex)
             if (controlPointIndex % 1 !== 0) {
               // Whole indices are control points (.5 are suggested ones)
               arrowActions.createControlPointAndStartDrag(state, realPressPos, controlPointIndex);
             } else {
               // Dragging an existing control point
-              arrowActions.startArrowEdgeDrag(state, controlPointIndex);
+              arrowActions.startControlPointDrag(state, controlPointIndex);
             }
             // Update the drag position
-            arrowActions.arrowEdgeDrag(state, mousePos);
+            arrowActions.controlPointDragMove(state, mousePos);
           }
           return;
         }
@@ -323,8 +321,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.updateDragSelection(state, mousePos);
     } else if (state.mode === PageMode.DraggingEditWindow) {
       pageActions.updateEditWindowDrag(state, mousePos);
-    } else if (state.mode === PageMode.ArrowEdgeDrag) {
-      arrowActions.arrowEdgeDrag(state, mousePos);
+    } else if (state.mode === PageMode.ArrowControlPointDrag) {
+      arrowActions.controlPointDragMove(state, mousePos);
     }
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
@@ -381,8 +379,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         pageActions.endDragSelection(state);
       } else if (state.mode === PageMode.DraggingEditWindow) {
         pageActions.endEditWindowDrag(state);
-      } else if (state.mode === PageMode.ArrowEdgeDrag) {
-        arrowActions.endArrowEdgeDrag(state, mousePos);
+      } else if (state.mode === PageMode.ArrowControlPointDrag) {
+        arrowActions.endControlPointDrag(state, mousePos);
       }
     }
     if (event.button === 2) { // Right press

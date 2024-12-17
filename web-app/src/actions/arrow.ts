@@ -107,84 +107,83 @@ class ArrowActions {
     }
 
     @action
-    startArrowEdgeDrag(state: PageViewState, edgeIndex: number) {
-        state.mode = PageMode.ArrowEdgeDrag;
-        state.draggedEdgeIndex = edgeIndex;
+    startControlPointDrag(state: PageViewState, controlPointIndex: number) {
+        state.mode = PageMode.ArrowControlPointDrag;
+        state.draggedControlPointIndex = controlPointIndex;
     }
 
     @action
-    arrowEdgeDrag(state: PageViewState, mousePos: Point2D) {
+    controlPointDragMove(state: PageViewState, mousePos: Point2D) {
         let arrowVS = state.arrowVS_withVisibleControlPoints();
 
         if (arrowVS === null) {
             throw Error('No arrow with visible control points found');
         }
-        if (state.draggedEdgeIndex === null) {
-            throw Error('No edge being dragged');
+        if (state.draggedControlPointIndex === null) {
+            throw Error('No control point being dragged');
         }
 
         // Get suggested anchor at mouse pos
         let realMousePos = state.viewport.unprojectPoint(mousePos)
         let anchorSuggestion = state.noteAnchorSuggestionAt(realMousePos)
 
-        let edge_coord: Point2D | null = null;
-        let edge_note: Note | null = null;
-        let edge_anchor: ArrowAnchorType = ArrowAnchorType.none;
+        let controlPoint: Point2D | null = null;
+        let suggestionNote: Note | null = null;
+        let suggestionAnchorType: ArrowAnchorType = ArrowAnchorType.none;
         let mouseSnapped = snapVectorToGrid(realMousePos);
 
         // If on an anchor
         if (anchorSuggestion.onAnchor) {
-            edge_note = anchorSuggestion.noteViewState.note();
-            edge_anchor = anchorSuggestion.anchorType;
+            suggestionNote = anchorSuggestion.noteViewState.note();
+            suggestionAnchorType = anchorSuggestion.anchorType;
         } else if (anchorSuggestion.onNote) {
             // If no anchor, but still on the note body
-            edge_note = anchorSuggestion.noteViewState.note();
-            edge_anchor = ArrowAnchorType.auto;
+            suggestionNote = anchorSuggestion.noteViewState.note();
+            suggestionAnchorType = ArrowAnchorType.auto;
         } else {
             // Else on empty space - snap to grid
-            edge_coord = mouseSnapped;
+            controlPoint = mouseSnapped;
         }
 
-        // Update the edge
+        // Update the control point
         let arrow = arrowVS.arrow();
-        let edgeIndices = arrow.edgeIndices();
-        let potentialEdgeIndices = arrow.potentialEdgeIndices();
-        let headIndex = edgeIndices[edgeIndices.length - 1];
+        let controlPointIndices = arrow.controlPointIndices();
+        let headIndex = controlPointIndices[controlPointIndices.length - 1];
 
-        // If the edge is the head or tail - set it via the respective setter
+        // If the CP is the head or tail - set it via the respective setter
         // (only here can we have note anchors)
-        if (state.draggedEdgeIndex === 0) {
-            arrow.setTail(edge_coord, edge_note, edge_anchor);
+        if (state.draggedControlPointIndex === 0) {
+            arrow.setTail(controlPoint, suggestionNote, suggestionAnchorType);
             let { headNVS, tailNVS } = state.noteVS_anchorsForArrow(arrow);
             arrowVS.updateFromArrow(arrow, headNVS, tailNVS);
-        } else if (state.draggedEdgeIndex === headIndex) {
-            arrow.setHead(edge_coord, edge_note, edge_anchor);
+        } else if (state.draggedControlPointIndex === headIndex) {
+            arrow.setHead(controlPoint, suggestionNote, suggestionAnchorType);
             let { headNVS, tailNVS } = state.noteVS_anchorsForArrow(arrow);
             arrowVS.updateFromArrow(arrow, headNVS, tailNVS);
 
-        } else if (edgeIndices.includes(state.draggedEdgeIndex)) {
+        } else if (controlPointIndices.includes(state.draggedControlPointIndex)) {
             // It's a mid point
-            let midPointIndex = state.draggedEdgeIndex - 1;
+            let midPointIndex = state.draggedControlPointIndex - 1;
             let midPoints = arrow.mid_points;
             midPoints[midPointIndex] = mouseSnapped;
             arrow.replaceMidpoints(midPoints);
             arrowVS.updateFromArrow(arrow, arrowVS.headAnchorNoteViewState, arrowVS.tailAnchorNoteViewState);
         } else {
-            throw Error('Clicks on suggested edge indices should be handled in createControlPoint');
+            throw Error('Clicks on suggested control point indices should be handled in createControlPoint');
         }
     }
 
     @action
-    endArrowEdgeDrag(state: PageViewState, mousePos: Point2D) {
+    endControlPointDrag(state: PageViewState, mousePos: Point2D) {
         let arrowVS = state.arrowVS_withVisibleControlPoints();
 
         if (arrowVS === null) {
             throw Error('No arrow with visible control points found');
         }
-        if (state.draggedEdgeIndex === null) {
-            throw Error('No edge being dragged');
+        if (state.draggedControlPointIndex === null) {
+            throw Error('No control point being dragged');
         }
-        if ((state.draggedEdgeIndex % 1) !== 0) {
+        if ((state.draggedControlPointIndex % 1) !== 0) {
             // If it's a suggested midpoint - do nothing
             state.clearMode();
             return;
@@ -194,37 +193,37 @@ class ArrowActions {
         let realMousePos = state.viewport.unprojectPoint(mousePos)
         let anchorSuggestion = state.noteAnchorSuggestionAt(realMousePos)
 
-        let edge_coord: Point2D | null = null;
-        let edge_note: Note | null = null;
-        let edge_anchor: ArrowAnchorType = ArrowAnchorType.none;
+        let controlPoint: Point2D | null = null;
+        let suggestionNote: Note | null = null;
+        let suggestionAnchorType: ArrowAnchorType = ArrowAnchorType.none;
         let mouseSnapped = snapVectorToGrid(realMousePos);
 
         // If on an anchor
         if (anchorSuggestion.onAnchor) {
-            edge_note = anchorSuggestion.noteViewState.note();
-            edge_anchor = anchorSuggestion.anchorType;
+            suggestionNote = anchorSuggestion.noteViewState.note();
+            suggestionAnchorType = anchorSuggestion.anchorType;
         } else if (anchorSuggestion.onNote) {
             // If no anchor, but still on the note body
-            edge_note = anchorSuggestion.noteViewState.note();
-            edge_anchor = ArrowAnchorType.auto;
+            suggestionNote = anchorSuggestion.noteViewState.note();
+            suggestionAnchorType = ArrowAnchorType.auto;
         } else {
             // Else on empty space - snap to grid
-            edge_coord = mouseSnapped;
+            controlPoint = mouseSnapped;
         }
 
-        // Update the edge
+        // Update the control point
         let arrow = arrowVS.arrow();
-        let edgeIndices = arrow.edgeIndices();
-        let headIndex = edgeIndices[edgeIndices.length - 1];
+        let controlPointIndices = arrow.controlPointIndices();
+        let headIndex = controlPointIndices[controlPointIndices.length - 1];
 
-        if (state.draggedEdgeIndex === 0) {
-            arrow.setTail(edge_coord, edge_note, edge_anchor);
-        } else if (state.draggedEdgeIndex === headIndex) {
-            arrow.setHead(edge_coord, edge_note, edge_anchor);
+        if (state.draggedControlPointIndex === 0) {
+            arrow.setTail(controlPoint, suggestionNote, suggestionAnchorType);
+        } else if (state.draggedControlPointIndex === headIndex) {
+            arrow.setHead(controlPoint, suggestionNote, suggestionAnchorType);
 
-        } else if (edgeIndices.includes(state.draggedEdgeIndex)) {
+        } else if (controlPointIndices.includes(state.draggedControlPointIndex)) {
             // It's a mid point
-            let midPointIndex = state.draggedEdgeIndex - 1;
+            let midPointIndex = state.draggedControlPointIndex - 1;
             let midPoints = arrow.mid_points;
             midPoints[midPointIndex] = mouseSnapped;
             arrow.replaceMidpoints(midPoints);
@@ -244,12 +243,12 @@ class ArrowActions {
 
         let arrow = arrowVS.arrow();
         let mouseSnapped = snapVectorToGrid(realPosition);
-        let potentialEdgeIndices = arrow.potentialEdgeIndices();
+        let potentialCP_indices = arrow.potentialControlPointIndices();
 
         // It's a suggested midpoint (with a .5 index)
-        let midPointIndex = potentialEdgeIndices.indexOf(suggestedIndex);
+        let midPointIndex = potentialCP_indices.indexOf(suggestedIndex);
         if (midPointIndex === -1) {
-            throw Error('Clicks on suggested edge indices should be handled in arrowEdgeDrag');
+            throw Error('Clicks on suggested control point indices should be handled in controlPointDragMove');
         }
         let midPoints = arrow.mid_points;
         midPoints.splice(midPointIndex, 0, mouseSnapped);
@@ -259,7 +258,7 @@ class ArrowActions {
         // Update the entity (we've created a new control point)
         pamet.updateArrow(arrow);
 
-        this.startArrowEdgeDrag(state, newMidPointIndex);
+        this.startControlPointDrag(state, newMidPointIndex);
     }
 
     @action

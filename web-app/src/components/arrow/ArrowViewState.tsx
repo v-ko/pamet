@@ -14,6 +14,7 @@ let log = getLogger('ArrowViewState');
 
 // Each curve has:
 // start_point, first_control_point, second_control point, end_point
+// ! Note that bezier curve control points != arrow CPs in the interface
 export type BezierCurve = [Point2D, Point2D, Point2D, Point2D]
 
 
@@ -355,34 +356,34 @@ export class ArrowViewState extends ElementViewState {
         return midPoints;
     }
 
-    controlPointPosition(edgeIndex: number): Point2D {
-        /** Returns the edge point position for the given index
+    controlPointPosition(controlPointIndex: number): Point2D {
+        /** Returns the control point position for the given index
          * Those include the tail, midpoints and head
          *
-         * The indeces are not integers, since the suggested new edge points
+         * The indeces are not integers, since the suggested new control points
          * are denoted with non-whole indices (e.g. 0.5, 1.5 etc.).
          * More over the tail index is 0, and the head index is the last one.
          */
 
         let point: Point2D;
-        if (edgeIndex % 1 === 0) {
-            if (edgeIndex === 0) {
+        if (controlPointIndex % 1 === 0) {
+            if (controlPointIndex === 0) {
                 return this.bezierCurveParams[0][0];
             } else {
-                let curveIdx = Math.floor(edgeIndex - 1);
+                let curveIdx = Math.floor(controlPointIndex - 1);
                 let curve = this.bezierCurveParams[curveIdx];
                 point = curve[3];
                 return point.copy();
             }
         } else {
-            point = this.bezierCurveArrayMidpoints[Math.floor(edgeIndex)];
+            point = this.bezierCurveArrayMidpoints[Math.floor(controlPointIndex)];
             return point.copy();
         }
     }
 
     controlPointAt(realPosition: Point2D): number | null {
-        /** Returns the edge index at the given real position if there's a
-         * control point there or a suggested one.
+        /** Returns the control point index at the given real position
+         * if there's a control point there or a suggested one.
          */
         let arrow = this.arrow();
         // Find the closest control point
@@ -390,7 +391,7 @@ export class ArrowViewState extends ElementViewState {
         let closestControlPointDistance = Infinity;
 
         // Check the control points
-        for (let i of arrow.edgeIndices()) {
+        for (let i of arrow.controlPointIndices()) {
             let controlPoint = this.controlPointPosition(i);
             let distance = controlPoint.distanceTo(realPosition);
             // Skip if outside the circle
@@ -404,7 +405,7 @@ export class ArrowViewState extends ElementViewState {
         }
 
         // Check the suggested control points
-        for (let i of arrow.potentialEdgeIndices()) {
+        for (let i of arrow.potentialControlPointIndices()) {
             let controlPoint = this.controlPointPosition(i);
             let distance = controlPoint.distanceTo(realPosition);
             // Skip if outside the circle
