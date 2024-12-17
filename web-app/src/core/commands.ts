@@ -3,6 +3,7 @@ import { pamet } from "./facade";
 import { command } from "fusion/libs/Command";
 import { getLogger } from "fusion/logging";
 import { Point2D } from "../util/Point2D";
+import { arrowActions } from "../actions/arrow";
 
 let log = getLogger('PametCommands');
 
@@ -18,13 +19,13 @@ class PametCommands {
             log.error('Trying to create a note with not page view state');
             return;
         }
-        let mousePos = pageVS.realMousePositionOnCanvas;
+        let mousePos = pageVS.projectedMousePosition;
         let creationPos: Point2D;
 
         if (mousePos === null) {
             creationPos = pageVS.viewport.realCenter;
         } else {
-            creationPos = mousePos;
+            creationPos = pageVS.viewport.unprojectPoint(mousePos);
         }
 
         // Create a new note
@@ -62,7 +63,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onPrimary', 'primary');
-        pageActions.colorSelectedArrows(pageVS, 'primary');
+        pageActions.colorSelectedArrows(pageVS, 'onPrimary');
         pageActions.clearSelection(pageVS);
     }
 
@@ -75,7 +76,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onError', 'error');
-        pageActions.colorSelectedArrows(pageVS, 'error');
+        pageActions.colorSelectedArrows(pageVS, 'onError');
         pageActions.clearSelection(pageVS);
     }
 
@@ -88,7 +89,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onSuccess', 'success');
-        pageActions.colorSelectedArrows(pageVS, 'success');
+        pageActions.colorSelectedArrows(pageVS, 'onSuccess');
         pageActions.clearSelection(pageVS);
     }
 
@@ -101,7 +102,7 @@ class PametCommands {
             return;
         }
         pageActions.colorSelectedNotes(pageVS, 'onSurface', 'surfaceDim');
-        pageActions.colorSelectedArrows(pageVS, 'surfaceDim');
+        pageActions.colorSelectedArrows(pageVS, 'onSurface');
         pageActions.clearSelection(pageVS);
     }
 
@@ -115,6 +116,22 @@ class PametCommands {
         }
         pageActions.colorSelectedNotes(pageVS, null, 'transparent');
         pageActions.clearSelection(pageVS);
+    }
+
+    @command('Create arrow')
+    createArrow() {
+        console.log('createArrow command executed')
+        let pageVS = pamet.appViewState.currentPageViewState;
+        if (pageVS === null) {
+            log.error('Trying to create arrow with no page view state');
+            return;
+        }
+        arrowActions.startArrowCreation(pageVS);
+    }
+
+    @command('Show help')
+    showHelp() {
+        alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation.')
     }
 }
 

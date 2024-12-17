@@ -2,7 +2,7 @@ import { Rectangle } from "../util/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
 import { Point2D } from "../util/Point2D";
-import { ArrowAnchorType } from "./Arrow";
+import { ArrowAnchorOnNoteType } from "./Arrow";
 import { textRect } from "../components/note/util";
 
 export interface ImageMetadata {
@@ -71,22 +71,6 @@ export class Note extends PametElement<NoteData> implements NoteData {
     get content(): NoteContent {
         return this._data.content;
     }
-    arrowAnchor(anchorType: ArrowAnchorType): Point2D {
-        const rect = this.rect();
-        switch (anchorType) {
-            case ArrowAnchorType.mid_left:
-                return rect.topLeft().add(new Point2D(0, rect.height / 2));
-            case ArrowAnchorType.top_mid:
-                return rect.topLeft().add(new Point2D(rect.width / 2, 0));
-            case ArrowAnchorType.mid_right:
-                return rect.topRight().add(new Point2D(0, rect.height / 2));
-            case ArrowAnchorType.bottom_mid:
-                return rect.bottomLeft().add(new Point2D(rect.width / 2, 0));
-            default:
-                throw new Error('Invalid anchor type');
-        }
-    }
-
     get text(): string {
         return this._data.content.text || '';
     }

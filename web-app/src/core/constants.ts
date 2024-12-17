@@ -18,6 +18,11 @@ export const MIN_NOTE_HEIGHT = 3 * AGU
 export const MAX_NOTE_WIDTH = 192 * AGU
 export const MAX_NOTE_HEIGHT = 192 * AGU
 
+export const RESIZE_CIRCLE_RADIUS = 2 * AGU
+export const ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS = 2 * AGU
+export const ARROW_CONTROL_POINT_RADIUS = 15
+export const ARROW_POTENTIAL_CONTROL_POINT_RADIUS = ARROW_CONTROL_POINT_RADIUS * 0.7
+
 export const DEFAULT_NOTE_FONT_SIZE = 18
 export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
 export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'
@@ -30,11 +35,11 @@ export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_L
 
 export const ARROW_SELECTION_RADIUS = 10
 
-export const ARROW_EDGE_RAIDUS = 25
+export const ARROW_CONTROL_POINT_RAIDUS = 25
 export const DEFAULT_ARROW_THICKNESS = 1.5
 export const ARROW_SELECTION_THICKNESS_DELTA = 3.5
 export const CONTROL_POINT_RADIUS = 15
-export const POTENTIAL_EDGE_RADIUS = CONTROL_POINT_RADIUS * 0.7
+export const POTENTIAL_CONTROL_POINT_RADIUS = CONTROL_POINT_RADIUS * 0.7
 
 // Page render and cache related
 export const MAX_RENDER_TIME = 0.017  // (in seconds) ~60 fps

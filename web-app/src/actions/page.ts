@@ -40,14 +40,13 @@ class PageActions {
 
   // Don't include the mouse tracking with the user actions. We need it for
   // the commands though (e.g. creating a note via command)
-  @action({ name: 'setRealMousePositionOnCanvas', issuer: 'PageView' })
+  @action({ name: 'updateProjectedMousePosition', issuer: 'PageView' })
   updateMousePosition(state: PageViewState, pixelSpaceMousePos: Point2D | null) {
     if (pixelSpaceMousePos === null) {
-      state.realMousePositionOnCanvas = null;
+      state.projectedMousePosition = null;
       return;
     }
-    let realMousePos = state.viewport.unprojectPoint(pixelSpaceMousePos);
-    state.realMousePositionOnCanvas = realMousePos;
+    state.projectedMousePosition = pixelSpaceMousePos;
   }
 
   @action
@@ -86,11 +85,6 @@ class PageActions {
 
   @action
   clearSelection(state: PageViewState) {
-    // let selectionMap: util.SelectionDict = new Map();
-    // for (let noteVS of state.selectedElementsVS) {
-    //   selectionMap.set(noteVS, false);
-    // }
-    // this.updateSelection(state, selectionMap);
     state.selectedElementsVS.clear();
   }
 
@@ -181,8 +175,6 @@ class PageActions {
 
     state.dragSelectionRectData = selectionRectangle.data();
     state.dragSelectedElementsVS.clear();
-
-
 
     // Get notes in the area
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
@@ -322,28 +314,28 @@ class PageActions {
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
+    let pageId: string = elements[0].parentId;
 
     for (let element of elements) {
       if (element instanceof Note) {
         notesForRemoval.push(element)
+        noteIds.add(element.own_id)
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }
-    }
 
-    // Get the page id (should be the same for all notes)
-    let pageId = notesForRemoval[0].parentId;
-    let isSame = notesForRemoval.every((note) => note.parentId === pageId);
-    if (!isSame) {
-      throw Error('Trying to delete notes from different pages')
+      // Verify pageId
+      if (element.parentId !== pageId) {
+        throw Error('Trying to delete elements from different pages')
+      }
     }
 
     // Get the arrows that are connected to the notes (check just one page)
     let allArrows = pamet.arrows({ parentId: pageId });
     for (let arrow of allArrows) {
       // If the arrow has tail/head in the notesForRemoval - add it of removal
-      if (arrow.tail_note_id && noteIds.has(arrow.tail_note_id) ||
-        arrow.head_note_id && noteIds.has(arrow.head_note_id)) {
+      if (arrow.tailNoteId && noteIds.has(arrow.tailNoteId) ||
+        arrow.headNoteId && noteIds.has(arrow.headNoteId)) {
         arrowsForRemoval.push(arrow);
       }
     }
@@ -390,7 +382,7 @@ class PageActions {
       }
       let arrowVS = elementVS as ArrowViewState;
       let arrow = arrowVS.arrow();
-      arrow.color_role = colorRole;
+      arrow.colorRole = colorRole;
       pamet.updateArrow(arrow);
     }
   }

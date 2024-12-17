@@ -29,8 +29,8 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState, clickHandler }:
     }, [arrowViewState]);
 
     let arrow = arrowViewState.arrow();
-    let color = color_role_to_hex_color(arrow.color_role)
-    let line_thickness = arrow.line_thickness;
+    let color = color_role_to_hex_color(arrow.colorRole)
+    let line_thickness = arrow.thickness;
 
     return (
         <g>
@@ -60,7 +60,7 @@ export const ArrowHeadComponent: FC<ArrowProps> = ({ arrowViewState }) => {
             refX="10" refY="3.5" orient="auto">
 
             <polygon points="0 0, 10 3.5, 0 7"
-                stroke={color_role_to_hex_color(arrowViewState.arrow().color_role)}
+                stroke={color_role_to_hex_color(arrowViewState.arrow().colorRole)}
             />
         </marker>
     )

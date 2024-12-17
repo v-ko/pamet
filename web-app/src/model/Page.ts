@@ -13,6 +13,7 @@ export interface PageData extends EntityData {
   // tour_segments: TourSegment[];
 }
 
+
 @entityType('Page')
 export class Page extends Entity<PageData> implements PageData {
   toString(): string {

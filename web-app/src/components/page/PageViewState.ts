@@ -1,5 +1,5 @@
-import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction } from 'mobx';
-import { ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../core/constants';
+import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
 import { Viewport } from './Viewport';
@@ -9,7 +9,7 @@ import { ArrowViewState } from '../arrow/ArrowViewState';
 import { pamet } from '../../core/facade';
 import { getLogger } from 'fusion/logging';
 import { Note } from '../../model/Note';
-import { Arrow } from '../../model/Arrow';
+import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
 import { EditComponentState } from '../note/EditComponent';
 import { Size } from '../../util/Size';
@@ -37,7 +37,7 @@ export enum PageMode {
     NoteResize,
     ChildMove,
     CreateArrow,
-    ArrowEdgeDrag,
+    ArrowControlPointDrag,
     AutoNavigation,
     DraggingEditWindow
 }
@@ -59,7 +59,7 @@ export class PageViewState {
     // Common
     mode: PageMode = PageMode.None;
     viewportCenterOnModeStart: Point2D = new Point2D(0, 0); // In real coords
-    realMousePositionOnCanvas: Point2D | null = null;
+    projectedMousePosition: Point2D | null = null;
     // mouseButtons: number = 0;
 
     // Drag navigation
@@ -76,6 +76,12 @@ export class PageViewState {
 
     // Edit window
     noteEditWindowState: EditComponentState | null = null;
+
+    // Arrow related
+    // Arrow creation
+    newArrowViewState: ArrowViewState | null = null;
+    // Arrow editing
+    draggedControlPointIndex: number | null = null;
 
     constructor(page: Page) {
         this.updateFromPage(page);
@@ -97,7 +103,7 @@ export class PageViewState {
 
             mode: observable,
             viewportCenterOnModeStart: observable,
-            realMousePositionOnCanvas: observable,
+            projectedMousePosition: observable,
 
             dragNavigationStartPosition: observable,
             selectedElementsVS: observable,
@@ -132,45 +138,60 @@ export class PageViewState {
         this._updateArrowViewStates(arrows);
     }
 
+    _addViewStateForNote(element: Note) {
+        if (this.noteViewStatesByOwnId.has(element.own_id)) {
+            log.error('Note already exists in page view state', element)
+            return;
+        }
+        let nvs = new NoteViewState(element);
+        this.noteViewStatesByOwnId.set(element.own_id, nvs);
+    }
+
+    _addViewStateForArrow(element: Arrow){
+        if (this.arrowViewStatesByOwnId.has(element.own_id)) {
+            log.error('Arrow already exists in page view state', element)
+            return;
+        }
+        let headNVS: NoteViewState | null = null;
+        if (element.headNoteId) {
+            headNVS = this.noteViewStatesByOwnId.get(element.headNoteId) || null
+            if (!headNVS) {
+                log.error('Arrow head note not found', element.headNoteId, 'setting head to (0, 0)')
+                element.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+            }
+        } else if(element.headAnchorType !== ArrowAnchorOnNoteType.none) {
+            log.error('No headd note id, but anchor is not fixed. Overwriting in view state.')
+            element.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+        }
+
+        let tailNVS: NoteViewState | null = null;
+        if (element.tailNoteId) {
+            tailNVS = this.noteViewStatesByOwnId.get(element.tailNoteId) || null
+            if (!tailNVS) {
+                log.error('Arrow tail note not found', element.tailNoteId, 'setting tail to (0, 0)')
+                element.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+            }
+        } else if(element.tailAnchorType !== ArrowAnchorOnNoteType.none) {
+            log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
+            element.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+        }
+
+        this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element, headNVS, tailNVS));
+    }
+
     addViewStateForElement(element: Note | Arrow) {
         if (element instanceof Note) {
-            if (this.noteViewStatesByOwnId.has(element.own_id)) {
-                log.error('Note already exists in page view state', element)
-                return;
+            try {
+                this._addViewStateForNote(element);
+            } catch (e) {
+                log.error('Error adding note view state for note', element, e)
             }
-            let nvs = new NoteViewState(element);
-            this.noteViewStatesByOwnId.set(element.own_id, nvs);
-
         } else if (element instanceof Arrow) {
-            if (this.arrowViewStatesByOwnId.has(element.own_id)) {
-                log.error('Arrow already exists in page view state', element)
-                return;
+            try {
+                this._addViewStateForArrow(element);
+            } catch (e) {
+                log.error('Error adding arrow view state for arrow', element, e)
             }
-            let missingAnchorVS = false;
-            let headNVS: NoteViewState | null = null;
-            if (element.head_note_id) {
-                headNVS = this.noteViewStatesByOwnId.get(element.head_note_id) || null
-                if (!headNVS) {
-                    missingAnchorVS = true;
-                    log.error('HEAD NOTE NOT FOUND', element.head_note_id)
-                }
-            }
-
-            let tailNVS: NoteViewState | null = null;
-            if (element.tail_note_id) {
-                tailNVS = this.noteViewStatesByOwnId.get(element.tail_note_id) || null
-                if (!tailNVS) {
-                    missingAnchorVS = true;
-                    log.error('TAIL NOTE NOT FOUND', element.tail_note_id)
-                }
-            }
-
-            if (missingAnchorVS) {
-                log.error('Arrow not added due to missing anchor view state')
-                return;
-            }
-
-            this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element, headNVS, tailNVS));
         }
     }
 
@@ -213,20 +234,20 @@ export class PageViewState {
     }
 
     noteVS_anchorsForArrow(arrow: Arrow) {
-
+        /* Get the NoteViewStates for the arrow's head and tail notes */
         let headNVS: NoteViewState | null = null;
-        if (arrow.head_note_id) {
-            headNVS = this.noteViewStatesByOwnId.get(arrow.head_note_id) || null
+        if (arrow.headNoteId) {
+            headNVS = this.noteViewStatesByOwnId.get(arrow.headNoteId) || null
             if (!headNVS) {
-                throw Error('Head note not found ' + arrow.head_note_id)
+                throw Error('Head note not found ' + arrow.headNoteId)
             }
         }
 
         let tailNVS: NoteViewState | null = null;
-        if (arrow.tail_note_id) {
-            tailNVS = this.noteViewStatesByOwnId.get(arrow.tail_note_id) || null
+        if (arrow.tailNoteId) {
+            tailNVS = this.noteViewStatesByOwnId.get(arrow.tailNoteId) || null
             if (!tailNVS) {
-                throw Error('Tail note not found ' + arrow.tail_note_id)
+                throw Error('Tail note not found ' + arrow.tailNoteId)
             }
         }
 
@@ -285,17 +306,12 @@ export class PageViewState {
     }
 
     get page() {
-        let page = pamet.findOne({ id: this._pageData.id });
-        if (page === null) {
-            throw new Error(`Page with id ${this._pageData.id} not found`);
-        }
-        return page as Page;
-        // return new Page(this._pageData);  the wrapped (observable) pageData causes problems
+        let pageData = toJS(this._pageData);
+        return new Page(pageData)
     }
 
     clearMode() {
         log.info('Clearing page mode')
-        this.mode = PageMode.None;
 
         this.dragNavigationStartPosition = null;
 
@@ -309,6 +325,28 @@ export class PageViewState {
         if (editWS !== null) {
             editWS.isBeingDragged = false;
         }
+
+        // Arrow editing related
+        if (this.newArrowViewState !== null) {
+            this.newArrowViewState = null;
+        }
+        // If arrow control point was being dragged - restore the arrow view state
+        // Since we make direct changes to it in the drag mode
+        if (this.mode === PageMode.ArrowControlPointDrag) {
+            let editedArrowVS = this.arrowVS_withVisibleControlPoints();
+            if (editedArrowVS === null) {
+                log.error('Arrow control point drag mode but no arrow view state with control points visible')
+                return;
+            }
+            let arrow = pamet.findOne({id: editedArrowVS!.arrow().id});
+            if (!(arrow instanceof Arrow)) {
+                log.error('Arrow not found for cp-dragged arrow with id', editedArrowVS.arrow().id)
+                return;
+            }
+            this.updateEVS_fromElement(arrow);
+        }
+
+        this.mode = PageMode.None;
     }
 
     setMode(mode: PageMode) {
@@ -332,12 +370,12 @@ export class PageViewState {
     *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
         for (let noteViewState of this.noteViewStatesByOwnId.values()) {
             let note = noteViewState.note();
+            let intersectRect = note.rect()
             if (radius > 0) {
-                let intersectRect = note.rect()
-                intersectRect.setSize(intersectRect.size().add(new Size(radius, radius)))
+                intersectRect.setSize(intersectRect.size().add(new Size(radius * 2, radius * 2)))
                 intersectRect.setTopLeft(intersectRect.topLeft().subtract(new Point2D(radius, radius)))
             }
-            if (note.rect().contains(position)) {
+            if (intersectRect.contains(position)) {
                 yield noteViewState;
             }
         }
@@ -362,5 +400,92 @@ export class PageViewState {
             return arrowViewState;
         }
         return null;
+    }
+
+    noteAnchorSuggestionAt(realPosition: Point2D): AnchorOnNoteSuggestion {
+        /* Returns the closest anchor suggestion for the given position
+        * If the hit is on an anchor - returns the params of the anchor
+        * If the hit is on a note - returns the noteViewState and sets the
+        * anchor position to the mouse position. The anchor tppe is set to auto.
+        * If there is no hit - anchorType is set to none, anchor position
+        * is set to the mouse position and noteViewState is null.
+        */
+
+        let closestAnchorType: ArrowAnchorOnNoteType = ArrowAnchorOnNoteType.none;
+        let closestNoteVS: NoteViewState | null = null;
+        let closestAnchorPosition: Point2D = realPosition
+
+        // Check note view states under the mouse (with margin for anchor)
+        let closestDistance = Number.MAX_VALUE;
+        for (let noteVS of this.noteViewsAt(realPosition, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS)) {
+            let note = noteVS.note();
+
+            // Check if the click is on a note anchor
+            let anchorUnderMouse = anchorIntersectsCircle(note, realPosition, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS);
+            if (anchorUnderMouse !== ArrowAnchorOnNoteType.none) {
+                // Click is on a note anchor
+                let anchorPosition = arrowAnchorPosition(note, anchorUnderMouse);
+                let distance = anchorPosition.distanceTo(realPosition);
+                if (distance < closestDistance) {
+                    closestDistance = distance;
+                    closestAnchorType = anchorUnderMouse;
+                    closestNoteVS = noteVS;
+                    closestAnchorPosition = anchorPosition;
+                }
+            } else if (note.rect().contains(realPosition)) {
+                // If the click is inside the note, set anchor to auto
+                anchorUnderMouse = ArrowAnchorOnNoteType.auto;
+                if (closestNoteVS === null) {
+                    closestNoteVS = noteVS;
+                }
+            }
+        }
+
+        if (closestAnchorType === ArrowAnchorOnNoteType.none && closestNoteVS !== null) {
+            closestAnchorType = ArrowAnchorOnNoteType.auto;
+        }
+
+        let suggestion = new AnchorOnNoteSuggestion(
+            closestAnchorType, closestNoteVS, closestAnchorPosition);
+        return suggestion;
+    }
+
+    arrowVS_withVisibleControlPoints(): ArrowViewState | null {
+        // If there's only one element selected and it's an arrow - then the
+        // control points should be visible
+        if (this.selectedElementsVS.size === 1) {
+            let selectedElement = this.selectedElementsVS.values().next().value;
+            if (selectedElement instanceof ArrowViewState) {
+                return selectedElement;
+            }
+        }
+        return null;
+    }
+}
+
+export class AnchorOnNoteSuggestion {
+    public anchorType: ArrowAnchorOnNoteType;
+    public _noteViewState: NoteViewState | null;
+    public position: Point2D;
+
+    constructor(anchorType: ArrowAnchorOnNoteType, noteViewState: NoteViewState | null, position: Point2D) {
+        this.anchorType = anchorType;
+        this._noteViewState = noteViewState;
+        this.position = position
+    }
+
+    get noteViewState(): NoteViewState {
+        if (this._noteViewState === null) {
+            throw new Error('Note view state not set in anchor suggestion');
+        }
+        return this._noteViewState;
+    }
+
+    get onAnchor(): boolean {
+        return this.anchorType !== ArrowAnchorOnNoteType.none && this.anchorType !== ArrowAnchorOnNoteType.auto;
+    }
+
+    get onNote(): boolean {
+        return this._noteViewState !== null;
     }
 }
