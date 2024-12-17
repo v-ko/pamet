@@ -10,7 +10,7 @@ import { color_role_to_hex_color } from "../../util/Color";
 import { Rectangle } from "../../util/Rectangle";
 import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
-import { arrowAnchorPosition, ArrowAnchorType } from "../../model/Arrow";
+import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "../../model/Arrow";
 
 let log = getLogger('DirectRenderer');
 
@@ -335,10 +335,9 @@ export class CanvasPageRenderer {
                 let note = anchorSuggestion.noteViewState.note();
 
                 for (let anchorType of
-                    [ArrowAnchorType.mid_left, ArrowAnchorType.top_mid,
-                    ArrowAnchorType.mid_right, ArrowAnchorType.bottom_mid]) {
-                    console.log('Drawing anchor suggestion', anchorType, Object.values(ArrowAnchorType));
-                    let anchorPosition = arrowAnchorPosition(note, anchorType as ArrowAnchorType);
+                    [ArrowAnchorOnNoteType.mid_left, ArrowAnchorOnNoteType.top_mid,
+                    ArrowAnchorOnNoteType.mid_right, ArrowAnchorOnNoteType.bottom_mid]) {
+                    let anchorPosition = arrowAnchorPosition(note, anchorType as ArrowAnchorOnNoteType);
 
                     // Draw the circle
                     ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
@@ -355,7 +354,7 @@ export class CanvasPageRenderer {
                 console.log('Drawing new arrow', state.newArrowViewState);
                 // Head should be null, and we want to set it to the mouse pos
                 let arrow = state.newArrowViewState.arrow()
-                arrow.setHead(realMousePos, null, ArrowAnchorType.none);
+                arrow.setHead(realMousePos, null, ArrowAnchorOnNoteType.none);
                 let newArrowVS = new ArrowViewState(
                     arrow,
                     state.newArrowViewState.headAnchorNoteViewState,
@@ -371,7 +370,7 @@ export class CanvasPageRenderer {
             // Display control points and suggested control points
             let arrow = editableArrowVS.arrow();
 
-            ctx.strokeStyle = color_role_to_hex_color(arrow.color_role);
+            ctx.strokeStyle = color_role_to_hex_color(arrow.colorRole);
             ctx.lineWidth = 1;
 
             // Display control points

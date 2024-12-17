@@ -54,8 +54,8 @@ export class ArrowCanvasView extends BaseCanvasView {
         let arrow = this.arrowViewState.arrow();
 
         context.save();
-        context.strokeStyle = color_role_to_hex_color(arrow.color_role);
-        context.lineWidth = arrow.line_thickness;
+        context.strokeStyle = color_role_to_hex_color(arrow.colorRole);
+        context.lineWidth = arrow.thickness;
         this._drawArrowBody(context);
         this._renderArrowHead(context);
         context.restore();
@@ -66,7 +66,7 @@ export class ArrowCanvasView extends BaseCanvasView {
 
         context.save();
         context.strokeStyle = selectionColor;
-        context.lineWidth = arrow.line_thickness + ARROW_SELECTION_THICKNESS_DELTA;
+        context.lineWidth = arrow.thickness + ARROW_SELECTION_THICKNESS_DELTA;
         this._drawArrowBody(context);
         this._renderArrowHead(context);
         context.restore();

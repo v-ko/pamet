@@ -55,7 +55,6 @@ export class FrontendDomainStore extends PametStore {
     // Implement the Repository interface to use the InMemoryRepository
     insertOne(entity: Entity<EntityData>): Change {
         log.info('Inserting entity', entity);
-        console.trace()
         let change = this._store.insertOne(entity);
         updateViewModelFromChanges(pamet.appViewState, [change]);
         this._uncommittedChanges.push(change);

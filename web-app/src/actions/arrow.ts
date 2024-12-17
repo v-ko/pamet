@@ -1,7 +1,7 @@
 import { action } from "fusion/libs/Action";
 import { PageMode, PageViewState } from "../components/page/PageViewState";
 import { ArrowViewState } from "../components/arrow/ArrowViewState";
-import { Arrow, ArrowAnchorType } from "../model/Arrow";
+import { Arrow, ArrowAnchorOnNoteType } from "../model/Arrow";
 import { Point2D, PointData } from "../util/Point2D";
 import { NoteViewState } from "../components/note/NoteViewState";
 import { DEFAULT_ARROW_THICKNESS } from "../core/constants";
@@ -27,7 +27,7 @@ class ArrowActions {
         // (note or note arrow anchor)
         let realPos = state.viewport.unprojectPoint(position);
         let noteVS_underMouse: NoteViewState | null = null;
-        let anchorUnderMouse: ArrowAnchorType = ArrowAnchorType.none;
+        let anchorUnderMouse: ArrowAnchorOnNoteType = ArrowAnchorOnNoteType.none;
         let anchorPos = realPos; // Default to the mouse position
 
         let anchorSuggestion = state.noteAnchorSuggestionAt(realPos);
@@ -55,19 +55,25 @@ class ArrowActions {
 
             let arrow = new Arrow({
                 id: elementId(state.page.id, getEntityId()),
-                tail_coords: tail_coords,
-                head_coords: null,  // Follow mouse when head is not set
-                mid_point_coords: [],
-                tail_note_id: tail_note_id,
-                head_note_id: null,
-                tail_anchor: anchorUnderMouse,
-                head_anchor: ArrowAnchorType.none,
-                color_role: colorRole,
-                line_type: "solid",
-                line_thickness: DEFAULT_ARROW_THICKNESS,
-                line_function_name: "bezier_cubic",
-                head_shape: "arrow",
-                tail_shape: "arrow",
+                tail: {
+                    position: tail_coords,
+                    noteAnchorId: tail_note_id,
+                    noteAnchorType: anchorUnderMouse,
+                },
+                head: {
+                    position: null,
+                    noteAnchorId: null,
+                    noteAnchorType: ArrowAnchorOnNoteType.none,
+                },
+                mid_points: [],
+                style: {
+                    color_role: colorRole,
+                    line_type: "solid",
+                    thickness: DEFAULT_ARROW_THICKNESS,
+                    line_function: "bezier_cubic",
+                    head_shape: "arrow",
+                    tail_shape: "arrow",
+                }
             });
             state.newArrowViewState = new ArrowViewState(arrow, null, noteVS_underMouse);
 
@@ -77,12 +83,12 @@ class ArrowActions {
             if (noteVS_underMouse) {
                 arrow.setHead(null, noteVS_underMouse.note(), anchorUnderMouse);
             } else {
-                arrow.setHead(realPos, null, ArrowAnchorType.none);
+                arrow.setHead(realPos, null, ArrowAnchorOnNoteType.none);
             }
 
             let invalidArrow = false;
             // If both ends of the arrow are at the same point - cancel it
-            if (arrow.head_coords && arrow.tail_coords) {
+            if (arrow.headPoint && arrow.tailPoint) {
                 if (arrow.headPoint!.equals(arrow.tailPoint!)) {
                     log.info('Arrow head and tail coords are the same');
                     invalidArrow = true;
@@ -90,8 +96,8 @@ class ArrowActions {
             }
 
             //Similarly check if both ends are on the same anchor of the same note
-            if (arrow.hasHeadAnchor() && arrow.hasTailAnchor()) {
-                if (arrow.head_note_id === arrow.tail_note_id && arrow.head_anchor === arrow.tail_anchor) {
+            if (arrow.headAnchoredOnNote && arrow.tailAnchoredOnNote) {
+                if (arrow.headNoteId === arrow.tailNoteId && arrow.headAnchorType === arrow.tailAnchorType) {
                     log.info('Arrow head and tail anchors are the same');
                     invalidArrow = true;
                 }
@@ -129,7 +135,7 @@ class ArrowActions {
 
         let controlPoint: Point2D | null = null;
         let suggestionNote: Note | null = null;
-        let suggestionAnchorType: ArrowAnchorType = ArrowAnchorType.none;
+        let suggestionAnchorType: ArrowAnchorOnNoteType = ArrowAnchorOnNoteType.none;
         let mouseSnapped = snapVectorToGrid(realMousePos);
 
         // If on an anchor
@@ -139,7 +145,7 @@ class ArrowActions {
         } else if (anchorSuggestion.onNote) {
             // If no anchor, but still on the note body
             suggestionNote = anchorSuggestion.noteViewState.note();
-            suggestionAnchorType = ArrowAnchorType.auto;
+            suggestionAnchorType = ArrowAnchorOnNoteType.auto;
         } else {
             // Else on empty space - snap to grid
             controlPoint = mouseSnapped;
@@ -164,7 +170,7 @@ class ArrowActions {
         } else if (controlPointIndices.includes(state.draggedControlPointIndex)) {
             // It's a mid point
             let midPointIndex = state.draggedControlPointIndex - 1;
-            let midPoints = arrow.mid_points;
+            let midPoints = arrow.midPoints;
             midPoints[midPointIndex] = mouseSnapped;
             arrow.replaceMidpoints(midPoints);
             arrowVS.updateFromArrow(arrow, arrowVS.headAnchorNoteViewState, arrowVS.tailAnchorNoteViewState);
@@ -195,7 +201,7 @@ class ArrowActions {
 
         let controlPoint: Point2D | null = null;
         let suggestionNote: Note | null = null;
-        let suggestionAnchorType: ArrowAnchorType = ArrowAnchorType.none;
+        let suggestionAnchorType: ArrowAnchorOnNoteType = ArrowAnchorOnNoteType.none;
         let mouseSnapped = snapVectorToGrid(realMousePos);
 
         // If on an anchor
@@ -205,7 +211,7 @@ class ArrowActions {
         } else if (anchorSuggestion.onNote) {
             // If no anchor, but still on the note body
             suggestionNote = anchorSuggestion.noteViewState.note();
-            suggestionAnchorType = ArrowAnchorType.auto;
+            suggestionAnchorType = ArrowAnchorOnNoteType.auto;
         } else {
             // Else on empty space - snap to grid
             controlPoint = mouseSnapped;
@@ -224,7 +230,7 @@ class ArrowActions {
         } else if (controlPointIndices.includes(state.draggedControlPointIndex)) {
             // It's a mid point
             let midPointIndex = state.draggedControlPointIndex - 1;
-            let midPoints = arrow.mid_points;
+            let midPoints = arrow.midPoints;
             midPoints[midPointIndex] = mouseSnapped;
             arrow.replaceMidpoints(midPoints);
         }
@@ -250,7 +256,7 @@ class ArrowActions {
         if (midPointIndex === -1) {
             throw Error('Clicks on suggested control point indices should be handled in controlPointDragMove');
         }
-        let midPoints = arrow.mid_points;
+        let midPoints = arrow.midPoints;
         midPoints.splice(midPointIndex, 0, mouseSnapped);
         let newMidPointIndex = midPointIndex + 1;
         arrow.replaceMidpoints(midPoints);
@@ -264,7 +270,7 @@ class ArrowActions {
     @action
     deleteControlPoint(state: ArrowViewState, cpIndex: number) {
         let arrow = state.arrow();
-        let midPoints = arrow.mid_points;
+        let midPoints = arrow.midPoints;
         midPoints.splice(cpIndex - 1, 1); // tail is 0, then midpoints, then head is last
         arrow.replaceMidpoints(midPoints);
         pamet.updateArrow(arrow);

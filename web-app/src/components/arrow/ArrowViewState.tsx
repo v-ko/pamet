@@ -1,4 +1,4 @@
-import { Arrow, arrowAnchorPosition, ArrowAnchorType, ArrowData } from '../../model/Arrow';
+import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData } from '../../model/Arrow';
 import { computed, makeObservable, observable, toJS } from 'mobx';
 import { NoteViewState } from '../note/NoteViewState';
 import { getLogger } from 'fusion/logging';
@@ -79,20 +79,20 @@ export class ArrowViewState extends ElementViewState {
         // Calculate head and tail static positions and anchor types
         let tailPoint: Point2D;
         let headPoint: Point2D;
-        let effectiveTailAnchorType: ArrowAnchorType;
-        let effectiveHeadAnchorType: ArrowAnchorType;
+        let effectiveTailAnchorType: ArrowAnchorOnNoteType;
+        let effectiveHeadAnchorType: ArrowAnchorOnNoteType;
 
         // If both are with fixed coordinates - easy
-        if (arrow.head_coords && arrow.tail_coords) {
-            effectiveTailAnchorType = ArrowAnchorType.none;
-            effectiveHeadAnchorType = ArrowAnchorType.none;
+        if (!arrow.tailAnchoredOnNote && !arrow.headAnchoredOnNote) {
+            effectiveTailAnchorType = ArrowAnchorOnNoteType.none;
+            effectiveHeadAnchorType = ArrowAnchorOnNoteType.none;
 
             // If both have anchors and both anchors are Auto and there's no mid-points
             // infer from the geometry of the notes
-        } if (arrow.hasTailAnchor() && arrow.hasHeadAnchor() &&
-            (arrow.headAnchorType === ArrowAnchorType.auto) &&
-            (arrow.tailAnchorType === ArrowAnchorType.auto) &&
-            arrow.mid_point_coords.length === 0) {
+        } if (arrow.tailAnchoredOnNote && arrow.headAnchoredOnNote &&
+            (arrow.headAnchorType === ArrowAnchorOnNoteType.auto) &&
+            (arrow.tailAnchorType === ArrowAnchorOnNoteType.auto) &&
+            arrow.midPoints.length === 0) {
 
             // Check tha note view states are present
             if (this.tailAnchorNoteViewState === null) {
@@ -114,63 +114,63 @@ export class ArrowViewState extends ElementViewState {
                 // top-top or bott-bott (depending on the center-y of the note rects)
                 if (intersectionRect.width > intersectionRect.height) {
                     if (tailRect.center().y < headRect.center().y) {
-                        effectiveTailAnchorType = ArrowAnchorType.top_mid;
-                        effectiveHeadAnchorType = ArrowAnchorType.top_mid;
+                        effectiveTailAnchorType = ArrowAnchorOnNoteType.top_mid;
+                        effectiveHeadAnchorType = ArrowAnchorOnNoteType.top_mid;
                     } else {
-                        effectiveTailAnchorType = ArrowAnchorType.bottom_mid;
-                        effectiveHeadAnchorType = ArrowAnchorType.bottom_mid;
+                        effectiveTailAnchorType = ArrowAnchorOnNoteType.bottom_mid;
+                        effectiveHeadAnchorType = ArrowAnchorOnNoteType.bottom_mid;
                     }
                 } else {
                     // More intersection on the y axis - the arrow anchors at left-left or right-right
                     if (tailRect.center().x < headRect.center().x) {
-                        effectiveTailAnchorType = ArrowAnchorType.mid_left;
-                        effectiveHeadAnchorType = ArrowAnchorType.mid_left;
+                        effectiveTailAnchorType = ArrowAnchorOnNoteType.mid_left;
+                        effectiveHeadAnchorType = ArrowAnchorOnNoteType.mid_left;
                     } else {
-                        effectiveTailAnchorType = ArrowAnchorType.mid_right;
-                        effectiveHeadAnchorType = ArrowAnchorType.mid_right;
+                        effectiveTailAnchorType = ArrowAnchorOnNoteType.mid_right;
+                        effectiveHeadAnchorType = ArrowAnchorOnNoteType.mid_right;
                     }
                 }
             } else {
                 // If there's no intersection - if the notes are above one another
                 // the arrow should be top-bottom/bottom-top
                 if (tailRect.center().y < headRect.center().y) {
-                    effectiveTailAnchorType = ArrowAnchorType.top_mid;
-                    effectiveHeadAnchorType = ArrowAnchorType.bottom_mid;
+                    effectiveTailAnchorType = ArrowAnchorOnNoteType.top_mid;
+                    effectiveHeadAnchorType = ArrowAnchorOnNoteType.bottom_mid;
                 } else {
-                    effectiveTailAnchorType = ArrowAnchorType.bottom_mid;
-                    effectiveHeadAnchorType = ArrowAnchorType.top_mid;
+                    effectiveTailAnchorType = ArrowAnchorOnNoteType.bottom_mid;
+                    effectiveHeadAnchorType = ArrowAnchorOnNoteType.top_mid;
                 }
             }
 
             // If one of the anchors is auto and there is at least one midpoint
         } else if ( // Only one of the anchors is possibly auto
-            (arrow.mid_points.length > 0)) {
+            (arrow.midPoints.length > 0)) {
             // TODO: use the inferArrowAnchor func from adjacent point using the adj. midpoint
             // where the anchor is on a note
-            let tailAdjacentPoint = arrow.mid_points[0];
-            let headAdjacentPoint = arrow.mid_points[arrow.mid_points.length - 1];
+            let tailAdjacentPoint = arrow.midPoints[0];
+            let headAdjacentPoint = arrow.midPoints[arrow.midPoints.length - 1];
 
             effectiveTailAnchorType = this.inferTailAnchorType(tailAdjacentPoint);
             effectiveHeadAnchorType = this.inferHeadAnchorType(headAdjacentPoint);
 
         } else if (  // Only one of the anchors is possibly auto
-            (arrow.mid_points.length === 0)) {
+            (arrow.midPoints.length === 0)) {
             // if one of the anchors is auto and there's no midpoints
             // TODO: Infer from the adjacent point (using the non-auto anchor as adjacent)
             // If the tail is auto - get the head point and infer the tail anchor
-            if (arrow.tailAnchorType === ArrowAnchorType.auto) {
+            if (arrow.tailAnchorType === ArrowAnchorOnNoteType.auto) {
                 // If the head has a fixed position
-                if (arrow.head_coords) {
-                    headPoint = Point2D.fromData(arrow.head_coords);
+                if (arrow.headPoint) {
+                    headPoint = arrow.headPoint;
                 } else {
                     headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), arrow.headAnchorType);
                 }
                 effectiveTailAnchorType = this.inferTailAnchorType(headPoint);
                 effectiveHeadAnchorType = arrow.headAnchorType;
-            } else if (arrow.headAnchorType === ArrowAnchorType.auto) {
+            } else if (arrow.headAnchorType === ArrowAnchorOnNoteType.auto) {
                 // If the tail has a fixed position
-                if (arrow.tail_coords) {
-                    tailPoint = Point2D.fromData(arrow.tail_coords);
+                if (arrow.tailPoint) {
+                    tailPoint = arrow.tailPoint;
                 } else {
                     tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), arrow.tailAnchorType);
                 }
@@ -186,21 +186,21 @@ export class ArrowViewState extends ElementViewState {
         }
 
         // Calculate the tail and head points
-        if (effectiveTailAnchorType === ArrowAnchorType.none) {
-            tailPoint = Point2D.fromData(arrow.tail_coords!);
+        if (effectiveTailAnchorType === ArrowAnchorOnNoteType.none) {
+            tailPoint = arrow.tailPoint!;
         } else {
             tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), effectiveTailAnchorType);
         }
 
-        if (effectiveHeadAnchorType === ArrowAnchorType.none) {
-            headPoint = Point2D.fromData(arrow.head_coords!);
+        if (effectiveHeadAnchorType === ArrowAnchorOnNoteType.none) {
+            headPoint = arrow.headPoint!;
         } else {
             headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), effectiveHeadAnchorType);
         }
 
 
         // If the head and tail are on the same point with no midpoints - set control points such that the arrow is a loop
-        if (arrow.mid_points.length === 0 && tailPoint.equals(headPoint)) {
+        if (arrow.midPoints.length === 0 && tailPoint.equals(headPoint)) {
             let controlPointDistance = CP_BASE_DISTANCE;
             // Set perpendicular control points
             let cp1 = tailPoint.add(new Point2D(controlPointDistance, 0));
@@ -212,9 +212,9 @@ export class ArrowViewState extends ElementViewState {
         // Infer adjacent points in order to calculate the first and last bezier control points
         let tailAdjacentPoint: Point2D;
         let headAdjacentPoint: Point2D;
-        if (arrow.mid_points.length > 0) {
-            tailAdjacentPoint = arrow.mid_points[0];
-            headAdjacentPoint = arrow.mid_points[arrow.mid_points.length - 1];
+        if (arrow.midPoints.length > 0) {
+            tailAdjacentPoint = arrow.midPoints[0];
+            headAdjacentPoint = arrow.midPoints[arrow.midPoints.length - 1];
         } else {
             tailAdjacentPoint = headPoint;
             headAdjacentPoint = tailPoint;
@@ -226,15 +226,15 @@ export class ArrowViewState extends ElementViewState {
         // Add the second control point for the first curve
         // and all the middle curves (if any), excluding the last control point
         let prevPoint: Point2D = tailPoint;
-        for (let idx = 0; idx < arrow.mid_points.length; idx++) {
-            let currentPoint = arrow.mid_points[idx];
+        for (let idx = 0; idx < arrow.midPoints.length; idx++) {
+            let currentPoint = arrow.midPoints[idx];
 
             /// If we're at the last point
             let nextPoint: Point2D;
-            if (idx + 1 === arrow.mid_points.length) {
+            if (idx + 1 === arrow.midPoints.length) {
                 nextPoint = headPoint;
             } else {
-                nextPoint = arrow.mid_points[idx + 1];
+                nextPoint = arrow.midPoints[idx + 1];
             }
 
             // Calculate alpha (see the schematic for details)
@@ -288,29 +288,29 @@ export class ArrowViewState extends ElementViewState {
     }
 
 
-    headOrTailBezierControlPoint(headOrTailPosition: Point2D, adjacentPoint: Point2D, controlPointDistance: number, effectiveAnchorType: ArrowAnchorType): Point2D {
+    headOrTailBezierControlPoint(headOrTailPosition: Point2D, adjacentPoint: Point2D, controlPointDistance: number, effectiveAnchorType: ArrowAnchorOnNoteType): Point2D {
 
-        if (effectiveAnchorType === ArrowAnchorType.none) {
+        if (effectiveAnchorType === ArrowAnchorOnNoteType.none) {
             let k = controlPointDistance / headOrTailPosition.distanceTo(adjacentPoint);
             return headOrTailPosition.add(adjacentPoint.subtract(headOrTailPosition).multiply(k));
-        } else if (effectiveAnchorType === ArrowAnchorType.mid_left) {
+        } else if (effectiveAnchorType === ArrowAnchorOnNoteType.mid_left) {
             return headOrTailPosition.subtract(new Point2D(controlPointDistance, 0));
-        } else if (effectiveAnchorType === ArrowAnchorType.top_mid) {
+        } else if (effectiveAnchorType === ArrowAnchorOnNoteType.top_mid) {
             return headOrTailPosition.subtract(new Point2D(0, controlPointDistance));
-        } else if (effectiveAnchorType === ArrowAnchorType.mid_right) {
+        } else if (effectiveAnchorType === ArrowAnchorOnNoteType.mid_right) {
             return headOrTailPosition.add(new Point2D(controlPointDistance, 0));
-        } else if (effectiveAnchorType === ArrowAnchorType.bottom_mid) {
+        } else if (effectiveAnchorType === ArrowAnchorOnNoteType.bottom_mid) {
             return headOrTailPosition.add(new Point2D(0, controlPointDistance));
         } else {
             throw Error('Effective type should have been inferred (!=auto). Type: ' + effectiveAnchorType);
         }
     }
 
-    inferTailAnchorType(secondPoint: Point2D): ArrowAnchorType {
+    inferTailAnchorType(secondPoint: Point2D): ArrowAnchorOnNoteType {
         /** Only refactored out to DRY the code a bit */
         let arrow = this.arrow();
-        let effectiveTailAnchorType: ArrowAnchorType;
-        if (arrow.tailAnchorType === ArrowAnchorType.auto) {
+        let effectiveTailAnchorType: ArrowAnchorOnNoteType;
+        if (arrow.tailAnchorType === ArrowAnchorOnNoteType.auto) {
             if (this.tailAnchorNoteViewState === null) {
                 throw Error('Tail anchor type is AUTO, but no head note view state is set');
             }
@@ -322,11 +322,11 @@ export class ArrowViewState extends ElementViewState {
         return effectiveTailAnchorType
     }
 
-    inferHeadAnchorType(secondPoint: Point2D): ArrowAnchorType {
+    inferHeadAnchorType(secondPoint: Point2D): ArrowAnchorOnNoteType {
         /** Only refactored out to DRY the code a bit */
         let arrow = this.arrow();
-        let effectiveHeadAnchorType: ArrowAnchorType;
-        if (arrow.headAnchorType === ArrowAnchorType.auto) {
+        let effectiveHeadAnchorType: ArrowAnchorOnNoteType;
+        if (arrow.headAnchorType === ArrowAnchorOnNoteType.auto) {
             if (this.headAnchorNoteViewState === null) {
                 throw Error('Head anchor type is AUTO, but no head note view state is set');
             }
@@ -454,25 +454,25 @@ export class ArrowViewState extends ElementViewState {
 }
 
 
-export function inferArrowAnchorType(adjacentPoint: Point2D, noteRect: Rectangle): ArrowAnchorType {
+export function inferArrowAnchorType(adjacentPoint: Point2D, noteRect: Rectangle): ArrowAnchorOnNoteType {
     // If the adjacent point is to the left or right - set a side anchor
     if (adjacentPoint.x < noteRect.left()) {
-        return ArrowAnchorType.mid_left;
+        return ArrowAnchorOnNoteType.mid_left;
     } else if (adjacentPoint.x > noteRect.right()) {
-        return ArrowAnchorType.mid_right;
+        return ArrowAnchorOnNoteType.mid_right;
     } else { // If the point is directly above or below the note
         // set a top/bottom anchor
         if (adjacentPoint.y < noteRect.top()) {
-            return ArrowAnchorType.top_mid;
+            return ArrowAnchorOnNoteType.top_mid;
         } else if (adjacentPoint.y > noteRect.bottom()) {
-            return ArrowAnchorType.bottom_mid;
+            return ArrowAnchorOnNoteType.bottom_mid;
         } else {
             // If the adjacent point is inside the note_rect - set either
             // a top or bottom anchor (arbitrary, its ugly either way)
             if (adjacentPoint.y < noteRect.center().y) {
-                return ArrowAnchorType.top_mid;
+                return ArrowAnchorOnNoteType.top_mid;
             } else {
-                return ArrowAnchorType.bottom_mid;
+                return ArrowAnchorOnNoteType.bottom_mid;
             }
         }
     }

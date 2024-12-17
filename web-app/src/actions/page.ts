@@ -334,8 +334,8 @@ class PageActions {
     let allArrows = pamet.arrows({ parentId: pageId });
     for (let arrow of allArrows) {
       // If the arrow has tail/head in the notesForRemoval - add it of removal
-      if (arrow.tail_note_id && noteIds.has(arrow.tail_note_id) ||
-        arrow.head_note_id && noteIds.has(arrow.head_note_id)) {
+      if (arrow.tailNoteId && noteIds.has(arrow.tailNoteId) ||
+        arrow.headNoteId && noteIds.has(arrow.headNoteId)) {
         arrowsForRemoval.push(arrow);
       }
     }
@@ -382,7 +382,7 @@ class PageActions {
       }
       let arrowVS = elementVS as ArrowViewState;
       let arrow = arrowVS.arrow();
-      arrow.color_role = colorRole;
+      arrow.colorRole = colorRole;
       pamet.updateArrow(arrow);
     }
   }
