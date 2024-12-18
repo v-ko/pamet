@@ -57,4 +57,7 @@ export abstract class PametStore extends Store {
         filter.type = Arrow
         return this.find(filter) as Generator<Arrow>
     }
+    arrow(arrow_id: string): Arrow | undefined {
+        return this.findOne({id: arrow_id}) as Arrow | undefined
+    }
 }

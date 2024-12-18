@@ -6,6 +6,7 @@ import { Size } from "../util/Size";
 import { snapVectorToGrid } from "../util";
 import { pamet } from "../core/facade";
 import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "../core/constants";
+import { ArrowViewState } from "../components/arrow/ArrowViewState";
 
 class NoteActions {
     @action
@@ -39,7 +40,7 @@ class NoteActions {
     }
 
     @action
-    notesResizeMove(state:PageViewState, mousePosOnScreen: Point2D) {
+    notesResizeMove(state: PageViewState, mousePosOnScreen: Point2D) {
         let newSize = this._newNoteSizeOnResize(state, mousePosOnScreen);
 
         for (let noteVS of state.notesBeingResized) {
@@ -71,6 +72,101 @@ class NoteActions {
         state.notesBeingResized = [];
         state.clearMode();
     }
+    @action
+    startMovingElements(state: PageViewState, mousePosOnScreen: Point2D) {
+        state.mode = PageMode.MoveElements;
+        state.realMousePosOnElementMoveStart = state.viewport.unprojectPoint(mousePosOnScreen);
+
+        state.movedNoteVSs = [];
+        state.movedArrowVSs = [];
+        for (let element of state.selectedElementsVS) {
+            if (element instanceof NoteViewState) {
+                state.movedNoteVSs.push(element);
+            } else if (element instanceof ArrowViewState) {
+                state.movedArrowVSs.push(element);
+            }
+        }
+    }
+    _elementsMoveUpdate(state: PageViewState, mousePosOnScreen: Point2D, final: boolean) {
+        let realMousePos = state.viewport.unprojectPoint(mousePosOnScreen)
+        let realDelta = realMousePos.subtract(state.realMousePosOnElementMoveStart)
+
+        let movedNoteIds = [];
+        for (let noteVS of state.movedNoteVSs) {
+            let viewStateNote = noteVS.note();
+            let initialNote = pamet.note(viewStateNote.id);
+            if (!initialNote) {
+                throw new Error('Entity for moved note not found');
+            }
+
+            movedNoteIds.push(initialNote.own_id);
+
+            let rect = initialNote.rect();
+            rect.setTopLeft(snapVectorToGrid(rect.topLeft().add(realDelta)));
+            if (final) {
+                initialNote.setRect(rect);
+                pamet.updateNote(initialNote);
+            } else {
+                viewStateNote.setRect(rect);
+                let noteVS = state.viewStateForElement(viewStateNote.own_id) as NoteViewState;
+                noteVS.updateFromNote(viewStateNote);
+            }
+        }
+
+        for (let arrowVS of state.movedArrowVSs) {
+            let initialArrow = pamet.arrow(arrowVS.arrow().id);
+            if (!initialArrow) {
+                throw new Error('Entity for moved arrow not found');
+            }
+            let viewStateArrow = arrowVS.arrow();
+            let tailMoved: boolean;
+            let headMoved: boolean;
+            if (viewStateArrow.tailPoint) {
+                viewStateArrow.tailPoint = snapVectorToGrid(
+                    initialArrow.tailPoint!.add(realDelta));
+                tailMoved = true;
+            } else {
+                tailMoved = movedNoteIds.includes(initialArrow.tailNoteId!);
+            }
+            if (viewStateArrow.headPoint) {
+                viewStateArrow.headPoint = snapVectorToGrid(
+                    initialArrow.headPoint!.add(realDelta));
+                headMoved = true;
+            } else {
+                headMoved = movedNoteIds.includes(initialArrow.headNoteId!);
+            }
+
+            // If both head and tail are anchored to notes which move - move midpoints
+            if (tailMoved && headMoved) {
+                let midPoints = initialArrow.midPoints.map(
+                    (p) => snapVectorToGrid(p.add(realDelta)));
+                viewStateArrow.replaceMidpoints(midPoints);
+            }
+
+            if (final) {
+                initialArrow.tailPoint = viewStateArrow.tailPoint;
+                initialArrow.headPoint = viewStateArrow.headPoint;
+                initialArrow.replaceMidpoints(viewStateArrow.midPoints);
+                pamet.updateArrow(initialArrow);
+            } else {
+                let { headNVS, tailNVS } = state.noteVS_anchorsForArrow(viewStateArrow);
+                let arrowVS = state.viewStateForElement(viewStateArrow.own_id) as ArrowViewState;
+                arrowVS.updateFromArrow(viewStateArrow, headNVS, tailNVS);
+            }
+        }
+    }
+    @action
+    elementsMoveUpdate(state: PageViewState, mousePosOnScreen: Point2D) {
+        this._elementsMoveUpdate(state, mousePosOnScreen, false);
+    }
+    @action
+    endElementsMove(state: PageViewState, mousePosOnScreen: Point2D) {
+        this._elementsMoveUpdate(state, mousePosOnScreen, true);
+        state.movedNoteVSs = [];  // If left full - it would be accepted as
+        state.movedArrowVSs = []; // if the move was aboerted in the clearMode
+        state.clearMode();
+    }
+
 }
 
 

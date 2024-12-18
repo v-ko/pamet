@@ -65,7 +65,7 @@ export class ArrowViewState extends ElementViewState {
         return this.arrow();
     }
     updateFromArrow(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null) {
-        console.log('updateFromArrow', arrow, headAnchorNoteViewState, tailAnchorNoteViewState);
+        // console.log('updateFromArrow', arrow, headAnchorNoteViewState, tailAnchorNoteViewState);
         this._arrowData = arrow.data();
 
         this.headAnchorNoteViewState = headAnchorNoteViewState;
