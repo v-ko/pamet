@@ -3,7 +3,7 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { getLogger } from "fusion/logging";
 import { drawCrossingDiagonals } from "../../util";
 import { color_role_to_hex_color } from "../../util/Color";
@@ -291,6 +291,7 @@ export class CanvasPageRenderer {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.resetTransform(); // may be redundant, but why not
 
+        // Drawing without transformation
         // Draw drag selection rectangle
         if (state.mode === PageMode.DragSelection && state.dragSelectionRectData !== null) {
             ctx.fillStyle = dragSelectRectColor;
@@ -322,6 +323,7 @@ export class CanvasPageRenderer {
             }
         }
 
+        // Draw regular selection overlays
         for (const childVS of state.selectedElementsVS) {
             this._drawSelectionOverlay(ctx, childVS);
         }
@@ -362,9 +364,47 @@ export class CanvasPageRenderer {
                 let view = new ArrowCanvasView(this, newArrowVS);
                 view.render(ctx);
             }
+        } else if (state.mode === PageMode.NoteResize || state.mode === PageMode.ChildMove) {
+            // Draw note alignment lines
+            for (let elementVS of state.selectedElementsVS) {
+                if (elementVS instanceof NoteViewState) {
+                    // Draw four lines that extend all rect sides with ALIGNM
+                    let note = elementVS.note();
+                    let rect = note.rect();
+                    let leftLine = [
+                        rect.x, rect.y - ALIGNMENT_LINE_LENGTH,
+                        rect.x, rect.bottom() + ALIGNMENT_LINE_LENGTH,
+                    ];
+                    let rightLine = [
+                        rect.right(), rect.y - ALIGNMENT_LINE_LENGTH,
+                        rect.right(), rect.bottom() + ALIGNMENT_LINE_LENGTH,
+                    ];
+                    let topLine = [
+                        rect.x - ALIGNMENT_LINE_LENGTH, rect.y,
+                        rect.right() + ALIGNMENT_LINE_LENGTH, rect.y,
+                    ];
+                    let bottomLine = [
+                        rect.x - ALIGNMENT_LINE_LENGTH, rect.bottom(),
+                        rect.right() + ALIGNMENT_LINE_LENGTH, rect.bottom(),
+                    ];
+                    ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.moveTo(leftLine[0], leftLine[1]);
+                    ctx.lineTo(leftLine[2], leftLine[3]);
+                    ctx.moveTo(rightLine[0], rightLine[1]);
+                    ctx.lineTo(rightLine[2], rightLine[3]);
+                    ctx.moveTo(topLine[0], topLine[1]);
+                    ctx.lineTo(topLine[2], topLine[3]);
+                    ctx.moveTo(bottomLine[0], bottomLine[1]);
+                    ctx.lineTo(bottomLine[2], bottomLine[3]);
+                    ctx.stroke();
+                    ctx.closePath();
+                }
+            }
         }
 
-        // When a single arrow is selected - draw the control points for editing
+        // When a single arrow is selected - draw the control points for editing it
         let editableArrowVS = state.arrowVS_withVisibleControlPoints();
         if (editableArrowVS !== null) {
             // Display control points and suggested control points
@@ -553,8 +593,18 @@ export class CanvasPageRenderer {
     _drawSelectionOverlay(ctx: CanvasRenderingContext2D, childVS: ElementViewState) {
         // Expects the ctx to be in the real space
         if (childVS instanceof NoteViewState) {
+            let note = childVS.note();
+            let rect = note.rect();
+            // Render the note selection overlay
             ctx.fillStyle = selectionColor;
-            ctx.fillRect(...childVS.note().rect().data());
+            ctx.fillRect(...rect.data());
+            // Draw the resize circles
+            ctx.fillStyle = color_role_to_hex_color(note.style.background_color_role);
+            let bottomRight = rect.bottomRight();
+            ctx.beginPath();
+            ctx.arc(bottomRight.x, bottomRight.y, RESIZE_CIRCLE_RADIUS, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.closePath();
 
         } else if (childVS instanceof ArrowViewState) {
             // Render the arrow selection overlay
