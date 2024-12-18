@@ -564,92 +564,88 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     console.log('KEY PRESSED', event.code)
+
     let preventDefault = true;
-    if (event.key === 'c' && event.ctrlKey) {
-      // event.preventDefault();
-      // copySelectedToClipboard();
-    }
-    else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
-      // Zoom in
-      pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
-    } else if (event.ctrlKey && event.key === '-') { // Minus key
-      // Zoom out
-      pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
-    } else if (event.ctrlKey && event.key === '0') { // Zero key
-      // Reset zoom level
-      pageActions.updateViewport(state, state.viewportCenter, 1);
-    } else if (event.code === 'KeyN') {
-      // Start note creation
-      commands.createNewNote();
-    } else if (event.code === 'KeyE') {
-      // Start editing the selected note
-      let selectedNote: Note | null = null;
-      for (let elementVS of state.selectedElementsVS.values()) {
-        if (elementVS instanceof NoteViewState) {
-          selectedNote = elementVS.note();
-          break;
-        }
-      }
-      if (selectedNote !== null) {
-        pageActions.startEditingNote(state, selectedNote);
-      }
-    } else if (event.code === 'KeyL') {
-      // Start note creation
-      arrowActions.startArrowCreation(state);
-    } else if (event.code === 'KeyA' && event.ctrlKey) {
-      // Select all
-      event.preventDefault();
-      let selectionMap = new Map();
-      for (let noteVS of state.noteViewStatesByOwnId.values()) {
-        selectionMap.set(noteVS, true);
-      }
-      for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
-        selectionMap.set(arrowVS, true);
-      }
-      pageActions.updateSelection(state, selectionMap);
-    } else if (event.code === 'KeyA') {
-      // Auto-size selected notes
-      pageActions.autoSizeSelectedNotes(state);
-    } else if (event.code === 'KeyY') {  // Dummy resize for testing auto-size
-      runInAction(() => {
-        console.log('Running dummy resize')
-        for (let element of state.selectedElementsVS.values()) {
-          if (element instanceof NoteViewState) {
-            let note = element.note();
-            let rect = note.rect();
-            rect.setSize(new Size(200, 200));
-            note.setRect(rect);
-            pamet.updateNote(note);
+    let noModifiers = !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
+
+    if (noModifiers){
+      if (event.code === 'KeyN') {
+        // Start note creation
+        commands.createNewNote();
+      } else if (event.code === 'KeyE') {
+        // Start editing the selected note
+        let selectedNote: Note | null = null;
+        for (let elementVS of state.selectedElementsVS.values()) {
+          if (elementVS instanceof NoteViewState) {
+            selectedNote = elementVS.note();
+            break;
           }
         }
-      });
-    } else if (event.code === 'Escape') {
-      pageActions.clearMode(state);
-    } else if (event.code === 'KeyH') {
-      commands.showHelp();
-    } else if (event.code === 'Delete') {
-      // Delete selected notes and arrows
-      pageActions.deleteSelectedElements(state);
+        if (selectedNote !== null) {
+          pageActions.startEditingNote(state, selectedNote);
+        }
+      } else if (event.code === 'KeyL') {
+        // Start note creation
+        arrowActions.startArrowCreation(state);
+      } else if (event.code === 'KeyA') {
+        // Auto-size selected notes
+        pageActions.autoSizeSelectedNotes(state);
+      } else if (event.code === 'Escape') {
+        pageActions.clearMode(state);
+      } else if (event.code === 'KeyH') {
+        commands.showHelp();
+      } else if (event.code === 'Delete') {
+        // Delete selected notes and arrows
+        pageActions.deleteSelectedElements(state);
 
-      // Colors
-    } else if (event.code === 'Digit1') {
-      // Set primary color to selected elements
-      commands.colorSelectedElementsPrimary();
-    } else if (event.code === 'Digit2') {
-      // Set error color to selected elements
-      commands.colorSelectedElementsSuccess();
-    } else if (event.code === 'Digit3') {
-      // Set success color to selected elements
-      commands.colorSelectedElementsError();
-    } else if (event.code === 'Digit4') {
-      // Set neutral color
-      commands.colorSelectedElementsSurfaceDim();
-    } else if (event.code === 'Digit5') {
-      // Remove note background
-      commands.setNoteBackgroundToTransparent();
+        // Colors
+      } else if (event.code === 'Digit1') {
+        // Set primary color to selected elements
+        commands.colorSelectedElementsPrimary();
+      } else if (event.code === 'Digit2') {
+        // Set error color to selected elements
+        commands.colorSelectedElementsSuccess();
+      } else if (event.code === 'Digit3') {
+        // Set success color to selected elements
+        commands.colorSelectedElementsError();
+      } else if (event.code === 'Digit4') {
+        // Set neutral color
+        commands.colorSelectedElementsSurfaceDim();
+      } else if (event.code === 'Digit5') {
+        // Remove note background
+        commands.setNoteBackgroundToTransparent();
+      } else {
+        preventDefault = false;
+      }
     } else {
-      preventDefault = false;
+      if (event.key === 'KeyC' && event.ctrlKey) {
+        // event.preventDefault();
+        // copySelectedToClipboard();
+      }
+      else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
+        // Zoom in
+        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
+      } else if (event.ctrlKey && event.key === '-') { // Minus key
+        // Zoom out
+        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
+      } else if (event.ctrlKey && event.key === '0') { // Zero key
+        // Reset zoom level
+        pageActions.updateViewport(state, state.viewportCenter, 1);
+      } else if (event.code === 'KeyA' && event.ctrlKey) {
+        // Select all
+        let selectionMap = new Map();
+        for (let noteVS of state.noteViewStatesByOwnId.values()) {
+          selectionMap.set(noteVS, true);
+        }
+        for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
+          selectionMap.set(arrowVS, true);
+        }
+        pageActions.updateSelection(state, selectionMap);
+      } else {
+        preventDefault = false;
+      }
     }
+
     if (preventDefault) {
       event.preventDefault(); // is this correct?
     }
