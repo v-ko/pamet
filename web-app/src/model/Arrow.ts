@@ -56,18 +56,6 @@ export interface ArrowData extends PametElementData {
 // Use camelCase for property names
 @entityType('Arrow')
 export class Arrow extends PametElement<ArrowData> {
-    // get tail_coords(): PointData | null {
-    //     return this._data.tail_coords;
-    // }
-
-    // get head_coords(): PointData | null {
-    //     return this._data.head_coords;
-    // }
-
-    // get mid_points(): PointData[] {
-    //     return this._data.mid_points;
-    // }
-
     get headNoteId(): string | null {
         return this._data.head.noteAnchorId;
     }
@@ -75,14 +63,6 @@ export class Arrow extends PametElement<ArrowData> {
     get tailNoteId(): string | null {
         return this._data.tail.noteAnchorId;
     }
-
-    // get head_anchor(): ArrowAnchorOnNoteType {
-    //     return this._data.head_anchor;
-    // }
-
-    // get tail_anchor(): ArrowAnchorOnNoteType {
-    //     return this._data.tail_anchor;
-    // }
 
     get colorRole(): string {
         return this._data.style.color_role;
@@ -165,6 +145,12 @@ export class Arrow extends PametElement<ArrowData> {
     }
     get headAnchoredOnNote(): boolean {
         return !!this.headNoteId;
+    }
+    get tailPositionIsAbsolute(): boolean {
+        return !!this._data.tail.position;
+    }
+    get headPositionIsAbsolute(): boolean {
+        return !!this._data.head.position;
     }
     controlPointIndices(): number[] {
         let midPointCount = 2 + this.midPoints.length;

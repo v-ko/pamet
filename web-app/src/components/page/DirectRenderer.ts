@@ -364,7 +364,7 @@ export class CanvasPageRenderer {
                 let view = new ArrowCanvasView(this, newArrowVS);
                 view.render(ctx);
             }
-        } else if (state.mode === PageMode.NoteResize || state.mode === PageMode.ChildMove) {
+        } else if (state.mode === PageMode.NoteResize || state.mode === PageMode.MoveElements) {
             // Draw note alignment lines
             for (let elementVS of state.selectedElementsVS) {
                 if (elementVS instanceof NoteViewState) {

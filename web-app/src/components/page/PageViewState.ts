@@ -35,7 +35,7 @@ export enum PageMode {
     DragNavigation,
     DragSelection,
     NoteResize,
-    ChildMove,
+    MoveElements,
     CreateArrow,
     ArrowControlPointDrag,
     AutoNavigation,
@@ -79,6 +79,11 @@ export class PageViewState {
     noteResizeInitialSize: Size = new Size(0, 0);
     noteResizeCircleClickOffset: Point2D = new Point2D(0, 0);
     notesBeingResized: NoteViewState[] = [];
+
+    // Element move related
+    realMousePosOnElementMoveStart: Point2D = new Point2D(0, 0);
+    movedNoteVSs: NoteViewState[] = [];  // Be explicit about it. 
+    movedArrowVSs: ArrowViewState[] = []; // Also marker for restoring state on abort
 
     // Arrow related
     // Arrow creation
@@ -341,6 +346,28 @@ export class PageViewState {
         }
         this.notesBeingResized = [];
 
+        // Element move related
+        // If element move was aborted - restore the geometries from the entities
+        if (this.movedNoteVSs.length > 0) {
+            for (let noteVS of this.movedNoteVSs) {
+                let note = pamet.findOne({id: noteVS.note().id});
+                if (!(note instanceof Note)) {
+                    log.error('Note not found for note view state being moved', noteVS.note().id)
+                    continue;
+                }
+                noteVS.updateFromNote(note);
+            }
+            for (let arrowVS of this.movedArrowVSs) {
+                let arrow = pamet.findOne({id: arrowVS.arrow().id});
+                if (!(arrow instanceof Arrow)) {
+                    log.error('Arrow not found for arrow view state being moved', arrowVS.arrow().id)
+                    continue;
+                }
+                let { headNVS, tailNVS } = this.noteVS_anchorsForArrow(arrow);
+                arrowVS.updateFromArrow(arrow, headNVS, tailNVS);
+            }
+        }
+
         // Arrow editing related
         if (this.newArrowViewState !== null) {
             this.newArrowViewState = null;
@@ -495,6 +522,25 @@ export class PageViewState {
             return closestNoteVS;
         }
         return null;
+    }
+
+    get selectedNotesVSs(): NoteViewState[] {
+        let selectedNoteVSs = [];
+        for (let elementVS of this.selectedElementsVS) {
+            if (elementVS instanceof NoteViewState) {
+                selectedNoteVSs.push(elementVS);
+            }
+        }
+        return selectedNoteVSs;
+    }
+    get selectedArrowsVSs(): ArrowViewState[] {
+        let selectedArrowVSs = [];
+        for (let elementVS of this.selectedElementsVS) {
+            if (elementVS instanceof ArrowViewState) {
+                selectedArrowVSs.push(elementVS);
+            }
+        }
+        return selectedArrowVSs;
     }
 }
 

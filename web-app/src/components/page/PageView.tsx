@@ -213,7 +213,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // in a mode where that's significant.
       if (state.mode === PageMode.CreateArrow) {
         mousePosIfRelevant = state.projectedMousePosition;
-      } else  {
+      } else {
         mousePosIfRelevant = null;
       }
 
@@ -230,7 +230,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       }
     },
       () => {
-        try{
+        try {
           state.renderer.renderPage(state, ctx);
         } catch (e) {
           log.error('Error rendering page:', e)
@@ -279,7 +279,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         arrowActions.arrowCreationClick(state, mousePos);
       }
     } else if (event.button === 2) { // right mouse
-      // setRightMouseIsPressed(true);
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y)
 
@@ -294,7 +293,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     if (state.mode === PageMode.None) {
       if (mouse.rightIsPressed) {
-        pageActions.startDragNavigation(state, pressPos)
+        pageActions.startDragNavigation(state)
         pageActions.dragNavigationMove(state, delta)
         navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D(event.movementX, event.movementY));
       } else if (mouse.leftIsPressed) {
@@ -319,13 +318,27 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
             }
             // Update the drag position
             arrowActions.controlPointDragMove(state, mousePos);
+            return;  // If user clicked on a control point - don't do anythin else
           }
-          return;
         }
 
-        pageActions.clearSelection(state);
-        pageActions.startDragSelection(state, pressPos);
-        pageActions.updateDragSelection(state, mousePos);
+        // If there was a note on the initial position - select and move it
+        let noteVS_underMouse = state.noteViewStateAt(state.viewport.unprojectPoint(pressPos))
+        let arrowVS_underMouse = state.arrowViewStateAt(state.viewport.unprojectPoint(pressPos))
+        let elementUnderMouse = noteVS_underMouse || arrowVS_underMouse;
+        if (elementUnderMouse !== null) {
+          if (!state.selectedElementsVS.has(elementUnderMouse)) {
+            pageActions.clearSelection(state)
+            pageActions.updateSelection(state, new Map([[elementUnderMouse, true]]))
+          }
+          noteActions.startMovingElements(state, pressPos);
+          noteActions.elementsMoveUpdate(state, mousePos);
+        } else {
+          // If there was no note under the mouse - start drag selection
+          pageActions.clearSelection(state);
+          pageActions.startDragSelection(state, pressPos);
+          pageActions.updateDragSelection(state, mousePos);
+        }
       }
     } else if (state.mode === PageMode.DragNavigation) {
       pageActions.dragNavigationMove(state, delta);
@@ -337,6 +350,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       arrowActions.controlPointDragMove(state, mousePos);
     } else if (state.mode === PageMode.NoteResize) {
       noteActions.notesResizeMove(state, mousePos);
+    } else if (state.mode === PageMode.MoveElements) {
+      noteActions.elementsMoveUpdate(state, mousePos);
     }
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
@@ -397,15 +412,18 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         arrowActions.endControlPointDrag(state, mousePos);
       } else if (state.mode === PageMode.NoteResize) {
         noteActions.endNotesResize(state, mousePos);
+      } else if (state.mode === PageMode.MoveElements) {
+        noteActions.endElementsMove(state, mousePos);
       }
     }
     if (event.button === 2) { // Right press
-      if (mousePos.equals(pressPos)) {
-        alert('Context menu not implemented yet')
-      }
-
       if (state.mode === PageMode.DragNavigation) {
         pageActions.endDragNavigation(state);
+      }
+
+      // If it's a click - show context menu
+      if (mousePos.equals(pressPos)) {
+        alert('Context menu not implemented yet')
       }
     }
   }, [state, mouse.positionOnPress, mouse]);
@@ -461,7 +479,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       setInitialPinchCenter(initPinchCenter);
       console.log('Initial pinch center', initPinchCenter)
 
-      pageActions.startDragNavigation(state, initPinchCenter)
+      pageActions.startDragNavigation(state)
     }
   }, [state, mouse]);
 
@@ -605,9 +623,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           }
         }
       });
-    } else if (event.code === 'Escape'){
+    } else if (event.code === 'Escape') {
       pageActions.clearMode(state);
-    } else if (event.code === 'KeyH'){
+    } else if (event.code === 'KeyH') {
       commands.showHelp();
     } else if (event.code === 'Delete') {
       // Delete selected notes and arrows
@@ -809,8 +827,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
         <Panel align='top-right'>
           <img src={helpCircleIconUrl} alt="Help"
-          style={{ cursor: 'pointer' }}
-          onClick={() => { commands.showHelp(); }}
+            style={{ cursor: 'pointer' }}
+            onClick={() => { commands.showHelp(); }}
           />
           <VerticalSeparator />
           <div>{state.page.name}</div>
