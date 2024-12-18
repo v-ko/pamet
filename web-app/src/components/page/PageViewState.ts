@@ -1,5 +1,5 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
-import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT } from '../../core/constants';
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT, RESIZE_CIRCLE_RADIUS } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';
 import { Viewport } from './Viewport';
@@ -59,11 +59,8 @@ export class PageViewState {
     // Common
     mode: PageMode = PageMode.None;
     viewportCenterOnModeStart: Point2D = new Point2D(0, 0); // In real coords
-    projectedMousePosition: Point2D | null = null;
+    projectedMousePosition: Point2D | null = null;  // If null - not on screen
     // mouseButtons: number = 0;
-
-    // Drag navigation
-    dragNavigationStartPosition: Point2D | null = null;
 
     // Selection related
     selectedElementsVS: ObservableSet<CanvasElementViewState> = observable.set();
@@ -76,6 +73,12 @@ export class PageViewState {
 
     // Edit window
     noteEditWindowState: EditComponentState | null = null;
+
+    // Note resize related
+    noteResizeClickRealPos: Point2D = new Point2D(0, 0);
+    noteResizeInitialSize: Size = new Size(0, 0);
+    noteResizeCircleClickOffset: Point2D = new Point2D(0, 0);
+    notesBeingResized: NoteViewState[] = [];
 
     // Arrow related
     // Arrow creation
@@ -105,7 +108,6 @@ export class PageViewState {
             viewportCenterOnModeStart: observable,
             projectedMousePosition: observable,
 
-            dragNavigationStartPosition: observable,
             selectedElementsVS: observable,
             mousePositionOnDragSelectionStart: observable,
             dragSelectionRectData: observable,
@@ -313,8 +315,6 @@ export class PageViewState {
     clearMode() {
         log.info('Clearing page mode')
 
-        this.dragNavigationStartPosition = null;
-
         // Drag select related
         this.mousePositionOnDragSelectionStart = null;
         this.dragSelectionRectData = null;
@@ -325,6 +325,21 @@ export class PageViewState {
         if (editWS !== null) {
             editWS.isBeingDragged = false;
         }
+
+        // Note resize related
+        // If note resize was aborted (notesBeingResized is not empty) - restore
+        // the geometries from the entities
+        if (this.notesBeingResized.length > 0) {
+            for (let noteVS of this.notesBeingResized) {
+                let note = pamet.note(noteVS.note().id);
+                if (note === undefined) {
+                    log.error('Note not found for note view state being resized', noteVS.note().id)
+                    continue;
+                }
+                noteVS.updateFromNote(note);
+            }
+        }
+        this.notesBeingResized = [];
 
         // Arrow editing related
         if (this.newArrowViewState !== null) {
@@ -458,6 +473,26 @@ export class PageViewState {
             if (selectedElement instanceof ArrowViewState) {
                 return selectedElement;
             }
+        }
+        return null;
+    }
+
+    resizeCircleAt(realPosition: Point2D): NoteViewState | null {
+        // Iterate through all notes and get the one where the bottom right corner
+        // is closest to the mouse position (if within RESIZE_CIRCLE_RADIUS)
+        let closestNoteVS: NoteViewState | null = null;
+        let closestDistance = Number.MAX_VALUE;
+        for (let noteVS of this.noteViewStatesByOwnId.values()) {
+            let note = noteVS.note();
+            let bottomRight = note.rect().bottomRight();
+            let distance = bottomRight.distanceTo(realPosition);
+            if (distance < closestDistance) {
+                closestDistance = distance;
+                closestNoteVS = noteVS;
+            }
+        }
+        if (closestDistance < RESIZE_CIRCLE_RADIUS) {
+            return closestNoteVS;
         }
         return null;
     }

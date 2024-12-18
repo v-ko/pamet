@@ -51,11 +51,9 @@ class PageActions {
 
   @action
   startDragNavigation(
-    state: PageViewState,
-    startPosition: Point2D) {
+    state: PageViewState) {
 
     state.setMode(PageMode.DragNavigation);
-    state.dragNavigationStartPosition = startPosition;
     state.viewportCenterOnModeStart = state.viewportCenter;
   }
 

@@ -26,6 +26,7 @@ import shareIconUrl from '../../resources/icons/share-2.svg';
 import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
 import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
 import { arrowActions } from '../../actions/arrow';
+import { noteActions } from '../../actions/note';
 
 
 let log = getLogger('Page.tsx')
@@ -259,10 +260,21 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
     mouse.applyPressEvent(event);
 
-
     if (event.button === 0) { // left mouse
       if (state.mode === PageMode.None) {
-        //
+        let realClickPos = state.viewport.unprojectPoint(mousePos)
+        // Resize related
+        // Get noteVS whose riseze circle is clicked if any
+        let resizedNoteVS = state.resizeCircleAt(realClickPos)
+        if (resizedNoteVS) {
+          // If the note is not selected - deselect all and select it
+          if (!state.selectedElementsVS.has(resizedNoteVS)) {
+            pageActions.clearSelection(state)
+            pageActions.updateSelection(state, new Map([[resizedNoteVS, true]]))
+          }
+          // Start resize mode
+          noteActions.startNotesResize(state, resizedNoteVS, mousePos);
+        }
       } else if (state.mode === PageMode.CreateArrow) {
         arrowActions.arrowCreationClick(state, mousePos);
       }
@@ -323,6 +335,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.updateEditWindowDrag(state, mousePos);
     } else if (state.mode === PageMode.ArrowControlPointDrag) {
       arrowActions.controlPointDragMove(state, mousePos);
+    } else if (state.mode === PageMode.NoteResize) {
+      noteActions.notesResizeMove(state, mousePos);
     }
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
@@ -381,6 +395,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         pageActions.endEditWindowDrag(state);
       } else if (state.mode === PageMode.ArrowControlPointDrag) {
         arrowActions.endControlPointDrag(state, mousePos);
+      } else if (state.mode === PageMode.NoteResize) {
+        noteActions.endNotesResize(state, mousePos);
       }
     }
     if (event.button === 2) { // Right press
