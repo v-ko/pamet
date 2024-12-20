@@ -14,7 +14,7 @@ import { pamet } from "../../core/facade";
 let log = getLogger("App");
 
 export enum PageError {
-  NONE = 0,
+  NO_ERROR = 0,
   NOT_FOUND = 1
 }
 
@@ -43,15 +43,17 @@ export class WebAppState {
   userId: string | null = null;
 
   currentProjectId: string | null = null;
+  projectError: ProjectError = ProjectError.NONE;
+
+  currentPageId: string | null = null;
   currentPageViewState: PageViewState | null = null;
+  pageError: PageError = PageError.NO_ERROR;
 
   storageState: PametStorageState = {
     localStorage: {
       available: false
     }
   }
-  projectError: ProjectError = ProjectError.NONE;
-  pageError: PageError = PageError.NONE;
 
   constructor() {
     makeObservable(this, {
@@ -63,9 +65,8 @@ export class WebAppState {
       pageError: observable,
       projectError: observable,
     });
-
-    // A reducer for automations
   }
+
   get device(): DeviceData | null {
     if (!this.deviceId) {
       return null
@@ -100,14 +101,9 @@ export class WebAppState {
 
 
 const WebApp = observer(({ state }: { state: WebAppState }) => {
-  let messages: string[] = []
+  let errorMessages: string[] = []
 
-  if (!state.device) {
-    messages.push('DeviceData missing. This is a pretty critical error.')
-  }
-  if (messages.length > 0) {
-    console.log(messages)
-  }
+
   // Change the title when the current page changes
   useEffect(() => {
     if (state.currentPageViewState) {
@@ -117,37 +113,41 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
     }
   }, [state.currentPageViewState]);
 
-  // Prep some flags
+  // Check for resurce availability, and prep error messages if needed
+  if (!state.device) {
+    errorMessages.push('DeviceData missing. This is a pretty critical error.')
+  }
   let localStorageAvailable = state.storageState.localStorage.available;
   let shouldDisplayPage = true
   if (!localStorageAvailable) {
-    messages.push("Local storage not available.")
+    errorMessages.push("Local storage not available.")
   }
   if (!localStorageAvailable || state.currentPageViewState === null) {
     shouldDisplayPage = false
   }
 
   if (state.projectError === ProjectError.NOT_FOUND) {
-    messages.push("Project not found")
+    errorMessages.push("Project not found")
     shouldDisplayPage = false
   } else {
     if (state.pageError === PageError.NOT_FOUND) {
-      messages.push("Page not found")
+      errorMessages.push("Page not found")
       shouldDisplayPage = false
     }
 
-    if (state.currentPageViewState === null && state.pageError === PageError.NONE) {
-      messages.push("Page not set")
+    if (state.currentPageViewState === null && state.pageError === PageError.NO_ERROR) {
+      errorMessages.push("Page not set")
+    }
+
+    if (errorMessages.length > 0) {
+      console.log('App error messages', errorMessages, state)
     }
   }
-
-
-  console.log('Rendering app. Messages', messages, state)
 
   return (
     <div className="app">
       {/* Display messages */}
-      {messages.map((message, index) => (
+      {errorMessages.map((message, index) => (
         <div key={index}>{message}</div>
       ))}
 

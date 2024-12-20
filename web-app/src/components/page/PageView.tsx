@@ -9,7 +9,7 @@ import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
 import { getLogger } from 'fusion/logging';
-import { reaction, runInAction } from 'mobx';
+import { reaction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
 import { ElementViewState } from './ElementViewState';
@@ -18,7 +18,6 @@ import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDevi
 import { commands } from '../../core/commands';
 import EditComponent from '../note/EditComponent';
 import { NoteViewState } from '../note/NoteViewState';
-import { Size } from '../../util/Size';
 import { Note } from '../../model/Note';
 import Panel from './Panel';
 import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
@@ -27,6 +26,8 @@ import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
 import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
 import { arrowActions } from '../../actions/arrow';
 import { noteActions } from '../../actions/note';
+import { InternalLinkNote } from '../../model/InternalLinkNote';
+import { appActions } from '../../actions/app';
 
 
 let log = getLogger('Page.tsx')
@@ -614,6 +615,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       } else if (event.code === 'Digit5') {
         // Remove note background
         commands.setNoteBackgroundToTransparent();
+      } else if (event.code === 'KeyP') {
+        // Start note creation
+        commands.createNewPage();
       } else {
         preventDefault = false;
       }
@@ -684,12 +688,21 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     let noteVS_underMouse = state.noteViewStateAt(realPos)
     if (noteVS_underMouse !== null) {
+      // If it's a link note - open the link
+      let note = noteVS_underMouse.note();
+      // For an internal link - follow it
+      if (note instanceof InternalLinkNote) {
+        let targetPage = note.targetPage();
+        if (targetPage !== undefined) {
+          appActions.setCurrentPage(pamet.appViewState, targetPage.id)
+          return;
+        }
+      }
+      // For an external link - open in new tab
       pageActions.startEditingNote(state, noteVS_underMouse.note());
-      return;
     } else {
       let realMousePos = state.viewport.unprojectPoint(mousePos);
       pageActions.startNoteCreation(state, realMousePos);
-      return;
     }
   }
 
@@ -720,7 +733,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     let note = noteVS.note()
     if (note.content.image !== undefined) {
       let url = note.content.image.url;
-      imageUrls.add(pamet.pametSchemaToHttpUrl(url));
+      imageUrls.add(pamet.projectScopedUrlToGlobal(url));
     }
   }
 

@@ -11,10 +11,11 @@ import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfig } from "../config/Config";
-import { StorageService, StorageServiceActualInterface } from "../storage/StorageService";
+import { StorageService } from "../storage/StorageService";
 import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
 import { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
-import { RoutingService } from "../services/RoutingService";
+import { RoutingService } from "../services/routing/RoutingService";
+import { PametRoute } from "../services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
 
@@ -27,6 +28,9 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 export class PametFacade extends PametStore {
+    getEntityId() {
+        throw new Error("Method not implemented.");
+    }
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
@@ -60,12 +64,12 @@ export class PametFacade extends PametStore {
         });
     }
 
-    pametSchemaToHttpUrl(url: string): string {
-        if (!url.startsWith('pamet:')) {
-            throw Error('Invalid media url: ' + url)
+    projectScopedUrlToGlobal(url: string): string {
+        let route = PametRoute.fromUrl(url);
+        if (!route.isInternal) {
+            throw Error('Url is not internal: ' + url)
         }
-        url = url.slice('pamet:'.length);
-        return this._apiClient.endpointUrl(url);
+        return this._apiClient.endpointUrl(route.path());
     }
 
     get frontendDomainStore(): FrontendDomainStore {
@@ -277,7 +281,9 @@ export function updateViewModelFromChanges(appState: WebAppState, changes: Array
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    pamet.router.setRoute({ projectId: projectId });
+                    let route = new PametRoute();
+                    route.projectId = projectId;
+                    pamet.router.setRoute(route);
                 }
             }
             else if (change.isUpdate()) {

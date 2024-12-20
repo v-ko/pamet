@@ -1,4 +1,7 @@
+import { getLogger } from "fusion/logging";
 import { COLOR_ROLE_MAP } from "../core/constants";
+
+const log = getLogger('Color');
 
 export type RGBAColorData = [number, number, number, number];
 export type HexColorData = string;
@@ -16,7 +19,8 @@ export function color_role_to_hex_color(color_role: string): HexColorData {
     if (color_role in COLOR_ROLE_MAP) {
         return COLOR_ROLE_MAP[color_role];
     } else {
-        throw Error(`Color role ${color_role} not found in color role map`);
+        log.error(`Color role ${color_role} not found in color role map`);
+        return '#ff0000'
     }
 }
 

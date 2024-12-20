@@ -113,7 +113,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        let image = this.renderer.getImage(pamet.pametSchemaToHttpUrl(imageMetadata.url));
+        let image = this.renderer.getImage(pamet.projectScopedUrlToGlobal(imageMetadata.url));
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = IMAGE_NOT_LOADED_TEXT;

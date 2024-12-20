@@ -4,6 +4,7 @@ import { command } from "fusion/libs/Command";
 import { getLogger } from "fusion/logging";
 import { Point2D } from "../util/Point2D";
 import { arrowActions } from "../actions/arrow";
+import { projectActions } from "../actions/project";
 
 let log = getLogger('PametCommands');
 
@@ -132,6 +133,29 @@ class PametCommands {
     @command('Show help')
     showHelp() {
         alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation.')
+    }
+
+    @command('Create new page')
+    createNewPage() {
+        let appState = pamet.appViewState;
+
+        // Determine forward link location - either under mouse or
+        // in the center of the viewport
+        // Get the real mouse pos on canvas (if it's over the viewport)
+        let pageVS = appState.currentPageViewState;
+        if (pageVS === null) {
+            log.error('A current/default page should be present for a user to create a new one');
+            return;
+        }
+        let mousePos = pageVS.projectedMousePosition;
+        let forwardLinkLocation: Point2D;
+        if (mousePos === null) {
+            forwardLinkLocation = pageVS.viewport.realCenter;
+        } else {
+            forwardLinkLocation = pageVS.viewport.unprojectPoint(mousePos);
+        }
+
+        projectActions.createNewPage(appState, forwardLinkLocation);
     }
 }
 
