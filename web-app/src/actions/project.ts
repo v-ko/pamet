@@ -47,6 +47,8 @@ class ProjectActions {
         if (!appState.currentPageViewState) {
             throw Error('No current page. Cannot create a new page via createNewPage. Use createDefaultPage instead.')
         }
+        forwardLinkLocation = snapVectorToGrid(forwardLinkLocation)
+
         // Create the page
         // Find free name
         let name = 'New Page'
@@ -64,7 +66,7 @@ class ProjectActions {
         })
         pamet.insertPage(newPage)
 
-        // Create a forward link note with a center on the given location in the current page
+        // Create a forward link note on the given location in the current page
         let currentPage = appState.currentPageViewState.page
         let forwardLink = InternalLinkNote.createNew(currentPage.id, newPage.id)
         // Autosize and set at location
@@ -72,7 +74,7 @@ class ProjectActions {
         let rect = forwardLink.rect();
         let newSize = snapVectorToGrid(minimalSize)
         rect.setSize(newSize);
-        rect.moveCenter(forwardLinkLocation);
+        rect.setTopLeft(forwardLinkLocation);
         forwardLink.setRect(rect);
         pamet.insertNote(forwardLink);
 
