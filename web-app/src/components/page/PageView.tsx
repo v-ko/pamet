@@ -5,7 +5,6 @@ import { observer } from 'mobx-react-lite';
 import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { pageActions } from '../../actions/page';
-import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
 import { getLogger } from 'fusion/logging';
@@ -19,11 +18,7 @@ import { commands } from '../../core/commands';
 import EditComponent from '../note/EditComponent';
 import { NoteViewState } from '../note/NoteViewState';
 import { Note } from '../../model/Note';
-import Panel from './Panel';
-import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
-import shareIconUrl from '../../resources/icons/share-2.svg';
-import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
-import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
+
 import { arrowActions } from '../../actions/arrow';
 import { noteActions } from '../../actions/note';
 import { InternalLinkNote } from '../../model/InternalLinkNote';
@@ -36,7 +31,7 @@ let log = getLogger('Page.tsx')
 // type Status = 'loading' | 'error' | 'loaded';
 
 
-export const PageOverlay = styled.div`
+export const PageOverlay = styled.main`
 content-visibility: auto;
 flex-grow: 1;
 flex-shrink: 1;
@@ -45,12 +40,6 @@ touch-action: none;
 min-width: 30px;
 `
 
-// Vertical line component
-const VerticalSeparator = styled.div`
-  width: 1px;
-  height: 1em;
-  background: rgba(0,0,0,0.2);
-`
 
 export class MouseState {
   buttons: number = 0;
@@ -80,7 +69,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   /**  */
   // trace(true)
 
-  const [mouse] = useState(new MouseState());
+  // const [mouse] = useState(new MouseState());
+  const mouse = pamet.appViewState.mouse;
 
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
   const [pinchInProgress, setPinchInProgress] = useState<boolean>(false);
@@ -109,28 +99,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     return ctx;
   }
     , [canvasRef]);
-
-  // Initial setup -
-  useEffect(() => {
-    if (!superContainerRef.current) {
-      console.error('superContainerRef is null')
-      return;
-    }
-    superContainerRef.current.focus()
-  }, [superContainerRef]);
-
-  // init paperjs
-  useEffect(() => {
-    console.log("[useEffect] INTO INIT")
-    const paperCanvas = paperCanvasRef.current;
-    if (paperCanvas === null) {
-      console.log("[useEffect] canvas is null")
-      return;
-    }
-    paper.setup(paperCanvas);
-    paper.view.autoUpdate = false;
-
-  }, [state, canvasCtx, paperCanvasRef]);
 
   const updateGeometryHandler = useCallback(() => {
     console.log("[updateGeometry] called")
@@ -171,6 +139,29 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   }, [state, superContainerRef]);
 
+  // Define effects
+
+  // Initial setup -
+  useEffect(() => {
+    if (!superContainerRef.current) {
+      console.error('superContainerRef is null')
+      return;
+    }
+    superContainerRef.current.focus()
+  }, [superContainerRef]);
+
+  // init paperjs
+  useEffect(() => {
+    console.log("[useEffect] INTO INIT")
+    const paperCanvas = paperCanvasRef.current;
+    if (paperCanvas === null) {
+      console.log("[useEffect] canvas is null")
+      return;
+    }
+    paper.setup(paperCanvas);
+    paper.view.autoUpdate = false;
+
+  }, [state, canvasCtx, paperCanvasRef]);
 
   // Setup geometry update handling on resize
   useEffect(() => {
@@ -706,24 +697,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
   }
 
-  // Edit-window related.
-  // The mouse event handling is tricky, since it's nicer to use the title-bar
-  // onDown/Up/.. signals (we can't make the whole component transparent to
-  // pointer events, since it has a lot of functionality). So we catch the
-  // mouseDown and mouseUp events on the title-bar handle and trigger the
-  // edit-window-drag events accodingly. Also we update the mouse state, because
-  // we need to properly handle enter/leave events (and offscreen mouse release)
-  const handleEditWindowDragHandlePress = (event: React.MouseEvent) => {
-    event.preventDefault();
-    let mousePos = new Point2D(event.clientX, event.clientY);
-    mouse.applyPressEvent(event);
-    pageActions.startEditWindowDrag(state, mousePos);
-  }
-  const handleEditWindowDragHandleRelease = (event: React.MouseEvent) => {
-    event.preventDefault();
-    mouse.applyReleaseEvent(event);
-    pageActions.endEditWindowDrag(state);
-  }
+
   // Rendering related
 
   // We'll crate hidden img elements for notes with images and use them in the
@@ -738,12 +712,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }
 
   return (
-    <main
+    // <main
+
+
+    // >
+      <PageOverlay
       className='page-view'  // index.css
       // Set cursor to cross if we're in arrow creation mode
       style={{ cursor: state.mode === PageMode.CreateArrow ? 'crosshair' : 'default' }}
-    >
-      <PageOverlay
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
         ref={superContainerRef}
         tabIndex={0}  // To make the page focusable
@@ -795,79 +771,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           ref={paperCanvasRef}
         />
 
-        {/* Main panel - logo, project name, save state, help button */}
-        <Panel align='top-left'>
-
-          <div
-            style={{
-              fontSize: '1.1em',
-              fontWeight: 400,
-              cursor: 'pointer',
-            }}
-            onClick={() => { alert('Not implemented yet') }}
-            title="Go to projects"
-          >PAMET</div>
-          <VerticalSeparator />
-
-          <div
-            style={{
-              cursor: 'pointer'
-            }}
-            onClick={() => { alert('Not implemented yet') }}
-            title="Project properties"
-          >-default-</div>
-          <img src={cloudOffIconUrl} alt="Not saved" />
-          <VerticalSeparator />
-          <img src={shareIconUrl} alt="Share" />
-          <VerticalSeparator />
-          <div
-            title='Main menu'
-            style={{
-              fontSize: '1.2em',
-              textAlign: 'center',
-              cursor: 'pointer',
-            }}
-            onClick={() => { alert('Not implemented yet') }}
-          >
-            ☰
-          </div>
-
-        </Panel>
-
-        <Panel align='top-right'>
-          <img src={helpCircleIconUrl} alt="Help"
-            style={{ cursor: 'pointer' }}
-            onClick={() => { commands.showHelp(); }}
-          />
-          <VerticalSeparator />
-          <div>{state.page.name}</div>
-          <VerticalSeparator />
-          <img src={accountCircleIconUrl} alt="Login/Sign up" />
-        </Panel>
-
-      </PageOverlay> {/*  map container container */}
-
-      {/* {state.page.tour_segments &&
-        <TourComponent
-          parentPageViewState={state}
-          segments={state.page.tour_segments}
-        />
-      } */}
-
-      {/* Edit window (if open) */}
-      {state.noteEditWindowState &&
-        <EditComponent
-          state={state.noteEditWindowState}
-          onTitlebarPress={handleEditWindowDragHandlePress}
-          onTitlebarRelease={handleEditWindowDragHandleRelease}
-          onCancel={() => {
-            pageActions.abortEditingNote(state)
-          }}
-          onSave={(note) => {
-            pageActions.saveEditedNote(state, note)
-          }}
-        />
-      }
 
       {/* Image elements (to be used by the cache renderer)
       pamet.parseMediaUrl(url!)
@@ -885,6 +788,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           />
         ))}
 
-    </main>
+      </PageOverlay> 
+
+
+    // </main>
   );
 });
