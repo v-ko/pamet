@@ -11,7 +11,7 @@ import { getLogger } from 'fusion/logging';
 import { Note } from '../../model/Note';
 import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
-import { EditComponentState } from '../note/EditComponent';
+import { NoteEditViewState } from '../note/NoteEditView';
 import { Size } from '../../util/Size';
 import { CanvasPageRenderer } from './DirectRenderer';
 
@@ -72,7 +72,7 @@ export class PageViewState {
     autoNavAnimation: ViewportAutoNavAnimation | null = null;
 
     // Edit window
-    noteEditWindowState: EditComponentState | null = null;
+    noteEditWindowState: NoteEditViewState | null = null;
 
     // Note resize related
     noteResizeClickRealPos: Point2D = new Point2D(0, 0);
@@ -82,7 +82,7 @@ export class PageViewState {
 
     // Element move related
     realMousePosOnElementMoveStart: Point2D = new Point2D(0, 0);
-    movedNoteVSs: NoteViewState[] = [];  // Be explicit about it. 
+    movedNoteVSs: NoteViewState[] = [];  // Be explicit about it.
     movedArrowVSs: ArrowViewState[] = []; // Also marker for restoring state on abort
 
     // Arrow related

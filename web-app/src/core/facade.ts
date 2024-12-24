@@ -20,6 +20,7 @@ import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
 import { KeybindingService } from "../services/KeybindingService";
 import { commands } from "./commands";
+import { FocusManager } from "../services/FocusManager";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -40,6 +41,7 @@ export class PametFacade extends PametStore {
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService = new KeybindingService();
+    focusService: FocusManager = new FocusManager();
     context: any = {};
 
     constructor() {

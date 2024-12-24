@@ -187,6 +187,27 @@ function keybindingToMapKey(r: ResolvedKeybinding): string {
  *   directly as `r.code`.
  */
 function eventToResolvedKeybinding(event: KeyboardEvent): ResolvedKeybinding {
+  // Account for the case where the user presses "Ctrl+Shift+=", etc.
+  // This is used for catching zoom in/out events.
+  if (event.key === '+' && event.ctrlKey) {
+    return {
+      ctrlKey: true,
+      shiftKey: false,
+      altKey: false,
+      metaKey: false,
+      code: 'Equal',
+    };
+  }
+  if (event.key === '-' && event.ctrlKey) {
+    return {
+      ctrlKey: true,
+      shiftKey: false,
+      altKey: false,
+      metaKey: false,
+      code: 'Minus',
+    };
+  }
+
   return {
     ctrlKey: event.ctrlKey,
     shiftKey: event.shiftKey,
@@ -241,6 +262,7 @@ export class KeybindingService {
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
+    console.log('Key pressed:', event.key, event.code, event.ctrlKey, event.shiftKey, event.altKey, event.metaKey);
     const resolved = eventToResolvedKeybinding(event);
     const mapKey = keybindingToMapKey(resolved);
 

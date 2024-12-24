@@ -19,7 +19,7 @@ import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
 import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
 import { commands } from "../../core/commands";
 import { pageActions } from "../../actions/page";
-import EditComponent from "../../components/note/EditComponent";
+import NoteEditView from "../../components/note/NoteEditView";
 import { Point2D } from "../../util/Point2D";
 import { projectActions } from "../../actions/project";
 import { CreatePageDialog } from "../../components/CreateNewPageDialog";
@@ -262,7 +262,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         // we need to properly handle enter/leave events (and offscreen mouse release)
 
 
-        <EditComponent
+        <NoteEditView
           state={currentPageVS.noteEditWindowState}
           onTitlebarPress={(event: React.MouseEvent) => {
             event.preventDefault();
@@ -285,7 +285,6 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
       {state.dialogMode === AppDialogMode.CreateNewPage && (
         <CreatePageDialog
-          isOpen={true}
           onClose={() => projectActions.closeAppDialog(state)}
           onCreate={(name: string) => projectActions.createNewPage(state, name)}
         />

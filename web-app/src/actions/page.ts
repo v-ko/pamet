@@ -7,7 +7,7 @@ import { action } from "fusion/libs/Action";
 import { getLogger } from "fusion/logging";
 import { Rectangle } from "../util/Rectangle";
 import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../core/constants";
-import { EditComponentState } from "../components/note/EditComponent";
+import { NoteEditViewState } from "../components/note/NoteEditView";
 import { pamet } from "../core/facade";
 import { Note } from "../model/Note";
 import { TextNote } from "../model/TextNote";
@@ -207,14 +207,14 @@ class PageActions {
     noteRect.setTopLeft(realPosition)
     note.setRect(noteRect)
 
-    let editWindowState = new EditComponentState(pixSpacePosition, note);
+    let editWindowState = new NoteEditViewState(pixSpacePosition, note);
     state.noteEditWindowState = editWindowState;
   }
 
   @action
   startEditingNote(state: PageViewState, note: Note) {
     let spawnPos = state.viewport.projectPoint(note.rect().topLeft());
-    let editWindowState = new EditComponentState(spawnPos, note);
+    let editWindowState = new NoteEditViewState(spawnPos, note);
     state.noteEditWindowState = editWindowState;
   }
 

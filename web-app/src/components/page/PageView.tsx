@@ -19,7 +19,6 @@ import { arrowActions } from '../../actions/arrow';
 import { noteActions } from '../../actions/note';
 import { InternalLinkNote } from '../../model/InternalLinkNote';
 import { appActions } from '../../actions/app';
-import { projectActions } from '../../actions/project';
 
 
 let log = getLogger('Page.tsx')
@@ -83,14 +82,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const canvasCtx = useCallback(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[canvasCtx] canvas is null")
+      log.error("[canvasCtx] canvas is null")
       return null;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[canvasCtx] canvas context is null")
+      log.error("[canvasCtx] canvas context is null")
       return null;
     }
     return ctx;
@@ -98,10 +97,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     , [canvasRef]);
 
   const updateGeometryHandler = useCallback(() => {
-    console.log("[updateGeometry] called")
     let container = superContainerRef.current;
     if (container === null) {
-      console.log("[updateGeometry] superContainerRef is null")
+      log.error("[updateGeometry] superContainerRef is null")
       return;
     }
     let boundingRect = container.getBoundingClientRect();
@@ -109,14 +107,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     //Adjust canvas size
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[useEffect] canvas is null")
+      log.error("[useEffect] canvas is null")
       return;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[useEffect] canvas context is null")
+      log.error("[useEffect] canvas context is null")
       return;
     }
 
@@ -128,20 +126,18 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     canvas.height = boundingRect.height * dpr;
 
     // Update viewport geometry
-
     pageActions.updateGeometry(
       state,
       [boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height]);
-    console.log("Resized to ", boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height);
 
   }, [state, superContainerRef]);
 
   // Define effects
 
-  // Initial setup -
+  // Initial setup
   useEffect(() => {
     if (!superContainerRef.current) {
-      console.error('superContainerRef is null')
+      log.error('superContainerRef is null')
       return;
     }
     superContainerRef.current.focus()
@@ -149,10 +145,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   // init paperjs
   useEffect(() => {
-    console.log("[useEffect] INTO INIT")
     const paperCanvas = paperCanvasRef.current;
     if (paperCanvas === null) {
-      console.log("[useEffect] canvas is null")
+      log.error("[useEffect] canvas is null")
       return;
     }
     paper.setup(paperCanvas);
@@ -167,7 +162,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // of the superContainer
     let container = superContainerRef.current;
     if (container === null) {
-      console.log("[updateGeometry] superContainerRef is null")
+      log.error("[updateGeometry] superContainerRef is null")
       return;
     }
 
@@ -181,14 +176,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[useEffect] canvas is null")
+      log.error("[useEffect] canvas is null")
       return;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[useEffect] canvas context is null")
+      log.error("[useEffect] canvas context is null")
       return;
     }
 
@@ -640,8 +635,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
-        onFocusCapture={() => { pamet.setContext('canvasFocus', true) }}
-        onBlurCapture={() => { pamet.setContext('canvasFocus', false) }}
+        onFocus={() => { pamet.setContext('canvasFocus', true) }}
+        onBlur={() => { pamet.setContext('canvasFocus', false) }}
       >
 
         {/* Old pamet-canvas element rendering */}
