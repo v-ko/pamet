@@ -1,5 +1,5 @@
 import { action } from "fusion/libs/Action";
-import { WebAppState } from "../containers/app/App";
+import { AppDialogMode, WebAppState } from "../containers/app/App";
 import { pamet } from "../core/facade";
 import { Page, PageData } from "../model/Page";
 import { currentTime, timestamp } from "fusion/util";
@@ -43,20 +43,23 @@ class ProjectActions {
     }
 
     @action
-    createNewPage(appState: WebAppState, forwardLinkLocation: Point2D) {
+    openPageCreationDialog(appState: WebAppState, forwardLinkLocation: Point2D) {
+        appState.dialogMode = AppDialogMode.CreateNewPage;
+        appState.focusPointOnDialogOpen = forwardLinkLocation;
+    }
+
+    @action
+    closeAppDialog(appState: WebAppState) {
+        appState.dialogMode = AppDialogMode.Closed;
+    }
+
+    @action
+    createNewPage(appState: WebAppState, name: string) {
         if (!appState.currentPageViewState) {
             throw Error('No current page. Cannot create a new page via createNewPage. Use createDefaultPage instead.')
         }
-        forwardLinkLocation = snapVectorToGrid(forwardLinkLocation)
+        let forwardLinkLocation = snapVectorToGrid(appState.focusPointOnDialogOpen);
 
-        // Create the page
-        // Find free name
-        let name = 'New Page'
-        let i = 1
-        while (pamet.findOne({ type: Page, name: name })) {
-            name = `New Page ${i}`
-            i++
-        }
         let currentTimestamp = timestamp(currentTime());
         let newPage = new Page({
             name: name,

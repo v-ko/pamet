@@ -19,13 +19,13 @@ class AppActions {
             state.currentPageId = pageId;
             state.currentPageViewState = new PageViewState(page);
             state.currentPageViewState.createElementViewStates();
-            state.pageError = PageError.NO_ERROR;
+            state.pageError = PageError.NoError;
         } else {
             console.log("Page not found. FDS:", pamet.frontendDomainStore)
             log.error('Page not found in the domain store.')
             state.currentPageId = null;
             state.currentPageViewState = null;
-            state.pageError = PageError.NOT_FOUND;
+            state.pageError = PageError.NotFound;
         }
         pamet.router.pushRoute(pamet.router.routeFromAppState(state));
     }
@@ -59,7 +59,7 @@ class AppActions {
     }
 
     @action
-    setCurrentProject(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NONE) {
+    setCurrentProject(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NoError) {
         state.currentProjectId = projectData ? projectData.id : null;
         state.projectError = projectError;
     }

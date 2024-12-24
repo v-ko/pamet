@@ -21,44 +21,49 @@ import { commands } from "../../core/commands";
 import { pageActions } from "../../actions/page";
 import EditComponent from "../../components/note/EditComponent";
 import { Point2D } from "../../util/Point2D";
+import { projectActions } from "../../actions/project";
+import { CreatePageDialog } from "../../components/CreateNewPageDialog";
 
 let log = getLogger("App");
 
+export enum AppDialogMode {
+  Closed,
+  CreateNewPage,
+  CreateNewProject,
+  ProjectProperties,
+  PageProperties
+}
+
 export enum PageError {
-  NO_ERROR = 0,
-  NOT_FOUND = 1
+  NoError,
+  NotFound
 }
 
 export enum ProjectError {
-  NONE = 0,
-  NOT_FOUND = 1
+  NoError,
+  NotFound
 }
 
 export interface LocalStorageState {
   available: boolean;
 
 }
-
 export interface PametStorageState {
   localStorage: LocalStorageState;
-
-
+  //
 }
 
-export enum PametAppLifeCycleState {
-
-}
 
 export class WebAppState {
   deviceId: string | null = null;
   userId: string | null = null;
 
   currentProjectId: string | null = null;
-  projectError: ProjectError = ProjectError.NONE;
+  projectError: ProjectError = ProjectError.NoError;
 
   currentPageId: string | null = null;
   currentPageViewState: PageViewState | null = null;
-  pageError: PageError = PageError.NO_ERROR;
+  pageError: PageError = PageError.NoError;
 
   storageState: PametStorageState = {
     localStorage: {
@@ -66,6 +71,8 @@ export class WebAppState {
     }
   }
 
+  dialogMode: AppDialogMode = AppDialogMode.Closed;
+  focusPointOnDialogOpen: Point2D = new Point2D(0, 0);  // Either the mouse location or the center of the screen
   mouse: MouseState = new MouseState();
 
   constructor() {
@@ -77,6 +84,7 @@ export class WebAppState {
       storageState: observable,
       pageError: observable,
       projectError: observable,
+      dialogMode: observable,
     });
   }
 
@@ -146,16 +154,16 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
     shouldDisplayPage = false
   }
 
-  if (state.projectError === ProjectError.NOT_FOUND) {
+  if (state.projectError === ProjectError.NotFound) {
     errorMessages.push("Project not found")
     shouldDisplayPage = false
   } else {
-    if (state.pageError === PageError.NOT_FOUND) {
+    if (state.pageError === PageError.NotFound) {
       errorMessages.push("Page not found")
       shouldDisplayPage = false
     }
 
-    if (state.currentPageViewState === null && state.pageError === PageError.NO_ERROR) {
+    if (state.currentPageViewState === null && state.pageError === PageError.NoError) {
       errorMessages.push("Page not set")
     }
 
@@ -273,9 +281,18 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onSave={(note) => {
             pageActions.saveEditedNote(currentPageVS, note)
           }}
+        />}
+
+      {state.dialogMode === AppDialogMode.CreateNewPage && (
+        <CreatePageDialog
+          isOpen={true}
+          onClose={() => projectActions.closeAppDialog(state)}
+          onCreate={(name: string) => projectActions.createNewPage(state, name)}
         />
-      }
+      )}
     </div>
+
+
   );
 });
 

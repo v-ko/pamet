@@ -9,6 +9,7 @@ import { pamet } from '../../core/facade';
 import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
 import { currentTime, timestamp } from 'fusion/util';
 import { getLogger } from 'fusion/logging';
+import { PametTabIndex } from '../../core/constants';
 
 let log = getLogger('EditComponent');
 
@@ -289,7 +290,8 @@ const EditComponent: React.FC<EditComponentProps> = observer((
           </label>
           <textarea
             // placeholder="Enter text here"
-            autoFocus
+            tabIndex={PametTabIndex.NoteEditViewWidget1}
+            autoFocus={true}
             defaultValue={state.targetNote.content.text}
             onChange={(e) => {
               setNoteData({
@@ -308,6 +310,8 @@ const EditComponent: React.FC<EditComponentProps> = observer((
               borderWidth: '2px',
               borderRadius: '5px',
             }}
+            onFocusCapture={ () => pamet.setContext('noteEditViewFocused', true) }
+            onBlurCapture={ () => pamet.setContext('noteEditViewFocused', false) }
           />
         </div>
       </div>

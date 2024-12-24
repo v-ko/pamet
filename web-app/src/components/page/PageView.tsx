@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import { observer } from 'mobx-react-lite';
 
-import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../core/constants';
+import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { pageActions } from '../../actions/page';
 import { PageMode, PageViewState } from './PageViewState';
@@ -14,15 +14,12 @@ import paper from 'paper';
 import { ElementViewState } from './ElementViewState';
 import { pamet } from '../../core/facade';
 import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
-import { commands } from '../../core/commands';
-import EditComponent from '../note/EditComponent';
-import { NoteViewState } from '../note/NoteViewState';
-import { Note } from '../../model/Note';
 
 import { arrowActions } from '../../actions/arrow';
 import { noteActions } from '../../actions/note';
 import { InternalLinkNote } from '../../model/InternalLinkNote';
 import { appActions } from '../../actions/app';
+import { projectActions } from '../../actions/project';
 
 
 let log = getLogger('Page.tsx')
@@ -554,113 +551,19 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
   }
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    console.log('KEY PRESSED', event.code)
-
-    let preventDefault = true;
-    let noModifiers = !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
-
-    if (noModifiers){
-      if (event.code === 'KeyN') {
-        // Start note creation
-        commands.createNewNote();
-      } else if (event.code === 'KeyE') {
-        // Start editing the selected note
-        let selectedNote: Note | null = null;
-        for (let elementVS of state.selectedElementsVS.values()) {
-          if (elementVS instanceof NoteViewState) {
-            selectedNote = elementVS.note();
-            break;
-          }
-        }
-        if (selectedNote !== null) {
-          pageActions.startEditingNote(state, selectedNote);
-        }
-      } else if (event.code === 'KeyL') {
-        // Start note creation
-        arrowActions.startArrowCreation(state);
-      } else if (event.code === 'KeyA') {
-        // Auto-size selected notes
-        pageActions.autoSizeSelectedNotes(state);
-      } else if (event.code === 'Escape') {
-        pageActions.clearMode(state);
-      } else if (event.code === 'KeyH') {
-        commands.showHelp();
-      } else if (event.code === 'Delete') {
-        // Delete selected notes and arrows
-        pageActions.deleteSelectedElements(state);
-
-        // Colors
-      } else if (event.code === 'Digit1') {
-        // Set primary color to selected elements
-        commands.colorSelectedElementsPrimary();
-      } else if (event.code === 'Digit2') {
-        // Set error color to selected elements
-        commands.colorSelectedElementsSuccess();
-      } else if (event.code === 'Digit3') {
-        // Set success color to selected elements
-        commands.colorSelectedElementsError();
-      } else if (event.code === 'Digit4') {
-        // Set neutral color
-        commands.colorSelectedElementsSurfaceDim();
-      } else if (event.code === 'Digit5') {
-        // Remove note background
-        commands.setNoteBackgroundToTransparent();
-      } else if (event.code === 'KeyP') {
-        // Start note creation
-        commands.createNewPage();
-      } else {
-        preventDefault = false;
-      }
-    } else {
-      if (event.key === 'KeyC' && event.ctrlKey) {
-        // event.preventDefault();
-        // copySelectedToClipboard();
-      }
-      else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
-        // Zoom in
-        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
-      } else if (event.ctrlKey && event.key === '-') { // Minus key
-        // Zoom out
-        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
-      } else if (event.ctrlKey && event.key === '0') { // Zero key
-        // Reset zoom level
-        pageActions.updateViewport(state, state.viewportCenter, 1);
-      } else if (event.code === 'KeyA' && event.ctrlKey) {
-        // Select all
-        let selectionMap = new Map();
-        for (let noteVS of state.noteViewStatesByOwnId.values()) {
-          selectionMap.set(noteVS, true);
-        }
-        for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
-          selectionMap.set(arrowVS, true);
-        }
-        pageActions.updateSelection(state, selectionMap);
-      } else {
-        preventDefault = false;
-      }
-    }
-
-    if (preventDefault) {
-      event.preventDefault(); // is this correct?
-    }
-  }, [state]);
-
   // Add native handlers for key/shortcut and wheel events
   useEffect(() => {
     // Existing keydown handler remains unchanged
 
 
     // Add both event listeners
-    window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("wheel", handleWheel, { passive: false }); // Set passive to false to allow preventDefault
 
     // Cleanup function to remove both event listeners
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [state, handleWheel, handleKeyDown]);
+  }, [state, handleWheel]);
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
@@ -722,7 +625,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       style={{ cursor: state.mode === PageMode.CreateArrow ? 'crosshair' : 'default' }}
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
         ref={superContainerRef}
-        tabIndex={0}  // To make the page focusable
+        tabIndex={PametTabIndex.Page}  // To make the page focusable
+        autoFocus={true}
         // onKeyDown={handleKeyDown}
         onDoubleClick={handleDoubleClick}
         // we watch for mouse events here, to get them in pixel space coords
@@ -736,6 +640,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
+        onFocusCapture={() => { pamet.setContext('canvasFocus', true) }}
+        onBlurCapture={() => { pamet.setContext('canvasFocus', false) }}
       >
 
         {/* Old pamet-canvas element rendering */}
@@ -788,7 +694,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           />
         ))}
 
-      </PageOverlay> 
+      </PageOverlay>
 
 
     // </main>

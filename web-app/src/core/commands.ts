@@ -5,9 +5,21 @@ import { getLogger } from "fusion/logging";
 import { Point2D } from "../util/Point2D";
 import { arrowActions } from "../actions/arrow";
 import { projectActions } from "../actions/project";
+import { Note } from "../model/Note";
+import { NoteViewState } from "../components/note/NoteViewState";
+import { PageViewState } from "../components/page/PageViewState";
 
 let log = getLogger('PametCommands');
 
+
+function getCurrentPageViewState(): PageViewState {
+    let appState = pamet.appViewState;
+    let pageVS = appState.currentPageViewState;
+    if (pageVS === null) {
+        throw Error('No current page view state');
+    }
+    return pageVS;
+}
 
 class PametCommands {
     @command('Create new note')
@@ -15,11 +27,7 @@ class PametCommands {
         console.log('createNewNote command executed')
 
         // Get the real mouse pos on canvas (if it's over the viewport)
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to create a note with not page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         let mousePos = pageVS.projectedMousePosition;
         let creationPos: Point2D;
 
@@ -35,34 +43,19 @@ class PametCommands {
 
     @command('Auto-size selected notes')
     autoSizeSelectedNotes() {
-        console.log('autoSizeSelectedNotes command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to auto-size notes with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         pageActions.autoSizeSelectedNotes(pageVS);
     }
 
     @command('Delete selected notes and arrows')
-    deleteSelectedNotesAndArrows() {
-        console.log('deleteSelectedNotesAndArrows command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to delete notes with no page view state');
-            return;
-        }
+    deleteSelectedElements() {
+        let pageVS = getCurrentPageViewState();
         pageActions.deleteSelectedElements(pageVS);
     }
 
     @command('Set default color to selected elements')
     colorSelectedElementsPrimary() {
-        console.log('colorSelectedElementsPrimary command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to color notes with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedNotes(pageVS, 'onPrimary', 'primary');
         pageActions.colorSelectedArrows(pageVS, 'onPrimary');
         pageActions.clearSelection(pageVS);
@@ -70,12 +63,7 @@ class PametCommands {
 
     @command('Set attention color to selected elements')
     colorSelectedElementsError() {
-        console.log('colorSelectedElementsError command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to color notes with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedNotes(pageVS, 'onError', 'error');
         pageActions.colorSelectedArrows(pageVS, 'onError');
         pageActions.clearSelection(pageVS);
@@ -83,12 +71,7 @@ class PametCommands {
 
     @command('Set success color to selected elements')
     colorSelectedElementsSuccess() {
-        console.log('colorSelectedElementsSuccess command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to color notes with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedNotes(pageVS, 'onSuccess', 'success');
         pageActions.colorSelectedArrows(pageVS, 'onSuccess');
         pageActions.clearSelection(pageVS);
@@ -96,12 +79,7 @@ class PametCommands {
 
     @command('Set neutral color to selected elements')
     colorSelectedElementsSurfaceDim() {
-        console.log('colorSelectedElementsSurfaceDim command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to color notes with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedNotes(pageVS, 'onSurface', 'surfaceDim');
         pageActions.colorSelectedArrows(pageVS, 'onSurface');
         pageActions.clearSelection(pageVS);
@@ -109,24 +87,14 @@ class PametCommands {
 
     @command('Set transparent background to selected notes')
     setNoteBackgroundToTransparent() {
-        console.log('colorSelectedNotesTransparent command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to color notes with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedNotes(pageVS, null, 'transparent');
         pageActions.clearSelection(pageVS);
     }
 
     @command('Create arrow')
     createArrow() {
-        console.log('createArrow command executed')
-        let pageVS = pamet.appViewState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('Trying to create arrow with no page view state');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         arrowActions.startArrowCreation(pageVS);
     }
 
@@ -142,11 +110,7 @@ class PametCommands {
         // Determine forward link location - either under mouse or
         // in the center of the viewport
         // Get the real mouse pos on canvas (if it's over the viewport)
-        let pageVS = appState.currentPageViewState;
-        if (pageVS === null) {
-            log.error('A current/default page should be present for a user to create a new one');
-            return;
-        }
+        let pageVS = getCurrentPageViewState();
         let mousePos = pageVS.projectedMousePosition;
         let forwardLinkLocation: Point2D;
         if (mousePos === null) {
@@ -155,7 +119,61 @@ class PametCommands {
             forwardLinkLocation = pageVS.viewport.unprojectPoint(mousePos);
         }
 
-        projectActions.createNewPage(appState, forwardLinkLocation);
+        projectActions.openPageCreationDialog(appState, forwardLinkLocation);
+    }
+
+    @command('Edit note')
+    editSelectedNote() {
+        let pageVS = getCurrentPageViewState();
+
+        // Start editing the selected note
+        let selectedNote: Note | null = null;
+        for (let elementVS of pageVS.selectedElementsVS.values()) {
+            if (elementVS instanceof NoteViewState) {
+                selectedNote = elementVS.note();
+                break;
+            }
+        }
+        if (selectedNote !== null) {
+            pageActions.startEditingNote(pageVS, selectedNote);
+        }
+    }
+
+    @command('Cancel page action')
+    cancelPageAction() {
+        pageActions.clearMode(getCurrentPageViewState());
+    }
+
+    @command('Page: Zoom in')
+    pageZoomIn() {
+        let pageVS = getCurrentPageViewState();
+        pageActions.updateViewport(pageVS, pageVS.viewportCenter, pageVS.viewportHeight / 1.1);
+    }
+
+    @command('Page: Zoom out')
+    pageZoomOut() {
+        let pageVS = getCurrentPageViewState();
+        pageActions.updateViewport(pageVS, pageVS.viewportCenter, pageVS.viewportHeight * 1.1);
+    }
+
+    @command('Page: Reset zoom')
+    pageZoomReset() {
+        let pageVS = getCurrentPageViewState();
+        pageActions.updateViewport(pageVS, pageVS.viewportCenter, 1);
+    }
+
+    @command('Select all')
+    selectAll() {
+        let pageVS = getCurrentPageViewState();
+        // Select all
+        let selectionMap = new Map();
+        for (let noteVS of pageVS.noteViewStatesByOwnId.values()) {
+            selectionMap.set(noteVS, true);
+        }
+        for (let arrowVS of pageVS.arrowViewStatesByOwnId.values()) {
+            selectionMap.set(arrowVS, true);
+        }
+        pageActions.updateSelection(pageVS, selectionMap);
     }
 }
 

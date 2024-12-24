@@ -1,6 +1,6 @@
 import { ProjectError, WebAppState } from "../containers/app/App";
 import { getLogger } from 'fusion/logging';
-import { Store, SearchFilter } from 'fusion/storage/BaseStore';
+import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
 import { PametStore } from "../storage/PametStore";
 import { Entity, EntityData } from "fusion/libs/Entity";
@@ -18,6 +18,8 @@ import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
+import { KeybindingService } from "../services/KeybindingService";
+import { commands } from "./commands";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -34,15 +36,105 @@ export class PametFacade extends PametStore {
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
-    private _changeBufferForRootAction: Array<Change> = [];
     private _config: PametConfig | null = null;
     private _storageService: StorageService | null = null;
-    private _projectManagerSubscriptionId: number | null = null;
     router: RoutingService = new RoutingService();
+    keybindingService: KeybindingService = new KeybindingService();
+    context: any = {};
 
     constructor() {
         super()
         this._apiClient = new ApiClient('http://localhost', 3333, '', true);
+
+        this.keybindingService.setKeybindings([
+            // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
+            {
+                key: 'n',
+                command: commands.createNewNote.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'e',
+                command: commands.editSelectedNote.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'l',
+                command: commands.createArrow.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'a',
+                command: commands.autoSizeSelectedNotes.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'escape',
+                command: commands.cancelPageAction.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'h',
+                command: commands.showHelp.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'delete',
+                command: commands.deleteSelectedElements.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '1',
+                command: commands.colorSelectedElementsPrimary.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '2',
+                command: commands.colorSelectedElementsSuccess.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '3',
+                command: commands.colorSelectedElementsError.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '4',
+                command: commands.colorSelectedElementsSurfaceDim.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '5',
+                command: commands.setNoteBackgroundToTransparent.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'p',
+                command: commands.createNewPage.name,
+                when: 'canvasFocus'
+            },
+
+            {
+                key: 'ctrl+=',
+                command: commands.pageZoomIn.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+-',
+                command: commands.pageZoomOut.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+0',
+                command: commands.pageZoomReset.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+a',
+                command: commands.selectAll.name,
+                when: 'canvasFocus'
+            },
+        ]);
 
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
@@ -62,6 +154,11 @@ export class PametFacade extends PametStore {
             }
             completedActionsLogger.info(rootAction.name);
         });
+    }
+
+    setContext(key: string, value: boolean) {
+        console.log('Setting context', key, value)
+        this.context[key] = value;
     }
 
     projectScopedUrlToGlobal(url: string): string {
@@ -199,7 +296,7 @@ export class PametFacade extends PametStore {
             let projectData = this.project(projectId);
             appActions.setCurrentProject(appState, projectData);
         } catch (e) {
-            appActions.setCurrentProject(appState, null, ProjectError.NOT_FOUND);
+            appActions.setCurrentProject(appState, null, ProjectError.NotFound);
         }
     }
 
