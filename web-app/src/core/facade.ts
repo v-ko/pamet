@@ -12,7 +12,7 @@ import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfig } from "../config/Config";
 import { StorageService } from "../storage/StorageService";
 import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
-import { RepoUpdateData } from "../../../fusion/js-src/src/storage/BaseRepository";
+import { RepoUpdateData } from "fusion/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/libs/Action";
@@ -21,7 +21,6 @@ import { KeybindingService } from "../services/KeybindingService";
 import { commands } from "./commands";
 import { FocusManager } from "../services/FocusManager";
 import { Delta } from "fusion/storage/Delta";
-import { elementOwnId } from "../model/Element";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');

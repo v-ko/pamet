@@ -1,4 +1,4 @@
-import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
+import { ObservableMap, ObservableSet, computed, makeObservable, observable, toJS } from 'mobx';
 import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT, RESIZE_CIRCLE_RADIUS } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { Page, PageData } from '../../model/Page';

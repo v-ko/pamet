@@ -4,7 +4,7 @@ import { SerializedStoreData } from 'fusion/storage/BaseStore';
 import { Delta, DeltaData } from 'fusion/storage/Delta';
 import { getLogger } from "fusion/logging";
 import serviceWorkerUrl from "../service-worker?url"
-import { RepoUpdateData } from '../../../fusion/js-src/src/storage/BaseRepository';
+import { RepoUpdateData } from "fusion/storage/BaseRepository"
 import { createId } from 'fusion/util';
 import { buildHashTree } from 'fusion/storage/HashTree';
 
@@ -151,8 +151,8 @@ export class StorageService {
         // Confirm the broadcast link
         try {
             await service.test();
-        } catch (error) {
-            throw Error("Service worker test failed");
+        } catch (e) {
+            throw Error(`Service worker test failed: ${e}`);
         }
 
         this._service = service;
@@ -188,7 +188,9 @@ export class StorageService {
     }
     commit(projectId: string, deltaData: DeltaData, message: string) {
         let request = createCommitRequest(projectId, deltaData, message)
-        this._storageOperationRequest(request);
+        this._storageOperationRequest(request).catch((error) => {
+            log.error('Error committing', error)
+        })
     }
     headState(projectId: string): Promise<SerializedStoreData> {
         return this.service.headState(projectId);
@@ -236,6 +238,10 @@ export class StorageServiceActual {
     }
     get inWorker(): boolean { // Might need to be more specific?
         return typeof self !== 'undefined';
+    }
+
+    test() {
+        log.info('Test!!!!!!!!!')
     }
 
     async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<number> {
@@ -303,7 +309,9 @@ export class StorageServiceActual {
 
         // Call queue processing deferred
         setTimeout(() => {
-            this.processStorageOperationQueue();
+            this.processStorageOperationQueue().catch((error) => {
+                log.error('Error processing storage operation queue', error)
+            });
         });
     }
     async _executeStorageOperationRequest(request: StorageOperationRequest): Promise<void> {
@@ -369,12 +377,18 @@ export class StorageServiceActual {
         if (updateMessage.storageServiceId === this.id) {
             if (updateMessage.projectId in this.repoManagers) {
                 let repoManager = this.repoManagers[updateMessage.projectId];
-                repoManager.inMemoryRepo.pull(repoManager.localStorageRepo)
+                repoManager.inMemoryRepo.pull(repoManager.localStorageRepo).then(
+                    () => {
+                        this._notifySubscribers(updateMessage.projectId, updateMessage.update);
+                    }
+                ).catch((error) => {
+                    log.error('Error pulling local storage update', error)
+                });
             }
+        } else {
+            // Notify all subscribers
+            this._notifySubscribers(updateMessage.projectId, updateMessage.update);
         }
-
-        // Notify all subscribers
-        this._notifySubscribers(updateMessage.projectId, updateMessage.update);
     }
 
     _notifySubscribers(projectId: string, update: RepoUpdateData) {

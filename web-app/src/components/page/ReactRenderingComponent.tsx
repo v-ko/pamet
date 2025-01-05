@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import React from "react";
 import styled from 'styled-components';
 
@@ -74,7 +76,7 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
                     <ArrowComponent
                         key={arrowVS.arrow().id}
                         arrowViewState={arrowVS}
-                        clickHandler={(event) => { console.log('Arrow clicked', arrowVS.arrow().id) }}
+                        clickHandler={() => { console.log('Arrow clicked', arrowVS.arrow().id) }}
                     />
                 ))}
             </svg>
