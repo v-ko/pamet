@@ -1,22 +1,26 @@
 import { ProjectError, WebAppState } from "../containers/app/App";
 import { getLogger } from 'fusion/logging';
-import { Store, SearchFilter } from 'fusion/storage/BaseStore';
+import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
 import { PametStore } from "../storage/PametStore";
 import { Entity, EntityData } from "fusion/libs/Entity";
 import { ApiClient } from "../storage/ApiClient";
-import { Page } from "../model/Page";
 import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfig } from "../config/Config";
-import { StorageService, StorageServiceActualInterface } from "../storage/StorageService";
+import { StorageService } from "../storage/StorageService";
 import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
-import { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
-import { RoutingService } from "../services/RoutingService";
+import { RepoUpdateData } from "fusion/storage/BaseRepository";
+import { RoutingService } from "../services/routing/RoutingService";
+import { PametRoute } from "../services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
+import { KeybindingService } from "../services/KeybindingService";
+import { commands } from "./commands";
+import { FocusManager } from "../services/FocusManager";
+import { Delta } from "fusion/storage/Delta";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -27,18 +31,127 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 export class PametFacade extends PametStore {
+    getEntityId() {
+        throw new Error("Method not implemented.");
+    }
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
-    private _changeBufferForRootAction: Array<Change> = [];
     private _config: PametConfig | null = null;
     private _storageService: StorageService | null = null;
-    private _projectManagerSubscriptionId: number | null = null;
     router: RoutingService = new RoutingService();
+    keybindingService: KeybindingService = new KeybindingService();
+    focusService: FocusManager = new FocusManager();
+    context: any = {};
 
     constructor() {
         super()
         this._apiClient = new ApiClient('http://localhost', 3333, '', true);
+
+        this.keybindingService.setKeybindings([
+            // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
+            {
+                key: 'n',
+                command: commands.createNewNote.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'e',
+                command: commands.editSelectedNote.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'l',
+                command: commands.createArrow.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'a',
+                command: commands.autoSizeSelectedNotes.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'escape',
+                command: commands.cancelPageAction.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'h',
+                command: commands.showHelp.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'delete',
+                command: commands.deleteSelectedElements.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '1',
+                command: commands.colorSelectedElementsPrimary.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '2',
+                command: commands.colorSelectedElementsSuccess.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '3',
+                command: commands.colorSelectedElementsError.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '4',
+                command: commands.colorSelectedElementsSurfaceDim.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: '5',
+                command: commands.setNoteBackgroundToTransparent.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'p',
+                command: commands.createNewPage.name,
+                when: 'canvasFocus'
+            },
+
+            {
+                key: 'ctrl+=',
+                command: commands.pageZoomIn.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+-',
+                command: commands.pageZoomOut.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+0',
+                command: commands.pageZoomReset.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+a',
+                command: commands.selectAll.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+e',
+                command: commands.openPageProperties.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+shift+y',  // tmp, could not find a sane shortcut
+                command: commands.createNewPage.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+shift+u',  // tmp, could not find a sane shortcut
+                command: commands.storeStateToClipboard.name,
+                when: 'canvasFocus'
+            },
+        ]);
 
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
@@ -60,12 +173,17 @@ export class PametFacade extends PametStore {
         });
     }
 
-    pametSchemaToHttpUrl(url: string): string {
-        if (!url.startsWith('pamet:')) {
-            throw Error('Invalid media url: ' + url)
+    setContext(key: string, value: boolean) {
+        console.log('Setting context', key, value)
+        this.context[key] = value;
+    }
+
+    projectScopedUrlToGlobal(url: string): string {
+        let route = PametRoute.fromUrl(url);
+        if (!route.isInternal) {
+            throw Error('Url is not internal: ' + url)
         }
-        url = url.slice('pamet:'.length);
-        return this._apiClient.endpointUrl(url);
+        return this._apiClient.endpointUrl(route.path());
     }
 
     get frontendDomainStore(): FrontendDomainStore {
@@ -178,7 +296,7 @@ export class PametFacade extends PametStore {
         this._frontendDomainStore = domainStore;
 
         // Repo update handler
-        let repoUpdateHandler = (repoUpdate: RepoUpdate) => {
+        let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
             // This handler will be called whenever the repo is updated
             domainStore.receiveRepoUpdate(repoUpdate)
         }
@@ -195,7 +313,7 @@ export class PametFacade extends PametStore {
             let projectData = this.project(projectId);
             appActions.setCurrentProject(appState, projectData);
         } catch (e) {
-            appActions.setCurrentProject(appState, null, ProjectError.NOT_FOUND);
+            appActions.setCurrentProject(appState, null, ProjectError.NotFound);
         }
     }
 
@@ -246,59 +364,56 @@ export class PametFacade extends PametStore {
 }
 
 
-export function updateViewModelFromChanges(appState: WebAppState, changes: Array<Change>) {
+export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
     /**
      * A reducer-like function to map entity changes to ViewStates
      * Will be used synchrously from the facade entity CRUD methods (inside actions)
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
      */
-    console.log('Applying changes to view states', changes)
-    for (let change of changes) {
-        // if page
-        let entity = change.lastState;
+    console.log('Applying delta to view states', delta)
 
+    for (let change of delta.changes()) {
         let currentPageVS = appState.currentPageViewState
         if (!currentPageVS) {
             continue
         }
 
-        if (entity instanceof Page) {
-
-
-            // if (change.isCreate()) // pass
+        // If it's the current page
+        let currentPageId = currentPageVS.page.id;
+        let childVS = currentPageVS.viewStateForElementId(change.entityId)
+        if (currentPageId === change.entityId) {
             if (change.isDelete()) {
-                // remove
-
-                // If current is removed - go to the project
-
-                if (currentPageVS.page.id === entity.id) {
+                // If current page gets removed - go to the project page
+                if (currentPageVS.page.id === change.entityId) {
                     let projectId = appState.currentProjectId;
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    pamet.router.setRoute({ projectId: projectId });
+                    let route = new PametRoute();
+                    route.projectId = projectId;
+                    pamet.router.setRoute(route);
                 }
             }
             else if (change.isUpdate()) {
-                // update data
-                currentPageVS.updateFromPage(entity);
+                // update view state
+                currentPageVS.updateFromChange(change);
             }
-        }
-        else if (entity instanceof Note || entity instanceof Arrow) {
-            // get current page vs
-            if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
-                // Skip processing if the parent of the element is not open
-                continue;
-            }
-
-            if (change.isCreate()) {
+        } else if (childVS && change.isDelete()) {
+            currentPageVS.removeViewStateForElement(childVS.element());
+        } else if (childVS && change.isUpdate()) {
+            // update view state
+            childVS.updateFromChange(change);
+        } else if (change.isCreate()) {
+            // If it's a new element
+            let entity = pamet.findOne({ id: change.entityId });
+            if (entity instanceof Note || entity instanceof Arrow) {
+                // get current page vs
+                if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
+                    // Skip processing if the parent of the element is not open
+                    continue;
+                }
                 currentPageVS.addViewStateForElement(entity);
-            } else if (change.isDelete()) {
-                currentPageVS.removeViewStateForElement(entity);
-            }
-            else if (change.isUpdate()) {
-                currentPageVS.updateEVS_fromElement(entity);
             }
         }
     }

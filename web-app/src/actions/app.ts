@@ -1,37 +1,33 @@
-import { PageError, ProjectError, WebAppState } from "../containers/app/App";
+import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/App";
 import type { LocalStorageState } from "../containers/app/App";
 import { pamet } from "../core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";
 import { PageViewState } from "../components/page/PageViewState";
 import type { ProjectData } from "../model/config/Project";
-import { Page } from "../model/Page";
 
 
 let log = getLogger("WebAppActions");
 
 class AppActions {
     @action
-    setCurrentPage(state: WebAppState, pageId: string | null) {
+    setCurrentPage(state: WebAppState, pageId: string) {
         log.info(`Setting current page to ${pageId}`);
-
-        if (pageId === null) {
-            state.currentPageViewState = null;
-            state.pageError = PageError.NONE;
-            return;
-        }
 
         let page = pamet.page(pageId);
         if (page) {
+            state.currentPageId = pageId;
             state.currentPageViewState = new PageViewState(page);
             state.currentPageViewState.createElementViewStates();
-            state.pageError = PageError.NONE;
+            state.pageError = PageError.NoError;
         } else {
             console.log("Page not found. FDS:", pamet.frontendDomainStore)
             log.error('Page not found in the domain store.')
+            state.currentPageId = null;
             state.currentPageViewState = null;
-            state.pageError = PageError.NOT_FOUND;
+            state.pageError = PageError.NotFound;
         }
+        pamet.router.pushRoute(pamet.router.routeFromAppState(state));
     }
 
     @action
@@ -63,9 +59,19 @@ class AppActions {
     }
 
     @action
-    setCurrentProject(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NONE) {
+    setCurrentProject(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NoError) {
         state.currentProjectId = projectData ? projectData.id : null;
         state.projectError = projectError;
+    }
+
+    @action
+    closeAppDialog(appState: WebAppState) {
+        appState.dialogMode = AppDialogMode.Closed;
+    }
+
+    @action
+    openPageProperties(appState: WebAppState) {
+        appState.dialogMode = AppDialogMode.PageProperties;
     }
 }
 

@@ -2,31 +2,23 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import styled from 'styled-components';
 import { observer } from 'mobx-react-lite';
 
-import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from '../../core/constants';
+import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from '../../core/constants';
 import { Point2D } from '../../util/Point2D';
 import { pageActions } from '../../actions/page';
-import { TourComponent } from '../Tour';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
 import { getLogger } from 'fusion/logging';
-import { reaction, runInAction } from 'mobx';
+import { reaction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
 import { ElementViewState } from './ElementViewState';
 import { pamet } from '../../core/facade';
 import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
-import { commands } from '../../core/commands';
-import EditComponent from '../note/EditComponent';
-import { NoteViewState } from '../note/NoteViewState';
-import { Size } from '../../util/Size';
-import { Note } from '../../model/Note';
-import Panel from './Panel';
-import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
-import shareIconUrl from '../../resources/icons/share-2.svg';
-import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
-import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
+
 import { arrowActions } from '../../actions/arrow';
 import { noteActions } from '../../actions/note';
+import { InternalLinkNote } from '../../model/InternalLinkNote';
+import { appActions } from '../../actions/app';
 
 
 let log = getLogger('Page.tsx')
@@ -35,7 +27,7 @@ let log = getLogger('Page.tsx')
 // type Status = 'loading' | 'error' | 'loaded';
 
 
-export const PageOverlay = styled.div`
+export const PageOverlay = styled.main`
 content-visibility: auto;
 flex-grow: 1;
 flex-shrink: 1;
@@ -44,12 +36,6 @@ touch-action: none;
 min-width: 30px;
 `
 
-// Vertical line component
-const VerticalSeparator = styled.div`
-  width: 1px;
-  height: 1em;
-  background: rgba(0,0,0,0.2);
-`
 
 export class MouseState {
   buttons: number = 0;
@@ -79,7 +65,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   /**  */
   // trace(true)
 
-  const [mouse] = useState(new MouseState());
+  // const [mouse] = useState(new MouseState());
+  const mouse = pamet.appViewState.mouse;
 
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
   const [pinchInProgress, setPinchInProgress] = useState<boolean>(false);
@@ -95,47 +82,24 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const canvasCtx = useCallback(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[canvasCtx] canvas is null")
+      log.error("[canvasCtx] canvas is null")
       return null;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[canvasCtx] canvas context is null")
+      log.error("[canvasCtx] canvas context is null")
       return null;
     }
     return ctx;
   }
     , [canvasRef]);
 
-  // Initial setup -
-  useEffect(() => {
-    if (!superContainerRef.current) {
-      console.error('superContainerRef is null')
-      return;
-    }
-    superContainerRef.current.focus()
-  }, [superContainerRef]);
-
-  // init paperjs
-  useEffect(() => {
-    console.log("[useEffect] INTO INIT")
-    const paperCanvas = paperCanvasRef.current;
-    if (paperCanvas === null) {
-      console.log("[useEffect] canvas is null")
-      return;
-    }
-    paper.setup(paperCanvas);
-    paper.view.autoUpdate = false;
-
-  }, [state, canvasCtx, paperCanvasRef]);
-
   const updateGeometryHandler = useCallback(() => {
-    console.log("[updateGeometry] called")
     let container = superContainerRef.current;
     if (container === null) {
-      console.log("[updateGeometry] superContainerRef is null")
+      log.error("[updateGeometry] superContainerRef is null")
       return;
     }
     let boundingRect = container.getBoundingClientRect();
@@ -143,14 +107,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     //Adjust canvas size
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[useEffect] canvas is null")
+      log.error("[useEffect] canvas is null")
       return;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[useEffect] canvas context is null")
+      log.error("[useEffect] canvas context is null")
       return;
     }
 
@@ -162,14 +126,34 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     canvas.height = boundingRect.height * dpr;
 
     // Update viewport geometry
-
     pageActions.updateGeometry(
       state,
       [boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height]);
-    console.log("Resized to ", boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height);
 
   }, [state, superContainerRef]);
 
+  // Define effects
+
+  // Initial setup
+  useEffect(() => {
+    if (!superContainerRef.current) {
+      log.error('superContainerRef is null')
+      return;
+    }
+    superContainerRef.current.focus()
+  }, [superContainerRef]);
+
+  // init paperjs
+  useEffect(() => {
+    const paperCanvas = paperCanvasRef.current;
+    if (paperCanvas === null) {
+      log.error("[useEffect] canvas is null")
+      return;
+    }
+    paper.setup(paperCanvas);
+    paper.view.autoUpdate = false;
+
+  }, [state, canvasCtx, paperCanvasRef]);
 
   // Setup geometry update handling on resize
   useEffect(() => {
@@ -178,7 +162,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // of the superContainer
     let container = superContainerRef.current;
     if (container === null) {
-      console.log("[updateGeometry] superContainerRef is null")
+      log.error("[updateGeometry] superContainerRef is null")
       return;
     }
 
@@ -192,14 +176,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
-      console.log("[useEffect] canvas is null")
+      log.error("[useEffect] canvas is null")
       return;
     }
 
     const ctx = canvas.getContext('2d');
 
     if (ctx === null) {
-      console.log("[useEffect] canvas context is null")
+      log.error("[useEffect] canvas context is null")
       return;
     }
 
@@ -562,110 +546,19 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
   }
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    console.log('KEY PRESSED', event.code)
-
-    let preventDefault = true;
-    let noModifiers = !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey;
-
-    if (noModifiers){
-      if (event.code === 'KeyN') {
-        // Start note creation
-        commands.createNewNote();
-      } else if (event.code === 'KeyE') {
-        // Start editing the selected note
-        let selectedNote: Note | null = null;
-        for (let elementVS of state.selectedElementsVS.values()) {
-          if (elementVS instanceof NoteViewState) {
-            selectedNote = elementVS.note();
-            break;
-          }
-        }
-        if (selectedNote !== null) {
-          pageActions.startEditingNote(state, selectedNote);
-        }
-      } else if (event.code === 'KeyL') {
-        // Start note creation
-        arrowActions.startArrowCreation(state);
-      } else if (event.code === 'KeyA') {
-        // Auto-size selected notes
-        pageActions.autoSizeSelectedNotes(state);
-      } else if (event.code === 'Escape') {
-        pageActions.clearMode(state);
-      } else if (event.code === 'KeyH') {
-        commands.showHelp();
-      } else if (event.code === 'Delete') {
-        // Delete selected notes and arrows
-        pageActions.deleteSelectedElements(state);
-
-        // Colors
-      } else if (event.code === 'Digit1') {
-        // Set primary color to selected elements
-        commands.colorSelectedElementsPrimary();
-      } else if (event.code === 'Digit2') {
-        // Set error color to selected elements
-        commands.colorSelectedElementsSuccess();
-      } else if (event.code === 'Digit3') {
-        // Set success color to selected elements
-        commands.colorSelectedElementsError();
-      } else if (event.code === 'Digit4') {
-        // Set neutral color
-        commands.colorSelectedElementsSurfaceDim();
-      } else if (event.code === 'Digit5') {
-        // Remove note background
-        commands.setNoteBackgroundToTransparent();
-      } else {
-        preventDefault = false;
-      }
-    } else {
-      if (event.key === 'KeyC' && event.ctrlKey) {
-        // event.preventDefault();
-        // copySelectedToClipboard();
-      }
-      else if (event.ctrlKey && (event.key === '+' || event.key === '=')) { // Plus key (with or without Shift)
-        // Zoom in
-        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight / 1.1);
-      } else if (event.ctrlKey && event.key === '-') { // Minus key
-        // Zoom out
-        pageActions.updateViewport(state, state.viewportCenter, state.viewportHeight * 1.1);
-      } else if (event.ctrlKey && event.key === '0') { // Zero key
-        // Reset zoom level
-        pageActions.updateViewport(state, state.viewportCenter, 1);
-      } else if (event.code === 'KeyA' && event.ctrlKey) {
-        // Select all
-        let selectionMap = new Map();
-        for (let noteVS of state.noteViewStatesByOwnId.values()) {
-          selectionMap.set(noteVS, true);
-        }
-        for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
-          selectionMap.set(arrowVS, true);
-        }
-        pageActions.updateSelection(state, selectionMap);
-      } else {
-        preventDefault = false;
-      }
-    }
-
-    if (preventDefault) {
-      event.preventDefault(); // is this correct?
-    }
-  }, [state]);
-
   // Add native handlers for key/shortcut and wheel events
   useEffect(() => {
     // Existing keydown handler remains unchanged
 
 
     // Add both event listeners
-    window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("wheel", handleWheel, { passive: false }); // Set passive to false to allow preventDefault
 
     // Cleanup function to remove both event listeners
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("wheel", handleWheel);
     };
-  }, [state, handleWheel, handleKeyDown]);
+  }, [state, handleWheel]);
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     let mousePos = new Point2D(event.clientX, event.clientY);
@@ -684,33 +577,25 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     let noteVS_underMouse = state.noteViewStateAt(realPos)
     if (noteVS_underMouse !== null) {
+      // If it's a link note - open the link
+      let note = noteVS_underMouse.note();
+      // For an internal link - follow it
+      if (note instanceof InternalLinkNote) {
+        let targetPage = note.targetPage();
+        if (targetPage !== undefined) {
+          appActions.setCurrentPage(pamet.appViewState, targetPage.id)
+          return;
+        }
+      }
+      // For an external link - open in new tab
       pageActions.startEditingNote(state, noteVS_underMouse.note());
-      return;
     } else {
       let realMousePos = state.viewport.unprojectPoint(mousePos);
       pageActions.startNoteCreation(state, realMousePos);
-      return;
     }
   }
 
-  // Edit-window related.
-  // The mouse event handling is tricky, since it's nicer to use the title-bar
-  // onDown/Up/.. signals (we can't make the whole component transparent to
-  // pointer events, since it has a lot of functionality). So we catch the
-  // mouseDown and mouseUp events on the title-bar handle and trigger the
-  // edit-window-drag events accodingly. Also we update the mouse state, because
-  // we need to properly handle enter/leave events (and offscreen mouse release)
-  const handleEditWindowDragHandlePress = (event: React.MouseEvent) => {
-    event.preventDefault();
-    let mousePos = new Point2D(event.clientX, event.clientY);
-    mouse.applyPressEvent(event);
-    pageActions.startEditWindowDrag(state, mousePos);
-  }
-  const handleEditWindowDragHandleRelease = (event: React.MouseEvent) => {
-    event.preventDefault();
-    mouse.applyReleaseEvent(event);
-    pageActions.endEditWindowDrag(state);
-  }
+
   // Rendering related
 
   // We'll crate hidden img elements for notes with images and use them in the
@@ -720,20 +605,19 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     let note = noteVS.note()
     if (note.content.image !== undefined) {
       let url = note.content.image.url;
-      imageUrls.add(pamet.pametSchemaToHttpUrl(url));
+      imageUrls.add(pamet.projectScopedUrlToGlobal(url));
     }
   }
 
   return (
-    <main
+      <PageOverlay
       className='page-view'  // index.css
       // Set cursor to cross if we're in arrow creation mode
       style={{ cursor: state.mode === PageMode.CreateArrow ? 'crosshair' : 'default' }}
-    >
-      <PageOverlay
         // style={{ width: '100%', height: '100%', overflow: 'hidden', touchAction: 'none' }}
         ref={superContainerRef}
-        tabIndex={0}  // To make the page focusable
+        tabIndex={PametTabIndex.Page}  // To make the page focusable
+        autoFocus={true}
         // onKeyDown={handleKeyDown}
         onDoubleClick={handleDoubleClick}
         // we watch for mouse events here, to get them in pixel space coords
@@ -747,6 +631,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
+        onFocus={() => { pamet.setContext('canvasFocus', true) }}
+        onBlur={() => { pamet.setContext('canvasFocus', false) }}
       >
 
         {/* Old pamet-canvas element rendering */}
@@ -782,79 +668,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           ref={paperCanvasRef}
         />
 
-        {/* Main panel - logo, project name, save state, help button */}
-        <Panel align='top-left'>
-
-          <div
-            style={{
-              fontSize: '1.1em',
-              fontWeight: 400,
-              cursor: 'pointer',
-            }}
-            onClick={() => { alert('Not implemented yet') }}
-            title="Go to projects"
-          >PAMET</div>
-          <VerticalSeparator />
-
-          <div
-            style={{
-              cursor: 'pointer'
-            }}
-            onClick={() => { alert('Not implemented yet') }}
-            title="Project properties"
-          >-default-</div>
-          <img src={cloudOffIconUrl} alt="Not saved" />
-          <VerticalSeparator />
-          <img src={shareIconUrl} alt="Share" />
-          <VerticalSeparator />
-          <div
-            title='Main menu'
-            style={{
-              fontSize: '1.2em',
-              textAlign: 'center',
-              cursor: 'pointer',
-            }}
-            onClick={() => { alert('Not implemented yet') }}
-          >
-            ☰
-          </div>
-
-        </Panel>
-
-        <Panel align='top-right'>
-          <img src={helpCircleIconUrl} alt="Help"
-            style={{ cursor: 'pointer' }}
-            onClick={() => { commands.showHelp(); }}
-          />
-          <VerticalSeparator />
-          <div>{state.page.name}</div>
-          <VerticalSeparator />
-          <img src={accountCircleIconUrl} alt="Login/Sign up" />
-        </Panel>
-
-      </PageOverlay> {/*  map container container */}
-
-      {/* {state.page.tour_segments &&
-        <TourComponent
-          parentPageViewState={state}
-          segments={state.page.tour_segments}
-        />
-      } */}
-
-      {/* Edit window (if open) */}
-      {state.noteEditWindowState &&
-        <EditComponent
-          state={state.noteEditWindowState}
-          onTitlebarPress={handleEditWindowDragHandlePress}
-          onTitlebarRelease={handleEditWindowDragHandleRelease}
-          onCancel={() => {
-            pageActions.abortEditingNote(state)
-          }}
-          onSave={(note) => {
-            pageActions.saveEditedNote(state, note)
-          }}
-        />
-      }
 
       {/* Image elements (to be used by the cache renderer)
       pamet.parseMediaUrl(url!)
@@ -872,6 +685,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           />
         ))}
 
-    </main>
+      </PageOverlay>
   );
 });

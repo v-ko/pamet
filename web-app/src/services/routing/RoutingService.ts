@@ -1,85 +1,13 @@
 import { getLogger } from "fusion/logging";
-import { appActions } from "../actions/app";
-import { projectActions } from "../actions/project";
-import { pamet } from "../core/facade";
-import { Page } from "../model/Page";
+import { appActions } from "../../actions/app";
+import { projectActions } from "../../actions/project";
+import { pamet } from "../../core/facade";
+import { Page } from "../../model/Page";
+import { WebAppState } from "../../containers/app/App";
+import { PametRoute, parseUrl, toUrlPath } from "./route";
 
 const log = getLogger('RoutingService');
 
-
-export interface PametRoute {
-    projectId?: string;
-    pageId?: string;
-    viewportCenter?: [number, number];
-    viewportEyeHeight?: number;
-    focusedNoteId?: string;
-}
-
-function parseUrl(url: string): PametRoute {
-    const url_ = new URL(url);
-    const path = url_.pathname;
-    const search = url_.search;
-    const hash = url_.hash;
-
-    let route: PametRoute = {
-        projectId: undefined,
-        pageId: undefined,
-        viewportCenter: undefined,
-        viewportEyeHeight: undefined,
-        focusedNoteId: undefined,
-    };
-
-    // Parse the path
-    const pathParts = path.split('/');
-    if (pathParts.length >= 3 && pathParts[1] === 'project' && pathParts[2].length === 8) {
-        route.projectId = pathParts[2];
-    }
-    if (pathParts.length >= 5 && pathParts[3] === 'page' && pathParts[4].length === 8) {
-        route.pageId = pathParts[4];
-    }
-
-    // Parse the search
-    const searchParams = new URLSearchParams(search);
-    const eye_at = searchParams.get('eye_at');
-    if (eye_at) {
-        const [eyeHeight, x, y] = eye_at.split('/').map(parseFloat);
-        if (!isNaN(eyeHeight) && !isNaN(x) && !isNaN(y)) {
-            route.viewportEyeHeight = eyeHeight;
-            route.viewportCenter = [x, y];
-        }
-    }
-
-    // Parse the hash
-    if (hash.startsWith('#note=')) {
-        route.focusedNoteId = decodeURIComponent(hash.substring(6));
-    }
-
-    return route;
-}
-
-function toUrl(route: PametRoute): string {
-    if (!route.projectId) {
-        return '/';
-    }
-
-    let path = `/project/${encodeURIComponent(route.projectId)}`;
-
-    if (route.pageId && route.pageId.length === 8) {
-        path += `/page/${encodeURIComponent(route.pageId)}`;
-    }
-
-    let search = '';
-    if (route.viewportEyeHeight && route.viewportCenter) {
-        search = `?eye_at=${encodeURIComponent(route.viewportEyeHeight.toString())}/${encodeURIComponent(route.viewportCenter[0].toString())}/${encodeURIComponent(route.viewportCenter[1].toString())}`;
-    }
-
-    let hash = '';
-    if (route.focusedNoteId) {
-        hash = `#note=${encodeURIComponent(route.focusedNoteId)}`;
-    }
-
-    return path + search + hash;
-}
 
 export class RoutingService {
     private routingListener: (() => void) | null = null;
@@ -93,7 +21,7 @@ export class RoutingService {
     }
     setRoute(route: PametRoute): void {
         log.info('Setting route', route)
-        const url = toUrl(route);
+        const url = toUrlPath(route);
         window.history.pushState({}, '', url);
 
         if (this.autoHandleRouteChange) {
@@ -140,7 +68,9 @@ export class RoutingService {
             } else {
                 log.info('Switching to the first project');
                 // TEST IF THIS NOTIFIES back to the handler
-                this.setRoute({ projectId: projects[0].id })
+                let firstProjectRoute = new PametRoute()
+                firstProjectRoute.projectId = projects[0].id;
+                this.setRoute(firstProjectRoute);
                 return;
             }
         }
@@ -157,15 +87,6 @@ export class RoutingService {
         // if there's a page id
         let pageId = route.pageId;
         if (pageId !== undefined) {
-            // // TMP - if missing redirect to project
-            // let page = pamet.findOne({ id: pageId });
-            // if (!page) {
-            //     log.error('Page not found in the repo for id', pageId);
-            //     log.info('Removing page id from the route')
-            //     log.info("REMOVE THIS LATER")
-            //     this.setRoute({ projectId: projectId });
-            //     return;
-            // }
             appActions.setCurrentPage(pamet.appViewState, pageId);
         } else {  // If there's no page id
             // Goto first/default page
@@ -196,6 +117,8 @@ export class RoutingService {
                     goToPageId = firstPage.id;
                 } else {  // If no pages present
                     // Create a default page
+                    log.info('No pages found in the project. Creating a default page');
+                    // TODO: Move that logic to somewhere else
                     projectActions.createDefaultPage(pamet.appViewState);
                     let newPage = pamet.findOne({ type: Page });
                     if (!newPage) {
@@ -207,10 +130,44 @@ export class RoutingService {
             }
 
             if(goToPageId !== undefined) {
-                this.setRoute({ projectId: projectId, pageId: goToPageId });
+                let defaultPageRoute = new PametRoute();
+                defaultPageRoute.projectId = projectId;
+                defaultPageRoute.pageId = goToPageId;
+                this.setRoute(defaultPageRoute);
             } else {
                 log.error('Could not find/create a page to go to.');
             }
         }
+    }
+
+    routeFromAppState(state: WebAppState): PametRoute {
+        let route = new PametRoute();
+        let projectId = state.currentProjectId;
+        let pageId = state.currentPageId;
+
+        if (projectId === null && pageId !== null) {
+            throw new Error('Page id set without project id. Removing page id.');
+        }
+
+        if (projectId) {
+            route.projectId = projectId;
+        }
+        if (pageId) {
+            route.pageId = pageId;
+        }
+
+        return route;
+    }
+
+    pushRoute(route: PametRoute): void {
+        log.info('Pushing route', route);
+        const url = toUrlPath(route);
+        window.history.pushState({}, '', url);
+    }
+
+    replaceRoute(route: PametRoute): void {
+        log.info('Replacing route', route);
+        const url = toUrlPath(route);
+        window.history.replaceState({}, '', url);
     }
 }

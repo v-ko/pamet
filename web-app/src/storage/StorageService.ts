@@ -4,12 +4,13 @@ import { SerializedStoreData } from 'fusion/storage/BaseStore';
 import { Delta, DeltaData } from 'fusion/storage/Delta';
 import { getLogger } from "fusion/logging";
 import serviceWorkerUrl from "../service-worker?url"
-import { RepoUpdate } from '../../../fusion/js-src/src/storage/BaseRepository';
+import { RepoUpdateData } from "fusion/storage/BaseRepository"
 import { createId } from 'fusion/util';
+import { buildHashTree } from 'fusion/storage/HashTree';
 
 let log = getLogger('StorageService')
 
-export type RepoUpdateNotifiedSignature = (update: RepoUpdate) => void;
+export type RepoUpdateNotifiedSignature = (update: RepoUpdateData) => void;
 
 // export interface RepoLoadResponce { // This is needed, so that
 //     subscriptionId: number;
@@ -44,7 +45,7 @@ function createCommitRequest(projectId: string, deltaData: DeltaData, message: s
 export interface LocalStorageUpdateMessage {
     projectId: string
     storageServiceId: string
-    update: RepoUpdate
+    update: RepoUpdateData
 }
 
 class Subscription {
@@ -150,8 +151,8 @@ export class StorageService {
         // Confirm the broadcast link
         try {
             await service.test();
-        } catch (error) {
-            throw Error("Service worker test failed");
+        } catch (e) {
+            throw Error(`Service worker test failed: ${e}`);
         }
 
         this._service = service;
@@ -187,7 +188,9 @@ export class StorageService {
     }
     commit(projectId: string, deltaData: DeltaData, message: string) {
         let request = createCommitRequest(projectId, deltaData, message)
-        this._storageOperationRequest(request);
+        this._storageOperationRequest(request).catch((error) => {
+            log.error('Error committing', error)
+        })
     }
     headState(projectId: string): Promise<SerializedStoreData> {
         return this.service.headState(projectId);
@@ -221,17 +224,22 @@ export class StorageServiceActual {
     id: string = createId(8)
     private repoManagers: { [key: string]: ProjectStorageManager } = {}; // Per projectId
     private subscriptions: { [key: string]: Subscription[] } = {}; // Per projectId
-    private _localUpdateChannel: BroadcastChannel = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL)
+    private _storageOperationBroadcaster: BroadcastChannel;
+    private _storageOperationReceiver: BroadcastChannel;
     private _storageOperationQueue: StorageOperationRequest[] = [];
 
     constructor() {
-        this._localUpdateChannel.addEventListener('message', (message) => {
-            this._onLocalStorageUpdate(message.data)
-        })
+        this._storageOperationBroadcaster = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL);
+        this._storageOperationReceiver = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL);
+
+        this._storageOperationReceiver.onmessage = (message) => {
+            this._onLocalStorageUpdate(message.data);
+        };
     }
     get inWorker(): boolean { // Might need to be more specific?
         return typeof self !== 'undefined';
     }
+
     test() {
         log.info('Test!!!!!!!!!')
     }
@@ -301,7 +309,9 @@ export class StorageServiceActual {
 
         // Call queue processing deferred
         setTimeout(() => {
-            this.processStorageOperationQueue();
+            this.processStorageOperationQueue().catch((error) => {
+                log.error('Error processing storage operation queue', error)
+            });
         });
     }
     async _executeStorageOperationRequest(request: StorageOperationRequest): Promise<void> {
@@ -314,7 +324,20 @@ export class StorageServiceActual {
             // Commit to in-mem
             let commit = await projectStorageManager.inMemoryRepo.commit(new Delta(commitRequest.deltaData), commitRequest.message);
             console.log('Created commit', commit)
+
+            // Integrity check (TMP)
+            let hashTree = await buildHashTree(projectStorageManager.inMemoryRepo.headStore);
+            let currentHash = projectStorageManager.inMemoryRepo.hashTree.rootHash();
+
+            if (currentHash !== hashTree.rootHash()) {
+                log.error('Hash tree integrity check failed',
+                    'Current hash:', currentHash,
+                    'Expected hash:', hashTree.rootHash());
+                return;
+            }
+
             // Save in local storage
+            log.info('Pulling the new commit from the adapter into the project inMem repo')
             await projectStorageManager.localStorageRepo.pull(projectStorageManager.inMemoryRepo);
 
             // Notify subscribers
@@ -342,26 +365,33 @@ export class StorageServiceActual {
     }
 
     broadcastLocalUpdate(update: LocalStorageUpdateMessage) {
-        log.info('Broadcasting local storage update', update)
-        this._localUpdateChannel.postMessage(update)
+        log.info('Broadcasting local storage update', update);
+        this._storageOperationBroadcaster.postMessage(update);
     }
 
     _onLocalStorageUpdate(updateMessage: LocalStorageUpdateMessage) {
         log.info('Received local storage update', updateMessage)
+
         // (Edge case) If there's more than one local storage service
         // (e.g. hard refresh and no service worker) - react on updates by pulling
         if (updateMessage.storageServiceId === this.id) {
             if (updateMessage.projectId in this.repoManagers) {
                 let repoManager = this.repoManagers[updateMessage.projectId];
-                repoManager.inMemoryRepo.pull(repoManager.localStorageRepo)
+                repoManager.inMemoryRepo.pull(repoManager.localStorageRepo).then(
+                    () => {
+                        this._notifySubscribers(updateMessage.projectId, updateMessage.update);
+                    }
+                ).catch((error) => {
+                    log.error('Error pulling local storage update', error)
+                });
             }
+        } else {
+            // Notify all subscribers
+            this._notifySubscribers(updateMessage.projectId, updateMessage.update);
         }
-
-        // Notify all subscribers
-        this._notifySubscribers(updateMessage.projectId, updateMessage.update);
     }
 
-    _notifySubscribers(projectId: string, update: RepoUpdate) {
+    _notifySubscribers(projectId: string, update: RepoUpdateData) {
         let subscriptions = this.subscriptions[projectId];
         if (!subscriptions) {
             return;
@@ -378,4 +408,3 @@ export class StorageServiceActual {
         return repoManager.inMemoryRepo.headStore.data();
     }
 }
-

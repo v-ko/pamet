@@ -7,9 +7,6 @@
         "fusion/js-src/src/*"
       ]
     },
-    "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "esModuleInterop": true,
     "jsx": "react-jsx",
   },
   "references": [
@@ -20,4 +17,10 @@
       "path": "./fusion/js-src"
     }
   ],
+  // "exclude": ["node_modules", "dist", "*.d.ts"],
+  // "include": [
+  //   "fusion/js-src/src/**/*",
+  //   "web-app/src/**/*",
+  //   "web-app/vite.config.ts"
+  // ]
 }

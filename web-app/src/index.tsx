@@ -1,6 +1,6 @@
 import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
-import WebApp, { PageError, WebAppState } from './containers/app/App';
+import WebApp, { WebAppState } from './containers/app/App';
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './core/facade';
@@ -26,8 +26,8 @@ import { appActions } from './actions/app';
 import { PametConfig } from './config/Config';
 import { LocalStorageConfigAdapter } from './config/LocalStorageConfigAdapter';
 import { ProjectData } from './model/config/Project';
-import { createId, currentTime, timestamp } from 'fusion/util';
-import { StorageService, StorageServiceActual } from './storage/StorageService';
+import { currentTime, timestamp } from 'fusion/util';
+import { StorageService } from './storage/StorageService';
 
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
@@ -88,7 +88,7 @@ if (!userData) {
 let projects = userData.projects;
 if (!projects || projects.length === 0) {
     let project: ProjectData = {
-        id: createId(8),
+        id: 'notes',
         name: "Notebook",
         owner: userData.id,
         description: 'Default project',
@@ -117,7 +117,10 @@ pamet.setStorageService(storageService);
 
 // Setup automatic handling
 pamet.router.handleRouteChange(true);
-pamet.router.reachRouteOrAutoassist(pamet.router.currentRoute())
+pamet.router.reachRouteOrAutoassist(
+    pamet.router.currentRoute()).catch((e) => {
+        log.error("Error in reachRouteOrAutoassist", e);
+    });
 
 // Load the default project - in applyRoute
 

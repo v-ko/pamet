@@ -15,7 +15,7 @@ export const DEFAULT_NOTE_WIDTH = 32 * AGU
 export const DEFAULT_NOTE_HEIGHT = 16 * AGU
 export const MIN_NOTE_WIDTH = 3 * AGU
 export const MIN_NOTE_HEIGHT = 3 * AGU
-export const MAX_NOTE_WIDTH = 192 * AGU 
+export const MAX_NOTE_WIDTH = 192 * AGU
 export const MAX_NOTE_HEIGHT = 192 * AGU
 
 export const RESIZE_CIRCLE_RADIUS = 2 * AGU
@@ -67,4 +67,19 @@ export const COLOR_ROLE_MAP: { [key: string]: HexColorData } = {
     'itemSelectionOverlay': '#ffff0080',  // yellow transparent selection overlay
     'interactiveSelectionMask': '#64646433',  // grey transparent selection mask
     'transparent': '#00000000'  // transparent
+}
+
+export enum PametTabIndex {
+    Page = 0,
+    NoteEditViewWidget1 = 10,
+    NoteEditViewWidget2 = 11,
+    NoteEditViewWidget3 = 12,
+    NoteEditViewWidget4 = 13,
+    NoteEditViewWidget5 = 14,
+    NoteEditViewWidget6 = 15,
+    NoteEditViewWidget7 = 16,
+    NoteEditViewWidget8 = 17,
+    NoteEditViewWidget9 = 18,
+    NoteEditViewWidget10 = 19,
+    NoteEditViewWidget11 = 20,
 }

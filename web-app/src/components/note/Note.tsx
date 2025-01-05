@@ -45,13 +45,6 @@ export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) 
     }
 
     // Handling the image
-    // There's image_url and local_image_url. The qt desktop app downloaded
-    // everything and gave it a local_image_url. The web app might not.
-    // Cases to handle:
-    // No local_image_url: show image_url
-    // local_image_url starts with pamet:/ - get it with the api
-    // (it'll be like /p/{page_id}/media/{path:path})
-    // local_image_url starts with / - use the API desktop/fs/{path} endpoint
 
     let image = note.content.image
     let imageSrc: string | undefined = undefined;
@@ -62,7 +55,7 @@ export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) 
     // }
 
     if (image ) {
-        imageSrc = pamet.pametSchemaToHttpUrl(image.url);
+        imageSrc = pamet.projectScopedUrlToGlobal(image.url);
         isExternal = false;
     }
     // if (imageUrl) {

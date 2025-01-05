@@ -75,7 +75,7 @@ class ArrowActions {
                     tail_shape: "arrow",
                 }
             });
-            state.newArrowViewState = new ArrowViewState(arrow, null, noteVS_underMouse);
+            state.newArrowViewState = new ArrowViewState(arrow);
 
         } else { // Second click - finish note creation
             // createArrow mode and newArrowViewState present implies second click
@@ -160,12 +160,10 @@ class ArrowActions {
         // (only here can we have note anchors)
         if (state.draggedControlPointIndex === 0) {
             arrow.setTail(controlPoint, suggestionNote, suggestionAnchorType);
-            let { headNVS, tailNVS } = state.noteVS_anchorsForArrow(arrow);
-            arrowVS.updateFromArrow(arrow, headNVS, tailNVS);
+            arrowVS.updateFromArrow(arrow);
         } else if (state.draggedControlPointIndex === headIndex) {
             arrow.setHead(controlPoint, suggestionNote, suggestionAnchorType);
-            let { headNVS, tailNVS } = state.noteVS_anchorsForArrow(arrow);
-            arrowVS.updateFromArrow(arrow, headNVS, tailNVS);
+            arrowVS.updateFromArrow(arrow);
 
         } else if (controlPointIndices.includes(state.draggedControlPointIndex)) {
             // It's a mid point
@@ -173,7 +171,7 @@ class ArrowActions {
             let midPoints = arrow.midPoints;
             midPoints[midPointIndex] = mouseSnapped;
             arrow.replaceMidpoints(midPoints);
-            arrowVS.updateFromArrow(arrow, arrowVS.headAnchorNoteViewState, arrowVS.tailAnchorNoteViewState);
+            arrowVS.updateFromArrow(arrow);
         } else {
             throw Error('Clicks on suggested control point indices should be handled in createControlPoint');
         }

@@ -4,23 +4,24 @@ import { computed, makeObservable, observable } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { Rectangle } from '../../util/Rectangle';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Note, SerializedNote } from '../../model/Note';
+import { Note, SerializedNote } from 'web-app/src/model/Note';
 import { pamet } from '../../core/facade';
 import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
 import { currentTime, timestamp } from 'fusion/util';
 import { getLogger } from 'fusion/logging';
+import { PametTabIndex } from '../../core/constants';
 
 let log = getLogger('EditComponent');
 
 interface EditComponentProps {
-  state: EditComponentState;
+  state: NoteEditViewState;
   onTitlebarPress: (event: React.MouseEvent) => void;
   onTitlebarRelease: (event: React.MouseEvent) => void;
   onCancel: () => void; // added to avoid a dependency to the pageViewState
   onSave: (note: Note) => void;
 }
 
-export class EditComponentState {
+export class NoteEditViewState {
   targetNote: Note;
   center: Point2D;
 
@@ -60,7 +61,7 @@ const ToolButton = styled.button`
     align-items: center;
 `;
 
-const EditComponent: React.FC<EditComponentProps> = observer((
+const NoteEditView: React.FC<EditComponentProps> = observer((
   { state,
     onTitlebarPress,
     onTitlebarRelease,
@@ -69,8 +70,14 @@ const EditComponent: React.FC<EditComponentProps> = observer((
   }: EditComponentProps) => {
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [geometry, setGeometry] = useState<Rectangle>(new Rectangle(0, 0, 0, 0));
+  const [geometry, setGeometry] = useState<Rectangle>(new Rectangle(state.center.x, state.center.y, 400, 400));
   const [noteData, setNoteData] = useState<SerializedNote>(dumpToDict(state.targetNote) as SerializedNote);
+
+  // Update context on unmount
+  useEffect(() => {
+    pamet.setContext('noteEditViewFocused', true);
+    return () => pamet.setContext('noteEditViewFocused', false);
+  }, []);
 
   //
   const bakeNoteAndSave = useCallback(() => {
@@ -110,7 +117,6 @@ const EditComponent: React.FC<EditComponentProps> = observer((
 
   // Setup geometry update handling on resize
   useEffect(() => {
-
     const updateGeometryHandler = () => {
       let wrapper = wrapperRef.current;
       if (wrapper === null) {
@@ -135,14 +141,16 @@ const EditComponent: React.FC<EditComponentProps> = observer((
     return () => resizeObserver.disconnect();
   }, [wrapperRef]);
 
-  // Limit the geometry of the window to the screen
+  // Limit the position of the window to the screen
   let width = geometry.width;
   let height = geometry.height;
+
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;
 
-  console.log(geometry)
-  // Check if the window is outside the screen
+  console.log("Rendering NoteEditView", geometry)
+
+  // Check if the window is outside the screen on the bottom and right
   if (left + width > window.innerWidth) {
     left = window.innerWidth - width;
   }
@@ -150,7 +158,7 @@ const EditComponent: React.FC<EditComponentProps> = observer((
     top = window.innerHeight - height;
   }
 
-  // Check if the window is outside the screen
+  // Check if the window is outside the screen on the top and left
   if (left < 0) {
     left = 0;
   }
@@ -289,7 +297,8 @@ const EditComponent: React.FC<EditComponentProps> = observer((
           </label>
           <textarea
             // placeholder="Enter text here"
-            autoFocus
+            tabIndex={PametTabIndex.NoteEditViewWidget1}
+            autoFocus={true}
             defaultValue={state.targetNote.content.text}
             onChange={(e) => {
               setNoteData({
@@ -308,6 +317,8 @@ const EditComponent: React.FC<EditComponentProps> = observer((
               borderWidth: '2px',
               borderRadius: '5px',
             }}
+            onFocus={ () => pamet.setContext('noteEditViewFocused', true) }
+            onBlur={ () => pamet.setContext('noteEditViewFocused', false) }
           />
         </div>
       </div>
@@ -332,4 +343,4 @@ const EditComponent: React.FC<EditComponentProps> = observer((
   );
 });
 
-export default EditComponent;
+export default NoteEditView;

@@ -13,7 +13,11 @@
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
         "ecmaVersion": "latest",
-        "sourceType": "module"
+        "sourceType": "module",
+        "project": [
+            "./web-app/tsconfig.json",
+            "./fusion/js-src/tsconfig.json"
+          ]
     },
     "plugins": [
         "@typescript-eslint",
@@ -23,13 +27,15 @@
     "rules": {
         "prefer-const": "off",
         "react/react-in-jsx-scope": "off",
-        "no-unused-vars": "warn",
+        "no-unused-vars": "off",
         "@typescript-eslint/prefer-as-const": "warn",
         "@typescript-eslint/no-unused-vars": "warn",
         "@typescript-eslint/no-var-requires": "warn",
         "@typescript-eslint/no-explicit-any": "off",
         "no-extra-boolean-cast": "off",
         "no-empty": "off",
-        "@typescript-eslint/no-empty-object-type": "off"
+        "@typescript-eslint/no-empty-object-type": "off",
+        "@typescript-eslint/no-floating-promises": "error",
+        "@typescript-eslint/ban-ts-comment": "off"
     }
 }

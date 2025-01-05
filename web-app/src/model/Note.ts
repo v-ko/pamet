@@ -1,8 +1,6 @@
 import { Rectangle } from "../util/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
-import { Point2D } from "../util/Point2D";
-import { ArrowAnchorOnNoteType } from "./Arrow";
 import { textRect } from "../components/note/util";
 
 export interface ImageMetadata {

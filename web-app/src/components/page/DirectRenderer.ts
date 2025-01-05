@@ -139,9 +139,12 @@ export class CanvasPageRenderer {
             return;
         }
         try {
+            context.save();
             view.render(context);
         } catch (e) {
             log.error('Error rendering element', element, e);
+        } finally {
+            context.restore();
         }
     }
 
@@ -358,11 +361,17 @@ export class CanvasPageRenderer {
                 let arrow = state.newArrowViewState.arrow()
                 arrow.setHead(realMousePos, null, ArrowAnchorOnNoteType.none);
                 let newArrowVS = new ArrowViewState(
-                    arrow,
-                    state.newArrowViewState.headAnchorNoteViewState,
-                    state.newArrowViewState.tailAnchorNoteViewState)
+                    arrow)
                 let view = new ArrowCanvasView(this, newArrowVS);
-                view.render(ctx);
+                try{
+                    ctx.save();
+                    view.render(ctx);
+                } catch (e) {
+                    log.error('Error rendering new arrow', e);
+                } finally {
+                    arrow.setHead(null, null, ArrowAnchorOnNoteType.none);
+                    ctx.restore();
+                }
             }
         } else if (state.mode === PageMode.NoteResize || state.mode === PageMode.MoveElements) {
             // Draw note alignment lines
@@ -609,7 +618,14 @@ export class CanvasPageRenderer {
         } else if (childVS instanceof ArrowViewState) {
             // Render the arrow selection overlay
             let arrowView = new ArrowCanvasView(this, childVS);
-            arrowView.renderSelectionOverlay(ctx);
+            try {
+                ctx.save();
+                arrowView.renderSelectionOverlay(ctx);
+            } catch (e) {
+                log.error('Error rendering arrow selection overlay', e);
+            } finally {
+                ctx.restore();
+            }
         }
     }
 
@@ -626,3 +642,6 @@ export class CanvasPageRenderer {
         this.renderPage(state, context);
     }
 }
+
+
+// a decorator for

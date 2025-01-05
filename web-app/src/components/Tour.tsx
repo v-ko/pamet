@@ -1,3 +1,4 @@
+// @ts-nocheck
 // A component that takes a markdown string and divides it into segments divided
 // by the links to the pamet page. They are displayed as a regular markdown file
 // only with thin lines demarking the segments. (Formatting is broken if there's

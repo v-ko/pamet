@@ -17,51 +17,78 @@ export function snapVectorToGrid<T extends Vector2D>(v: T): T {
     return v.divide(ALIGNMENT_GRID_UNIT).round().multiply(ALIGNMENT_GRID_UNIT);
 }
 
-export interface PametUrlProps {
-    page_id?: string,
-    viewportCenter?: Point2D,
-    viewportHeight?: number,
-    // selection?: Array<string>,
-    focused_note_id?: string,
-}
+// export interface PametUrlProps {
+//     pageId?: string,
+//     viewportCenter?: Point2D,
+//     viewportHeight?: number,
+//     // selection?: Array<string>,
+//     focusedNoteId?: string,
+// }
 
-export function parsePametUrl(url_string: string): PametUrlProps {
-    let url = new URL(url_string);
+// export function parsePametUrl(url_string: string): PametUrlProps {
+//     let url = new URL(url_string);
 
-    // The page_id is a part of the path like /p/page_id/
-    // So if there's no /p/ it will remain unset
-    let page_id: string | undefined = undefined;
-    if (url.pathname.startsWith("/p/")) {
-        page_id = url.pathname.split("/")[2];
-    }
+//     // The page_id is a part of the path like /p/page_id/
+//     // So if there's no /p/ it will remain unset
+//     let page_id: string | undefined = undefined;
+//     if (url.pathname.startsWith("/p/")) {
+//         page_id = url.pathname.split("/")[2];
+//     }
 
-    // The anchor is a key/value pair for either eye_at= (map position)
-    // or note= for a note id
+//     // The anchor is a key/value pair for either eye_at= (map position)
+//     // or note= for a note id
 
-    // The eye_at is in the fragment/anchor and is in the form height/x/y
-    let viewportCenter: Point2D | undefined = undefined;
-    let viewportHeight: number | undefined = undefined;
-    let focused_note_id: string | undefined = undefined;
+//     // The eye_at is in the fragment/anchor and is in the form height/x/y
+//     let viewportCenter: Point2D | undefined = undefined;
+//     let viewportHeight: number | undefined = undefined;
+//     let focused_note_id: string | undefined = undefined;
 
-    let eye_at = url.hash.split("#eye_at=")[1];
-    if (eye_at) {
-        let [height, x, y] = eye_at.split("/").map(parseFloat);
-        if (!(isNaN(height) || isNaN(x) || isNaN(y))) {
-            viewportCenter = new Point2D(x, y);
-            viewportHeight = height;
-        }
-    }
+//     let eye_at = url.hash.split("#eye_at=")[1];
+//     if (eye_at) {
+//         let [height, x, y] = eye_at.split("/").map(parseFloat);
+//         if (!(isNaN(height) || isNaN(x) || isNaN(y))) {
+//             viewportCenter = new Point2D(x, y);
+//             viewportHeight = height;
+//         }
+//     }
 
-    // Get the focused note from the anchor
-    focused_note_id = url.hash.split("#note=")[1];
+//     // Get the focused note from the anchor
+//     focused_note_id = url.hash.split("#note=")[1];
 
-    return {
-        page_id: page_id,
-        viewportCenter: viewportCenter,
-        viewportHeight: viewportHeight,
-        focused_note_id: focused_note_id,
-    }
-}
+//     return {
+//         pageId: page_id,
+//         viewportCenter: viewportCenter,
+//         viewportHeight: viewportHeight,
+//         focusedNoteId: focused_note_id,
+//     }
+// }
+
+// export function createPametUrl(props: PametUrlProps): string {
+//     let url = new URL(window.location.href);
+
+//     if (props.pageId) {
+//         url.pathname = `/p/${props.pageId}/`;
+//     }
+
+//     let anchor = "";
+//     if (props.viewportCenter && props.viewportHeight) {
+//         anchor += `#eye_at=${props.viewportHeight}/${props.viewportCenter.x}/${props.viewportCenter.y}`;
+//     }
+
+//     if (props.focusedNoteId) {
+//         anchor += `#note=${props.focusedNoteId}`;
+//     }
+
+//     url.hash = anchor;
+
+//     return url.toString();
+// }
+
+// export function updateBrowserLocation(props: PametUrlProps) {
+//     let url = createPametUrl(props);
+//     window.history.pushState({}, "", url);
+// }
+
 
 export let EMPTY_TOKEN = '';
 

@@ -149,9 +149,8 @@ class NoteActions {
                 initialArrow.replaceMidpoints(viewStateArrow.midPoints);
                 pamet.updateArrow(initialArrow);
             } else {
-                let { headNVS, tailNVS } = state.noteVS_anchorsForArrow(viewStateArrow);
                 let arrowVS = state.viewStateForElement(viewStateArrow.own_id) as ArrowViewState;
-                arrowVS.updateFromArrow(viewStateArrow, headNVS, tailNVS);
+                arrowVS.updateFromArrow(viewStateArrow);
             }
         }
     }

@@ -8,6 +8,9 @@ import { approximateMidpointOfBezierCurve } from '../../util';
 import { ElementViewState } from '../page/ElementViewState';
 import paper from 'paper';
 import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from '../../core/constants';
+import { Change } from 'fusion/Change';
+import { pamet } from '../../core/facade';
+import { elementPageId } from '../../model/Element';
 
 let log = getLogger('ArrowViewState');
 
@@ -28,21 +31,21 @@ function specialSigmoid(x: number): number {
 
 export class ArrowViewState extends ElementViewState {
     _arrowData!: ArrowData;
-    headAnchorNoteViewState: NoteViewState | null = null;
-    tailAnchorNoteViewState: NoteViewState | null = null;
+    // headAnchorNoteViewState: NoteViewState | null = null;
+    // tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
     _paperPath: paper.Path | null = null;
 
-    constructor(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null) {
+    constructor(arrow: Arrow) {
         super();
 
-        this.updateFromArrow(arrow, headAnchorNoteViewState, tailAnchorNoteViewState);
+        this._arrowData = { ...arrow.data() };
 
         makeObservable(this, {
             _arrowData: observable,
-            _arrow: computed,
-            headAnchorNoteViewState: observable,
-            tailAnchorNoteViewState: observable,
+            // _arrow: computed, This returns instances with the same data object (and entities arer expected to be generally immutable )
+            // headAnchorNoteViewState: observable,
+            // tailAnchorNoteViewState: observable,
             bezierCurveParams: computed,
             bezierCurveArrayMidpoints: computed,
             paperPath: computed,
@@ -52,11 +55,6 @@ export class ArrowViewState extends ElementViewState {
     get _arrow(): Arrow {
         let arrowData = toJS(this._arrowData) as ArrowData;
         return new Arrow(arrowData);
-        // let arrow = pamet.findOne({id: this._arrowData.id});
-        // if (arrow === undefined) {
-        //     throw Error('Arrow not found');
-        // }
-        // return arrow as Arrow;
     }
     arrow(): Arrow {
         return this._arrow;
@@ -64,12 +62,72 @@ export class ArrowViewState extends ElementViewState {
     element(): Arrow {
         return this.arrow();
     }
-    updateFromArrow(arrow: Arrow, headAnchorNoteViewState: NoteViewState | null, tailAnchorNoteViewState: NoteViewState | null) {
-        // console.log('updateFromArrow', arrow, headAnchorNoteViewState, tailAnchorNoteViewState);
-        this._arrowData = arrow.data();
 
-        this.headAnchorNoteViewState = headAnchorNoteViewState;
-        this.tailAnchorNoteViewState = tailAnchorNoteViewState;
+    updateFromChange(change: Change) {
+        log.info('updateFromChange', change);
+        if (!change.isUpdate) {
+            log.error('Can only update from an update type change');
+            return;
+        }
+        let update = change.forwardComponent as Partial<ArrowData>;
+        this._arrowData = { ...this._arrowData, ...update };
+
+        let arrow = this.arrow();
+        let pageVS = pamet.appViewState.pageViewState(arrow.parentId);
+
+        let { headNVS, tailNVS } = pageVS.noteVS_anchorsForArrow(arrow)
+
+        // If the head or tail NoteViewStates are not found - set the anchor to (0, 0)
+        // so that upon bugs related to that - the user can see the arrow and delete it
+        if (arrow.headNoteId && !headNVS) {
+            log.error('Arrow head note not found', arrow.headNoteId, 'setting head to (0, 0)')
+            arrow.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+        } else if (!arrow.headNoteId && arrow.headAnchorType !== ArrowAnchorOnNoteType.none) {
+            log.error('No head note id, but anchor is not fixed. Overwriting in view state.')
+            arrow.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+        }
+
+        if (arrow.tailNoteId && !tailNVS) {
+            log.error('Arrow tail note not found', arrow.tailNoteId, 'setting tail to (0, 0)')
+            arrow.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+        } else if (!arrow.tailNoteId && arrow.tailAnchorType !== ArrowAnchorOnNoteType.none) {
+            log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
+            arrow.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+        }
+
+        // console.log('setting anchors', tailNVS, headNVS)
+        // this.tailAnchorNoteViewState = tailNVS;
+        // this.headAnchorNoteViewState = headNVS;
+    }
+
+    get headAnchorNoteViewState(): NoteViewState | null {
+        console.log('headAnchorNoteViewState', this._arrowData.head.noteAnchorId)
+        if (!this._arrowData.head.noteAnchorId) {
+            console.log('no head anchor')
+            return null;
+        }
+        let pageVS = pamet.appViewState.pageViewState(elementPageId(this._arrowData.id));
+        let headNVS = pageVS.viewStateForElement(this._arrowData.head.noteAnchorId) as NoteViewState | null;
+        console.log('headAnchorNoteViewState', headNVS)
+        return headNVS;
+    }
+
+    get tailAnchorNoteViewState() {
+        console.log('tailAnchorNoteViewState', this._arrowData.tail.noteAnchorId)
+        if (!this._arrowData.tail.noteAnchorId) {
+            console.log('no tail anchor')
+            return null;
+        }
+        let pageVS = pamet.appViewState.pageViewState(elementPageId(this._arrowData.id));
+        let tailNVS = pageVS.viewStateForElement(this._arrowData.tail.noteAnchorId ) as NoteViewState | null;
+        console.log('tailAnchorNoteViewState', tailNVS)
+        return tailNVS;
+    }
+
+    updateFromArrow(arrow: Arrow) {
+        this.arrow().setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none);
+        let change = this.arrow().changeFrom(arrow);
+        this.updateFromChange(change);
     }
 
     get bezierCurveParams(): BezierCurve[] {
