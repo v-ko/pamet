@@ -67,126 +67,35 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
       ref={dialogRef}
       onCancel={handleClose}
       onClick={handleBackgroundClick}
-      className="page-properties-dialog"
+      style={{
+        border: 'none',
+        borderRadius: '4px',
+        padding: '16px',
+        maxWidth: '300px'
+      }}
     >
-      <div className="content-wrapper">
-        <h3>Page Properties</h3>
-        <form onSubmit={handleSave}>
-          <div className="form-group">
-            <input
-              autoFocus
-              type="text"
-              value={pageName}
-              onChange={e => setPageName(e.target.value)}
-              placeholder="Page name"
-              className="page-name-input"
-            />
-            {isNameTaken && <div className="error-message">This name is already taken.</div>}
-          </div>
-          <div className="button-group">
-            <button
-              type="submit"
-              disabled={isNameTaken || !pageName.trim()}
-              className="save-button"
-            >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <h3 style={{ margin: 0 }}>Page Properties</h3>
+        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <input
+            autoFocus
+            type="text"
+            value={pageName}
+            onChange={e => setPageName(e.target.value)}
+            placeholder="Page name"
+            style={{ padding: '4px' }}
+          />
+          {isNameTaken && <div style={{ color: 'red', fontSize: '14px' }}>This name is already taken.</div>}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+            <button type="submit" disabled={isNameTaken || !pageName.trim()}>
               Save
             </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              className="delete-button"
-            >
+            <button type="button" onClick={handleDelete} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none' }}>
               Delete Page
             </button>
           </div>
         </form>
       </div>
-      <style jsx>{`
-        .page-properties-dialog {
-          border: none;
-          border-radius: 8px;
-          padding: 0;
-          background: white;
-          box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .page-properties-dialog::backdrop {
-          background: rgba(0, 0, 0, 0.5);
-        }
-
-        .content-wrapper {
-          padding: 24px;
-          min-width: 320px;
-        }
-
-        h3 {
-          margin: 0 0 20px 0;
-          font-size: 1.2rem;
-          color: #333;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .page-name-input {
-          width: 100%;
-          padding: 8px 12px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-          font-size: 1rem;
-          outline: none;
-          transition: border-color 0.2s;
-        }
-
-        .page-name-input:focus {
-          border-color: #007bff;
-        }
-
-        .error-message {
-          color: #dc3545;
-          font-size: 0.875rem;
-          margin-top: 6px;
-        }
-
-        .button-group {
-          display: flex;
-          justify-content: flex-end;
-          gap: 12px;
-        }
-
-        button {
-          padding: 8px 16px;
-          border: none;
-          border-radius: 4px;
-          font-size: 0.875rem;
-          cursor: pointer;
-          transition: background-color 0.2s;
-        }
-
-        button:disabled {
-          opacity: 0.6;
-          cursor: not-allowed;
-        }
-
-        .save-button {
-          background: #007bff;
-          color: white;
-        }
-
-        .save-button:hover:not(:disabled) {
-          background: #0056b3;
-        }
-
-        .delete-button {
-          background: #dc3545;
-          color: white;
-        }
-
-        .delete-button:hover {
-          background: #c82333;
-        }
-      `}</style>
     </dialog>
   );
 }

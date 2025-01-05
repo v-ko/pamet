@@ -1,4 +1,4 @@
-import { BaseAsyncRepository, RepoUpdate } from "fusion/storage/BaseRepository";
+import { BaseAsyncRepository } from "fusion/storage/BaseRepository";
 import { IndexedDBRepository } from "./IndexedDB_storageAdapter";
 import { StorageServiceActual } from "./StorageService";
 import { AsyncInMemoryRepository } from "fusion/storage/AsyncInMemoryRepo";

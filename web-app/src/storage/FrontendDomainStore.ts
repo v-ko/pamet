@@ -7,7 +7,7 @@ import { updateViewModelFromDelta, pamet } from "../core/facade";
 import { action } from "fusion/libs/Action";
 import { getLogger } from "fusion/logging";
 import { Delta, DeltaData, squishDeltas } from "fusion/storage/Delta";
-import type { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
+import type { RepoUpdateData } from "../../../fusion/js-src/src/storage/BaseRepository";
 
 let log = getLogger('FrontendDomainStore');
 
@@ -112,7 +112,7 @@ export class FrontendDomainStore extends PametStore {
     }
 
     @action({ issuer: 'service' })
-    receiveRepoUpdate(repoUpdate: RepoUpdate) {
+    receiveRepoUpdate(repoUpdate: RepoUpdateData) {
         log.info('Received repo update', repoUpdate);
 
         // Aggregate the deltas from the commits

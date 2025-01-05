@@ -12,7 +12,7 @@ import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfig } from "../config/Config";
 import { StorageService } from "../storage/StorageService";
 import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
-import { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
+import { RepoUpdateData } from "../../../fusion/js-src/src/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/libs/Action";
@@ -297,7 +297,7 @@ export class PametFacade extends PametStore {
         this._frontendDomainStore = domainStore;
 
         // Repo update handler
-        let repoUpdateHandler = (repoUpdate: RepoUpdate) => {
+        let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
             // This handler will be called whenever the repo is updated
             domainStore.receiveRepoUpdate(repoUpdate)
         }

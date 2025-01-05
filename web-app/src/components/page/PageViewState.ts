@@ -126,10 +126,10 @@ export class PageViewState{
             viewport: computed
         });
 
-        // test note updat reaction
-        reaction(() => Array.from(this.noteViewStatesByOwnId.values()).map((noteVS) => toJS(noteVS._noteData)), (values) => {
-            log.info('Note view states changed', values);
-        });
+        // // test note updat reaction
+        // reaction(() => Array.from(this.noteViewStatesByOwnId.values()).map((noteVS) => toJS(noteVS._noteData)), (values) => {
+        //     log.info('Note view states changed', values);
+        // });
     }
 
     updateFromChange(change: Change) {

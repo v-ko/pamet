@@ -4,13 +4,13 @@ import { SerializedStoreData } from 'fusion/storage/BaseStore';
 import { Delta, DeltaData } from 'fusion/storage/Delta';
 import { getLogger } from "fusion/logging";
 import serviceWorkerUrl from "../service-worker?url"
-import { RepoUpdate } from '../../../fusion/js-src/src/storage/BaseRepository';
+import { RepoUpdateData } from '../../../fusion/js-src/src/storage/BaseRepository';
 import { createId } from 'fusion/util';
 import { buildHashTree } from 'fusion/storage/HashTree';
 
 let log = getLogger('StorageService')
 
-export type RepoUpdateNotifiedSignature = (update: RepoUpdate) => void;
+export type RepoUpdateNotifiedSignature = (update: RepoUpdateData) => void;
 
 // export interface RepoLoadResponce { // This is needed, so that
 //     subscriptionId: number;
@@ -45,7 +45,7 @@ function createCommitRequest(projectId: string, deltaData: DeltaData, message: s
 export interface LocalStorageUpdateMessage {
     projectId: string
     storageServiceId: string
-    update: RepoUpdate
+    update: RepoUpdateData
 }
 
 class Subscription {
@@ -377,7 +377,7 @@ export class StorageServiceActual {
         this._notifySubscribers(updateMessage.projectId, updateMessage.update);
     }
 
-    _notifySubscribers(projectId: string, update: RepoUpdate) {
+    _notifySubscribers(projectId: string, update: RepoUpdateData) {
         let subscriptions = this.subscriptions[projectId];
         if (!subscriptions) {
             return;
