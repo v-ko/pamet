@@ -369,7 +369,6 @@ export class CanvasPageRenderer {
                 } catch (e) {
                     log.error('Error rendering new arrow', e);
                 } finally {
-                    arrow.setHead(null, null, ArrowAnchorOnNoteType.none);
                     ctx.restore();
                 }
             }

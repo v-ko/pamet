@@ -196,7 +196,9 @@ class PametCommands {
 
     @command('Copy store state to clipboard')
     storeStateToClipboard() {
-        storeStateToClipboard();
+        storeStateToClipboard().catch(err => {
+            log.error('Failed to store state to clipboard:', err);
+        });
     }
 }
 
@@ -210,7 +212,7 @@ async function storeStateToClipboard() {
     let nodeData = nodes.map(node => node.data())
     let text = JSON.stringify({ fdsState, nodeData }, null, 2)
     try {
-        navigator.clipboard.writeText(text);
+        await navigator.clipboard.writeText(text)
         log.info('Successfully copied to clipboard');
     } catch (err) {
         log.error('Failed to copy to clipboard:', err);

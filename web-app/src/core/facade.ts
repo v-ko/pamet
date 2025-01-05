@@ -43,6 +43,9 @@ export class PametFacade extends PametStore {
     keybindingService: KeybindingService = new KeybindingService();
     focusService: FocusManager = new FocusManager();
     context: any = {};
+    // Focus handling (context related): Except when receiving focus/blur
+    // events - the context change should be applied in the unmount hook
+    // (callback returned by useEffect)
 
     constructor() {
         super()
