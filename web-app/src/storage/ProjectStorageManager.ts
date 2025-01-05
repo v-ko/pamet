@@ -23,19 +23,22 @@ async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsy
     let repo: BaseAsyncRepository;
 
     switch (config.name) {
-        case "IndexedDB":
+        case "IndexedDB":{
             let idbRepoArgs = config.args as { defaultBranchName: string }
             let indexedDB_repo = new IndexedDBRepository(idbRepoArgs.defaultBranchName);
             await indexedDB_repo.init(config.args.defaultBranchName)
             repo = indexedDB_repo
             break;
-        case "InMemory":  // For testing purposes
+        }
+        case "InMemory": { // For testing purposes
             let inMemRepo = new AsyncInMemoryRepository();
             await inMemRepo.init(config.args.defaultBranchName)
             repo = inMemRepo
             break;
-        default:
+        }
+        default:{
             throw new Error(`Unknown storage adapter name: ${config.name}`)
+        }
     }
 
     return repo

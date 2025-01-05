@@ -30,6 +30,7 @@ class ProjectActions {
         note.content.text = 'Press H for help'
         let noteRect = note.rect()
         noteRect.setSize(minimalNonelidedSize(note))
+        noteRect.moveCenter(new Point2D(0, 0))  
         note.setRect(noteRect)
         pamet.insertNote(note)
 
