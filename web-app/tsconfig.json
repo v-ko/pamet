@@ -23,6 +23,7 @@
     "moduleResolution": "Node",
     // "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
+    "esModuleInterop": true,
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     // "noEmit": true,
@@ -43,4 +44,5 @@
     "src/**/*",  // VScode does not find declarations without that
     "../fusion/js-src/src/**/*"
   ],
+  "exclude": ["node_modules", "dist", "*.d.ts"],
 }
