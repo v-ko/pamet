@@ -10,11 +10,19 @@ export function elementId(page_id: string, own_id: string): string {
 }
 
 export function elementPageId(id: string): string {
-    return id.split('-')[0]
+    let parts = id.split('-')
+    if (parts.length != 2) {
+        throw new Error(`Id is not of two components: ${id}`)
+    }
+    return parts[0]
 }
 
 export function elementOwnId(id: string): string {
-    return id.split('-')[1]
+    let parts = id.split('-')
+    if (parts.length != 2) {
+        throw new Error(`Id is not of two components: ${id}`)
+    }
+    return parts[1]
 }
 
 

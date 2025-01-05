@@ -38,8 +38,6 @@ export class ArrowCanvasView extends BaseCanvasView {
     }
 
     _drawArrowBody(context: CanvasRenderingContext2D) {
-        let arrow = this.arrowViewState.arrow();
-
         // Draw the arrow line/path
         for (let curve of this.arrowViewState.bezierCurveParams) {
             context.beginPath();
@@ -53,22 +51,18 @@ export class ArrowCanvasView extends BaseCanvasView {
     render(context: CanvasRenderingContext2D) {
         let arrow = this.arrowViewState.arrow();
 
-        context.save();
         context.strokeStyle = color_role_to_hex_color(arrow.colorRole);
         context.lineWidth = arrow.thickness;
         this._drawArrowBody(context);
         this._renderArrowHead(context);
-        context.restore();
     }
 
     renderSelectionOverlay(context: CanvasRenderingContext2D) {
         let arrow = this.arrowViewState.arrow();
 
-        context.save();
         context.strokeStyle = selectionColor;
         context.lineWidth = arrow.thickness + ARROW_SELECTION_THICKNESS_DELTA;
         this._drawArrowBody(context);
         this._renderArrowHead(context);
-        context.restore();
     }
 }

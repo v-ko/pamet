@@ -18,14 +18,12 @@ export class ExternalLinkNoteCanvasView extends CardNoteCanvasView {
         let p2 = p1.add(new Point2D(-DECORATION_EDGE, 0));
         let p3 = p1.add(new Point2D(0, DECORATION_EDGE));
 
-        context.save();
         context.fillStyle = color_role_to_hex_color(note.style.color_role);
         context.beginPath();
         context.moveTo(p1.x, p1.y);
         context.lineTo(p2.x, p2.y);
         context.lineTo(p3.x, p3.y);
         context.fill();
-        context.restore();
     }
 }
 
