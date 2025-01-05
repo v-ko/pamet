@@ -32,7 +32,7 @@
     "strict": true,
     "noFallthroughCasesInSwitch": true,
 
-    // // Custom
+    // Custom
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
     "preserveSymlinks": true,
@@ -44,5 +44,5 @@
     "src/**/*",  // VScode does not find declarations without that
     "../fusion/js-src/src/**/*"
   ],
-  "exclude": ["node_modules", "dist", "*.d.ts"],
+  // "exclude": ["node_modules", "dist", "*.d.ts"],
 }
