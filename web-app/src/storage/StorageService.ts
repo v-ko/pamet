@@ -6,6 +6,7 @@ import { getLogger } from "fusion/logging";
 import serviceWorkerUrl from "../service-worker?url"
 import { RepoUpdate } from '../../../fusion/js-src/src/storage/BaseRepository';
 import { createId } from 'fusion/util';
+import { buildHashTree } from 'fusion/storage/HashTree';
 
 let log = getLogger('StorageService')
 
@@ -221,19 +222,20 @@ export class StorageServiceActual {
     id: string = createId(8)
     private repoManagers: { [key: string]: ProjectStorageManager } = {}; // Per projectId
     private subscriptions: { [key: string]: Subscription[] } = {}; // Per projectId
-    private _localUpdateChannel: BroadcastChannel = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL)
+    private _storageOperationBroadcaster: BroadcastChannel;
+    private _storageOperationReceiver: BroadcastChannel;
     private _storageOperationQueue: StorageOperationRequest[] = [];
 
     constructor() {
-        this._localUpdateChannel.addEventListener('message', (message) => {
-            this._onLocalStorageUpdate(message.data)
-        })
+        this._storageOperationBroadcaster = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL);
+        this._storageOperationReceiver = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL);
+
+        this._storageOperationReceiver.onmessage = (message) => {
+            this._onLocalStorageUpdate(message.data);
+        };
     }
     get inWorker(): boolean { // Might need to be more specific?
         return typeof self !== 'undefined';
-    }
-    test() {
-        log.info('Test!!!!!!!!!')
     }
 
     async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<number> {
@@ -314,7 +316,20 @@ export class StorageServiceActual {
             // Commit to in-mem
             let commit = await projectStorageManager.inMemoryRepo.commit(new Delta(commitRequest.deltaData), commitRequest.message);
             console.log('Created commit', commit)
+
+            // Integrity check (TMP)
+            let hashTree = await buildHashTree(projectStorageManager.inMemoryRepo.headStore);
+            let currentHash = projectStorageManager.inMemoryRepo.hashTree.rootHash();
+
+            if (currentHash !== hashTree.rootHash()) {
+                log.error('Hash tree integrity check failed',
+                    'Current hash:', currentHash,
+                    'Expected hash:', hashTree.rootHash());
+                return;
+            }
+
             // Save in local storage
+            log.info('Pulling the new commit from the adapter into the project inMem repo')
             await projectStorageManager.localStorageRepo.pull(projectStorageManager.inMemoryRepo);
 
             // Notify subscribers
@@ -342,12 +357,13 @@ export class StorageServiceActual {
     }
 
     broadcastLocalUpdate(update: LocalStorageUpdateMessage) {
-        log.info('Broadcasting local storage update', update)
-        this._localUpdateChannel.postMessage(update)
+        log.info('Broadcasting local storage update', update);
+        this._storageOperationBroadcaster.postMessage(update);
     }
 
     _onLocalStorageUpdate(updateMessage: LocalStorageUpdateMessage) {
         log.info('Received local storage update', updateMessage)
+
         // (Edge case) If there's more than one local storage service
         // (e.g. hard refresh and no service worker) - react on updates by pulling
         if (updateMessage.storageServiceId === this.id) {
@@ -378,4 +394,3 @@ export class StorageServiceActual {
         return repoManager.inMemoryRepo.headStore.data();
     }
 }
-

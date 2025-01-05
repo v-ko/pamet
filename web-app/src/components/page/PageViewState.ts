@@ -14,6 +14,8 @@ import { ElementViewState as CanvasElementViewState } from './ElementViewState';
 import { NoteEditViewState } from '../note/NoteEditView';
 import { Size } from '../../util/Size';
 import { CanvasPageRenderer } from './DirectRenderer';
+import { Change } from 'fusion/Change';
+import { elementOwnId } from '../../model/Element';
 
 let log = getLogger('PageViewState');
 
@@ -43,7 +45,7 @@ export enum PageMode {
 }
 
 
-export class PageViewState {
+export class PageViewState{
     _pageData!: PageData;
     _renderer: CanvasPageRenderer;
 
@@ -92,7 +94,7 @@ export class PageViewState {
     draggedControlPointIndex: number | null = null;
 
     constructor(page: Page) {
-        this.updateFromPage(page);
+        this._pageData = page.data();
         this._renderer = new CanvasPageRenderer();
 
         this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
@@ -100,7 +102,7 @@ export class PageViewState {
 
         makeObservable(this, {
             _pageData: observable,
-            page: computed,
+            // page: computed, This returns instances with the same data object (and entities arer expected to be generally immutable )
 
             noteViewStatesByOwnId: observable,
             arrowViewStatesByOwnId: observable,
@@ -125,13 +127,17 @@ export class PageViewState {
         });
 
         // test note updat reaction
-        reaction(() => Array.from(this.noteViewStatesByOwnId.values()).map((noteVS) => noteVS._noteData), (values) => {
+        reaction(() => Array.from(this.noteViewStatesByOwnId.values()).map((noteVS) => toJS(noteVS._noteData)), (values) => {
             log.info('Note view states changed', values);
         });
     }
 
-    updateFromPage(page: Page) {
-        this._pageData = page.data();
+    updateFromChange(change: Change) {
+        if (!change.isUpdate()) {
+            throw new Error('Page view state can only be updated from an update type change');
+        }
+        let update = change.forwardComponent as Partial<PageData>;
+        this._pageData = { ...this._pageData, ...update };
     }
 
     get renderer() {
@@ -159,31 +165,8 @@ export class PageViewState {
             log.error('Arrow already exists in page view state', element)
             return;
         }
-        let headNVS: NoteViewState | null = null;
-        if (element.headNoteId) {
-            headNVS = this.noteViewStatesByOwnId.get(element.headNoteId) || null
-            if (!headNVS) {
-                log.error('Arrow head note not found', element.headNoteId, 'setting head to (0, 0)')
-                element.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
-            }
-        } else if(element.headAnchorType !== ArrowAnchorOnNoteType.none) {
-            log.error('No headd note id, but anchor is not fixed. Overwriting in view state.')
-            element.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
-        }
 
-        let tailNVS: NoteViewState | null = null;
-        if (element.tailNoteId) {
-            tailNVS = this.noteViewStatesByOwnId.get(element.tailNoteId) || null
-            if (!tailNVS) {
-                log.error('Arrow tail note not found', element.tailNoteId, 'setting tail to (0, 0)')
-                element.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
-            }
-        } else if(element.tailAnchorType !== ArrowAnchorOnNoteType.none) {
-            log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
-            element.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
-        }
-
-        this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element, headNVS, tailNVS));
+        this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element));
     }
 
     addViewStateForElement(element: Note | Arrow) {
@@ -207,36 +190,6 @@ export class PageViewState {
             this.noteViewStatesByOwnId.delete(element.own_id);
         } else if (element instanceof Arrow) {
             this.arrowViewStatesByOwnId.delete(element.own_id);
-        }
-    }
-
-    updateEVS_fromElement(element: Note | Arrow) {
-        if (element instanceof Note) {
-            let nvs = this.noteViewStatesByOwnId.get(element.own_id);
-            if (nvs === undefined) {
-                log.error('Note view state not found for note', element)
-                return;
-            }
-            nvs.updateFromNote(element);
-        } else if (element instanceof Arrow) {
-            let avs = this.arrowViewStatesByOwnId.get(element.own_id);
-            if (avs === undefined) {
-                log.error('Arrow view state not found for arrow', element)
-                return;
-            }
-
-            // Get anchors if any
-            let headNVS_: NoteViewState | null;
-            let tailNVS_: NoteViewState | null;
-            try {
-                let { headNVS, tailNVS } = this.noteVS_anchorsForArrow(element);
-                headNVS_ = headNVS;
-                tailNVS_ = tailNVS;
-            } catch (e) {
-                log.error('Error getting anchors for arrow', element)
-                return;
-            }
-            avs.updateFromArrow(element, headNVS_, tailNVS_);
         }
     }
 
@@ -311,6 +264,14 @@ export class PageViewState {
     viewStateForElement(elementOwnId: string): NoteViewState | ArrowViewState | null {
         return this.noteViewStatesByOwnId.get(elementOwnId) || this.arrowViewStatesByOwnId.get(elementOwnId) || null;
     }
+    viewStateForElementId(elementId: string): NoteViewState | ArrowViewState | null {
+        try {
+            let ownId = elementOwnId(elementId);
+            return this.viewStateForElement(ownId);
+        } catch {
+            return null;
+        }
+    }
 
     get page() {
         let pageData = toJS(this._pageData);
@@ -363,8 +324,7 @@ export class PageViewState {
                     log.error('Arrow not found for arrow view state being moved', arrowVS.arrow().id)
                     continue;
                 }
-                let { headNVS, tailNVS } = this.noteVS_anchorsForArrow(arrow);
-                arrowVS.updateFromArrow(arrow, headNVS, tailNVS);
+                arrowVS.updateFromArrow(arrow);
             }
         }
 
@@ -385,7 +345,7 @@ export class PageViewState {
                 log.error('Arrow not found for cp-dragged arrow with id', editedArrowVS.arrow().id)
                 return;
             }
-            this.updateEVS_fromElement(arrow);
+            editedArrowVS.updateFromArrow(arrow);
         }
 
         this.mode = PageMode.None;

@@ -610,10 +610,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }
 
   return (
-    // <main
-
-
-    // >
       <PageOverlay
       className='page-view'  // index.css
       // Set cursor to cross if we're in arrow creation mode
@@ -690,8 +686,5 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         ))}
 
       </PageOverlay>
-
-
-    // </main>
   );
 });

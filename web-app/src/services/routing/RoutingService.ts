@@ -117,6 +117,8 @@ export class RoutingService {
                     goToPageId = firstPage.id;
                 } else {  // If no pages present
                     // Create a default page
+                    log.info('No pages found in the project. Creating a default page');
+                    // TODO: Move that logic to somewhere else
                     projectActions.createDefaultPage(pamet.appViewState);
                     let newPage = pamet.findOne({ type: Page });
                     if (!newPage) {

@@ -14,6 +14,23 @@ export abstract class PametStore extends Store {
     updatePage(page: Page): Change {
         return this.updateOne(page)
     }
+    removePageWithChildren(page: Page): Change[] {
+        const changes: Change[] = [];
+
+        // Find all entities with this page as parent
+        const children = Array.from(this.find({ parentId: page.id }));
+
+        // Remove all children
+        for (const child of children) {
+            changes.push(this.removeOne(child));
+        }
+
+        // Remove the page itself
+        changes.push(this.removeOne(page));
+
+        return changes;
+    }
+
     removePage(page: Page): Change {
         return this.removeOne(page)
     }

@@ -7,6 +7,7 @@ import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { dumpToDict, loadFromDict } from "fusion/libs/Entity";
 import { pamet } from '../../core/facade';
+import { Change } from "fusion/Change";
 
 let log = getLogger('NoteViewState.ts');
 
@@ -16,18 +17,17 @@ export class NoteViewState extends ElementViewState {
 
     constructor(note: Note) {
         super();
-        this.updateFromNote(note);
+        this._noteData = dumpToDict(note) as SerializedNote;
 
         makeObservable(this, {
             _noteData: observable,
-            _note: computed,
+            // _note: computed,  This returns instances with the same data object (and entities arer expected to be generally immutable )
             textLayoutData: computed
         });
 
         reaction(() => {
             return {content: this._noteData.content, style: this._noteData.style}
         }, () => {
-            log.info('Note data changed', this._noteData);
             pamet.appViewState.currentPageViewState?._renderer.deleteNvsCache(this);
         });
     }
@@ -49,9 +49,19 @@ export class NoteViewState extends ElementViewState {
     element(): Note {
         return this.note();
     }
+    updateFromChange(change: Change) {
+        if (!change.isUpdate) {
+            log.error('Can only update from an update type change');
+            return;
+        }
+        let update = change.forwardComponent as Partial<SerializedNote>;
+        this._noteData = { ...this._noteData, ...update };
+    }
+
     updateFromNote(note: Note) {
         // Needed since the note type can be changed at runtime from the user
-        this._noteData = dumpToDict(note) as SerializedNote;
+        let change = this.note().changeFrom(note)
+        this.updateFromChange(change);
     }
     get textLayoutData(): TextLayout {
         let note = this.note();

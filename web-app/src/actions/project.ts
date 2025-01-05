@@ -49,11 +49,6 @@ class ProjectActions {
     }
 
     @action
-    closeAppDialog(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.Closed;
-    }
-
-    @action
     createNewPage(appState: WebAppState, name: string) {
         if (!appState.currentPageViewState) {
             throw Error('No current page. Cannot create a new page via createNewPage. Use createDefaultPage instead.')
@@ -94,6 +89,34 @@ class ProjectActions {
 
         // Open settings view | IMPLEMENT LATER
     }
+
+    @action
+    openPageProperties(state: WebAppState) {
+        state.dialogMode = AppDialogMode.PageProperties;
+    }
+
+
+  @action
+  deletePageAndUpdateReferences(page: Page) {
+    // Delete the page and its contents
+    pamet.removePageWithChildren(page);
+
+    // Find all internal link notes pointing to this page
+    const internalLinks = Array.from(pamet.find({
+      type: InternalLinkNote
+    }) as Generator<InternalLinkNote>).filter((note: InternalLinkNote) => note.targetPageId() === page.id);
+
+    // Convert each internal link to a text note showing the page was removed
+    for (const link of internalLinks) {
+      const textNote = new TextNote({
+        ...link.data(),
+        content: {
+          text: `(page "${page.name}" removed)`
+        }
+      });
+      pamet.updateNote(textNote);
+    }
+  }
 }
 
 export const projectActions = new ProjectActions();

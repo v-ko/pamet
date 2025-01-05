@@ -16,6 +16,7 @@ import { NoteViewState } from "../components/note/NoteViewState";
 import { PametElement, PametElementData } from "../model/Element";
 import { Arrow } from "../model/Arrow";
 import { ArrowViewState } from "../components/arrow/ArrowViewState";
+import { Page } from "../model/Page";
 
 let log = getLogger('MapActions');
 
@@ -245,7 +246,7 @@ class PageActions {
   }
 
   @action
-  abortEditingNote(state: PageViewState) {
+  closeNoteEditWindow(state: PageViewState) {
     state.noteEditWindowState = null;
   }
 
@@ -384,6 +385,12 @@ class PageActions {
       pamet.updateArrow(arrow);
     }
   }
+
+  @action
+  updatePageProperties(newPageState: Page) {
+    pamet.updatePage(newPageState);
+  }
+
 }
 
 export const pageActions = new PageActions();

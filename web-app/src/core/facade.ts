@@ -5,7 +5,6 @@ import { Change } from "fusion/Change";
 import { PametStore } from "../storage/PametStore";
 import { Entity, EntityData } from "fusion/libs/Entity";
 import { ApiClient } from "../storage/ApiClient";
-import { Page } from "../model/Page";
 import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
@@ -21,6 +20,8 @@ import { ProjectData } from "../model/config/Project";
 import { KeybindingService } from "../services/KeybindingService";
 import { commands } from "./commands";
 import { FocusManager } from "../services/FocusManager";
+import { Delta } from "fusion/storage/Delta";
+import { elementOwnId } from "../model/Element";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -134,6 +135,21 @@ export class PametFacade extends PametStore {
             {
                 key: 'ctrl+a',
                 command: commands.selectAll.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+e',
+                command: commands.openPageProperties.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+shift+y',  // tmp, could not find a sane shortcut
+                command: commands.createNewPage.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+shift+u',  // tmp, could not find a sane shortcut
+                command: commands.storeStateToClipboard.name,
                 when: 'canvasFocus'
             },
         ]);
@@ -349,33 +365,28 @@ export class PametFacade extends PametStore {
 }
 
 
-export function updateViewModelFromChanges(appState: WebAppState, changes: Array<Change>) {
+export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
     /**
      * A reducer-like function to map entity changes to ViewStates
      * Will be used synchrously from the facade entity CRUD methods (inside actions)
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
      */
-    console.log('Applying changes to view states', changes)
-    for (let change of changes) {
-        // if page
-        let entity = change.lastState;
+    console.log('Applying delta to view states', delta)
 
+    for (let change of delta.changes()) {
         let currentPageVS = appState.currentPageViewState
         if (!currentPageVS) {
             continue
         }
 
-        if (entity instanceof Page) {
-
-
-            // if (change.isCreate()) // pass
+        // If it's the current page
+        let currentPageId = currentPageVS.page.id;
+        let childVS = currentPageVS.viewStateForElementId(change.entityId)
+        if (currentPageId === change.entityId) {
             if (change.isDelete()) {
-                // remove
-
-                // If current is removed - go to the project
-
-                if (currentPageVS.page.id === entity.id) {
+                // If current page gets removed - go to the project page
+                if (currentPageVS.page.id === change.entityId) {
                     let projectId = appState.currentProjectId;
                     if (projectId === null) {
                         throw Error('No project set');
@@ -386,24 +397,24 @@ export function updateViewModelFromChanges(appState: WebAppState, changes: Array
                 }
             }
             else if (change.isUpdate()) {
-                // update data
-                currentPageVS.updateFromPage(entity);
+                // update view state
+                currentPageVS.updateFromChange(change);
             }
-        }
-        else if (entity instanceof Note || entity instanceof Arrow) {
-            // get current page vs
-            if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
-                // Skip processing if the parent of the element is not open
-                continue;
-            }
-
-            if (change.isCreate()) {
+        } else if (childVS && change.isDelete()) {
+            currentPageVS.removeViewStateForElement(childVS.element());
+        } else if (childVS && change.isUpdate()) {
+            // update view state
+            childVS.updateFromChange(change);
+        } else if (change.isCreate()) {
+            // If it's a new element
+            let entity = pamet.findOne({ id: change.entityId });
+            if (entity instanceof Note || entity instanceof Arrow) {
+                // get current page vs
+                if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
+                    // Skip processing if the parent of the element is not open
+                    continue;
+                }
                 currentPageVS.addViewStateForElement(entity);
-            } else if (change.isDelete()) {
-                currentPageVS.removeViewStateForElement(entity);
-            }
-            else if (change.isUpdate()) {
-                currentPageVS.updateEVS_fromElement(entity);
             }
         }
     }

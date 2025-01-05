@@ -17,12 +17,14 @@ import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
 import shareIconUrl from '../../resources/icons/share-2.svg';
 import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
 import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
-import { commands } from "../../core/commands";
+import { commands, confirmPageDeletion } from "../../core/commands";
 import { pageActions } from "../../actions/page";
 import NoteEditView from "../../components/note/NoteEditView";
 import { Point2D } from "../../util/Point2D";
 import { projectActions } from "../../actions/project";
 import { CreatePageDialog } from "../../components/CreateNewPageDialog";
+import { appActions } from "../../actions/app";
+import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
 
 let log = getLogger("App");
 
@@ -117,6 +119,15 @@ export class WebAppState {
       throw new Error("ProjectData missing.")
     }
     return projectData
+  }
+
+  pageViewState(pageId: string): PageViewState {
+    // Since there's no caching just returns the current if it's the correct
+    // page id. Else throws an error
+    if (this.currentPageViewState && this.currentPageViewState.page.id === pageId) {
+      return this.currentPageViewState
+    }
+    throw new Error("PageViewState not found")
   }
 }
 
@@ -276,7 +287,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             pageActions.endEditWindowDrag(currentPageVS);
           }}
           onCancel={() => {
-            pageActions.abortEditingNote(currentPageVS)
+            pageActions.closeNoteEditWindow(currentPageVS)
           }}
           onSave={(note) => {
             pageActions.saveEditedNote(currentPageVS, note)
@@ -285,8 +296,21 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
       {state.dialogMode === AppDialogMode.CreateNewPage && (
         <CreatePageDialog
-          onClose={() => projectActions.closeAppDialog(state)}
+          onClose={() => appActions.closeAppDialog(state)}
           onCreate={(name: string) => projectActions.createNewPage(state, name)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.PageProperties && state.currentPageViewState && (
+        <PagePropertiesDialog
+          page={state.currentPageViewState.page}
+          onClose={() => appActions.closeAppDialog(state)}
+          onSave={(page) => pageActions.updatePageProperties(page)}
+          onDelete={(page) => {
+            if (confirmPageDeletion(page.name)) {
+              projectActions.deletePageAndUpdateReferences(page);
+            }
+          }}
         />
       )}
     </div>

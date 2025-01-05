@@ -1,4 +1,4 @@
-import { PageError, ProjectError, WebAppState } from "../containers/app/App";
+import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/App";
 import type { LocalStorageState } from "../containers/app/App";
 import { pamet } from "../core/facade";
 import { getLogger } from "fusion/logging";
@@ -62,6 +62,16 @@ class AppActions {
     setCurrentProject(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NoError) {
         state.currentProjectId = projectData ? projectData.id : null;
         state.projectError = projectError;
+    }
+
+    @action
+    closeAppDialog(appState: WebAppState) {
+        appState.dialogMode = AppDialogMode.Closed;
+    }
+
+    @action
+    openPageProperties(appState: WebAppState) {
+        appState.dialogMode = AppDialogMode.PageProperties;
     }
 }
 

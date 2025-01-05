@@ -1,12 +1,12 @@
 import { InMemoryStore } from "fusion/storage/InMemoryStore"
 import { PametStore as PametStore } from "./PametStore";
-import { SearchFilter, SerializedStoreData, Store as Store, deltaFromChanges } from "fusion/storage/BaseStore"
+import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/BaseStore"
 import { Entity, EntityData } from "fusion/libs/Entity";
 import { Change } from "fusion/Change";
-import { updateViewModelFromChanges, pamet } from "../core/facade";
+import { updateViewModelFromDelta, pamet } from "../core/facade";
 import { action } from "fusion/libs/Action";
 import { getLogger } from "fusion/logging";
-import { Delta, DeltaData } from "fusion/storage/Delta";
+import { Delta, DeltaData, squishDeltas } from "fusion/storage/Delta";
 import type { RepoUpdate } from "../../../fusion/js-src/src/storage/BaseRepository";
 
 let log = getLogger('FrontendDomainStore');
@@ -25,16 +25,20 @@ export class FrontendDomainStore extends PametStore {
      * This class handles this synchronization without concerning the frontend.
      *
      */
-    private _store: Store;
+    _store: Store;
 
     private _uncommittedChanges: Change[] = [];
-    private _expectedDeltas: DeltaData[] = []; // Sent to the repo service to create commits with
+    // private _expectedDeltas: DeltaData[] = []; // Sent to the repo service to create commits with
+    private _expectedChanges: Change[] = [];
+    private _expectedDelta: Delta = new Delta({})
 
     constructor() {
         super()
         this._store = new InMemoryStore();
     }
-
+    data(): SerializedStoreData {
+        return this._store.data();
+    }
     loadData(data: SerializedStoreData): void {
         this._store.loadData(data);
     }
@@ -56,7 +60,7 @@ export class FrontendDomainStore extends PametStore {
     insertOne(entity: Entity<EntityData>): Change {
         log.info('Inserting entity', entity);
         let change = this._store.insertOne(entity);
-        updateViewModelFromChanges(pamet.appViewState, [change]);
+        updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
         this._uncommittedChanges.push(change);
         return change;
     }
@@ -64,14 +68,14 @@ export class FrontendDomainStore extends PametStore {
     updateOne(entity: Entity<EntityData>): Change {
         log.info('Updating entity', entity);
         let change = this._store.updateOne(entity);
-        updateViewModelFromChanges(pamet.appViewState, [change]);
+        updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
         this._uncommittedChanges.push(change);
         return change;
     }
     removeOne(entity: Entity<EntityData>): Change {
         log.info('Removing entity', entity);
         let change = this._store.removeOne(entity);
-        updateViewModelFromChanges(pamet.appViewState, [change]);
+        updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
         this._uncommittedChanges.push(change);
         return change;
     }
@@ -95,9 +99,9 @@ export class FrontendDomainStore extends PametStore {
 
         log.info('Saving uncommited changes. Count:', this._uncommittedChanges.length)
 
-        let delta = deltaFromChanges(this._uncommittedChanges);
+        let delta = Delta.fromChanges(this._uncommittedChanges);
         this._uncommittedChanges = []
-        this._expectedDeltas.push(delta.data);
+        this._expectedDelta.mergeWithPriority(delta);
 
         // Send the delta to the storage service
         let currentProject = pamet.currentProject();
@@ -107,53 +111,102 @@ export class FrontendDomainStore extends PametStore {
         pamet.storageService.commit(currentProject.id, delta.data, 'Auto-commit')
     }
 
-    @action({issuer: 'service'})
+    @action({ issuer: 'service' })
     receiveRepoUpdate(repoUpdate: RepoUpdate) {
         log.info('Received repo update', repoUpdate);
-        //     // Check if the update is expected
-        //     // If expected - skip the commits that match the expected deltas
-        //     // Else - revert the local changes and apply the received commits
-        //     // (which will include the local changes with conclicting changes
-        //     // overriden)
-        //     let deltas: Delta[] = []
-        //     let externalDeltas: Delta[] = []
-        //     for (let commitData of repoUpdate.commits) {
-        //         let deltaData = commitData.deltaData;
-        //         if (deltaData === undefined) {
-        //             throw Error('Received undefined delta data')
-        //         }
-        //         let delta = new Delta(deltaData);
 
-        //         // If no expected deltas: add to external
-        //         if (this._expectedDeltas.length === 0) {
-        //             externalDeltas.push(delta)
-        //         } else {  // Else if expecting
-        //             let expectedDelta = this._expectedDeltas.shift();
-        //             // - If match - continue (don't apply commit, and delta removed from expected)
-
-        //             // - If mismatch - clear expected deltas
-
-        //         }
-
-        // Simpler: always revert and reapply. mobx will reduce changes already
-        // sent to the views
-
-        // Revert local changes by applying them in reversed order
-        for (let change of this._uncommittedChanges) {
-            this._store.applyChange(change.reversed())
-        }
-
-        // Apply external delta (which will include the local changes)
-        let changes: Change[] = []
+        // Aggregate the deltas from the commits
+        let deltasData: DeltaData[] = []
         for (let commitData of repoUpdate.newCommits) {
             let deltaData = commitData.deltaData;
             if (deltaData === undefined) {
                 throw Error('Received undefined delta data')
             }
-            let delta = new Delta(deltaData);
-            let changes_ = this._store.applyDelta(delta)
-            changes.push(...changes_)
+            deltasData.push(deltaData)
         }
-        updateViewModelFromChanges(pamet.appViewState, changes);
+        let aggregatedDeltas = squishDeltas(deltasData);
+
+        // Reverse the expected delta and merge it with the received one
+        // The remainder is what we need to apply to get the store in sync
+        // What happens in detail:
+        // 1. User makes change in action and the change is applied synchronously
+        // in the FDS._store (lets call it S1), and the change/delta - C.
+        // So S2 = S1 + C
+        // 2. We save the change and request a commit with it. It's created in
+        // the storage service. It has the same state S, but also may receive
+        // changes from elsewhere, so we assume that the commit hash is
+        // f(S2'), where C' are the expected changes +- other stuff, and S2'=S1+C'
+        // 3. We receive the new commit and accept it as ground truth. But we
+        // need to sync the FDS._store to the StorageService state.
+        // So we do:
+        // S2 - C = S1
+        // S1 + C' = S2'
+        // Or for efficiency sake we combine the deltas before applying them
+        // (order matters)
+        // S2 + (reversed(C) + C') = S2'
+        let reversedExpectedDelta = this._expectedDelta.reversed();
+        this._expectedDelta = new Delta({});
+
+        try {
+            reversedExpectedDelta.mergeWithPriority(aggregatedDeltas);
+            let unexpectedDelta = reversedExpectedDelta;
+            this._store.applyDelta(unexpectedDelta);
+
+            // Apply the result to the repo
+            updateViewModelFromDelta(pamet.appViewState, unexpectedDelta);
+        } catch (e) {
+            log.error('Inconsistency between received commit deltas and expected changes. Exception:', e);
+            alert('Critical error (check the console). Confirm page reload.');
+            window.location.reload();
+        }
+
+        // // Check that the last commit hash is the same as the one of the
+        // // store state after the update... Cannot be done, hashing is async.
+        // // Also this class should be lean
+
+        // // Integrity check (TMP)
+        // // Check that the store hash is the same as the commit
+        // let hashTreePromise = buildHashTree(this._store);
+        // hashTreePromise.then((hashTree) => {
+        //     let storeHash = hashTree.rootHash();
+        //     let commitHash = repoUpdate.newCommits[repoUpdate.newCommits.length - 1].snapshotHash;
+        //     if (storeHash !== commitHash) {
+        //         log.error('Hash tree integrity check failed',
+        //             'Current hash:', storeHash,
+        //             'Expected hash:', commitHash);
+        //     } else {
+        //         log.info('FDS store hash equals commit hash');
+        //         log.info('Store hash:', storeHash);
+        //     }
+        // }).catch((e) => {
+        //     log.error('Error in hash tree building', e);
+        // })
+        // // Get head state from the store and compare with the FDS.inMemoryRepo
+        // let headStatePromise = pamet.storageService.headState(
+        //     pamet.appViewState.currentProjectId!)
+
+        // headStatePromise.then((headState) => {
+        //     log.info('Head state', JSON.stringify(headState, null, 2));
+        //     let store = new InMemoryStore();
+        //     store.loadData(headState);
+        //     let headHashTreePromise = buildHashTree(store);
+        //     headHashTreePromise.then((headHashTree) => {
+        //         let headHash = headHashTree.rootHash();
+        //         log.info('Head state hash:', headHash);
+        //         let commitHash = repoUpdate.newCommits[repoUpdate.newCommits.length - 1].snapshotHash;
+        //         if (headHash !== commitHash) {
+        //             log.error('Head state integrity check failed',
+        //                 'FDS hash:', headHash,
+        //                 'Commit hash:', headHash);
+        //         } else{
+        //             log.info('Head state hash equals commit hash');
+        //             log.info('Head state hash:', headHash);
+        //         }
+        //     }).catch((e) => {
+        //         log.error('Error in head hash tree', e);
+        //     })
+        // }).catch((e) => {
+        //     log.error('Error in head state', e);
+        // })
     }
 }

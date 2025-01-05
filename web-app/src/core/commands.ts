@@ -2,15 +2,20 @@ import { pageActions } from "../actions/page";
 import { pamet } from "./facade";
 import { command } from "fusion/libs/Command";
 import { getLogger } from "fusion/logging";
+import { appActions } from "../actions/app";
 import { Point2D } from "../util/Point2D";
 import { arrowActions } from "../actions/arrow";
 import { projectActions } from "../actions/project";
 import { Note } from "../model/Note";
 import { NoteViewState } from "../components/note/NoteViewState";
 import { PageViewState } from "../components/page/PageViewState";
+import { buildHashTree } from "fusion/storage/HashTree";
 
 let log = getLogger('PametCommands');
 
+export function confirmPageDeletion(pageName: string): boolean {
+    return window.confirm(`Are you sure you want to delete the page "${pageName}"?`);
+}
 
 function getCurrentPageViewState(): PageViewState {
     let appState = pamet.appViewState;
@@ -174,6 +179,41 @@ class PametCommands {
             selectionMap.set(arrowVS, true);
         }
         pageActions.updateSelection(pageVS, selectionMap);
+    }
+
+    @command('Open page properties')
+    openPageProperties() {
+        appActions.openPageProperties(pamet.appViewState);
+    }
+
+    @command('Delete current page')
+    deleteCurrentPage() {
+        const pageVS = getCurrentPageViewState();
+        if (confirmPageDeletion(pageVS.page.name)) {
+            projectActions.deletePageAndUpdateReferences(pageVS.page);
+        }
+    }
+
+    @command('Copy store state to clipboard')
+    storeStateToClipboard() {
+        storeStateToClipboard();
+    }
+}
+
+async function storeStateToClipboard() {
+    // get the FDS state
+    let fdsState = pamet.frontendDomainStore._store.data()
+    // create a hash tree
+    let hashTree = await buildHashTree(pamet.frontendDomainStore._store)
+    // copy both to clipboard
+    let nodes = Object.values(hashTree.nodes)
+    let nodeData = nodes.map(node => node.data())
+    let text = JSON.stringify({ fdsState, nodeData }, null, 2)
+    try {
+        navigator.clipboard.writeText(text);
+        log.info('Successfully copied to clipboard');
+    } catch (err) {
+        log.error('Failed to copy to clipboard:', err);
     }
 }
 
