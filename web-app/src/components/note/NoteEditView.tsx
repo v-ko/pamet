@@ -59,6 +59,17 @@ const ToolButton = styled.button`
     display: flex;
     justify-content: center;
     align-items: center;
+  background: #fff;
+  border: 1px solid #000;
+  border-radius: 2px;
+  color: #000;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #000;
+    color: #fff;
+  }
 `;
 
 const NoteEditView: React.FC<EditComponentProps> = observer((
@@ -79,7 +90,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     return () => pamet.setContext('noteEditViewFocused', false);
   }, []);
 
-  //
   const bakeNoteAndSave = useCallback(() => {
     /**
      * Returns a note object with the changes from the editing actions applied
@@ -126,7 +136,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
       const rect = wrapper.getBoundingClientRect();
       setGeometry(new Rectangle(rect.left, rect.top, rect.width, rect.height));
-    }
+    };
 
     // Use a resize observer to bind the updateGeometry function to resize events
     // of the superContainer
@@ -168,81 +178,92 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
   return (
     <div
-      // onMouseMove={onMouseMove}
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
       style={{
         left: left,
         top: top,
-        background: `rgba(255, 255, 255, ${state.isBeingDragged ? 0.6 : 1})`,
+        // background: `rgba(255, 255, 255, ${state.isBeingDragged ? 0.6 : 1})`,
         pointerEvents: state.isBeingDragged ? 'none' : 'auto',
 
         position: 'absolute',
         width: '400px',
         height: '400px',
+        background: '#fff',
+        color: '#000',
         resize: 'both',
         overflow: 'auto',
         minHeight: '300px',
         minWidth: '300px',
         maxWidth: '95%',
 
-        border: '1px solid black',
-        borderRadius: '5px',
+        border: '1px solid #000',
+        borderRadius: '2px',
         display: 'grid',
         gridTemplateColumns: '100%',
-        gridTemplateRows: '30px 50px auto 50px',
-        zIndex: 1003
-      }}>
+        gridTemplateRows: '36px 46px auto 50px',
+        zIndex: 1003,
+      }}
+    >
       {/* Title bar */}
       <div
         style={{
-          // padding: '5px',
           position: 'relative',
-          backgroundColor: '#f0f0f0',
+          background: '#000',
+          color: '#fff',
           display: 'flex',
-
-        }}>
-        {/* move icon */}
-        <div // Title / resize area
+          alignItems: 'center',
+          borderBottom: '1px solid #000',
+        }}
+      >
+        {/* move icon area */}
+        <div
           onMouseDown={onTitlebarPress}
           onMouseUp={onTitlebarRelease}
           style={{
             cursor: 'move',
-            flexGrow: 1
-          }}>
-        </div>
-        <button // Close button
+            flexGrow: 1,
+            // minimal “grab area” for moving the dialog
+          }}
+        />
+        {/* Close button */}
+        <button
           onClick={onCancel}
           style={{
-            // margin: '2px',
+            background: 'transparent',
             border: 'none',
-            width: '30px',
-            height: '30px',
+            width: '36px',
+            height: '36px',
+            color: '#fff',
+            fontSize: '18px',
+            cursor: 'pointer',
+            transition: '0.2s',
           }}
-        // onClick={}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#444')}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
         >
-          🗙
+          ×
         </button>
         <div // Display the title separately on top (there's probably a nicer way)
           style={{
             position: 'absolute',
             width: '100%',
             height: '100%',
-            top: '0',
-            left: '0',
+            top: 0,
+            left: 0,
             textAlign: 'center',
-            justifyContent: 'center',
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
             pointerEvents: 'none',
           }}
         >
           {/* Set the text to 'Edit note' or 'Create note' */}
           {state.creatingNote ? 'Create note' : 'Edit note'}
-
         </div>
-
       </div>
+
+      {/* Tool buttons row */}
       <div
         style={{
           display: 'flex',
@@ -257,19 +278,17 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         <ToolButton>⋮</ToolButton>
       </div>
 
+      {/* Main content */}
       <div
         className="main-content"
         style={{
-          paddingLeft: '8px',
-          paddingRight: '8px',
-          // border: '1px solid black',
+          padding: '8px',
           overflow: 'none',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'center',
           gap: '10px',
-
         }}
       >
         {/* Main content */}
@@ -281,13 +300,10 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
             width: '100%',
             height: '100%',
             overflow: 'none',
-            // margin: '10px',
-            // padding: '20px',
           }}
         >
           <label
             style={{
-              display: 'block',
               fontSize: '0.9em',
               fontWeight: 'bold',
               marginBottom: '5px',
@@ -305,37 +321,58 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
                 ...noteData,
                 content: {
                   ...noteData.content,
-                  text: e.target.value
-                }
-              })
+                  text: e.target.value,
+                },
+              });
             }}
             style={{
               flexGrow: 1,
               resize: 'none',
-              padding: '0px',
-              border: '1px solid #ccc',
-              borderWidth: '2px',
-              borderRadius: '5px',
+              border: '1px solid #000',
+              borderRadius: '2px',
+              padding: '8px',
+              fontSize: '14px',
+              color: '#000',
             }}
-            onFocus={ () => pamet.setContext('noteEditViewFocused', true) }
-            onBlur={ () => pamet.setContext('noteEditViewFocused', false) }
+            onFocus={() => pamet.setContext('noteEditViewFocused', true)}
+            onBlur={() => pamet.setContext('noteEditViewFocused', false)}
           />
         </div>
       </div>
 
+      {/* Footer / actions */}
       <div
         style={{
           display: 'flex',
           justifyContent: 'center',
-          padding: '10px',
+          alignItems: 'center',
           gap: '10px',
-        }}>
+          padding: '8px',
+          borderTop: '1px solid #000',
+        }}
+      >
         <button
           onClick={onCancel}
+          style={{
+            padding: '6px 12px',
+            border: '1px solid #000',
+            borderRadius: '2px',
+            background: '#fff',
+            color: '#000',
+            cursor: 'pointer',
+          }}
         >
           Cancel (Esc)</button>
         <button
           onClick={bakeNoteAndSave}
+          style={{
+            padding: '6px 12px',
+            border: '1px solid #000',
+            borderRadius: '2px',
+            background: '#000',
+            color: '#fff',
+            cursor: 'pointer',
+          }}
         >
           Save (Ctrl+S)</button>
       </div>
