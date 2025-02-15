@@ -25,6 +25,8 @@ import { projectActions } from "../../actions/project";
 import { CreatePageDialog } from "../../components/CreateNewPageDialog";
 import { appActions } from "../../actions/app";
 import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
+import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
+import { ProjectsDialog } from "../../components/ProjectsDialog";
 
 let log = getLogger("App");
 
@@ -33,7 +35,8 @@ export enum AppDialogMode {
   CreateNewPage,
   CreateNewProject,
   ProjectProperties,
-  PageProperties
+  PageProperties,
+  ProjectsDialog
 }
 
 export enum PageError {
@@ -221,7 +224,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             fontWeight: 400,
             cursor: 'pointer',
           }}
-          onClick={() => { alert('Not implemented yet') }}
+          onClick={() => appActions.openProjectsDialog(state)}
           title="Go to projects"
         >PAMET</div>
         <VerticalSeparator />
@@ -230,9 +233,9 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           style={{
             cursor: 'pointer'
           }}
-          onClick={() => { alert('Not implemented yet') }}
+          onClick={() => appActions.openProjectPropertiesDialog(state)}
           title="Project properties"
-        >-default-</div>
+        >{state.currentProject?.name || '-default-'}</div>
         <img src={cloudOffIconUrl} alt="Not saved" />
         <VerticalSeparator />
         <img src={shareIconUrl} alt="Share" />
@@ -313,9 +316,22 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           }}
         />
       )}
+
+      {state.dialogMode === AppDialogMode.ProjectProperties && state.currentProject && (
+        <ProjectPropertiesDialog
+          project={state.currentProject}
+          onClose={() => appActions.closeAppDialog(state)}
+          onSave={(project) => log.error('Project save not implemented')}
+          onDelete={(project) => appActions.deleteProject(project)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.ProjectsDialog && (
+        <ProjectsDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
     </div>
-
-
   );
 });
 

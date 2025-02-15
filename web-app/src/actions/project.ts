@@ -9,6 +9,10 @@ import { Point2D } from "../util/Point2D";
 import { InternalLinkNote } from "../model/InternalLinkNote";
 import { getEntityId } from "fusion/libs/Entity";
 import { snapVectorToGrid } from "../util";
+import type { ProjectData } from "../model/config/Project";
+import { getLogger } from "fusion/logging";
+
+const log = getLogger("ProjectActions");
 
 
 class ProjectActions {
@@ -30,7 +34,7 @@ class ProjectActions {
         note.content.text = 'Press H for help'
         let noteRect = note.rect()
         noteRect.setSize(minimalNonelidedSize(note))
-        noteRect.moveCenter(new Point2D(0, 0))  
+        noteRect.moveCenter(new Point2D(0, 0))
         note.setRect(noteRect)
         pamet.insertNote(note)
 

@@ -1,13 +1,14 @@
-import { DeviceData } from "../model/config/Device";
-import { ProjectData } from "../model/config/Project";
-import { UserData } from "../model/config/User";
+import { DeviceData } from "../../model/config/Device";
+import { ProjectData } from "../../model/config/Project";
+import { UserData } from "../../model/config/User";
 import { BaseConfigAdapter } from "./BaseConfigAdapter";
 
-export class PametConfig {
+export class PametConfigService {
     /**
      * A wrapper to access and modify user settings, device settings,
      * project metadata, and possibly other light config items that will be
-     * stored in the local storage
+     * stored in the local storage. An update handler can be set to be called
+     * when the config is updated.
      */
     private _adapter: BaseConfigAdapter;
 
@@ -47,6 +48,15 @@ export class PametConfig {
         this._adapter.set('device', deviceData);
     }
 
+    addProject(project: ProjectData){
+        let userData = this.userData;
+        if (!userData) {
+            throw new Error("User data not found");
+        }
+
+        userData.projects.push(project);
+        this.userData = userData;
+    }
     projectData(projectId: string): ProjectData {
         // For the current user
         let userData = this.userData;

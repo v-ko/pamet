@@ -23,11 +23,10 @@ import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
 import { fusion } from 'fusion/index';
 import { ActionState } from 'fusion/libs/Action';
 import { appActions } from './actions/app';
-import { PametConfig } from './config/Config';
-import { LocalStorageConfigAdapter } from './config/LocalStorageConfigAdapter';
-import { ProjectData } from './model/config/Project';
-import { currentTime, timestamp } from 'fusion/util';
+import { PametConfigService } from './services/config/Config';
+import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
 import { StorageService } from './storage/StorageService';
+import { projectActions } from './actions/project';
 
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
@@ -57,7 +56,7 @@ const PametContext = createContext<PametFacade>(pamet);
 let app_state = new WebAppState()
 pamet.setAppViewState(app_state)
 
-const config = new PametConfig(new LocalStorageConfigAdapter())
+const config = new PametConfigService(new LocalStorageConfigAdapter())
 pamet.setConfig(config)
 
 // Setup the user and device configs. For now the simplest possible setup:
@@ -76,26 +75,13 @@ if (!deviceData) {
 // Check for user. If none - create
 let userData = config.userData;
 if (!userData) {
-    userData = {
-        id: "user-" + crypto.randomUUID(),
-        name: "Anonymous",
-        projects: []
-    }
-    config.userData = userData;
+    userData = appActions.createDefaultUser()
 }
 
 // Check for projects. If none - create a default one
 let projects = userData.projects;
 if (!projects || projects.length === 0) {
-    let project: ProjectData = {
-        id: 'notes',
-        name: "Notebook",
-        owner: userData.id,
-        description: 'Default project',
-        created: timestamp(currentTime())
-    }
-    userData.projects = [project];
-    config.userData = userData;
+    projectActions.createDefaultProject();
 }
 
 // Setup state updates on config updates and do an initial update

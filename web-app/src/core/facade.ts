@@ -9,7 +9,7 @@ import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
-import { PametConfig } from "../config/Config";
+import { PametConfigService } from "../services/config/Config";
 import { StorageService } from "../storage/StorageService";
 import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/BaseRepository";
@@ -37,7 +37,7 @@ export class PametFacade extends PametStore {
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
-    private _config: PametConfig | null = null;
+    private _config: PametConfigService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService = new KeybindingService();
@@ -196,7 +196,7 @@ export class PametFacade extends PametStore {
         return this._frontendDomainStore;
     }
 
-    setConfig(config: PametConfig) {
+    setConfig(config: PametConfigService) {
         this._config = config;
         appActions.updateAppStateFromConfig(this.appViewState);
         config.setUpdateHandler(() => {
@@ -220,7 +220,7 @@ export class PametFacade extends PametStore {
         this._appViewState = state;
     }
 
-    get config(): PametConfig {
+    get config(): PametConfigService {
         if (!this._config) {
             throw Error('Config not set');
         }

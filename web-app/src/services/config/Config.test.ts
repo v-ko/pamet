@@ -1,17 +1,17 @@
-import { UserData } from '../model/config/User';
-import { PametConfig } from './Config';
+import { UserData } from '../../model/config/User';
+import { PametConfigService } from './Config';
 import { DummyConfigAdapter } from './DummyAdapter';
 
 // prep for mocking localStorage
 
 
 describe('PametConfig', () => {
-    let config: PametConfig;
+    let config: PametConfigService;
     let adapter: DummyConfigAdapter;
 
     beforeEach(() => {
         adapter = new DummyConfigAdapter();
-        config = new PametConfig(adapter);
+        config = new PametConfigService(adapter);
     });
 
     afterEach(() => {
