@@ -9,25 +9,32 @@ let log = getLogger('ProjectStorageManager');
 
 export interface ProjectStorageConfig {
     currentBranchName: string;
-    storageAdapterConfig: StorageAdapterConfig;
+    localRepoConfig: StorageAdapterConfig;
+    // WebRTC repo config
+    // Cloud repo config
 }
 
 export type StorageAdapterNames = "IndexedDB" | "InMemory";
 
+export interface StorageAdapterArgs {
+    projectId: string;
+    defaultBranchName: string;
+}
+
 export interface StorageAdapterConfig {
     name: StorageAdapterNames
-    args: any;
+    args: StorageAdapterArgs;
 }
 
 async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsyncRepository> {
     let repo: BaseAsyncRepository;
 
     switch (config.name) {
-        case "IndexedDB":{
-            let idbRepoArgs = config.args as { defaultBranchName: string }
-            let indexedDB_repo = new IndexedDBRepository(idbRepoArgs.defaultBranchName);
-            await indexedDB_repo.init(config.args.defaultBranchName)
-            repo = indexedDB_repo
+        case "IndexedDB": {
+            let idbRepoArgs = config.args;
+            let indexedDB_repo = new IndexedDBRepository(idbRepoArgs.projectId, idbRepoArgs.defaultBranchName);
+            await indexedDB_repo.connectOrInit()
+            repo = indexedDB_repo  // For TS type annotation purpuses
             break;
         }
         case "InMemory": { // For testing purposes
@@ -36,7 +43,7 @@ async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsy
             repo = inMemRepo
             break;
         }
-        default:{
+        default: {
             throw new Error(`Unknown storage adapter name: ${config.name}`)
         }
     }
@@ -102,18 +109,18 @@ export class ProjectStorageManager {
         const branchName = this.config.currentBranchName
 
         // Setup the local storage adapter
-        // let AdapterClass = initStorageAdapter(this.config.storageAdapterConfig.name)
-        // this._localStorageRepo = new AdapterClass(this.config.storageAdapterConfig.args);
-        try{
-        this._localStorageRepo = await initStorageAdapter(this.config.storageAdapterConfig)
-        } catch(e){
+        try {
+            this._localStorageRepo = await initStorageAdapter(this.config.localRepoConfig)
+            log.info('Initialized storage adapter', this._localStorageRepo)
+
+        } catch (e) {
             console.error("Error in initializing storage adapter", e)
         }
         // Check that there's a device branch with the id supplied in the config
         // and create one if not
         let localGraph = await this.localStorageRepo.getCommitGraph()
 
-        if(!localGraph.branch(branchName)){
+        if (!localGraph.branch(branchName)) {
             // If the branch does not exist -
             // create branch in local adapter, pull, merge, push
             log.info('Device branch missing in the local storage. Creating it:', branchName)
@@ -125,6 +132,23 @@ export class ProjectStorageManager {
 
         // Populate the in-mem repo with the local storage data
         await this._inMemRepo.pull(this.localStorageRepo)
+    }
+
+    shutdown() {
+        // Close the storage manager
+        log.info('Closing project storage manager')
+        if (this._localStorageRepo) {
+            this._localStorageRepo.shutdown()
+        }
+    }
+
+    async eraseLocalStorage() {
+        // Erase the local storage
+        if (this._localStorageRepo) {
+            await this._localStorageRepo.eraseStorage()
+        } else {
+            log.warning('Local storage not initialized. Nothing to erase.')
+        }
     }
 }
 

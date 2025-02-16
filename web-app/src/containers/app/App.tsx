@@ -27,6 +27,7 @@ import { appActions } from "../../actions/app";
 import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
 import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "../../components/ProjectsDialog";
+import { CreateProjectDialog } from "../../components/CreateProjectDialog";
 
 let log = getLogger("App");
 
@@ -235,7 +236,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           }}
           onClick={() => appActions.openProjectPropertiesDialog(state)}
           title="Project properties"
-        >{state.currentProject?.name || '-default-'}</div>
+        >{state.currentProject?.title || '(no project open)'}</div>
         <img src={cloudOffIconUrl} alt="Not saved" />
         <VerticalSeparator />
         <img src={shareIconUrl} alt="Share" />
@@ -322,12 +323,18 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           project={state.currentProject}
           onClose={() => appActions.closeAppDialog(state)}
           onSave={(project) => log.error('Project save not implemented')}
-          onDelete={(project) => appActions.deleteProject(project)}
+          // onDelete={(project) => appActions.deleteProject(project)}
         />
       )}
 
       {state.dialogMode === AppDialogMode.ProjectsDialog && (
         <ProjectsDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.CreateNewProject && (
+        <CreateProjectDialog
           onClose={() => appActions.closeAppDialog(state)}
         />
       )}

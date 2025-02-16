@@ -1,21 +1,32 @@
 import { useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import type { ProjectData } from 'web-app/src/model/config/Project';
+import { appActions } from '../actions/app';
 
 interface ProjectPropertiesDialogProps {
   project: ProjectData;
   onClose: () => void;
   onSave: (project: ProjectData) => void;
-  onDelete: (project: ProjectData) => void;
+  // onDelete: (project: ProjectData) => void;
 }
 
 export function ProjectPropertiesDialog({
   project,
   onClose,
   onSave,
-  onDelete
+  // onDelete
 }: ProjectPropertiesDialogProps) {
   const [projectId, setProjectId] = useState(project.id);
+
+  function onDelete(project: ProjectData) {
+    onClose();
+
+    // Confirmation dialog
+    const confirmed = window.confirm('Are you sure you want to delete this project from local storage?');
+    if (!confirmed) return;
+
+    appActions.startProjectDeletionProcedure(project);
+  }
 
   return (
     <Dialog.Root open={true} onOpenChange={(open) => !open && onClose()}>

@@ -10,21 +10,24 @@
   "devDependencies": {
     "@types/jest": "^29.5.12",
     "@types/node": "^22.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
     "babel-jest": "^29.7.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.4",
-    "typescript": "^5.5.4",
     "eslint": "^8.57.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0"
+    "jest": "^29.7.0",
+    "ts-jest": "^29.2.4",
+    "typescript": "^5.5.4"
   },
   "scripts": {
     "dev": "npm run dev --workspace web-app",
     "test": "jest --detect-open-handles",
     "test:packages": "npm run test --workspaces"
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.6"
   }
 }

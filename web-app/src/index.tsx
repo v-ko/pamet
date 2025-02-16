@@ -26,7 +26,6 @@ import { appActions } from './actions/app';
 import { PametConfigService } from './services/config/Config';
 import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
 import { StorageService } from './storage/StorageService';
-import { projectActions } from './actions/project';
 
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
@@ -81,7 +80,7 @@ if (!userData) {
 // Check for projects. If none - create a default one
 let projects = userData.projects;
 if (!projects || projects.length === 0) {
-    projectActions.createDefaultProject();
+    appActions.createDefaultProject();
 }
 
 // Setup state updates on config updates and do an initial update

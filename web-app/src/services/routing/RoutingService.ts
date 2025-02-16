@@ -26,7 +26,9 @@ export class RoutingService {
 
         if (this.autoHandleRouteChange) {
             setTimeout(() => {
-                this.reachRouteOrAutoassist(route);
+                this.reachRouteOrAutoassist(route).catch((e) => {
+                    log.error('Failed in reachRouteOrAutoassist', route, e);
+                });
             });
         }
     }
@@ -39,7 +41,9 @@ export class RoutingService {
             this.routingListener = () => {
                 const route = this.currentRoute();
                 log.info('Route changed, calling handler');
-                this.reachRouteOrAutoassist(route);
+                this.reachRouteOrAutoassist(route).catch((e) => {
+                    log.error('Failed in reachRouteOrAutoassist', route, e);
+                });
             };
             window.addEventListener('popstate', this.routingListener);
         } else if (!enable) {
@@ -82,7 +86,7 @@ export class RoutingService {
             throw Error('User data not loaded');
         }
 
-        await pamet.setCurrentProject(projectId); // view state updated here
+        await pamet.switchToProject(projectId); // view state updated here
 
         // if there's a page id
         let pageId = route.pageId;

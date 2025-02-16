@@ -1,4 +1,4 @@
-import { ProjectError, WebAppState } from "../containers/app/App";
+import { WebAppState } from "../containers/app/App";
 import { getLogger } from 'fusion/logging';
 import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
@@ -11,7 +11,7 @@ import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfigService } from "../services/config/Config";
 import { StorageService } from "../storage/StorageService";
-import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
+import { StorageAdapterNames } from "../storage/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
@@ -189,6 +189,23 @@ export class PametFacade extends PametStore {
         return this._apiClient.endpointUrl(route.path());
     }
 
+    projectManagerConfig(projectId: string) {
+        let device = this.config.deviceData;
+        if (!device) {
+            throw Error('Device not set');
+        }
+        return {
+            currentBranchName: device.id,
+            localRepoConfig: {
+                name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
+                args: {
+                    projectId: projectId,
+                    defaultBranchName: device.id,
+                }
+            }
+        }
+    }
+
     get frontendDomainStore(): FrontendDomainStore {
         if (!this._frontendDomainStore) {
             throw Error('Frontend domain store not set');
@@ -241,83 +258,63 @@ export class PametFacade extends PametStore {
         this._storageService = storageService;
     }
 
-    async setCurrentProject(projectId: string | null): Promise<void> {
+    async switchToProject(projectId: string | null): Promise<void> {
+        // A procedure to switch the storage backend to a new project. This
+        //  requires swapping out the frontend domain store and reporting the
+        // status of the backend availability to UI
+
         // Load the project storage manager in the storage service
-        // Swap out the frontend domain store (+ initial state) and connect
-        // it to the storage manager (auto-save, confirm save, get remote commits)
+        // Swap out the frontend domain store (+ initial state) and connect it
+        // to the latter (for auto-save, etc.)
 
-        let device = this.config.deviceData;
         const appState = this.appViewState;
-
-        if (!device) {
-            throw Error('Device not set');
-        }
 
         if (appState.currentProject) {
             // Check if a change is needed at all
             if (appState.currentProject.id === projectId) {
                 return;
             }
-            // Else start the process of swapping the project
-
-            // Unload the last project
-            log.info('Unloading project', appState.currentProject.id);
-            this._frontendDomainStore = null
-            await pamet.storageService.unloadProject(appState.currentProject.id);
         }
 
         // Mark the local storage as unavailable
         appActions.setLocalStorageState(appState, { available: false });
 
-        // let repoManagerConfig: ProjectStorageConfig = {
-        //     currentBranchName: device.id,
-        //     storageAdapterConfig: {
-        //         name: 'InMemory' as StorageAdapterNames, // I really want to remove this cast
-        //         args: {
-        //             defaultBranchName: device.id, // For testing purposes
-        //         }
-        //     }
-        // }
-
-        let repoManagerConfig: ProjectStorageConfig = {
-            currentBranchName: device.id,
-            storageAdapterConfig: {
-                name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
-                args: {
-                    defaultBranchName: device.id, // For testing purposes
+        if (appState.currentProject) {
+            // Unload the last project
+            this._frontendDomainStore = null
+            await pamet.storageService.unloadProject(appState.currentProject.id).catch(
+                (e) => {
+                    log.error('Error unloading project', e);
                 }
-            }
+            )
         }
 
         if (projectId === null) {
+            log.info('[switchToProject] Project is null, setting it as such');
             appActions.setCurrentProject(pamet.appViewState, null);
             return;
         }
 
-        log.info('Loading project', projectId);
-        let domainStore = new FrontendDomainStore()
-        this._frontendDomainStore = domainStore;
+        log.info('[switchToProject] Loading project', projectId);
+        this._frontendDomainStore = new FrontendDomainStore()
 
         // Repo update handler
         let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
             // This handler will be called whenever the repo is updated
-            domainStore.receiveRepoUpdate(repoUpdate)
+            this._frontendDomainStore!.receiveRepoUpdate(repoUpdate)
         }
 
         // Load the new project and connect it to the Frontend domain store
-        await this.storageService.loadProject(projectId, repoManagerConfig, repoUpdateHandler)
+        await this.storageService.loadProject(projectId, this.projectManagerConfig(projectId), repoUpdateHandler)
+
         // Load the entities after loading the repo
         let headState = await this.storageService.headState(projectId)
         this._frontendDomainStore.loadData(headState);
 
         appActions.setLocalStorageState(appState, { available: true });
 
-        try {
-            let projectData = this.project(projectId);
-            appActions.setCurrentProject(appState, projectData);
-        } catch (e) {
-            appActions.setCurrentProject(appState, null, ProjectError.NotFound);
-        }
+        let projectData = this.project(projectId);
+        appActions.setCurrentProject(appState, projectData);
     }
 
     projects(): ProjectData[] {

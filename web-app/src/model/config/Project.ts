@@ -1,6 +1,6 @@
 export interface ProjectData {
     id: string;
-    name: string;
+    title: string;
     owner: string; // User id
     description: string;
     created: string;

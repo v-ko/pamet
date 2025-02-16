@@ -57,6 +57,21 @@ export class PametConfigService {
         userData.projects.push(project);
         this.userData = userData;
     }
+    removeProject(projectId: string) {
+        let userData = this.userData;
+        if (!userData) {
+            throw new Error("User data not found");
+        }
+
+        let projects = userData.projects;
+        let index = projects.findIndex(p => p.id === projectId);
+        if (index === -1) {
+            throw new Error(`Project with ID ${projectId} not found`);
+        }
+        projects.splice(index, 1);
+        userData.projects = projects;
+        this.userData = userData;
+    }
     projectData(projectId: string): ProjectData {
         // For the current user
         let userData = this.userData;
