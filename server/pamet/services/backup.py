@@ -375,10 +375,12 @@ class FSStorageBackupService:
 
             # Read them from the tmp changes file, and add them to the db
             tmp_changeset_file = self.tmp_changeset_path(page_id)
-            lines = tmp_changeset_file.read_text().splitlines()
+            lines = tmp_changeset_file.read_text().split('\n')
             with self.changeset_db.bind_ctx([ChangePW]):
                 with self.changeset_db.atomic():
                     for change_json in lines:
+                        if not change_json:
+                            continue  # Skip empty lines. Should be just one at the end
                         change = Change.from_safe_delta_dict(
                             json.loads(change_json))
                         change = ChangePW.create(page_id=page_id,
