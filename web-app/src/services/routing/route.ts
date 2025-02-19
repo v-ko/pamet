@@ -1,3 +1,5 @@
+import { WebAppState } from "../../containers/app/App";
+
 export const PROJECT_PROTOCOL = 'project:';
 
 
@@ -76,7 +78,7 @@ export function parseUrl(url: string): PametRoute {
 
         // Get the project id from the path
         // Check that there's at least a project id and it's 8 characters long
-        if (pathParts.length >= 3 && pathParts[2].length === 8) {
+        if (pathParts.length >= 3) {
             route.projectId = pathParts[2];
             subProjectPath = pathParts.slice(3).join('/');
         } else {
@@ -150,4 +152,24 @@ export function toUrlPath(route: PametRoute): string {
     }
 
     return path;
+}
+
+
+export function routeFromAppState(state: WebAppState): PametRoute {
+    let route = new PametRoute();
+    let projectId = state.currentProjectId;
+    let pageId = state.currentPageId;
+
+    if (projectId === null && pageId !== null) {
+        throw new Error('Page id set without project id. Removing page id.');
+    }
+
+    if (projectId) {
+        route.projectId = projectId;
+    }
+    if (pageId) {
+        route.pageId = pageId;
+    }
+
+    return route;
 }

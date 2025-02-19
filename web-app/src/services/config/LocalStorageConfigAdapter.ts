@@ -1,4 +1,8 @@
+import { getLogger } from "fusion/logging";
 import { BaseConfigAdapter } from "./BaseConfigAdapter";
+
+const log = getLogger('LocalStorageConfigAdapter');
+
 
 export class LocalStorageConfigAdapter extends BaseConfigAdapter {
     private _handler = () => { };
@@ -25,6 +29,7 @@ export class LocalStorageConfigAdapter extends BaseConfigAdapter {
         // Listen for updates from other tabs
         window.addEventListener('storage', (event) => {
             if (event.storageArea === localStorage) {
+                log.info('Local storage update detected', event);
                 handler();
             }
         });

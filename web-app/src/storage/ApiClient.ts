@@ -8,11 +8,19 @@ import { SerializedEntityData, loadFromDict } from "fusion/libs/Entity";
 import { elementId } from "../model/Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
 import { old_color_to_role } from "../util/Color";
+import { PametRoute } from "../services/routing/route";
 
 let log = getLogger('ApiClient');
 
 
 export class ApiClient extends BaseApiClient {
+    projectScopedUrlToGlobal(url: string): string {
+        let route = PametRoute.fromUrl(url);
+        if (!route.isInternal) {
+            throw Error('Url is not internal: ' + url)
+        }
+        return this.endpointUrl(route.path());
+    }
     // Get pages metadata
     async pages(filter: PageQueryFilter = {}): Promise<Array<Page>> {
         let url = this.endpointUrl('pages');
@@ -69,7 +77,7 @@ export class ApiClient extends BaseApiClient {
             // Convert colors to roles (or fill with defaults)
             if (childData.style.color === undefined) {
                 childData.style.color_role = DEFAULT_TEXT_COLOR_ROLE
-            } else{
+            } else {
                 childData.style.color_role = old_color_to_role(childData.style.color)
             }
             if (childData.style.background_color === undefined) {

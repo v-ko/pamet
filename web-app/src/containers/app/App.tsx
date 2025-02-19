@@ -28,6 +28,7 @@ import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
 import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "../../components/ProjectsDialog";
 import { CreateProjectDialog } from "../../components/CreateProjectDialog";
+import { ProjectData } from "../../model/config/Project";
 
 let log = getLogger("App");
 
@@ -65,6 +66,7 @@ export class WebAppState {
   userId: string | null = null;
 
   currentProjectId: string | null = null;
+  currentProjectState: ProjectData | null = null;
   projectError: ProjectError = ProjectError.NoError;
 
   currentPageId: string | null = null;
@@ -86,6 +88,7 @@ export class WebAppState {
       deviceId: observable,
       userId: observable,
       currentProjectId: observable,
+      currentProjectState: observable,
       currentPageViewState: observable,
       storageState: observable,
       pageError: observable,
@@ -114,7 +117,7 @@ export class WebAppState {
     }
     return userData
   }
-  get currentProject() {
+  currentProject() {
     if (!this.currentProjectId) {
       return null
     }
@@ -157,15 +160,17 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   }, [state.currentPageViewState]);
 
   // Check for resurce availability, and prep error messages if needed
+  let shouldDisplayPage = true
+
   if (!state.device) {
     errorMessages.push('DeviceData missing. This is a pretty critical error.')
   }
-  let localStorageAvailable = state.storageState.localStorage.available;
-  let shouldDisplayPage = true
-  if (!localStorageAvailable) {
-    errorMessages.push("Local storage not initialized/available.")
-  }
-  if (!localStorageAvailable || state.currentPageViewState === null) {
+  // let localStorageAvailable = state.storageState.localStorage.available;
+  // if (!localStorageAvailable) {
+  //   errorMessages.push("Local storage not initialized/available.")
+  //   shouldDisplayPage = false
+  // }
+  if (state.currentPageViewState === null) {
     shouldDisplayPage = false
   }
 
@@ -182,9 +187,6 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       errorMessages.push("Page not set")
     }
 
-    if (errorMessages.length > 0) {
-      console.log('App error messages', errorMessages, state)
-    }
   }
 
   const currentPageVS = state.currentPageViewState
@@ -236,7 +238,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           }}
           onClick={() => appActions.openProjectPropertiesDialog(state)}
           title="Project properties"
-        >{state.currentProject?.title || '(no project open)'}</div>
+        >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
         <img src={cloudOffIconUrl} alt="Not saved" />
         <VerticalSeparator />
         <img src={shareIconUrl} alt="Share" />
@@ -318,12 +320,10 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         />
       )}
 
-      {state.dialogMode === AppDialogMode.ProjectProperties && state.currentProject && (
+      {state.dialogMode === AppDialogMode.ProjectProperties && state.currentProjectState && (
         <ProjectPropertiesDialog
-          project={state.currentProject}
+          project={state.currentProjectState}
           onClose={() => appActions.closeAppDialog(state)}
-          onSave={(project) => log.error('Project save not implemented')}
-          // onDelete={(project) => appActions.deleteProject(project)}
         />
       )}
 

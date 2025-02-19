@@ -21,6 +21,7 @@ import { KeybindingService } from "../services/KeybindingService";
 import { commands } from "./commands";
 import { FocusManager } from "../services/FocusManager";
 import { Delta } from "fusion/storage/Delta";
+import { updateAppStateFromConfig } from "../procedures/app";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -176,19 +177,7 @@ export class PametFacade extends PametStore {
         });
     }
 
-    setContext(key: string, value: boolean) {
-        console.log('Setting context', key, value)
-        this.context[key] = value;
-    }
-
-    projectScopedUrlToGlobal(url: string): string {
-        let route = PametRoute.fromUrl(url);
-        if (!route.isInternal) {
-            throw Error('Url is not internal: ' + url)
-        }
-        return this._apiClient.endpointUrl(route.path());
-    }
-
+    // Service related
     projectManagerConfig(projectId: string) {
         let device = this.config.deviceData;
         if (!device) {
@@ -213,12 +202,33 @@ export class PametFacade extends PametStore {
         return this._frontendDomainStore;
     }
 
-    setConfig(config: PametConfigService) {
-        this._config = config;
-        appActions.updateAppStateFromConfig(this.appViewState);
-        config.setUpdateHandler(() => {
-            appActions.updateAppStateFromConfig(this.appViewState);
-        });
+    removeFrontendDomainStore() {
+        this._frontendDomainStore = null;
+    }
+
+    setFrontendDomainStore(store: FrontendDomainStore) {
+        this._frontendDomainStore = store;
+    }
+
+    get apiClient() {
+        return this._apiClient;
+    }
+
+    get storageService() {
+        if (!this._storageService) {
+            throw Error('Storage service not set');
+        }
+        return this._storageService;
+    }
+    setStorageService(storageService: StorageService) {
+        this._storageService = storageService;
+    }
+
+
+    // UI related
+    setContext(key: string, value: boolean) {
+        console.log('Setting context', key, value)
+        this.context[key] = value;
     }
 
     get appViewState(): WebAppState {
@@ -237,6 +247,48 @@ export class PametFacade extends PametStore {
         this._appViewState = state;
     }
 
+    async setupFrontendDomainStore(projectId: string) {
+        pamet._frontendDomainStore = new FrontendDomainStore()
+
+        // Load the new project and connect it to the Frontend domain store
+        let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
+            // This handler will be called whenever the repo is updated
+            pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
+        }
+        await pamet.storageService.loadRepo(
+            projectId, pamet.projectManagerConfig(projectId), repoUpdateHandler)
+
+        // Load the entities after loading the repo
+        let headState = await pamet.storageService.headState(projectId)
+        pamet.frontendDomainStore.loadData(headState);
+
+        appActions.setLocalStorageState(this.appViewState, { available: true });
+    }
+
+    async detachFrontendDomainStore(projectId: string) {
+        log.info('Detaching FDS for project', projectId);
+        let currentProject = this.appViewState.currentProject();
+
+        // Mark the local storage as unavailable
+        appActions.setLocalStorageState(pamet.appViewState, { available: false });
+
+        if (!currentProject) {
+            log.error('Trying to detach FDS without a project');
+            return;
+        } else if (currentProject.id !== projectId) {
+            log.error('Wrong project id passed for FDS detachment');
+            return;
+        }
+
+        this._frontendDomainStore = null;
+        await this.storageService.unloadRepo(currentProject.id).catch(
+            (e) => {
+                log.error('Error unloading project', e);
+            }
+        )
+    }
+
+    // Model related
     get config(): PametConfigService {
         if (!this._config) {
             throw Error('Config not set');
@@ -244,77 +296,17 @@ export class PametFacade extends PametStore {
         return this._config;
     }
 
-    apiClient() {
-        return this._apiClient;
-    }
-
-    get storageService() {
-        if (!this._storageService) {
-            throw Error('Storage service not set');
-        }
-        return this._storageService;
-    }
-    setStorageService(storageService: StorageService) {
-        this._storageService = storageService;
-    }
-
-    async switchToProject(projectId: string | null): Promise<void> {
-        // A procedure to switch the storage backend to a new project. This
-        //  requires swapping out the frontend domain store and reporting the
-        // status of the backend availability to UI
-
-        // Load the project storage manager in the storage service
-        // Swap out the frontend domain store (+ initial state) and connect it
-        // to the latter (for auto-save, etc.)
-
-        const appState = this.appViewState;
-
-        if (appState.currentProject) {
-            // Check if a change is needed at all
-            if (appState.currentProject.id === projectId) {
-                return;
-            }
-        }
-
-        // Mark the local storage as unavailable
-        appActions.setLocalStorageState(appState, { available: false });
-
-        if (appState.currentProject) {
-            // Unload the last project
-            this._frontendDomainStore = null
-            await pamet.storageService.unloadProject(appState.currentProject.id).catch(
-                (e) => {
-                    log.error('Error unloading project', e);
-                }
-            )
-        }
-
-        if (projectId === null) {
-            log.info('[switchToProject] Project is null, setting it as such');
-            appActions.setCurrentProject(pamet.appViewState, null);
-            return;
-        }
-
-        log.info('[switchToProject] Loading project', projectId);
-        this._frontendDomainStore = new FrontendDomainStore()
-
-        // Repo update handler
-        let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
-            // This handler will be called whenever the repo is updated
-            this._frontendDomainStore!.receiveRepoUpdate(repoUpdate)
-        }
-
-        // Load the new project and connect it to the Frontend domain store
-        await this.storageService.loadProject(projectId, this.projectManagerConfig(projectId), repoUpdateHandler)
-
-        // Load the entities after loading the repo
-        let headState = await this.storageService.headState(projectId)
-        this._frontendDomainStore.loadData(headState);
-
-        appActions.setLocalStorageState(appState, { available: true });
-
-        let projectData = this.project(projectId);
-        appActions.setCurrentProject(appState, projectData);
+    setConfig(config: PametConfigService) {
+        this._config = config;
+        updateAppStateFromConfig(this.appViewState).catch((e) => {
+            log.error('[setConfig] Error updating app state from config', e);
+        });
+        config.setUpdateHandler(() => {
+            log.info('Config updated');
+            updateAppStateFromConfig(this.appViewState).catch((e) => {
+                log.error('[Config.updateHandler] Error updating app state from config', e);
+            });
+        });
     }
 
     projects(): ProjectData[] {
@@ -325,21 +317,8 @@ export class PametFacade extends PametStore {
         return userData.projects;
     }
 
-    project(projectId: string): ProjectData {
+    project(projectId: string): ProjectData | undefined {
         return this.config.projectData(projectId);
-    }
-    currentProject() {
-        return this.appViewState.currentProject;
-    }
-    updateProject(projectData: ProjectData) {
-        // Update in the config
-        this.config.updateProjectData(projectData);
-
-        // If it's the current one - update in the appViewState
-        let currentProject = this.appViewState.currentProject;
-        if (currentProject && currentProject.id === projectData.id) {
-            appActions.setCurrentProject(this.appViewState, projectData);
-        }
     }
 
     insertOne(entity: Entity<EntityData>): Change {
@@ -392,7 +371,7 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
                     }
                     let route = new PametRoute();
                     route.projectId = projectId;
-                    pamet.router.setRoute(route);
+                    pamet.router.replaceRoute(route);
                 }
             }
             else if (change.isUpdate()) {

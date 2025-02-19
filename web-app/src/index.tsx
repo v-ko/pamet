@@ -22,10 +22,10 @@ import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
 import { fusion } from 'fusion/index';
 import { ActionState } from 'fusion/libs/Action';
-import { appActions } from './actions/app';
 import { PametConfigService } from './services/config/Config';
 import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
 import { StorageService } from './storage/StorageService';
+import { updateAppFromRouteOrAutoassist } from './procedures/app';
 
 let dummyImports: any[] = [];
 dummyImports.push(TextNote);
@@ -56,7 +56,6 @@ let app_state = new WebAppState()
 pamet.setAppViewState(app_state)
 
 const config = new PametConfigService(new LocalStorageConfigAdapter())
-pamet.setConfig(config)
 
 // Setup the user and device configs. For now the simplest possible setup:
 // Generate device if none. Generate anonymous user and default project and page if none
@@ -72,23 +71,16 @@ if (!deviceData) {
 }
 
 // Check for user. If none - create
-let userData = config.userData;
-if (!userData) {
-    userData = appActions.createDefaultUser()
+if (!config.userData) {
+    let userData = {
+        id: "user-" + crypto.randomUUID(),
+        name: "Anonymous",
+        projects: []
+    }
+    config.userData = userData;
 }
 
-// Check for projects. If none - create a default one
-let projects = userData.projects;
-if (!projects || projects.length === 0) {
-    appActions.createDefaultProject();
-}
-
-// Setup state updates on config updates and do an initial update
-// This should be more integrated with mobx
-appActions.updateAppStateFromConfig(app_state);
-config.setUpdateHandler(() => {
-    appActions.updateAppStateFromConfig(app_state);
-});
+pamet.setConfig(config)
 
 // // Setup the sync service
 setupWebWorkerLoggingChannel();
@@ -96,18 +88,14 @@ setupWebWorkerLoggingChannel();
 // Create a storage service in the main thread
 let storageService = StorageService.inMainThread();
 pamet.setStorageService(storageService);
-// Determine the route and do an initial update
-// let route = pamet.router.currentRoute()
-// appActions.applyRoute(app_state, route);
 
 // Setup automatic handling
-pamet.router.handleRouteChange(true);
-pamet.router.reachRouteOrAutoassist(
-    pamet.router.currentRoute()).catch((e) => {
-        log.error("Error in reachRouteOrAutoassist", e);
+// pamet.router.setHandleRouteChange(true);
+log.info("AT index.tsx - setting up route handling");
+updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
+    .catch((e) => {
+        log.error("Error in updateAppFromRouteOrAutoassist", e);
     });
-
-// Load the default project - in applyRoute
 
 
 // // Start loading the storage service in the service worker

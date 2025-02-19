@@ -605,7 +605,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     let note = noteVS.note()
     if (note.content.image !== undefined) {
       let url = note.content.image.url;
-      imageUrls.add(pamet.projectScopedUrlToGlobal(url));
+      imageUrls.add(pamet.apiClient.projectScopedUrlToGlobal(url));
     }
   }
 

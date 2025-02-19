@@ -26,8 +26,5 @@
     "dev": "npm run dev --workspace web-app",
     "test": "jest --detect-open-handles",
     "test:packages": "npm run test --workspaces"
-  },
-  "dependencies": {
-    "@radix-ui/react-dialog": "^1.1.6"
   }
 }

@@ -85,7 +85,12 @@ export class FrontendDomainStore extends PametStore {
     }
 
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
-        return this._store.findOne(filter);
+        let result = this._store.findOne(filter);
+        log.info('FDS findOne',
+            'Filter:', filter,
+            'Store:', this._store,
+            'Result:', result);
+        return result
     }
 
     // Logic for committing, confirming commit creation and acceptiong new commits
@@ -104,7 +109,7 @@ export class FrontendDomainStore extends PametStore {
         this._expectedDelta.mergeWithPriority(delta);
 
         // Send the delta to the storage service
-        let currentProject = pamet.currentProject();
+        let currentProject = pamet.appViewState.currentProject();
         if (!currentProject) {
             throw Error('No current project set');
         }
@@ -156,8 +161,8 @@ export class FrontendDomainStore extends PametStore {
             updateViewModelFromDelta(pamet.appViewState, unexpectedDelta);
         } catch (e) {
             log.error('Inconsistency between received commit deltas and expected changes. Exception:', e);
-            alert('Critical error (check the console). Confirm page reload.');
-            window.location.reload();
+            alert('Critical error (check the console). Please reload the page');
+            // window.location.reload();
         }
 
         // // Check that the last commit hash is the same as the one of the

@@ -111,7 +111,6 @@ export class ProjectStorageManager {
         // Setup the local storage adapter
         try {
             this._localStorageRepo = await initStorageAdapter(this.config.localRepoConfig)
-            log.info('Initialized storage adapter', this._localStorageRepo)
 
         } catch (e) {
             console.error("Error in initializing storage adapter", e)

@@ -5,30 +5,13 @@ import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";
 import { PageViewState } from "../components/page/PageViewState";
 import type { ProjectData } from "../model/config/Project";
-import type { UserData } from "../model/config/User";
 import { currentTime, timestamp } from "fusion/util";
-import { PametRoute } from "../services/routing/route";
+import { deleteProjectAndSwitch } from "../procedures/app";
+import { routeFromAppState } from "../services/routing/route";
 
 let log = getLogger("WebAppActions");
 
 class AppActions {
-    @action
-    createDefaultUser(): UserData {
-        let userData = pamet.config.userData;
-
-        if (userData) {
-             throw Error('Cannot create default user if one already exists')
-        }
-
-        userData = {
-            id: "user-" + crypto.randomUUID(),
-            name: "Anonymous",
-            projects: []
-        }
-        pamet.config.userData = userData;
-        return userData
-    }
-
     @action
     setCurrentPage(state: WebAppState, pageId: string) {
         log.info(`Setting current page to ${pageId}`);
@@ -41,34 +24,12 @@ class AppActions {
             state.pageError = PageError.NoError;
         } else {
             console.log("Page not found. FDS:", pamet.frontendDomainStore)
-            log.error('Page not found in the domain store.')
+            log.error('Page not found in the domain store.', pageId)
             state.currentPageId = null;
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
         }
-        pamet.router.pushRoute(pamet.router.routeFromAppState(state));
-    }
-
-    @action
-    updateAppStateFromConfig(state: WebAppState) {
-        // Device
-        let device = pamet.config.deviceData;
-        if (device === undefined) {
-            state.deviceId = null;
-        } else {
-            state.deviceId = device.id;
-        }
-
-        // User
-        let user = pamet.config.userData;
-        if (user === undefined) {
-            state.userId = null;
-        } else {
-            state.userId = user.id;
-        }
-
-        // Settings?
-        // Projects - no , they are in the user config for now
+        pamet.router.pushRoute(routeFromAppState(state));
     }
 
     @action({ issuer: 'service' })
@@ -77,10 +38,13 @@ class AppActions {
         state.storageState.localStorage = localStorageState;
     }
 
-    @action
-    setCurrentProject(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NoError) {
+    @action({ issuer: 'service' })
+    reflectCurrentProjectState(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NoError) {
+        // This is used only for setting the state. The actual project
+        // switching is done in the switchToProject procedure
         log.info('Setting projectId in view state', projectData ? projectData.id : null);
         state.currentProjectId = projectData ? projectData.id : null;
+        state.currentProjectState = projectData;
         state.projectError = projectError;
         state.currentPageId = null;
     }
@@ -140,49 +104,9 @@ class AppActions {
         pamet.config.addProject(project);
     }
 
-    async deleteProjectAndSwitch(project: ProjectData) {
-        // call the async local data erase, then remove the project from the config
-        // then if deleting the currently open project
-        // switch to another project (if none present - create a default one)
-        log.info("Starting delete procedure for project", project);
-
-        // Get projects, return error if the project is missing
-        let projects = pamet.projects();
-        if (!projects.find(p => p.id === project.id)) {
-            throw new Error(`Project with ID ${project.id} not found`);
-        }
-
-        // If the project to be deleted is the currently open one
-        // set the current project to null
-        if (pamet.appViewState.currentProjectId === project.id) {
-            log.info("Setting current project to null");
-            await pamet.switchToProject(null);
-        }
-
-        // Do the requested delete from the local config and storage backend
-        log.info("Removing project from config and indexeddb", project);
-        pamet.config.removeProject(project.id);
-        await pamet.storageService.deleteProject(project.id, pamet.projectManagerConfig(project.id));
-
-        // If there's no projects left, create a default one
-        if (pamet.projects().length === 0) {
-            log.info("No projects left - creating a default one");
-            pamet.config.addProject(appActions.createDefaultProject());
-        }
-
-        // If the current project is null (i.e. we've deleted the current project)
-        // Use the auto-assist to switch to the first project in the list
-        // and create default page if needed, etc
-        if (pamet.appViewState.currentProjectId === null) {
-            await pamet.router.reachRouteOrAutoassist(new PametRoute());
-        }
-
-        log.info("Project deletion procedure completed");
-    }
-
     @action
     startProjectDeletionProcedure(project: ProjectData) {
-        this.deleteProjectAndSwitch(project).catch((e) => {
+        deleteProjectAndSwitch(project).catch((e) => {
             log.error("Error in startProjectDeletionProcedure", e);
         });
     }

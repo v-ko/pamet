@@ -1,7 +1,11 @@
+import { getLogger } from "fusion/logging";
 import { DeviceData } from "../../model/config/Device";
 import { ProjectData } from "../../model/config/Project";
 import { UserData } from "../../model/config/User";
 import { BaseConfigAdapter } from "./BaseConfigAdapter";
+
+const log = getLogger('PametConfigService');
+
 
 export class PametConfigService {
     /**
@@ -72,16 +76,13 @@ export class PametConfigService {
         userData.projects = projects;
         this.userData = userData;
     }
-    projectData(projectId: string): ProjectData {
+    projectData(projectId: string): ProjectData | undefined {
         // For the current user
         let userData = this.userData;
         if (!userData) {
             throw new Error("User data not found");
         }
         let project = userData.projects.find(p => p.id === projectId);
-        if (!project) {
-            throw new Error(`Project with ID ${projectId} not found`);
-        }
         return project;
     }
     updateProjectData(projectData: ProjectData) {
@@ -95,9 +96,10 @@ export class PametConfigService {
         if (index === -1) {
             throw new Error(`Project with ID ${projectData.id} not found`);
         }
+
+        log.info("Updating project in config", projectData);
         projects[index] = projectData;
         userData.projects = projects;
         this.userData = userData;
     }
 }
-

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { appActions } from 'web-app/src/actions/app';
 import { pamet } from 'web-app/src/core/facade';
 import { timestamp, currentTime } from 'fusion/util';
+import { switchToProject } from '../procedures/app';
 
 interface CreateProjectDialogProps {
   onClose: () => void;
@@ -44,11 +45,11 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
   }
 
   function generateDefaultTitle(): string {
-    let title = 'Notebook';
+    let title = 'Project 1';
     let i = 1;
     while (pamet.projects().some(p => p.title === title)) {
       i++;
-      title = `Notebook ${i}`;
+      title = `Project ${i}`;
     }
     return title;
   }
@@ -104,7 +105,9 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
     };
 
     appActions.createProject(newProject);
-    appActions.setCurrentProject(pamet.appViewState, newProject);
+    switchToProject(newProject.id).catch(e => {
+      console.error('Failed to switch to the new project', e);
+    });
     handleClose();
   }
 

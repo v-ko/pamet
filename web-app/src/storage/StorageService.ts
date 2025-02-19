@@ -29,23 +29,12 @@ interface CommitRequest extends StorageOperationRequest {
     deltaData: DeltaData;
     message: string;
 }
-interface DeleteRequest extends StorageOperationRequest {
-    projectId: string;
-    projectStorageConfig: ProjectStorageConfig;
-}
 function createCommitRequest(projectId: string, deltaData: DeltaData, message: string): CommitRequest {
     return {
         type: 'commit',
         projectId: projectId,
         deltaData: deltaData,
         message: message
-    }
-}
-function createDeleteRequest(projectId: string, projectStorageConfig: ProjectStorageConfig): DeleteRequest {
-    return {
-        type: 'deleteRepo',
-        projectId: projectId,
-        projectStorageConfig: projectStorageConfig
     }
 }
 
@@ -178,13 +167,13 @@ export class StorageService {
     }
 
     // Proxy interface methods
-    async loadProject(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<void> {
+    async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<void> {
         log.info('Loading project', projectId)
         let subscriptionId = await this.service.loadRepo(projectId, projectStorageConfig, commitNotify);
         this._repoSubscriptions[projectId] = subscriptionId;
         log.info('Loaded project', projectId)
     }
-    async unloadProject(projectId: string): Promise<void> {
+    async unloadRepo(projectId: string): Promise<void> {
         log.info('Unloading project', projectId)
         let subscriptionId = this._repoSubscriptions[projectId];
         if (subscriptionId === undefined) {
@@ -263,7 +252,6 @@ export class StorageServiceActual {
          *
          * Returns a subscription id
          */
-        log.info('Loading repo', projectId);
         let repoManager = this.repoManagers[projectId];
         if (!repoManager) {
             repoManager = new ProjectStorageManager(this, projectStorageConfig);
@@ -272,9 +260,15 @@ export class StorageServiceActual {
 
             this.subscriptions[projectId] = [];
         } else { // Repo already loaded
+            log.info('Repo already loaded', projectId);
             // Check that the configs are the same
-            if (repoManager.config !== projectStorageConfig) {
-                throw new Error("Repo already loaded with different config");
+            // deep compare the configs
+            let configsAreTheSame = JSON.stringify(repoManager.config) === JSON.stringify(projectStorageConfig);
+            if (!configsAreTheSame) {
+                log.error('Repo already loaded with different config', projectId);
+                log.error('Loaded config', repoManager.config);
+                log.error('Requested config', projectStorageConfig);
+                throw new Error('Repo already loaded with different config');
             }
         }
 
@@ -315,9 +309,6 @@ export class StorageServiceActual {
     }
     async deleteRepo(projectId: string, projectStorageConfig: ProjectStorageConfig): Promise<void> {
         // Delete the local storage
-        // let request = createDeleteRequest(projectId, projectStorageConfig);
-        // await this._storageOperationRequest(request);
-
         let projectStorageManager = this.repoManagers[projectId];
 
         // If the repo manager is not loaded - load it temporarily
@@ -388,9 +379,8 @@ export class StorageServiceActual {
         log.info('Executing storage operation request', request)
         if (request.type === 'commit') {
             await this._exectuteCommitRequest(request as CommitRequest);
-
-        } else if (request.type === 'deleteRepo') {
-
+        } else {
+            log.error('Unknown storage operation request', request)
         }
     }
 
