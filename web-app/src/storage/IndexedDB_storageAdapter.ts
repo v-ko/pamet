@@ -1,14 +1,20 @@
 import { getLogger } from "fusion/logging";
 import { BaseAsyncRepository, BranchMetadata } from "fusion/storage/BaseRepository";
 import { Commit, CommitData } from "fusion/storage/Commit";
-import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { openDB, DBSchema, IDBPDatabase, deleteDB } from 'idb';
 import { DeltaData } from "fusion/storage/Delta";
 import { inferRepoChangesFromGraphUpdate } from "fusion/storage/SyncUtils";
 import { CommitGraph } from "fusion/storage/CommitGraph";
+import { DebugConnectionTracker, wrapDbWithTransactionDebug } from "./DebugUtils";
 
 
 let log = getLogger('IndexedDB_storageAdapter');
 
+const DEBUG_DB = false;
+
+function repoStoreName(projectId: string) {
+    return 'repoStore-' + projectId;
+}
 
 interface RepoDB extends DBSchema {
     branches: {
@@ -30,30 +36,31 @@ interface RepoDB extends DBSchema {
 
 export class IndexedDBRepository extends BaseAsyncRepository {
     private _db: IDBPDatabase<RepoDB> | null = null;
+    private _projectId: string;
     private _currentBranch: string | null = null;
-    private _localBranchName: string;
+    private _checkoutBranch: string;
 
-    constructor(localBranchName: string) {
+    constructor(projectId: string, checkoutBranch: string) {
         super();
-        this._localBranchName = localBranchName;
-        log.info('Instantiating IndexedDBRepository for branch:', localBranchName)
+        this._projectId = projectId;
+        this._checkoutBranch = checkoutBranch;
+        log.info('Instantiating IndexedDBRepository for branch:', checkoutBranch)
     }
 
-    async init(localBranchName: string) {
+    async connectOrInit() {
         if (!this._db) {
             await this._initDB();
         } else {
             throw new Error('IndexedDB already initialized');
         }
 
-        this._currentBranch = localBranchName;
         // Pull the commit graph. If the branch does not exist - create it
         let commitGraph = await this.getCommitGraph();
-        let currentBranch = commitGraph.branch(localBranchName);
+        let currentBranch = commitGraph.branch(this._checkoutBranch);
         if (!currentBranch) {
             // Create the branch
-            log.info('Creating a new branch', localBranchName)
-            await this.createBranch(localBranchName);
+            log.info('Creating a new branch', this._checkoutBranch)
+            await this.createBranch(this._checkoutBranch);
         }
     }
 
@@ -65,8 +72,16 @@ export class IndexedDBRepository extends BaseAsyncRepository {
     }
 
     async _initDB() {
-        let dbName = 'repoStore-' + this._localBranchName;
-        this._db = await openDB<RepoDB>(dbName, 1, {
+        let dbName = repoStoreName(this._projectId);
+        // db id for the error reporting. uuid or random
+        let id = Math.random().toString(36).substring(7);
+
+        let DBConstructor = openDB;
+        if (DEBUG_DB) {
+            DBConstructor = DebugConnectionTracker.openDBWithTracking;
+        }
+
+        this._db = await DBConstructor<RepoDB>(dbName, 1, {
             upgrade(db) {
                 let branchesStore = db.createObjectStore('branches', { keyPath: 'name' });
                 let commitsStore = db.createObjectStore('commits', { keyPath: 'id' });
@@ -76,10 +91,37 @@ export class IndexedDBRepository extends BaseAsyncRepository {
                 commitsStore.createIndex('by-id', 'id');
                 deltasStore.createIndex('by-commitId', 'commitId');
             },
+            blocked() {
+                log.error(`[${id}] IndexedDB blocked - another connection is still open`);
+            },
+            blocking() {
+                log.error(`[${id}] IndexedDB blocking another connection`);
+            }
         });
+        log.info(`[${id}] Opened IndexedDB for project ${this._projectId}`);
+
+        if (DEBUG_DB) {
+            // Wrap the DB with transaction debug logging
+            this._db = wrapDbWithTransactionDebug(this._db);
+        }
 
         if (!this._db) {
             log.error('Failed to open IndexedDB');
+        }
+
+        // Report version changes
+        this._db.addEventListener('versionchange', () => {
+            log.warning(`[${id}] IndexedDB version change detected`);
+        });
+    }
+
+    shutdown() {
+        if (this._db) {
+            log.info('Closing IndexedDB connection');
+            this._db.close();
+            this._db = null;
+        } else {
+            log.warning('[shutdown] IndexedDB already closed');
         }
     }
 
@@ -114,41 +156,6 @@ export class IndexedDBRepository extends BaseAsyncRepository {
         }
     }
 
-
-    // async getCommits(ids?: string[]): Promise<Commit[]> {
-    //     if (!ids || ids.length === 0) {
-    //         return []
-    //     }
-
-    //     const tx = this.db.transaction(['commits', 'deltas'], 'readonly');
-    //     const commitsStore = tx.objectStore('commits');
-    //     const deltasStore = tx.objectStore('deltas');
-
-    //     const commits = [];
-
-    //     for (const id of ids) {
-    //         const commitData = await commitsStore.get(id);
-    //         if (commitData) {
-    //             const delta = await deltasStore.get(commitData.id);
-    //             if (delta) {
-    //                 commitData.deltaData = delta.delta;
-    //                 commits.push(new Commit(commitData));
-    //             } else {
-    //                 log.error('Delta not found for commit ' + commitData.id);  // Handle the case where no delta is found
-    //             }
-    //         } else {
-    //             log.error('Commit not found for ID ' + id);  // Handle the case where no commit is found
-    //         }
-    //     }
-
-    //     await tx.done;  // Ensure the transaction completes
-
-    //     if (commits.length === 0) {
-    //         throw new Error('No commits found for the provided IDs');
-    //     }
-
-    //     return commits;
-    // }
 
     async getCommits(ids?: string[]): Promise<Commit[]> {
         if (!ids || ids.length === 0) {
@@ -275,5 +282,20 @@ export class IndexedDBRepository extends BaseAsyncRepository {
         }
 
         await tx.done;
+    }
+
+    async eraseStorage(): Promise<void> {
+        log.info('Erasing IndexedDB storage for project', this._projectId);
+        this.shutdown();
+        try {
+            await deleteDB(repoStoreName(this._projectId), {
+                blocked() {
+                    log.warning('deleteDB is blocked – another connection is still open.');
+                }
+            });
+        } catch (e) {
+            log.error('Error erasing IndexedDB storage for project', this._projectId, e);
+        }
+        log.info('Erased IndexedDB storage for project', this._projectId);
     }
 }

@@ -12,14 +12,10 @@ let log = getLogger('StorageService')
 
 export type RepoUpdateNotifiedSignature = (update: RepoUpdateData) => void;
 
-// export interface RepoLoadResponce { // This is needed, so that
-//     subscriptionId: number;
-//     headState: SerializedStoreData;
-// }
-
 export interface StorageServiceActualInterface {
     loadRepo: (projectId: string, repoManagerConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature) => Promise<number>;
     unloadRepo: (subscriptionId: number) => Promise<void>;
+    deleteRepo: (projectId: string, projectStorageConfig: ProjectStorageConfig) => Promise<void>;
     headState: (projectId: string) => Promise<SerializedStoreData>;
     _storageOperationRequest: (request: StorageOperationRequest) => Promise<void>;
     test(): void;
@@ -72,7 +68,6 @@ export class StorageService {
      * so that they can be executed in request order as to avoid consistency problems
      */
     private _service: StorageServiceActualInterface | null = null;
-    // private _reconnectSet: boolean = false;
     _worker: ServiceWorker | null = null;
     _workerRegistration: ServiceWorkerRegistration | null = null;
     _proxyBroadcastChannel: BroadcastChannel | null = null;
@@ -172,16 +167,22 @@ export class StorageService {
     }
 
     // Proxy interface methods
-    async loadProject(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<void> {
+    async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<void> {
+        log.info('Loading project', projectId)
         let subscriptionId = await this.service.loadRepo(projectId, projectStorageConfig, commitNotify);
         this._repoSubscriptions[projectId] = subscriptionId;
+        log.info('Loaded project', projectId)
     }
-    async unloadProject(projectId: string): Promise<void> {
+    async unloadRepo(projectId: string): Promise<void> {
+        log.info('Unloading project', projectId)
         let subscriptionId = this._repoSubscriptions[projectId];
-        if (!subscriptionId) {
-            log.warning('Tryging to unload a project that is not loaded')
+        if (subscriptionId === undefined) {
+            log.warning('Trying to unload a project that is not loaded:', projectId)
         }
         return this.service.unloadRepo(subscriptionId);
+    }
+    async deleteProject(projectId: string, projectStorageConfig: ProjectStorageConfig): Promise<void> {
+        return this.service.deleteRepo(projectId, projectStorageConfig);
     }
     async _storageOperationRequest(request: StorageOperationRequest): Promise<any> {
         return this.service._storageOperationRequest(request);
@@ -251,7 +252,6 @@ export class StorageServiceActual {
          *
          * Returns a subscription id
          */
-        log.info('Loading repo', projectId);
         let repoManager = this.repoManagers[projectId];
         if (!repoManager) {
             repoManager = new ProjectStorageManager(this, projectStorageConfig);
@@ -260,9 +260,15 @@ export class StorageServiceActual {
 
             this.subscriptions[projectId] = [];
         } else { // Repo already loaded
+            log.info('Repo already loaded', projectId);
             // Check that the configs are the same
-            if (repoManager.config !== projectStorageConfig) {
-                throw new Error("Repo already loaded with different config");
+            // deep compare the configs
+            let configsAreTheSame = JSON.stringify(repoManager.config) === JSON.stringify(projectStorageConfig);
+            if (!configsAreTheSame) {
+                log.error('Repo already loaded with different config', projectId);
+                log.error('Loaded config', repoManager.config);
+                log.error('Requested config', projectStorageConfig);
+                throw new Error('Repo already loaded with different config');
             }
         }
 
@@ -290,7 +296,7 @@ export class StorageServiceActual {
             throw new Error("Subscription not found");
         }
 
-        // let repoManager = this.repoManagers[subscription.projectId];
+        let repoManager = this.repoManagers[subscription.projectId];
         let projectSubs = this.subscriptions[subscription.projectId];
         let index = projectSubs.indexOf(subscription);
         projectSubs.splice(index, 1);
@@ -298,9 +304,30 @@ export class StorageServiceActual {
         if (projectSubs.length === 0) {
             delete this.repoManagers[subscription.projectId];
             delete this.subscriptions[subscription.projectId];
-            // await repoManager.close();
+            repoManager.shutdown();
         }
     }
+    async deleteRepo(projectId: string, projectStorageConfig: ProjectStorageConfig): Promise<void> {
+        // Delete the local storage
+        let projectStorageManager = this.repoManagers[projectId];
+
+        // If the repo manager is not loaded - load it temporarily
+        let subscriptionId: number | null = null;
+        if (projectStorageManager === undefined) {
+            log.info('Loading repo temporarily for deletion', projectId);
+            subscriptionId = await this.loadRepo(projectId, projectStorageConfig, () => { });
+            log.info('Loaded repo temporarily for deletion', projectId);
+        }
+        projectStorageManager = this.repoManagers[projectId];
+        await projectStorageManager.localStorageRepo.eraseStorage();
+        log.info('Erased local storage for project', projectId);
+
+        if (subscriptionId !== null) { // Unload tmp repo
+            await this.unloadRepo(subscriptionId);
+            log.info('Unloaded temporary repo', projectId);
+        }
+    }
+
     async _storageOperationRequest(request: StorageOperationRequest): Promise<void> {
         log.info('Storage operation request made', request)
         // This is a wrapper for the actual storage operation
@@ -314,41 +341,46 @@ export class StorageServiceActual {
             });
         });
     }
+    async _exectuteCommitRequest(request: CommitRequest): Promise<void> {
+        console.log('Type is commit')
+        let commitRequest = request as CommitRequest;
+        let projectStorageManager = this.repoManagers[commitRequest.projectId];
+
+        // Commit to in-mem
+        let commit = await projectStorageManager.inMemoryRepo.commit(new Delta(commitRequest.deltaData), commitRequest.message);
+        console.log('Created commit', commit)
+
+        // Integrity check (TMP)
+        let hashTree = await buildHashTree(projectStorageManager.inMemoryRepo.headStore);
+        let currentHash = projectStorageManager.inMemoryRepo.hashTree.rootHash();
+
+        if (currentHash !== hashTree.rootHash()) {
+            log.error('Hash tree integrity check failed',
+                'Current hash:', currentHash,
+                'Expected hash:', hashTree.rootHash());
+            return;
+        }
+
+        // Save in local storage
+        log.info('Pulling the new commit from the adapter into the project inMem repo')
+        await projectStorageManager.localStorageRepo.pull(projectStorageManager.inMemoryRepo);
+
+        // Notify subscribers
+        this.broadcastLocalUpdate({
+            projectId: commitRequest.projectId,
+            storageServiceId: this.id,
+            update: {
+                commitGraph: this.repoManagers[commitRequest.projectId].inMemoryRepo.commitGraph.data(),
+                newCommits: [commit.data()]
+            }
+        });
+    }
     async _executeStorageOperationRequest(request: StorageOperationRequest): Promise<void> {
         log.info('Executing storage operation request', request)
         if (request.type === 'commit') {
-            console.log('Type is commit')
-            let commitRequest = request as CommitRequest;
-            let projectStorageManager = this.repoManagers[commitRequest.projectId];
-
-            // Commit to in-mem
-            let commit = await projectStorageManager.inMemoryRepo.commit(new Delta(commitRequest.deltaData), commitRequest.message);
-            console.log('Created commit', commit)
-
-            // Integrity check (TMP)
-            let hashTree = await buildHashTree(projectStorageManager.inMemoryRepo.headStore);
-            let currentHash = projectStorageManager.inMemoryRepo.hashTree.rootHash();
-
-            if (currentHash !== hashTree.rootHash()) {
-                log.error('Hash tree integrity check failed',
-                    'Current hash:', currentHash,
-                    'Expected hash:', hashTree.rootHash());
-                return;
-            }
-
-            // Save in local storage
-            log.info('Pulling the new commit from the adapter into the project inMem repo')
-            await projectStorageManager.localStorageRepo.pull(projectStorageManager.inMemoryRepo);
-
-            // Notify subscribers
-            this.broadcastLocalUpdate({
-                projectId: commitRequest.projectId,
-                storageServiceId: this.id,
-                update: {
-                    commitGraph: this.repoManagers[commitRequest.projectId].inMemoryRepo.commitGraph.data(),
-                    newCommits: [commit.data()]
-                }
-            })
+            await this._exectuteCommitRequest(request as CommitRequest);
+        } else {
+            log.error('Unknown storage operation request', request)
         }
     }
 
@@ -358,7 +390,7 @@ export class StorageServiceActual {
             try {
                 await this._executeStorageOperationRequest(request);
             } catch (error) {
-                log.error('Error processing storage operation request', error)
+                log.error('Error processing storage operation request',request , error)
             }
         }
         this._storageOperationQueue = [];

@@ -1,4 +1,4 @@
-import { ProjectError, WebAppState } from "../containers/app/App";
+import { WebAppState } from "../containers/app/App";
 import { getLogger } from 'fusion/logging';
 import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
@@ -9,9 +9,9 @@ import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
-import { PametConfig } from "../config/Config";
+import { PametConfigService } from "../services/config/Config";
 import { StorageService } from "../storage/StorageService";
-import { StorageAdapterNames, ProjectStorageConfig } from "../storage/ProjectStorageManager";
+import { StorageAdapterNames } from "../storage/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
@@ -21,6 +21,7 @@ import { KeybindingService } from "../services/KeybindingService";
 import { commands } from "./commands";
 import { FocusManager } from "../services/FocusManager";
 import { Delta } from "fusion/storage/Delta";
+import { updateAppStateFromConfig } from "../procedures/app";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -37,7 +38,7 @@ export class PametFacade extends PametStore {
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
-    private _config: PametConfig | null = null;
+    private _config: PametConfigService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService = new KeybindingService();
@@ -176,17 +177,22 @@ export class PametFacade extends PametStore {
         });
     }
 
-    setContext(key: string, value: boolean) {
-        console.log('Setting context', key, value)
-        this.context[key] = value;
-    }
-
-    projectScopedUrlToGlobal(url: string): string {
-        let route = PametRoute.fromUrl(url);
-        if (!route.isInternal) {
-            throw Error('Url is not internal: ' + url)
+    // Service related
+    projectManagerConfig(projectId: string) {
+        let device = this.config.deviceData;
+        if (!device) {
+            throw Error('Device not set');
         }
-        return this._apiClient.endpointUrl(route.path());
+        return {
+            currentBranchName: device.id,
+            localRepoConfig: {
+                name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
+                args: {
+                    projectId: projectId,
+                    defaultBranchName: device.id,
+                }
+            }
+        }
     }
 
     get frontendDomainStore(): FrontendDomainStore {
@@ -196,12 +202,33 @@ export class PametFacade extends PametStore {
         return this._frontendDomainStore;
     }
 
-    setConfig(config: PametConfig) {
-        this._config = config;
-        appActions.updateAppStateFromConfig(this.appViewState);
-        config.setUpdateHandler(() => {
-            appActions.updateAppStateFromConfig(this.appViewState);
-        });
+    removeFrontendDomainStore() {
+        this._frontendDomainStore = null;
+    }
+
+    setFrontendDomainStore(store: FrontendDomainStore) {
+        this._frontendDomainStore = store;
+    }
+
+    get apiClient() {
+        return this._apiClient;
+    }
+
+    get storageService() {
+        if (!this._storageService) {
+            throw Error('Storage service not set');
+        }
+        return this._storageService;
+    }
+    setStorageService(storageService: StorageService) {
+        this._storageService = storageService;
+    }
+
+
+    // UI related
+    setContext(key: string, value: boolean) {
+        console.log('Setting context', key, value)
+        this.context[key] = value;
     }
 
     get appViewState(): WebAppState {
@@ -220,104 +247,66 @@ export class PametFacade extends PametStore {
         this._appViewState = state;
     }
 
-    get config(): PametConfig {
+    async setupFrontendDomainStore(projectId: string) {
+        pamet._frontendDomainStore = new FrontendDomainStore()
+
+        // Load the new project and connect it to the Frontend domain store
+        let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
+            // This handler will be called whenever the repo is updated
+            pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
+        }
+        await pamet.storageService.loadRepo(
+            projectId, pamet.projectManagerConfig(projectId), repoUpdateHandler)
+
+        // Load the entities after loading the repo
+        let headState = await pamet.storageService.headState(projectId)
+        pamet.frontendDomainStore.loadData(headState);
+
+        appActions.setLocalStorageState(this.appViewState, { available: true });
+    }
+
+    async detachFrontendDomainStore(projectId: string) {
+        log.info('Detaching FDS for project', projectId);
+        let currentProject = this.appViewState.currentProject();
+
+        // Mark the local storage as unavailable
+        appActions.setLocalStorageState(pamet.appViewState, { available: false });
+
+        if (!currentProject) {
+            log.error('Trying to detach FDS without a project');
+            return;
+        } else if (currentProject.id !== projectId) {
+            log.error('Wrong project id passed for FDS detachment');
+            return;
+        }
+
+        this._frontendDomainStore = null;
+        await this.storageService.unloadRepo(currentProject.id).catch(
+            (e) => {
+                log.error('Error unloading project', e);
+            }
+        )
+    }
+
+    // Model related
+    get config(): PametConfigService {
         if (!this._config) {
             throw Error('Config not set');
         }
         return this._config;
     }
 
-    apiClient() {
-        return this._apiClient;
-    }
-
-    get storageService() {
-        if (!this._storageService) {
-            throw Error('Storage service not set');
-        }
-        return this._storageService;
-    }
-    setStorageService(storageService: StorageService) {
-        this._storageService = storageService;
-    }
-
-    async setCurrentProject(projectId: string | null): Promise<void> {
-        // Load the project storage manager in the storage service
-        // Swap out the frontend domain store (+ initial state) and connect
-        // it to the storage manager (auto-save, confirm save, get remote commits)
-
-        let device = this.config.deviceData;
-        const appState = this.appViewState;
-
-        if (!device) {
-            throw Error('Device not set');
-        }
-
-        if (appState.currentProject) {
-            // Check if a change is needed at all
-            if (appState.currentProject.id === projectId) {
-                return;
-            }
-            // Else start the process of swapping the project
-
-            // Unload the last project
-            log.info('Unloading project', appState.currentProject.id);
-            this._frontendDomainStore = null
-            await pamet.storageService.unloadProject(appState.currentProject.id);
-        }
-
-        // Mark the local storage as unavailable
-        appActions.setLocalStorageState(appState, { available: false });
-
-        // let repoManagerConfig: ProjectStorageConfig = {
-        //     currentBranchName: device.id,
-        //     storageAdapterConfig: {
-        //         name: 'InMemory' as StorageAdapterNames, // I really want to remove this cast
-        //         args: {
-        //             defaultBranchName: device.id, // For testing purposes
-        //         }
-        //     }
-        // }
-
-        let repoManagerConfig: ProjectStorageConfig = {
-            currentBranchName: device.id,
-            storageAdapterConfig: {
-                name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
-                args: {
-                    defaultBranchName: device.id, // For testing purposes
-                }
-            }
-        }
-
-        if (projectId === null) {
-            appActions.setCurrentProject(pamet.appViewState, null);
-            return;
-        }
-
-        log.info('Loading project', projectId);
-        let domainStore = new FrontendDomainStore()
-        this._frontendDomainStore = domainStore;
-
-        // Repo update handler
-        let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
-            // This handler will be called whenever the repo is updated
-            domainStore.receiveRepoUpdate(repoUpdate)
-        }
-
-        // Load the new project and connect it to the Frontend domain store
-        await this.storageService.loadProject(projectId, repoManagerConfig, repoUpdateHandler)
-        // Load the entities after loading the repo
-        let headState = await this.storageService.headState(projectId)
-        this._frontendDomainStore.loadData(headState);
-
-        appActions.setLocalStorageState(appState, { available: true });
-
-        try {
-            let projectData = this.project(projectId);
-            appActions.setCurrentProject(appState, projectData);
-        } catch (e) {
-            appActions.setCurrentProject(appState, null, ProjectError.NotFound);
-        }
+    setConfig(config: PametConfigService) {
+        this._config = config;
+        updateAppStateFromConfig(this.appViewState).catch((e) => {
+            log.error('[setConfig] Error updating app state from config', e);
+        });
+        config.setUpdateHandler(() => {
+            log.info('Config updated');
+            updateAppStateFromConfig(this.appViewState).catch((e) => {
+                log.error('[Config.updateHandler] Error updating app state from config', e);
+            });
+        });
     }
 
     projects(): ProjectData[] {
@@ -328,21 +317,8 @@ export class PametFacade extends PametStore {
         return userData.projects;
     }
 
-    project(projectId: string): ProjectData {
+    project(projectId: string): ProjectData | undefined {
         return this.config.projectData(projectId);
-    }
-    currentProject() {
-        return this.appViewState.currentProject;
-    }
-    updateProject(projectData: ProjectData) {
-        // Update in the config
-        this.config.updateProjectData(projectData);
-
-        // If it's the current one - update in the appViewState
-        let currentProject = this.appViewState.currentProject;
-        if (currentProject && currentProject.id === projectData.id) {
-            appActions.setCurrentProject(this.appViewState, projectData);
-        }
     }
 
     insertOne(entity: Entity<EntityData>): Change {
@@ -395,7 +371,7 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
                     }
                     let route = new PametRoute();
                     route.projectId = projectId;
-                    pamet.router.setRoute(route);
+                    pamet.router.replaceRoute(route);
                 }
             }
             else if (change.isUpdate()) {

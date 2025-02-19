@@ -1,13 +1,18 @@
-import { DeviceData } from "../model/config/Device";
-import { ProjectData } from "../model/config/Project";
-import { UserData } from "../model/config/User";
+import { getLogger } from "fusion/logging";
+import { DeviceData } from "../../model/config/Device";
+import { ProjectData } from "../../model/config/Project";
+import { UserData } from "../../model/config/User";
 import { BaseConfigAdapter } from "./BaseConfigAdapter";
 
-export class PametConfig {
+const log = getLogger('PametConfigService');
+
+
+export class PametConfigService {
     /**
      * A wrapper to access and modify user settings, device settings,
      * project metadata, and possibly other light config items that will be
-     * stored in the local storage
+     * stored in the local storage. An update handler can be set to be called
+     * when the config is updated.
      */
     private _adapter: BaseConfigAdapter;
 
@@ -47,16 +52,37 @@ export class PametConfig {
         this._adapter.set('device', deviceData);
     }
 
-    projectData(projectId: string): ProjectData {
+    addProject(project: ProjectData){
+        let userData = this.userData;
+        if (!userData) {
+            throw new Error("User data not found");
+        }
+
+        userData.projects.push(project);
+        this.userData = userData;
+    }
+    removeProject(projectId: string) {
+        let userData = this.userData;
+        if (!userData) {
+            throw new Error("User data not found");
+        }
+
+        let projects = userData.projects;
+        let index = projects.findIndex(p => p.id === projectId);
+        if (index === -1) {
+            throw new Error(`Project with ID ${projectId} not found`);
+        }
+        projects.splice(index, 1);
+        userData.projects = projects;
+        this.userData = userData;
+    }
+    projectData(projectId: string): ProjectData | undefined {
         // For the current user
         let userData = this.userData;
         if (!userData) {
             throw new Error("User data not found");
         }
         let project = userData.projects.find(p => p.id === projectId);
-        if (!project) {
-            throw new Error(`Project with ID ${projectId} not found`);
-        }
         return project;
     }
     updateProjectData(projectData: ProjectData) {
@@ -70,9 +96,10 @@ export class PametConfig {
         if (index === -1) {
             throw new Error(`Project with ID ${projectData.id} not found`);
         }
+
+        log.info("Updating project in config", projectData);
         projects[index] = projectData;
         userData.projects = projects;
         this.userData = userData;
     }
 }
-

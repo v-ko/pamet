@@ -25,6 +25,10 @@ import { projectActions } from "../../actions/project";
 import { CreatePageDialog } from "../../components/CreateNewPageDialog";
 import { appActions } from "../../actions/app";
 import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
+import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
+import { ProjectsDialog } from "../../components/ProjectsDialog";
+import { CreateProjectDialog } from "../../components/CreateProjectDialog";
+import { ProjectData } from "../../model/config/Project";
 
 let log = getLogger("App");
 
@@ -33,7 +37,8 @@ export enum AppDialogMode {
   CreateNewPage,
   CreateNewProject,
   ProjectProperties,
-  PageProperties
+  PageProperties,
+  ProjectsDialog
 }
 
 export enum PageError {
@@ -61,6 +66,7 @@ export class WebAppState {
   userId: string | null = null;
 
   currentProjectId: string | null = null;
+  currentProjectState: ProjectData | null = null;
   projectError: ProjectError = ProjectError.NoError;
 
   currentPageId: string | null = null;
@@ -82,6 +88,7 @@ export class WebAppState {
       deviceId: observable,
       userId: observable,
       currentProjectId: observable,
+      currentProjectState: observable,
       currentPageViewState: observable,
       storageState: observable,
       pageError: observable,
@@ -110,7 +117,7 @@ export class WebAppState {
     }
     return userData
   }
-  get currentProject() {
+  currentProject() {
     if (!this.currentProjectId) {
       return null
     }
@@ -153,15 +160,17 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   }, [state.currentPageViewState]);
 
   // Check for resurce availability, and prep error messages if needed
+  let shouldDisplayPage = true
+
   if (!state.device) {
     errorMessages.push('DeviceData missing. This is a pretty critical error.')
   }
-  let localStorageAvailable = state.storageState.localStorage.available;
-  let shouldDisplayPage = true
-  if (!localStorageAvailable) {
-    errorMessages.push("Local storage not initialized/available.")
-  }
-  if (!localStorageAvailable || state.currentPageViewState === null) {
+  // let localStorageAvailable = state.storageState.localStorage.available;
+  // if (!localStorageAvailable) {
+  //   errorMessages.push("Local storage not initialized/available.")
+  //   shouldDisplayPage = false
+  // }
+  if (state.currentPageViewState === null) {
     shouldDisplayPage = false
   }
 
@@ -178,9 +187,6 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       errorMessages.push("Page not set")
     }
 
-    if (errorMessages.length > 0) {
-      console.log('App error messages', errorMessages, state)
-    }
   }
 
   const currentPageVS = state.currentPageViewState
@@ -221,7 +227,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             fontWeight: 400,
             cursor: 'pointer',
           }}
-          onClick={() => { alert('Not implemented yet') }}
+          onClick={() => appActions.openProjectsDialog(state)}
           title="Go to projects"
         >PAMET</div>
         <VerticalSeparator />
@@ -230,9 +236,9 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           style={{
             cursor: 'pointer'
           }}
-          onClick={() => { alert('Not implemented yet') }}
+          onClick={() => appActions.openProjectPropertiesDialog(state)}
           title="Project properties"
-        >-default-</div>
+        >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
         <img src={cloudOffIconUrl} alt="Not saved" />
         <VerticalSeparator />
         <img src={shareIconUrl} alt="Share" />
@@ -313,9 +319,26 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           }}
         />
       )}
+
+      {state.dialogMode === AppDialogMode.ProjectProperties && state.currentProjectState && (
+        <ProjectPropertiesDialog
+          project={state.currentProjectState}
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.ProjectsDialog && (
+        <ProjectsDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.CreateNewProject && (
+        <CreateProjectDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
     </div>
-
-
   );
 });
 

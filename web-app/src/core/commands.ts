@@ -200,6 +200,16 @@ class PametCommands {
             log.error('Failed to store state to clipboard:', err);
         });
     }
+
+    @command('Open projects dialog')
+    deleteCurrentProject() {
+        appActions.openProjectsDialog(pamet.appViewState);
+    }
+
+    @command('Create new project')
+    createNewProject() {
+        appActions.openCreateProjectDialog(pamet.appViewState);
+    }
 }
 
 async function storeStateToClipboard() {
