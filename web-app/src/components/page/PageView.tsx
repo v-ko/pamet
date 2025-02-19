@@ -680,7 +680,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
             alt=""
             style={{ display: 'none' }}
             onError={(event) => {
-              log.error('Image load error', event)
+              log.error('Image load error', event, url)
             }}
           />
         ))}

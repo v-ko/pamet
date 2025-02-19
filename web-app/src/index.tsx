@@ -25,6 +25,7 @@ import { ActionState } from 'fusion/libs/Action';
 import { PametConfigService } from './services/config/Config';
 import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
 import { StorageService } from './storage/StorageService';
+import { StorageAdapterNames } from './storage/ProjectStorageManager';
 import { updateAppFromRouteOrAutoassist } from './procedures/app';
 
 let dummyImports: any[] = [];
@@ -52,8 +53,8 @@ const PametContext = createContext<PametFacade>(pamet);
 (window as any).pamet = pamet; // For debugging
 
 // Configure pamet
-let app_state = new WebAppState()
-pamet.setAppViewState(app_state)
+let appState = new WebAppState()
+pamet.setAppViewState(appState)
 
 const config = new PametConfigService(new LocalStorageConfigAdapter())
 
@@ -84,6 +85,26 @@ pamet.setConfig(config)
 
 // // Setup the sync service
 setupWebWorkerLoggingChannel();
+
+// Setup for desktop testing
+deviceData = {
+    id: 'desktop',
+    name: 'Desktop device'
+}
+log.info('User', config.userData, 'Device', config.deviceData)
+
+config.deviceData = deviceData
+
+pamet.projectManagerConfigFactory = (projectId: string) => ({
+    currentBranchName: deviceData.id,
+    localRepoConfig: {
+        name: "DesktopServer" as StorageAdapterNames,
+        args: {
+            projectId: projectId,
+            defaultBranchName: "main"
+        }
+    }
+});
 
 // Create a storage service in the main thread
 let storageService = StorageService.inMainThread();

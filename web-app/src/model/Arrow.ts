@@ -17,6 +17,26 @@ export enum ArrowAnchorOnNoteType {
     bottom_mid,
 }
 
+// Map enum values to strings
+export const ArrowAnchorTypeToString: { [key in ArrowAnchorOnNoteType]: string } = {
+    [ArrowAnchorOnNoteType.none]: 'none',
+    [ArrowAnchorOnNoteType.auto]: 'auto',
+    [ArrowAnchorOnNoteType.mid_left]: 'mid_left',
+    [ArrowAnchorOnNoteType.top_mid]: 'top_mid',
+    [ArrowAnchorOnNoteType.mid_right]: 'mid_right',
+    [ArrowAnchorOnNoteType.bottom_mid]: 'bottom_mid',
+};
+
+// Map strings to enum values
+export const StringToArrowAnchorType: { [key: string]: ArrowAnchorOnNoteType } = {
+    'none': ArrowAnchorOnNoteType.none,
+    'auto': ArrowAnchorOnNoteType.auto,
+    'mid_left': ArrowAnchorOnNoteType.mid_left,
+    'top_mid': ArrowAnchorOnNoteType.top_mid,
+    'mid_right': ArrowAnchorOnNoteType.mid_right,
+    'bottom_mid': ArrowAnchorOnNoteType.bottom_mid,
+};
+
 // export interface ArrowData extends PametElementData {
 //     tail_coords: PointData | null;
 //     head_coords: PointData | null;
@@ -35,7 +55,7 @@ export enum ArrowAnchorOnNoteType {
 export interface EndPointProps {
     position: PointData | null;
     noteAnchorId: string | null;
-    noteAnchorType: ArrowAnchorOnNoteType;
+    noteAnchorType: string;
 }
 
 export interface ArrowStyle {
@@ -126,18 +146,18 @@ export class Arrow extends PametElement<ArrowData> {
     }
 
     get tailAnchorType(): ArrowAnchorOnNoteType {
-        return this._data.tail.noteAnchorType;
+        return StringToArrowAnchorType[this._data.tail.noteAnchorType];
     }
 
     set tailAnchorType(new_type: ArrowAnchorOnNoteType) {
-        this._data.tail.noteAnchorType = new_type;
+        this._data.tail.noteAnchorType = ArrowAnchorTypeToString[new_type];
     }
 
     get headAnchorType(): ArrowAnchorOnNoteType {
-        return this._data.head.noteAnchorType;
+        return StringToArrowAnchorType[this._data.head.noteAnchorType];
     }
     set headAnchorType(new_type: ArrowAnchorOnNoteType) {
-        this._data.head.noteAnchorType = new_type;
+        this._data.head.noteAnchorType = ArrowAnchorTypeToString[new_type];
     }
 
     get tailAnchoredOnNote(): boolean {

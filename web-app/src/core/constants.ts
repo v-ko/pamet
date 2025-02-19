@@ -43,7 +43,7 @@ export const CONTROL_POINT_RADIUS = 15
 export const POTENTIAL_CONTROL_POINT_RADIUS = CONTROL_POINT_RADIUS * 0.7
 
 // Page render and cache related
-export const MAX_RENDER_TIME = 0.017  // (in seconds) ~60 fps
+export const MAX_RENDER_TIME = 0.04  // (in seconds) ~24 fps
 export const IMAGE_CACHE_PADDING = 3;
 
 // Colors

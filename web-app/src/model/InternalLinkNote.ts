@@ -4,7 +4,7 @@ import { Page } from "./Page";
 import { elementId } from "./Element";
 import { currentTime, timestamp } from "fusion/util";
 import { pamet } from "../core/facade";
-import { parseUrl } from "../services/routing/route";
+import { PametRoute } from "../services/routing/route";
 
 const MISSING_PAGE_TITLE = '(missing)'
 
@@ -50,7 +50,7 @@ export class InternalLinkNote extends Note {
         if (url === undefined){
             return undefined
         }
-        return parseUrl(url).pageId // pamet:/p/<page_id>
+        return PametRoute.fromUrl(url).pageId // pamet:/p/<page_id>
     }
     targetPage(): Page | undefined {
         let pageId = this.targetPageId()

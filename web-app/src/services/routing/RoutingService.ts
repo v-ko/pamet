@@ -1,5 +1,5 @@
 import { getLogger } from "fusion/logging";
-import { PametRoute, parseUrl, toUrlPath } from "./route";
+import { PametRoute } from "./route";
 import { updateAppFromRouteOrAutoassist } from "../../procedures/app";
 
 const log = getLogger('RoutingService');
@@ -13,17 +13,17 @@ export class RoutingService {
     // }
 
     currentRoute(): PametRoute {
-        return parseUrl(window.location.href);
+        return PametRoute.fromUrl(window.location.href);
     }
     replaceRoute(route: PametRoute): void {
         log.info('Setting route', route)
-        const url = toUrlPath(route);
+        const url = route.path();
         window.history.replaceState({}, '', url);
     }
 
     pushRoute(route: PametRoute): void {
         log.info('Pushing route', route);
-        const url = toUrlPath(route);
+        const url = route.path();
         window.history.pushState({}, '', url);
     }
 

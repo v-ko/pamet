@@ -101,26 +101,22 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get headAnchorNoteViewState(): NoteViewState | null {
-        console.log('headAnchorNoteViewState', this._arrowData.head.noteAnchorId)
         if (!this._arrowData.head.noteAnchorId) {
             console.log('no head anchor')
             return null;
         }
         let pageVS = pamet.appViewState.pageViewState(elementPageId(this._arrowData.id));
         let headNVS = pageVS.viewStateForElement(this._arrowData.head.noteAnchorId) as NoteViewState | null;
-        console.log('headAnchorNoteViewState', headNVS)
         return headNVS;
     }
 
     get tailAnchorNoteViewState() {
-        console.log('tailAnchorNoteViewState', this._arrowData.tail.noteAnchorId)
         if (!this._arrowData.tail.noteAnchorId) {
             console.log('no tail anchor')
             return null;
         }
         let pageVS = pamet.appViewState.pageViewState(elementPageId(this._arrowData.id));
         let tailNVS = pageVS.viewStateForElement(this._arrowData.tail.noteAnchorId ) as NoteViewState | null;
-        console.log('tailAnchorNoteViewState', tailNVS)
         return tailNVS;
     }
 

@@ -119,7 +119,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
     let deletionPromise = pamet.storageService.deleteProject(
         project.id,
-        pamet.projectManagerConfig(project.id)
+        pamet.projectManagerConfigFactory(project.id)
     )
 
     try {

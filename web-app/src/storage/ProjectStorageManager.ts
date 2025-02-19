@@ -4,6 +4,8 @@ import { StorageServiceActual } from "./StorageService";
 import { AsyncInMemoryRepository } from "fusion/storage/AsyncInMemoryRepo";
 import { getLogger } from "fusion/logging";
 import { autoMergeForSync } from "fusion/storage/SyncUtils";
+import { DesktopServerRepository } from "./DesktopServerRepository";
+import { ApiClient } from "./ApiClient";
 
 let log = getLogger('ProjectStorageManager');
 
@@ -14,7 +16,7 @@ export interface ProjectStorageConfig {
     // Cloud repo config
 }
 
-export type StorageAdapterNames = "IndexedDB" | "InMemory";
+export type StorageAdapterNames = "IndexedDB" | "InMemory" | "DesktopServer";
 
 export interface StorageAdapterArgs {
     projectId: string;
@@ -34,13 +36,20 @@ async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsy
             let idbRepoArgs = config.args;
             let indexedDB_repo = new IndexedDBRepository(idbRepoArgs.projectId, idbRepoArgs.defaultBranchName);
             await indexedDB_repo.connectOrInit()
-            repo = indexedDB_repo  // For TS type annotation purpuses
+            repo = indexedDB_repo  // For TS type annotation purposes
             break;
         }
         case "InMemory": { // For testing purposes
             let inMemRepo = new AsyncInMemoryRepository();
             await inMemRepo.init(config.args.defaultBranchName)
             repo = inMemRepo
+            break;
+        }
+        case "DesktopServer": {
+            let apiClient = new ApiClient("http://localhost", 11352);
+            let desktopRepo = new DesktopServerRepository(apiClient);
+            await desktopRepo.init();
+            repo = desktopRepo
             break;
         }
         default: {
@@ -150,4 +159,3 @@ export class ProjectStorageManager {
         }
     }
 }
-

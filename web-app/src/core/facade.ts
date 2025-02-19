@@ -11,7 +11,7 @@ import { Arrow } from "../model/Arrow";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfigService } from "../services/config/Config";
 import { StorageService } from "../storage/StorageService";
-import { StorageAdapterNames } from "../storage/ProjectStorageManager";
+import { ProjectStorageConfig, StorageAdapterNames } from "../storage/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
@@ -31,6 +31,25 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 
+// Service related
+function indexedDB_storeConfigFactory(projectId: string) {
+    let device = this.config.deviceData;
+    if (!device) {
+        throw Error('Device not set');
+    }
+    return {
+        currentBranchName: device.id,
+        localRepoConfig: {
+            name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
+            args: {
+                projectId: projectId,
+                defaultBranchName: device.id,
+            }
+        }
+    }
+}
+
+
 export class PametFacade extends PametStore {
     getEntityId() {
         throw new Error("Method not implemented.");
@@ -44,13 +63,14 @@ export class PametFacade extends PametStore {
     keybindingService: KeybindingService = new KeybindingService();
     focusService: FocusManager = new FocusManager();
     context: any = {};
+    projectManagerConfigFactory: (projectId: string) => ProjectStorageConfig = indexedDB_storeConfigFactory
     // Focus handling (context related): Except when receiving focus/blur
     // events - the context change should be applied in the unmount hook
     // (callback returned by useEffect)
 
     constructor() {
         super()
-        this._apiClient = new ApiClient('http://localhost', 3333, '', true);
+        this._apiClient = new ApiClient('http://localhost', 11352, '', true);
 
         this.keybindingService.setKeybindings([
             // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
@@ -177,24 +197,6 @@ export class PametFacade extends PametStore {
         });
     }
 
-    // Service related
-    projectManagerConfig(projectId: string) {
-        let device = this.config.deviceData;
-        if (!device) {
-            throw Error('Device not set');
-        }
-        return {
-            currentBranchName: device.id,
-            localRepoConfig: {
-                name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
-                args: {
-                    projectId: projectId,
-                    defaultBranchName: device.id,
-                }
-            }
-        }
-    }
-
     get frontendDomainStore(): FrontendDomainStore {
         if (!this._frontendDomainStore) {
             throw Error('Frontend domain store not set');
@@ -256,7 +258,7 @@ export class PametFacade extends PametStore {
             pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
         }
         await pamet.storageService.loadRepo(
-            projectId, pamet.projectManagerConfig(projectId), repoUpdateHandler)
+            projectId, pamet.projectManagerConfigFactory(projectId), repoUpdateHandler)
 
         // Load the entities after loading the repo
         let headState = await pamet.storageService.headState(projectId)

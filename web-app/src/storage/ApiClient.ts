@@ -54,7 +54,6 @@ export class ApiClient extends BaseApiClient {
         function tmpDynamicMigration(childData: Record<string, any>) {
             // Additional tasks for the migration:
             // - Add size metadata for images where it's missing
-
             let [page_id, own_id] = childData.id;
             if (page_id === undefined || own_id === undefined) {
                 throw new Error('Bad id')
@@ -93,6 +92,7 @@ export class ApiClient extends BaseApiClient {
                 } else if (childData.content.url) {
                     let url: string = childData.content.url
                     if (url.startsWith('pamet:/p')) {
+                        childData.content.url = url.replace('>pamet:/p', 'project:/page')
                         childData.type_name = 'InternalLinkNote'
                     } else {
                         childData.type_name = 'ExternalLinkNote'
@@ -133,7 +133,7 @@ export class ApiClient extends BaseApiClient {
                 delete childData.content.local_image_url;
 
                 if (image_width === undefined) {
-                    log.error('Unexpected: note with local_image_url has no image_size', childData)
+                    log.warning('Unexpected: note with local_image_url has no image_size', childData)
                     image_width = 0;
                     // This would cause bad rendering if the image is a card note, but that's
                     // a very rare case. During the migration those should be covered
@@ -144,13 +144,13 @@ export class ApiClient extends BaseApiClient {
 
                 if (local_image_url.startsWith('pamet:/p')) { // local media
                     childData.content.image = {
-                        url: local_image_url,
+                        url: local_image_url.replace('pamet:/p', 'project:/p'),
                         width: image_width,
                         height: image_height,
                     }
                 } else {
                     childData.content.image = { // file system media
-                        url: 'pamet:/desktop/fs' + local_image_url,
+                        url: 'project:/desktop/fs' + local_image_url,
                         width: image_width,
                         height: image_height,
                     }
@@ -164,6 +164,57 @@ export class ApiClient extends BaseApiClient {
                     log.error('Unexpected: note with image_url has no local_image_url')
                 }
                 delete childData.content.image_url
+            }
+
+            // Convert arrows to the new format
+            if (childData.type_name === 'Arrow') {
+                // Convert tail and head to EndPointProps format
+                childData.tail = {
+                    position: childData.tail_coords ? [childData.tail_coords[0], childData.tail_coords[1]] : null,
+                    noteAnchorId: childData.tail_note_id || null,
+                    noteAnchorType: childData.tail_anchor ? childData.tail_anchor.toLowerCase() : 'none'
+                };
+                delete childData.tail_coords;
+                delete childData.tail_note_id;
+                delete childData.tail_anchor;
+
+                childData.head = {
+                    position: childData.head_coords ? [childData.head_coords[0], childData.head_coords[1]] : null,
+                    noteAnchorId: childData.head_note_id || null,
+                    noteAnchorType: childData.head_anchor ? childData.head_anchor.toLowerCase() : 'none'
+                };
+                delete childData.head_coords;
+                delete childData.head_note_id;
+                delete childData.head_anchor;
+
+                // Convert mid points
+                const midPointCoords = childData.mid_point_coords || [];
+                childData.mid_points = [];
+                for (const coords of midPointCoords) {
+                    if (!Array.isArray(coords) || coords.length < 2) {
+                        log.warning('Invalid mid point coordinates', coords);
+                        childData.mid_points.push([0, 0]);
+                    } else {
+                        childData.mid_points.push([coords[0], coords[1]]);
+                    }
+                }
+                delete childData.mid_point_coords;
+
+                // Convert style properties
+                childData.style = {
+                    color_role: old_color_to_role(childData.color),
+                    line_type: childData.line_type || 'solid',
+                    thickness: childData.line_thickness || 1,
+                    line_function: childData.line_function_name || 'bezier_cubic',
+                    head_shape: childData.head_shape || 'arrow',
+                    tail_shape: childData.tail_shape || 'arrow'
+                };
+                delete childData.color;
+                delete childData.line_type;
+                delete childData.line_thickness;
+                delete childData.line_function_name;
+                delete childData.head_shape;
+                delete childData.tail_shape;
             }
 
             return childData;
