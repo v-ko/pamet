@@ -2,6 +2,7 @@ import { BaseAsyncRepository } from "fusion/storage/BaseRepository";
 import { IndexedDBRepository } from "./IndexedDB_storageAdapter";
 import { StorageServiceActual } from "./StorageService";
 import { AsyncInMemoryRepository } from "fusion/storage/AsyncInMemoryRepo";
+import { PAMET_INMEMORY_STORE_CONFIG } from "./PametStore";
 import { getLogger } from "fusion/logging";
 import { autoMergeForSync } from "fusion/storage/SyncUtils";
 import { DesktopServerRepository } from "./DesktopServerRepository";
@@ -55,7 +56,7 @@ async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsy
             break;
         }
         case "InMemory": { // For testing purposes
-            let inMemRepo = new AsyncInMemoryRepository();
+            let inMemRepo = new AsyncInMemoryRepository(PAMET_INMEMORY_STORE_CONFIG);
             await inMemRepo.init(config.args.localBranchName)
             repo = inMemRepo
             break;
@@ -191,7 +192,7 @@ export class ProjectStorageManager {
             }
 
             log.info('Initializing in-memory repository from remote')
-            this._inMemRepo = await AsyncInMemoryRepository.initFromRemote(this.localStorageRepo, branchName)
+            this._inMemRepo = await AsyncInMemoryRepository.initFromRemote(this.localStorageRepo, branchName, PAMET_INMEMORY_STORE_CONFIG)
             log.info('In-memory repository initialized successfully')
 
             log.info('Performing auto-merge for sync')

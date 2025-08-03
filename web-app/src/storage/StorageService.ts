@@ -9,6 +9,7 @@ import { createId } from 'fusion/util';
 import { buildHashTree } from 'fusion/storage/HashTree';
 import { MediaItem, MediaItemData } from '../model/MediaItem';
 import { PametRoute } from '../services/routing/route';
+import { generateUniquePathWithSuffix } from '../util';
 
 let log = getLogger('StorageService')
 
@@ -579,7 +580,14 @@ export class StorageServiceActual implements StorageServiceActualInterface {
         if (!repoManager) {
             throw new Error("Repo not loaded");
         }
-        return repoManager.mediaStore.addMedia(blob, path); // Now returns MediaItemData directly
+
+        // Generate a unique path using the utility function and check against the in-memory repository
+        const uniquePath = generateUniquePathWithSuffix(path, (checkPath: string) => {
+            // Check if any entity with this path exists in the in-memory repository
+            return !!repoManager.inMemoryRepo.headStore.findOne({ path: checkPath });
+        });
+
+        return repoManager.mediaStore.addMedia(blob, uniquePath); // Use the unique path
     }
 
     async getMedia(projectId: string, mediaId: string, mediaHash: string): Promise<Blob> {

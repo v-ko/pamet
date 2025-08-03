@@ -5,11 +5,12 @@ import { IndexDefinition, EntityTypeIndexConfig } from 'fusion/storage/InMemoryS
 import { Arrow } from '../model/Arrow'
 import { Note } from '../model/Note'
 import { Page } from '../model/Page'
+import { MediaItem } from '../model/MediaItem'
 
 // Entity type index configuration for Pamet domain objects
 const PAMET_ENTITY_TYPE_CONFIG: EntityTypeIndexConfig = {
     indexKey: 'entityType',
-    allowedTypes: [Page, Note, Arrow]
+    allowedTypes: [Page, Note, Arrow, MediaItem]
 };
 
 // Pamet-specific index definitions including entity type indexing

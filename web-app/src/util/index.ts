@@ -4,6 +4,7 @@ import { getLogger } from "fusion/logging";
 import { Point2D, Vector2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
 import slugify from "slugify";
+import { createId } from "fusion/util";
 
 // Clipboard item types
 export type ClipboardItemType = 'text' | 'url' | 'image';
@@ -282,4 +283,47 @@ export function toUriFriendlyFileName(filename: string, maxLength: number = MAX_
 
     // Combine name and extension
     return truncatedName + extension;
+}
+
+const MAX_CHECKS = 100;
+
+/**
+ * Generates a unique path by appending integer suffixes or a random ID if needed
+ * @param basePath The original path to make unique
+ * @param pathExistsChecker Function that returns true if a path already exists
+ * @returns A unique path
+ */
+export function generateUniquePathWithSuffix(basePath: string, pathExistsChecker: (path: string) => boolean): string {
+    let path = basePath;
+    let counter = 1;
+
+    // Check if a path already exists
+    while (pathExistsChecker(path)) {
+        if (counter > MAX_CHECKS) {
+            log.warning(`Exceeded MAX_CHECKS (${MAX_CHECKS}) for path uniqueness, using random ID for path: ${basePath}`);
+
+            // Extract name and extension from path
+            const lastDotIndex = basePath.lastIndexOf('.');
+            const name = lastDotIndex !== -1 ? basePath.substring(0, lastDotIndex) : basePath;
+            const extension = lastDotIndex !== -1 ? basePath.substring(lastDotIndex) : '';
+
+            const randomId = createId()
+            path = `${name}_${randomId}${extension}`;
+
+            if (counter > MAX_CHECKS + 1) {
+                log.error(`Unable to generate a unique path after ${MAX_CHECKS} checks, using random ID: ${path}`);
+            }
+        }
+
+        // Extract name and extension from path
+        const lastDotIndex = basePath.lastIndexOf('.');
+        const name = lastDotIndex !== -1 ? basePath.substring(0, lastDotIndex) : basePath;
+        const extension = lastDotIndex !== -1 ? basePath.substring(lastDotIndex) : '';
+
+        // Add counter to path
+        path = `${name}_${counter}${extension}`;
+        counter++;
+    }
+
+    return path;
 }
