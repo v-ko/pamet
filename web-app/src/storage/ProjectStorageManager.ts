@@ -6,21 +6,25 @@ import { getLogger } from "fusion/logging";
 import { autoMergeForSync } from "fusion/storage/SyncUtils";
 import { DesktopServerRepository } from "./DesktopServerRepository";
 import { ApiClient } from "./ApiClient";
+import { MediaStoreAdapter } from "./MediaStoreAdapter";
+import { InMemoryMediaStoreAdapter } from "./InMemoryMediaStoreAdapter";
+import { CacheMediaStoreAdapter } from "./CacheMediaStoreAdapter";
 
 let log = getLogger('ProjectStorageManager');
 
 export interface ProjectStorageConfig {
     currentBranchName: string;
-    localRepoConfig: StorageAdapterConfig;
-    // WebRTC repo config
-    // Cloud repo config
+    localRepo: StorageAdapterConfig;  // IndexedDB, DesktopServer, Cloud (for thin clients), InMemory for testing
+    localMediaStore: MediaStoreConfig;  // CacheAPI, DesktopServer, Cloud (for thin clients), InMemory for testing
+    // remoteRepo: StorageAdapterConfig; // WebRTC, Cloud (for full clients)
+    // remoteMediaStore: MediaStoreConfig; // WebRTC, Cloud (for full clients)
 }
 
-export type StorageAdapterNames = "IndexedDB" | "InMemory" | "DesktopServer";
+export type StorageAdapterNames = "InMemory" | "IndexedDB" | "DesktopServer";
 
 export interface StorageAdapterArgs {
     projectId: string;
-    defaultBranchName: string;
+    localBranchName: string;
 }
 
 export interface StorageAdapterConfig {
@@ -28,27 +32,38 @@ export interface StorageAdapterConfig {
     args: StorageAdapterArgs;
 }
 
+export interface MediaStoreConfig {
+    name: MediaStoreAdapterNames;
+    args: MediaStoreAdapterArgs;
+}
+
+export interface MediaStoreAdapterArgs {
+    projectId: string;
+}
+
+export type MediaStoreAdapterNames = "InMemory" | "CacheAPI" | "DesktopServer";
+
 async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsyncRepository> {
     let repo: BaseAsyncRepository;
 
     switch (config.name) {
         case "IndexedDB": {
             let idbRepoArgs = config.args;
-            let indexedDB_repo = new IndexedDBRepository(idbRepoArgs.projectId, idbRepoArgs.defaultBranchName);
+            let indexedDB_repo = new IndexedDBRepository(idbRepoArgs.projectId, idbRepoArgs.localBranchName);
             await indexedDB_repo.connectOrInit()
             repo = indexedDB_repo  // For TS type annotation purposes
             break;
         }
         case "InMemory": { // For testing purposes
             let inMemRepo = new AsyncInMemoryRepository();
-            await inMemRepo.init(config.args.defaultBranchName)
+            await inMemRepo.init(config.args.localBranchName)
             repo = inMemRepo
             break;
         }
         case "DesktopServer": {
-            let apiClient = new ApiClient("http://localhost", 11352);
-            let desktopRepo = new DesktopServerRepository(apiClient);
-            await desktopRepo.init();
+            let desktopApiClient = new ApiClient("http://localhost", 11352);
+            let desktopRepo = new DesktopServerRepository(desktopApiClient);
+            await desktopRepo.init(config.args.localBranchName);
             repo = desktopRepo
             break;
         }
@@ -58,6 +73,33 @@ async function initStorageAdapter(config: StorageAdapterConfig): Promise<BaseAsy
     }
 
     return repo
+}
+
+async function initMediaStore(config: MediaStoreConfig): Promise<MediaStoreAdapter> {
+    let mediaStore: MediaStoreAdapter;
+
+    switch (config.name) {
+        case "InMemory": {
+            let inMemMediaStore = new InMemoryMediaStoreAdapter();
+            mediaStore = inMemMediaStore
+            break;
+        }
+        case "CacheAPI": {
+            let cacheMediaStore = new CacheMediaStoreAdapter(config.args.projectId);
+            await cacheMediaStore.init();
+            log.info('Initialized CacheMediaStoreAdapter for project', config.args.projectId);
+            mediaStore = cacheMediaStore
+            break;
+        }
+        case "DesktopServer": {
+            throw new Error("DesktopServer not implemented yet")
+        }
+        default: {
+            throw new Error(`Unknown media store name: ${config.name}`)
+        }
+    }
+
+    return mediaStore
 }
 
 
@@ -85,7 +127,8 @@ export class ProjectStorageManager {
     private _storageService: StorageServiceActual; // Parent
     private _config: ProjectStorageConfig;
     private _inMemRepo: AsyncInMemoryRepository | null = null;
-    _localStorageRepo: BaseAsyncRepository | null = null;
+    _localRepo: BaseAsyncRepository | null = null;
+    private _localMediaStore: MediaStoreAdapter | null = null;
 
     constructor(storageService: StorageServiceActual, config: ProjectStorageConfig) {
         this._storageService = storageService
@@ -98,10 +141,16 @@ export class ProjectStorageManager {
         return this._inMemRepo
     }
     get localStorageRepo() {
-        if (!this._localStorageRepo) {
+        if (!this._localRepo) {
             throw new Error("Local storage repo not set. Have you called init?")
         }
-        return this._localStorageRepo
+        return this._localRepo
+    }
+    get mediaStore() {
+        if (!this._localMediaStore) {
+            throw new Error("Media store not set. Have you called init?")
+        }
+        return this._localMediaStore
     }
     get storageService() {
         return this._storageService
@@ -119,41 +168,70 @@ export class ProjectStorageManager {
 
         // Setup the local storage adapter
         try {
-            this._localStorageRepo = await initStorageAdapter(this.config.localRepoConfig)
+            log.info('Initializing storage adapter:', this.config.localRepo.name)
+            this._localRepo = await initStorageAdapter(this.config.localRepo)
+            log.info('Storage adapter initialized successfully')
 
         } catch (e) {
-            console.error("Error in initializing storage adapter", e)
+            log.error("Error in initializing storage adapter", e)
+            throw e; // Re-throw to prevent partial initialization
         }
-        // Check that there's a device branch with the id supplied in the config
-        // and create one if not
-        let localGraph = await this.localStorageRepo.getCommitGraph()
 
-        if (!localGraph.branch(branchName)) {
-            // If the branch does not exist -
-            // create branch in local adapter, pull, merge, push
-            log.info('Device branch missing in the local storage. Creating it:', branchName)
-            await this.localStorageRepo.createBranch(branchName)
+        try {
+            // Check that there's a device branch with the id supplied in the config
+            // and create one if not
+            log.info('Getting commit graph from local storage')
+            let localGraph = await this.localStorageRepo.getCommitGraph()
+
+            if (!localGraph.branch(branchName)) {
+                // If the branch does not exist -
+                // create branch in local adapter, pull, merge, push
+                log.info('Device branch missing in the local storage. Creating it:', branchName)
+                await this.localStorageRepo.createBranch(branchName)
+            }
+
+            log.info('Initializing in-memory repository from remote')
+            this._inMemRepo = await AsyncInMemoryRepository.initFromRemote(this.localStorageRepo, branchName)
+            log.info('In-memory repository initialized successfully')
+
+            log.info('Performing auto-merge for sync')
+            await autoMergeForSync(this.inMemoryRepo, branchName)
+
+            log.info('Pulling from in-memory repo to local storage')
+            await this.localStorageRepo.pull(this.inMemoryRepo)
+
+            // Populate the in-mem repo with the local storage data
+            log.info('Pulling from local storage to in-memory repo')
+            await this._inMemRepo.pull(this.localStorageRepo)
+
+            // Initialize the media store
+            log.info('Initializing media store:', this.config.localMediaStore.name)
+            this._localMediaStore = await initMediaStore(this.config.localMediaStore)
+            log.info('Media store initialized successfully')
+
+            log.info('Project storage manager initialization completed successfully')
+        } catch (e) {
+            log.error("Error during project storage manager initialization", e)
+            // Clean up partial state
+            this._inMemRepo = null;
+            this._localRepo = null;
+            this._localMediaStore = null;
+            throw e;
         }
-        this._inMemRepo = await AsyncInMemoryRepository.initFromRemote(this.localStorageRepo, branchName)
-        await autoMergeForSync(this.inMemoryRepo, branchName)
-        await this.localStorageRepo.pull(this.inMemoryRepo)
-
-        // Populate the in-mem repo with the local storage data
-        await this._inMemRepo.pull(this.localStorageRepo)
     }
 
     shutdown() {
         // Close the storage manager
         log.info('Closing project storage manager')
-        if (this._localStorageRepo) {
-            this._localStorageRepo.shutdown()
+        if (this._localRepo) {
+            this._localRepo.shutdown()
         }
     }
 
     async eraseLocalStorage() {
         // Erase the local storage
-        if (this._localStorageRepo) {
-            await this._localStorageRepo.eraseStorage()
+        if (this._localRepo) {
+            await this._localRepo.eraseStorage()
         } else {
             log.warning('Local storage not initialized. Nothing to erase.')
         }

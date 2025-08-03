@@ -1,4 +1,4 @@
-import { WebAppState } from "../containers/app/App";
+import { WebAppState } from "../containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
 import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
@@ -8,10 +8,11 @@ import { ApiClient } from "../storage/ApiClient";
 import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
+import { MediaItem } from "../model/MediaItem";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfigService } from "../services/config/Config";
 import { StorageService } from "../storage/StorageService";
-import { ProjectStorageConfig, StorageAdapterNames } from "../storage/ProjectStorageManager";
+import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from "../storage/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
@@ -32,18 +33,24 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 // Service related
-function indexedDB_storeConfigFactory(projectId: string) {
-    let device = this.config.deviceData;
+function indexedDB_storeConfigFactory(projectId: string): ProjectStorageConfig {
+    let device = pamet.config.deviceData;
     if (!device) {
         throw Error('Device not set');
     }
     return {
         currentBranchName: device.id,
-        localRepoConfig: {
+        localRepo: {
             name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
             args: {
                 projectId: projectId,
-                defaultBranchName: device.id,
+                localBranchName: device.id,
+            }
+        },
+        localMediaStore: {
+            name: 'InMemory' as MediaStoreAdapterNames,
+            args: {
+                projectId: projectId
             }
         }
     }
@@ -70,7 +77,7 @@ export class PametFacade extends PametStore {
 
     constructor() {
         super()
-        this._apiClient = new ApiClient('http://localhost', 11352, '', true);
+        this._apiClient = new ApiClient('http://localhost', 3000, '', true);
 
         this.keybindingService.setKeybindings([
             // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
@@ -175,6 +182,12 @@ export class PametFacade extends PametStore {
                 command: commands.storeStateToClipboard.name,
                 when: 'canvasFocus'
             },
+            {
+                key: 'ctrl+shift+v',
+                command: commands.pasteSpecial.name,
+                when: 'canvasFocus'
+            },
+
         ]);
 
         // Register rootAction hook to auto-commit / save
@@ -341,6 +354,26 @@ export class PametFacade extends PametStore {
 
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
         return this.frontendDomainStore.findOne(filter);
+    }
+
+    // Media CRUD methods
+    async createMediaItem(blob: Blob, path: string): Promise<MediaItem> {
+        const currentProjectId = this.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set');
+        }
+
+        // Create the MediaItem through the storage service
+        // This will handle blob storage, dimension extraction, and hash generation
+        const mediaItemData = await this.storageService.addMedia(currentProjectId, blob, path);
+
+        // Reconstruct MediaItem from data (since Comlink serialization strips prototype methods)
+        const mediaItem = new MediaItem(mediaItemData);
+
+        // Add to the frontend domain store
+        this.insertOne(mediaItem);
+
+        return mediaItem;
     }
 }
 

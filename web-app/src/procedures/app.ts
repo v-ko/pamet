@@ -3,7 +3,7 @@ import { pamet } from "../core/facade";
 import { ProjectData } from "../model/config/Project";
 import { appActions } from "../actions/app";
 import { PametRoute } from "../services/routing/route";
-import { ProjectError, WebAppState } from "../containers/app/App";
+import { ProjectError, WebAppState } from "../containers/app/WebAppState";
 import { projectActions } from "../actions/project";
 import { Page } from "../model/Page";
 
@@ -26,6 +26,7 @@ export async function switchToProject(projectId: string | null): Promise<void> {
         return;
     }
     projectSwithLock = true;
+    log.info('Switching to project', projectId);
 
     const appState = pamet.appViewState;
     let currentProjectId = pamet.appViewState.currentProjectId;
@@ -172,6 +173,13 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
     // "Reaches" the route by executing the necessary app configuration
     log.info('updateAppFromRouteOrAutoassist for route', route);
 
+    // Get project data from config
+    let userData = pamet.config.userData;
+    if (!userData || userData.id == undefined) {
+        log.error('User not set.');
+        throw Error('User data not loaded');
+    }
+
     // If no project id - go to default project (or create one)
     let projectId = route.projectId;
     if (projectId === undefined) {
@@ -185,16 +193,11 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
         } else {
             log.info('Switching to the first project');
             let firstProjectRoute = new PametRoute()
+            firstProjectRoute.userId = userData.id;
             firstProjectRoute.projectId = projects[0].id;
             await pamet.router.changeRouteAndApplyToApp(firstProjectRoute);
             return;
         }
-    }
-
-    // Get project data from config
-    let userData = pamet.config.userData;
-    if (!userData) {
-        throw Error('User data not loaded');
     }
 
     await switchToProject(projectId); // view state updated here
@@ -252,6 +255,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
 
         if (goToPageId !== undefined) {
             let defaultPageRoute = new PametRoute();
+            defaultPageRoute.userId = userData.id;
             defaultPageRoute.projectId = projectId;
             defaultPageRoute.pageId = goToPageId;
             await pamet.router.changeRouteAndApplyToApp(defaultPageRoute);

@@ -2,19 +2,12 @@ import { Rectangle } from "../util/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
 import { textRect } from "../components/note/util";
-
-export interface ImageMetadata {
-    url: string;
-    width: number;
-    height: number;
-}
+import { MediaItemData } from "./MediaItem";
 
 export interface NoteContent {
     text?: string;
     url?: string;
-    // image_url?: string; // remove that
-    // local_image_url?: string; //refactor that to 'image'
-    image?: ImageMetadata;
+    image?: MediaItemData;
 }
 export interface NoteStyle {
     color_role: string;

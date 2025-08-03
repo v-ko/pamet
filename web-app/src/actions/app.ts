@@ -1,5 +1,5 @@
-import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/App";
-import type { LocalStorageState } from "../containers/app/App";
+import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/WebAppState";
+import type { LocalStorageState } from "../containers/app/WebAppState";
 import { pamet } from "../core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";
@@ -7,7 +7,6 @@ import { PageViewState } from "../components/page/PageViewState";
 import type { ProjectData } from "../model/config/Project";
 import { currentTime, timestamp } from "fusion/util";
 import { deleteProjectAndSwitch } from "../procedures/app";
-import { routeFromAppState } from "../services/routing/route";
 
 let log = getLogger("WebAppActions");
 
@@ -29,7 +28,7 @@ class AppActions {
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
         }
-        pamet.router.pushRoute(routeFromAppState(state));
+        pamet.router.pushRoute(state.route());
     }
 
     @action({ issuer: 'service' })

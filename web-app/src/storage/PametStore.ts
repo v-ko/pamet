@@ -1,9 +1,25 @@
 
 import { Change } from 'fusion/Change'
 import { Store, SearchFilter } from 'fusion/storage/BaseStore'
+import { IndexDefinition, EntityTypeIndexConfig } from 'fusion/storage/InMemoryStore'
 import { Arrow } from '../model/Arrow'
 import { Note } from '../model/Note'
 import { Page } from '../model/Page'
+
+// Entity type index configuration for Pamet domain objects
+const PAMET_ENTITY_TYPE_CONFIG: EntityTypeIndexConfig = {
+    indexKey: 'entityType',
+    allowedTypes: [Page, Note, Arrow]
+};
+
+// Pamet-specific index definitions including entity type indexing
+export const PAMET_INMEMORY_STORE_CONFIG: readonly IndexDefinition[] = [
+    ["id"],                                    // Unique index for entity lookup by ID
+    [PAMET_ENTITY_TYPE_CONFIG, "id"],         // Composite index for type-specific ID lookups
+    ["parentId"],                             // Index for parent-child relationships
+    [PAMET_ENTITY_TYPE_CONFIG, "parentId"],   // Composite index for type-specific parent lookups
+    ["path"],                                 // Index for path-based lookups (e.g., media items)
+] as const;
 
 
 export abstract class PametStore extends Store {

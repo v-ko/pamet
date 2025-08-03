@@ -2,7 +2,7 @@ import { NoteViewState } from "./NoteViewState";
 import { NO_SCALE_LINE_SPACING } from "../../core/constants";
 import { TextLayout } from "../../util";
 import { color_role_to_hex_color } from "../../util/Color";
-import { calculateTextLayout } from "./util";
+import { calculateTextLayout } from "./note-dependent-utils";
 import { Point2D } from "../../util/Point2D";
 import { Rectangle } from "../../util/Rectangle";
 import { BaseCanvasView } from "./BaseCanvasView";
@@ -11,6 +11,7 @@ import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { textRect, imageRect } from "./util";
 import { Size } from "../../util/Size";
 import { getLogger } from "fusion/logging";
+import { ImageNote } from "../../model/ImageNote";
 
 let log = getLogger('NoteCanvasView');
 
@@ -104,6 +105,10 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
     drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
         let note = this.noteViewState.note();
+        if (!(note instanceof ImageNote)) {
+            log.error('drawImage called on non-ImageNote', note);
+            return;
+        }
         let noteRect = note.rect();
         let imageMetadata = note.content.image;
         if (imageMetadata === undefined) {
@@ -113,7 +118,17 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        let image = this.renderer.getImage(pamet.apiClient.projectScopedUrlToGlobal(imageMetadata.url));
+        // Use the MediaItem's projectScopedUrl method
+        let mediaItem = note.imageMediaItem();
+        let userId = pamet.appViewState.userId;
+        let projectId = pamet.appViewState.currentProjectId;
+        if (userId === null || projectId === null) {
+            log.error('Cannot draw image: userId or projectId is undefined');
+            return;
+        }
+        let mediaItemRoute = mediaItem.pametRoute(userId, projectId);
+
+        let image = this.renderer.getImage(mediaItemRoute.path());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = IMAGE_NOT_LOADED_TEXT;

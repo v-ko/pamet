@@ -1,15 +1,10 @@
 import "./App.css";
-import { useEffect } from "react";
-import { makeObservable, observable } from "mobx";
+import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
-import { MouseState, PageView } from "../../components/page/PageView";
-import { PageViewState } from "../../components/page/PageViewState";
+import { PageView } from "../../components/page/PageView";
 
 import { getLogger } from "fusion/logging";
-import { DeviceData } from "web-app/src/model/config/Device";
-import { UserData } from "web-app/src/model/config/User";
-import { pamet } from "../../core/facade";
 import { styled } from "styled-components";
 import Panel from "../../components/Panel";
 
@@ -28,116 +23,10 @@ import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
 import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "../../components/ProjectsDialog";
 import { CreateProjectDialog } from "../../components/CreateProjectDialog";
-import { ProjectData } from "../../model/config/Project";
+import { DebugDialog } from "../../components/DebugDialog";
+import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
 
 let log = getLogger("App");
-
-export enum AppDialogMode {
-  Closed,
-  CreateNewPage,
-  CreateNewProject,
-  ProjectProperties,
-  PageProperties,
-  ProjectsDialog
-}
-
-export enum PageError {
-  NoError,
-  NotFound
-}
-
-export enum ProjectError {
-  NoError,
-  NotFound
-}
-
-export interface LocalStorageState {
-  available: boolean;
-
-}
-export interface PametStorageState {
-  localStorage: LocalStorageState;
-  //
-}
-
-
-export class WebAppState {
-  deviceId: string | null = null;
-  userId: string | null = null;
-
-  currentProjectId: string | null = null;
-  currentProjectState: ProjectData | null = null;
-  projectError: ProjectError = ProjectError.NoError;
-
-  currentPageId: string | null = null;
-  currentPageViewState: PageViewState | null = null;
-  pageError: PageError = PageError.NoError;
-
-  storageState: PametStorageState = {
-    localStorage: {
-      available: false
-    }
-  }
-
-  dialogMode: AppDialogMode = AppDialogMode.Closed;
-  focusPointOnDialogOpen: Point2D = new Point2D(0, 0);  // Either the mouse location or the center of the screen
-  mouse: MouseState = new MouseState();
-
-  constructor() {
-    makeObservable(this, {
-      deviceId: observable,
-      userId: observable,
-      currentProjectId: observable,
-      currentProjectState: observable,
-      currentPageViewState: observable,
-      storageState: observable,
-      pageError: observable,
-      projectError: observable,
-      dialogMode: observable,
-    });
-  }
-
-  get device(): DeviceData | null {
-    if (!this.deviceId) {
-      return null
-    }
-    let deviceData = pamet.config.deviceData
-    if (!deviceData) {
-      throw new Error("DeviceData missing.")
-    }
-    return deviceData
-  }
-  get user(): UserData | null {
-    if (!this.userId) {
-      return null
-    }
-    let userData = pamet.config.userData
-    if (!userData) {
-      throw new Error("UserData missing.")
-    }
-    return userData
-  }
-  currentProject() {
-    if (!this.currentProjectId) {
-      return null
-    }
-    let projectData = pamet.project(this.currentProjectId)
-    if (!projectData) {
-      throw new Error("ProjectData missing.")
-    }
-    return projectData
-  }
-
-  pageViewState(pageId: string): PageViewState {
-    // Since there's no caching just returns the current if it's the correct
-    // page id. Else throws an error
-    if (this.currentPageViewState && this.currentPageViewState.page.id === pageId) {
-      return this.currentPageViewState
-    }
-    throw new Error("PageViewState not found")
-  }
-}
-
 
 // Vertical line component
 const VerticalSeparator = styled.div`
@@ -148,7 +37,7 @@ const VerticalSeparator = styled.div`
 
 const WebApp = observer(({ state }: { state: WebAppState }) => {
   let errorMessages: string[] = []
-
+  const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -258,6 +147,12 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       </Panel>
 
       <Panel align='top-right'>
+        <div
+          title='Debug info'
+          onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
+        >
+          {'</>'}
+        </div>
         <img src={helpCircleIconUrl} alt="Help"
           style={{ cursor: 'pointer' }}
           onClick={() => { commands.showHelp(); }}
@@ -338,6 +233,12 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onClose={() => appActions.closeAppDialog(state)}
         />
       )}
+
+      {/* Debug Dialog */}
+      <DebugDialog
+        isOpen={debugInfoModalOpen}
+        onClose={() => setDebugInfoModalOpen(false)}
+      />
     </div>
   );
 });

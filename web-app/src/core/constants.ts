@@ -1,15 +1,20 @@
 import { HexColorData } from "../util/Color";
 
-export const MIN_HEIGHT_SCALE = 0.2
-export const MAX_HEIGHT_SCALE = 200
-
-export const DEFAULT_EYE_HEIGHT = 40
-
+// Base geometry
 export const NO_SCALE_LINE_SPACING = 20
 
 export const ALIGNMENT_GRID_UNIT = 10
 export const AGU = ALIGNMENT_GRID_UNIT
 
+
+// Navigation
+export const MIN_HEIGHT_SCALE = 0.2
+export const MAX_HEIGHT_SCALE = 200
+
+export const DEFAULT_EYE_HEIGHT = 40
+
+
+// Note related
 export const NOTE_MARGIN = AGU / 2
 export const DEFAULT_NOTE_WIDTH = 32 * AGU
 export const DEFAULT_NOTE_HEIGHT = 16 * AGU
@@ -20,9 +25,7 @@ export const MAX_NOTE_HEIGHT = 192 * AGU
 
 export const RESIZE_CIRCLE_RADIUS = 2 * AGU
 export const ALIGNMENT_LINE_LENGTH = 12 * AGU
-export const ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS = 2 * AGU
-export const ARROW_CONTROL_POINT_RADIUS = 1.5 * AGU
-export const ARROW_POTENTIAL_CONTROL_POINT_RADIUS = ARROW_CONTROL_POINT_RADIUS * 0.7
+
 
 export const DEFAULT_NOTE_FONT_SIZE = 18
 export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
@@ -34,6 +37,7 @@ export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_L
     `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
     `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
 
+// Arrow related
 export const ARROW_SELECTION_RADIUS = 10
 
 export const ARROW_CONTROL_POINT_RAIDUS = 25
@@ -41,6 +45,9 @@ export const DEFAULT_ARROW_THICKNESS = 1.5
 export const ARROW_SELECTION_THICKNESS_DELTA = 3.5
 export const CONTROL_POINT_RADIUS = 15
 export const POTENTIAL_CONTROL_POINT_RADIUS = CONTROL_POINT_RADIUS * 0.7
+export const ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS = 2 * AGU
+export const ARROW_CONTROL_POINT_RADIUS = 1.5 * AGU
+export const ARROW_POTENTIAL_CONTROL_POINT_RADIUS = ARROW_CONTROL_POINT_RADIUS * 0.7
 
 // Page render and cache related
 export const MAX_RENDER_TIME = 0.04  // (in seconds) ~24 fps
@@ -83,3 +90,6 @@ export enum PametTabIndex {
     NoteEditViewWidget10 = 19,
     NoteEditViewWidget11 = 20,
 }
+
+// Media related
+export const MAX_MEDIA_NAME_LENGTH = 100;

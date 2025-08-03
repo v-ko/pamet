@@ -16,6 +16,7 @@ import { Size } from '../../util/Size';
 import { CanvasPageRenderer } from './DirectRenderer';
 import { Change } from 'fusion/Change';
 import { elementOwnId } from '../../model/Element';
+import React from 'react';
 
 let log = getLogger('PageViewState');
 
@@ -529,4 +530,28 @@ export class AnchorOnNoteSuggestion {
     get onNote(): boolean {
         return this._noteViewState !== null;
     }
+}
+
+export class MouseState {
+  buttons: number = 0;
+  position: Point2D = new Point2D(0, 0);
+  positionOnPress: Point2D = new Point2D(0, 0);
+  buttonsOnLeave: number = 0;
+
+  get rightIsPressed() {
+    return (this.buttons & 2) !== 0;
+  }
+  get leftIsPressed() {
+    return (this.buttons & 1) !== 0;
+  }
+  applyPressEvent(event: React.MouseEvent) {
+    this.positionOnPress = new Point2D(event.clientX, event.clientY);
+    this.buttons = event.buttons;
+  }
+  applyMoveEvent(event: React.MouseEvent) {
+    this.position = new Point2D(event.clientX, event.clientY);
+  }
+  applyReleaseEvent(event: React.MouseEvent) {
+    this.buttons = event.buttons;
+  }
 }

@@ -2,7 +2,7 @@ import { registerElementView } from "../elementViewLibrary";
 import { CardNote } from "../../model/CardNote";
 import { ImageNote } from "../../model/ImageNote";
 import { TextNote } from "../../model/TextNote";
-import { calculateTextLayout } from "./util";
+import { calculateTextLayout } from "./note-dependent-utils";
 import { NoteCanvasView } from "./NoteCanvasView";
 import { textRect } from "./util";
 import { DEFAULT_FONT_STRING } from "../../core/constants";

@@ -1,7 +1,7 @@
 import { registerElementView } from "../elementViewLibrary";
 import { ScriptNote } from "../../model/ScriptNote";
 import { color_role_to_hex_color } from "../../util/Color";
-import { calculateTextLayout } from "./util";
+import { calculateTextLayout } from "./note-dependent-utils";
 import { Point2D } from "../../util/Point2D";
 import { NoteCanvasView } from "./NoteCanvasView";
 import { textRect } from "./util";

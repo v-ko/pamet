@@ -10,6 +10,8 @@ import { Note } from "../model/Note";
 import { NoteViewState } from "../components/note/NoteViewState";
 import { PageViewState } from "../components/page/PageViewState";
 import { buildHashTree } from "fusion/storage/HashTree";
+import { parseClipboardContents } from "../util";
+import { pasteSpecial as pasteSpecialProcedure } from "../procedures/page";
 
 let log = getLogger('PametCommands');
 
@@ -209,6 +211,34 @@ class PametCommands {
     @command('Create new project')
     createNewProject() {
         appActions.openCreateProjectDialog(pamet.appViewState);
+    }
+
+    @command('Paste special')
+    async pasteSpecial() {
+        try {
+            // Get the current page view state
+            let pageVS = getCurrentPageViewState();
+
+            // Get the mouse position or use viewport center
+            let mousePos = pageVS.projectedMousePosition;
+            let position: Point2D;
+
+            if (mousePos === null) {
+                position = pageVS.viewport.realCenter;
+            } else {
+                position = pageVS.viewport.unprojectPoint(mousePos);
+            }
+
+            // Get clipboard contents
+            const clipboardContents = await parseClipboardContents();
+
+            // Pass the data to the action
+            pasteSpecialProcedure(pageVS.page.id, position, clipboardContents).catch((error) => {
+                log.error('Error in pasteSpecial procedure:', error);
+              });
+        } catch (error) {
+            log.error('Error in paste special command:', error);
+        }
     }
 }
 

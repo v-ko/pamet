@@ -7,18 +7,27 @@ import serviceWorkerUrl from "../service-worker?url"
 import { RepoUpdateData } from "fusion/storage/BaseRepository"
 import { createId } from 'fusion/util';
 import { buildHashTree } from 'fusion/storage/HashTree';
+import { MediaItem, MediaItemData } from '../model/MediaItem';
+import { PametRoute } from '../services/routing/route';
 
 let log = getLogger('StorageService')
 
 export type RepoUpdateNotifiedSignature = (update: RepoUpdateData) => void;
 
 export interface StorageServiceActualInterface {
-    loadRepo: (projectId: string, repoManagerConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature) => Promise<number>;
-    unloadRepo: (subscriptionId: number) => Promise<void>;
+    loadRepo: (projectId: string, repoManagerConfig: ProjectStorageConfig) => Promise<void>;
+    unloadRepo: (projectId: string) => Promise<void>;
     deleteRepo: (projectId: string, projectStorageConfig: ProjectStorageConfig) => Promise<void>;
     headState: (projectId: string) => Promise<SerializedStoreData>;
     _storageOperationRequest: (request: StorageOperationRequest) => Promise<void>;
-    test(): void;
+
+    // Media operations
+    addMedia: (projectId: string, blob: Blob, path: string) => Promise<MediaItemData>;
+    getMedia: (projectId: string, mediaId: string, mediaHash: string) => Promise<Blob>;
+    removeMedia: (projectId: string, mediaId: string, mediaHash: string) => Promise<void>;
+    moveMediaItemToTrash: (projectId: string, mediaId: string, mediaHash: string) => Promise<void>;
+
+    test(): boolean;
 }
 
 interface StorageOperationRequest {
@@ -44,17 +53,6 @@ export interface LocalStorageUpdateMessage {
     update: RepoUpdateData
 }
 
-class Subscription {
-    id: number;
-    projectId: string;
-    localStorageUpdateHandler: RepoUpdateNotifiedSignature;
-
-    constructor(projectId: string, subscriptionId: number, localStorageUpdateHandler: RepoUpdateNotifiedSignature) {
-        this.projectId = projectId;
-        this.id = subscriptionId;
-        this.localStorageUpdateHandler = localStorageUpdateHandler;
-    }
-}
 
 const LOCAL_STORAGE_UPDATE_CHANNEL = 'storage-service-local-storage-update-channel'
 const STORAGE_SERVICE_PROXY_CHANNEL = 'storage-service-proxy-channel'
@@ -66,12 +64,38 @@ export class StorageService {
      *
      * Commit, squish, merge and other storage operations are wrapped as requests
      * so that they can be executed in request order as to avoid consistency problems
+     *
+     * Normally each tab/window will only load a single project. Those can be
+     * different though, so the service should accomodate that with minimal overhead.
+     * Therefore it will act on a subscription principle. Each request for loading
+     * a repo will constitue a subscription to that repos changes. The first load
+     * inits the repo, and the last close(=unsubscribe) closes the repo and frees
+     * memory.
+     *
+     * There's a local repo and at some point - a sync service
+     * > The local repo does not issue changes, since it's solely owned by the client.
+     * It may be index-db based or device (desktop/mobile) based.
+     * > The sync service will push local sync graph changes and notify for remote
+     *   sync graph changes.
      */
-    private _service: StorageServiceActualInterface | null = null;
+    private _service: Comlink.Remote<StorageServiceActualInterface> | StorageServiceActualInterface | null = null;
     _worker: ServiceWorker | null = null;
     _workerRegistration: ServiceWorkerRegistration | null = null;
-    _proxyBroadcastChannel: BroadcastChannel | null = null;
-    _repoSubscriptions: { [key: string]: number } = {}; // track subs for this instance
+    _localUpdateBroadcastChannel: BroadcastChannel | null = null;
+    _currentProjectId: string | null = null; // Only one project allowed per tab
+    _localStorageUpdateCallback: RepoUpdateNotifiedSignature | null = null; // Callback for current project
+
+    constructor() {
+        // Create the broadcast channel for receiving updates
+        this._localUpdateBroadcastChannel = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL);
+        this._localUpdateBroadcastChannel.onmessage = (event) => {
+            const update: LocalStorageUpdateMessage = event.data;
+            if (this._currentProjectId === update.projectId && this._localStorageUpdateCallback) {
+                this._localStorageUpdateCallback(update.update);
+            }
+        };
+        log.info('Broadcast channel created for updates', this._localUpdateBroadcastChannel.name);
+    }
 
     static inMainThread(): StorageService {
         log.info('Creating storage service in main thread')
@@ -84,10 +108,11 @@ export class StorageService {
         log.info('Creating service worker proxy')
         let service = new StorageService();
         await service._setupProxy();
+        log.info('Service worker proxy created', service._service)
         return service;
     }
 
-    get service(): StorageServiceActualInterface {
+    get service(): Comlink.Remote<StorageServiceActualInterface> | StorageServiceActualInterface {
         if (!this._service) {
             throw new Error("Service not initialized");
         }
@@ -119,7 +144,6 @@ export class StorageService {
         }
 
         await navigator.serviceWorker.ready;
-        console.log('After ready')
 
         const controller = navigator.serviceWorker.controller;
         if (!controller) {
@@ -136,17 +160,31 @@ export class StorageService {
         if (!controller) {
             throw new Error("Service worker not available");
         }
-        // Create the broadcast channel
-        this._proxyBroadcastChannel = new BroadcastChannel(STORAGE_SERVICE_PROXY_CHANNEL);
 
-        // Wrap the worker
+        // Create MessageChannel for proper Comlink communication
+        const messageChannel = new MessageChannel();
+        const port1 = messageChannel.port1;
+        const port2 = messageChannel.port2;
+
+        log.info('Created MessageChannel for Comlink communication');
+
+        // Send port2 to the service worker
+        controller.postMessage({ type: 'CONNECT_STORAGE' }, [port2]);
+        log.info('Sent MessageChannel port to service worker');
+
+        // Store reference to the worker
         this._worker = controller;
-        let service = Comlink.wrap<StorageServiceActualInterface>(this._worker);
 
-        // Confirm the broadcast link
+        // Wrap port1 for communication
+        let service = Comlink.wrap<StorageServiceActualInterface>(port1);
+        log.info('Wrapped MessageChannel port1 with Comlink');
+
+        // Confirm the connection works
         try {
-            await service.test();
+            let testResult = await service.test();
+            log.info('Service worker test passed, result:', testResult);
         } catch (e) {
+            log.error('Service worker test failed:', e);
             throw Error(`Service worker test failed: ${e}`);
         }
 
@@ -169,17 +207,32 @@ export class StorageService {
     // Proxy interface methods
     async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<void> {
         log.info('Loading project', projectId)
-        let subscriptionId = await this.service.loadRepo(projectId, projectStorageConfig, commitNotify);
-        this._repoSubscriptions[projectId] = subscriptionId;
+
+        // Enforce one project per tab restriction
+        if (this._currentProjectId) {
+            throw new Error(`Cannot load project ${projectId}. Project ${this._currentProjectId} is already loaded. Only one project per tab is allowed.`);
+        }
+
+        // Store current project and callback
+        this._currentProjectId = projectId;
+        this._localStorageUpdateCallback = commitNotify;
+
+        await this.service.loadRepo(projectId, projectStorageConfig);
         log.info('Loaded project', projectId)
     }
     async unloadRepo(projectId: string): Promise<void> {
         log.info('Unloading project', projectId)
-        let subscriptionId = this._repoSubscriptions[projectId];
-        if (subscriptionId === undefined) {
-            log.warning('Trying to unload a project that is not loaded:', projectId)
+
+        if (this._currentProjectId !== projectId) {
+            throw new Error(`Trying to unload a project that is not the current project: ${projectId}`);
         }
-        return this.service.unloadRepo(subscriptionId);
+
+        // Clear current project and callback
+        this._currentProjectId = null;
+        this._localStorageUpdateCallback = null;
+
+        await this.service.unloadRepo(projectId);
+        log.info('Unloaded project', projectId)
     }
     async deleteProject(projectId: string, projectStorageConfig: ProjectStorageConfig): Promise<void> {
         return this.service.deleteRepo(projectId, projectStorageConfig);
@@ -196,38 +249,49 @@ export class StorageService {
     headState(projectId: string): Promise<SerializedStoreData> {
         return this.service.headState(projectId);
     }
+
+    // Media operations
+    async addMedia(projectId: string, blob: Blob, path: string): Promise<MediaItemData> {
+        return this.service.addMedia(projectId, blob, path);
+    }
+
+    async getMedia(projectId: string, mediaId: string, mediaHash: string): Promise<Blob> {
+        return this.service.getMedia(projectId, mediaId, mediaHash);
+    }
+
+    async removeMedia(projectId: string, mediaId: string, mediaHash: string): Promise<void> {
+        return this.service.removeMedia(projectId, mediaId, mediaHash);
+    }
+
+    async moveMediaItemToTrash(projectId: string, mediaId: string, mediaHash: string): Promise<void> {
+        return this.service.moveMediaItemToTrash(projectId, mediaId, mediaHash);
+    }
+
+
     async test() {
         return this.service.test();
     }
 }
 
-export class StorageServiceActual {
+export class StorageServiceActual implements StorageServiceActualInterface {
     /**
      * This service provides an interface for the storage management.
      *
      * When the service worker is available - it's run in it and is used via
-     * wrappers in all windows/tabs (to save on resources and
+     * wrappers in all windows/tabs (to save on resources).
      *
-     * Normally each tab/window will only load a single project. Those can be
-     * different though, so the service should accomodate that with minimal overhead.
-     * Therefore it will act on a subscription principle. Each request for loading
-     * a repo will constitue a subscription to that repos changes. The first load
-     * inits the repo, and the last close(=unsubscribe) closes the repo and frees
-     * memory.
-     *
-     * There's a local repo and at some point - a sync service
-     * > The local repo does not issue changes, since it's solely owned by the client.
-     * It may be index-db based or device (desktop/mobile) based.
-     * > The sync service will push local sync graph changes and notify for remote
-     *   sync graph changes.
-     *
+     * Uses reference counting to manage repository lifecycle - repos are loaded
+     * on first request and unloaded when no more references exist.
      */
     id: string = createId(8)
     private repoManagers: { [key: string]: ProjectStorageManager } = {}; // Per projectId
-    private subscriptions: { [key: string]: Subscription[] } = {}; // Per projectId
+    private repoRefCounts: { [key: string]: number } = {}; // Per projectId - reference counting
     private _storageOperationBroadcaster: BroadcastChannel;
     private _storageOperationReceiver: BroadcastChannel;
     private _storageOperationQueue: StorageOperationRequest[] = [];
+
+    // Media deletion tracking - sorted by timeDeleted for efficient cleanup
+    private deletedMediaItems: { [projectId: string]: MediaItem[] } = {}; // Per projectId, sorted by timeDeleted
 
     constructor() {
         this._storageOperationBroadcaster = new BroadcastChannel(LOCAL_STORAGE_UPDATE_CHANNEL);
@@ -243,14 +307,88 @@ export class StorageServiceActual {
 
     test() {
         log.info('Test!!!!!!!!!')
+        return true
     }
 
-    async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig, commitNotify: RepoUpdateNotifiedSignature): Promise<number> {
+    setupMediaRequestInterception() {
         /**
-         * Creates the Repo manager (if not already present), pull()-s
-         * subscribes the handler to new commits and returns the head state.
-         *
-         * Returns a subscription id
+         * Sets up the media request interception for the service worker.
+         * For the desktop-app and offline-webapp scenarios we intercept
+         * media requests to serve the media files from the respective storage
+         */
+        if (!this.inWorker) {
+            throw new Error('Media request interception can only be set up in a service worker context');
+        }
+
+        // Check if fetch event interception is available
+        if (typeof self.addEventListener !== 'function') {
+            throw new Error('Service worker fetch event interception is not available. Cannot set up media cache interception.');
+        }
+
+        // Set up fetch event listener for media requests
+        const handleFetch = (event: Event) => {
+            const fetchEvent = event as FetchEvent;
+            const url = fetchEvent.request.url;
+
+            log.info(`Intercepting fetch request for URL: ${url}`);
+
+            // Parse the URL using PametRoute to check if it's a media request
+            const route = PametRoute.fromUrl(url);
+            if (route.mediaItemId) {
+                fetchEvent.respondWith(this.handleMediaRequest(fetchEvent.request, route));
+            }
+        };
+
+        // Set up fetch event listener for media requests
+        self.addEventListener('fetch', handleFetch);
+        log.info('Set up global fetch interception for media requests in service worker');
+    }
+
+    // Handle media requests in service worker
+    async handleMediaRequest(request: Request, route: PametRoute): Promise<Response> {
+        try {
+            if (!route.mediaItemId || !route.projectId) {
+                log.warning(`Invalid media URL format: ${request.url}`);
+                return new Response('Invalid media URL format', {
+                    status: 400,
+                    statusText: 'Bad Request',
+                    headers: { 'Content-Type': 'text/plain' }
+                });
+            }
+
+            // Get project storage manager for the project
+            const repoManager = this.repoManagers[route.projectId];
+            if (!repoManager) {
+                log.warning(`No repo manager found for project: ${route.projectId}`);
+                return new Response('Project not found', {
+                    status: 404,
+                    statusText: 'Not Found',
+                    headers: { 'Content-Type': 'text/plain' }
+                });
+            }
+
+            const blob = await repoManager.mediaStore.getMedia(route.mediaItemId, route.mediaItemContentHash || '');
+            log.info(`Serving media from storage: ${route.mediaItemId}, hash: ${route.mediaItemContentHash}`);
+            return new Response(blob, {
+                headers: {
+                    'Content-Type': blob.type,
+                    'Content-Length': blob.size.toString(),
+                }
+            });
+
+        } catch (error) {
+            log.warning(`Media not found: ${request.url}`, error);
+            return new Response('Media not found', {
+                status: 404,
+                statusText: 'Not Found',
+                headers: { 'Content-Type': 'text/plain' }
+            });
+        }
+    }
+
+    async loadRepo(projectId: string, projectStorageConfig: ProjectStorageConfig): Promise<void> {
+        /**
+         * Creates the Repo manager (if not already present) and increments reference count.
          */
         let repoManager = this.repoManagers[projectId];
         if (!repoManager) {
@@ -258,9 +396,20 @@ export class StorageServiceActual {
             this.repoManagers[projectId] = repoManager;
             await repoManager.init();
 
-            this.subscriptions[projectId] = [];
+            this.repoRefCounts[projectId] = 0;
+
+            // Initialize deleted media items tracking for this project
+            if (!this.deletedMediaItems[projectId]) {
+                this.deletedMediaItems[projectId] = [];
+            }
+
+            log.info('Initialized repo manager for project', projectId);
+
+            // Perform cleanup of old deleted media items on startup
+            await this.cleanupDeletedMediaItems(projectId);
         } else { // Repo already loaded
             log.info('Repo already loaded', projectId);
+            log.info('Loaded repo manager for project', JSON.stringify(repoManager.config));
             // Check that the configs are the same
             // deep compare the configs
             let configsAreTheSame = JSON.stringify(repoManager.config) === JSON.stringify(projectStorageConfig);
@@ -272,39 +421,28 @@ export class StorageServiceActual {
             }
         }
 
-        // Add a subscription
-        let subscription = new Subscription(projectId, this.subscriptions[projectId].length, commitNotify);
-        this.subscriptions[projectId].push(subscription);
-
-        return subscription.id
+        // Increment reference count
+        this.repoRefCounts[projectId]++;
     }
 
-    async unloadRepo(subscriptionId: number): Promise<void> {
+    async unloadRepo(projectId: string): Promise<void> {
         /**
-         * Unsubscribes the handler from new commits and unloads the repo if no
-         * more subscriptions are present
+         * Decrements reference count and unloads the repo if no more references exist.
          */
-        let subscription: Subscription | undefined;
-        for (let projectId in this.subscriptions) {
-            subscription = this.subscriptions[projectId].find(sub => sub.id === subscriptionId);
-            if (subscription) {
-                break;
-            }
+        if (!this.repoRefCounts[projectId]) {
+            log.warning('Trying to unload a project that is not loaded:', projectId);
+            return;
         }
 
-        if (!subscription) {
-            throw new Error("Subscription not found");
-        }
+        this.repoRefCounts[projectId]--;
 
-        let repoManager = this.repoManagers[subscription.projectId];
-        let projectSubs = this.subscriptions[subscription.projectId];
-        let index = projectSubs.indexOf(subscription);
-        projectSubs.splice(index, 1);
-
-        if (projectSubs.length === 0) {
-            delete this.repoManagers[subscription.projectId];
-            delete this.subscriptions[subscription.projectId];
+        if (this.repoRefCounts[projectId] <= 0) {
+            let repoManager = this.repoManagers[projectId];
+            delete this.repoManagers[projectId];
+            delete this.repoRefCounts[projectId];
+            delete this.deletedMediaItems[projectId];
             repoManager.shutdown();
+            log.info('Unloaded repo for project', projectId);
         }
     }
     async deleteRepo(projectId: string, projectStorageConfig: ProjectStorageConfig): Promise<void> {
@@ -312,18 +450,19 @@ export class StorageServiceActual {
         let projectStorageManager = this.repoManagers[projectId];
 
         // If the repo manager is not loaded - load it temporarily
-        let subscriptionId: number | null = null;
+        let wasTemporarilyLoaded = false;
         if (projectStorageManager === undefined) {
             log.info('Loading repo temporarily for deletion', projectId);
-            subscriptionId = await this.loadRepo(projectId, projectStorageConfig, () => { });
+            await this.loadRepo(projectId, projectStorageConfig);
+            wasTemporarilyLoaded = true;
             log.info('Loaded repo temporarily for deletion', projectId);
         }
         projectStorageManager = this.repoManagers[projectId];
         await projectStorageManager.localStorageRepo.eraseStorage();
         log.info('Erased local storage for project', projectId);
 
-        if (subscriptionId !== null) { // Unload tmp repo
-            await this.unloadRepo(subscriptionId);
+        if (wasTemporarilyLoaded) { // Unload tmp repo
+            await this.unloadRepo(projectId);
             log.info('Unloaded temporary repo', projectId);
         }
     }
@@ -390,7 +529,7 @@ export class StorageServiceActual {
             try {
                 await this._executeStorageOperationRequest(request);
             } catch (error) {
-                log.error('Error processing storage operation request',request , error)
+                log.error('Error processing storage operation request', request, error)
             }
         }
         this._storageOperationQueue = [];
@@ -424,13 +563,8 @@ export class StorageServiceActual {
     }
 
     _notifySubscribers(projectId: string, update: RepoUpdateData) {
-        let subscriptions = this.subscriptions[projectId];
-        if (!subscriptions) {
-            return;
-        }
-        for (let subscription of subscriptions) {
-            subscription.localStorageUpdateHandler(update);
-        }
+        // No-op in service worker - notifications handled via BroadcastChannel
+        // The main thread StorageService will handle callback notifications
     }
     async headState(projectId: string): Promise<SerializedStoreData> {
         let repoManager = this.repoManagers[projectId];
@@ -438,5 +572,102 @@ export class StorageServiceActual {
             throw new Error("Repo not loaded");
         }
         return repoManager.inMemoryRepo.headStore.data();
+    }
+    // Media operations
+    async addMedia(projectId: string, blob: Blob, path: string): Promise<MediaItemData> {
+        let repoManager = this.repoManagers[projectId];
+        if (!repoManager) {
+            throw new Error("Repo not loaded");
+        }
+        return repoManager.mediaStore.addMedia(blob, path); // Now returns MediaItemData directly
+    }
+
+    async getMedia(projectId: string, mediaId: string, mediaHash: string): Promise<Blob> {
+        let repoManager = this.repoManagers[projectId];
+        if (!repoManager) {
+            throw new Error("Repo not loaded");
+        }
+        return repoManager.mediaStore.getMedia(mediaId, mediaHash);
+    }
+
+    async removeMedia(projectId: string, mediaId: string, mediaHash: string): Promise<void> {
+        let repoManager = this.repoManagers[projectId];
+        if (!repoManager) {
+            throw new Error("Repo not loaded");
+        }
+
+        // Create a MediaItem instance for the adapter
+        const mediaItem = new MediaItem({ id: mediaId, path: '', contentHash: mediaHash, width: 0, height: 0, mimeType: '', size: 0 });
+        return repoManager.mediaStore.removeMedia(mediaItem);
+    }
+
+    async moveMediaItemToTrash(projectId: string, mediaId: string, mediaHash: string): Promise<void> {
+        let repoManager = this.repoManagers[projectId];
+        if (!repoManager) {
+            throw new Error("Repo not loaded");
+        }
+
+        // Create a MediaItem instance and mark it as deleted
+        const mediaItem = new MediaItem({ id: mediaId, path: '', contentHash: mediaHash, width: 0, height: 0, mimeType: '', size: 0 });
+        mediaItem.markDeleted();
+
+        // Add to deleted media items index
+        if (!this.deletedMediaItems[projectId]) {
+            this.deletedMediaItems[projectId] = [];
+        }
+
+        const deletedItems = this.deletedMediaItems[projectId];
+        deletedItems.push(mediaItem);
+
+        // Sort by timeDeleted to maintain order for efficient cleanup
+        deletedItems.sort((a, b) => a.timeDeleted! - b.timeDeleted!);
+
+        log.info(`Moved media item to trash: ${mediaItem.path}, timeDeleted: ${mediaItem.timeDeleted}`);
+    }
+
+    /**
+     * Clean up deleted media items older than the specified retention period
+     * Default retention period is 30 days (30 * 24 * 60 * 60 * 1000 ms)
+     */
+    private async cleanupDeletedMediaItems(projectId: string, retentionPeriodMs: number = 30 * 24 * 60 * 60 * 1000): Promise<void> {
+        const deletedItems = this.deletedMediaItems[projectId];
+        if (!deletedItems || deletedItems.length === 0) {
+            return;
+        }
+
+        const cutoffTime = Date.now() - retentionPeriodMs;
+        let itemsToRemove = 0;
+
+        // Since the array is sorted by timeDeleted, we can find the cutoff point efficiently
+        for (let i = 0; i < deletedItems.length; i++) {
+            if (deletedItems[i].timeDeleted! > cutoffTime) {
+                break;
+            }
+            itemsToRemove++;
+        }
+
+        if (itemsToRemove === 0) {
+            log.info(`No deleted media items to clean up for project ${projectId}`);
+            return;
+        }
+
+        const repoManager = this.repoManagers[projectId];
+        if (!repoManager) {
+            log.warning(`Repo not loaded for project ${projectId}, skipping cleanup`);
+            return;
+        }
+
+        // Remove the expired items from storage
+        const itemsToDelete = deletedItems.splice(0, itemsToRemove);
+        for (const item of itemsToDelete) {
+            try {
+                await repoManager.mediaStore.removeMedia(item);
+                log.info(`Permanently deleted expired media item: ${item.path}`);
+            } catch (error) {
+                log.error(`Failed to delete expired media item ${item.path}:`, error);
+            }
+        }
+
+        log.info(`Cleaned up ${itemsToDelete.length} expired deleted media items for project ${projectId}`);
     }
 }

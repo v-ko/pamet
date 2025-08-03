@@ -19,6 +19,7 @@ import { arrowActions } from '../../actions/arrow';
 import { noteActions } from '../../actions/note';
 import { InternalLinkNote } from '../../model/InternalLinkNote';
 import { appActions } from '../../actions/app';
+import { ImageNote } from '../../model/ImageNote';
 
 
 let log = getLogger('Page.tsx')
@@ -36,30 +37,6 @@ touch-action: none;
 min-width: 30px;
 `
 
-
-export class MouseState {
-  buttons: number = 0;
-  position: Point2D = new Point2D(0, 0);
-  positionOnPress: Point2D = new Point2D(0, 0);
-  buttonsOnLeave: number = 0;
-
-  get rightIsPressed() {
-    return (this.buttons & 2) !== 0;
-  }
-  get leftIsPressed() {
-    return (this.buttons & 1) !== 0;
-  }
-  applyPressEvent(event: React.MouseEvent) {
-    this.positionOnPress = new Point2D(event.clientX, event.clientY);
-    this.buttons = event.buttons;
-  }
-  applyMoveEvent(event: React.MouseEvent) {
-    this.position = new Point2D(event.clientX, event.clientY);
-  }
-  applyReleaseEvent(event: React.MouseEvent) {
-    this.buttons = event.buttons;
-  }
-}
 
 export const PageView = observer(({ state }: { state: PageViewState }) => {
   /**  */
@@ -601,11 +578,35 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
   let imageUrls: Set<string> = new Set();
+  const config = pamet.config;
+  const userData = config.userData;
+  const projectId = pamet.appViewState.currentProjectId;
+
   for (let noteVS of state.noteViewStatesByOwnId.values()) {
+    if (!userData || !projectId) { // Lazy. Could be done outside of the loop
+      continue
+    }
+
     let note = noteVS.note()
-    if (note.content.image !== undefined) {
-      let url = note.content.image.url;
-      imageUrls.add(pamet.apiClient.projectScopedUrlToGlobal(url));
+    if (note.content.image !== undefined && note instanceof ImageNote) {
+      // Use the MediaItem's projectScopedUrl method
+      let mediaItem = note.imageMediaItem();
+      let mediaItemRoute = mediaItem.pametRoute(userData.id, projectId);
+      // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
+      let mediaItemPath = mediaItemRoute.path();
+
+      // DEBUG: Log URL generation process
+      log.info('[DEBUG] URL Generation Process:', {
+        mediaItemId: mediaItem.id,
+        contentHash: mediaItem.contentHash,
+        toProjectScopedURI: mediaItemRoute.toProjectScopedURI(),
+        mediaItemPath: mediaItemPath,
+        locationOrigin: location.origin,
+        apiClientHost: pamet.apiClient.host,
+        apiClientPort: pamet.apiClient.port
+      });
+
+      imageUrls.add(mediaItemPath);
     }
   }
 

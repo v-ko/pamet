@@ -3,7 +3,6 @@ import { Note } from "./Note";
 import { Page } from "./Page";
 import { elementId } from "./Element";
 import { currentTime, timestamp } from "fusion/util";
-import { pamet } from "../core/facade";
 import { PametRoute } from "../services/routing/route";
 
 const MISSING_PAGE_TITLE = '(missing)'
@@ -14,11 +13,6 @@ export class InternalLinkNote extends Note {
         let ownId = getEntityId();
         let id = elementId(parentPageId, ownId);
         let currentTimestamp = timestamp(currentTime());
-
-        let targetPage = pamet.page(targetPageId)
-        if (targetPage === undefined) {
-            throw new Error(`Target page ${targetPageId} not found`)
-        }
 
         let note = new InternalLinkNote({
             id: id,

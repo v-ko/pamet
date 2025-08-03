@@ -24,6 +24,11 @@ export class PametConfigService {
         this._adapter.setUpdateHandler(handler);
     }
 
+    data(): object {
+        // Returns the whole config data as an object
+        return this._adapter.data();
+    }
+
     clear() {
         this._adapter.clear();
     }

@@ -1,8 +1,99 @@
 import { ElementViewState } from "../components/page/ElementViewState";
-import { ALIGNMENT_GRID_UNIT } from "../core/constants";
+import { ALIGNMENT_GRID_UNIT, MAX_MEDIA_NAME_LENGTH } from "../core/constants";
 import { getLogger } from "fusion/logging";
 import { Point2D, Vector2D } from "./Point2D";
 import { Rectangle } from "./Rectangle";
+import slugify from "slugify";
+
+// Clipboard item types
+export type ClipboardItemType = 'text' | 'url' | 'image';
+
+// Clipboard item interface
+export interface ClipboardItem {
+    type: ClipboardItemType;
+    text?: string;
+    url?: string;
+    image_blob?: Blob;
+    mime_type?: string;
+}
+
+/**
+ * Parse clipboard data into a structured format
+ */
+export async function parseClipboardContents(): Promise<ClipboardItem[]> {
+    const result: ClipboardItem[] = [];
+
+    try {
+        // Read clipboard items
+        const clipboardItems = await navigator.clipboard.read();
+
+        // Process each item
+        for (const item of clipboardItems) {
+            // Process images
+            const imageTypes = item.types.filter(type => type.startsWith('image/'));
+            for (const imageType of imageTypes) {
+                try {
+                    const blob = await item.getType(imageType);
+                    result.push({
+                        type: 'image',
+                        image_blob: blob,
+                        mime_type: imageType
+                    });
+                } catch (e) {
+                    log.error('Error getting image from clipboard:', e);
+                }
+            }
+
+            // Process text
+            if (item.types.includes('text/plain') || item.types.includes('text/html')) {
+                try {
+                    const blob = await item.getType('text/plain');
+                    const text = await blob.text();
+
+                    // Split text by double newlines
+                    const textParts = text.split(/\n\s*\n/);
+
+                    // Process each part separately
+                    for (const part of textParts) {
+                        const trimmedPart = part.trim();
+                        if (!trimmedPart) continue; // Skip empty parts
+
+                        // Check if text is a URL
+                        try {
+                            const url = new URL(trimmedPart);
+                            if (url.protocol === 'http:' || url.protocol === 'https:') {
+                                // Add as URL item
+                                result.push({
+                                    type: 'url',
+                                    text: trimmedPart,
+                                    url: url.href
+                                });
+                            } else {
+                                // Add as regular text
+                                result.push({
+                                    type: 'text',
+                                    text: trimmedPart
+                                });
+                            }
+                        } catch {
+                            // Not a valid URL, add as regular text
+                            result.push({
+                                type: 'text',
+                                text: trimmedPart
+                            });
+                        }
+                    }
+                } catch (e) {
+                    log.error('Error getting text from clipboard:', e);
+                }
+            }
+        }
+    } catch (error) {
+        log.error('Error parsing clipboard contents:', error);
+    }
+
+    return result;
+}
 
 export type SelectionDict = Map<ElementViewState, boolean>;
 
@@ -16,79 +107,6 @@ export function snapToGrid(x: number): number {
 export function snapVectorToGrid<T extends Vector2D>(v: T): T {
     return v.divide(ALIGNMENT_GRID_UNIT).round().multiply(ALIGNMENT_GRID_UNIT);
 }
-
-// export interface PametUrlProps {
-//     pageId?: string,
-//     viewportCenter?: Point2D,
-//     viewportHeight?: number,
-//     // selection?: Array<string>,
-//     focusedNoteId?: string,
-// }
-
-// export function parsePametUrl(url_string: string): PametUrlProps {
-//     let url = new URL(url_string);
-
-//     // The page_id is a part of the path like /p/page_id/
-//     // So if there's no /p/ it will remain unset
-//     let page_id: string | undefined = undefined;
-//     if (url.pathname.startsWith("/p/")) {
-//         page_id = url.pathname.split("/")[2];
-//     }
-
-//     // The anchor is a key/value pair for either eye_at= (map position)
-//     // or note= for a note id
-
-//     // The eye_at is in the fragment/anchor and is in the form height/x/y
-//     let viewportCenter: Point2D | undefined = undefined;
-//     let viewportHeight: number | undefined = undefined;
-//     let focused_note_id: string | undefined = undefined;
-
-//     let eye_at = url.hash.split("#eye_at=")[1];
-//     if (eye_at) {
-//         let [height, x, y] = eye_at.split("/").map(parseFloat);
-//         if (!(isNaN(height) || isNaN(x) || isNaN(y))) {
-//             viewportCenter = new Point2D(x, y);
-//             viewportHeight = height;
-//         }
-//     }
-
-//     // Get the focused note from the anchor
-//     focused_note_id = url.hash.split("#note=")[1];
-
-//     return {
-//         pageId: page_id,
-//         viewportCenter: viewportCenter,
-//         viewportHeight: viewportHeight,
-//         focusedNoteId: focused_note_id,
-//     }
-// }
-
-// export function createPametUrl(props: PametUrlProps): string {
-//     let url = new URL(window.location.href);
-
-//     if (props.pageId) {
-//         url.pathname = `/p/${props.pageId}/`;
-//     }
-
-//     let anchor = "";
-//     if (props.viewportCenter && props.viewportHeight) {
-//         anchor += `#eye_at=${props.viewportHeight}/${props.viewportCenter.x}/${props.viewportCenter.y}`;
-//     }
-
-//     if (props.focusedNoteId) {
-//         anchor += `#note=${props.focusedNoteId}`;
-//     }
-
-//     url.hash = anchor;
-
-//     return url.toString();
-// }
-
-// export function updateBrowserLocation(props: PametUrlProps) {
-//     let url = createPametUrl(props);
-//     window.history.pushState({}, "", url);
-// }
-
 
 export let EMPTY_TOKEN = '';
 
@@ -245,4 +263,23 @@ export function drawCrossingDiagonals(
     }
 
     ctx.restore();
+}
+
+export function toUriFriendlyFileName(filename: string, maxLength: number = MAX_MEDIA_NAME_LENGTH): string {
+    // First slugify the entire filename
+    const slugifiedFilename = slugify(filename, {
+        strict: true,     // Strip special characters except replacement
+    });
+
+    // Then extract extension if present
+    const lastDotIndex = slugifiedFilename.lastIndexOf('.');
+    const name = lastDotIndex !== -1 ? slugifiedFilename.substring(0, lastDotIndex) : slugifiedFilename;
+    const extension = lastDotIndex !== -1 ? slugifiedFilename.substring(lastDotIndex) : '';
+
+    // Limit the name length to maxLength minus the extension length
+    const maxNameLength = maxLength - extension.length;
+    const truncatedName = name.substring(0, maxNameLength);
+
+    // Combine name and extension
+    return truncatedName + extension;
 }

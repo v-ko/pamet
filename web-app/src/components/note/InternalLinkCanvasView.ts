@@ -1,6 +1,6 @@
 import { registerElementView } from "../elementViewLibrary";
 import { InternalLinkNote } from "../../model/InternalLinkNote";
-import { calculateTextLayout } from "./util";
+import { calculateTextLayout } from "./note-dependent-utils";
 import { NoteCanvasView, BorderType } from "./NoteCanvasView"
 import { textRect } from "./util";
 import { DEFAULT_FONT_STRING } from "../../core/constants";

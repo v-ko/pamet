@@ -18,8 +18,8 @@ export class DesktopServerRepository extends BaseAsyncRepository {
         this.apiClient = apiClient;
     }
 
-    async init(): Promise<void> {
-        await this._inMemRepo.init("desktop");
+    async init(branchName: string): Promise<void> {
+        await this._inMemRepo.init(branchName);
 
         try {
             // Get all pages

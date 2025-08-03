@@ -1,7 +1,16 @@
 import * as Comlink from 'comlink';
 import { StorageServiceActual } from './storage/StorageService';
 
+// DEBUG: Add logging to check entity registration
+import { getLogger } from 'fusion/logging';
+import { registerEntityClasses } from './core/entityRegistrationHack';
+
+const log = getLogger('service-worker');
+
 declare const self: ServiceWorkerGlobalScope;
+
+// Register entity classes in service worker context
+registerEntityClasses();
 
 // Configure the service worker to update immediately and claim clients upon activation
 self.addEventListener('install', event => {
@@ -23,21 +32,29 @@ self.addEventListener('activate', event => {
 // }, 1000);
 
 let storageService = new StorageServiceActual();
+storageService.setupMediaRequestInterception();
 
-// Expose the storage service to the main thread via Comlink and broadcast channel
-let broadcastChannel = 
+// Set up broadcast channel for storage updates
+let broadcastChannel = new BroadcastChannel('storage-service-proxy-channel');
 
-// // // Expose the RepositoryService to the main thread via Comlink
-// Comlink.expose(StorageService);// Define a type for the methods you expect to be available from the service worker
-
-// Establish the comlink connection to the wrapper via a MessageChannel
+// Handle MessageChannel connections from main thread
 self.addEventListener("message", (event: ExtendableMessageEvent) => {
-
-    // if (event.data.comlinkInit) {
-    //   Comlink.expose(StorageService, event.data.port);
-    //   console.log('Comlink exposed', event.data.port);
-    //   return;
-    // }
-// test: log received messages
     console.log('Service worker received message:', event.data);
+
+    // Handle Comlink connection setup
+    if (event.data && event.data.type === 'CONNECT_STORAGE') {
+        const port = event.ports[0];
+        if (port) {
+            console.log('Service worker: Setting up Comlink on MessageChannel port');
+            // Expose the storage service on this specific port
+            Comlink.expose(storageService, port);
+            console.log('Service worker: Comlink exposed on port');
+        } else {
+            console.error('Service worker: No port received in CONNECT_STORAGE message');
+        }
+        return;
+    }
+
+    // Handle other messages (legacy logging)
+    console.log('Service worker: Unhandled message type');
 });

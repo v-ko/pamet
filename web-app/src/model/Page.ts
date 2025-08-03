@@ -25,10 +25,10 @@ export class Page extends Entity<PageData> implements PageData {
     return '';
   }
 
-  url(): string {
+  projectScopedURI(): string {
     let route = new PametRoute()
     route.pageId = this.id
-    return route.toLocalUrl()
+    return route.toProjectScopedURI()
   }
 
   get datetimeCreated(): Date {

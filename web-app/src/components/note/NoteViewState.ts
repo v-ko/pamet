@@ -1,7 +1,7 @@
 import { computed, makeObservable, observable, reaction, toJS } from "mobx";
 import { Note, SerializedNote } from "../../model/Note";
 import { TextLayout } from "../../util";
-import { calculateTextLayout } from "./util";
+import { calculateTextLayout } from "./note-dependent-utils";
 import { getLogger } from "fusion/logging";
 import { ElementViewState } from "../page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "../../core/constants";

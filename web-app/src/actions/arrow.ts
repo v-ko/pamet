@@ -58,12 +58,12 @@ class ArrowActions {
                 tail: {
                     position: tail_coords,
                     noteAnchorId: tail_note_id,
-                    noteAnchorType: anchorUnderMouse,
+                    noteAnchorType: anchorUnderMouse.toString(),
                 },
                 head: {
                     position: null,
                     noteAnchorId: null,
-                    noteAnchorType: ArrowAnchorOnNoteType.none,
+                    noteAnchorType: ArrowAnchorOnNoteType.none.toString(),
                 },
                 mid_points: [],
                 style: {

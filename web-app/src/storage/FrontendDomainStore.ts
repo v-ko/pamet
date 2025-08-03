@@ -1,5 +1,5 @@
 import { InMemoryStore } from "fusion/storage/InMemoryStore"
-import { PametStore as PametStore } from "./PametStore";
+import { PametStore as PametStore, PAMET_INMEMORY_STORE_CONFIG } from "./PametStore";
 import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/BaseStore"
 import { Entity, EntityData } from "fusion/libs/Entity";
 import { Change } from "fusion/Change";
@@ -34,7 +34,8 @@ export class FrontendDomainStore extends PametStore {
 
     constructor() {
         super()
-        this._store = new InMemoryStore();
+        // Use Pamet-specific index configuration with entity type support
+        this._store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
     }
     data(): SerializedStoreData {
         return this._store.data();

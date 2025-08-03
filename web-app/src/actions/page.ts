@@ -11,12 +11,13 @@ import { NoteEditViewState } from "../components/note/NoteEditView";
 import { pamet } from "../core/facade";
 import { Note } from "../model/Note";
 import { TextNote } from "../model/TextNote";
-import { minimalNonelidedSize } from "../components/note/util";
+import { minimalNonelidedSize } from "../components/note/note-dependent-utils";
 import { NoteViewState } from "../components/note/NoteViewState";
 import { PametElement, PametElementData } from "../model/Element";
 import { Arrow } from "../model/Arrow";
 import { ArrowViewState } from "../components/arrow/ArrowViewState";
 import { Page } from "../model/Page";
+import { MediaItem } from "../model/MediaItem";
 
 let log = getLogger('MapActions');
 
@@ -391,6 +392,18 @@ class PageActions {
     pamet.updatePage(newPageState);
   }
 
+  @action({ issuer: 'paste-special-procedure' })
+  pasteSpecialAddElements(notes: Note[], mediaItems: MediaItem[]) {
+    // Add new media items via facade
+    for (let mediaItem of mediaItems) {
+      pamet.insertOne(mediaItem);
+    }
+
+    // Add new notes via facade
+    for (let note of notes) {
+      pamet.insertNote(note);
+    }
+  }
 }
 
 export const pageActions = new PageActions();

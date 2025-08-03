@@ -1,22 +1,18 @@
 import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
-import WebApp, { WebAppState } from './containers/app/App';
+import WebApp from './containers/app/App';
+import { WebAppState } from "./containers/app/WebAppState";
 import './index.css';
 // import reportWebVitals from './reportWebVitals';
 import { PametFacade, pamet } from './core/facade';
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 
 
-// Imports that are required to just activate decorators. Might be removed when
-// some extensions logic is implemented
-import { TextNote } from './model/TextNote';
-import { CardNote } from './model/CardNote';
-import { ImageNote } from './model/ImageNote';
-import { OtherPageListNote } from './model/OtherPageListNote';
-import { ScriptNote } from './model/ScriptNote';
-import { InternalLinkNote } from './model/InternalLinkNote';
+// Register entity classes for @entityType decorators
+import { registerEntityClasses } from './core/entityRegistrationHack';
+
+// Canvas view imports (still needed for UI components)
 import { InternalLinkNoteCanvasView } from './components/note/InternalLinkCanvasView';
-import { ExternalLinkNote } from './model/ExternalLinkNote';
 import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
 import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
@@ -25,17 +21,14 @@ import { ActionState } from 'fusion/libs/Action';
 import { PametConfigService } from './services/config/Config';
 import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
 import { StorageService } from './storage/StorageService';
-import { StorageAdapterNames } from './storage/ProjectStorageManager';
+import { ProjectStorageConfig, StorageAdapterNames } from './storage/ProjectStorageManager';
 import { updateAppFromRouteOrAutoassist } from './procedures/app';
 
+// Register entity classes in main thread context
+registerEntityClasses();
+
+// Keep canvas view imports to prevent tree-shaking
 let dummyImports: any[] = [];
-dummyImports.push(TextNote);
-dummyImports.push(CardNote);
-dummyImports.push(ImageNote);
-dummyImports.push(OtherPageListNote);
-dummyImports.push(ScriptNote);
-dummyImports.push(InternalLinkNote);
-dummyImports.push(ExternalLinkNote);
 dummyImports.push(InternalLinkNoteCanvasView)
 dummyImports.push(ExternalLinkNoteCanvasView)
 dummyImports.push(ScriptNoteCanvasView)
@@ -71,11 +64,15 @@ if (!deviceData) {
     config.deviceData = deviceData;
 }
 
-// Check for user. If none - create
+// Check for user. If none - create with default 'local' user
+// Default user is 'local' for initial provisioning. When setting up storage
+// with a real user account, the project should be moved explicitly from 'local'
+// to the actual user. This allows the app to work immediately without requiring
+// user registration, while still supporting proper user-scoped storage later.
 if (!config.userData) {
     let userData = {
-        id: "user-" + crypto.randomUUID(),
-        name: "Anonymous",
+        id: "local",
+        name: "Local User",
         projects: []
     }
     config.userData = userData;
@@ -86,47 +83,65 @@ pamet.setConfig(config)
 // // Setup the sync service
 setupWebWorkerLoggingChannel();
 
-// Setup for desktop testing
-deviceData = {
-    id: 'desktop',
-    name: 'Desktop device'
-}
-log.info('User', config.userData, 'Device', config.deviceData)
+// // Setup for desktop testing
+// deviceData = {
+//     id: 'desktop',
+//     name: 'Desktop device'
+// }
+// log.info('User', config.userData, 'Device', config.deviceData)
 
-config.deviceData = deviceData
+// config.deviceData = deviceData
 
-pamet.projectManagerConfigFactory = (projectId: string) => ({
-    currentBranchName: deviceData.id,
-    localRepoConfig: {
-        name: "DesktopServer" as StorageAdapterNames,
-        args: {
-            projectId: projectId,
-            defaultBranchName: "main"
+function offlineAppConfigFactory(projectId: string): ProjectStorageConfig {
+    return {
+        currentBranchName: deviceData!.id,
+        localRepo: {
+            name: "DesktopServer" as StorageAdapterNames,
+            args: {
+                projectId: projectId,
+                localBranchName: deviceData!.id
+            }
+        },
+        localMediaStore: {
+            name: "CacheAPI",
+            args: {
+                projectId: projectId
+            }
         }
     }
+}
+
+pamet.projectManagerConfigFactory = offlineAppConfigFactory
+
+async function initializeApp() {
+    // Init storage service
+    try{
+        // Create a storage service in the main thread
+        // let storageService = StorageService.inMainThread();
+        // pamet.setStorageService(storageService);
+
+        log.info("Initializing storage service...");
+        let storage_service = await StorageService.serviceWorkerProxy();
+        pamet.setStorageService(storage_service);
+        log.info("Storage service initialized");
+    } catch (e) {
+        log.error("Failed to initialize storage service", e);
+    }
+
+    // Handle the route
+    try{
+        await updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
+    } catch (e) {
+        log.error("Error in updateAppFromRouteOrAutoassist", e);
+    }
+}
+
+
+initializeApp().catch((e) => {
+    log.error("Error in initializeApp", e);
+    alert("Failed to initialize app. Please check the console for details.");
 });
 
-// Create a storage service in the main thread
-let storageService = StorageService.inMainThread();
-pamet.setStorageService(storageService);
-
-// Setup automatic handling
-// pamet.router.setHandleRouteChange(true);
-log.info("AT index.tsx - setting up route handling");
-updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
-    .catch((e) => {
-        log.error("Error in updateAppFromRouteOrAutoassist", e);
-    });
-
-
-// // Start loading the storage service in the service worker
-// // When/if done successfully - swap it out
-// StorageService.serviceWorkerProxy().then((serviceWorkerStorageService) => {
-//     pamet.setStorageService(serviceWorkerStorageService);
-//     log.info("Service worker storage service loaded");
-// }).catch((e) => {
-//     log.error("Error loading service worker storage service", e);
-// });
 
 
 // // Disconnect on app close
@@ -134,35 +149,6 @@ updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
 //     storageService.disconnect();
 // });
 
-// // Initial entity load (TMP, will be done by the sync service)
-// const afterLoad = () => {
-//     log.info("Loaded all entities")
-
-//     appActions.setLoading(app_state, false);
-
-//     let urlPath = window.location.pathname;
-//     // If we're at the index page, load home or first
-//     if (urlPath === "/") {
-//         appActions.setPageToHomeOrFirst(app_state);
-
-//         // If the URL contains /p/ - load the page by id, else load the home page
-//     } else if (urlPath.includes("/p/")) {
-//         const pageId = urlPath.split("/")[2];
-
-//         // Get the page from the pages array
-//         const page = pamet.findOne({ id: pageId });
-//         if (page) {
-//             appActions.setCurrentPage(app_state, page.id);
-//         } else {
-//             log.warning(`Page with id ${pageId} not found`);
-//             appActions.setCurrentPage(app_state, null, PageError.NOT_FOUND);
-//         }
-//     } else {
-//         console.log("Url not supported", urlPath)
-//         appActions.setCurrentPage(app_state, null);
-//     }
-// }
-// pamet.loadAllEntitiesTMP(afterLoad);
 
 // Testing: log the actions channel
 fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
