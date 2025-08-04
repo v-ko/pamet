@@ -1,4 +1,6 @@
-@import '../../variables.css';
+/* NoteEditView.css */
+
+@import '../../variables.css'; /* must be first */
 
 /* Layout container */
 .note-edit-view {
@@ -9,7 +11,7 @@
   min-height: 20rem;
   max-width: 95vw;
   max-height: 95vh;
-  font-size: var(--type-md);
+  font-size: var(--type-xl);
   background: var(--color-bg-light);
   color: var(--color-text);
   display: grid;
@@ -48,12 +50,13 @@
 .close-button {
   border: 0.1rem solid var(--color-border);
   background: transparent;
-  width: var(--space-5);
-  height: var(--space-5);
-  font-size: var(--type-lg);
+  width: var(--space-4);
+  height: var(--space-4);
+  font-size: var(--type-md);
   border-top-right-radius: var(--radius-md);
   cursor: pointer;
   transition: background 0.2s;
+  box-sizing: border-box;
 }
 
 .close-button:hover {
@@ -67,6 +70,7 @@
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  font-size: var(--type-lg);
   font-weight: bold;
 }
 
@@ -74,36 +78,65 @@
 .tool-buttons {
   display: flex;
   justify-content: center;
-  gap: var(--space-2);    /* moderate spacing */
-  padding: var(--space-1) 0;
+  padding: 0.25rem 0;      /* reduced vertical padding */
 }
 
 .tool-button {
   font-size: var(--type-lg);
-  width: var(--space-4);    /* rectangular: wider */
-  height: var(--space-3);   /* rectangular: shorter */
+  width: 3rem;
+  height: 2.5rem;
+  margin: 0 0.125rem;      /* small margins to separate icons lightly */
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg-light);
-  border: 0.1rem solid var(--color-border);
-  border-radius: var(--radius-sm);
   cursor: pointer;
+  position: relative;
   transition: background 0.2s;
-  box-sizing: border-box;
+}s {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-1) 0;
+}
+
+.tool-button {
+  font-size: var(--type-lg);        /* larger icons */
+  width: 3.5rem;                    /* increased width */
+  height: 3rem;                     /* increased height */
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.2s;
+}
+
+/* separator line between buttons */
+.tool-button + .tool-button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  background: var(--color-border);
 }
 
 .tool-button:hover {
-  background: var(--color-hover-dark);
+  background: var(--color-hover-light);  /* lighter hover */
 }
 
-
+/* Main content area */
+/* Main content area */
 .main-content {
-  padding: var(--space-2);
+  padding: 0.25rem;          /* tighter padding */
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-3);
+  align-items: stretch;
+  gap: 0.25rem;              /* tighter gap */
 }
 
 .text-container {
@@ -113,7 +146,10 @@
   height: 100%;
 }
 
-/* Label removed - using placeholder instead */
+.text-container label {
+  font-size: var(--type-sm);
+  margin-bottom: var(--space-1);
+}
 
 .text-container textarea {
   flex: 1;
@@ -125,12 +161,7 @@
   background: #fff;
   color: var(--color-text);
   outline: none;
-}
-
-.text-container textarea::placeholder {
-  color: #999;
-  opacity: 0.7;
-  font-style: italic;
+  box-sizing: border-box;
 }
 
 /* Footer */
@@ -138,18 +169,19 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2);
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
 }
 
 .cancel-button,
 .save-button {
   font-size: var(--type-md);
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-3, 1.5rem);
   border: 0.1rem solid var(--color-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.2s;
+  box-sizing: border-box;
 }
 
 .cancel-button {
