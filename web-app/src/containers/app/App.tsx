@@ -153,6 +153,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         >
           {'</>'}
         </div>
+        <VerticalSeparator />
         <img src={helpCircleIconUrl} alt="Help"
           style={{ cursor: 'pointer' }}
           onClick={() => { commands.showHelp(); }}
@@ -183,6 +184,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             pageActions.startEditWindowDrag(currentPageVS, mousePos);
           }}
           onTitlebarRelease={(event: React.MouseEvent) => {
+            console.log('Titlebar released', event);
             event.preventDefault();
             state.mouse.applyReleaseEvent(event);
             pageActions.endEditWindowDrag(currentPageVS);
