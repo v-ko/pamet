@@ -1,0 +1,169 @@
+@import '../../variables.css';
+
+/* Layout container */
+.note-edit-view {
+  position: absolute;
+  width: clamp(20rem, 50vw, 40rem);
+  height: clamp(20rem, 50vh, 40rem);
+  min-width: 20rem;
+  min-height: 20rem;
+  max-width: 95vw;
+  max-height: 95vh;
+  font-size: var(--type-md);
+  background: var(--color-bg-light);
+  color: var(--color-text);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  border: 0.1rem solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  resize: both;
+  overflow: auto;
+  z-index: 1003;
+  transition: opacity 0.2s;
+}
+
+.note-edit-view.dragged {
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+/* Title bar */
+.title-bar {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  background: var(--color-bg-title);
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+  position: relative;
+}
+
+.move-area {
+  flex: 1;
+  height: 100%;
+  cursor: move;
+}
+
+.close-button {
+  border: 0.1rem solid var(--color-border);
+  background: transparent;
+  width: var(--space-5);
+  height: var(--space-5);
+  font-size: var(--type-lg);
+  border-top-right-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.close-button:hover {
+  background: var(--color-close-hover);
+}
+
+.title-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-weight: bold;
+}
+
+/* Tool buttons */
+.tool-buttons {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);    /* moderate spacing */
+  padding: var(--space-1) 0;
+}
+
+.tool-button {
+  font-size: var(--type-lg);
+  width: var(--space-4);    /* rectangular: wider */
+  height: var(--space-3);   /* rectangular: shorter */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-light);
+  border: 0.1rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+  box-sizing: border-box;
+}
+
+.tool-button:hover {
+  background: var(--color-hover-dark);
+}
+
+
+.main-content {
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.text-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+/* Label removed - using placeholder instead */
+
+.text-container textarea {
+  flex: 1;
+  resize: none;
+  border: 0.1rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  font-size: var(--type-md);
+  background: #fff;
+  color: var(--color-text);
+  outline: none;
+}
+
+.text-container textarea::placeholder {
+  color: #999;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+}
+
+.cancel-button,
+.save-button {
+  font-size: var(--type-md);
+  padding: var(--space-1) var(--space-3);
+  border: 0.1rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cancel-button {
+  background: var(--color-bg-light);
+}
+
+.cancel-button:hover {
+  background: var(--color-hover-light);
+}
+
+.save-button {
+  background: var(--color-bg-medium);
+}
+
+.save-button:hover {
+  background: #ccc;
+}

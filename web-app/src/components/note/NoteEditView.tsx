@@ -1,15 +1,16 @@
-import styled from 'styled-components';
+// NoteEditView.tsx
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import { Point2D } from '../../util/Point2D';
 import { computed, makeObservable, observable } from 'mobx';
-import { observer } from 'mobx-react-lite';
 import { Rectangle } from '../../util/Rectangle';
-import { useCallback, useEffect, useRef, useState } from 'react';
 import { Note, SerializedNote } from 'web-app/src/model/Note';
 import { pamet } from '../../core/facade';
 import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
 import { currentTime, timestamp } from 'fusion/util';
 import { getLogger } from 'fusion/logging';
 import { PametTabIndex } from '../../core/constants';
+import './NoteEditView.css';
 
 let log = getLogger('EditComponent');
 
@@ -30,13 +31,9 @@ export class NoteEditViewState {
   topLeftOnDragStart: Point2D = new Point2D(0, 0);
   dragStartClickPos: Point2D = new Point2D(0, 0);
 
-  // Note content
-  // _noteData: SerializedNote;
-
   constructor(centerAt: Point2D, note: Note) {
     this.center = centerAt; // Pixel space
     this.targetNote = note;
-    // this._noteData = dumpToDict(note) as SerializedNote;
 
     makeObservable(this, {
       center: observable,
@@ -51,27 +48,6 @@ export class NoteEditViewState {
   }
 }
 
-const ToolButton = styled.button`
-    width: 1.8em;
-    height: 1.8em;
-    font-size: 1.3em;
-    // center content
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  background: #fff;
-  border: 1px solid #000;
-  border-radius: 2px;
-  color: #000;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #000;
-    color: #fff;
-  }
-`;
-
 const NoteEditView: React.FC<EditComponentProps> = observer((
   { state,
     onTitlebarPress,
@@ -81,10 +57,14 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   }: EditComponentProps) => {
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [geometry, setGeometry] = useState<Rectangle>(new Rectangle(state.center.x, state.center.y, 400, 400));
-  const [noteData, setNoteData] = useState<SerializedNote>(dumpToDict(state.targetNote) as SerializedNote);
+  const [geometry, setGeometry] = useState<Rectangle>(
+    new Rectangle(state.center.x, state.center.y, 400, 400)
+  );
+  const [noteData, setNoteData] = useState<SerializedNote>(
+    dumpToDict(state.targetNote) as SerializedNote
+  );
 
-  // Update context on unmount
+  // Update context on mount/unmount
   useEffect(() => {
     pamet.setContext('noteEditViewFocused', true);
     return () => pamet.setContext('noteEditViewFocused', false);
@@ -122,15 +102,15 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
     // TODO: Add exceptions for global key bindings
     event.stopPropagation();
-    log.info("Key pressed: " + event.key)
-  }
+    log.info("Key pressed: " + event.key);
+  };
 
   // Setup geometry update handling on resize
   useEffect(() => {
     const updateGeometryHandler = () => {
       let wrapper = wrapperRef.current;
       if (wrapper === null) {
-        console.log("[resize handler] wrapperRef is null")
+        console.log("[resize handler] wrapperRef is null");
         return;
       }
 
@@ -142,7 +122,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     // of the superContainer
     let wrapper = wrapperRef.current;
     if (wrapper === null) {
-      console.log("[resize watch effect] wrapperRef is null")
+      console.log("[resize watch effect] wrapperRef is null");
       return;
     }
 
@@ -158,7 +138,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;
 
-  console.log("Rendering NoteEditView", geometry)
+  console.log("Rendering NoteEditView", geometry);
 
   // Check if the window is outside the screen on the bottom and right
   if (left + width > window.innerWidth) {
@@ -180,161 +160,47 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     <div
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
-      style={{
-        left: left,
-        top: top,
-        // background: `rgba(255, 255, 255, ${state.isBeingDragged ? 0.6 : 1})`,
-        pointerEvents: state.isBeingDragged ? 'none' : 'auto',
-
-        position: 'absolute',
-        width: '400px',
-        height: '400px',
-        background: '#fff',
-        color: '#000',
-        resize: 'both',
-        overflow: 'auto',
-        minHeight: '300px',
-        minWidth: '300px',
-        maxWidth: '95%',
-
-        border: '1px solid #000',
-        borderRadius: '2px',
-        display: 'grid',
-        gridTemplateColumns: '100%',
-        gridTemplateRows: '36px 46px auto 50px',
-        zIndex: 1003,
-      }}
+      className={`note-edit-view${state.isBeingDragged ? ' dragged' : ''}`}
+      style={{ left, top }}
     >
       {/* Title bar */}
-      <div
-        style={{
-          position: 'relative',
-          background: '#000',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          borderBottom: '1px solid #000',
-        }}
-      >
+      <div className="title-bar">
         {/* move icon area */}
         <div
           onMouseDown={onTitlebarPress}
           onMouseUp={onTitlebarRelease}
-          style={{
-            cursor: 'move',
-            flexGrow: 1,
-            height: "100%",
-            // minimal “grab area” for moving the dialog
-          }}
+          className="move-area"
         />
         {/* Close button */}
-        <button
-          onClick={onCancel}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            width: '36px',
-            height: '36px',
-            color: '#fff',
-            fontSize: '18px',
-            cursor: 'pointer',
-            transition: '0.2s',
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#444')}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-        >
-          ×
-        </button>
-        <div // Display the title separately on top (there's probably a nicer way)
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-            textAlign: 'center',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-          }}
-        >
+        <button className="close-button" onClick={onCancel}>×</button>
+        <div className="title-text">
           {/* Set the text to 'Edit note' or 'Create note' */}
           {state.creatingNote ? 'Create note' : 'Edit note'}
         </div>
       </div>
 
       {/* Tool buttons row */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '5px',
-          gap: '2px',
-        }}>
-        <ToolButton>T</ToolButton>
-        <ToolButton>🔗</ToolButton>
-        <ToolButton>🖼️</ToolButton>
-        <ToolButton>🗑️</ToolButton>
-        <ToolButton>⋮</ToolButton>
+      <div className="tool-buttons">
+        <button className="tool-button">T</button>
+        <button className="tool-button">🔗</button>
+        <button className="tool-button">🖼️</button>
+        <button className="tool-button">🗑️</button>
+        <button className="tool-button">⋮</button>
       </div>
 
       {/* Main content */}
-      <div
-        className="main-content"
-        style={{
-          padding: '8px',
-          overflow: 'none',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '10px',
-        }}
-      >
-        {/* Main content */}
+      <div className="main-content">
         {/* Text edit related */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            height: '100%',
-            overflow: 'none',
-          }}
-        >
-          <label
-            style={{
-              fontSize: '0.9em',
-              fontWeight: 'bold',
-              marginBottom: '5px',
-            }}
-          >
-            Text:
-          </label>
+        <div className="text-container">
           <textarea
-            // placeholder="Enter text here"
+            placeholder="Note text"
             tabIndex={PametTabIndex.NoteEditViewWidget1}
-            autoFocus={true}
+            autoFocus
             defaultValue={state.targetNote.content.text}
-            onChange={(e) => {
-              setNoteData({
-                ...noteData,
-                content: {
-                  ...noteData.content,
-                  text: e.target.value,
-                },
-              });
-            }}
-            style={{
-              flexGrow: 1,
-              resize: 'none',
-              border: '1px solid #000',
-              borderRadius: '2px',
-              padding: '8px',
-              fontSize: '14px',
-              color: '#000',
-            }}
+            onChange={(e) => setNoteData({
+              ...noteData,
+              content: { ...noteData.content, text: e.target.value }
+            })}
             onFocus={() => pamet.setContext('noteEditViewFocused', true)}
             onBlur={() => pamet.setContext('noteEditViewFocused', false)}
           />
@@ -342,40 +208,13 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       </div>
 
       {/* Footer / actions */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '8px',
-          borderTop: '1px solid #000',
-        }}
-      >
-        <button
-          onClick={onCancel}
-          style={{
-            padding: '6px 12px',
-            border: '1px solid #000',
-            borderRadius: '2px',
-            background: '#fff',
-            color: '#000',
-            cursor: 'pointer',
-          }}
-        >
-          Cancel (Esc)</button>
-        <button
-          onClick={bakeNoteAndSave}
-          style={{
-            padding: '6px 12px',
-            border: '1px solid #000',
-            borderRadius: '2px',
-            background: '#000',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          Save (Ctrl+S)</button>
+      <div className="footer">
+        <button className="cancel-button" onClick={onCancel}>
+          Cancel (Esc)
+        </button>
+        <button className="save-button" onClick={bakeNoteAndSave}>
+          Save (Ctrl+S)
+        </button>
       </div>
     </div>
   );
