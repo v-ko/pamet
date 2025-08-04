@@ -593,7 +593,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       let mediaItem = note.imageMediaItem();
       let mediaItemRoute = mediaItem.pametRoute(userData.id, projectId);
       // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
-      let mediaItemPath = mediaItemRoute.path();
+      let mediaItemPath = mediaItemRoute.toRelativeReference();
 
       // DEBUG: Log URL generation process
       log.info('[DEBUG] URL Generation Process:', {

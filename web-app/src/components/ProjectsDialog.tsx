@@ -84,7 +84,7 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
                 href={(() => {
                   const route = new PametRoute();
                   route.projectId = project.id;
-                  return route.path();
+                  return route.toRelativeReference();
                 })()}
                 onClick={handleClose}
                 style={{

@@ -17,13 +17,13 @@ export class RoutingService {
     }
     replaceRoute(route: PametRoute): void {
         log.info('Setting route', route)
-        const url = route.path();
+        const url = route.toRelativeReference();
         window.history.replaceState({}, '', url);
     }
 
     pushRoute(route: PametRoute): void {
         log.info('Pushing route', route);
-        const url = route.path();
+        const url = route.toRelativeReference();
         window.history.pushState({}, '', url);
     }
 

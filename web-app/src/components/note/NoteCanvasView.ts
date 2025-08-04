@@ -128,7 +128,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         }
         let mediaItemRoute = mediaItem.pametRoute(userId, projectId);
 
-        let image = this.renderer.getImage(mediaItemRoute.path());
+        let image = this.renderer.getImage(mediaItemRoute.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = IMAGE_NOT_LOADED_TEXT;

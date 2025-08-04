@@ -1,6 +1,7 @@
 /* NoteEditView.css */
 
-@import '../../variables.css'; /* must be first */
+@import '../../variables.css';
+/* must be first */
 
 /* Layout container */
 .note-edit-view {
@@ -34,11 +35,13 @@
 .title-bar {
   display: flex;
   align-items: center;
-  padding: var(--space-1) var(--space-2);
+  justify-content: space-between;
+  height: 2rem;
   background: var(--color-bg-title);
   border-top-left-radius: var(--radius-md);
   border-top-right-radius: var(--radius-md);
   position: relative;
+  z-index: 1;
 }
 
 .move-area {
@@ -50,8 +53,9 @@
 .close-button {
   border: 0.1rem solid var(--color-border);
   background: transparent;
-  width: var(--space-4);
-  height: var(--space-4);
+  width: 2rem;
+  height: 100%;
+  flex-shrink: 0;
   font-size: var(--type-md);
   border-top-right-radius: var(--radius-md);
   cursor: pointer;
@@ -80,6 +84,7 @@
   justify-content: center;
   padding: 0.25rem 0;
 }
+
 .tool-button {
   font-size: var(--type-lg);
   width: 3rem;
@@ -93,7 +98,8 @@
   position: relative;
   transition: background 0.2s;
 }
-.tool-button + .tool-button::before {
+
+.tool-button+.tool-button::before {
   content: "";
   position: absolute;
   left: 0;
@@ -102,16 +108,21 @@
   width: 1px;
   background: var(--color-border);
 }
+
 .tool-button:hover {
   background: var(--color-hover-light);
-}/* Main content area */
+}
+
+/* Main content area */
 /* Main content area */
 .main-content {
-  padding: 0.25rem;          /* tighter padding */
+  padding: 0.25rem;
+  /* tighter padding */
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.25rem;              /* tighter gap */
+  gap: 0.25rem;
+  /* tighter gap */
 }
 
 .text-container {
@@ -173,4 +184,37 @@
 
 .save-button:hover {
   background: #ccc;
+}
+
+.tool-button.toggled {
+  background-color: #ccc;
+}
+
+.image-edit-props-widget {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.url-input-container {
+  display: flex;
+  gap: 5px;
+}
+
+.url-input-container input {
+  flex-grow: 1;
+}
+
+.image-preview-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+}
+
+.image-preview-placeholder {
+  color: #999;
 }

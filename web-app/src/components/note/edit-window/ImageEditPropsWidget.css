@@ -1,0 +1,63 @@
+.image-edit-props-widget {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    align-items: stretch;
+    box-sizing: border-box; /* Added to include padding and border in the element's total width and height */
+}
+
+.buttons-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.image-preview-container {
+    flex-grow: 1;
+}
+
+.buttons-container .tool-button:hover {
+  background: #ccc;
+}
+.url-input-container {
+    display: flex;
+    gap: 5px;
+}
+
+.url-input-container input {
+    flex-grow: 1;
+}
+
+.image-preview-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100px;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+}
+
+.image-preview-placeholder {
+    color: #999;
+}
+
+.buttons-container .action-button {
+  font-size: var(--type-md);
+  padding: var(--space-1) var(--space-3, 1.5rem);
+  border: 0.1rem solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+  box-sizing: border-box;
+  background: var(--color-bg-medium);
+}
+
+.buttons-container .action-button:hover {
+  background: #ccc;
+}
+
+.tool-button.toggled {
+    background-color: #ccc;
+}

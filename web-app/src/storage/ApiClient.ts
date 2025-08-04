@@ -19,7 +19,7 @@ export class ApiClient extends BaseApiClient {
         if (!route.isInternal) {
             throw Error('Url is not internal: ' + url)
         }
-        return this.endpointUrl(route.path());
+        return this.endpointUrl(route.toRelativeReference());
     }
     // Get pages metadata
     async pages(filter: PageQueryFilter = {}): Promise<Array<Page>> {

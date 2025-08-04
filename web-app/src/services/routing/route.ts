@@ -97,11 +97,10 @@ export class PametRoute {
         // Parse the hash
         const hash = url_.hash;
         if (hash.startsWith('#note=')) {
-            route.focusedNoteId = decodeURIComponent(
-                hash.substring(6)); // remove the '#note='
+            route.focusedNoteId = hash.substring(6); // remove the '#note='
         } else if (route.mediaItemId && hash.length === 33) {
             // If media item id is set, the hash should be the content hash
-            route.mediaItemContentHash = decodeURIComponent(hash.substring(1)); // remove the '#'
+            route.mediaItemContentHash = hash.substring(1); // remove the '#'
         }
 
         log.info('Parsed PametRoute from URL:', route);
@@ -113,10 +112,10 @@ export class PametRoute {
     }
 
     projectScopedPath(): string {
-        return toProjectScopedPath(this);
+        return toProjectScopedRelativeReference(this);
     }
 
-    path(): string {
+    toRelativeReference(): string {
         let path = '/';
 
         if (this.projectId) {
@@ -127,7 +126,7 @@ export class PametRoute {
             path += `${this.projectId}`;
         }
 
-        let projectScopedPath = toProjectScopedPath(this);
+        let projectScopedPath = toProjectScopedRelativeReference(this);
         if (projectScopedPath !== '/') {
             path += projectScopedPath;
         }
@@ -136,7 +135,7 @@ export class PametRoute {
     }
 
     toProjectScopedURI(): string {
-        let path = toProjectScopedPath(this);
+        let path = toProjectScopedRelativeReference(this);
         return `project://${path}`;
     }
 
@@ -147,38 +146,42 @@ export class PametRoute {
         if (!this.protocol) {
             throw new Error('Protocol is not set. Cannot create URL string.');
         }
-        const url = new URL(this.protocol + '//' + this.host);
-        url.pathname = this.path();
+        const base = this.protocol + '//' + this.host;
+        const url = new URL(this.toRelativeReference(), base);
         return url.toString();
+    }
+
+    toString(): string {
+        return this.toUrlString();
     }
 }
 
-export function toProjectScopedPath(route: PametRoute): string {
+export function toProjectScopedRelativeReference(route: PametRoute): string {
     // same as the tuUrlPath logic but for the subpath after project
     let path = '/';
 
     if (route.pageId && route.pageId.length === 8) {
-        path += `page/${encodeURIComponent(route.pageId)}`;
+        path += `page/${route.pageId}`;
     } else if (route.mediaItemId) {
         // For media items, userId and projectId are required to match cache format
         if (!route.userId || !route.projectId) {
             throw new Error(`Media item routes require userId and projectId. Got userId: ${route.userId}, projectId: ${route.projectId}`);
         }
-        path += `media/item/${encodeURIComponent(route.mediaItemId)}`;
+        path += `media/item/${route.mediaItemId}`;
         if (route.mediaItemContentHash) {
-            path += `#${encodeURIComponent(route.mediaItemContentHash)}`;
+            path += `#${route.mediaItemContentHash}`;
         }
         return path; // Return early for media items, no search params or note hash
     }
 
     let search = '';
     if (route.viewportEyeHeight && route.viewportCenter) {
-        search = `?eye_at=${encodeURIComponent(route.viewportEyeHeight.toString())}/${encodeURIComponent(route.viewportCenter[0].toString())}/${encodeURIComponent(route.viewportCenter[1].toString())}`;
+        search = `?eye_at=${route.viewportEyeHeight.toString()}/${route.viewportCenter[0].toString()}/${route.viewportCenter[1].toString()}`;
     }
 
     let hash = '';
     if (route.focusedNoteId) {
-        hash = `#note=${encodeURIComponent(route.focusedNoteId)}`;
+        hash = `#note=${route.focusedNoteId}`;
     }
 
     return path + search + hash;

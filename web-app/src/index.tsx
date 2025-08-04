@@ -144,10 +144,15 @@ initializeApp().catch((e) => {
 
 
 
-// // Disconnect on app close
-// window.addEventListener('beforeunload', () => {
-//     storageService.disconnect();
-// });
+// App close confirmation
+window.addEventListener('beforeunload', (event) => {
+    const pageViewState = pamet.appViewState.currentPageViewState;
+    if (pageViewState && pageViewState.noteEditWindowState) {
+        // Standard way to trigger the browser's "Are you sure you want to leave?"
+        event.preventDefault();
+        event.returnValue = '';
+    }
+});
 
 
 // Testing: log the actions channel
