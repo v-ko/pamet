@@ -223,6 +223,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
           style={{
             cursor: 'move',
             flexGrow: 1,
+            height: "100%",
             // minimal “grab area” for moving the dialog
           }}
         />
