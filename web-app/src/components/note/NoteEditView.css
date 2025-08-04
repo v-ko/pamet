@@ -78,32 +78,12 @@
 .tool-buttons {
   display: flex;
   justify-content: center;
-  padding: 0.25rem 0;      /* reduced vertical padding */
+  padding: 0.25rem 0;
 }
-
 .tool-button {
   font-size: var(--type-lg);
   width: 3rem;
   height: 2.5rem;
-  margin: 0 0.125rem;      /* small margins to separate icons lightly */
-  background: transparent;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  transition: background 0.2s;
-}s {
-  display: flex;
-  justify-content: center;
-  padding: var(--space-1) 0;
-}
-
-.tool-button {
-  font-size: var(--type-lg);        /* larger icons */
-  width: 3.5rem;                    /* increased width */
-  height: 3rem;                     /* increased height */
   background: transparent;
   border: none;
   display: flex;
@@ -113,8 +93,6 @@
   position: relative;
   transition: background 0.2s;
 }
-
-/* separator line between buttons */
 .tool-button + .tool-button::before {
   content: "";
   position: absolute;
@@ -124,12 +102,9 @@
   width: 1px;
   background: var(--color-border);
 }
-
 .tool-button:hover {
-  background: var(--color-hover-light);  /* lighter hover */
-}
-
-/* Main content area */
+  background: var(--color-hover-light);
+}/* Main content area */
 /* Main content area */
 .main-content {
   padding: 0.25rem;          /* tighter padding */
