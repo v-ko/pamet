@@ -1,4 +1,5 @@
 import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/WebAppState";
+import { SystemModalDialogState } from "../components/system-modal-dialog/state";
 import type { LocalStorageState } from "../containers/app/WebAppState";
 import { pamet } from "../core/facade";
 import { getLogger } from "fusion/logging";
@@ -108,6 +109,11 @@ class AppActions {
         deleteProjectAndSwitch(project).catch((e) => {
             log.error("Error in startProjectDeletionProcedure", e);
         });
+    }
+
+    @action
+    updateSystemDialogState(appState: WebAppState, dialogState: SystemModalDialogState | null) {
+        appState.systemModalDialogState = dialogState;
     }
 }
 

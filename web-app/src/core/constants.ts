@@ -6,6 +6,8 @@ export const NO_SCALE_LINE_SPACING = 20
 export const ALIGNMENT_GRID_UNIT = 10
 export const AGU = ALIGNMENT_GRID_UNIT
 
+export const PROPOSED_MAX_PAGE_WIDTH = 1000 * AGU;
+export const PROPOSED_MAX_PAGE_HEIGHT = 1000 * AGU;
 
 // Navigation
 export const MIN_HEIGHT_SCALE = 0.2
@@ -30,10 +32,9 @@ export const ALIGNMENT_LINE_LENGTH = 12 * AGU
 export const DEFAULT_NOTE_FONT_SIZE = 18
 export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
 export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'
-export const DEFAULT_NOTE_LINE_HEIGHT = 20
 export const PREFERRED_TEXT_NOTE_ASPECT_RATIO = 5
 
-export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${DEFAULT_NOTE_LINE_HEIGHT}px ` +
+export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${NO_SCALE_LINE_SPACING}px ` +
     `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
     `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
 
@@ -93,3 +94,36 @@ export enum PametTabIndex {
 
 // Media related
 export const MAX_MEDIA_NAME_LENGTH = 100;
+
+// Media constraints
+// See policies.ts for usage
+export const MAX_IMAGE_SIZE = 5 * 1000 * 1000; // 5 MB
+export const MAX_IMAGE_DIMENSION = 2560; // for either width or height
+export const MAX_IMAGE_DIMENSION_FOR_COMPRESSION = 8192; // Reject larger images to avoid memory problems
+export const MAX_FILE_UPLOAD_SIZE_BYTES = 40 * 1000 * 1000; // 40 MB
+
+
+// Image conversion presets
+export interface ImageConversionPreset {
+    maxWidth: number;
+    maxHeight: number;
+    mimeType: 'image/jpeg' | 'image/png';
+    quality?: number;
+}
+
+export const IMAGE_CONVERSION_PRESET_JPG: ImageConversionPreset = {
+    maxWidth: 2560,
+    maxHeight: 2560,
+    mimeType: 'image/jpeg',
+    quality: 0.9, // High quality
+};
+
+export const IMAGE_CONVERSION_PRESET_PNG: ImageConversionPreset = {
+    maxWidth: 1920,
+    maxHeight: 1920,
+    mimeType: 'image/png',
+    // PNG quality is about compression effort (0-9), not visual quality.
+    // The canvas 'toBlob' for PNG doesn't support a quality/effort setting.
+    // It's effectively lossless but without control over compression level.
+};
+

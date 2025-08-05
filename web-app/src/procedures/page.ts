@@ -5,16 +5,22 @@ import { minimalNonelidedSize } from "../components/note/note-dependent-utils";
 import * as util from "../util";
 import { pamet } from "../core/facade";
 import { pageActions } from "../actions/page";
+import { appActions } from "../actions/app";
+import { MediaProcessingDialogState } from "../components/system-modal-dialog/state";
 import { generateFilenameTimestamp } from "fusion/util";
 import { getLogger } from "fusion/logging";
-import { AGU } from "../core/constants";
+import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "../core/constants";
 import { MediaItem } from "../model/MediaItem";
+import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "../core/policies";
+import { convertImage, extractImageDimensions } from "../util/media";
+import { getFileExtensionFromMimeType } from "../util";
 
 const log = getLogger('PageProcedures');
 
 /**
  * Handle pasting an image from clipboard data.
- * Creates a unique path for the image and adds it to the media store.
+ * Applies compression policies, creates a unique path for the image,
+ * and adds it to the media store.
  *
  * @param pageId - The ID of the page where the image should be pasted
  * @param position - The position where the image note should be created
@@ -28,68 +34,53 @@ export async function pasteImage(
     imageBlob: Blob,
     mimeType: string
 ): Promise<Point2D> {
-    // Generate unique path for the pasted image
-    const timestamp = generateFilenameTimestamp();
-
-    // Extract file extension from MIME type
-    let extension = '.png'; // Default fallback
-    if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-        extension = '.jpg';
-    } else if (mimeType === 'image/gif') {
-        extension = '.gif';
-    } else if (mimeType === 'image/webp') {
-        extension = '.webp';
-    } else if (mimeType === 'image/svg+xml') {
-        extension = '.svg';
-    } else if (mimeType === 'image/png') {
-        extension = '.png';
-    }
-
-    const imagePath = `images/pasted_image-${timestamp}${extension}`;
-
-    // Get current project
     const currentProject = pamet.appViewState.currentProject();
     if (!currentProject) {
         throw Error('No current project set');
     }
 
+    let finalImageBlob = imageBlob;
     let note;
-    let mediaItem;
 
     try {
-        // Add the image to the media store
-        const mediaItemData = await pamet.storageService.addMedia(currentProject.id, imageBlob, imagePath);
-        log.info('Successfully added pasted image:', mediaItemData.path);
+        const { width, height } = await extractImageDimensions(imageBlob);
+        const verdict = shouldCompressImage({ width, height, size: imageBlob.size, mimeType });
 
-        // Reconstruct MediaItem from data (since Comlink serialization strips prototype methods)
-        mediaItem = new MediaItem(mediaItemData);
+        if (verdict === ImageVerdict.Reject) {
+            const errorText = `Image is too large to process (${width}x${height}). Maximum allowed is ${MAX_IMAGE_DIMENSION_FOR_COMPRESSION}px.`;
+            log.error(errorText, "the image will be skipped.");
+            return position; // Skip item, return original position
+        }
 
-        // Create an ImageNote with the MediaItem
+        if (verdict === ImageVerdict.Compress) {
+            const preset = determineConversionPreset(mimeType);
+            const imageFile = new File([imageBlob], "pasted_image", { type: mimeType });
+            finalImageBlob = await convertImage(imageFile, preset);
+        }
+
+        const timestamp = generateFilenameTimestamp();
+        const extension = getFileExtensionFromMimeType(finalImageBlob.type);
+        const imagePath = `images/pasted_image-${timestamp}${extension}`;
+
+        const mediaItemData = await pamet.storageService.addMedia(currentProject.id, finalImageBlob, imagePath);
+        const mediaItem = new MediaItem(mediaItemData);
         note = ImageNote.createNew(pageId, mediaItem);
 
+        // Configure note position and size
+        let rect = note.rect();
+        rect.setTopLeft(position);
+        let size = util.snapVectorToGrid(minimalNonelidedSize(note));
+        rect.setSize(size);
+        note.setRect(rect);
+
+        pageActions.pasteSpecialAddElements([note], [mediaItem]);
+
+        return position.add(new Point2D(0, size.y + AGU));
+
     } catch (error) {
-        log.error('Error adding pasted image:', error);
-
-        // Create an error note instead
-        note = TextNote.createNew(pageId);
-        note.content.text = `[Error pasting image: ${error}]`;
+        log.error('Error processing pasted image:', error, 'The item will be skipped.');
+        return position; // On any error, skip the item and return the original position
     }
-
-    // Configure note position and size
-    let rect = note.rect();
-    rect.setTopLeft(position);
-    let size = util.snapVectorToGrid(minimalNonelidedSize(note));
-    rect.setSize(size);
-    note.setRect(rect);
-
-    let mediaItems = [];
-    if (mediaItem) {
-        mediaItems.push(mediaItem);
-    }
-    pageActions.pasteSpecialAddElements([note], mediaItems);
-
-    // Return position for next item
-    return position.add(new Point2D(0, size.y + AGU));
 }
 
 /**
@@ -105,51 +96,60 @@ export async function pasteSpecial(
     position: Point2D,
     pasteData: util.ClipboardItem[]
 ): Promise<void> {
-    let pasteAt = position;
 
-    if (pasteData.length > 100) {
-        let result = window.confirm('Pasting more than 100 items. Are you sure?');
-        if (!result) {
-            return;
-        }
-    }
+    const dialogState = new MediaProcessingDialogState();
+    dialogState.title = 'Pasting content';
+    dialogState.showAfterUnixTime = Date.now() + 500;
+    appActions.updateSystemDialogState(pamet.appViewState, dialogState);
 
-    // First pass: create and position all text notes
-    let textNotes: TextNote[] = [];
-    for (let item of pasteData) {
-        if (item.type === 'text') {
-            let textNote = TextNote.createNew(pageId);
-            textNote.content.text = item.text;
+    try {
+        let pasteAt = position;
+        const totalItems = pasteData.length;
+        let itemsProcessed = 0;
 
-            let rect = textNote.rect();
-            rect.setTopLeft(pasteAt);
-            let size = util.snapVectorToGrid(minimalNonelidedSize(textNote));
-            rect.setSize(size);
-            textNote.setRect(rect);
-
-            textNotes.push(textNote);
-            pasteAt = pasteAt.add(new Point2D(0, size.y + AGU)); // Move down for the next note
-        }
-    }
-
-    // Bulk add all text notes
-    if (textNotes.length > 0) {
-        pageActions.pasteSpecialAddElements(textNotes, []);
-    }
-
-    // Second pass: handle images (these need individual processing due to async nature)
-    for (let item of pasteData) {
-        if (item.type === 'image') {
-            if (item.image_blob && item.mime_type) {
-                try {
-                    pasteAt = await pasteImage(pageId, pasteAt, item.image_blob, item.mime_type);
-                } catch (error) {
-                    log.error('Error pasting image:', error);
-                }
-            } else {
-                log.error('Image clipboard item missing blob or mime type');
+        if (totalItems > 100) {
+            let result = window.confirm(`Pasting ${totalItems} items. Are you sure?`);
+            if (!result) {
+                return;
             }
         }
+
+        for (const item of pasteData) {
+            itemsProcessed++;
+            dialogState.taskDescription = `Processing item ${itemsProcessed} of ${totalItems}`;
+            dialogState.taskProgress = (itemsProcessed / totalItems) * 100;
+            // Create a new state object to ensure reactivity, since mobx might not pick up on nested property changes
+            let newDialogState = Object.assign(new MediaProcessingDialogState(), dialogState);
+            appActions.updateSystemDialogState(pamet.appViewState, newDialogState);
+            // await new Promise(resolve => setTimeout(resolve, 1000));
+
+            if (item.type === 'text') {
+                let textNote = TextNote.createNew(pageId);
+                textNote.content.text = item.text;
+
+                let rect = textNote.rect();
+                rect.setTopLeft(pasteAt);
+                let size = util.snapVectorToGrid(minimalNonelidedSize(textNote));
+                rect.setSize(size);
+                textNote.setRect(rect);
+
+                pageActions.pasteSpecialAddElements([textNote], []);
+                pasteAt = pasteAt.add(new Point2D(0, size.y + AGU));
+
+            } else if (item.type === 'image') {
+                if (item.image_blob && item.mime_type) {
+                    try {
+                        pasteAt = await pasteImage(pageId, pasteAt, item.image_blob, item.mime_type);
+                    } catch (error) {
+                        log.error('Error pasting image:', error);
+                    }
+                } else {
+                    log.error('Image clipboard item missing blob or mime type');
+                }
+            }
+        }
+    } finally {
+        appActions.updateSystemDialogState(pamet.appViewState, null);
     }
 }
 

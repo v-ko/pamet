@@ -7,6 +7,9 @@ import { pamet } from '../../../core/facade';
 import { MediaItem } from '../../../model/MediaItem';
 import { getLogger } from 'fusion/logging';
 import { parseClipboardContents, toUriFriendlyFileName } from '../../../util';
+import { determineConversionPreset, ImageVerdict, shouldCompressImage } from '../../../core/policies';
+import { convertImage, extractImageDimensions } from '../../../util/media';
+import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from '../../../core/constants';
 
 let log = getLogger('ImageEditPropsWidget');
 
@@ -21,25 +24,68 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
     const dropZoneRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [statusMessage, setStatusMessage] = useState('');
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    const resetState = () => {
+        setIsLoading(false);
+        setStatusMessage('');
+        setUploadProgress(null);
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+    };
+
+    const handleCancel = () => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        resetState();
+    };
 
     const loadImage = async (file: File) => {
         if (!file.type.startsWith('image/')) {
-            log.warning('Dropped file is not an image:', file.type);
+            log.warning('The provided file is not a supported image:', file.type);
             return;
         }
+
         setIsLoading(true);
+        setStatusMessage('Verifying image...');
+
         try {
-            if (noteData.content.image) {  // If an image is already present
+            const { width, height } = await extractImageDimensions(file);
+            const verdict = shouldCompressImage({ width, height, size: file.size, mimeType: file.type });
+
+            if (verdict === ImageVerdict.Reject) {
+                const errorText = `Image is too large (${width}x${height}, ${Math.round(file.size / 1000 / 100) / 10} MB). Maximum allowed is ${MAX_IMAGE_DIMENSION_FOR_COMPRESSION}px and ${Math.round(MAX_FILE_UPLOAD_SIZE_BYTES / 1000 / 1000)} MB.`;
+                alert(errorText);
+                resetState();
+                return;
+            }
+
+            let imageBlob: Blob = file;
+            if (verdict === ImageVerdict.Compress) {
+                setStatusMessage('Compressing image...');
+                const preset = determineConversionPreset(file.type);
+                imageBlob = await convertImage(file, preset);
+            }
+
+            if (noteData.content.image) {
+                setStatusMessage('Removing old image...');
                 await removeNoteImage();
             }
-            await setNoteImage(file, file.name);
+            setStatusMessage('Saving image...');
+            await setNoteImage(imageBlob, file.name);
+
         } catch (error: any) {
-            log.error('Error setting note image:', error);
+            log.error('Error loading image:', error);
             alert(`Error: ${error.message}`);
         } finally {
-            setIsLoading(false);
+            resetState();
         }
-    }
+    };
 
     const handleUploadFileClick = () => {
         fileInputRef.current?.click();
@@ -119,27 +165,70 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
             return;
         }
 
+        abortControllerRef.current = new AbortController();
+        const signal = abortControllerRef.current.signal;
+
         setIsLoading(true);
+        setStatusMessage('Downloading image...');
+        setUploadProgress(0);
+
         try {
-            const response = await fetch(url);
+            const response = await fetch(url, { signal });
+
             if (!response.ok) {
                 throw new Error(`Failed to fetch image. Status: ${response.status}`);
             }
-            const blob = await response.blob();
+
+            const contentLength = response.headers.get('content-length');
+            const total = contentLength ? parseInt(contentLength, 10) : 0;
+            let loaded = 0;
+
+            const reader = response.body!.getReader();
+            const stream = new ReadableStream({
+                start(controller) {
+                    function push() {
+                        reader.read().then(({ done, value }) => {
+                            if (done) {
+                                controller.close();
+                                return;
+                            }
+                            loaded += value.length;
+                            if (total > 0) {
+                                setUploadProgress((loaded / total) * 100);
+                            }
+                            controller.enqueue(value);
+                            push();
+                        }).catch(error => {
+                            log.error("Error reading stream:", error);
+                            controller.error(error);
+                        });
+                    }
+                    push();
+                }
+            });
+
+            const blob = await new Response(stream).blob();
+
             if (!blob.type.startsWith('image/')) {
                 alert('The provided URL does not point to a valid image.');
+                resetState();
                 return;
             }
 
             let fileName = url.substring(url.lastIndexOf('/') + 1) || 'downloaded-image';
             fileName = toUriFriendlyFileName(fileName);
+
             await loadImage(new File([blob], fileName, { type: blob.type }));
 
-        } catch (error) {
-            log.error('Error fetching image from URL:', error);
-            alert('Failed to fetch image from the provided URL. This might be due to browser security restrictions (CORS). Please download the image to your computer and upload it manually. The upcoming desktop app will not have this limitation.');
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                log.info('Image download aborted.');
+            } else {
+                log.error('Error fetching image from URL:', error);
+                alert('Failed to fetch image from the provided URL. This might be due to browser security restrictions (CORS). Please download the image to your computer and upload it manually.');
+            }
         } finally {
-            setIsLoading(false);
+            resetState();
         }
     }
 
@@ -167,7 +256,6 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                 style={{ display: 'none' }}
                 onChange={handleFileChange}
                 accept="image/*"
-                disabled={imagePresent}
             />
             <div className='buttons-container'>
                 <button
@@ -176,7 +264,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                     disabled={isLoading}
                     tabIndex={PametTabIndex.NoteEditViewWidget1 + 9}
                 >
-                    {isLoading ? 'Uploading...' : 'Upload file'}
+                    Upload file
                 </button>
                 <button
                     className='action-button'
@@ -208,12 +296,19 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                         <span>Drop or paste image</span>
                     </div>
                 }
-                {isLoading && <div>Loading...</div>}
-                {imagePresent &&
-                    <img src={imageUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: '100px' }} />
+                {isLoading &&
+                    <div className="loading-overlay">
+                        <div className="status-message">{statusMessage}</div>
+                        {uploadProgress !== null &&
+                            <progress value={uploadProgress} max="100"></progress>
+                        }
+                    </div>
                 }
-                {imagePresent &&
-                    <button onClick={removeNoteImage} className="remove-image-button action-button">
+                {imagePresent && !isLoading &&
+                    <img src={imageUrl} alt="preview" style={{ maxWidth: '100%', maxHeight: '100px', pointerEvents: 'none' }} />
+                }
+                {(imagePresent || isLoading) &&
+                    <button onClick={isLoading ? handleCancel : removeNoteImage} className="remove-image-button action-button">
                         X
                     </button>
                 }

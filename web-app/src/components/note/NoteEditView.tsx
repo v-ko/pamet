@@ -15,7 +15,7 @@ import { getLogger } from 'fusion/logging';
 import { PametTabIndex } from '../../core/constants';
 import './NoteEditView.css';
 import { ImageEditPropsWidget } from './edit-window/ImageEditPropsWidget';
-import { MediaItemData } from 'web-app/src/model/MediaItem';
+import { MediaItem, MediaItemData } from 'web-app/src/model/MediaItem';
 
 let log = getLogger('EditComponent');
 
@@ -24,7 +24,7 @@ interface EditComponentProps {
   onTitlebarPress: (event: React.MouseEvent) => void;
   onTitlebarRelease: (event: React.MouseEvent) => void;
   onCancel: () => void; // added to avoid a dependency to the pageViewState
-  onSave: (note: Note, addedMediaItem: MediaItemData | null, removedMediaItem: MediaItemData | null) => void;
+  onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
 }
 
 export class NoteEditViewState {
@@ -124,7 +124,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     };
   }, [uncommitedImage, textButtonToggled]);
 
-  const removeNoteImage = async () => {
+  const removeNoteImage = useCallback(async () => {
     const currentImage = noteData.content.image;
     if (!currentImage) {
         throw new Error("removeOriginalImage called when there is no image.");
@@ -148,9 +148,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         ...prev,
         content: { ...prev.content, image: undefined }
     }));
-  };
+  }, [noteData, originalImageForTrashing]);
 
-  const setNoteImage = async (blob: Blob, path: string) => {
+  const setNoteImage = useCallback(async (blob: Blob, path: string) => {
     const projectId = pamet.appViewState.currentProjectId;
     if (!projectId) {
       throw new Error('No project loaded');
@@ -163,7 +163,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path);
     setUncommitedImage(newMediaItem);
     setNoteData(prev => ({ ...prev, content: { ...prev.content, image: newMediaItem } }));
-  };
+  }, [noteData]);
 
   const bakeNoteAndSave = useCallback(() => {
     // Deep copy to avoid mutating state directly
@@ -206,7 +206,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
     let note = loadFromDict(data) as Note;
     committed.current = true;
-    onSave(note, uncommitedImage, originalImageForTrashing);
+    const addedMediaItem = uncommitedImage ? new MediaItem(uncommitedImage) : null;
+    const removedMediaItem = originalImageForTrashing ? new MediaItem(originalImageForTrashing) : null;
+    onSave(note, addedMediaItem, removedMediaItem);
 
     // On successful save, the media items are committed. Clear the state.
     setUncommitedImage(null);

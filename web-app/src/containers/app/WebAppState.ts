@@ -1,11 +1,12 @@
 import { makeObservable, observable } from "mobx";
 import { DeviceData } from "web-app/src/model/config/Device";
 import { UserData } from "web-app/src/model/config/User";
-import { MouseState, PageViewState } from "web-app/src/components/page/PageViewState";
+import { MouseState, PageViewState } from "../../components/page/PageViewState";
 import { pamet } from "web-app/src/core/facade";
 import { ProjectData } from "web-app/src/model/config/Project";
 import { Point2D } from "web-app/src/util/Point2D";
 import { PametRoute } from "../../services/routing/route";
+import { SystemModalDialogState } from "../../components/system-modal-dialog/state";
 
 
 export enum AppDialogMode {
@@ -56,6 +57,7 @@ export class WebAppState {
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;
   focusPointOnDialogOpen: Point2D = new Point2D(0, 0); // Either the mouse location or the center of the screen
+  systemModalDialogState: SystemModalDialogState | null = null;
   mouse: MouseState = new MouseState();
 
   constructor() {
@@ -69,6 +71,7 @@ export class WebAppState {
       pageError: observable,
       projectError: observable,
       dialogMode: observable,
+      systemModalDialogState: observable,
     });
   }
 
@@ -122,7 +125,7 @@ export class WebAppState {
     }
 
     let route = new PametRoute();
-    
+
     if (userId) {
       route.userId = userId;
     }

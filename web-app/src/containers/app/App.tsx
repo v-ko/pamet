@@ -25,6 +25,8 @@ import { ProjectsDialog } from "../../components/ProjectsDialog";
 import { CreateProjectDialog } from "../../components/CreateProjectDialog";
 import { DebugDialog } from "../../components/DebugDialog";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
+import { MediaProcessingDialog } from "../../components/system-modal-dialog/MediaProcessingDialog";
+import { MediaProcessingDialogState } from "../../components/system-modal-dialog/state";
 
 let log = getLogger("App");
 
@@ -38,6 +40,7 @@ const VerticalSeparator = styled.div`
 const WebApp = observer(({ state }: { state: WebAppState }) => {
   let errorMessages: string[] = []
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
+  const [showSystemModal, setShowSystemModal] = useState(false);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -47,6 +50,32 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       document.title = "Pamet";
     }
   }, [state.currentPageViewState]);
+
+  useEffect(() => {
+    // Set delayed system modal dialog visibility to avoid
+    // Brief pop-up on short tasks
+    const dialogState = state.systemModalDialogState;
+    if (!dialogState) {
+      setShowSystemModal(false);
+      return;
+    }
+
+    const now = Date.now();
+    const delay = dialogState.showAfterUnixTime - now;
+
+    if (delay <= 0) {
+      setShowSystemModal(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowSystemModal(true);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [state.systemModalDialogState]);
 
   // Check for resurce availability, and prep error messages if needed
   let shouldDisplayPage = true
@@ -192,8 +221,8 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onCancel={() => {
             pageActions.closeNoteEditWindow(currentPageVS)
           }}
-          onSave={(note) => {
-            pageActions.saveEditedNote(currentPageVS, note)
+          onSave={(note, addedMediaItem, removedMediaItem) => {
+            pageActions.saveEditedNote(currentPageVS, note, addedMediaItem, removedMediaItem);
           }}
         />}
 
@@ -241,6 +270,10 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         isOpen={debugInfoModalOpen}
         onClose={() => setDebugInfoModalOpen(false)}
       />
+
+      {showSystemModal && state.systemModalDialogState instanceof MediaProcessingDialogState && (
+        <MediaProcessingDialog state={state.systemModalDialogState} />
+      )}
     </div>
   );
 });

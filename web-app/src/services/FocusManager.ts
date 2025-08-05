@@ -15,6 +15,7 @@ export class FocusManager {
   // Handle focusin event
   handleFocusIn(event: FocusEvent): void {
     const target = event.target as HTMLElement;
+    // console.log('Focus in:', target);
 
     if (target && target.tabIndex === -1) {
       this.correctFocus(); // Shift focus if the current element doesn't have a valid tabIndex
@@ -24,7 +25,6 @@ export class FocusManager {
   // Handle focusout event
   handleFocusOut(event: FocusEvent): void {
     // console.log('Focus out:', event.target);
-    this.correctFocus(); // Ensure focus moves to the highest tabIndex element
   }
 
   private correctFocus(): void {

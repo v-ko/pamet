@@ -3,7 +3,7 @@ import { Viewport } from "./Viewport";
 import { ElementViewState } from "./ElementViewState";
 import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_RENDER_TIME, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { getLogger } from "fusion/logging";
 import { drawCrossingDiagonals } from "../../util";
 import { color_role_to_hex_color } from "../../util/Color";
@@ -318,6 +318,18 @@ export class CanvasPageRenderer {
         // ctx.lineWidth = 1;
         // ctx.strokeRect(...state.viewport.realBounds().data());
 
+        // Draw a rectangle for the page outline if the viewport is zoomed out
+        // enough
+        if (state.viewportHeight > MAX_HEIGHT_SCALE * 0.9) {
+            ctx.save();
+            let heightScaleFactor = state.viewport.heightScaleFactor()
+            ctx.strokeStyle = '#dddddd';
+            ctx.lineWidth = 1 / heightScaleFactor;
+            ctx.beginPath();
+            ctx.arc(0, 0, PROPOSED_MAX_PAGE_WIDTH / 2, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.restore();
+        }
         // Draw selection overlays
         // If drag selection is active - add drag selected children to the selection
         if (state.mode === PageMode.DragSelection) {
