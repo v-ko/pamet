@@ -407,7 +407,7 @@ export class StorageServiceActual implements StorageServiceActualInterface {
             log.info('Initialized repo manager for project', projectId);
 
             // Perform cleanup of old deleted media items on startup
-            await this.cleanupDeletedMediaItems(projectId);
+            await this.cleanupExpiredTrashItems(projectId);
         } else { // Repo already loaded
             log.info('Repo already loaded', projectId);
             log.info('Loaded repo manager for project', JSON.stringify(repoManager.config));
@@ -637,7 +637,7 @@ export class StorageServiceActual implements StorageServiceActualInterface {
      * Clean up deleted media items older than the specified retention period
      * Default retention period is 30 days (30 * 24 * 60 * 60 * 1000 ms)
      */
-    private async cleanupDeletedMediaItems(projectId: string, retentionPeriodMs: number = 30 * 24 * 60 * 60 * 1000): Promise<void> {
+    private async cleanupExpiredTrashItems(projectId: string, retentionPeriodMs: number = 30 * 24 * 60 * 60 * 1000): Promise<void> {
         const deletedItems = this.deletedMediaItems[projectId];
         if (!deletedItems || deletedItems.length === 0) {
             return;
