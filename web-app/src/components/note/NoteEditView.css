@@ -213,6 +213,12 @@
   min-height: 100px;
   border: 1px dashed #ccc;
   border-radius: 4px;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.image-preview-container.dragging-over {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-light-accent);
 }
 
 .image-preview-placeholder {

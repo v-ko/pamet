@@ -145,6 +145,10 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
         let imgRect = imageRect(imageArea, new Size(image!.naturalWidth, image!.naturalHeight));
         context.drawImage(image!, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
+
+        context.strokeStyle = '#dddddd';
+        context.lineWidth = 0.5;
+        context.strokeRect(noteRect.x, noteRect.y, noteRect.w, noteRect.h);
     }
 
     abstract render(context: CanvasRenderingContext2D): void;

@@ -221,28 +221,40 @@ class PageActions {
   }
 
   @action
-  saveEditedNote(state: PageViewState, note: Note) {
-    let editWS = state.noteEditWindowState;
-
-    if (editWS === null) {
-      throw Error('saveEditedNote called without noteEditWindowState')
+  saveEditedNote(state: PageViewState, note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) {
+    const editWS = state.noteEditWindowState;
+    if (!editWS) {
+        throw new Error('saveEditedNote called without noteEditWindowState');
     }
 
-    // If creating
+    const projectId = pamet.appViewState.currentProjectId;
+    if (!projectId) {
+        throw new Error('No project loaded');
+    }
+
+    // Handle media item changes
+    if (addedMediaItem) {
+        pamet.insertOne(new MediaItem(addedMediaItem));
+    }
+
+    if (removedMediaItem) {
+        pamet.storageService.moveMediaItemToTrash(projectId, removedMediaItem.id, removedMediaItem.contentHash)
+            .catch(err => log.error('Failed to move media to trash:', err));
+        pamet.removeOne(new MediaItem(removedMediaItem));
+    }
+
+    // Save the note
     if (editWS.creatingNote) {
-      let newNote = note;
-      // Autosize the note
-      let minimalSize = minimalNonelidedSize(newNote);
-      let rect = newNote.rect();
-      rect.setSize(util.snapVectorToGrid(minimalSize));
-      rect.setTopLeft(util.snapVectorToGrid(rect.topLeft()));
-      newNote.setRect(rect);
-      pamet.insertNote(newNote);
-
-    } else { // If editing
-      let editedNote = note;
-      pamet.updateNote(editedNote);
+        const minimalSize = minimalNonelidedSize(note);
+        const rect = note.rect();
+        rect.setSize(util.snapVectorToGrid(minimalSize));
+        rect.setTopLeft(util.snapVectorToGrid(rect.topLeft()));
+        note.setRect(rect);
+        pamet.insertNote(note);
+    } else {
+        pamet.updateNote(note);
     }
+
     state.noteEditWindowState = null;
   }
 

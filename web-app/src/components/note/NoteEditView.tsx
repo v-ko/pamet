@@ -24,7 +24,7 @@ interface EditComponentProps {
   onTitlebarPress: (event: React.MouseEvent) => void;
   onTitlebarRelease: (event: React.MouseEvent) => void;
   onCancel: () => void; // added to avoid a dependency to the pageViewState
-  onSave: (note: Note) => void;
+  onSave: (note: Note, addedMediaItem: MediaItemData | null, removedMediaItem: MediaItemData | null) => void;
 }
 
 export class NoteEditViewState {
@@ -62,13 +62,16 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   }: EditComponentProps) => {
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const committed = useRef(false);
   const [geometry, setGeometry] = useState<Rectangle>(
     new Rectangle(state.center.x, state.center.y, 400, 400)
   );
   const [noteData, setNoteData] = useState<SerializedNote>(
     dumpToDict(state.targetNote) as SerializedNote
   );
-  const [uncommittedImage, setUncommittedImage] = useState<MediaItemData | null>(null);
+  const [uncommitedImage, setUncommitedImage] = useState<MediaItemData | null>(null);
+  const [originalImageForTrashing, setOriginalImageForTrashing] = useState<MediaItemData | null>(null);
 
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
     const note = state.targetNote;
@@ -101,23 +104,51 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     setNoteData(dumpToDict(newNote) as SerializedNote);
   }, [textButtonToggled, imageButtonToggled, noteData]);
 
-  // Update context on mount and setup cleanup for uncommitted media
+  // Update context and focus on mount, and setup cleanup for uncommitted media
   useEffect(() => {
-    pamet.setContext('noteEditViewFocused', true);
+    // Focus the text area on mount if it's visible
+    if (textButtonToggled) {
+        textAreaRef.current?.focus();
+    }
 
     return () => {
-      pamet.setContext('noteEditViewFocused', false);
       // If the component unmounts and there's an uncommitted item, delete it
-      if (uncommittedImage) {
+      if (uncommitedImage && !committed.current) {
         const projectId = pamet.appViewState.currentProjectId;
         if (projectId) {
-          log.info('Cleaning up uncommitted media item on unmount:', uncommittedImage);
-          pamet.storageService.removeMedia(projectId, uncommittedImage.id, uncommittedImage.contentHash)
+          log.info('Cleaning up uncommitted media item on unmount:', uncommitedImage);
+          pamet.storageService.removeMedia(projectId, uncommitedImage.id, uncommitedImage.contentHash)
             .catch(err => log.error('Failed to clean up media item', err));
         }
       }
     };
-  }, [uncommittedImage]);
+  }, [uncommitedImage, textButtonToggled]);
+
+  const removeNoteImage = async () => {
+    const currentImage = noteData.content.image;
+    if (!currentImage) {
+        throw new Error("removeOriginalImage called when there is no image.");
+    }
+
+    const projectid = pamet.appViewState.currentProjectId;
+    if (!projectid) {
+      throw new Error('No project loaded');
+    }
+
+    // If removing the original image
+    if (!originalImageForTrashing) {
+      setOriginalImageForTrashing(currentImage);
+    } else {
+      // If removing an image added in the editing session - delete it
+      await pamet.storageService.removeMedia(projectid, currentImage.id, currentImage.contentHash)
+    }
+
+    // Clear the image from the note data state
+    setNoteData(prev => ({
+        ...prev,
+        content: { ...prev.content, image: undefined }
+    }));
+  };
 
   const setNoteImage = async (blob: Blob, path: string) => {
     const projectId = pamet.appViewState.currentProjectId;
@@ -125,17 +156,13 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-    // If there's an existing uncommitted item, remove it.
-    if (uncommittedImage) {
-      await pamet.storageService.removeMedia(projectId, uncommittedImage.id, uncommittedImage.contentHash);
+    if (noteData.content.image) {
+        throw new Error("setNoteImage called when there is already an image.");
     }
 
     const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path);
-    setUncommittedImage(newMediaItem);
-    setNoteData({
-      ...noteData,
-      content: { ...noteData.content, image: newMediaItem }
-    });
+    setUncommitedImage(newMediaItem);
+    setNoteData(prev => ({ ...prev, content: { ...prev.content, image: newMediaItem } }));
   };
 
   const bakeNoteAndSave = useCallback(() => {
@@ -178,12 +205,26 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     }
 
     let note = loadFromDict(data) as Note;
-    onSave(note);
+    committed.current = true;
+    onSave(note, uncommitedImage, originalImageForTrashing);
 
-    // On successful save, the media item is committed. Clear the state.
-    setUncommittedImage(null);
+    // On successful save, the media items are committed. Clear the state.
+    setUncommitedImage(null);
+    setOriginalImageForTrashing(null);
 
-  }, [noteData, onSave, state.creatingNote, state.targetNote, setUncommittedImage]);
+  }, [noteData, onSave, state.creatingNote, state.targetNote, uncommitedImage, originalImageForTrashing]);
+
+  const handleFocus = () => {
+    pamet.setContext('noteEditViewFocused', true);
+  };
+
+  const handleBlur = (event: React.FocusEvent) => {
+    // If the relatedTarget (where focus is going) is not a child of the wrapper,
+    // then the focus has truly left the component.
+    if (!wrapperRef.current?.contains(event.relatedTarget as Node)) {
+        pamet.setContext('noteEditViewFocused', false);
+    }
+  };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
@@ -250,6 +291,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     <div
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       className={`note-edit-view${state.isBeingDragged ? ' dragged' : ''}`}
       style={{ left, top }}
     >
@@ -262,7 +305,10 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
           className="move-area"
         />
         {/* Close button */}
-        <button className="close-button" onClick={onCancel}>×</button>
+        <button
+          className="close-button"
+          onClick={onCancel}
+        >×</button>
         <div className="title-text">
           {state.creatingNote ? 'Create note' : 'Edit note'}
         </div>
@@ -276,14 +322,15 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
             if (!imageButtonToggled) return;
             setTextButtonToggled(!textButtonToggled)
           }}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 3}
         >T</button>
-        <button className="tool-button">🔗</button>
+        <button className="tool-button" tabIndex={PametTabIndex.NoteEditViewWidget1 + 4}>🔗</button>
         <button
           className={`tool-button ${imageButtonToggled ? 'toggled' : ''}`}
           onClick={() => setImageButtonToggled(!imageButtonToggled)}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 5}
         >🖼️</button>
-        <button className="tool-button">🗑️</button>
-        <button className="tool-button">⋮</button>
+        <button className="tool-button" tabIndex={PametTabIndex.NoteEditViewWidget1 + 6}>⋮</button>
       </div>
 
       {/* Main content */}
@@ -291,29 +338,36 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         {imageButtonToggled && <ImageEditPropsWidget
           noteData={noteData}
           setNoteImage={setNoteImage}
+          removeNoteImage={removeNoteImage}
         />}
         {textButtonToggled && <div className="text-container">
           <textarea
+            ref={textAreaRef}
             placeholder="Note text"
             tabIndex={PametTabIndex.NoteEditViewWidget1}
-            autoFocus
             defaultValue={state.targetNote.content.text}
             onChange={(e) => setNoteData({
               ...noteData,
               content: { ...noteData.content, text: e.target.value }
             })}
-            onFocus={() => pamet.setContext('noteEditViewFocused', true)}
-            onBlur={() => pamet.setContext('noteEditViewFocused', false)}
           />
         </div>}
       </div>
 
       {/* Footer / actions */}
       <div className="footer">
-        <button className="cancel-button" onClick={onCancel}>
+        <button
+          className="cancel-button"
+          onClick={onCancel}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 2}
+        >
           Cancel (Esc)
         </button>
-        <button className="save-button" onClick={bakeNoteAndSave}>
+        <button
+          className="save-button"
+          onClick={bakeNoteAndSave}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 1}
+        >
           Save (Ctrl+S)
         </button>
       </div>
