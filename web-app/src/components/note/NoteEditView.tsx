@@ -1,5 +1,5 @@
 // NoteEditView.tsx
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Point2D } from '../../util/Point2D';
 import { computed, makeObservable, observable } from 'mobx';
@@ -111,13 +111,15 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     updateNoteData(dumpToDict(newNote) as SerializedNote);
   }, [textButtonToggled, imageButtonToggled]);
 
-  // Update context and focus on mount, and setup cleanup for uncommitted media
   useEffect(() => {
     // Focus the text area on mount if it's visible
     if (textButtonToggled) {
         textAreaRef.current?.focus();
     }
+  }, [textButtonToggled]);
 
+  // Effect for cleaning up uncommitted media on component unmount
+  useEffect(() => {
     return () => {
       // If the component unmounts and there's an uncommitted item, delete it
       if (uncommitedImage && !committed.current) {
@@ -129,7 +131,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         }
       }
     };
-  }, [uncommitedImage, textButtonToggled]);
+  }, []);
 
   const removeNoteImage = async () => {
     const currentImage = noteData.current.content.image;
