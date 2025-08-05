@@ -13,7 +13,7 @@ import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "../core/constants";
 import { MediaItem } from "../model/MediaItem";
 import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "../core/policies";
 import { convertImage, extractImageDimensions } from "../util/media";
-import { getFileExtensionFromMimeType } from "../util";
+import { mapMimeTypeToFileExtension } from "../util";
 
 const log = getLogger('PageProcedures');
 
@@ -59,8 +59,8 @@ export async function pasteImage(
         }
 
         const timestamp = generateFilenameTimestamp();
-        const extension = getFileExtensionFromMimeType(finalImageBlob.type);
-        const imagePath = `images/pasted_image-${timestamp}${extension}`;
+        const extension = mapMimeTypeToFileExtension(finalImageBlob.type);
+        const imagePath = `images/pasted_image-${timestamp}.${extension}`;
 
         const mediaItemData = await pamet.storageService.addMedia(currentProject.id, finalImageBlob, imagePath);
         const mediaItem = new MediaItem(mediaItemData);

@@ -74,7 +74,7 @@ export class CacheMediaStoreAdapter implements MediaStoreAdapter {
     const cacheKey = this._getCacheKey(mediaItem.id, contentHash);
 
     // Store the blob in the Cache API using the cache key
-    const response = new Response(blob, {
+    const response = new Response(blob.slice(), {
       headers: {
         'Content-Type': blob.type,
         'Content-Length': blob.size.toString(),

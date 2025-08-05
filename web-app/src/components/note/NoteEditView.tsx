@@ -67,9 +67,16 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   const [geometry, setGeometry] = useState<Rectangle>(
     new Rectangle(state.center.x, state.center.y, 400, 400)
   );
-  const [noteData, setNoteData] = useState<SerializedNote>(
+  const noteData = useRef(
     dumpToDict(state.targetNote) as SerializedNote
   );
+  const [, setForceUpdate] = useState(0);
+
+  const updateNoteData = (newData: Partial<SerializedNote>) => {
+    noteData.current = { ...noteData.current, ...newData };
+    setForceUpdate(x => x + 1);
+  };
+
   const [uncommitedImage, setUncommitedImage] = useState<MediaItemData | null>(null);
   const [originalImageForTrashing, setOriginalImageForTrashing] = useState<MediaItemData | null>(null);
 
@@ -86,23 +93,23 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   // Handle Note type changes
   useEffect(() => {
     let newNote: Note;
-    const currentNote = loadFromDict(noteData) as Note;
+    const currentNote = loadFromDict(noteData.current) as Note;
 
     if (textButtonToggled && imageButtonToggled) {
       if (currentNote instanceof CardNote) return;
-      newNote = new CardNote(noteData);
+      newNote = new CardNote(noteData.current);
     } else if (textButtonToggled) {
       if (currentNote instanceof TextNote && !(currentNote instanceof CardNote)) return;
-      newNote = new TextNote(noteData);
+      newNote = new TextNote(noteData.current);
     } else if (imageButtonToggled) {
       if (currentNote instanceof ImageNote && !(currentNote instanceof CardNote)) return;
-      newNote = new ImageNote(noteData);
+      newNote = new ImageNote(noteData.current);
     } else { // Should not happen with proper logic
       setTextButtonToggled(true);
       return;
     }
-    setNoteData(dumpToDict(newNote) as SerializedNote);
-  }, [textButtonToggled, imageButtonToggled, noteData]);
+    updateNoteData(dumpToDict(newNote) as SerializedNote);
+  }, [textButtonToggled, imageButtonToggled]);
 
   // Update context and focus on mount, and setup cleanup for uncommitted media
   useEffect(() => {
@@ -124,8 +131,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     };
   }, [uncommitedImage, textButtonToggled]);
 
-  const removeNoteImage = useCallback(async () => {
-    const currentImage = noteData.content.image;
+  const removeNoteImage = async () => {
+    const currentImage = noteData.current.content.image;
     if (!currentImage) {
         throw new Error("removeOriginalImage called when there is no image.");
     }
@@ -144,30 +151,27 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     }
 
     // Clear the image from the note data state
-    setNoteData(prev => ({
-        ...prev,
-        content: { ...prev.content, image: undefined }
-    }));
-  }, [noteData, originalImageForTrashing]);
+    updateNoteData({ content: { ...noteData.current.content, image: undefined } });
+  };
 
-  const setNoteImage = useCallback(async (blob: Blob, path: string) => {
+  const setNoteImage = async (blob: Blob, path: string) => {
     const projectId = pamet.appViewState.currentProjectId;
     if (!projectId) {
       throw new Error('No project loaded');
     }
 
-    if (noteData.content.image) {
+    if (noteData.current.content.image) {
         throw new Error("setNoteImage called when there is already an image.");
     }
 
     const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path);
     setUncommitedImage(newMediaItem);
-    setNoteData(prev => ({ ...prev, content: { ...prev.content, image: newMediaItem } }));
-  }, [noteData]);
+    updateNoteData({ content: { ...noteData.current.content, image: newMediaItem } });
+  };
 
-  const bakeNoteAndSave = useCallback(() => {
+  const bakeNoteAndSave = () => {
     // Deep copy to avoid mutating state directly
-    let data = JSON.parse(JSON.stringify(noteData));
+    let data = JSON.parse(JSON.stringify(noteData.current));
 
     // Determine the definitive note type based on content
     const hasText = data.content.text && data.content.text.trim().length > 0;
@@ -214,7 +218,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     setUncommitedImage(null);
     setOriginalImageForTrashing(null);
 
-  }, [noteData, onSave, state.creatingNote, state.targetNote, uncommitedImage, originalImageForTrashing]);
+  };
 
   const handleFocus = () => {
     pamet.setContext('noteEditViewFocused', true);
@@ -338,7 +342,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       {/* Main content */}
       <div className="main-content">
         {imageButtonToggled && <ImageEditPropsWidget
-          noteData={noteData}
+          noteData={noteData.current}
           setNoteImage={setNoteImage}
           removeNoteImage={removeNoteImage}
         />}
@@ -348,10 +352,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
             placeholder="Note text"
             tabIndex={PametTabIndex.NoteEditViewWidget1}
             defaultValue={state.targetNote.content.text}
-            onChange={(e) => setNoteData({
-              ...noteData,
-              content: { ...noteData.content, text: e.target.value }
-            })}
+            onChange={(e) => {
+                updateNoteData({ content: { ...noteData.current.content, text: e.target.value } });
+            }}
           />
         </div>}
       </div>

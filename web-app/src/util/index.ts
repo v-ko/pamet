@@ -328,18 +328,17 @@ export function generateUniquePathWithSuffix(basePath: string, pathExistsChecker
     return path;
 }
 
-
-export function getFileExtensionFromMimeType(mimeType: string): string {
+export function mapMimeTypeToFileExtension(mimeType: string): string {
     if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') {
-        return '.jpg';
+        return 'jpg';
     } else if (mimeType === 'image/gif') {
-        return '.gif';
+        return 'gif';
     } else if (mimeType === 'image/webp') {
-        return '.webp';
+        return 'webp';
     } else if (mimeType === 'image/svg+xml') {
-        return '.svg';
+        return 'svg';
     } else if (mimeType === 'image/png') {
-        return '.png';
+        return 'png';
     }
-    return '.png'; // Default fallback
+    return 'png'; // Default fallback
 }

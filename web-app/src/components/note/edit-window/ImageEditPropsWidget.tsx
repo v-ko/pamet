@@ -6,7 +6,7 @@ import { PametTabIndex } from '../../../core/constants';
 import { pamet } from '../../../core/facade';
 import { MediaItem } from '../../../model/MediaItem';
 import { getLogger } from 'fusion/logging';
-import { parseClipboardContents, toUriFriendlyFileName } from '../../../util';
+import { mapMimeTypeToFileExtension, parseClipboardContents, toUriFriendlyFileName } from '../../../util';
 import { determineConversionPreset, ImageVerdict, shouldCompressImage } from '../../../core/policies';
 import { convertImage, extractImageDimensions } from '../../../util/media';
 import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from '../../../core/constants';
@@ -66,10 +66,16 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
             }
 
             let imageBlob: Blob = file;
+            let fileName = file.name;
             if (verdict === ImageVerdict.Compress) {
                 setStatusMessage('Compressing image...');
                 const preset = determineConversionPreset(file.type);
                 imageBlob = await convertImage(file, preset);
+
+                let newExtension = mapMimeTypeToFileExtension(preset.mimeType);
+                const lastDotIndex = fileName.lastIndexOf('.');
+                const name = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
+                fileName = `${name}.${newExtension}`;
             }
 
             if (noteData.content.image) {
@@ -77,7 +83,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                 await removeNoteImage();
             }
             setStatusMessage('Saving image...');
-            await setNoteImage(imageBlob, file.name);
+            await setNoteImage(imageBlob, fileName);
 
         } catch (error: any) {
             log.error('Error loading image:', error);
@@ -207,7 +213,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                 }
             });
 
-            const blob = await new Response(stream).blob();
+            const blob = await new Response(stream, { headers: response.headers }).blob();
 
             if (!blob.type.startsWith('image/')) {
                 alert('The provided URL does not point to a valid image.');

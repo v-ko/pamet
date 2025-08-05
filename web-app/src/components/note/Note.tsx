@@ -55,7 +55,7 @@ export const NoteComponentBase = ({ noteViewState: state }: NoteComponentProps) 
     // }
 
     if (image ) {
-        imageSrc = pamet.apiClient.projectScopedUrlToGlobal(image.url);
+        imageSrc = pamet.apiClient.projectScopedUrlToGlobal(image.path);
         isExternal = false;
     }
     // if (imageUrl) {
