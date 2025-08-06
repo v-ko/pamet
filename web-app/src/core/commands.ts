@@ -240,6 +240,20 @@ class PametCommands {
             log.error('Error in paste special command:', error);
         }
     }
+
+    @command('Open command palette')
+    openCommandPalette() {
+        appActions.openPageAndCommandPalette(pamet.appViewState, '>');
+    }
+    @command('Open page search')
+    openPagePalette() {
+        appActions.openPageAndCommandPalette(pamet.appViewState, '');
+    }
+
+    @command('Open project search')
+    openCommandPaletteWithProjectSwitch() {
+        appActions.openProjectPalette(pamet.appViewState);
+    }
 }
 
 async function storeStateToClipboard() {

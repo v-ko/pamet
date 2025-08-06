@@ -28,6 +28,7 @@ import { importDesktopDataForTesting } from "../../procedures/app";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
 import { MediaProcessingDialog } from "../../components/system-modal-dialog/MediaProcessingDialog";
 import { MediaProcessingDialogState } from "../../components/system-modal-dialog/state";
+import { PageAndCommandPalette, ProjectPalette, PageAndCommandPaletteState, ProjectPaletteState } from "../../components/CommandPalette";
 
 let log = getLogger("App");
 
@@ -288,6 +289,10 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       {showSystemModal && state.systemModalDialogState instanceof MediaProcessingDialogState && (
         <MediaProcessingDialog state={state.systemModalDialogState} />
       )}
+        {state.commandPaletteState instanceof PageAndCommandPaletteState &&
+            <PageAndCommandPalette state={state.commandPaletteState} />}
+        {state.commandPaletteState instanceof ProjectPaletteState &&
+            <ProjectPalette state={state.commandPaletteState} />}
     </div>
   );
 });

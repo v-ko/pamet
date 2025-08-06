@@ -1,6 +1,7 @@
 import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/WebAppState";
 import { SystemModalDialogState } from "../components/system-modal-dialog/state";
 import type { LocalStorageState } from "../containers/app/WebAppState";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "../components/CommandPalette";
 import { pamet } from "../core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";
@@ -122,6 +123,21 @@ class AppActions {
         for (const entity of entities) {
             pamet.insertOne(entity);
         }
+    }
+
+    @action
+    openPageAndCommandPalette(appState: WebAppState, initialInput: string) {
+        appState.commandPaletteState = new PageAndCommandPaletteState(initialInput);
+    }
+
+    @action
+    openProjectPalette(appState: WebAppState) {
+        appState.commandPaletteState = new ProjectPaletteState('');
+    }
+
+    @action
+    closeCommandPalette(appState: WebAppState) {
+        appState.commandPaletteState = null;
     }
 }
 

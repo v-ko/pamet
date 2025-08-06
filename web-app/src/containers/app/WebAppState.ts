@@ -7,6 +7,7 @@ import { ProjectData } from "web-app/src/model/config/Project";
 import { Point2D } from "web-app/src/util/Point2D";
 import { PametRoute } from "../../services/routing/route";
 import { SystemModalDialogState } from "../../components/system-modal-dialog/state";
+import { CommandPaletteState } from "../../components/CommandPalette";
 
 
 export enum AppDialogMode {
@@ -59,6 +60,7 @@ export class WebAppState {
   focusPointOnDialogOpen: Point2D = new Point2D(0, 0); // Either the mouse location or the center of the screen
   systemModalDialogState: SystemModalDialogState | null = null;
   mouse: MouseState = new MouseState();
+  commandPaletteState: CommandPaletteState | null = null;
 
   constructor() {
     makeObservable(this, {
@@ -72,6 +74,7 @@ export class WebAppState {
       projectError: observable,
       dialogMode: observable,
       systemModalDialogState: observable,
+      commandPaletteState: observable,
     });
   }
 

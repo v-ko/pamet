@@ -188,6 +188,21 @@ export class PametFacade extends PametStore {
                 command: commands.pasteSpecial.name,
                 when: 'canvasFocus'
             },
+            {
+                key: 'ctrl+shift+p',
+                command: commands.openPagePalette.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+k',
+                command: commands.openCommandPalette.name,
+                when: 'canvasFocus'
+            },
+            {
+                key: 'ctrl+alt+p',
+                command: commands.openCommandPaletteWithProjectSwitch.name,
+                when: 'canvasFocus'
+            },
 
         ]);
 

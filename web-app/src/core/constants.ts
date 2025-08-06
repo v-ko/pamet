@@ -1,5 +1,5 @@
-import { HexColorData } from "../util/Color";
 import { ImageConversionPreset } from "fusion/media-utils";
+import { HexColorData } from "../util/Color";
 
 // Base geometry
 export const NO_SCALE_LINE_SPACING = 20
@@ -78,6 +78,15 @@ export const COLOR_ROLE_MAP: { [key: string]: HexColorData } = {
     'transparent': '#00000000'  // transparent
 }
 
+// To consider:
+// Command palette
+// Panels
+// Note edit view
+// Canvas
+// System modal dialog
+// Future:
+// Search and other utils pane
+// Alert dialog?
 export enum PametTabIndex {
     Page = 0,
     NoteEditViewWidget1 = 10,

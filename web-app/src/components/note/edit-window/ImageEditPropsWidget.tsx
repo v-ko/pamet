@@ -2,7 +2,7 @@
 import React, { useRef, useState } from 'react';
 import { SerializedNote } from '../../../model/Note';
 import './ImageEditPropsWidget.css';
-import { PametTabIndex } from '../../../core/constants';
+import { MAX_MEDIA_NAME_LENGTH, PametTabIndex } from '../../../core/constants';
 import { pamet } from '../../../core/facade';
 import { MediaItem } from 'fusion/libs/MediaItem';
 import { getLogger } from 'fusion/logging';
@@ -224,7 +224,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
             }
 
             let fileName = url.substring(url.lastIndexOf('/') + 1) || 'downloaded-image';
-            fileName = toUriFriendlyFileName(fileName);
+            fileName = toUriFriendlyFileName(fileName, MAX_MEDIA_NAME_LENGTH);
 
             await loadImage(new File([blob], fileName, { type: blob.type }));
 
