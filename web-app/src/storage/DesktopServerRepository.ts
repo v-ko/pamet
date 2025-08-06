@@ -10,8 +10,8 @@ import { AsyncInMemoryRepository } from "fusion/storage/AsyncInMemoryRepo";
 const log = getLogger('DesktopServerRepository');
 
 export class DesktopServerRepository extends BaseAsyncRepository {
-    private apiClient: ApiClient;
-    private _inMemRepo = new AsyncInMemoryRepository();
+    apiClient: ApiClient;
+    _inMemRepo = new AsyncInMemoryRepository();
 
     constructor(apiClient: ApiClient) {
         super();

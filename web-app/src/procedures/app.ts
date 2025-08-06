@@ -6,6 +6,11 @@ import { PametRoute } from "../services/routing/route";
 import { ProjectError, WebAppState } from "../containers/app/WebAppState";
 import { projectActions } from "../actions/project";
 import { Page } from "../model/Page";
+import { ApiClient } from "../storage/ApiClient";
+import { DesktopServerRepository } from "../storage/DesktopServerRepository";
+import { MediaProcessingDialogState } from "../components/system-modal-dialog/state";
+import { createId, currentTime, timestamp } from "fusion/base-util";
+import { Entity } from "fusion/libs/Entity";
 
 const log = getLogger('AppProcedures');
 
@@ -120,7 +125,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
     let deletionPromise = pamet.storageService.deleteProject(
         project.id,
-        pamet.projectManagerConfigFactory(project.id)
+        pamet.projectStorageConfig(project.id)
     )
 
     try {
@@ -303,5 +308,61 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
             log.info('AT updateAppStateFromConfig. Current project present. Reflecting new state', currentProjectNewState);
             appActions.reflectCurrentProjectState(appState, currentProjectNewState);
         }
+    }
+}
+
+export async function importDesktopDataForTesting() {
+    log.info('Starting import of desktop data for testing...');
+    const appState = pamet.appViewState;
+
+    const dialogState = new MediaProcessingDialogState();
+    dialogState.title = 'Starting import...';
+    // @ts-ignore
+    dialogState.progress = -1; // Negative progress for spinner
+    appActions.updateSystemDialogState(appState, dialogState);
+
+    try {
+        // 1. Create a new project for the imported data
+        dialogState.title = 'Creating new project...';
+        appActions.updateSystemDialogState(appState, { ...dialogState });
+
+        const newProject: ProjectData = {
+            id: `desktop-import-${createId()}`,
+            title: 'Desktop Import',
+            description: 'Imported from desktop server',
+            owner: pamet.config.userData!.id,
+            created: timestamp(currentTime()),
+        };
+        appActions.createProject(newProject);
+
+        // 2. Switch to the new project
+        dialogState.title = 'Switching to new project...';
+        appActions.updateSystemDialogState(appState, { ...dialogState });
+        await switchToProject(newProject.id);
+
+        // 3. Fetch data from desktop server
+        dialogState.title = 'Fetching data from desktop server...';
+        appActions.updateSystemDialogState(appState, { ...dialogState });
+        let desktopApiClient = new ApiClient("http://localhost", 11352);
+        let desktopRepo = new DesktopServerRepository(desktopApiClient);
+        await desktopRepo.init('main');
+
+        // 4. Get all entities from the temporary repo
+        // @ts-ignore
+        const entities = await desktopRepo._inMemRepo.headStore.find({}) as Entity[];
+
+        // 5. Import entities into the new project
+        dialogState.title = `Importing ${entities.length} items...`;
+        appActions.updateSystemDialogState(appState, { ...dialogState });
+        appActions.importEntitiesAction(entities);
+
+        log.info(`Imported ${entities.length} entities into project ${newProject.id}`);
+
+    } catch (e) {
+        log.error('Failed to import desktop data', e);
+        alert('Failed to import desktop data. See console for details.');
+    } finally {
+        // 6. Close the dialog
+        appActions.updateSystemDialogState(appState, null);
     }
 }

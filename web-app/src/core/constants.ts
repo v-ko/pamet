@@ -1,4 +1,5 @@
 import { HexColorData } from "../util/Color";
+import { ImageConversionPreset } from "fusion/media-utils";
 
 // Base geometry
 export const NO_SCALE_LINE_SPACING = 20
@@ -102,14 +103,6 @@ export const MAX_IMAGE_DIMENSION = 2560; // for either width or height
 export const MAX_IMAGE_DIMENSION_FOR_COMPRESSION = 8192; // Reject larger images to avoid memory problems
 export const MAX_FILE_UPLOAD_SIZE_BYTES = 40 * 1000 * 1000; // 40 MB
 
-
-// Image conversion presets
-export interface ImageConversionPreset {
-    maxWidth: number;
-    maxHeight: number;
-    mimeType: 'image/jpeg' | 'image/png';
-    quality?: number;
-}
 
 export const IMAGE_CONVERSION_PRESET_JPG: ImageConversionPreset = {
     maxWidth: 2560,

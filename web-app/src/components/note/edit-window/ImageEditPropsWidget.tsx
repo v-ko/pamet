@@ -1,15 +1,17 @@
 // ImageEditPropsWidget.tsx
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { SerializedNote } from '../../../model/Note';
 import './ImageEditPropsWidget.css';
 import { PametTabIndex } from '../../../core/constants';
 import { pamet } from '../../../core/facade';
-import { MediaItem } from '../../../model/MediaItem';
+import { MediaItem } from 'fusion/libs/MediaItem';
 import { getLogger } from 'fusion/logging';
-import { mapMimeTypeToFileExtension, parseClipboardContents, toUriFriendlyFileName } from '../../../util';
+import { parseClipboardContents } from '../../../util';
+import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/base-util";
 import { determineConversionPreset, ImageVerdict, shouldCompressImage } from '../../../core/policies';
-import { convertImage, extractImageDimensions } from '../../../util/media';
+import { convertImage, extractImageDimensions } from 'fusion/media-utils';
 import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from '../../../core/constants';
+import { mediaItemRoute } from '../../../services/routing/route';
 
 let log = getLogger('ImageEditPropsWidget');
 
@@ -241,7 +243,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
     let imageUrl = '';
     if (noteData.content.image) {
         const mediaItem = new MediaItem(noteData.content.image);
-        const route = mediaItem.pametRoute(pamet.appViewState.userId!, pamet.appViewState.currentProjectId!);
+        const route = mediaItemRoute(mediaItem, pamet.appViewState.userId!, pamet.appViewState.currentProjectId!);
         route.host = window.location.host;
         route.protocol = window.location.protocol;
         imageUrl = route.toString();

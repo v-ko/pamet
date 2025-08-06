@@ -2,7 +2,7 @@ import { entityType, getEntityId } from "fusion/libs/Entity";
 import { Note } from "./Note";
 import { Page } from "./Page";
 import { elementId } from "./Element";
-import { currentTime, timestamp } from "fusion/util";
+import { currentTime, timestamp } from "fusion/base-util";
 import { PametRoute } from "../services/routing/route";
 
 const MISSING_PAGE_TITLE = '(missing)'

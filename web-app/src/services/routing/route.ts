@@ -1,3 +1,4 @@
+import { MediaItem } from "fusion/libs/MediaItem";
 import { getLogger } from "fusion/logging";
 
 let log = getLogger('PametRoute');
@@ -46,8 +47,8 @@ export class PametRoute {
     }
 
     static fromUrl(url: string): PametRoute {
-        const url_ = new URL(url);
         log.info('Parsing URL:', url);
+        const url_ = new URL(url);
 
         // Local urls start with project:///, globals are regular with a host
         let route = new PametRoute();
@@ -187,3 +188,12 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
     return path + search + hash;
 }
 
+// Get the project-scoped URL for this media item
+export function mediaItemRoute(mediaItem: MediaItem, userId: string, projectId: string): PametRoute {
+    let route = new PametRoute();
+    route.mediaItemId = mediaItem.id;
+    route.mediaItemContentHash = mediaItem.contentHash;
+    route.userId = userId;
+    route.projectId = projectId;
+    return route
+}

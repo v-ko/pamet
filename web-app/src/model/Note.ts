@@ -2,7 +2,8 @@ import { Rectangle } from "../util/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
 import { textRect } from "../components/note/util";
-import { MediaItemData } from "./MediaItem";
+import { MediaItemData } from "../../../fusion/js-src/src/libs/MediaItem";
+import { entityType } from "fusion/libs/Entity";
 
 export interface NoteContent {
     text?: string;
@@ -30,7 +31,7 @@ export interface SerializedNote extends NoteData {
     type_name: string;
 }
 
-// @entityType('Note') - no, this is just a base class
+@entityType('Note') // was removed .. ? but it's needed for the inmem store search at minimum (instanceof matching)
 export class Note extends PametElement<NoteData> implements NoteData {
     // This is only a base class, static helpers should go in the subclasses
     rect(): Rectangle {

@@ -3,11 +3,11 @@ import { entityType, getEntityId } from "fusion/libs/Entity";
 import { Rectangle } from "../util/Rectangle";
 import { Size } from "../util/Size";
 import { Note } from "./Note";
-import { MediaItem, MediaItemData } from "./MediaItem";
+import { MediaItem, MediaItemData } from "fusion/libs/MediaItem";
 import { elementId } from "./Element";
 import { RectangleData } from "../util/Rectangle";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
-import { currentTime, timestamp } from "fusion/util";
+import { currentTime, timestamp } from "fusion/base-util";
 
 @entityType('ImageNote')
 export class ImageNote extends Note {

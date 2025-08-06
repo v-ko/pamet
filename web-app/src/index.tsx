@@ -1,15 +1,14 @@
 import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
-import WebApp from './containers/app/App';
-import { WebAppState } from "./containers/app/WebAppState";
 import './index.css';
+
 // import reportWebVitals from './reportWebVitals';
-import { PametFacade, pamet } from './core/facade';
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
+import { PametFacade, webStorageConfigFactory, pamet } from './core/facade';
 
 
-// Register entity classes for @entityType decorators
 import { registerEntityClasses } from './core/entityRegistrationHack';
+registerEntityClasses();
 
 // Canvas view imports (still needed for UI components)
 import { InternalLinkNoteCanvasView } from './components/note/InternalLinkCanvasView';
@@ -20,12 +19,15 @@ import { fusion } from 'fusion/index';
 import { ActionState } from 'fusion/libs/Action';
 import { PametConfigService } from './services/config/Config';
 import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
-import { StorageService } from './storage/StorageService';
-import { ProjectStorageConfig, StorageAdapterNames } from './storage/ProjectStorageManager';
+import { StorageService } from '../../fusion/js-src/src/storage/StorageService';
 import { updateAppFromRouteOrAutoassist } from './procedures/app';
 
+import WebApp from './containers/app/App';
+import { WebAppState } from "./containers/app/WebAppState";
+
+import serviceWorkerUrl from "./service-worker?url"
+
 // Register entity classes in main thread context
-registerEntityClasses();
 
 // Keep canvas view imports to prevent tree-shaking
 let dummyImports: any[] = [];
@@ -92,26 +94,7 @@ setupWebWorkerLoggingChannel();
 
 // config.deviceData = deviceData
 
-function offlineAppConfigFactory(projectId: string): ProjectStorageConfig {
-    return {
-        currentBranchName: deviceData!.id,
-        localRepo: {
-            name: "DesktopServer" as StorageAdapterNames,
-            args: {
-                projectId: projectId,
-                localBranchName: deviceData!.id
-            }
-        },
-        localMediaStore: {
-            name: "CacheAPI",
-            args: {
-                projectId: projectId
-            }
-        }
-    }
-}
-
-pamet.projectManagerConfigFactory = offlineAppConfigFactory
+pamet.setProjectStorageConfigFactory(webStorageConfigFactory)
 
 async function initializeApp() {
     // Init storage service
@@ -121,8 +104,9 @@ async function initializeApp() {
         // pamet.setStorageService(storageService);
 
         log.info("Initializing storage service...");
-        let storage_service = await StorageService.serviceWorkerProxy();
-        pamet.setStorageService(storage_service);
+        let storageService = new StorageService();
+        await storageService.setupInServiceWorker(serviceWorkerUrl);
+        pamet.setStorageService(storageService);
         log.info("Storage service initialized");
     } catch (e) {
         log.error("Failed to initialize storage service", e);
@@ -144,15 +128,15 @@ initializeApp().catch((e) => {
 
 
 
-// App close confirmation
-window.addEventListener('beforeunload', (event) => {
-    const pageViewState = pamet.appViewState.currentPageViewState;
-    if (pageViewState && pageViewState.noteEditWindowState) {
-        // Standard way to trigger the browser's "Are you sure you want to leave?"
-        event.preventDefault();
-        event.returnValue = '';
-    }
-});
+// // App close confirmation
+// window.addEventListener('beforeunload', (event) => {
+//     const pageViewState = pamet.appViewState.currentPageViewState;
+//     if (pageViewState && pageViewState.noteEditWindowState) {
+//         // Standard way to trigger the browser's "Are you sure you want to leave?"
+//         event.preventDefault();
+//         event.returnValue = '';
+//     }
+// });
 
 
 // Testing: log the actions channel

@@ -2,7 +2,7 @@ import { action } from "fusion/libs/Action";
 import { AppDialogMode, WebAppState } from "../containers/app/WebAppState";
 import { pamet } from "../core/facade";
 import { Page, PageData } from "../model/Page";
-import { currentTime, timestamp } from "fusion/util";
+import { currentTime, timestamp } from "fusion/base-util";
 import { minimalNonelidedSize } from "../components/note/note-dependent-utils";
 import { TextNote } from "../model/TextNote";
 import { Point2D } from "../util/Point2D";

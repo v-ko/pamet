@@ -2,17 +2,17 @@ import { WebAppState } from "../containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
 import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
-import { PametStore } from "../storage/PametStore";
+import { PAMET_INMEMORY_STORE_CONFIG, PametStore } from "../storage/PametStore";
 import { Entity, EntityData } from "fusion/libs/Entity";
 import { ApiClient } from "../storage/ApiClient";
 import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
-import { MediaItem } from "../model/MediaItem";
+import { MediaItem } from "fusion/libs/MediaItem";
 import { FrontendDomainStore } from "../storage/FrontendDomainStore";
 import { PametConfigService } from "../services/config/Config";
-import { StorageService } from "../storage/StorageService";
-import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from "../storage/ProjectStorageManager";
+import { StorageService } from "fusion/storage/StorageService";
+import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from "fusion/storage/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/BaseRepository";
 import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
@@ -33,22 +33,23 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 // Service related
-function indexedDB_storeConfigFactory(projectId: string): ProjectStorageConfig {
+export function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
     let device = pamet.config.deviceData;
     if (!device) {
         throw Error('Device not set');
     }
     return {
         currentBranchName: device.id,
+        inMemoryRepoIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
         localRepo: {
-            name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
+            name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,
                 localBranchName: device.id,
             }
         },
         localMediaStore: {
-            name: 'InMemory' as MediaStoreAdapterNames,
+            name: 'CacheAPI' as MediaStoreAdapterNames,
             args: {
                 projectId: projectId
             }
@@ -70,7 +71,7 @@ export class PametFacade extends PametStore {
     keybindingService: KeybindingService = new KeybindingService();
     focusService: FocusManager = new FocusManager();
     context: any = {};
-    projectManagerConfigFactory: (projectId: string) => ProjectStorageConfig = indexedDB_storeConfigFactory
+    _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     // Focus handling (context related): Except when receiving focus/blur
     // events - the context change should be applied in the unmount hook
     // (callback returned by useEffect)
@@ -210,6 +211,21 @@ export class PametFacade extends PametStore {
         });
     }
 
+    get projectStorageConfigFactory(): (projectId: string) => ProjectStorageConfig {
+        if (this._projectStorageConfigFactory === null) {
+            throw Error('Project storage config factory not set');
+        }
+        return this._projectStorageConfigFactory;
+    }
+
+    setProjectStorageConfigFactory(factory: (projectId: string) => ProjectStorageConfig) {
+        this._projectStorageConfigFactory = factory;
+    }
+
+    projectStorageConfig(projectId: string): ProjectStorageConfig {
+        return this.projectStorageConfigFactory(projectId);
+    }
+
     get frontendDomainStore(): FrontendDomainStore {
         if (!this._frontendDomainStore) {
             throw Error('Frontend domain store not set');
@@ -270,8 +286,13 @@ export class PametFacade extends PametStore {
             // This handler will be called whenever the repo is updated
             pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
         }
-        await pamet.storageService.loadRepo(
-            projectId, pamet.projectManagerConfigFactory(projectId), repoUpdateHandler)
+        try{
+            await pamet.storageService.loadProject(
+                projectId, pamet.projectStorageConfig(projectId), repoUpdateHandler)
+
+        } catch (e) {
+            log.error('Error loading project', e);
+        }
 
         // Load the entities after loading the repo
         let headState = await pamet.storageService.headState(projectId)
@@ -296,7 +317,7 @@ export class PametFacade extends PametStore {
         }
 
         this._frontendDomainStore = null;
-        await this.storageService.unloadRepo(currentProject.id).catch(
+        await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
                 log.error('Error unloading project', e);
             }
@@ -400,11 +421,16 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
                 if (currentPageVS.page.id === change.entityId) {
+                    let userId = appState.userId;
+                    if (userId === null) {
+                        throw Error('No user set');
+                    }
                     let projectId = appState.currentProjectId;
                     if (projectId === null) {
                         throw Error('No project set');
                     }
                     let route = new PametRoute();
+                    route.userId = userId;
                     route.projectId = projectId;
                     pamet.router.replaceRoute(route);
                 }

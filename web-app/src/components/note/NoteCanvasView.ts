@@ -12,6 +12,7 @@ import { textRect, imageRect } from "./util";
 import { Size } from "../../util/Size";
 import { getLogger } from "fusion/logging";
 import { ImageNote } from "../../model/ImageNote";
+import { mediaItemRoute } from "../../services/routing/route";
 
 let log = getLogger('NoteCanvasView');
 
@@ -126,9 +127,9 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             log.error('Cannot draw image: userId or projectId is undefined');
             return;
         }
-        let mediaItemRoute = mediaItem.pametRoute(userId, projectId);
+        let mediaItemRoute_ = mediaItemRoute(mediaItem,userId, projectId);
 
-        let image = this.renderer.getImage(mediaItemRoute.toRelativeReference());
+        let image = this.renderer.getImage(mediaItemRoute_.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = IMAGE_NOT_LOADED_TEXT;

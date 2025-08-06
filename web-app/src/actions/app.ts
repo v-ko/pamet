@@ -6,8 +6,9 @@ import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";
 import { PageViewState } from "../components/page/PageViewState";
 import type { ProjectData } from "../model/config/Project";
-import { currentTime, timestamp } from "fusion/util";
+import { currentTime, timestamp } from "fusion/base-util";
 import { deleteProjectAndSwitch } from "../procedures/app";
+import { Entity } from "fusion/libs/Entity";
 
 let log = getLogger("WebAppActions");
 
@@ -114,6 +115,13 @@ class AppActions {
     @action
     updateSystemDialogState(appState: WebAppState, dialogState: SystemModalDialogState | null) {
         appState.systemModalDialogState = dialogState;
+    }
+
+    @action
+    importEntitiesAction(entities: Entity<any>[]) {
+        for (const entity of entities) {
+            pamet.insertOne(entity);
+        }
     }
 }
 

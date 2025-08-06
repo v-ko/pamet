@@ -24,6 +24,7 @@ import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialo
 import { ProjectsDialog } from "../../components/ProjectsDialog";
 import { CreateProjectDialog } from "../../components/CreateProjectDialog";
 import { DebugDialog } from "../../components/DebugDialog";
+import { importDesktopDataForTesting } from "../../procedures/app";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
 import { MediaProcessingDialog } from "../../components/system-modal-dialog/MediaProcessingDialog";
 import { MediaProcessingDialogState } from "../../components/system-modal-dialog/state";
@@ -183,12 +184,25 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           {'</>'}
         </div>
         <VerticalSeparator />
+        <div
+          title='Desktop import (dbg)'
+          style={{ cursor: 'pointer' }}
+          onClick={() => importDesktopDataForTesting()}
+        >
+          {/* Use a unicode symbol for import */}
+          &#x21E9;
+        </div>
+        <VerticalSeparator />
         <img src={helpCircleIconUrl} alt="Help"
           style={{ cursor: 'pointer' }}
           onClick={() => { commands.showHelp(); }}
         />
         <VerticalSeparator />
-        <div>{currentPageVS ? currentPageVS.page.name : '(no page open)'}</div>
+        <div
+          onClick={() => appActions.openPageProperties(state)}
+          style={{ cursor: 'pointer' }}
+          title="Page properties"
+        >{currentPageVS ? currentPageVS.page.name : '(no page open)'}</div>
         <VerticalSeparator />
         <img src={accountCircleIconUrl} alt="Login/Sign up" />
       </Panel>

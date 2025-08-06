@@ -10,12 +10,12 @@ import { ImageNote } from 'web-app/src/model/ImageNote';
 import { CardNote } from 'web-app/src/model/CardNote';
 import { pamet } from '../../core/facade';
 import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
-import { currentTime, timestamp } from 'fusion/util';
+import { currentTime, timestamp } from 'fusion/base-util';
 import { getLogger } from 'fusion/logging';
 import { PametTabIndex } from '../../core/constants';
 import './NoteEditView.css';
 import { ImageEditPropsWidget } from './edit-window/ImageEditPropsWidget';
-import { MediaItem, MediaItemData } from 'web-app/src/model/MediaItem';
+import { MediaItem, MediaItemData } from 'fusion/libs/MediaItem';
 
 let log = getLogger('EditComponent');
 

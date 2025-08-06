@@ -20,6 +20,7 @@ import { noteActions } from '../../actions/note';
 import { InternalLinkNote } from '../../model/InternalLinkNote';
 import { appActions } from '../../actions/app';
 import { ImageNote } from '../../model/ImageNote';
+import { mediaItemRoute } from '../../services/routing/route';
 
 
 let log = getLogger('Page.tsx')
@@ -591,15 +592,15 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     if (note.content.image !== undefined && note instanceof ImageNote) {
       // Use the MediaItem's projectScopedUrl method
       let mediaItem = note.imageMediaItem();
-      let mediaItemRoute = mediaItem.pametRoute(userData.id, projectId);
+      let mediaItemRoute_ = mediaItemRoute(mediaItem, userData.id, projectId);
       // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
-      let mediaItemPath = mediaItemRoute.toRelativeReference();
+      let mediaItemPath = mediaItemRoute_.toRelativeReference();
 
       // DEBUG: Log URL generation process
       log.info('[DEBUG] URL Generation Process:', {
         mediaItemId: mediaItem.id,
         contentHash: mediaItem.contentHash,
-        toProjectScopedURI: mediaItemRoute.toProjectScopedURI(),
+        toProjectScopedURI: mediaItemRoute_.toProjectScopedURI(),
         mediaItemPath: mediaItemPath,
         locationOrigin: location.origin,
         apiClientHost: pamet.apiClient.host,

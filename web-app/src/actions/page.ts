@@ -17,7 +17,7 @@ import { PametElement, PametElementData } from "../model/Element";
 import { Arrow } from "../model/Arrow";
 import { ArrowViewState } from "../components/arrow/ArrowViewState";
 import { Page } from "../model/Page";
-import { MediaItem } from "../model/MediaItem";
+import { MediaItem } from "fusion/libs/MediaItem";
 
 let log = getLogger('MapActions');
 
