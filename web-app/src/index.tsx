@@ -29,6 +29,7 @@ import serviceWorkerUrl from "./service-worker?url"
 import { PAMET_INMEMORY_STORE_CONFIG } from './storage/PametStore';
 import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/ProjectStorageManager';
 import { DEFAULT_KEYBINDINGS } from './core/keybindings';
+// import { MediaProcessingDialogState } from './components/system-modal-dialog/state';
 
 // Register entity classes in main thread context
 
@@ -52,8 +53,29 @@ const PametContext = createContext<PametFacade>(pamet);
 
 // Configure pamet
 let appState = new WebAppState()
+// let testSystemDialog = new MediaProcessingDialogState();
+// testSystemDialog.title = "Test Dialog";
+// testSystemDialog.taskDescription = "Lorem impsum i guess";
+// appState.systemModalDialogState = testSystemDialog;
+
 pamet.setAppViewState(appState)
 pamet.setKeybindings(DEFAULT_KEYBINDINGS);
+
+// Setup FocusManager for declarative context management
+pamet.setupFocusManager();
+pamet.focusManager.updateContextOnFocus({
+    selector: '.page-view',
+    contextKey: 'canvasFocus',
+    valOnFocus: true,
+    valOnBlur: false,
+});
+
+pamet.focusManager.updateContextOnFocus({
+    selector: '.note-edit-view',
+    contextKey: 'noteEditViewFocused',
+    valOnFocus: true,
+    valOnBlur: false,
+});
 
 const config = new PametConfigService(new LocalStorageConfigAdapter())
 

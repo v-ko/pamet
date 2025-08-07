@@ -1,7 +1,7 @@
 import { makeObservable, observable } from "mobx";
 
 export abstract class SystemModalDialogState {
-    showAfterUnixTime: number = 0;
+    showAfterUnixTime?: number; // Null to show immediately, or a Unix timestamp to show after that time
 }
 
 export class MediaProcessingDialogState extends SystemModalDialogState {

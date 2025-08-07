@@ -4,7 +4,6 @@ import { SearchFilter } from 'fusion/storage/BaseStore';
 import { Change } from "fusion/Change";
 import { PAMET_INMEMORY_STORE_CONFIG, PametStore } from "../storage/PametStore";
 import { Entity, EntityData } from "fusion/libs/Entity";
-import { ApiClient } from "../storage/ApiClient";
 import { appActions } from "../actions/app";
 import { Note } from "../model/Note";
 import { Arrow } from "../model/Arrow";
@@ -62,13 +61,12 @@ export class PametFacade extends PametStore {
         throw new Error("Method not implemented.");
     }
     private _frontendDomainStore: FrontendDomainStore | null = null;
-    private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
     private _config: PametConfigService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService | null = null;
-    focusService: FocusManager | null = null;
+    _focusManager: FocusManager | null = null;
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     // Focus handling (context related): Except when receiving focus/blur
@@ -77,7 +75,6 @@ export class PametFacade extends PametStore {
 
     constructor() {
         super()
-        this._apiClient = new ApiClient('http://localhost', 3000, '', true);
 
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
@@ -129,10 +126,6 @@ export class PametFacade extends PametStore {
         this._frontendDomainStore = store;
     }
 
-    get apiClient() {
-        return this._apiClient;
-    }
-
     get storageService() {
         if (!this._storageService) {
             throw Error('Storage service not set');
@@ -154,10 +147,16 @@ export class PametFacade extends PametStore {
     }
 
     setupFocusManager() {
-        if (this.focusService) {
+        if (this._focusManager) {
             throw Error('Focus manager already set, not setting up again');
         }
-        this.focusService = new FocusManager();
+        this._focusManager = new FocusManager();
+    }
+    get focusManager(): FocusManager {
+        if (!this._focusManager) {
+            throw Error('Focus manager not set up');
+        }
+        return this._focusManager;
     }
 
     setContext(key: string, value: boolean) {

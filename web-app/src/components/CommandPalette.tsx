@@ -69,6 +69,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({initialInput, upd
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           autoFocus
+          onBlur={() => appActions.closeCommandPalette(pamet.appViewState)}
         />
         <ul className="command-list">
           {filteredCommands.map((command, index) => (
@@ -126,6 +127,7 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
                     action: () => {
                         // appActions.navigateToPage(page.id);
                         log.info(`Navigating to page ${page.name}`);
+                        appActions.setCurrentPage(pamet.appViewState, page.id);
                         appActions.closeCommandPalette(appState);
                     }
                 });

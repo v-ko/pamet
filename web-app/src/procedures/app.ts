@@ -6,11 +6,9 @@ import { PametRoute } from "../services/routing/route";
 import { ProjectError, WebAppState } from "../containers/app/WebAppState";
 import { projectActions } from "../actions/project";
 import { Page } from "../model/Page";
-import { ApiClient } from "../storage/ApiClient";
-import { DesktopServerRepository } from "../storage/DesktopServerRepository";
 import { MediaProcessingDialogState } from "../components/system-modal-dialog/state";
 import { createId, currentTime, timestamp } from "fusion/base-util";
-import { Entity } from "fusion/libs/Entity";
+import { DesktopImporter } from "../storage/DesktopImporter";
 
 const log = getLogger('AppProcedures');
 
@@ -340,23 +338,15 @@ export async function importDesktopDataForTesting() {
         appActions.updateSystemDialogState(appState, { ...dialogState });
         await switchToProject(newProject.id);
 
-        // 3. Fetch data from desktop server
-        dialogState.title = 'Fetching data from desktop server...';
-        appActions.updateSystemDialogState(appState, { ...dialogState });
-        let desktopApiClient = new ApiClient("http://localhost", 11352);
-        let desktopRepo = new DesktopServerRepository(desktopApiClient);
-        await desktopRepo.init('main');
+        // 3. Fetch data from desktop server and import it
+        const desktopImporter = new DesktopImporter("http://localhost", 11352);
+        await desktopImporter.importAllInProject((progress: number, message: string) => {
+            dialogState.title = message;
+            dialogState.taskProgress = progress;
+            appActions.updateSystemDialogState(appState, { ...dialogState });
+        });
 
-        // 4. Get all entities from the temporary repo
-        // @ts-ignore
-        const entities = await desktopRepo._inMemRepo.headStore.find({}) as Entity[];
-
-        // 5. Import entities into the new project
-        dialogState.title = `Importing ${entities.length} items...`;
-        appActions.updateSystemDialogState(appState, { ...dialogState });
-        appActions.importEntitiesAction(entities);
-
-        log.info(`Imported ${entities.length} entities into project ${newProject.id}`);
+        log.info(`Imported entities into project ${newProject.id}`);
 
     } catch (e) {
         log.error('Failed to import desktop data', e);

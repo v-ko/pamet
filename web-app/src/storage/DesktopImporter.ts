@@ -9,48 +9,15 @@ import { elementId } from "../model/Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
 import { old_color_to_role } from "../util/Color";
 import { PametRoute } from "../services/routing/route";
+import { pamet } from "../core/facade";
 
 let log = getLogger('ApiClient');
 
+export class DesktopImporter extends BaseApiClient {
+    public async importAllInProject(progressCallback: (progress: number, message: string) => void) {
+        progressCallback(0, 'Starting import...');
 
-export class ApiClient extends BaseApiClient {
-    projectScopedUrlToGlobal(url: string): string {
-        let route = PametRoute.fromUrl(url);
-        if (!route.isInternal) {
-            throw Error('Url is not internal: ' + url)
-        }
-        return this.endpointUrl(route.toRelativeReference());
-    }
-    // Get pages metadata
-    async pages(filter: PageQueryFilter = {}): Promise<Array<Page>> {
-        let url = this.endpointUrl('pages');
-        let query = '';
-        // If filter is not empty, add it to the query
-        if (Object.keys(filter).length !== 0) {
-            query = '?' + new URLSearchParams(filter);
-        }
-        let data = await this.get(url + query);
-
-        let pages = data.map((pageData: PageData) => {
-            return new Page(pageData);
-        });
-        return pages;
-    }
-    async children(pageId: string): Promise<{ notes: Note[], arrows: Arrow[] }> {
-        let url = this.endpointUrl(`/p/${pageId}/children`);
-        let data = await this.get(url);
-
-        let notesData = data.notes;
-        let arrowsData = data.arrows;
-
-        // TODO: synchronize that with the python implementation
-        // Convert the id in format [page_id, own_id] to
-        // page_id and own_id to be compatible with the
-        // Note and Arrow data structures
-        // Convert notes to internal links where needed.
-
-        // This should be translated to a db migration when the main web
-        // app is finished and the final integration begins.
+        // This is the original migration function, unmodified, nested here for use.
         function tmpDynamicMigration(childData: Record<string, any>) {
             // Additional tasks for the migration:
             // - Add size metadata for images where it's missing
@@ -220,15 +187,125 @@ export class ApiClient extends BaseApiClient {
             return childData;
         }
 
-        let notes = notesData.map((noteData: any) => {
-            return loadFromDict(tmpDynamicMigration(noteData) as SerializedEntityData);
-        });
-        let arrows = arrowsData.map((arrowData: any) => {
-            return loadFromDict(tmpDynamicMigration(arrowData) as SerializedEntityData);
-        })
-        return {
-            notes: notes,
-            arrows: arrows,
+
+        // 1. Fetch raw data
+        progressCallback(0.1, 'Fetching repository data...');
+        const pagesUrl = this.endpointUrl('pages');
+        const rawPagesData: any[] = await this.get(pagesUrl);
+
+        let allMigratedEntities: any[] = [];
+
+        // Push the raw page data directly, as it doesn't need color migration.
+        // The tmpDynamicMigration function doesn't apply to pages anyway.
+        for (const pageData of rawPagesData) {
+            allMigratedEntities.push(pageData);
+        }
+
+        // Fetch children for each page and migrate them
+        let pageCount = rawPagesData.length;
+        let pagesProcessed = 0;
+        for (const pageData of rawPagesData) {
+            pagesProcessed++;
+            progressCallback(0.2 + 0.3 * (pagesProcessed / pageCount), `Fetching page content ${pagesProcessed}/${pageCount}...`);
+            const childrenUrl = this.endpointUrl(`/p/${pageData.id}/children`);
+            const childrenData = await this.get(childrenUrl);
+            allMigratedEntities.push(...childrenData.notes.map(tmpDynamicMigration));
+            allMigratedEntities.push(...childrenData.arrows.map(tmpDynamicMigration));
+        }
+
+        // 3. Separate image notes from others
+        const imageNoteDatas: Record<string, any>[] = [];
+        const otherEntityDatas: Record<string, any>[] = [];
+
+        for (const entityData of allMigratedEntities) {
+            if (entityData.type_name === 'ImageNote' && entityData.content.image?.url?.startsWith('project:/desktop/fs')) {
+                imageNoteDatas.push(entityData);
+            } else {
+                otherEntityDatas.push(entityData);
+            }
+        }
+
+        // 4. Process image notes
+        const totalEntities = allMigratedEntities.length;
+        let entitiesProcessed = otherEntityDatas.length; // Start count after others
+
+        for (const imageData of imageNoteDatas) {
+            const imageUrl = imageData.content.image.url; // e.g. 'project:/desktop/fs/C:/Users/user/image.png'
+            const fsPath = imageUrl.replace('project:/desktop/fs', '');
+
+            // Fetch image blob from desktop server
+            const blobUrl = this.endpointUrl(`fs${fsPath}`);
+
+            try {
+                const blob = await this.getBlob(blobUrl);
+
+                const mediaItem = await pamet.addMediaToStore(blob, fsPath, imageData.id);
+
+                // Update imageNoteData
+                imageData.content.image_id = mediaItem.id;
+                delete imageData.content.image; // remove the old image url structure
+
+                // Insert note
+                const imageNote = loadFromDict(imageData as SerializedEntityData);
+                pamet.insertOne(imageNote);
+
+            } catch (e) {
+                log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);
+            }
+
+            entitiesProcessed++;
+            progressCallback(0.5 + 0.5 * (entitiesProcessed / totalEntities), `Importing media files... ${entitiesProcessed}/${totalEntities}`);
+        }
+
+        // 5. Process other entities
+        entitiesProcessed = 0;
+        for (const entityData of otherEntityDatas) {
+             if (entityData.type_name === 'Page') {
+                const page = new Page(entityData as PageData);
+                pamet.insertOne(page);
+            } else {
+                const entity = loadFromDict(entityData as SerializedEntityData);
+                pamet.insertOne(entity);
+            }
+
+            entitiesProcessed++;
+        }
+
+        progressCallback(1, 'Import complete.');
+    }
+
+    public async getBlob(url: string, timeout = 20000): Promise<Blob> {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
+        const requestRepr = `'GET ${url}' (blob)`;
+
+        const options: RequestInit = {
+            method: 'GET',
+            signal: controller.signal,
         };
+
+        let response: Response;
+        try {
+            response = await Promise.race([
+                fetch(url, options),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error(`Request ${requestRepr} timed out`)), timeout)
+                )
+            ]) as Response;
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                throw new Error(`Request ${requestRepr} timed out`);
+            }
+            throw error;
+        }
+        clearTimeout(id);
+
+        if (response.ok) {
+            return await response.blob();
+        } else {
+            log.error(`Request to ${response.url} for blob failed with status ${response.status}: ${response.statusText}`);
+            throw new Error(response.statusText);
+        }
     }
 }

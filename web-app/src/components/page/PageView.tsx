@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import styled from 'styled-components';
 import { observer } from 'mobx-react-lite';
 
 import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from '../../core/constants';
@@ -11,6 +10,7 @@ import { getLogger } from 'fusion/logging';
 import { reaction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
+import './PageView.css';
 import { ElementViewState } from './ElementViewState';
 import { pamet } from '../../core/facade';
 import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
@@ -28,16 +28,6 @@ let log = getLogger('Page.tsx')
 
 // const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
 // type Status = 'loading' | 'error' | 'loaded';
-
-
-export const PageOverlay = styled.main`
-content-visibility: auto;
-flex-grow: 1;
-flex-shrink: 1;
-overflow: hidden;
-touch-action: none;
-min-width: 30px;
-`
 
 
 export const PageView = observer(({ state }: { state: PageViewState }) => {
@@ -218,7 +208,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   // Mouse event handlers
   const handleMouseDown = useCallback((event: React.MouseEvent) => {
-    event.preventDefault();
     // let mousePos = mapClientPointToSuperContainer(new Point2D(event.clientX, event.clientY));
     let mousePos = new Point2D(event.clientX, event.clientY);
     mouse.applyPressEvent(event);
@@ -334,7 +323,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     console.log('Mouse up', PageMode[state.mode], 'button', event.button, elementUnderMouse)
 
-    event.preventDefault();
     mouse.buttons = event.buttons;
 
     if (event.button === 0) { // Left press (different from the .buttons left button index, because fu)
@@ -599,23 +587,12 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
       let mediaItemPath = mediaItemRoute_.toRelativeReference();
 
-      // DEBUG: Log URL generation process
-      log.info('[DEBUG] URL Generation Process:', {
-        mediaItemId: mediaItem.id,
-        contentHash: mediaItem.contentHash,
-        toProjectScopedURI: mediaItemRoute_.toProjectScopedURI(),
-        mediaItemPath: mediaItemPath,
-        locationOrigin: location.origin,
-        apiClientHost: pamet.apiClient.host,
-        apiClientPort: pamet.apiClient.port
-      });
-
       imageUrls.add(mediaItemPath);
     }
   }
 
   return (
-      <PageOverlay
+      <main
       className='page-view'  // index.css
       // Set cursor to cross if we're in arrow creation mode
       style={{ cursor: state.mode === PageMode.CreateArrow ? 'crosshair' : 'default' }}
@@ -636,8 +613,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
-        onFocus={() => { pamet.setContext('canvasFocus', true) }}
-        onBlur={() => { pamet.setContext('canvasFocus', false) }}
+        // onFocus={() => { pamet.setContext('canvasFocus', true) }}
+        // onBlur={() => { pamet.setContext('canvasFocus', false) }}
       >
 
         {/* Old pamet-canvas element rendering */}
@@ -690,6 +667,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           />
         ))}
 
-      </PageOverlay>
+      </main>
   );
 });

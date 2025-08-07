@@ -20,7 +20,8 @@
   --color-bg-medium: #dddddd;
   --color-bg-title: #dddddd;
   --color-text: #333;
-  --color-border: #ddd;
+  --color-light-border: #ddd;
+  --color-dark-border: #5f5f5f;
   --color-hover-dark: #555;
   --color-hover-light: #e0e0e0;
   --color-close-hover: #777;

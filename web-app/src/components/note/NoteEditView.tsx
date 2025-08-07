@@ -1,7 +1,6 @@
 // NoteEditView.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Point2D } from '../../util/Point2D';
 import { Rectangle } from '../../util/Rectangle';
 import { Note, SerializedNote } from 'web-app/src/model/Note';
 import { TextNote } from 'web-app/src/model/TextNote';
@@ -206,18 +205,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
   };
 
-  const handleFocus = () => {
-    pamet.setContext('noteEditViewFocused', true);
-  };
-
-  const handleBlur = (event: React.FocusEvent) => {
-    // If the relatedTarget (where focus is going) is not a child of the wrapper,
-    // then the focus has truly left the component.
-    if (!wrapperRef.current?.contains(event.relatedTarget as Node)) {
-        pamet.setContext('noteEditViewFocused', false);
-    }
-  };
-
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
       onCancel();
@@ -283,8 +270,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     <div
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
-      onFocus={handleFocus}
-      onBlur={handleBlur}
       className={`note-edit-view${state.isBeingDragged ? ' dragged' : ''}`}
       style={{ left, top }}
     >

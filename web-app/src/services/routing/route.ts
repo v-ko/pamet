@@ -47,7 +47,6 @@ export class PametRoute {
     }
 
     static fromUrl(url: string): PametRoute {
-        log.info('Parsing URL:', url);
         const url_ = new URL(url);
 
         // Local urls start with project:///, globals are regular with a host
@@ -104,7 +103,6 @@ export class PametRoute {
             route.mediaItemContentHash = hash.substring(1); // remove the '#'
         }
 
-        log.info('Parsed PametRoute from URL:', route);
         return route;
     }
 

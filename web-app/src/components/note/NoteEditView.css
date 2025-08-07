@@ -17,7 +17,7 @@
   color: var(--color-text);
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  border: 0.1rem solid var(--color-border);
+  border: 0.1rem solid var(--color-light-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg);
   resize: both;
@@ -51,7 +51,7 @@
 }
 
 .close-button {
-  border: 0.1rem solid var(--color-border);
+  border: 0.1rem solid var(--color-light-border);
   background: transparent;
   width: 2rem;
   height: 100%;
@@ -106,7 +106,7 @@
   top: 20%;
   bottom: 20%;
   width: 1px;
-  background: var(--color-border);
+  background: var(--color-light-border);
 }
 
 .tool-button:hover {
@@ -140,7 +140,7 @@
 .text-container textarea {
   flex: 1;
   resize: none;
-  border: 0.1rem solid var(--color-border);
+  border: 0.1rem solid var(--color-light-border);
   border-radius: var(--radius-sm);
   padding: var(--space-2);
   font-size: var(--type-md);
@@ -163,7 +163,7 @@
 .save-button {
   font-size: var(--type-md);
   padding: var(--space-1) var(--space-3, 1.5rem);
-  border: 0.1rem solid var(--color-border);
+  border: 0.1rem solid var(--color-light-border);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.2s;
