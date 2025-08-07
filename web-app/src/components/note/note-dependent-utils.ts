@@ -1,9 +1,12 @@
 import { DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, DEFAULT_FONT_STRING, MAX_NOTE_WIDTH, ALIGNMENT_GRID_UNIT, PREFERRED_TEXT_NOTE_ASPECT_RATIO, MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT } from "../../core/constants";
 import { ImageNote } from "../../model/ImageNote";
+import { imageGeometryToFitAre } from "./util";
 import { Note } from "../../model/Note";
 import { TextLayout, EMPTY_TOKEN, truncateText } from "../../util";
 import { Rectangle } from "../../util/Rectangle";
 import { Size } from "../../util/Size";
+import { pamet } from "../../core/facade";
+import { MediaItem } from "fusion/libs/MediaItem";
 
 // Init the canvas - conditionally initialize DOM-dependent globals
 
@@ -221,11 +224,13 @@ export function minimalNonelidedSize(note: Note): Size {
     // If it's an image note - fit to the image (if no image - default size)
     if (note instanceof ImageNote) {
         let imageNote = note as ImageNote;
-        try {
-            return imageNote.imageRect().size();
-        } catch (e) {
-            return defaultNoteSize;
+
+        const mediaItem = pamet.findOne({ id: imageNote.content.image_id }) as MediaItem;
+        if (!mediaItem || !mediaItem.width || !mediaItem.height) {
+            return defaultNoteSize; // Used just for the aspect ratio
         }
+
+        return imageGeometryToFitAre(imageNote.rect(), new Size(mediaItem.width, mediaItem.height)).size();
     }
 
     let text = note.text;

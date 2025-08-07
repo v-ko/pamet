@@ -17,7 +17,7 @@
       "path": "./fusion/js-src"
     }
   ],
-  // "exclude": ["node_modules", "dist", "*.d.ts"],
+  "exclude": ["node_modules/*", "dist/*", "*.d.ts"],
   // "include": [
   //   "fusion/js-src/src/**/*",
   //   "web-app/src/**/*",

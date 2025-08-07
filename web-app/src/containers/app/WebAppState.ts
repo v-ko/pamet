@@ -7,7 +7,7 @@ import { ProjectData } from "web-app/src/model/config/Project";
 import { Point2D } from "web-app/src/util/Point2D";
 import { PametRoute } from "../../services/routing/route";
 import { SystemModalDialogState } from "../../components/system-modal-dialog/state";
-import { CommandPaletteState } from "../../components/CommandPalette";
+import { CommandPaletteState } from "../../components/CommandPaletteState";
 
 
 export enum AppDialogMode {

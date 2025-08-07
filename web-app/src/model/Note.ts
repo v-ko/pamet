@@ -2,13 +2,12 @@ import { Rectangle } from "../util/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
 import { textRect } from "../components/note/util";
-import { MediaItemData } from "../../../fusion/js-src/src/libs/MediaItem";
 import { entityType } from "fusion/libs/Entity";
 
 export interface NoteContent {
     text?: string;
     url?: string;
-    image?: MediaItemData;
+    image_id?: string;
 }
 export interface NoteStyle {
     color_role: string;
@@ -32,7 +31,7 @@ export interface SerializedNote extends NoteData {
 }
 
 @entityType('Note') // was removed .. ? but it's needed for the inmem store search at minimum (instanceof matching)
-export class Note extends PametElement<NoteData> implements NoteData {
+export class Note extends PametElement<NoteData> {
     // This is only a base class, static helpers should go in the subclasses
     rect(): Rectangle {
         return new Rectangle(...this._data.geometry);

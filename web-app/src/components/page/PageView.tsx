@@ -21,6 +21,7 @@ import { InternalLinkNote } from '../../model/InternalLinkNote';
 import { appActions } from '../../actions/app';
 import { ImageNote } from '../../model/ImageNote';
 import { mediaItemRoute } from '../../services/routing/route';
+import { MediaItem } from 'fusion/libs/MediaItem';
 
 
 let log = getLogger('Page.tsx')
@@ -589,9 +590,11 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
 
     let note = noteVS.note()
-    if (note.content.image !== undefined && note instanceof ImageNote) {
-      // Use the MediaItem's projectScopedUrl method
-      let mediaItem = note.imageMediaItem();
+    if (note.content.image_id && note instanceof ImageNote) {
+      const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
+      if (!mediaItem) {
+          continue;
+      }
       let mediaItemRoute_ = mediaItemRoute(mediaItem, userData.id, projectId);
       // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
       let mediaItemPath = mediaItemRoute_.toRelativeReference();

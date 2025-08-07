@@ -2,7 +2,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Point2D } from '../../util/Point2D';
-import { computed, makeObservable, observable } from 'mobx';
 import { Rectangle } from '../../util/Rectangle';
 import { Note, SerializedNote } from 'web-app/src/model/Note';
 import { TextNote } from 'web-app/src/model/TextNote';
@@ -16,41 +15,16 @@ import { PametTabIndex } from '../../core/constants';
 import './NoteEditView.css';
 import { ImageEditPropsWidget } from './edit-window/ImageEditPropsWidget';
 import { MediaItem, MediaItemData } from 'fusion/libs/MediaItem';
+import { NoteEditViewState } from './NoteEditViewState';
 
 let log = getLogger('EditComponent');
 
 interface EditComponentProps {
-  state: NoteEditViewState;
-  onTitlebarPress: (event: React.MouseEvent) => void;
-  onTitlebarRelease: (event: React.MouseEvent) => void;
-  onCancel: () => void; // added to avoid a dependency to the pageViewState
-  onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
-}
-
-export class NoteEditViewState {
-  targetNote: Note;
-  center: Point2D;
-
-  // Drag-by-title-bar related
-  isBeingDragged: boolean = false;
-  topLeftOnDragStart: Point2D = new Point2D(0, 0);
-  dragStartClickPos: Point2D = new Point2D(0, 0);
-
-  constructor(centerAt: Point2D, note: Note) {
-    this.center = centerAt; // Pixel space
-    this.targetNote = note;
-
-    makeObservable(this, {
-      center: observable,
-      targetNote: observable,
-      isBeingDragged: observable,
-      creatingNote: computed,
-    });
-  }
-
-  get creatingNote() {
-    return pamet.note(this.targetNote.id) === undefined;
-  }
+    state: NoteEditViewState;
+    onTitlebarPress: (event: React.MouseEvent) => void;
+    onTitlebarRelease: (event: React.MouseEvent) => void;
+    onCancel: () => void; // added to avoid a dependency to the pageViewState
+    onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
 }
 
 const NoteEditView: React.FC<EditComponentProps> = observer((
@@ -134,8 +108,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   }, []);
 
   const removeNoteImage = async () => {
-    const currentImage = noteData.current.content.image;
-    if (!currentImage) {
+    const currentImageId = noteData.current.content.image_id;
+    if (!currentImageId) {
         throw new Error("removeOriginalImage called when there is no image.");
     }
 
@@ -146,14 +120,24 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
     // If removing the original image
     if (!originalImageForTrashing) {
-      setOriginalImageForTrashing(currentImage);
-    } else {
-      // If removing an image added in the editing session - delete it
-      await pamet.storageService.removeMedia(projectid, currentImage.id, currentImage.contentHash)
+      const originalMediaItem = pamet.mediaItem(currentImageId);
+      if (!originalMediaItem) {
+        throw new Error("Original media item not found for the image.");
+      }
+      setOriginalImageForTrashing(originalMediaItem.data());
+    } else { // If there is an original image for trashing, then the current image has been added in this editing session
+      // If removing an image added in the editing session - delete it from the store permanently
+      // Get the set media item from the state
+      if (!uncommitedImage) {
+        throw new Error("No uncommitted image to remove.");
+      } else if (uncommitedImage.id !== currentImageId) {
+        throw new Error("Uncommitted image ID does not match the current image ID.");
+      }
+      await pamet.deleteMediaFromStore(new MediaItem(uncommitedImage))
     }
 
     // Clear the image from the note data state
-    updateNoteData({ content: { ...noteData.current.content, image: undefined } });
+    updateNoteData({ content: { ...noteData.current.content, image_id: undefined } });
   };
 
   const setNoteImage = async (blob: Blob, path: string) => {
@@ -162,22 +146,22 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-    if (noteData.current.content.image) {
+    if (noteData.current.content.image_id) {
         throw new Error("setNoteImage called when there is already an image.");
     }
 
-    const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path);
+    const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path, noteData.current.id);
     setUncommitedImage(newMediaItem);
-    updateNoteData({ content: { ...noteData.current.content, image: newMediaItem } });
+    updateNoteData({ content: { ...noteData.current.content, image_id: newMediaItem.id } });
   };
 
   const bakeNoteAndSave = () => {
     // Deep copy to avoid mutating state directly
-    let data = JSON.parse(JSON.stringify(noteData.current));
+    let data = noteData.current
 
     // Determine the definitive note type based on content
     const hasText = data.content.text && data.content.text.trim().length > 0;
-    const hasImage = !!data.content.image;
+    const hasImage = !!data.content.image_id;
     let FinalNoteClass: typeof Note;
 
     if (hasText && hasImage) {
@@ -197,7 +181,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         finalContent.text = data.content.text;
     }
     if (FinalNoteClass === ImageNote || FinalNoteClass === CardNote) {
-        finalContent.image = data.content.image;
+        finalContent.image_id = data.content.image_id;
     }
     data.content = finalContent;
 
@@ -345,6 +329,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       <div className="main-content">
         {imageButtonToggled && <ImageEditPropsWidget
           noteData={noteData.current}
+          uncommitedMediaItem={uncommitedImage}
           setNoteImage={setNoteImage}
           removeNoteImage={removeNoteImage}
         />}

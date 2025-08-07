@@ -28,7 +28,8 @@ import { importDesktopDataForTesting } from "../../procedures/app";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
 import { MediaProcessingDialog } from "../../components/system-modal-dialog/MediaProcessingDialog";
 import { MediaProcessingDialogState } from "../../components/system-modal-dialog/state";
-import { PageAndCommandPalette, ProjectPalette, PageAndCommandPaletteState, ProjectPaletteState } from "../../components/CommandPalette";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "../../components/CommandPaletteState";
+import { PageAndCommandPalette, ProjectPalette } from "../../components/CommandPalette";
 
 let log = getLogger("App");
 

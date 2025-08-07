@@ -1,7 +1,7 @@
 import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/WebAppState";
 import { SystemModalDialogState } from "../components/system-modal-dialog/state";
 import type { LocalStorageState } from "../containers/app/WebAppState";
-import { PageAndCommandPaletteState, ProjectPaletteState } from "../components/CommandPalette";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "../components/CommandPaletteState";
 import { pamet } from "../core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";

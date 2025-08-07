@@ -11,7 +11,7 @@ export function textRect(forArea: Rectangle): Rectangle {
 }
 
 
-export function imageRect(forArea: Rectangle, imageSize: Size): Rectangle {
+export function imageGeometryToFitAre(forArea: Rectangle, imageSize: Size): Rectangle {
     /**
      * Returns a centered rectangle, keeping the image aspect ratio
      */

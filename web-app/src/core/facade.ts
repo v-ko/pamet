@@ -18,8 +18,7 @@ import { RoutingService } from "../services/routing/RoutingService";
 import { PametRoute } from "../services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/libs/Action";
 import { ProjectData } from "../model/config/Project";
-import { KeybindingService } from "../services/KeybindingService";
-import { commands } from "./commands";
+import { Keybinding, KeybindingService } from "../services/KeybindingService";
 import { FocusManager } from "../services/FocusManager";
 import { Delta } from "fusion/storage/Delta";
 import { updateAppStateFromConfig } from "../procedures/app";
@@ -68,8 +67,8 @@ export class PametFacade extends PametStore {
     private _config: PametConfigService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
-    keybindingService: KeybindingService = new KeybindingService();
-    focusService: FocusManager = new FocusManager();
+    keybindingService: KeybindingService | null = null;
+    focusService: FocusManager | null = null;
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     // Focus handling (context related): Except when receiving focus/blur
@@ -79,132 +78,6 @@ export class PametFacade extends PametStore {
     constructor() {
         super()
         this._apiClient = new ApiClient('http://localhost', 3000, '', true);
-
-        this.keybindingService.setKeybindings([
-            // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
-            {
-                key: 'n',
-                command: commands.createNewNote.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'e',
-                command: commands.editSelectedNote.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'l',
-                command: commands.createArrow.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'a',
-                command: commands.autoSizeSelectedNotes.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'escape',
-                command: commands.cancelPageAction.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'h',
-                command: commands.showHelp.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'delete',
-                command: commands.deleteSelectedElements.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '1',
-                command: commands.colorSelectedElementsPrimary.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '2',
-                command: commands.colorSelectedElementsSuccess.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '3',
-                command: commands.colorSelectedElementsError.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '4',
-                command: commands.colorSelectedElementsSurfaceDim.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '5',
-                command: commands.setNoteBackgroundToTransparent.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'p',
-                command: commands.createNewPage.name,
-                when: 'canvasFocus'
-            },
-
-            {
-                key: 'ctrl+=',
-                command: commands.pageZoomIn.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+-',
-                command: commands.pageZoomOut.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+0',
-                command: commands.pageZoomReset.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+a',
-                command: commands.selectAll.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+e',
-                command: commands.openPageProperties.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+shift+y',  // tmp, could not find a sane shortcut
-                command: commands.createNewPage.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+shift+u',  // tmp, could not find a sane shortcut
-                command: commands.storeStateToClipboard.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+shift+v',
-                command: commands.pasteSpecial.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+shift+p',
-                command: commands.openPagePalette.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+k',
-                command: commands.openCommandPalette.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+alt+p',
-                command: commands.openCommandPaletteWithProjectSwitch.name,
-                when: 'canvasFocus'
-            },
-
-        ]);
 
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
@@ -272,6 +145,21 @@ export class PametFacade extends PametStore {
 
 
     // UI related
+    setKeybindings(keybindings: Keybinding[]) {
+        log.info('Setting keybindings', keybindings);
+        if (!this.keybindingService) {
+            this.keybindingService = new KeybindingService();
+        }
+        this.keybindingService.setKeybindings(keybindings);
+    }
+
+    setupFocusManager() {
+        if (this.focusService) {
+            throw Error('Focus manager already set, not setting up again');
+        }
+        this.focusService = new FocusManager();
+    }
+
     setContext(key: string, value: boolean) {
         console.log('Setting context', key, value)
         this.context[key] = value;
@@ -301,7 +189,7 @@ export class PametFacade extends PametStore {
             // This handler will be called whenever the repo is updated
             pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
         }
-        try{
+        try {
             await pamet.storageService.loadProject(
                 projectId, pamet.projectStorageConfig(projectId), repoUpdateHandler)
 
@@ -393,7 +281,7 @@ export class PametFacade extends PametStore {
     }
 
     // Media CRUD methods
-    async createMediaItem(blob: Blob, path: string): Promise<MediaItem> {
+    async addMediaToStore(blob: Blob, path: string, parentId: string): Promise<MediaItem> {
         const currentProjectId = this.appViewState.currentProjectId;
         if (!currentProjectId) {
             throw new Error('No current project set');
@@ -401,15 +289,27 @@ export class PametFacade extends PametStore {
 
         // Create the MediaItem through the storage service
         // This will handle blob storage, dimension extraction, and hash generation
-        const mediaItemData = await this.storageService.addMedia(currentProjectId, blob, path);
+        const mediaItemData = await this.storageService.addMedia(currentProjectId, blob, path, parentId);
 
-        // Reconstruct MediaItem from data (since Comlink serialization strips prototype methods)
-        const mediaItem = new MediaItem(mediaItemData);
+        return new MediaItem(mediaItemData);
+    }
+    async deleteMediaFromStore(mediaItem: MediaItem): Promise<void> {
+        const currentProjectId = this.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set');
+        }
 
-        // Add to the frontend domain store
-        this.insertOne(mediaItem);
+        // Remove the media item using the storage service
+        await this.storageService.removeMedia(currentProjectId, mediaItem.id, mediaItem.contentHash);
+    }
+    async moveMediaToTrash(mediaItem: MediaItem): Promise<void> {
+        const currentProjectId = this.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set');
+        }
 
-        return mediaItem;
+        // Move the media to trash in the storage service
+        await this.storageService.moveMediaToTrash(currentProjectId, mediaItem.id, mediaItem.contentHash);
     }
 }
 

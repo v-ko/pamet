@@ -1,0 +1,127 @@
+import { commands } from "./commands";
+
+export const DEFAULT_KEYBINDINGS = [
+    // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
+    {
+        key: 'n',
+        command: commands.createNewNote.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'e',
+        command: commands.editSelectedNote.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'l',
+        command: commands.createArrow.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'a',
+        command: commands.autoSizeSelectedNotes.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'escape',
+        command: commands.cancelPageAction.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'h',
+        command: commands.showHelp.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'delete',
+        command: commands.deleteSelectedElements.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: '1',
+        command: commands.colorSelectedElementsPrimary.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: '2',
+        command: commands.colorSelectedElementsSuccess.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: '3',
+        command: commands.colorSelectedElementsError.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: '4',
+        command: commands.colorSelectedElementsSurfaceDim.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: '5',
+        command: commands.setNoteBackgroundToTransparent.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'p',
+        command: commands.createNewPage.name,
+        when: 'canvasFocus'
+    },
+
+    {
+        key: 'ctrl+=',
+        command: commands.pageZoomIn.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+-',
+        command: commands.pageZoomOut.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+0',
+        command: commands.pageZoomReset.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+a',
+        command: commands.selectAll.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+e',
+        command: commands.openPageProperties.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+shift+y',  // tmp, could not find a sane shortcut
+        command: commands.createNewPage.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+shift+u',  // tmp, could not find a sane shortcut
+        command: commands.storeStateToClipboard.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+shift+v',
+        command: commands.pasteSpecial.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+shift+p',
+        command: commands.openPagePalette.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+k',
+        command: commands.openCommandPalette.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+alt+p',
+        command: commands.openCommandPaletteWithProjectSwitch.name,
+        when: 'canvasFocus'
+    },
+
+]

@@ -34,11 +34,6 @@ export async function pasteImage(
     imageBlob: Blob,
     mimeType: string
 ): Promise<Point2D> {
-    const currentProject = pamet.appViewState.currentProject();
-    if (!currentProject) {
-        throw Error('No current project set');
-    }
-
     let finalImageBlob = imageBlob;
     let note;
 
@@ -62,9 +57,9 @@ export async function pasteImage(
         const extension = mapMimeTypeToFileExtension(finalImageBlob.type);
         const imagePath = `images/pasted_image-${timestamp}.${extension}`;
 
-        const mediaItemData = await pamet.storageService.addMedia(currentProject.id, finalImageBlob, imagePath);
-        const mediaItem = new MediaItem(mediaItemData);
-        note = ImageNote.createNew(pageId, mediaItem);
+        note = ImageNote.createNew(pageId);
+        const mediaItem = await pamet.addMediaToStore(finalImageBlob, imagePath, note.id);
+        note.content.image_id = mediaItem.id;
 
         // Configure note position and size
         let rect = note.rect();

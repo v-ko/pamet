@@ -7,7 +7,6 @@ import { action } from "fusion/libs/Action";
 import { getLogger } from "fusion/logging";
 import { Rectangle } from "../util/Rectangle";
 import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../core/constants";
-import { NoteEditViewState } from "../components/note/NoteEditView";
 import { pamet } from "../core/facade";
 import { Note } from "../model/Note";
 import { TextNote } from "../model/TextNote";
@@ -18,6 +17,8 @@ import { Arrow } from "../model/Arrow";
 import { ArrowViewState } from "../components/arrow/ArrowViewState";
 import { Page } from "../model/Page";
 import { MediaItem } from "fusion/libs/MediaItem";
+import { ImageNote } from "../model/ImageNote";
+import { NoteEditViewState } from "../components/note/NoteEditViewState";
 
 let log = getLogger('MapActions');
 
@@ -135,9 +136,9 @@ class PageActions {
         let newCenter = startCenter.add(
           endCenter.subtract(startCenter).multiply(timingFunction(t)));
         let newHeight = startHeight + (endHeight - startHeight) * timingFunction(t);
-        pageActions.updateViewport(state, newCenter, newHeight);
+        this.updateViewport(state, newCenter, newHeight);
         if (t === 1) {
-          pageActions.endAutoNavigation(state);
+          this.endAutoNavigation(state);
         }
         let lastUpdateTime = Date.now();
         // console.log('lastUpdateTime', lastUpdateTime)
@@ -234,13 +235,16 @@ class PageActions {
 
     // Handle media item changes
     if (addedMediaItem) {
-        pamet.insertOne(new MediaItem(addedMediaItem));
+        pamet.insertOne(addedMediaItem);
     }
 
     if (removedMediaItem) {
-        pamet.storageService.moveMediaItemToTrash(projectId, removedMediaItem.id, removedMediaItem.contentHash)
-            .catch(err => log.error('Failed to move media to trash:', err));
-        pamet.removeOne(new MediaItem(removedMediaItem));
+      if (!addedMediaItem){
+        throw new Error('Removed media item without added media item');
+      }
+        pamet.moveMediaToTrash(removedMediaItem).catch(
+          err => log.error('Failed to move media to trash:', err));
+        pamet.removeOne(removedMediaItem);
     }
 
     // Save the note
@@ -325,6 +329,7 @@ class PageActions {
     // add them for removal too
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
+    let mediaItemsForTrashing: MediaItem[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
     let pageId: string = elements[0].parentId;
 
@@ -332,6 +337,16 @@ class PageActions {
       if (element instanceof Note) {
         notesForRemoval.push(element)
         noteIds.add(element.own_id)
+
+        // Mark media for trashing if the note has an image
+        if (element instanceof ImageNote){  // Should catch both card notes and image notes
+          let mediaItem = pamet.mediaItem(element.content.image_id!);
+          if (mediaItem) {
+            mediaItemsForTrashing.push(mediaItem);
+          } else {
+            log.warning(`ImageNote with id ${element.id} has no media item associated.`);
+          }
+        }
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }
@@ -352,12 +367,21 @@ class PageActions {
       }
     }
 
-    // Remove the elements
+    // Remove the notes
     for (let note of notesForRemoval) {
       pamet.removeNote(note);
     }
+
+    // Remove the arrows
     for (let arrow of arrowsForRemoval) {
       pamet.removeArrow(arrow);
+    }
+
+    // Trash media items
+    for (let mediaItem of mediaItemsForTrashing) {
+      pamet.moveMediaToTrash(mediaItem).catch(
+        err => log.error('Failed to move media to trash:', err));
+      pamet.removeOne(mediaItem);
     }
   }
 

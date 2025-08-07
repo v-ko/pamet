@@ -4,7 +4,7 @@ import { SerializedNote } from '../../../model/Note';
 import './ImageEditPropsWidget.css';
 import { MAX_MEDIA_NAME_LENGTH, PametTabIndex } from '../../../core/constants';
 import { pamet } from '../../../core/facade';
-import { MediaItem } from 'fusion/libs/MediaItem';
+import { MediaItem, MediaItemData } from 'fusion/libs/MediaItem';
 import { getLogger } from 'fusion/logging';
 import { parseClipboardContents } from '../../../util';
 import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/base-util";
@@ -17,11 +17,12 @@ let log = getLogger('ImageEditPropsWidget');
 
 interface ImageEditPropsWidgetProps {
     noteData: SerializedNote;
+    uncommitedMediaItem: MediaItemData | null;
     setNoteImage: (blob: Blob, path: string) => Promise<void>;
     removeNoteImage: () => Promise<void>;
 }
 
-export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ noteData, setNoteImage, removeNoteImage }) => {
+export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ noteData, uncommitedMediaItem, setNoteImage, removeNoteImage }) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const dropZoneRef = useRef<HTMLDivElement>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +81,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                 fileName = `${name}.${newExtension}`;
             }
 
-            if (noteData.content.image) {
+            if (noteData.content.image_id) {
                 setStatusMessage('Removing old image...');
                 await removeNoteImage();
             }
@@ -241,12 +242,26 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
     }
 
     let imageUrl = '';
-    if (noteData.content.image) {
-        const mediaItem = new MediaItem(noteData.content.image);
-        const route = mediaItemRoute(mediaItem, pamet.appViewState.userId!, pamet.appViewState.currentProjectId!);
-        route.host = window.location.host;
-        route.protocol = window.location.protocol;
-        imageUrl = route.toString();
+    let mediaItem: MediaItem | undefined;
+    if (noteData.content.image_id) {
+        if (uncommitedMediaItem) {  // If it's added in this session
+            mediaItem = new MediaItem(uncommitedMediaItem);
+
+        } else {  // If it's been in the note before it's open for editing
+            let retrievedMediaItem = pamet.mediaItem(noteData.content.image_id);
+            if (retrievedMediaItem) {
+                mediaItem = retrievedMediaItem;
+            } else {
+                log.error('ImageEditPropsWidget: Could not find media item with ID:', noteData.content.image_id);
+            }
+        }
+
+        if (mediaItem){ // Couldn't get it because of the above error
+            const route = mediaItemRoute(mediaItem, pamet.appViewState.userId!, pamet.appViewState.currentProjectId!);
+            route.host = window.location.host;
+            route.protocol = window.location.protocol;
+            imageUrl = route.toString();
+        }
     }
 
     const dropZoneClasses = ['image-preview-container'];
@@ -254,7 +269,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
         dropZoneClasses.push('dragging-over');
     }
 
-    const imagePresent = !!imageUrl;
+    const imagePresent = !!mediaItem;
 
     return (
         <div className="image-edit-props-widget">

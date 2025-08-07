@@ -26,7 +26,7 @@ export function elementOwnId(id: string): string {
 }
 
 
-export class PametElement<T extends PametElementData> extends Entity<T> implements PametElementData {
+export class PametElement<T extends PametElementData> extends Entity<T> {
 
 
     get page_id(): string {

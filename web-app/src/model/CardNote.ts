@@ -2,6 +2,8 @@ import { textRect } from "../components/note/util";
 import { entityType } from "fusion/libs/Entity";
 import { Rectangle } from "../util/Rectangle";
 import { Note } from "./Note";
+import { pamet } from "../core/facade";
+import { MediaItem } from "fusion/libs/MediaItem";
 
 const MIN_AR_DELTA_FOR_HORIZONTAL_ALIGN = 0.5
 const IMAGE_PORTION_FOR_HORIZONTAL_ALIGN = 0.8
@@ -26,13 +28,12 @@ export class CardNote extends Note {
         let textArea: Rectangle;
 
         // Get image aspect ratio or assume 1
-        let imageAspectRatio = 1
+        let imageAspectRatio = 1;
 
-        let image = this.content.image
-
-        if (image !== undefined) {
-            if (image.width > 0 && image.height > 0) {
-                imageAspectRatio = image.width / image.height
+        if (this.content.image_id) {
+            const mediaItem = pamet.findOne({ id: this.content.image_id }) as MediaItem;
+            if (mediaItem && mediaItem.width > 0 && mediaItem.height > 0) {
+                imageAspectRatio = mediaItem.width / mediaItem.height;
             }
         }
 

@@ -11,12 +11,12 @@ import { getLogger } from 'fusion/logging';
 import { Note } from '../../model/Note';
 import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from '../../model/Arrow';
 import { ElementViewState as CanvasElementViewState } from './ElementViewState';
-import { NoteEditViewState } from '../note/NoteEditView';
 import { Size } from '../../util/Size';
 import { CanvasPageRenderer } from './DirectRenderer';
 import { Change } from 'fusion/Change';
 import { elementOwnId } from '../../model/Element';
 import React from 'react';
+import { NoteEditViewState } from '../note/NoteEditViewState';
 
 let log = getLogger('PageViewState');
 

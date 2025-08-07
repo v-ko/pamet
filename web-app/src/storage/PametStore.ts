@@ -1,4 +1,4 @@
-
+import { MediaItem } from 'fusion/libs/MediaItem';
 import { Change } from 'fusion/Change'
 import { Store, SearchFilter } from 'fusion/storage/BaseStore'
 import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'fusion/storage/InMemoryStore'
@@ -108,5 +108,10 @@ export abstract class PametStore extends Store {
     }
     arrow(arrow_id: string): Arrow | undefined {
         return this.findOne({id: arrow_id}) as Arrow | undefined
+    }
+
+    // MediaItem CRUD
+    mediaItem(id: string): MediaItem | undefined {
+        return this.findOne({ id: id, type: MediaItem }) as MediaItem | undefined
     }
 }

@@ -8,11 +8,12 @@ import { Rectangle } from "../../util/Rectangle";
 import { BaseCanvasView } from "./BaseCanvasView";
 import { pamet } from "../../core/facade";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
-import { textRect, imageRect } from "./util";
+import { textRect, imageGeometryToFitAre } from "./util";
 import { Size } from "../../util/Size";
 import { getLogger } from "fusion/logging";
 import { ImageNote } from "../../model/ImageNote";
 import { mediaItemRoute } from "../../services/routing/route";
+import { MediaItem } from "fusion/libs/MediaItem";
 
 let log = getLogger('NoteCanvasView');
 
@@ -111,23 +112,27 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
         let noteRect = note.rect();
-        let imageMetadata = note.content.image;
-        if (imageMetadata === undefined) {
+        if (!note.content.image_id) {
             // Display error text instead
+            let textLayout = calculateTextLayout('Image not set', textRect(noteRect), DEFAULT_FONT_STRING)
+            this.drawText(context, textLayout);
+            return;
+        }
+
+        const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
+        if (!mediaItem) {
             let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
             return;
         }
 
-        // Use the MediaItem's projectScopedUrl method
-        let mediaItem = note.imageMediaItem();
         let userId = pamet.appViewState.userId;
         let projectId = pamet.appViewState.currentProjectId;
         if (userId === null || projectId === null) {
             log.error('Cannot draw image: userId or projectId is undefined');
             return;
         }
-        let mediaItemRoute_ = mediaItemRoute(mediaItem,userId, projectId);
+        let mediaItemRoute_ = mediaItemRoute(mediaItem, userId, projectId);
 
         let image = this.renderer.getImage(mediaItemRoute_.toRelativeReference());
         let errorText: string | undefined = undefined;
@@ -136,7 +141,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         } else if (!image.complete) { // still loading
             errorText = IMAGE_NOT_LOADED_TEXT;
         } else if (image.naturalWidth === 0) { // loaded unsuccessfully
-            errorText = IMAGE_MISSING_TEXT;
+            errorText = 'Loading failed';
         }
         if (errorText !== undefined) {
             let textLayout = calculateTextLayout(errorText, textRect(noteRect), DEFAULT_FONT_STRING)
@@ -144,7 +149,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        let imgRect = imageRect(imageArea, new Size(image!.naturalWidth, image!.naturalHeight));
+        let imgRect = imageGeometryToFitAre(imageArea, new Size(image!.naturalWidth, image!.naturalHeight));
         context.drawImage(image!, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
 
         context.strokeStyle = '#dddddd';

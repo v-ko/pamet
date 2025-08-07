@@ -26,6 +26,9 @@ import WebApp from './containers/app/App';
 import { WebAppState } from "./containers/app/WebAppState";
 
 import serviceWorkerUrl from "./service-worker?url"
+import { PAMET_INMEMORY_STORE_CONFIG } from './storage/PametStore';
+import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/ProjectStorageManager';
+import { DEFAULT_KEYBINDINGS } from './core/keybindings';
 
 // Register entity classes in main thread context
 
@@ -50,6 +53,7 @@ const PametContext = createContext<PametFacade>(pamet);
 // Configure pamet
 let appState = new WebAppState()
 pamet.setAppViewState(appState)
+pamet.setKeybindings(DEFAULT_KEYBINDINGS);
 
 const config = new PametConfigService(new LocalStorageConfigAdapter())
 
@@ -94,7 +98,32 @@ setupWebWorkerLoggingChannel();
 
 // config.deviceData = deviceData
 
-pamet.setProjectStorageConfigFactory(webStorageConfigFactory)
+
+// Service related
+export function inMainThreadConfigFactory(projectId: string): ProjectStorageConfig {
+    let device = pamet.config.deviceData;
+    if (!device) {
+        throw Error('Device not set');
+    }
+    return {
+        currentBranchName: device.id,
+        inMemoryRepoIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
+        localRepo: {
+            name: 'IndexedDB' as StorageAdapterNames,
+            args: {
+                projectId: projectId,
+                localBranchName: device.id,
+            }
+        },
+        localMediaStore: {
+            name: 'InMemory' as MediaStoreAdapterNames,
+            args: {
+                projectId: projectId
+            }
+        }
+    }
+}
+
 
 async function initializeApp() {
     // Init storage service
@@ -104,8 +133,13 @@ async function initializeApp() {
         // pamet.setStorageService(storageService);
 
         log.info("Initializing storage service...");
+
+        pamet.setProjectStorageConfigFactory(webStorageConfigFactory)
+        // pamet.setProjectStorageConfigFactory(inMainThreadConfigFactory)
+
         let storageService = new StorageService();
         await storageService.setupInServiceWorker(serviceWorkerUrl);
+        // storageService.setupInMainThread();
         pamet.setStorageService(storageService);
         log.info("Storage service initialized");
     } catch (e) {

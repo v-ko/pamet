@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { makeObservable, observable } from "mobx";
 import { observer } from 'mobx-react-lite';
 import './CommandPalette.css';
 import { pamet } from '../core/facade';
@@ -7,27 +6,9 @@ import { appActions } from '../actions/app';
 import { switchToProject } from '../procedures/app';
 import { getLogger } from 'fusion/logging';
 import { getCommands } from 'fusion/libs/Command';
+import { PageAndCommandPaletteState, ProjectPaletteState } from './CommandPaletteState';
 
 let log = getLogger('CommandPalette');
-
-// States
-export class CommandPaletteState {
-    initialInput: string = '';
-
-    constructor(initialInput: string) {
-        this.initialInput = initialInput;
-
-        makeObservable(this, {
-            initialInput: observable,
-        });
-    }
-}
-
-export class PageAndCommandPaletteState extends CommandPaletteState {
-}
-
-export class ProjectPaletteState extends CommandPaletteState {
-}
 
 
 interface PaletteItemAttributes {

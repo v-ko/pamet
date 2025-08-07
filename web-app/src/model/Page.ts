@@ -16,7 +16,7 @@ export interface PageData extends EntityData {
 
 
 @entityType('Page')
-export class Page extends Entity<PageData> implements PageData {
+export class Page extends Entity<PageData> {
   toString(): string {
     return `<Page id=${this.id} name=${this.name}>`;
   }
