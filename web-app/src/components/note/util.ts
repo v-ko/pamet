@@ -1,13 +1,13 @@
 import { NOTE_MARGIN } from "../../core/constants";
-import { Rectangle } from "../../util/Rectangle";
-import { Size } from "../../util/Size";
+import { Rectangle } from "fusion/primitives/Rectangle";
+import { Size } from "fusion/primitives/Size";
 
 export function textRect(forArea: Rectangle): Rectangle {
-    return new Rectangle(
+    return new Rectangle([
         forArea.x + NOTE_MARGIN,
         forArea.y + NOTE_MARGIN,
         forArea.w - 2 * NOTE_MARGIN,
-        forArea.h - 2 * NOTE_MARGIN);
+        forArea.h - 2 * NOTE_MARGIN]);
 }
 
 
@@ -23,13 +23,13 @@ export function imageGeometryToFitAre(forArea: Rectangle, imageSize: Size): Rect
     if (imageAR > areaAR) {
         let w = size.x;
         let h = w / imageAR;
-        imageRect = new Rectangle(forArea.x, forArea.y + (size.y - h) / 2, w, h);
+        imageRect = new Rectangle([forArea.x, forArea.y + (size.y - h) / 2, w, h]);
     } else if (imageAR < areaAR) {
         let h = size.y;
         let w = h * imageAR;
-        imageRect = new Rectangle(forArea.x + (size.x - w) / 2, forArea.y, w, h);
+        imageRect = new Rectangle([forArea.x + (size.x - w) / 2, forArea.y, w, h]);
     } else {
-        imageRect = new Rectangle(forArea.x, forArea.y, forArea.w, forArea.h);
+        imageRect = new Rectangle([forArea.x, forArea.y, forArea.w, forArea.h]);
     }
     return imageRect;
 }

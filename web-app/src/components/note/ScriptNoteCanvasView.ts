@@ -1,11 +1,12 @@
 import { registerElementView } from "../elementViewLibrary";
 import { ScriptNote } from "../../model/ScriptNote";
-import { color_role_to_hex_color } from "../../util/Color";
+
 import { calculateTextLayout } from "./note-dependent-utils";
-import { Point2D } from "../../util/Point2D";
+import { Point2D } from "fusion/primitives/Point2D";
 import { NoteCanvasView } from "./NoteCanvasView";
 import { textRect } from "./util";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
+import { color_role_to_hex_color } from "../../util";
 
 const TRIANGLE_BASE = 10;
 const TRIANGLE_SPACING = 3;
@@ -23,15 +24,15 @@ export class ScriptNoteCanvasView extends NoteCanvasView {
 
         // Draw a play icon in the upper right corner of the note
         let topRight = note.rect().topRight();
-        let p1 = new Point2D(
+        let p1 = new Point2D([
             topRight.x - TRIANGLE_BASE - TRIANGLE_SPACING,
-            topRight.y + TRIANGLE_SPACING);
-        let p2 = new Point2D(
+            topRight.y + TRIANGLE_SPACING]);
+        let p2 = new Point2D([
             p1.x,
-            p1.y + TRIANGLE_BASE);
-        let p3 = new Point2D(
+            p1.y + TRIANGLE_BASE]);
+        let p3 = new Point2D([
             p1.x + TRIANGLE_BASE,
-            p1.y + TRIANGLE_BASE / 2);
+            p1.y + TRIANGLE_BASE / 2]);
 
         context.save();
         context.fillStyle = color_role_to_hex_color(note.style.color_role);

@@ -4,7 +4,7 @@ import { UserData } from "web-app/src/model/config/User";
 import { MouseState, PageViewState } from "../../components/page/PageViewState";
 import { pamet } from "web-app/src/core/facade";
 import { ProjectData } from "web-app/src/model/config/Project";
-import { Point2D } from "web-app/src/util/Point2D";
+import { Point2D } from "fusion/primitives/Point2D";
 import { PametRoute } from "../../services/routing/route";
 import { SystemModalDialogState } from "../../components/system-modal-dialog/state";
 import { CommandPaletteState } from "../../components/CommandPaletteState";
@@ -57,7 +57,7 @@ export class WebAppState {
   };
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;
-  focusPointOnDialogOpen: Point2D = new Point2D(0, 0); // Either the mouse location or the center of the screen
+  focusPointOnDialogOpen: Point2D = new Point2D([0, 0]); // Either the mouse location or the center of the screen
   systemModalDialogState: SystemModalDialogState | null = null;
   mouse: MouseState = new MouseState();
   commandPaletteState: CommandPaletteState | null = null;

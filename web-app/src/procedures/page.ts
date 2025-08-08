@@ -1,4 +1,4 @@
-import { Point2D } from "../util/Point2D";
+import { Point2D } from "fusion/primitives/Point2D";
 import { TextNote } from "../model/TextNote";
 import { ImageNote } from "../model/ImageNote";
 import { minimalNonelidedSize } from "../components/note/note-dependent-utils";
@@ -10,7 +10,6 @@ import { MediaProcessingDialogState } from "../components/system-modal-dialog/st
 import { generateFilenameTimestamp } from "fusion/base-util";
 import { getLogger } from "fusion/logging";
 import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "../core/constants";
-import { MediaItem } from "fusion/libs/MediaItem";
 import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "../core/policies";
 import { convertImage, extractImageDimensions } from "fusion/media-utils";
 import { mapMimeTypeToFileExtension } from "fusion/base-util";
@@ -70,7 +69,7 @@ export async function pasteImage(
 
         pageActions.pasteSpecialAddElements([note], [mediaItem]);
 
-        return position.add(new Point2D(0, size.y + AGU));
+        return position.add(new Point2D([0, size.y + AGU]));
 
     } catch (error) {
         log.error('Error processing pasted image:', error, 'The item will be skipped.');
@@ -129,7 +128,7 @@ export async function pasteSpecial(
                 textNote.setRect(rect);
 
                 pageActions.pasteSpecialAddElements([textNote], []);
-                pasteAt = pasteAt.add(new Point2D(0, size.y + AGU));
+                pasteAt = pasteAt.add(new Point2D([0, size.y + AGU]));
 
             } else if (item.type === 'image') {
                 if (item.image_blob && item.mime_type) {

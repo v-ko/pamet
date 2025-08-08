@@ -87,10 +87,6 @@ export class FrontendDomainStore extends PametStore {
 
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
         let result = this._store.findOne(filter);
-        log.info('FDS findOne',
-            'Filter:', filter,
-            'Store:', this._store,
-            'Result:', result);
         return result
     }
 

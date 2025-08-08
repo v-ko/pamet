@@ -1,7 +1,7 @@
 // NoteEditView.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Rectangle } from '../../util/Rectangle';
+import { Rectangle } from 'fusion/primitives/Rectangle';
 import { Note, SerializedNote } from 'web-app/src/model/Note';
 import { TextNote } from 'web-app/src/model/TextNote';
 import { ImageNote } from 'web-app/src/model/ImageNote';
@@ -38,7 +38,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
   const committed = useRef(false);
   const [geometry, setGeometry] = useState<Rectangle>(
-    new Rectangle(state.center.x, state.center.y, 400, 400)
+    new Rectangle([state.center.x, state.center.y, 400, 400])
   );
   const noteData = useRef(
     dumpToDict(state.targetNote) as SerializedNote
@@ -226,7 +226,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         return;
       }
       const rect = wrapper.getBoundingClientRect();
-      setGeometry(new Rectangle(rect.left, rect.top, rect.width, rect.height));
+      setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
     };
 
     // Use a resize observer to bind the updateGeometry function to resize events
@@ -242,8 +242,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   }, [wrapperRef]);
 
   // Limit the position of the window to the screen
-  let width = geometry.width;
-  let height = geometry.height;
+  let width = geometry.width();
+  let height = geometry.height();
 
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;

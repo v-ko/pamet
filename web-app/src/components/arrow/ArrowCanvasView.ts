@@ -1,5 +1,5 @@
 import { ARROW_SELECTION_THICKNESS_DELTA, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
-import { color_role_to_hex_color } from "../../util/Color";
+import { color_role_to_hex_color } from "../../util";
 import { BaseCanvasView } from "../note/BaseCanvasView";
 import { ArrowViewState } from "./ArrowViewState";
 

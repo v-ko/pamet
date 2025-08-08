@@ -5,9 +5,9 @@ import { PageMode, PageViewState } from "./PageViewState";
 import { NoteViewState } from "../note/NoteViewState";
 import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
 import { getLogger } from "fusion/logging";
-import { drawCrossingDiagonals } from "../../util";
-import { color_role_to_hex_color } from "../../util/Color";
-import { Rectangle } from "../../util/Rectangle";
+import { color_role_to_hex_color, drawCrossingDiagonals } from "../../util";
+
+import { Rectangle } from "fusion/primitives/Rectangle";
 import { ElementView, getElementView } from "../elementViewLibrary";
 import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
 import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "../../model/Arrow";
@@ -45,7 +45,7 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     let note = noteVS.note();
     ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
     let rect = note.rect();
-    drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
+    drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width(), rect.height(), 20);
 }
 
 
@@ -118,7 +118,7 @@ export class CanvasPageRenderer {
         // Reverse DPR correction
         const dpr = viewport.devicePixelRatio;
         let [x, y, w, h] = nvsCacheRectReal.data();
-        nvsCacheRectReal = new Rectangle(x / dpr, y / dpr, w / dpr, h / dpr);
+        nvsCacheRectReal = new Rectangle([x / dpr, y / dpr, w / dpr, h / dpr]);
         return viewport.unprojectRect(nvsCacheRectReal);
     }
 
@@ -161,7 +161,7 @@ export class CanvasPageRenderer {
         w = Math.floor(w * dpr) + 2 * adjustedPadding;
         h = Math.floor(h * dpr) + 2 * adjustedPadding;
 
-        return new Rectangle(x, y, w, h);
+        return new Rectangle([x, y, w, h]);
     }
 
     renderNoteView_toCache(mainCtx: CanvasRenderingContext2D, noteVS: NoteViewState, viewport: Viewport, dpr: number): boolean {
@@ -179,7 +179,7 @@ export class CanvasPageRenderer {
             return false;
         }
         let offscreenCanvas = new OffscreenCanvas(
-            cacheRectAfterDPR.width, cacheRectAfterDPR.height);
+            cacheRectAfterDPR.width(), cacheRectAfterDPR.height());
 
         let ctx = offscreenCanvas.getContext('2d') as CanvasRenderingContext2D | null;
         if (!ctx) {
@@ -207,7 +207,7 @@ export class CanvasPageRenderer {
         ctx.restore()
 
         let imageBitmap = offscreenCanvas.transferToImageBitmap();
-        if (imageBitmap.width !== cacheRectAfterDPR.width || imageBitmap.height !== cacheRectAfterDPR.height) {
+        if (imageBitmap.width !== cacheRectAfterDPR.width() || imageBitmap.height !== cacheRectAfterDPR.height()) {
             log.error('Image bitmap size does not match cache rect size', imageBitmap, cacheRectAfterDPR);
         } else {
         }
@@ -251,7 +251,7 @@ export class CanvasPageRenderer {
         // mainCtx.imageSmoothingQuality = 'low'
         mainCtx.drawImage(
             imageBitmap,
-            cacheRectReal.x, cacheRectReal.y, cacheRectReal.width, cacheRectReal.height
+            cacheRectReal.x, cacheRectReal.y, cacheRectReal.width(), cacheRectReal.height()
         )
 
         mainCtx.restore()
@@ -488,7 +488,7 @@ export class CanvasPageRenderer {
         let withNoCache = new Set<NoteViewState>(); // nvs in the viewport without cache
         for (const noteVS of state.noteViewStatesByOwnId.values()) {
             // Skip if the note is outside the viewport
-            if (!viewportRect.intersects(noteVS.note().rect())) {
+            if (!viewportRect.intersects(new Rectangle(noteVS._noteData.geometry))) {
                 continue;
             }
 
@@ -503,7 +503,7 @@ export class CanvasPageRenderer {
             const cacheRectAfterDPR = this.cacheRectAfterDPR(noteVS, state.viewport);
             if (imageBitmap !== undefined) {
                 cachePresent = true;
-                sizeMatches = imageBitmap.width === cacheRectAfterDPR.width && imageBitmap.height === cacheRectAfterDPR.height;
+                sizeMatches = imageBitmap.width === cacheRectAfterDPR.width() && imageBitmap.height === cacheRectAfterDPR.height();
             } else {
                 cachePresent = false;
                 sizeMatches = false;
@@ -598,7 +598,7 @@ export class CanvasPageRenderer {
         ctx.fillStyle = 'black';
         ctx.font = '15px sans-serif';
         let xStats = 10;
-        let yStats = pixelSpaceRect.height - 10;
+        let yStats = pixelSpaceRect.height() - 10;
         ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
         ctx.restore()
 

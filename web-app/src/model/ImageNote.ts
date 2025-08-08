@@ -1,9 +1,6 @@
-import { imageGeometryToFitAre } from "../components/note/util";
 import { entityType, getEntityId } from "fusion/libs/Entity";
-import { Rectangle, RectangleData } from "../util/Rectangle";
-import { Size } from "../util/Size";
+import { RectangleData } from "fusion/primitives/Rectangle";
 import { Note } from "./Note";
-import { MediaItem, MediaItemData } from "fusion/libs/MediaItem";
 import { elementId } from "./Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
 import { currentTime, timestamp } from "fusion/base-util";

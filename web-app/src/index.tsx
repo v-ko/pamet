@@ -15,7 +15,6 @@ import { InternalLinkNoteCanvasView } from './components/note/InternalLinkCanvas
 import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
 import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
-import { fusion } from 'fusion/index';
 import { ActionState } from 'fusion/libs/Action';
 import { PametConfigService } from './services/config/Config';
 import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
@@ -29,6 +28,7 @@ import serviceWorkerUrl from "./service-worker?url"
 import { PAMET_INMEMORY_STORE_CONFIG } from './storage/PametStore';
 import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/ProjectStorageManager';
 import { DEFAULT_KEYBINDINGS } from './core/keybindings';
+import { addChannel } from 'fusion/libs/Channel';
 // import { MediaProcessingDialogState } from './components/system-modal-dialog/state';
 
 // Register entity classes in main thread context
@@ -196,7 +196,8 @@ initializeApp().catch((e) => {
 
 
 // Testing: log the actions channel
-fusion.rootActionEventsChannel.subscribe((actionState: ActionState) => {
+let rootActionEventsChannel = addChannel('rootActionEvents');
+rootActionEventsChannel.subscribe((actionState: ActionState) => {
     if (actionState.issuer !== 'user') {
         return;
     }

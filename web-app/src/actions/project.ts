@@ -5,7 +5,7 @@ import { Page, PageData } from "../model/Page";
 import { currentTime, timestamp } from "fusion/base-util";
 import { minimalNonelidedSize } from "../components/note/note-dependent-utils";
 import { TextNote } from "../model/TextNote";
-import { Point2D } from "../util/Point2D";
+import { Point2D } from "fusion/primitives/Point2D";
 import { InternalLinkNote } from "../model/InternalLinkNote";
 import { getEntityId } from "fusion/libs/Entity";
 import { snapVectorToGrid } from "../util";
@@ -44,7 +44,7 @@ class ProjectActions {
     note.content.text = 'Press H for help'
     let noteRect = note.rect()
     noteRect.setSize(minimalNonelidedSize(note))
-    noteRect.moveCenter(new Point2D(0, 0))
+    noteRect.moveCenter(new Point2D([0, 0]))
     note.setRect(noteRect)
     pamet.insertNote(note)
 
@@ -96,7 +96,7 @@ class ProjectActions {
     // Autosize and set at center
     rect = backLink.rect();
     rect.setSize(minimalSize);
-    rect.moveCenter(new Point2D(0, 0));
+    rect.moveCenter(new Point2D([0, 0]));
     backLink.setRect(rect);
     pamet.insertNote(backLink);
 

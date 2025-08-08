@@ -1,6 +1,6 @@
 import { textRect } from "../components/note/util";
 import { entityType } from "fusion/libs/Entity";
-import { Rectangle } from "../util/Rectangle";
+import { Rectangle } from "fusion/primitives/Rectangle";
 import { Note } from "./Note";
 import { pamet } from "../core/facade";
 import { MediaItem } from "fusion/libs/MediaItem";
@@ -44,32 +44,32 @@ export class CardNote extends Note {
         let AR_delta = noteAspectRatio - imageAspectRatio
         if (AR_delta > MIN_AR_DELTA_FOR_HORIZONTAL_ALIGN) {
             // Image is tall in respect to the note, align the card horizontally
-            imageArea = new Rectangle(
+            imageArea = new Rectangle([
                 noteRect.x,
                 noteRect.y,
                 noteSize.y * imageAspectRatio,
                 noteSize.y
-            )
+            ])
 
-            textArea = new Rectangle(
-                noteRect.x + imageArea.width,
+            textArea = new Rectangle([
+                noteRect.x + imageArea.width(),
                 noteRect.y,
-                noteSize.x - imageArea.width,
+                noteSize.x - imageArea.width(),
                 noteSize.y
-            )
+            ])
         } else { // Image is wide or similar to the note, align the card vertically
-            imageArea = new Rectangle(
+            imageArea = new Rectangle([
                 noteRect.x,
                 noteRect.y,
                 noteSize.x,
                 noteSize.y * IMAGE_PORTION_FOR_HORIZONTAL_ALIGN
-            )
-            textArea = new Rectangle(
+            ])
+            textArea = new Rectangle([
                 noteRect.x,
-                noteRect.y + imageArea.height,
+                noteRect.y + imageArea.height(),
                 noteSize.x,
-                noteSize.y - imageArea.height
-            )
+                noteSize.y - imageArea.height()
+            ])
         }
         return { textArea, imageArea }
     }

@@ -2,7 +2,7 @@ import { action } from "fusion/libs/Action";
 import { PageMode, PageViewState } from "../components/page/PageViewState";
 import { ArrowViewState } from "../components/arrow/ArrowViewState";
 import { Arrow, ArrowAnchorOnNoteType } from "../model/Arrow";
-import { Point2D, PointData } from "../util/Point2D";
+import { Point2D, PointData } from "fusion/primitives/Point2D";
 import { NoteViewState } from "../components/note/NoteViewState";
 import { DEFAULT_ARROW_THICKNESS } from "../core/constants";
 import { pamet } from "../core/facade";

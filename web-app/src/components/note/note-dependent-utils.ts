@@ -3,8 +3,8 @@ import { ImageNote } from "../../model/ImageNote";
 import { imageGeometryToFitAre } from "./util";
 import { Note } from "../../model/Note";
 import { TextLayout, EMPTY_TOKEN, truncateText } from "../../util";
-import { Rectangle } from "../../util/Rectangle";
-import { Size } from "../../util/Size";
+import { Rectangle } from "fusion/primitives/Rectangle";
+import { Size } from "fusion/primitives/Size";
 import { pamet } from "../../core/facade";
 import { MediaItem } from "fusion/libs/MediaItem";
 
@@ -103,11 +103,11 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         }
 
         // Find the coordinates and dimentions of the line
-        let lineRect = new Rectangle(textRect.left(), lineY, textRect.width, lineSpacing);
+        let lineRect = new Rectangle([textRect.left(), lineY, textRect.width(), lineSpacing]);
 
         // Fill the line word by word
         let wordsOnLine: string[] = [];
-        let widthLeft = textRect.width;
+        let widthLeft = textRect.width();
         let usedWords = 0;
 
         let truncateLine = false;
@@ -182,7 +182,7 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         //     log.info('line before truncate', lineText)
         // }
         if (truncateLine) {
-            let width = textRect.width - ellipsisWidth;
+            let width = textRect.width() - ellipsisWidth;
             lineText = truncateText(lineText, width, canvasContext);
         }
 
@@ -218,7 +218,7 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
 
 export function minimalNonelidedSize(note: Note): Size {
     /** Do a binary search to get the minimal note size */
-    let defaultNoteSize = new Size(DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT);
+    let defaultNoteSize = new Size([DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT]);
     let noteFont = DEFAULT_FONT_STRING;
 
     // If it's an image note - fit to the image (if no image - default size)
@@ -230,7 +230,7 @@ export function minimalNonelidedSize(note: Note): Size {
             return defaultNoteSize; // Used just for the aspect ratio
         }
 
-        return imageGeometryToFitAre(imageNote.rect(), new Size(mediaItem.width, mediaItem.height)).size();
+        return imageGeometryToFitAre(note.rect(), new Size([mediaItem.width, mediaItem.height])).size();
     }
 
     let text = note.text;
@@ -254,7 +254,7 @@ export function minimalNonelidedSize(note: Note): Size {
         let testWidthU = minWidthU + testWidthIt;
         let testHeightU = Math.round(testWidthU / PREFERRED_TEXT_NOTE_ASPECT_RATIO);
 
-        let textSize = new Size(testWidthU * unit, testHeightU * unit);
+        let textSize = new Size([testWidthU * unit, testHeightU * unit]);
         testRect.setSize(textSize);
         note.setRect(testRect);
         let textLayout = calculateTextLayout(text, note.textRect(), noteFont);
@@ -273,16 +273,16 @@ export function minimalNonelidedSize(note: Note): Size {
     let height = heightU * unit;
 
     // Adjust the height
-    testRect.setSize(new Size(width, height));
+    testRect.setSize(new Size([width, height]));
     let textLayout = calculateTextLayout(text, note.textRect(), noteFont);
-    while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
+    while (testRect.width() >= MIN_NOTE_WIDTH && testRect.height() >= MIN_NOTE_HEIGHT) {
         if (textLayout.isElided) {
             break;
         } else {
-            height = testRect.height;
+            height = testRect.height();
         }
 
-        testRect.setSize(new Size(testRect.width, testRect.height - unit));
+        testRect.setSize(new Size([testRect.width(), testRect.height() - unit]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
     }
 
@@ -290,18 +290,18 @@ export function minimalNonelidedSize(note: Note): Size {
     // even elided text (if it's multi line) can have empty space laterally
     let textBeforeAdjust = textLayout.text();
     text = textBeforeAdjust;
-    testRect.setSize(new Size(width, height));
-    while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
+    testRect.setSize(new Size([width, height]));
+    while (testRect.width() >= MIN_NOTE_WIDTH && testRect.height() >= MIN_NOTE_HEIGHT) {
         if (text !== textBeforeAdjust) {
             break;
         } else {
-            width = testRect.width;
+            width = testRect.width();
         }
 
-        testRect.setSize(new Size(testRect.width - unit, testRect.height));
+        testRect.setSize(new Size([testRect.width() - unit, testRect.height()]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
         text = textLayout.text();
     }
 
-    return new Size(width, height);
+    return new Size([width, height]);
 }

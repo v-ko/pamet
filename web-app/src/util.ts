@@ -1,8 +1,9 @@
-import { ElementViewState } from "../components/page/ElementViewState";
-import { ALIGNMENT_GRID_UNIT } from "../core/constants";
+import { ElementViewState } from "./components/page/ElementViewState";
+import { ALIGNMENT_GRID_UNIT, COLOR_ROLE_MAP } from "./core/constants";
 import { getLogger } from "fusion/logging";
-import { Point2D, Vector2D } from "./Point2D";
-import { Rectangle } from "./Rectangle";
+import { Point2D, Vector2D } from "../../fusion/js-src/src/primitives/Point2D";
+import { Rectangle } from "../../fusion/js-src/src/primitives/Rectangle";
+import { HexColorData } from "fusion/primitives/Color";
 
 // Clipboard item types
 export type ClipboardItemType = 'text' | 'url' | 'image';
@@ -96,7 +97,7 @@ export async function parseClipboardContents(): Promise<ClipboardItem[]> {
 
 export type SelectionDict = Map<ElementViewState, boolean>;
 
-export let log = getLogger('util/index.ts');
+export let log = getLogger('primitives/index.ts');
 
 
 export function snapToGrid(x: number): number {
@@ -104,7 +105,18 @@ export function snapToGrid(x: number): number {
 }
 
 export function snapVectorToGrid<T extends Vector2D>(v: T): T {
-    return v.divide(ALIGNMENT_GRID_UNIT).round().multiply(ALIGNMENT_GRID_UNIT);
+    let newV = v.copy()
+    newV.divide_inplace(ALIGNMENT_GRID_UNIT)
+    newV.round_inplace()
+    newV.multiply_inplace(ALIGNMENT_GRID_UNIT)
+    return newV
+}
+
+export function snapVectorToGrid_inplace<T extends Vector2D>(v: T): T {
+    v.divide_inplace(ALIGNMENT_GRID_UNIT)
+    v.round_inplace()
+    v.multiply_inplace(ALIGNMENT_GRID_UNIT)
+    return v
 }
 
 export let EMPTY_TOKEN = '';
@@ -162,22 +174,26 @@ export const truncateText = (text: string, targetWidth: number, ctx: CanvasRende
 };
 
 function bezierPoint(t: number, P0: Point2D, P1: Point2D, P2: Point2D, P3: Point2D): Point2D {
+    let p = new Point2D([0, 0]);
+    return bezierPoint_inplace(t, P0, P1, P2, P3, p);
+}
+
+function bezierPoint_inplace(t: number, P0: Point2D, P1: Point2D, P2: Point2D, P3: Point2D, p_inplace: Point2D): Point2D {
     const u = 1 - t;
     const tt = t * t;
     const uu = u * u;
     const uuu = uu * u;
     const ttt = tt * t;
 
-    let p = new Point2D();
-    p.x = uuu * P0.x; // first term
-    p.y = uuu * P0.y;
-    p.x += 3 * uu * t * P1.x; // second term
-    p.y += 3 * uu * t * P1.y;
-    p.x += 3 * u * tt * P2.x; // third term
-    p.y += 3 * u * tt * P2.y;
-    p.x += ttt * P3.x; // fourth term
-    p.y += ttt * P3.y;
-    return p;
+    p_inplace.x = uuu * P0.x; // first term
+    p_inplace.y = uuu * P0.y;
+    p_inplace.x += 3 * uu * t * P1.x; // second term
+    p_inplace.y += 3 * uu * t * P1.y;
+    p_inplace.x += 3 * u * tt * P2.x; // third term
+    p_inplace.y += 3 * u * tt * P2.y;
+    p_inplace.x += ttt * P3.x; // fourth term
+    p_inplace.y += ttt * P3.y;
+    return p_inplace;
 }
 
 export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point2D, cp2: Point2D, endPoint: Point2D, precision_k: number = 1): Point2D {
@@ -190,9 +206,10 @@ export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point
         let length = 0;
         let previousPoint = startPoint;
         let steps = Math.ceil(t * numSegments);
+        let currentPoint = new Point2D([0, 0]);
         for (let i = 1; i <= steps; i++) {
             let ct = i / numSegments;
-            let currentPoint = bezierPoint(ct, startPoint, cp1, cp2, endPoint);
+            bezierPoint_inplace(ct, startPoint, cp1, cp2, endPoint, currentPoint);
             length += previousPoint.distanceTo(currentPoint);
             previousPoint = currentPoint;
         }
@@ -263,3 +280,14 @@ export function drawCrossingDiagonals(
 
     ctx.restore();
 }
+
+
+export function color_role_to_hex_color(color_role: string): HexColorData {
+    if (color_role in COLOR_ROLE_MAP) {
+        return COLOR_ROLE_MAP[color_role];
+    } else {
+        log.error(`Color role ${color_role} not found in color role map`);
+        return '#ff0000';
+    }
+}
+

@@ -1,15 +1,14 @@
 import { NoteViewState } from "./NoteViewState";
 import { NO_SCALE_LINE_SPACING } from "../../core/constants";
-import { TextLayout } from "../../util";
-import { color_role_to_hex_color } from "../../util/Color";
+import { color_role_to_hex_color, TextLayout } from "../../util";
+
 import { calculateTextLayout } from "./note-dependent-utils";
-import { Point2D } from "../../util/Point2D";
-import { Rectangle } from "../../util/Rectangle";
+import { Rectangle } from "fusion/primitives/Rectangle";
 import { BaseCanvasView } from "./BaseCanvasView";
 import { pamet } from "../../core/facade";
 import { DEFAULT_FONT_STRING } from "../../core/constants";
 import { textRect, imageGeometryToFitAre } from "./util";
-import { Size } from "../../util/Size";
+import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
 import { ImageNote } from "../../model/ImageNote";
 import { mediaItemRoute } from "../../services/routing/route";
@@ -54,10 +53,10 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
         // Center align vertically in textRect
         let textHeight = textLayout.lines.length * NO_SCALE_LINE_SPACING;
-        textTopLeft.y = textTopLeft.y + (textRect_.height - textHeight) / 2;
+        textTopLeft.y += (textRect_.height() - textHeight) / 2;
 
         // Adjust for the text body to be drawn in the middle of the line
-        let adjTopLeft = new Point2D(textTopLeft.x, textTopLeft.y);
+        let adjTopLeft = textTopLeft.copy();
         let hackyPadding = NO_SCALE_LINE_SPACING / 7.5; // TODO: Should be dependent on font descent
         adjTopLeft.y = adjTopLeft.y + hackyPadding;
 
@@ -66,11 +65,11 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         // textRect.setHeight(textHeight);
         // ctx.strokeStyle = 'red';
         // ctx.lineWidth = 1;
-        // ctx.strokeRect(textRect.x, textRect.y, textRect.width(), textRect.height());
+        // ctx.strokeRect(textRect.left(), textRect.top(), textRect.width(), textRect.height());
 
         // Correct for ctx center align behavior
         if (textLayout.alignment === 'center') {
-            adjTopLeft.x = adjTopLeft.x + textRect_.width / 2;
+            adjTopLeft.x = adjTopLeft.x + textRect_.width() / 2;
         }
 
         // Draw text
@@ -149,7 +148,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        let imgRect = imageGeometryToFitAre(imageArea, new Size(image!.naturalWidth, image!.naturalHeight));
+        let imgRect = imageGeometryToFitAre(imageArea, new Size([image!.naturalWidth, image!.naturalHeight]));
         context.drawImage(image!, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
 
         context.strokeStyle = '#dddddd';

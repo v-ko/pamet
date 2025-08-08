@@ -3,7 +3,7 @@ import { entityType, getEntityId } from "fusion/libs/Entity";
 import { currentTime, timestamp } from "fusion/base-util";
 import { elementId } from "./Element";
 import { Note } from "./Note";
-import { RectangleData } from "../util/Rectangle";
+import { RectangleData } from "fusion/primitives/Rectangle";
 
 @entityType('TextNote')
 export class TextNote extends Note {

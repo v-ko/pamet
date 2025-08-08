@@ -3,7 +3,7 @@ import { pamet } from "./facade";
 import { command } from "fusion/libs/Command";
 import { getLogger } from "fusion/logging";
 import { appActions } from "../actions/app";
-import { Point2D } from "../util/Point2D";
+import { Point2D } from "fusion/primitives/Point2D";
 import { arrowActions } from "../actions/arrow";
 import { projectActions } from "../actions/project";
 import { Note } from "../model/Note";

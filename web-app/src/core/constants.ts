@@ -1,5 +1,5 @@
 import { ImageConversionPreset } from "fusion/media-utils";
-import { HexColorData } from "../util/Color";
+import { HexColorData } from "fusion/primitives/Color";
 
 // Base geometry
 export const NO_SCALE_LINE_SPACING = 20

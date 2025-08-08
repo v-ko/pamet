@@ -1,4 +1,4 @@
-import { Rectangle } from "../util/Rectangle";
+import { Rectangle } from "fusion/primitives/Rectangle";
 
 import { PametElement, PametElementData } from "./Element";
 import { textRect } from "../components/note/util";
@@ -34,7 +34,7 @@ export interface SerializedNote extends NoteData {
 export class Note extends PametElement<NoteData> {
     // This is only a base class, static helpers should go in the subclasses
     rect(): Rectangle {
-        return new Rectangle(...this._data.geometry);
+        return new Rectangle([...this._data.geometry]);
     }
     setRect(rect: Rectangle) {
         this._data.geometry = rect.data();

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 
 import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from '../../core/constants';
-import { Point2D } from '../../util/Point2D';
+import { Point2D } from 'fusion/primitives/Point2D';
 import { pageActions } from '../../actions/page';
 import { PageMode, PageViewState } from './PageViewState';
 import { Viewport } from './Viewport';
@@ -40,7 +40,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
   const [pinchInProgress, setPinchInProgress] = useState<boolean>(false);
   const [pinchStartViewportHeight, setPinchStartViewportHeight] = useState<number>(DEFAULT_EYE_HEIGHT);
-  const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D(0, 0));
+  const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D([0, 0]));
 
   const superContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -209,7 +209,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // Mouse event handlers
   const handleMouseDown = useCallback((event: React.MouseEvent) => {
     // let mousePos = mapClientPointToSuperContainer(new Point2D(event.clientX, event.clientY));
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
     mouse.applyPressEvent(event);
 
     if (event.button === 0) { // left mouse
@@ -237,7 +237,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [mouse]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
     let pressPos = mouse.positionOnPress;
     let delta = pressPos.subtract(mousePos);
 
@@ -247,7 +247,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       if (mouse.rightIsPressed) {
         pageActions.startDragNavigation(state)
         pageActions.dragNavigationMove(state, delta)
-        navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D(event.movementX, event.movementY));
+        navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D([event.movementX, event.movementY]));
       } else if (mouse.leftIsPressed) {
         console.log('Mouse move', PageMode[state.mode], 'left button')
 
@@ -308,7 +308,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent) => {
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
 
     let pressPos = mouse.positionOnPress;
     let realPos = state.viewport.unprojectPoint(mousePos);
@@ -381,14 +381,14 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   const handleWheel = useCallback((event: WheelEvent) => {
     event.preventDefault();
-    navDeviceAutoSwitcher.registerScrollEvent(new Point2D(event.deltaX, event.deltaY));
+    navDeviceAutoSwitcher.registerScrollEvent(new Point2D([event.deltaX, event.deltaY]));
 
     let new_height = state.viewportHeight * Math.exp((event.deltaY / 120) * 0.1);
     new_height = Math.max(
       MIN_HEIGHT_SCALE,
       Math.min(new_height, MAX_HEIGHT_SCALE))
 
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
 
     // console.log(mouse_pos)
     let mouse_pos_unproj = state.viewport.unprojectPoint(mousePos)
@@ -400,7 +400,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
       pageActions.updateViewport(state, new_center, new_height);
     } else if (navDeviceAutoSwitcher.device === NavigationDevice.TOUCHPAD) {
-      let delta = new Point2D(event.deltaX, event.deltaY);
+      let delta = new Point2D([event.deltaX, event.deltaY]);
       let newViewportCenter = state.viewportCenter.add(delta.divide(state.viewport.heightScaleFactor()));
       pageActions.updateViewport(state, newViewportCenter, state.viewportHeight);
     }
@@ -410,7 +410,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const handleTouchStart = useCallback((event: React.TouchEvent) => {
     // Only for single finger touch
     if (event.touches.length === 1) {
-      let touchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
+      let touchPos = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
       mouse.positionOnPress = touchPos;  // Revize this
       pageActions.startDragSelection(state, touchPos)
     } else if (event.touches.length === 2) {
@@ -418,8 +418,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // so we enter DragNavigation mode and also update the viewport height
 
       console.log('pinch start')
-      let touch1 = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
-      let touch2 = new Point2D(event.touches[1].clientX, event.touches[1].clientY);
+      let touch1 = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      let touch2 = new Point2D([event.touches[1].clientX, event.touches[1].clientY]);
       // touch1 = mapClientPointToSuperContainer(touch1); // NOT TESTED
       // touch2 = mapClientPointToSuperContainer(touch2);
       let distance = touch1.distanceTo(touch2);
@@ -436,12 +436,12 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   const handeTouchMove = useCallback((event: React.TouchEvent) => {
     if (event.touches.length === 1) {
-      let newTouchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
+      let newTouchPos = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
       pageActions.updateDragSelection(state, newTouchPos);
 
     } else if (event.touches.length === 2) {
-      let touch1 = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
-      let touch2 = new Point2D(event.touches[1].clientX, event.touches[1].clientY);
+      let touch1 = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      let touch2 = new Point2D([event.touches[1].clientX, event.touches[1].clientY]);
 
       if (pinchInProgress) {
         // Calculate the new height
@@ -503,7 +503,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     console.log('MOUSE ENTER!!')
 
     // Update the mouse position in the state
-    pageActions.updateMousePosition(state, new Point2D(event.clientX, event.clientY));
+    pageActions.updateMousePosition(state, new Point2D([event.clientX, event.clientY]));
 
     // If the mouse was released outside of the page, we need to clear the mode
     if (mouse.buttonsOnLeave > event.buttons) {
@@ -528,7 +528,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [state, handleWheel]);
 
   const handleDoubleClick = (event: React.MouseEvent) => {
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
     let realPos = state.viewport.unprojectPoint(mousePos);
 
     // If an arrow is selected and a control point is under the mouse - delete it

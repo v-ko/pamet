@@ -15,7 +15,7 @@ import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
 import { commands, confirmPageDeletion } from "../../core/commands";
 import { pageActions } from "../../actions/page";
 import NoteEditView from "../../components/note/NoteEditView";
-import { Point2D } from "../../util/Point2D";
+import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "../../actions/project";
 import { CreatePageDialog } from "../../components/CreateNewPageDialog";
 import { appActions } from "../../actions/app";
@@ -27,7 +27,7 @@ import { DebugDialog } from "../../components/DebugDialog";
 import { importDesktopDataForTesting } from "../../procedures/app";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
 import { MediaProcessingDialog } from "../../components/system-modal-dialog/MediaProcessingDialog";
-import { MediaProcessingDialogState, SystemModalDialogState } from "../../components/system-modal-dialog/state";
+import { MediaProcessingDialogState } from "../../components/system-modal-dialog/state";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "../../components/CommandPaletteState";
 import { PageAndCommandPalette, ProjectPalette } from "../../components/CommandPalette";
 
@@ -229,7 +229,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           state={currentPageVS.noteEditWindowState}
           onTitlebarPress={(event: React.MouseEvent) => {
             event.preventDefault();
-            let mousePos = new Point2D(event.clientX, event.clientY);
+            let mousePos = new Point2D([event.clientX, event.clientY]);
             state.mouse.applyPressEvent(event);
             pageActions.startEditWindowDrag(currentPageVS, mousePos);
           }}

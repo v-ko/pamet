@@ -1,14 +1,10 @@
-import { PageQueryFilter } from "../core/facade";
 import { Page, PageData } from "../model/Page";
-import { Note } from "../model/Note";
-import { Arrow } from "../model/Arrow";
 import { getLogger } from "fusion/logging";
 import { BaseApiClient } from "fusion/storage/BaseApiClient";
 import { SerializedEntityData, loadFromDict } from "fusion/libs/Entity";
 import { elementId } from "../model/Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
-import { old_color_to_role } from "../util/Color";
-import { PametRoute } from "../services/routing/route";
+import { old_color_to_role } from "fusion/primitives/Color";
 import { pamet } from "../core/facade";
 
 let log = getLogger('ApiClient');
