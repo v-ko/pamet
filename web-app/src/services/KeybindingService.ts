@@ -279,6 +279,19 @@ export class KeybindingService {
     // We found a matching keybinding whose 'when' is satisfied.
     event.preventDefault();
 
+
+    // If it's ctrl+P or ctrl+S, we need to take extra steps
+    if ((event.code === 'KeyP' || event.code === 'KeyS') &&
+        (event.ctrlKey || event.metaKey) && !event.altKey &&
+        (!event.shiftKey || (window as any).chrome || (window as any).opera)) {
+      // Prevent the default browser print/save action
+        if (event.stopImmediatePropagation) {
+            event.stopImmediatePropagation();
+        } else {
+            event.stopPropagation();
+        }
+    }
+
     const cmd = getCommand(matchedBinding.command);
     if (cmd) {
       cmd.function();

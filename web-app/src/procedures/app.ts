@@ -78,6 +78,7 @@ export async function switchToProject(projectId: string | null): Promise<void> {
     } finally {
         projectSwithLock = false;
     }
+    log.info('Project switch finished. App state:', pamet.appViewState);
 }
 
 
@@ -318,6 +319,7 @@ export async function importDesktopDataForTesting() {
     // @ts-ignore
     dialogState.progress = -1; // Negative progress for spinner
     appActions.updateSystemDialogState(appState, dialogState);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
 
     try {
         // 1. Create a new project for the imported data

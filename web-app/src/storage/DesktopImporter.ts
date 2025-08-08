@@ -202,7 +202,7 @@ export class DesktopImporter extends BaseApiClient {
         let pagesProcessed = 0;
         for (const pageData of rawPagesData) {
             pagesProcessed++;
-            progressCallback(0.2 + 0.3 * (pagesProcessed / pageCount), `Fetching page content ${pagesProcessed}/${pageCount}...`);
+            // progressCallback(0.2 + 0.3 * (pagesProcessed / pageCount), `Fetching page content ${pagesProcessed}/${pageCount}...`);
             const childrenUrl = this.endpointUrl(`/p/${pageData.id}/children`);
             const childrenData = await this.get(childrenUrl);
             allMigratedEntities.push(...childrenData.notes.map(tmpDynamicMigration));
@@ -230,12 +230,13 @@ export class DesktopImporter extends BaseApiClient {
             const fsPath = imageUrl.replace('project:/desktop/fs', '');
 
             // Fetch image blob from desktop server
-            const blobUrl = this.endpointUrl(`fs${fsPath}`);
+            const blobUrl = this.endpointUrl(`desktop/fs${fsPath}`);
 
             try {
                 const blob = await this.getBlob(blobUrl);
 
                 const mediaItem = await pamet.addMediaToStore(blob, fsPath, imageData.id);
+                pamet.insertOne(mediaItem);
 
                 // Update imageNoteData
                 imageData.content.image_id = mediaItem.id;
@@ -250,7 +251,7 @@ export class DesktopImporter extends BaseApiClient {
             }
 
             entitiesProcessed++;
-            progressCallback(0.5 + 0.5 * (entitiesProcessed / totalEntities), `Importing media files... ${entitiesProcessed}/${totalEntities}`);
+            // progressCallback(0.5 + 0.5 * (entitiesProcessed / totalEntities), `Importing media files... ${entitiesProcessed}/${totalEntities}`);
         }
 
         // 5. Process other entities

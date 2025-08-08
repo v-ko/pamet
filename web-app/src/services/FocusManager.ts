@@ -49,7 +49,7 @@ export class FocusManager {
       throw new Error(`Focus registration for selector "${registration.selector}" already exists.`);
     }
     this.focusRegistrations.set(registration.selector, registration);
-    log.info('Registered focus tracking for selector', registration.selector);
+    // log.info('Registered focus tracking for selector', registration.selector);
   }
 
   public updateContextOnElementVisible(registration: VisibilityRegistration) {
@@ -57,12 +57,11 @@ export class FocusManager {
       throw new Error(`Visibility registration for selector "${registration.selector}" already exists.`);
     }
     this.visibilityRegistrations.set(registration.selector, registration);
-    log.info('Registered visibility tracking for selector', registration.selector);
+    // log.info('Registered visibility tracking for selector', registration.selector);
     this.reevaluateVisibilityContexts(); // Initial check
   }
 
   private reevaluateVisibilityContexts() {
-    log.info('Re-evaluating visibility contexts');
     for (const registration of this.visibilityRegistrations.values()) {
       const el = document.querySelector(registration.selector) as HTMLElement | null;
       const isVisible = el ? el.offsetParent !== null : false;
@@ -90,7 +89,7 @@ export class FocusManager {
 
   handleFocusIn(event: FocusEvent): void {
     const target = event.target as HTMLElement;
-    log.info('FocusIn event on', target);
+    // log.info('FocusIn event on', target);
 
     const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
     for (const reg of this.focusRegistrations.values()) {
@@ -101,24 +100,24 @@ export class FocusManager {
     }
 
     const dominantElement = this.getDominantElement(Array.from(matchedElements.keys()));
-    if (dominantElement) {
-        log.info('Dominant element is', dominantElement);
-    }
+    // if (dominantElement) {
+    //     log.info('Dominant element is', dominantElement);
+    // }
     const dominantRegistration = dominantElement ? matchedElements.get(dominantElement) : null;
     const newActiveKey = dominantRegistration ? dominantRegistration.contextKey : null;
 
     if (this.activeFocusKey !== newActiveKey) {
-      log.info(`Active focus context changing from '${this.activeFocusKey}' to '${newActiveKey}'`);
+      // log.info(`Active focus context changing from '${this.activeFocusKey}' to '${newActiveKey}'`);
       if (this.activeFocusKey) {
         const oldReg = [...this.focusRegistrations.values()].find(r => r.contextKey === this.activeFocusKey);
         if (oldReg) {
-          log.info(`Setting old context '${oldReg.contextKey}' to ${oldReg.valOnBlur} (on blur)`);
+          // log.info(`Setting old context '${oldReg.contextKey}' to ${oldReg.valOnBlur} (on blur)`);
           pamet.setContext(oldReg.contextKey, oldReg.valOnBlur);
         }
       }
 
       if (newActiveKey && dominantRegistration) {
-        log.info(`Setting new context '${dominantRegistration.contextKey}' to ${dominantRegistration.valOnFocus} (on focus)`);
+        // log.info(`Setting new context '${dominantRegistration.contextKey}' to ${dominantRegistration.valOnFocus} (on focus)`);
         pamet.setContext(dominantRegistration.contextKey, dominantRegistration.valOnFocus);
       }
       this.activeFocusKey = newActiveKey;
@@ -127,17 +126,17 @@ export class FocusManager {
     if (target && target.tabIndex > -1) {
       this.lastFocusedElement = target;
     } else if (target && target.tabIndex === -1) {
-      log.info('Focused element has tabIndex -1, correcting focus.');
+      // log.info('Focused element has tabIndex -1, correcting focus.');
       this.correctFocus();
     }
   }
 
   handleFocusOut(event: FocusEvent): void {
     const relatedTarget = event.relatedTarget as HTMLElement | null;
-    log.info('FocusOut event, related target is', relatedTarget);
+    // log.info('FocusOut event, related target is', relatedTarget);
 
     if (!relatedTarget) {
-      log.info('Focus left the document, correcting focus.');
+      // log.info('Focus left the document, correcting focus.');
       this.correctFocus();
       return;
     }
@@ -147,7 +146,7 @@ export class FocusManager {
       if (reg) {
         const activeElement = document.querySelector(reg.selector);
         if (activeElement && !activeElement.contains(relatedTarget)) {
-          log.info(`Focus moved out of '${reg.selector}'. Setting context '${reg.contextKey}' to ${reg.valOnBlur}`);
+          // log.info(`Focus moved out of '${reg.selector}'. Setting context '${reg.contextKey}' to ${reg.valOnBlur}`);
           pamet.setContext(reg.contextKey, reg.valOnBlur);
           this.activeFocusKey = null;
         }
