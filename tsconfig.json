@@ -1,7 +1,32 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./fusion/js-src" },
-    { "path": "./web-app" }
-  ]
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "fusion/*": ["./fusion/js-src/src/*"],
+      "@/*": ["./web-app/src/*"]
+    },
+    "types": ["node", "vite/client"]
+  },
+  "include": [
+    "fusion/js-src/src/**/*.ts",
+    "fusion/js-src/src/**/*.tsx",
+    "web-app/src/**/*.ts",
+    "web-app/src/**/*.tsx",
+    "vite.config.ts"
+  ],
+  "exclude": ["node_modules", "**/dist", "**/*.d.ts"]
 }

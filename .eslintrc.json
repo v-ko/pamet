@@ -14,10 +14,7 @@
     "parserOptions": {
         "ecmaVersion": "latest",
         "sourceType": "module",
-        "project": [
-            "./web-app/tsconfig.json",
-            "./fusion/js-src/tsconfig.json"
-          ]
+        "project": "./tsconfig.json"
     },
     "plugins": [
         "@typescript-eslint",

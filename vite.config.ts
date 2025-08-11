@@ -4,9 +4,12 @@ import * as path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  root: 'src',
+  root: './web-app/src',
+  publicDir: '../public',
   build: {
+    outDir: '../dist',
     sourcemap: true,
+    emptyOutDir: true,
   },
   plugins: [
     react(),
@@ -16,8 +19,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'fusion': path.resolve(__dirname, '../fusion/js-src/src'),
-      '@': path.resolve(__dirname, './src'),
+      'fusion': path.resolve(__dirname, './fusion/js-src/src'),
+      '@': path.resolve(__dirname, './web-app/src'),
     },
   },
 })
