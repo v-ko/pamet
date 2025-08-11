@@ -1,26 +1,7 @@
 {
-  "compilerOptions": {
-    "baseUrl": "./",
-    "rootDir": "./",
-    "paths": {
-      "fusion/*": [
-        "fusion/js-src/src/*"
-      ]
-    },
-    "jsx": "react-jsx",
-  },
+  "files": [],
   "references": [
-    {
-      "path": "./web-app"
-    },
-    {
-      "path": "./fusion/js-src"
-    }
-  ],
-  "exclude": ["node_modules/*", "dist/*", "*.d.ts"],
-  // "include": [
-  //   "fusion/js-src/src/**/*",
-  //   "web-app/src/**/*",
-  //   "web-app/vite.config.ts"
-  // ]
+    { "path": "./fusion/js-src" },
+    { "path": "./web-app" }
+  ]
 }
