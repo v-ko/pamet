@@ -7,13 +7,13 @@ import { TextNote } from '@/model/TextNote';
 import { ImageNote } from '@/model/ImageNote';
 import { CardNote } from '@/model/CardNote';
 import { pamet } from "@/core/facade";
-import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
-import { currentTime, timestamp } from 'fusion/base-util';
+import { dumpToDict, loadFromDict } from 'fusion/model/Entity';
+import { currentTime, timestamp } from 'fusion/util/base';
 import { getLogger } from 'fusion/logging';
 import { PametTabIndex } from "@/core/constants";
 import "@/components/note/NoteEditView.css";
 import { ImageEditPropsWidget } from "@/components/note/edit-window/ImageEditPropsWidget";
-import { MediaItem, MediaItemData } from 'fusion/libs/MediaItem';
+import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('EditComponent');

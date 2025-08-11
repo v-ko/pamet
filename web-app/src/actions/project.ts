@@ -1,13 +1,13 @@
-import { action } from "fusion/libs/Action";
+import { action } from "fusion/registries/Action";
 import { AppDialogMode, WebAppState } from "@/containers/app/WebAppState";
 import { pamet } from "@/core/facade";
 import { Page, PageData } from "@/model/Page";
-import { currentTime, timestamp } from "fusion/base-util";
+import { currentTime, timestamp } from "fusion/util/base";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import { TextNote } from "@/model/TextNote";
 import { Point2D } from "fusion/primitives/Point2D";
 import { InternalLinkNote } from "@/model/InternalLinkNote";
-import { getEntityId } from "fusion/libs/Entity";
+import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";
 import type { ProjectData } from "@/model/config/Project";
 import { getLogger } from "fusion/logging";

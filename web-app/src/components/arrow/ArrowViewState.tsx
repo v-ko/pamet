@@ -8,7 +8,7 @@ import { approximateMidpointOfBezierCurve } from "@/util";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import paper from 'paper';
 import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/core/constants";
-import { Change } from 'fusion/Change';
+import { Change } from 'fusion/model/Change';
 import { pamet } from "@/core/facade";
 import { elementPageId } from "@/model/Element";
 

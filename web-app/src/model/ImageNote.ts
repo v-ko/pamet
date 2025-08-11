@@ -1,9 +1,9 @@
-import { entityType, getEntityId } from "fusion/libs/Entity";
+import { entityType, getEntityId } from "fusion/model/Entity";
 import { RectangleData } from "fusion/primitives/Rectangle";
 import { Note } from "@/model/Note";
 import { elementId } from "@/model/Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
-import { currentTime, timestamp } from "fusion/base-util";
+import { currentTime, timestamp } from "fusion/util/base";
 
 @entityType('ImageNote')
 export class ImageNote extends Note {

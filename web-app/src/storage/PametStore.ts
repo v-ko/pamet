@@ -1,7 +1,7 @@
-import { MediaItem } from 'fusion/libs/MediaItem';
-import { Change } from 'fusion/Change'
-import { Store, SearchFilter } from 'fusion/storage/BaseStore'
-import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'fusion/storage/InMemoryStore'
+import { MediaItem } from 'fusion/model/MediaItem';
+import { Change } from 'fusion/model/Change'
+import { Store, SearchFilter } from 'fusion/storage/domain-store/BaseStore'
+import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'fusion/storage/domain-store/InMemoryStore'
 import { Arrow } from "@/model/Arrow"
 import { Note } from "@/model/Note"
 import { Page } from "@/model/Page"

@@ -15,10 +15,10 @@ import { InternalLinkNoteCanvasView } from "@/components/note/InternalLinkCanvas
 import { ExternalLinkNoteCanvasView } from "@/components/note/ExternalLinkCanvasView";
 import { ScriptNoteCanvasView } from "@/components/note/ScriptNoteCanvasView";
 import { CardNoteCanvasView } from "@/components/note/CardNoteCanvasView";
-import { ActionState } from 'fusion/libs/Action';
+import { ActionState } from 'fusion/registries/Action';
 import { PametConfigService } from "@/services/config/Config";
 import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
-import { StorageService } from 'fusion/storage/StorageService';
+import { StorageService } from 'fusion/storage/management/StorageService';
 import { updateAppFromRouteOrAutoassist } from "@/procedures/app";
 
 import WebApp from "@/containers/app/App";
@@ -26,9 +26,9 @@ import { WebAppState } from "@/containers/app/WebAppState";
 
 import serviceWorkerUrl from "@/service-worker?url"
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
-import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/ProjectStorageManager';
+import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
-import { addChannel } from 'fusion/libs/Channel';
+import { addChannel } from 'fusion/registries/Channel';
 // import { MediaProcessingDialogState } from './components/system-modal-dialog/state';
 
 // Register entity classes in main thread context

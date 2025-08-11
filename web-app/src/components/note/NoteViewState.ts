@@ -5,9 +5,9 @@ import { calculateTextLayout } from "@/components/note/note-dependent-utils";
 import { getLogger } from "fusion/logging";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "@/core/constants";
-import { dumpToDict, loadFromDict } from "fusion/libs/Entity";
+import { dumpToDict, loadFromDict } from "fusion/model/Entity";
 import { pamet } from "@/core/facade";
-import { Change } from "fusion/Change";
+import { Change } from "fusion/model/Change";
 
 let log = getLogger('NoteViewState.ts');
 

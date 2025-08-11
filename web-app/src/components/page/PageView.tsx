@@ -21,7 +21,7 @@ import { InternalLinkNote } from "@/model/InternalLinkNote";
 import { appActions } from "@/actions/app";
 import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
-import { MediaItem } from 'fusion/libs/MediaItem';
+import { MediaItem } from 'fusion/model/MediaItem';
 
 
 let log = getLogger('Page.tsx')

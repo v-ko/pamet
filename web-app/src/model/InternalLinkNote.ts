@@ -1,8 +1,8 @@
-import { entityType, getEntityId } from "fusion/libs/Entity";
+import { entityType, getEntityId } from "fusion/model/Entity";
 import { Note } from "@/model/Note";
 import { Page } from "@/model/Page";
 import { elementId } from "@/model/Element";
-import { currentTime, timestamp } from "fusion/base-util";
+import { currentTime, timestamp } from "fusion/util/base";
 import { PametRoute } from "@/services/routing/route";
 
 const MISSING_PAGE_TITLE = '(missing)'

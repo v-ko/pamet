@@ -1,4 +1,4 @@
-import { getCommand } from "fusion/libs/Command";
+import { getCommand } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
 import { pamet } from "@/core/facade";
 

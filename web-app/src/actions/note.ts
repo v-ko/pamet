@@ -1,4 +1,4 @@
-import { action } from "fusion/libs/Action";
+import { action } from "fusion/registries/Action";
 import { PageMode, PageViewState } from "@/components/page/PageViewState";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { Point2D } from "fusion/primitives/Point2D";

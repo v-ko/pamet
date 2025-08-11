@@ -1,4 +1,4 @@
-import { entityType } from "fusion/libs/Entity";
+import { entityType } from "fusion/model/Entity";
 import { Note } from "@/model/Note";
 
 @entityType('ScriptNote')

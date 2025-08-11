@@ -6,7 +6,7 @@ import { TextLayout, EMPTY_TOKEN, truncateText } from "@/util";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
 import { pamet } from "@/core/facade";
-import { MediaItem } from "fusion/libs/MediaItem";
+import { MediaItem } from "fusion/model/MediaItem";
 
 // Init the canvas - conditionally initialize DOM-dependent globals
 

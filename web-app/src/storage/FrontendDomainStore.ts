@@ -1,13 +1,13 @@
-import { InMemoryStore } from "fusion/storage/InMemoryStore"
+import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore"
 import { PametStore as PametStore, PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
-import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/BaseStore"
-import { Entity, EntityData } from "fusion/libs/Entity";
-import { Change } from "fusion/Change";
+import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/domain-store/BaseStore"
+import { Entity, EntityData } from "fusion/model/Entity";
+import { Change } from "fusion/model/Change";
 import { updateViewModelFromDelta, pamet } from "@/core/facade";
-import { action } from "fusion/libs/Action";
+import { action } from "fusion/registries/Action";
 import { getLogger } from "fusion/logging";
-import { Delta, DeltaData, squishDeltas } from "fusion/storage/Delta";
-import type { RepoUpdateData } from "fusion/storage/BaseRepository";
+import { Delta, DeltaData, squishDeltas } from "fusion/model/Delta";
+import type { RepoUpdateData } from "fusion/storage/repository/BaseRepository";
 
 let log = getLogger('FrontendDomainStore');
 

@@ -7,7 +7,7 @@ import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
 import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
-import { createId, currentTime, timestamp } from "fusion/base-util";
+import { createId, currentTime, timestamp } from "fusion/util/base";
 import { DesktopImporter } from "@/storage/DesktopImporter";
 
 const log = getLogger('AppProcedures');

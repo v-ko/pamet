@@ -5,7 +5,7 @@ import {
     IMAGE_CONVERSION_PRESET_PNG,
     MAX_IMAGE_DIMENSION_FOR_COMPRESSION
 } from "@/core/constants";
-import { ImageConversionPreset } from "fusion/media-utils";
+import { ImageConversionPreset } from "fusion/util/media";
 
 interface ImageInfo {
     width: number;

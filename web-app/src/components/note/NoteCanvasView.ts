@@ -12,7 +12,7 @@ import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
 import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
-import { MediaItem } from "fusion/libs/MediaItem";
+import { MediaItem } from "fusion/model/MediaItem";
 
 let log = getLogger('NoteCanvasView');
 

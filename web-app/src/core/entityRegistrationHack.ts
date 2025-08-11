@@ -10,7 +10,7 @@ import { InternalLinkNote } from "@/model/InternalLinkNote";
 import { ExternalLinkNote } from "@/model/ExternalLinkNote";
 import { Page } from "@/model/Page";
 import { Arrow } from "@/model/Arrow";
-import { MediaItem } from 'fusion/libs/MediaItem';
+import { MediaItem } from 'fusion/model/MediaItem';
 
 const log = getLogger('entityRegistration');
 

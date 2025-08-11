@@ -1,4 +1,4 @@
-import { MediaRequest, MediaRequestParser, StorageServiceActual } from "fusion/storage/StorageService";
+import { MediaRequest, MediaRequestParser, StorageServiceActual } from "fusion/storage/management/StorageService";
 import { PametRoute } from "@/services/routing/route";
 import { getLogger } from "fusion/logging";
 

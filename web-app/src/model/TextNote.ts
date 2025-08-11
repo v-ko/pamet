@@ -1,6 +1,6 @@
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
-import { entityType, getEntityId } from "fusion/libs/Entity";
-import { currentTime, timestamp } from "fusion/base-util";
+import { entityType, getEntityId } from "fusion/model/Entity";
+import { currentTime, timestamp } from "fusion/util/base";
 import { elementId } from "@/model/Element";
 import { Note } from "@/model/Note";
 import { RectangleData } from "fusion/primitives/Rectangle";

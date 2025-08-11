@@ -4,12 +4,12 @@ import type { LocalStorageState } from "@/containers/app/WebAppState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
-import { action } from "fusion/libs/Action";
+import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/components/page/PageViewState";
 import type { ProjectData } from "@/model/config/Project";
-import { currentTime, timestamp } from "fusion/base-util";
+import { currentTime, timestamp } from "fusion/util/base";
 import { deleteProjectAndSwitch } from "@/procedures/app";
-import { Entity } from "fusion/libs/Entity";
+import { Entity } from "fusion/model/Entity";
 
 let log = getLogger("WebAppActions");
 

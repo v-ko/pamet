@@ -4,12 +4,12 @@ import { SerializedNote } from "@/model/Note";
 import "@/components/note/edit-window/ImageEditPropsWidget.css";
 import { MAX_MEDIA_NAME_LENGTH, PametTabIndex } from "@/core/constants";
 import { pamet } from "@/core/facade";
-import { MediaItem, MediaItemData } from 'fusion/libs/MediaItem';
+import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
 import { getLogger } from 'fusion/logging';
 import { parseClipboardContents } from "@/util";
-import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/base-util";
+import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/util/base";
 import { determineConversionPreset, ImageVerdict, shouldCompressImage } from "@/core/policies";
-import { convertImage, extractImageDimensions } from 'fusion/media-utils';
+import { convertImage, extractImageDimensions } from 'fusion/util/media';
 import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from "@/core/constants";
 import { mediaItemRoute } from "@/services/routing/route";
 

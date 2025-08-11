@@ -7,12 +7,12 @@ import { pamet } from "@/core/facade";
 import { pageActions } from "@/actions/page";
 import { appActions } from "@/actions/app";
 import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
-import { generateFilenameTimestamp } from "fusion/base-util";
+import { generateFilenameTimestamp } from "fusion/util/base";
 import { getLogger } from "fusion/logging";
 import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "@/core/constants";
 import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "@/core/policies";
-import { convertImage, extractImageDimensions } from "fusion/media-utils";
-import { mapMimeTypeToFileExtension } from "fusion/base-util";
+import { convertImage, extractImageDimensions } from "fusion/util/media";
+import { mapMimeTypeToFileExtension } from "fusion/util/base";
 
 const log = getLogger('PageProcedures');
 

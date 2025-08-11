@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { appActions } from '@/actions/app';
 import { pamet } from '@/core/facade';
-import { timestamp, currentTime } from 'fusion/base-util';
+import { timestamp, currentTime } from 'fusion/util/base';
 import { switchToProject } from "@/procedures/app";
 
 interface CreateProjectDialogProps {

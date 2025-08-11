@@ -1,4 +1,4 @@
-import { ImageConversionPreset } from "fusion/media-utils";
+import { ImageConversionPreset } from "fusion/util/media";
 import { HexColorData } from "fusion/primitives/Color";
 
 // Base geometry

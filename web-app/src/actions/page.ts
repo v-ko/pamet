@@ -2,7 +2,7 @@ import * as util from "@/util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/components/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 
-import { action } from "fusion/libs/Action";
+import { action } from "fusion/registries/Action";
 
 import { getLogger } from "fusion/logging";
 import { Rectangle } from "fusion/primitives/Rectangle";
@@ -16,7 +16,7 @@ import { PametElement, PametElementData } from "@/model/Element";
 import { Arrow } from "@/model/Arrow";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { Page } from "@/model/Page";
-import { MediaItem } from "fusion/libs/MediaItem";
+import { MediaItem } from "fusion/model/MediaItem";
 import { ImageNote } from "@/model/ImageNote";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 

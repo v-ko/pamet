@@ -1,9 +1,9 @@
 import { textRect } from "@/components/note/util";
-import { entityType } from "fusion/libs/Entity";
+import { entityType } from "fusion/model/Entity";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Note } from "@/model/Note";
 import { pamet } from "@/core/facade";
-import { MediaItem } from "fusion/libs/MediaItem";
+import { MediaItem } from "fusion/model/MediaItem";
 
 const MIN_AR_DELTA_FOR_HORIZONTAL_ALIGN = 0.5
 const IMAGE_PORTION_FOR_HORIZONTAL_ALIGN = 0.8

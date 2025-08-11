@@ -1,4 +1,4 @@
-import { entityType } from 'fusion/libs/Entity';
+import { entityType } from 'fusion/model/Entity';
 import { Point2D, PointData } from 'fusion/primitives/Point2D';
 import { PametElement, PametElementData } from "@/model/Element";
 import { Note } from "@/model/Note";

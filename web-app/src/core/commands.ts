@@ -1,6 +1,6 @@
 import { pageActions } from "@/actions/page";
 import { pamet } from "@/core/facade";
-import { command } from "fusion/libs/Command";
+import { command } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
 import { Point2D } from "fusion/primitives/Point2D";
@@ -9,7 +9,7 @@ import { projectActions } from "@/actions/project";
 import { Note } from "@/model/Note";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { PageViewState } from "@/components/page/PageViewState";
-import { buildHashTree } from "fusion/storage/HashTree";
+import { buildHashTree } from "fusion/storage/version-control/HashTree";
 import { parseClipboardContents } from "@/util";
 import { pasteSpecial as pasteSpecialProcedure } from "@/procedures/page";
 

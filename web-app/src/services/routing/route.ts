@@ -1,4 +1,4 @@
-import { MediaItem } from "fusion/libs/MediaItem";
+import { MediaItem } from "fusion/model/MediaItem";
 import { getLogger } from "fusion/logging";
 
 let log = getLogger('PametRoute');

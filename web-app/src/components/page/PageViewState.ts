@@ -13,7 +13,7 @@ import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteTy
 import { ElementViewState as CanvasElementViewState } from "@/components/page/ElementViewState";
 import { Size } from 'fusion/primitives/Size';
 import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
-import { Change } from 'fusion/Change';
+import { Change } from 'fusion/model/Change';
 import { elementOwnId } from "@/model/Element";
 import React from 'react';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";

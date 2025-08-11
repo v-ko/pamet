@@ -5,7 +5,7 @@ import { pamet } from "@/core/facade";
 import { appActions } from "@/actions/app";
 import { switchToProject } from "@/procedures/app";
 import { getLogger } from 'fusion/logging';
-import { getCommands } from 'fusion/libs/Command';
+import { getCommands } from 'fusion/registries/Command';
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 
 let log = getLogger('CommandPalette');
