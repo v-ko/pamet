@@ -1,9 +1,9 @@
-import { registerElementView } from "../elementViewLibrary";
-import { ExternalLinkNote } from "../../model/ExternalLinkNote";
+import { registerElementView } from "@/components/elementViewLibrary";
+import { ExternalLinkNote } from "@/model/ExternalLinkNote";
 
 import { Point2D } from "fusion/primitives/Point2D";
-import { CardNoteCanvasView } from "./CardNoteCanvasView";
-import { color_role_to_hex_color } from "../../util";
+import { CardNoteCanvasView } from "@/components/note/CardNoteCanvasView";
+import { color_role_to_hex_color } from "@/util";
 
 const DECORATION_EDGE = 10;
 

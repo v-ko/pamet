@@ -1,16 +1,16 @@
-import { ArrowViewState } from "../arrow/ArrowViewState";
-import { Viewport } from "./Viewport";
-import { ElementViewState } from "./ElementViewState";
-import { PageMode, PageViewState } from "./PageViewState";
-import { NoteViewState } from "../note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "../../core/constants";
+import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { Viewport } from "@/components/page/Viewport";
+import { ElementViewState } from "@/components/page/ElementViewState";
+import { PageMode, PageViewState } from "@/components/page/PageViewState";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
 import { getLogger } from "fusion/logging";
-import { color_role_to_hex_color, drawCrossingDiagonals } from "../../util";
+import { color_role_to_hex_color, drawCrossingDiagonals } from "@/util";
 
 import { Rectangle } from "fusion/primitives/Rectangle";
-import { ElementView, getElementView } from "../elementViewLibrary";
-import { ArrowCanvasView } from "../arrow/ArrowCanvasView";
-import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "../../model/Arrow";
+import { ElementView, getElementView } from "@/components/elementViewLibrary";
+import { ArrowCanvasView } from "@/components/arrow/ArrowCanvasView";
+import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
 
 let log = getLogger('DirectRenderer');
 

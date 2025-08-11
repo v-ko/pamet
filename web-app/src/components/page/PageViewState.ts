@@ -1,22 +1,22 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, toJS } from 'mobx';
-import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT, RESIZE_CIRCLE_RADIUS } from '../../core/constants';
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT, RESIZE_CIRCLE_RADIUS } from "@/core/constants";
 import { Point2D } from 'fusion/primitives/Point2D';
-import { Page, PageData } from '../../model/Page';
-import { Viewport } from './Viewport';
+import { Page, PageData } from "@/model/Page";
+import { Viewport } from "@/components/page/Viewport";
 import { RectangleData } from 'fusion/primitives/Rectangle';
-import { NoteViewState } from '../note/NoteViewState';
-import { ArrowViewState } from '../arrow/ArrowViewState';
-import { pamet } from '../../core/facade';
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { pamet } from "@/core/facade";
 import { getLogger } from 'fusion/logging';
-import { Note } from '../../model/Note';
-import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from '../../model/Arrow';
-import { ElementViewState as CanvasElementViewState } from './ElementViewState';
+import { Note } from "@/model/Note";
+import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
+import { ElementViewState as CanvasElementViewState } from "@/components/page/ElementViewState";
 import { Size } from 'fusion/primitives/Size';
-import { CanvasPageRenderer } from './DirectRenderer';
+import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 import { Change } from 'fusion/Change';
-import { elementOwnId } from '../../model/Element';
+import { elementOwnId } from "@/model/Element";
 import React from 'react';
-import { NoteEditViewState } from '../note/NoteEditViewState';
+import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('PageViewState');
 

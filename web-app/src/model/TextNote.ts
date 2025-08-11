@@ -1,8 +1,8 @@
-import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
+import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
 import { entityType, getEntityId } from "fusion/libs/Entity";
 import { currentTime, timestamp } from "fusion/base-util";
-import { elementId } from "./Element";
-import { Note } from "./Note";
+import { elementId } from "@/model/Element";
+import { Note } from "@/model/Note";
 import { RectangleData } from "fusion/primitives/Rectangle";
 
 @entityType('TextNote')

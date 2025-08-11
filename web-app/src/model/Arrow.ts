@@ -1,7 +1,7 @@
 import { entityType } from 'fusion/libs/Entity';
 import { Point2D, PointData } from 'fusion/primitives/Point2D';
-import { PametElement, PametElementData } from './Element';
-import { Note } from './Note';
+import { PametElement, PametElementData } from "@/model/Element";
+import { Note } from "@/model/Note";
 
 
 export type ArrowLineType = 'solid';  // To be extended

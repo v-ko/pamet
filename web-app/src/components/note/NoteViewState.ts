@@ -1,12 +1,12 @@
 import { computed, makeObservable, observable, reaction, toJS } from "mobx";
-import { Note, SerializedNote } from "../../model/Note";
-import { TextLayout } from "../../util";
-import { calculateTextLayout } from "./note-dependent-utils";
+import { Note, SerializedNote } from "@/model/Note";
+import { TextLayout } from "@/util";
+import { calculateTextLayout } from "@/components/note/note-dependent-utils";
 import { getLogger } from "fusion/logging";
-import { ElementViewState } from "../page/ElementViewState";
-import { DEFAULT_FONT_STRING } from "../../core/constants";
+import { ElementViewState } from "@/components/page/ElementViewState";
+import { DEFAULT_FONT_STRING } from "@/core/constants";
 import { dumpToDict, loadFromDict } from "fusion/libs/Entity";
-import { pamet } from '../../core/facade';
+import { pamet } from "@/core/facade";
 import { Change } from "fusion/Change";
 
 let log = getLogger('NoteViewState.ts');

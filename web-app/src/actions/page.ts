@@ -1,24 +1,24 @@
-import * as util from "../util";
-import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/page/PageViewState";
+import * as util from "@/util";
+import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/components/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 
 import { action } from "fusion/libs/Action";
 
 import { getLogger } from "fusion/logging";
 import { Rectangle } from "fusion/primitives/Rectangle";
-import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../core/constants";
-import { pamet } from "../core/facade";
-import { Note } from "../model/Note";
-import { TextNote } from "../model/TextNote";
-import { minimalNonelidedSize } from "../components/note/note-dependent-utils";
-import { NoteViewState } from "../components/note/NoteViewState";
-import { PametElement, PametElementData } from "../model/Element";
-import { Arrow } from "../model/Arrow";
-import { ArrowViewState } from "../components/arrow/ArrowViewState";
-import { Page } from "../model/Page";
+import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "@/core/constants";
+import { pamet } from "@/core/facade";
+import { Note } from "@/model/Note";
+import { TextNote } from "@/model/TextNote";
+import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { PametElement, PametElementData } from "@/model/Element";
+import { Arrow } from "@/model/Arrow";
+import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { Page } from "@/model/Page";
 import { MediaItem } from "fusion/libs/MediaItem";
-import { ImageNote } from "../model/ImageNote";
-import { NoteEditViewState } from "../components/note/NoteEditViewState";
+import { ImageNote } from "@/model/ImageNote";
+import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('MapActions');
 

@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import './Panel.css';
+import "@/components/Panel.css";
 
 interface PanelProps {
   align: 'top-left' | 'top-right';

@@ -1,11 +1,11 @@
-import { registerElementView } from "../elementViewLibrary";
-import { CardNote } from "../../model/CardNote";
-import { ImageNote } from "../../model/ImageNote";
-import { TextNote } from "../../model/TextNote";
-import { calculateTextLayout } from "./note-dependent-utils";
-import { NoteCanvasView } from "./NoteCanvasView";
-import { textRect } from "./util";
-import { DEFAULT_FONT_STRING } from "../../core/constants";
+import { registerElementView } from "@/components/elementViewLibrary";
+import { CardNote } from "@/model/CardNote";
+import { ImageNote } from "@/model/ImageNote";
+import { TextNote } from "@/model/TextNote";
+import { calculateTextLayout } from "@/components/note/note-dependent-utils";
+import { NoteCanvasView } from "@/components/note/NoteCanvasView";
+import { textRect } from "@/components/note/util";
+import { DEFAULT_FONT_STRING } from "@/core/constants";
 
 
 

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
-import { pamet } from '../core/facade';
-import { Page } from '../model/Page';
+import { pamet } from "@/core/facade";
+import { Page } from "@/model/Page";
 
 interface CreatePageDialogProps {
   onClose: () => void;

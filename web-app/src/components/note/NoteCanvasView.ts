@@ -1,17 +1,17 @@
-import { NoteViewState } from "./NoteViewState";
-import { NO_SCALE_LINE_SPACING } from "../../core/constants";
-import { color_role_to_hex_color, TextLayout } from "../../util";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { NO_SCALE_LINE_SPACING } from "@/core/constants";
+import { color_role_to_hex_color, TextLayout } from "@/util";
 
-import { calculateTextLayout } from "./note-dependent-utils";
+import { calculateTextLayout } from "@/components/note/note-dependent-utils";
 import { Rectangle } from "fusion/primitives/Rectangle";
-import { BaseCanvasView } from "./BaseCanvasView";
-import { pamet } from "../../core/facade";
-import { DEFAULT_FONT_STRING } from "../../core/constants";
-import { textRect, imageGeometryToFitAre } from "./util";
+import { BaseCanvasView } from "@/components/note/BaseCanvasView";
+import { pamet } from "@/core/facade";
+import { DEFAULT_FONT_STRING } from "@/core/constants";
+import { textRect, imageGeometryToFitAre } from "@/components/note/util";
 import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
-import { ImageNote } from "../../model/ImageNote";
-import { mediaItemRoute } from "../../services/routing/route";
+import { ImageNote } from "@/model/ImageNote";
+import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from "fusion/libs/MediaItem";
 
 let log = getLogger('NoteCanvasView');

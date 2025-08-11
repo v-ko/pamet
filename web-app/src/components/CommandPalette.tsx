@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import './CommandPalette.css';
-import { pamet } from '../core/facade';
-import { appActions } from '../actions/app';
-import { switchToProject } from '../procedures/app';
+import "@/components/CommandPalette.css";
+import { pamet } from "@/core/facade";
+import { appActions } from "@/actions/app";
+import { switchToProject } from "@/procedures/app";
 import { getLogger } from 'fusion/logging';
 import { getCommands } from 'fusion/libs/Command';
-import { PageAndCommandPaletteState, ProjectPaletteState } from './CommandPaletteState';
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 
 let log = getLogger('CommandPalette');
 

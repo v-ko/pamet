@@ -1,6 +1,6 @@
 import { getLogger } from "fusion/logging";
-import { PametRoute } from "./route";
-import { updateAppFromRouteOrAutoassist } from "../../procedures/app";
+import { PametRoute } from "@/services/routing/route";
+import { updateAppFromRouteOrAutoassist } from "@/procedures/app";
 
 const log = getLogger('RoutingService');
 

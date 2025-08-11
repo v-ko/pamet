@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import type { ProjectData } from 'web-app/src/model/config/Project';
-import { appActions } from '../actions/app';
-import { projectActions } from '../actions/project';
-import { pamet } from '../core/facade';
+import { appActions } from "@/actions/app";
+import { projectActions } from "@/actions/project";
+import { pamet } from "@/core/facade";
 
 interface ProjectPropertiesDialogProps {
   project: ProjectData;

@@ -1,14 +1,14 @@
-import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/WebAppState";
-import { SystemModalDialogState } from "../components/system-modal-dialog/state";
-import type { LocalStorageState } from "../containers/app/WebAppState";
-import { PageAndCommandPaletteState, ProjectPaletteState } from "../components/CommandPaletteState";
-import { pamet } from "../core/facade";
+import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/containers/app/WebAppState";
+import { SystemModalDialogState } from "@/components/system-modal-dialog/state";
+import type { LocalStorageState } from "@/containers/app/WebAppState";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
+import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/libs/Action";
-import { PageViewState } from "../components/page/PageViewState";
-import type { ProjectData } from "../model/config/Project";
+import { PageViewState } from "@/components/page/PageViewState";
+import type { ProjectData } from "@/model/config/Project";
 import { currentTime, timestamp } from "fusion/base-util";
-import { deleteProjectAndSwitch } from "../procedures/app";
+import { deleteProjectAndSwitch } from "@/procedures/app";
 import { Entity } from "fusion/libs/Entity";
 
 let log = getLogger("WebAppActions");

@@ -1,8 +1,8 @@
 import { getLogger } from "fusion/logging";
-import { DeviceData } from "../../model/config/Device";
-import { ProjectData } from "../../model/config/Project";
-import { UserData } from "../../model/config/User";
-import { BaseConfigAdapter } from "./BaseConfigAdapter";
+import { DeviceData } from "@/model/config/Device";
+import { ProjectData } from "@/model/config/Project";
+import { UserData } from "@/model/config/User";
+import { BaseConfigAdapter } from "@/services/config/BaseConfigAdapter";
 
 const log = getLogger('PametConfigService');
 

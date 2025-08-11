@@ -6,15 +6,15 @@ import { Note, SerializedNote } from 'web-app/src/model/Note';
 import { TextNote } from 'web-app/src/model/TextNote';
 import { ImageNote } from 'web-app/src/model/ImageNote';
 import { CardNote } from 'web-app/src/model/CardNote';
-import { pamet } from '../../core/facade';
+import { pamet } from "@/core/facade";
 import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
 import { currentTime, timestamp } from 'fusion/base-util';
 import { getLogger } from 'fusion/logging';
-import { PametTabIndex } from '../../core/constants';
-import './NoteEditView.css';
-import { ImageEditPropsWidget } from './edit-window/ImageEditPropsWidget';
+import { PametTabIndex } from "@/core/constants";
+import "@/components/note/NoteEditView.css";
+import { ImageEditPropsWidget } from "@/components/note/edit-window/ImageEditPropsWidget";
 import { MediaItem, MediaItemData } from 'fusion/libs/MediaItem';
-import { NoteEditViewState } from './NoteEditViewState';
+import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('EditComponent');
 

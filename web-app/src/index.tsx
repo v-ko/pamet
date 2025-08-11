@@ -1,33 +1,33 @@
 import React, { createContext } from 'react';
 import ReactDOM from 'react-dom/client';
-import './index.css';
+import "@/index.css";
 
 // import reportWebVitals from './reportWebVitals';
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
-import { PametFacade, webStorageConfigFactory, pamet } from './core/facade';
+import { PametFacade, webStorageConfigFactory, pamet } from "@/core/facade";
 
 
-import { registerEntityClasses } from './core/entityRegistrationHack';
+import { registerEntityClasses } from "@/core/entityRegistrationHack";
 registerEntityClasses();
 
 // Canvas view imports (still needed for UI components)
-import { InternalLinkNoteCanvasView } from './components/note/InternalLinkCanvasView';
-import { ExternalLinkNoteCanvasView } from './components/note/ExternalLinkCanvasView';
-import { ScriptNoteCanvasView } from './components/note/ScriptNoteCanvasView';
-import { CardNoteCanvasView } from './components/note/CardNoteCanvasView';
+import { InternalLinkNoteCanvasView } from "@/components/note/InternalLinkCanvasView";
+import { ExternalLinkNoteCanvasView } from "@/components/note/ExternalLinkCanvasView";
+import { ScriptNoteCanvasView } from "@/components/note/ScriptNoteCanvasView";
+import { CardNoteCanvasView } from "@/components/note/CardNoteCanvasView";
 import { ActionState } from 'fusion/libs/Action';
-import { PametConfigService } from './services/config/Config';
-import { LocalStorageConfigAdapter } from './services/config/LocalStorageConfigAdapter';
-import { StorageService } from '../../fusion/js-src/src/storage/StorageService';
-import { updateAppFromRouteOrAutoassist } from './procedures/app';
+import { PametConfigService } from "@/services/config/Config";
+import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
+import { StorageService } from 'fusion/storage/StorageService';
+import { updateAppFromRouteOrAutoassist } from "@/procedures/app";
 
-import WebApp from './containers/app/App';
-import { WebAppState } from "./containers/app/WebAppState";
+import WebApp from "@/containers/app/App";
+import { WebAppState } from "@/containers/app/WebAppState";
 
-import serviceWorkerUrl from "./service-worker?url"
-import { PAMET_INMEMORY_STORE_CONFIG } from './storage/PametStore';
+import serviceWorkerUrl from "@/service-worker?url"
+import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/ProjectStorageManager';
-import { DEFAULT_KEYBINDINGS } from './core/keybindings';
+import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
 import { addChannel } from 'fusion/libs/Channel';
 // import { MediaProcessingDialogState } from './components/system-modal-dialog/state';
 

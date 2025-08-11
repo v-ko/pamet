@@ -1,26 +1,26 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 
-import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from '../../core/constants';
+import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from "@/core/constants";
 import { Point2D } from 'fusion/primitives/Point2D';
-import { pageActions } from '../../actions/page';
-import { PageMode, PageViewState } from './PageViewState';
-import { Viewport } from './Viewport';
+import { pageActions } from "@/actions/page";
+import { PageMode, PageViewState } from "@/components/page/PageViewState";
+import { Viewport } from "@/components/page/Viewport";
 import { getLogger } from 'fusion/logging';
 import { reaction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
-import './PageView.css';
-import { ElementViewState } from './ElementViewState';
-import { pamet } from '../../core/facade';
-import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
+import "@/components/page/PageView.css";
+import { ElementViewState } from "@/components/page/ElementViewState";
+import { pamet } from "@/core/facade";
+import { NavigationDevice, NavigationDeviceAutoSwitcher } from "@/components/page/NavigationDeviceAutoSwitcher";
 
-import { arrowActions } from '../../actions/arrow';
-import { noteActions } from '../../actions/note';
-import { InternalLinkNote } from '../../model/InternalLinkNote';
-import { appActions } from '../../actions/app';
-import { ImageNote } from '../../model/ImageNote';
-import { mediaItemRoute } from '../../services/routing/route';
+import { arrowActions } from "@/actions/arrow";
+import { noteActions } from "@/actions/note";
+import { InternalLinkNote } from "@/model/InternalLinkNote";
+import { appActions } from "@/actions/app";
+import { ImageNote } from "@/model/ImageNote";
+import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from 'fusion/libs/MediaItem';
 
 

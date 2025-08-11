@@ -1,16 +1,16 @@
-import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData } from '../../model/Arrow';
+import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData } from "@/model/Arrow";
 import { computed, makeObservable, observable, toJS } from 'mobx';
-import { NoteViewState } from '../note/NoteViewState';
+import { NoteViewState } from "@/components/note/NoteViewState";
 import { getLogger } from 'fusion/logging';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { Rectangle } from 'fusion/primitives/Rectangle';
-import { approximateMidpointOfBezierCurve } from '../../util';
-import { ElementViewState } from '../page/ElementViewState';
+import { approximateMidpointOfBezierCurve } from "@/util";
+import { ElementViewState } from "@/components/page/ElementViewState";
 import paper from 'paper';
-import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from '../../core/constants';
+import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/core/constants";
 import { Change } from 'fusion/Change';
-import { pamet } from '../../core/facade';
-import { elementPageId } from '../../model/Element';
+import { pamet } from "@/core/facade";
+import { elementPageId } from "@/model/Element";
 
 let log = getLogger('ArrowViewState');
 

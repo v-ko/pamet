@@ -1,4 +1,4 @@
-import { commands } from "./commands";
+import { commands } from "@/core/commands";
 
 export const DEFAULT_KEYBINDINGS = [
     // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):

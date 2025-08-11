@@ -1,5 +1,5 @@
 import { getLogger } from "fusion/logging";
-import { pamet } from "../core/facade";
+import { pamet } from "@/core/facade";
 
 const log = getLogger('FocusManager');
 

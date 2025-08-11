@@ -3,9 +3,9 @@
 import React from "react";
 import styled from 'styled-components';
 
-import { PageViewState } from "./PageViewState";
-import { NoteComponent } from "../note/Note";
-import { ArrowComponent, ArrowHeadComponent } from "../arrow/Arrow";
+import { PageViewState } from "@/components/page/PageViewState";
+import { NoteComponent } from "@/components/note/Note";
+import { ArrowComponent, ArrowHeadComponent } from "@/components/arrow/Arrow";
 import { observer } from "mobx-react-lite";
 
 export const CanvasWrapper = styled.div`

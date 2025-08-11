@@ -1,5 +1,5 @@
-import { NoteCanvasView } from "./note/NoteCanvasView";
-import { PametElement } from "../model/Element";
+import { NoteCanvasView } from "@/components/note/NoteCanvasView";
+import { PametElement } from "@/model/Element";
 
 
 export type ElementView<T extends typeof NoteCanvasView> = T | React.FC<any>;

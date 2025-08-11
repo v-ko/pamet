@@ -1,8 +1,8 @@
-import { ElementViewState } from "./components/page/ElementViewState";
-import { ALIGNMENT_GRID_UNIT, COLOR_ROLE_MAP } from "./core/constants";
+import { ElementViewState } from "@/components/page/ElementViewState";
+import { ALIGNMENT_GRID_UNIT, COLOR_ROLE_MAP } from "@/core/constants";
 import { getLogger } from "fusion/logging";
-import { Point2D, Vector2D } from "../../fusion/js-src/src/primitives/Point2D";
-import { Rectangle } from "../../fusion/js-src/src/primitives/Rectangle";
+import { Point2D, Vector2D } from "@/../../fusion/js-src/src/primitives/Point2D";
+import { Rectangle } from "@/../../fusion/js-src/src/primitives/Rectangle";
 import { HexColorData } from "fusion/primitives/Color";
 
 // Clipboard item types

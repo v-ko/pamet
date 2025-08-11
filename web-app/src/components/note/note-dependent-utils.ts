@@ -1,11 +1,11 @@
-import { DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, DEFAULT_FONT_STRING, MAX_NOTE_WIDTH, ALIGNMENT_GRID_UNIT, PREFERRED_TEXT_NOTE_ASPECT_RATIO, MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT } from "../../core/constants";
-import { ImageNote } from "../../model/ImageNote";
-import { imageGeometryToFitAre } from "./util";
-import { Note } from "../../model/Note";
-import { TextLayout, EMPTY_TOKEN, truncateText } from "../../util";
+import { DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, DEFAULT_FONT_STRING, MAX_NOTE_WIDTH, ALIGNMENT_GRID_UNIT, PREFERRED_TEXT_NOTE_ASPECT_RATIO, MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT } from "@/core/constants";
+import { ImageNote } from "@/model/ImageNote";
+import { imageGeometryToFitAre } from "@/components/note/util";
+import { Note } from "@/model/Note";
+import { TextLayout, EMPTY_TOKEN, truncateText } from "@/util";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
-import { pamet } from "../../core/facade";
+import { pamet } from "@/core/facade";
 import { MediaItem } from "fusion/libs/MediaItem";
 
 // Init the canvas - conditionally initialize DOM-dependent globals

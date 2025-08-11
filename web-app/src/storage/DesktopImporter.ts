@@ -1,11 +1,11 @@
-import { Page, PageData } from "../model/Page";
+import { Page, PageData } from "@/model/Page";
 import { getLogger } from "fusion/logging";
 import { BaseApiClient } from "fusion/storage/BaseApiClient";
 import { SerializedEntityData, loadFromDict } from "fusion/libs/Entity";
-import { elementId } from "../model/Element";
-import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "../core/constants";
+import { elementId } from "@/model/Element";
+import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
 import { old_color_to_role } from "fusion/primitives/Color";
-import { pamet } from "../core/facade";
+import { pamet } from "@/core/facade";
 
 let log = getLogger('ApiClient');
 

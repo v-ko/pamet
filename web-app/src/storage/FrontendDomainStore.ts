@@ -1,9 +1,9 @@
 import { InMemoryStore } from "fusion/storage/InMemoryStore"
-import { PametStore as PametStore, PAMET_INMEMORY_STORE_CONFIG } from "./PametStore";
+import { PametStore as PametStore, PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/BaseStore"
 import { Entity, EntityData } from "fusion/libs/Entity";
 import { Change } from "fusion/Change";
-import { updateViewModelFromDelta, pamet } from "../core/facade";
+import { updateViewModelFromDelta, pamet } from "@/core/facade";
 import { action } from "fusion/libs/Action";
 import { getLogger } from "fusion/logging";
 import { Delta, DeltaData, squishDeltas } from "fusion/storage/Delta";

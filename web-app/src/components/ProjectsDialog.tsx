@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { pamet } from 'web-app/src/core/facade';
 import { appActions } from 'web-app/src/actions/app';
-import { PametRoute } from '../services/routing/route';
+import { PametRoute } from "@/services/routing/route";
 
 interface ProjectsDialogProps {
   onClose: () => void;

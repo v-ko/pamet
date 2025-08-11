@@ -1,14 +1,14 @@
 import { getLogger } from "fusion/logging";
-import { pamet } from "../core/facade";
-import { ProjectData } from "../model/config/Project";
-import { appActions } from "../actions/app";
-import { PametRoute } from "../services/routing/route";
-import { ProjectError, WebAppState } from "../containers/app/WebAppState";
-import { projectActions } from "../actions/project";
-import { Page } from "../model/Page";
-import { MediaProcessingDialogState } from "../components/system-modal-dialog/state";
+import { pamet } from "@/core/facade";
+import { ProjectData } from "@/model/config/Project";
+import { appActions } from "@/actions/app";
+import { PametRoute } from "@/services/routing/route";
+import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
+import { projectActions } from "@/actions/project";
+import { Page } from "@/model/Page";
+import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
 import { createId, currentTime, timestamp } from "fusion/base-util";
-import { DesktopImporter } from "../storage/DesktopImporter";
+import { DesktopImporter } from "@/storage/DesktopImporter";
 
 const log = getLogger('AppProcedures');
 

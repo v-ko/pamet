@@ -1,7 +1,7 @@
 import { computed, makeObservable, observable } from 'mobx';
-import { Note } from '../../model/Note';
+import { Note } from "@/model/Note";
 import { Point2D } from 'fusion/primitives/Point2D';
-import { pamet } from '../../core/facade';
+import { pamet } from "@/core/facade";
 
 export class NoteEditViewState {
   targetNote: Note;

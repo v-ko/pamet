@@ -1,4 +1,4 @@
-import { NOTE_MARGIN } from "../../core/constants";
+import { NOTE_MARGIN } from "@/core/constants";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
 

@@ -1,12 +1,12 @@
-import { registerElementView } from "../elementViewLibrary";
-import { ScriptNote } from "../../model/ScriptNote";
+import { registerElementView } from "@/components/elementViewLibrary";
+import { ScriptNote } from "@/model/ScriptNote";
 
-import { calculateTextLayout } from "./note-dependent-utils";
+import { calculateTextLayout } from "@/components/note/note-dependent-utils";
 import { Point2D } from "fusion/primitives/Point2D";
-import { NoteCanvasView } from "./NoteCanvasView";
-import { textRect } from "./util";
-import { DEFAULT_FONT_STRING } from "../../core/constants";
-import { color_role_to_hex_color } from "../../util";
+import { NoteCanvasView } from "@/components/note/NoteCanvasView";
+import { textRect } from "@/components/note/util";
+import { DEFAULT_FONT_STRING } from "@/core/constants";
+import { color_role_to_hex_color } from "@/util";
 
 const TRIANGLE_BASE = 10;
 const TRIANGLE_SPACING = 3;

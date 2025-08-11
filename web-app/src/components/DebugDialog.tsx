@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { pamet } from '../core/facade';
+import { pamet } from "@/core/facade";
 
 interface DebugDialogProps {
   isOpen: boolean;

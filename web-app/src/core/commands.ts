@@ -1,17 +1,17 @@
-import { pageActions } from "../actions/page";
-import { pamet } from "./facade";
+import { pageActions } from "@/actions/page";
+import { pamet } from "@/core/facade";
 import { command } from "fusion/libs/Command";
 import { getLogger } from "fusion/logging";
-import { appActions } from "../actions/app";
+import { appActions } from "@/actions/app";
 import { Point2D } from "fusion/primitives/Point2D";
-import { arrowActions } from "../actions/arrow";
-import { projectActions } from "../actions/project";
-import { Note } from "../model/Note";
-import { NoteViewState } from "../components/note/NoteViewState";
-import { PageViewState } from "../components/page/PageViewState";
+import { arrowActions } from "@/actions/arrow";
+import { projectActions } from "@/actions/project";
+import { Note } from "@/model/Note";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { PageViewState } from "@/components/page/PageViewState";
 import { buildHashTree } from "fusion/storage/HashTree";
-import { parseClipboardContents } from "../util";
-import { pasteSpecial as pasteSpecialProcedure } from "../procedures/page";
+import { parseClipboardContents } from "@/util";
+import { pasteSpecial as pasteSpecialProcedure } from "@/procedures/page";
 
 let log = getLogger('PametCommands');
 

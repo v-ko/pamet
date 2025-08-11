@@ -1,5 +1,5 @@
-import { ElementViewState } from "../page/ElementViewState";
-import { CanvasPageRenderer } from "../page/DirectRenderer";
+import { ElementViewState } from "@/components/page/ElementViewState";
+import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 
 export class BaseCanvasView {
     renderer: CanvasPageRenderer;

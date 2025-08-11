@@ -1,35 +1,35 @@
-import "./App.css";
+import "@/containers/app/App.css";
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
-import { PageView } from "../../components/page/PageView";
+import { PageView } from "@/components/page/PageView";
 
 import { getLogger } from "fusion/logging";
 import { styled } from "styled-components";
-import Panel from "../../components/Panel";
+import Panel from "@/components/Panel";
 
-import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
-import shareIconUrl from '../../resources/icons/share-2.svg';
-import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
-import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
-import { commands, confirmPageDeletion } from "../../core/commands";
-import { pageActions } from "../../actions/page";
-import NoteEditView from "../../components/note/NoteEditView";
+import cloudOffIconUrl from "@/resources/icons/cloud-off.svg";
+import shareIconUrl from "@/resources/icons/share-2.svg";
+import accountCircleIconUrl from "@/resources/icons/account-circle.svg";
+import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
+import { commands, confirmPageDeletion } from "@/core/commands";
+import { pageActions } from "@/actions/page";
+import NoteEditView from "@/components/note/NoteEditView";
 import { Point2D } from "fusion/primitives/Point2D";
-import { projectActions } from "../../actions/project";
-import { CreatePageDialog } from "../../components/CreateNewPageDialog";
-import { appActions } from "../../actions/app";
-import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
-import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
-import { ProjectsDialog } from "../../components/ProjectsDialog";
-import { CreateProjectDialog } from "../../components/CreateProjectDialog";
-import { DebugDialog } from "../../components/DebugDialog";
-import { importDesktopDataForTesting } from "../../procedures/app";
-import { WebAppState, ProjectError, PageError, AppDialogMode } from "./WebAppState";
-import { MediaProcessingDialog } from "../../components/system-modal-dialog/MediaProcessingDialog";
-import { MediaProcessingDialogState } from "../../components/system-modal-dialog/state";
-import { PageAndCommandPaletteState, ProjectPaletteState } from "../../components/CommandPaletteState";
-import { PageAndCommandPalette, ProjectPalette } from "../../components/CommandPalette";
+import { projectActions } from "@/actions/project";
+import { CreatePageDialog } from "@/components/CreateNewPageDialog";
+import { appActions } from "@/actions/app";
+import { PagePropertiesDialog } from "@/components/PagePropertiesDialog";
+import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
+import { ProjectsDialog } from "@/components/ProjectsDialog";
+import { CreateProjectDialog } from "@/components/CreateProjectDialog";
+import { DebugDialog } from "@/components/DebugDialog";
+import { importDesktopDataForTesting } from "@/procedures/app";
+import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
+import { MediaProcessingDialog } from "@/components/system-modal-dialog/MediaProcessingDialog";
+import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
+import { PageAndCommandPalette, ProjectPalette } from "@/components/CommandPalette";
 
 let log = getLogger("App");
 

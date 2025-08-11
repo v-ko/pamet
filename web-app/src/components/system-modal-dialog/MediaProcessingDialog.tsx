@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { MediaProcessingDialogState } from './state';
-import './MediaProcessingDialog.css';
+import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
+import "@/components/system-modal-dialog/MediaProcessingDialog.css";
 
 interface MediaProcessingDialogProps {
     state: MediaProcessingDialogState;

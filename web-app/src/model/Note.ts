@@ -1,7 +1,7 @@
 import { Rectangle } from "fusion/primitives/Rectangle";
 
-import { PametElement, PametElementData } from "./Element";
-import { textRect } from "../components/note/util";
+import { PametElement, PametElementData } from "@/model/Element";
+import { textRect } from "@/components/note/util";
 import { entityType } from "fusion/libs/Entity";
 
 export interface NoteContent {
