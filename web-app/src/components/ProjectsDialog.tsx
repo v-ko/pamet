@@ -1,6 +1,6 @@
 import { useRef, useEffect } from 'react';
-import { pamet } from 'web-app/src/core/facade';
-import { appActions } from 'web-app/src/actions/app';
+import { pamet } from '@/core/facade';
+import { appActions } from '@/actions/app';
 import { PametRoute } from "@/services/routing/route";
 
 interface ProjectsDialogProps {

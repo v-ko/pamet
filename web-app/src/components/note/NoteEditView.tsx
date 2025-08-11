@@ -2,10 +2,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Rectangle } from 'fusion/primitives/Rectangle';
-import { Note, SerializedNote } from 'web-app/src/model/Note';
-import { TextNote } from 'web-app/src/model/TextNote';
-import { ImageNote } from 'web-app/src/model/ImageNote';
-import { CardNote } from 'web-app/src/model/CardNote';
+import { Note, SerializedNote } from '@/model/Note';
+import { TextNote } from '@/model/TextNote';
+import { ImageNote } from '@/model/ImageNote';
+import { CardNote } from '@/model/CardNote';
 import { pamet } from "@/core/facade";
 import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
 import { currentTime, timestamp } from 'fusion/base-util';

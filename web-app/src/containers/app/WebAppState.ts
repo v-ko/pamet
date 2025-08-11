@@ -1,9 +1,9 @@
 import { makeObservable, observable } from "mobx";
-import { DeviceData } from "web-app/src/model/config/Device";
-import { UserData } from "web-app/src/model/config/User";
+import { DeviceData } from "@/model/config/Device";
+import { UserData } from "@/model/config/User";
 import { MouseState, PageViewState } from "@/components/page/PageViewState";
-import { pamet } from "web-app/src/core/facade";
-import { ProjectData } from "web-app/src/model/config/Project";
+import { pamet } from "@/core/facade";
+import { ProjectData } from "@/model/config/Project";
 import { Point2D } from "fusion/primitives/Point2D";
 import { PametRoute } from "@/services/routing/route";
 import { SystemModalDialogState } from "@/components/system-modal-dialog/state";

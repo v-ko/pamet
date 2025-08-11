@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
-import { pamet } from 'web-app/src/core/facade';
-import { Page } from 'web-app/src/model/Page';
+import { pamet } from '@/core/facade';
+import { Page } from '@/model/Page';
 
 interface PagePropertiesDialogProps {
   page: Page;
