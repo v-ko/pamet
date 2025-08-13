@@ -26,9 +26,10 @@ import { WebAppState } from "@/containers/app/WebAppState";
 
 import serviceWorkerUrl from "@/service-worker?url"
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
-import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
+import { MediaStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
 import { addChannel } from 'fusion/registries/Channel';
+import { StorageAdapterNames } from 'fusion/storage/repository/Repository';
 // import { MediaProcessingDialogState } from './components/system-modal-dialog/state';
 
 // Register entity classes in main thread context
@@ -128,17 +129,17 @@ export function inMainThreadConfigFactory(projectId: string): ProjectStorageConf
         throw Error('Device not set');
     }
     return {
-        currentBranchName: device.id,
-        inMemoryRepoIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        localRepo: {
+        deviceBranchName: device.id,
+        storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
+        onDeviceRepo: {
             name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,
                 localBranchName: device.id,
             }
         },
-        localMediaStore: {
-            name: 'InMemory' as MediaStoreAdapterNames,
+        onDeviceMediaStore: {
+            name: 'CacheAPI' as MediaStoreAdapterNames, // ???
             args: {
                 projectId: projectId
             }

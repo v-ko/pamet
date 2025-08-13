@@ -23,15 +23,6 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
     }
   }, []);
 
-  // Close helper
-  function handleClose() {
-    const dialog = dialogRef.current;
-    if (dialog?.open) {
-      dialog.close();
-    }
-    onClose();
-  }
-
   // Check if name is already taken by a different page
   const isNameTaken = useMemo(() => {
     const trimmed = pageName.trim();
@@ -46,27 +37,24 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
       const updatedPage = page;
       updatedPage.name = trimmed;
       onSave(updatedPage);
-      handleClose();
+      // The dialog will close automatically because of the form method="dialog"
     }
   }
 
   function handleDelete() {
       onDelete(page);
-      handleClose();
-  }
-
-  // Close dialog on background click
-  function handleBackgroundClick(event: React.MouseEvent) {
-    if (event.target === dialogRef.current) {
-      handleClose();
-    }
+      // The dialog will close automatically because of the form method="dialog"
   }
 
   return (
     <dialog
       ref={dialogRef}
-      onCancel={handleClose}
-      onClick={handleBackgroundClick}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) { // Close on outside click
+            onClose();
+        }
+      }}
       style={{
         border: 'none',
         borderRadius: '4px',
@@ -76,7 +64,7 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         <h3 style={{ margin: 0 }}>Page Properties</h3>
-        <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <form method="dialog" onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <input
             autoFocus
             type="text"

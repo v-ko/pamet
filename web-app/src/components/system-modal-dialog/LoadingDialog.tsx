@@ -1,13 +1,10 @@
 import { useRef, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
-import "@/components/system-modal-dialog/MediaProcessingDialog.css";
+import { LoadingDialogState } from "@/components/system-modal-dialog/state";
+import "@/components/system-modal-dialog/LoadingDialog.css";
 
-interface MediaProcessingDialogProps {
-    state: MediaProcessingDialogState;
-}
 
-export const MediaProcessingDialog = observer(({ state }: MediaProcessingDialogProps) => {
+export const MediaProcessingDialog = observer(({ state }: { state: LoadingDialogState }) => {
     const dialogRef = useRef<HTMLDialogElement>(null);
 
     useEffect(() => {
@@ -18,7 +15,7 @@ export const MediaProcessingDialog = observer(({ state }: MediaProcessingDialogP
     }, []);
 
     return (
-        <dialog ref={dialogRef} className="system-modal-dialog">
+        <dialog ref={dialogRef} className="loading-dialog">
             <h3 className="dialog-title">{state.title}</h3>
             <p className="task-description">{state.taskDescription}</p>
             {state.taskProgress < 0 ? (

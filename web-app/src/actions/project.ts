@@ -64,7 +64,7 @@ class ProjectActions {
   }
 
   @action
-  createNewPage(appState: WebAppState, name: string) {
+  createNewPage(appState: WebAppState, name: string): Page {
     if (!appState.currentPageViewState) {
       throw Error('No current page. Cannot create a new page via createNewPage. Use createDefaultPage instead.')
     }
@@ -100,9 +100,7 @@ class ProjectActions {
     backLink.setRect(rect);
     pamet.insertNote(backLink);
 
-    // Switch to new page
-
-    // Open settings view | IMPLEMENT LATER
+    return newPage;
   }
 
   @action

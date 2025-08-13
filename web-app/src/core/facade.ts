@@ -11,8 +11,8 @@ import { MediaItem } from "fusion/model/MediaItem";
 import { FrontendDomainStore } from "@/storage/FrontendDomainStore";
 import { PametConfigService } from "@/services/config/Config";
 import { StorageService } from "fusion/storage/management/StorageService";
-import { MediaStoreAdapterNames, ProjectStorageConfig, StorageAdapterNames } from "fusion/storage/management/ProjectStorageManager";
-import { RepoUpdateData } from "fusion/storage/repository/BaseRepository";
+import { MediaStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
+import { RepoUpdateData, StorageAdapterNames } from "fusion/storage/repository/Repository";
 import { RoutingService } from "@/services/routing/RoutingService";
 import { PametRoute } from "@/services/routing/route";
 import { registerRootActionCompletedHook } from "fusion/registries/Action";
@@ -20,7 +20,7 @@ import { ProjectData } from "@/model/config/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
-import { updateAppStateFromConfig } from "@/procedures/app";
+import { updateAppStateFromConfig, restartServiceWorker } from "@/procedures/app";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -37,16 +37,16 @@ export function webStorageConfigFactory(projectId: string): ProjectStorageConfig
         throw Error('Device not set');
     }
     return {
-        currentBranchName: device.id,
-        inMemoryRepoIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        localRepo: {
+        deviceBranchName: device.id,
+        storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
+        onDeviceRepo: {
             name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,
                 localBranchName: device.id,
             }
         },
-        localMediaStore: {
+        onDeviceMediaStore: {
             name: 'CacheAPI' as MediaStoreAdapterNames,
             args: {
                 projectId: projectId
@@ -69,13 +69,18 @@ export class PametFacade extends PametStore {
     _focusManager: FocusManager | null = null;
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
+    procedures: {
+        restartServiceWorker: () => Promise<void>;
+    }
     // Focus handling (context related): Except when receiving focus/blur
     // events - the context change should be applied in the unmount hook
     // (callback returned by useEffect)
 
     constructor() {
         super()
-
+        this.procedures = {
+            restartServiceWorker: restartServiceWorker,
+        };
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
             // Better do the registration here, so that we don't have to worry
@@ -320,7 +325,7 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
      */
-    console.log('Applying delta to view states', delta)
+    // console.log('Applying delta to view states', delta)
 
     for (let change of delta.changes()) {
         let currentPageVS = appState.currentPageViewState

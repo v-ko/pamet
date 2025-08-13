@@ -1,8 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import type { ProjectData } from '@/model/config/Project';
-import { appActions } from "@/actions/app";
 import { projectActions } from "@/actions/project";
 import { pamet } from "@/core/facade";
+import { deleteProjectAndSwitch } from '@/procedures/app';
+import { getLogger } from 'fusion/logging';
+
+let log = getLogger("ProjectPropertiesDialog");
 
 interface ProjectPropertiesDialogProps {
   project: ProjectData;
@@ -30,7 +33,9 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
     if (!confirmed) return;
 
     onClose();
-    appActions.startProjectDeletionProcedure(project);
+    deleteProjectAndSwitch(project).catch((e) => {
+      log.error("Error in startProjectDeletionProcedure", e);
+    });
   }
 
   useEffect(() => {
@@ -40,25 +45,15 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
     }
   }, []);
 
-  function handleClose() {
-    const dialog = dialogRef.current;
-    if (dialog?.open) {
-      dialog.close();
-    }
-    onClose();
-  }
-
-  function handleBackgroundClick(event: React.MouseEvent) {
-    if (event.target === dialogRef.current) {
-      handleClose();
-    }
-  }
-
   return (
     <dialog
       ref={dialogRef}
-      onClick={handleBackgroundClick}
-      onCancel={handleClose}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) {
+          onClose();
+        }
+      }}
       style={{
         border: 'none',
         borderRadius: '4px',
@@ -72,94 +67,97 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
       <h3 style={{ margin: 0, marginBottom: '12px' }}>Project Properties</h3>
 
       <form
-            style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (titleError) return;
+        method="dialog"
+        style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+        onSubmit={(e) => {
+          // Note: when the form method is "dialog", the submit event fires, but
+          // the default action is to close the dialog, not to submit the form.
+          // So we can just do our thing here and not call e.preventDefault()
+          if (titleError) return;
 
-              const updatedProject = {
-                ...project,
-                title: title.trim()
-              };
+          const updatedProject = {
+            ...project,
+            title: title.trim()
+          };
 
-              try {
-                projectActions.updateProject(updatedProject);
-                onClose();
-              } catch (error) {
-                setTitleError((error as Error).message);
-              }
+          try {
+            projectActions.updateProject(updatedProject);
+            // No need to call onClose, the dialog will close automatically
+          } catch (error) {
+            setTitleError((error as Error).message);
+          }
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <input
+            type="text"
+            value={title}
+            onChange={e => {
+              const newTitle = e.target.value;
+              setTitle(newTitle);
+              setTitleError(validateTitle(newTitle));
+            }}
+            placeholder="Project Title"
+            style={{
+              padding: '4px',
+              border: '1px solid #ddd',
+              borderRadius: '4px'
+            }}
+          />
+          {titleError && (
+            <small style={{ color: 'red' }}>{titleError}</small>
+          )}
+        </div>
+
+        <input
+          type="text"
+          value={project.id}
+          disabled
+          title="Project ID cannot be changed"
+          style={{
+            padding: '4px',
+            backgroundColor: '#f5f5f5',
+            cursor: 'not-allowed',
+            border: '1px solid #ddd',
+            borderRadius: '4px'
+          }}
+        />
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
+          <button
+            type="submit"
+            disabled={!title.trim() || titleError !== null}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              backgroundColor: titleError || !title.trim() ? '#f5f5f5' : '#0066cc',
+              color: titleError || !title.trim() ? '#666' : 'white',
+              cursor: titleError || !title.trim() ? 'not-allowed' : 'pointer'
             }}
           >
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <input
-                type="text"
-                value={title}
-                onChange={e => {
-                  const newTitle = e.target.value;
-                  setTitle(newTitle);
-                  setTitleError(validateTitle(newTitle));
-                }}
-                placeholder="Project Title"
-                style={{
-                  padding: '4px',
-                  border: '1px solid #ddd',
-                  borderRadius: '4px'
-                }}
-              />
-              {titleError && (
-                <small style={{ color: 'red' }}>{titleError}</small>
-              )}
-            </div>
-
-            <input
-              type="text"
-              value={project.id}
-              disabled
-              title="Project ID cannot be changed"
-              style={{
-                padding: '4px',
-                backgroundColor: '#f5f5f5',
-                cursor: 'not-allowed',
-                border: '1px solid #ddd',
-                borderRadius: '4px'
-              }}
-            />
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-              <button
-                type="submit"
-                disabled={!title.trim() || titleError !== null}
-                style={{
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: titleError || !title.trim() ? '#f5f5f5' : '#0066cc',
-                  color: titleError || !title.trim() ? '#666' : 'white',
-                  cursor: titleError || !title.trim() ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Save
-              </button>
-              <button
-                type="button"
-                onClick={() => onDelete(project)}
-                style={{
-                  padding: '8px 16px',
-                  border: 'none',
-                  borderRadius: '4px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                Delete Project
-              </button>
-            </div>
-          </form>
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(project)}
+            style={{
+              padding: '8px 16px',
+              border: 'none',
+              borderRadius: '4px',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              cursor: 'pointer'
+            }}
+          >
+            Delete Project
+          </button>
+        </div>
+      </form>
 
       <button
-        type="button"
-        onClick={handleClose}
+        formMethod="dialog"
+        formNoValidate
         style={{
           position: 'absolute',
           top: '10px',

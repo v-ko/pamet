@@ -18,25 +18,15 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
     }
   }, []);
 
-  function handleClose() {
-    const dialog = dialogRef.current;
-    if (dialog?.open) {
-      dialog.close();
-    }
-    onClose();
-  }
-
-  function handleBackgroundClick(event: React.MouseEvent) {
-    if (event.target === dialogRef.current) {
-      handleClose();
-    }
-  }
-
   return (
     <dialog
       ref={dialogRef}
-      onClick={handleBackgroundClick}
-      onCancel={handleClose}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) { // Close on outside click
+            onClose();
+        }
+      }}
       style={{
         border: 'none',
         borderRadius: '4px',
@@ -86,7 +76,7 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
                   route.projectId = project.id;
                   return route.toRelativeReference();
                 })()}
-                onClick={handleClose}
+                onClick={onClose}
                 style={{
                   flex: 1,
                   padding: '4px',

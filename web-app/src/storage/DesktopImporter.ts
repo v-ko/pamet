@@ -185,7 +185,7 @@ export class DesktopImporter extends BaseApiClient {
 
 
         // 1. Fetch raw data
-        progressCallback(0.1, 'Fetching repository data...');
+        progressCallback(-1, 'Fetching repository data...');
         const pagesUrl = this.endpointUrl('pages');
         const rawPagesData: any[] = await this.get(pagesUrl);
 
@@ -202,7 +202,7 @@ export class DesktopImporter extends BaseApiClient {
         let pagesProcessed = 0;
         for (const pageData of rawPagesData) {
             pagesProcessed++;
-            // progressCallback(0.2 + 0.3 * (pagesProcessed / pageCount), `Fetching page content ${pagesProcessed}/${pageCount}...`);
+            progressCallback(20 + 30 * (pagesProcessed / pageCount), `Fetching page content ${pagesProcessed}/${pageCount}...`);
             const childrenUrl = this.endpointUrl(`/p/${pageData.id}/children`);
             const childrenData = await this.get(childrenUrl);
             allMigratedEntities.push(...childrenData.notes.map(tmpDynamicMigration));
@@ -251,7 +251,7 @@ export class DesktopImporter extends BaseApiClient {
             }
 
             entitiesProcessed++;
-            // progressCallback(0.5 + 0.5 * (entitiesProcessed / totalEntities), `Importing media files... ${entitiesProcessed}/${totalEntities}`);
+            progressCallback(50 + 50 * (entitiesProcessed / totalEntities), `Importing media files... ${entitiesProcessed}/${totalEntities}`);
         }
 
         // 5. Process other entities

@@ -24,12 +24,12 @@ import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { DebugDialog } from "@/components/DebugDialog";
-import { importDesktopDataForTesting } from "@/procedures/app";
+import { importDesktopDataForTesting, updateAppFromRouteOrAutoassist } from "@/procedures/app";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
-import { MediaProcessingDialog } from "@/components/system-modal-dialog/MediaProcessingDialog";
-import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
+import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { PageAndCommandPalette, ProjectPalette } from "@/components/CommandPalette";
+import { pamet } from "@/core/facade";
 
 let log = getLogger("App");
 
@@ -43,7 +43,7 @@ const VerticalSeparator = styled.div`
 const WebApp = observer(({ state }: { state: WebAppState }) => {
   let errorMessages: string[] = []
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
-  const [showMediaProcessingModal, setShowMediaProcessingModal] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -57,14 +57,14 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   useEffect(() => {
     // Set delayed system modal dialog visibility to avoid
     // Brief pop-up on short tasks
-    const dialogState = state.systemModalDialogState;
+    const dialogState = state.loadingDialogState;
     if (!dialogState) {
-      setShowMediaProcessingModal(false);
+      setShowLoadingDialog(false);
       return;
     }
 
-    if (dialogState.showAfterUnixTime === undefined) {
-      setShowMediaProcessingModal(true);
+    if (dialogState.showAfterUnixTime === null) {
+      setShowLoadingDialog(true);
       return;
     }
 
@@ -72,18 +72,18 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
     const delay = dialogState.showAfterUnixTime - now;
 
     if (delay <= 0) {
-      setShowMediaProcessingModal(true);
+      setShowLoadingDialog(true);
       return;
     }
 
     const timer = setTimeout(() => {
-      setShowMediaProcessingModal(true);
+      setShowLoadingDialog(true);
     }, delay);
 
     return () => {
       clearTimeout(timer);
     };
-  }, [state.systemModalDialogState]);
+  }, [state.loadingDialogState]);
 
   // Check for resurce availability, and prep error messages if needed
   let shouldDisplayPage = true
@@ -250,7 +250,14 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       {state.dialogMode === AppDialogMode.CreateNewPage && (
         <CreatePageDialog
           onClose={() => appActions.closeAppDialog(state)}
-          onCreate={(name: string) => projectActions.createNewPage(state, name)}
+          onCreate={(name: string) => {
+            log.info(`Creating new page: ${name}`);
+            let page = projectActions.createNewPage(state, name)
+            log.info(`Setting current page to ${name}`);
+            appActions.setCurrentPage(state, page.id);
+
+            // Open settings view | IMPLEMENT LATER
+          }}
         />
       )}
 
@@ -262,6 +269,12 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onDelete={(page) => {
             if (confirmPageDeletion(page.name)) {
               projectActions.deletePageAndUpdateReferences(page);
+              appActions.closeAppDialog(state);
+              let route = pamet.router.currentRoute();
+              route.pageId = undefined
+              updateAppFromRouteOrAutoassist(route).catch((err) => {
+                log.error("Error updating app from route after page deletion", err);
+              });
             }
           }}
         />
@@ -292,8 +305,8 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         onClose={() => setDebugInfoModalOpen(false)}
       />
 
-      {showMediaProcessingModal && state.systemModalDialogState instanceof MediaProcessingDialogState && (
-        <MediaProcessingDialog state={state.systemModalDialogState} />
+      {showLoadingDialog && state.loadingDialogState && (
+        <MediaProcessingDialog state={state.loadingDialogState} />
       )}
       {state.commandPaletteState instanceof PageAndCommandPaletteState &&
         <PageAndCommandPalette state={state.commandPaletteState} />}

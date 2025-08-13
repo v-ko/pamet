@@ -36,6 +36,15 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
     }
   };
 
+  const a_restartServiceWorker = async () => {
+    try {
+        await pamet.procedures.restartServiceWorker();
+    } catch (error) {
+        console.error('Error restarting service worker:', error);
+        alert('Error restarting service worker. See console for details.');
+    }
+    };
+
   const fetchFdsState = () => {
     try {
       console.log('Fetching FDS state');
@@ -57,7 +66,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       }}
       onCancel={onClose}
       onClick={(e) => {
-        if (e.target === e.currentTarget) {
+        if (e.target === dialogRef.current) {
           onClose();
         }
       }}
@@ -119,7 +128,9 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
           </pre>
         </details>
       )}
-
+      <button onClick={a_restartServiceWorker}>
+        Restart Service Worker
+      </button>
     </dialog>
   );
 };

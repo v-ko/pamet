@@ -6,7 +6,6 @@ import * as util from "@/util";
 import { pamet } from "@/core/facade";
 import { pageActions } from "@/actions/page";
 import { appActions } from "@/actions/app";
-import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
 import { generateFilenameTimestamp } from "fusion/util/base";
 import { getLogger } from "fusion/logging";
 import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "@/core/constants";
@@ -91,10 +90,7 @@ export async function pasteSpecial(
     pasteData: util.ClipboardItem[]
 ): Promise<void> {
 
-    const dialogState = new MediaProcessingDialogState();
-    dialogState.title = 'Pasting content';
-    dialogState.showAfterUnixTime = Date.now() + 500;
-    appActions.updateSystemDialogState(pamet.appViewState, dialogState);
+    appActions.updateSystemDialogState(pamet.appViewState, {title: 'Pasting content', showAfterUnixTime: Date.now() + 500});
 
     try {
         let pasteAt = position;
@@ -110,11 +106,9 @@ export async function pasteSpecial(
 
         for (const item of pasteData) {
             itemsProcessed++;
-            dialogState.taskDescription = `Processing item ${itemsProcessed} of ${totalItems}`;
-            dialogState.taskProgress = (itemsProcessed / totalItems) * 100;
-            // Create a new state object to ensure reactivity, since mobx might not pick up on nested property changes
-            let newDialogState = Object.assign(new MediaProcessingDialogState(), dialogState);
-            appActions.updateSystemDialogState(pamet.appViewState, newDialogState);
+            let taskDescription = `Processing item ${itemsProcessed} of ${totalItems}`;
+            let taskProgress = (itemsProcessed / totalItems) * 100;
+            appActions.updateSystemDialogState(pamet.appViewState, {taskDescription: taskDescription, taskProgress: taskProgress});
             // await new Promise(resolve => setTimeout(resolve, 1000));
 
             if (item.type === 'text') {

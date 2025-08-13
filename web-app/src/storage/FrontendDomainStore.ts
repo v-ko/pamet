@@ -7,7 +7,7 @@ import { updateViewModelFromDelta, pamet } from "@/core/facade";
 import { action } from "fusion/registries/Action";
 import { getLogger } from "fusion/logging";
 import { Delta, DeltaData, squishDeltas } from "fusion/model/Delta";
-import type { RepoUpdateData } from "fusion/storage/repository/BaseRepository";
+import type { RepoUpdateData } from "fusion/storage/repository/Repository";
 
 let log = getLogger('FrontendDomainStore');
 

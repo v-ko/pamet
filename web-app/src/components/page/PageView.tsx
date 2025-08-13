@@ -500,8 +500,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // Currently only dragging navigation/selection can be resumed on reentry.
     // Everything else should be cancelled on mouseleave
 
-    console.log('MOUSE ENTER!!')
-
     // Update the mouse position in the state
     pageActions.updateMousePosition(state, new Point2D([event.clientX, event.clientY]));
 
@@ -613,8 +611,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
-        // onFocus={() => { pamet.setContext('canvasFocus', true) }}
-        // onBlur={() => { pamet.setContext('canvasFocus', false) }}
       >
 
         {/* Old pamet-canvas element rendering */}

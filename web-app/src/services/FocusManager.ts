@@ -45,6 +45,16 @@ export class FocusManager {
   }
 
   public updateContextOnFocus(registration: FocusRegistration) {
+    /**
+     * Whem focus is on the element matched by the selector - the
+     * contextKey is set to valOnFocus, and vice versa.
+     * These registrations are also used when correcting focus. If the
+     * focused element has no tabindex - focus is automatically switched to
+     * 1. The last focused element (if it has tabindex and is present)
+     * 2. The registered parent of the focused element
+     * 3. Any registered element
+     * 4. The element with the highest tab index on the page.
+     */
     if (this.focusRegistrations.has(registration.selector)) {
       throw new Error(`Focus registration for selector "${registration.selector}" already exists.`);
     }

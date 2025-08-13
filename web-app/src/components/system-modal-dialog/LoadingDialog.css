@@ -1,6 +1,6 @@
 @import '../../variables.css';
 
-.system-modal-dialog {
+.loading-dialog {
     border: none;
     border-radius: var(--radius-md);
     padding: var(--space-3);

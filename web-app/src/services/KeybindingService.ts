@@ -5,18 +5,24 @@ import { pamet } from "@/core/facade";
 const log = getLogger('KeybindingService');
 
 function contextConditionFulfilled(whenExpression: string): boolean {
-  if (whenExpression.includes('&&') || whenExpression.includes('||')) {
+  if (whenExpression.includes('&&') || whenExpression.includes('||') ||
+    whenExpression.includes('==')) {
     throw new Error('Logical expressions not implemented yet');
   }
 
-  // For now, we only support simple conditions like 'pageHasFocus'
-  let condition = whenExpression;
-  const contextVal = pamet.context[condition];
-  if (contextVal === undefined) {
-    throw new Error(`Context condition not found: ${condition}`);
+  if (whenExpression === '') {
+    return true;
   }
 
-  return contextVal;
+  // For now, we only support simple conditions like 'pageHasFocus'
+  let contextKey = whenExpression;
+  const contextVal = pamet.context[contextKey];
+  if (contextVal === undefined) {
+    throw new Error(`Context condition not found: ${contextKey}`);
+  }
+  let satisfied = contextVal === true;
+
+  return satisfied;
 }
 
 export interface Keybinding {
@@ -282,14 +288,14 @@ export class KeybindingService {
 
     // If it's ctrl+P or ctrl+S, we need to take extra steps
     if ((event.code === 'KeyP' || event.code === 'KeyS') &&
-        (event.ctrlKey || event.metaKey) && !event.altKey &&
-        (!event.shiftKey || (window as any).chrome || (window as any).opera)) {
+      (event.ctrlKey || event.metaKey) && !event.altKey &&
+      (!event.shiftKey || (window as any).chrome || (window as any).opera)) {
       // Prevent the default browser print/save action
-        if (event.stopImmediatePropagation) {
-            event.stopImmediatePropagation();
-        } else {
-            event.stopPropagation();
-        }
+      if (event.stopImmediatePropagation) {
+        event.stopImmediatePropagation();
+      } else {
+        event.stopPropagation();
+      }
     }
 
     const cmd = getCommand(matchedBinding.command);

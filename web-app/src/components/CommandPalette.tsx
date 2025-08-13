@@ -58,6 +58,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({initialInput, upd
     }, [filteredCommands, selectedIndex]);
 
   const handleCommandClick = (command: PaletteItemAttributes) => {
+    appActions.closeCommandPalette(pamet.appViewState);
     command.action();
   };
 
@@ -76,7 +77,10 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({initialInput, upd
             <li
                 key={command.id}
                 className={index === selectedIndex ? 'selected' : ''}
-                onClick={() => handleCommandClick(command)}
+                onClick={(e) => {
+                   e.stopPropagation();
+                   handleCommandClick(command)
+               }}
                 onMouseEnter={() => setSelectedIndex(index)}
             >
               {command.title}

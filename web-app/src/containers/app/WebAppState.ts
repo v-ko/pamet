@@ -6,7 +6,7 @@ import { pamet } from "@/core/facade";
 import { ProjectData } from "@/model/config/Project";
 import { Point2D } from "fusion/primitives/Point2D";
 import { PametRoute } from "@/services/routing/route";
-import { SystemModalDialogState } from "@/components/system-modal-dialog/state";
+import { LoadingDialogState } from "@/components/system-modal-dialog/state";
 import { CommandPaletteState } from "@/components/CommandPaletteState";
 
 
@@ -58,7 +58,7 @@ export class WebAppState {
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;
   focusPointOnDialogOpen: Point2D = new Point2D([0, 0]); // Either the mouse location or the center of the screen
-  systemModalDialogState: SystemModalDialogState | null = null;
+  loadingDialogState: LoadingDialogState | null = null;
   mouse: MouseState = new MouseState();
   commandPaletteState: CommandPaletteState | null = null;
 
@@ -73,7 +73,7 @@ export class WebAppState {
       pageError: observable,
       projectError: observable,
       dialogMode: observable,
-      systemModalDialogState: observable,
+      loadingDialogState: observable,
       commandPaletteState: observable,
     });
   }

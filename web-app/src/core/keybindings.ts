@@ -111,17 +111,17 @@ export const DEFAULT_KEYBINDINGS = [
     {
         key: 'ctrl+p',
         command: commands.openPagePalette.name,
-        when: 'canvasFocus'
+        when: ''
     },
     {
         key: 'ctrl+shift+p',
         command: commands.openCommandPalette.name,
-        when: 'canvasFocus'
+        when: ''
     },
     {
         key: 'ctrl+alt+p',
         command: commands.openCommandPaletteWithProjectSwitch.name,
-        when: 'canvasFocus'
+        when: ''
     },
 
 ]

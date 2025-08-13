@@ -6,7 +6,6 @@ import { PametRoute } from "@/services/routing/route";
 import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
-import { MediaProcessingDialogState } from "@/components/system-modal-dialog/state";
 import { createId, currentTime, timestamp } from "fusion/util/base";
 import { DesktopImporter } from "@/storage/DesktopImporter";
 
@@ -32,6 +31,9 @@ export async function switchToProject(projectId: string | null): Promise<void> {
     log.info('Switching to project', projectId);
 
     const appState = pamet.appViewState;
+    appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
+    // await new Promise(resolve => setTimeout(resolve, 50)); // Simulate delay
+
     let currentProjectId = pamet.appViewState.currentProjectId;
     let idsMatch = currentProjectId === projectId;
 
@@ -75,8 +77,13 @@ export async function switchToProject(projectId: string | null): Promise<void> {
             appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
         }
 
+        // The state is updated - so produce a route from it and apply it to
+        // the app. There may be a more elegant way in the future
+        // But this works and will
+        await pamet.router.pushRoute(appState.route())
     } finally {
         projectSwithLock = false;
+        appActions.updateSystemDialogState(appState, null);
     }
     log.info('Project switch finished. App state:', pamet.appViewState);
 }
@@ -94,6 +101,12 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         throw new Error(`Project with ID ${project.id} not found`);
     }
 
+    // Ask here, so that there's no chance another tab creates the default
+    // project first, creating a conflict
+    if (pamet.projects().length === 1) {
+        alert('You\'re deleting the last project. A new one will be created.')
+    }
+
     // If the project to be deleted is the currently open one
     // we detach
     if (pamet.appViewState.currentProjectId === project.id) {
@@ -101,58 +114,31 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         await switchToProject(null);
     }
 
-    // Ask here, so that there's no chance another tab creates the default
-    // project first, creating a conflict
-    if (pamet.projects().length === 1) {
-        alert('You\'re deleting the last project. A new one will be created.')
-    }
-
     // Do the requested delete from the local config and storage backend
     log.info("Removing project from config and indexeddb", project);
+    appActions.updateSystemDialogState(pamet.appViewState, {
+        title: 'Deleting project...',
+        taskProgress: -1,
+    });
 
     // Remove from config which will signal the other tabs to unload the project
     pamet.config.removeProject(project.id);
 
-    // Create a timeout promise
-    const DELETION_TIMEOUT = 5000; // 5 seconds
-    const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-            reject(new Error('Project deletion timed out - other tabs may be blocking'));
-        }, DELETION_TIMEOUT);
-    });
-
-
-    let deletionPromise = pamet.storageService.deleteProject(
+    await pamet.storageService.deleteProject(
         project.id,
         pamet.projectStorageConfig(project.id)
     )
-
-    try {
-        // Race between deletion and timeout
-        await Promise.race([
-            deletionPromise,
-            timeoutPromise
-        ]);
-
-        // If we get here, deletion succeeded before timeout
-
-    } catch (error: any) {
-        log.error('Error during project deletion:', error);
-
-        if (error?.message?.includes('timed out')) {
-            // If it timed out, show warning and proceed with config removal
-            log.error('Project deletion timed out.');
-        } else {
-            // For other errors, rethrow
-            throw error;
-        }
-    }
-
-    // If there's no projects left, create a default one
-    if (pamet.projects().length === 0) {
-        log.info("No projects left - creating a default one");
-        appActions.createDefaultProject();
-    }
+    // auto-creation is handled in auto-assist i think
+    // // If there's no projects left, create a default one
+    // if (pamet.projects().length === 0) {
+    //     log.info("No projects left - creating a default one");
+    //     appActions.updateSystemDialogState(pamet.appViewState, {
+    //         title: 'Creating default project...',
+    //         taskProgress: 100,
+    //     });
+    //     let newProject = await createDefaultProject();
+    //     await switchToProject(newProject.id);
+    // }
 
     // If the current project is null (i.e. we've deleted the current project)
     // Use the auto-assist to switch to the first project in the list
@@ -191,7 +177,8 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
         let projects = pamet.projects();
         if (projects.length === 0) {
             log.info('No projects found. Creating a default one');
-            appActions.createDefaultProject();
+            let newProject = await createDefaultProject();
+            await switchToProject(newProject.id);
             await updateAppFromRouteOrAutoassist(new PametRoute());
             return;
         } else {
@@ -199,7 +186,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
             let firstProjectRoute = new PametRoute()
             firstProjectRoute.userId = userData.id;
             firstProjectRoute.projectId = projects[0].id;
-            await pamet.router.changeRouteAndApplyToApp(firstProjectRoute);
+            await pamet.router.changeRouteAndApplyToApp(firstProjectRoute); // calls this function inside (recurses)
             return;
         }
     }
@@ -269,8 +256,6 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
     }
 }
 
-
-
 export async function updateAppStateFromConfig(appState: WebAppState) {
     // Device
     let device = pamet.config.deviceData;
@@ -314,17 +299,12 @@ export async function importDesktopDataForTesting() {
     log.info('Starting import of desktop data for testing...');
     const appState = pamet.appViewState;
 
-    const dialogState = new MediaProcessingDialogState();
-    dialogState.title = 'Starting import...';
-    // @ts-ignore
-    dialogState.progress = -1; // Negative progress for spinner
-    appActions.updateSystemDialogState(appState, dialogState);
+    appActions.updateSystemDialogState(appState, {title: 'Starting import...'});
     await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
 
     try {
         // 1. Create a new project for the imported data
-        dialogState.title = 'Creating new project...';
-        appActions.updateSystemDialogState(appState, { ...dialogState });
+        appActions.updateSystemDialogState(appState, {title: 'Creating new project...'});
 
         const newProject: ProjectData = {
             id: `desktop-import-${createId()}`,
@@ -333,19 +313,16 @@ export async function importDesktopDataForTesting() {
             owner: pamet.config.userData!.id,
             created: timestamp(currentTime()),
         };
-        appActions.createProject(newProject);
+        await createProject(newProject);
 
         // 2. Switch to the new project
-        dialogState.title = 'Switching to new project...';
-        appActions.updateSystemDialogState(appState, { ...dialogState });
+        appActions.updateSystemDialogState(appState, {title: 'Switching to new project...'});
         await switchToProject(newProject.id);
 
         // 3. Fetch data from desktop server and import it
         const desktopImporter = new DesktopImporter("http://localhost", 11352);
         await desktopImporter.importAllInProject((progress: number, message: string) => {
-            dialogState.title = message;
-            dialogState.taskProgress = progress;
-            appActions.updateSystemDialogState(appState, { ...dialogState });
+            appActions.updateSystemDialogState(appState, {title: message, taskProgress: progress});
         });
 
         log.info(`Imported entities into project ${newProject.id}`);
@@ -357,4 +334,30 @@ export async function importDesktopDataForTesting() {
         // 6. Close the dialog
         appActions.updateSystemDialogState(appState, null);
     }
+}
+
+export async function createProject(newProject: ProjectData): Promise<void> {
+    log.info('Creating project', newProject.id);
+    await pamet.storageService.createProject(newProject.id, pamet.projectStorageConfig(newProject.id));
+    pamet.config.addProject(newProject);
+    log.info('Project created and added to config', newProject.id);
+}
+
+export async function createDefaultProject(): Promise<ProjectData> {
+    const newProject: ProjectData = {
+        id: 'notebook',
+        title: 'Notebook',
+        description: 'Default project',
+        owner: pamet.config.userData!.id,
+        created: timestamp(currentTime()),
+    };
+    await createProject(newProject);
+    return newProject;
+}
+
+export async function restartServiceWorker(): Promise<void> {
+    log.info('Restarting service worker...');
+    await pamet.storageService.unregisterServiceWorker();
+    log.info('Service worker restarted. Reloading page...');
+    window.location.reload();
 }
