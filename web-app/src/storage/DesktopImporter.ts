@@ -6,6 +6,7 @@ import { elementId } from "@/model/Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
 import { old_color_to_role } from "fusion/primitives/Color";
 import { pamet } from "@/core/facade";
+import { PametRoute } from "@/services/routing/route";
 
 let log = getLogger('ApiClient');
 
@@ -209,6 +210,37 @@ export class DesktopImporter extends BaseApiClient {
             allMigratedEntities.push(...childrenData.arrows.map(tmpDynamicMigration));
         }
 
+        // Create a map of pageId to pageData for fixing internal links
+        const pageIdToName: Record<string, string> = {};
+        for (const pageData of rawPagesData) {
+            pageIdToName[pageData.id] = pageData.name;
+            log.info(`Page ${pageData.id} (${pageData.name}) added to pageIdToName map`);
+        }
+
+        // Fix internal links
+        for (const entityData of allMigratedEntities) {
+            if (entityData.type_name === 'InternalLinkNote') {
+                let pageId: string | undefined;
+                if (entityData.content.url.startsWith('pamet:/p/')) {
+                    // Extract pageId from the URL
+                    const urlParts = entityData.content.url.split('/');
+                    if (urlParts.length < 3) {
+                        log.error(`Invalid internal link URL: ${entityData.content.url}`);
+                        continue;
+                    }
+                    pageId = urlParts[2]; // e.g. 'p/12345' -> '12345'
+                }
+                if (pageId && pageIdToName[pageId]) {
+                    entityData.content.text = pageIdToName[pageId];
+                    entityData.content.url = new PametRoute({ pageId: pageId }).toProjectScopedURI();
+                } else {
+                    log.warning(`Internal link note ${entityData.id} points to unknown page from url ${entityData.content.url} parts: ${JSON.stringify(entityData.content.url.split('/'))}`);
+                    entityData.content.text = '(missing page)';
+                    entityData.content.url = '';
+                }
+            }
+        }
+
         // 3. Separate image notes from others
         const imageNoteDatas: Record<string, any>[] = [];
         const otherEntityDatas: Record<string, any>[] = [];
@@ -222,9 +254,7 @@ export class DesktopImporter extends BaseApiClient {
         }
 
         // 4. Process image notes
-        const totalEntities = allMigratedEntities.length;
-        let entitiesProcessed = otherEntityDatas.length; // Start count after others
-
+        let imageNoteCounter = 0
         for (const imageData of imageNoteDatas) {
             const imageUrl = imageData.content.image.url; // e.g. 'project:/desktop/fs/C:/Users/user/image.png'
             const fsPath = imageUrl.replace('project:/desktop/fs', '');
@@ -250,12 +280,11 @@ export class DesktopImporter extends BaseApiClient {
                 log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);
             }
 
-            entitiesProcessed++;
-            progressCallback(50 + 50 * (entitiesProcessed / totalEntities), `Importing media files... ${entitiesProcessed}/${totalEntities}`);
+            imageNoteCounter++;
+            progressCallback(50 + 50 * (imageNoteCounter/ imageNoteDatas.length), `Importing media files... ${imageNoteCounter}/${imageNoteDatas.length}`);
         }
 
         // 5. Process other entities
-        entitiesProcessed = 0;
         for (const entityData of otherEntityDatas) {
              if (entityData.type_name === 'Page') {
                 const page = new Page(entityData as PageData);
@@ -264,8 +293,6 @@ export class DesktopImporter extends BaseApiClient {
                 const entity = loadFromDict(entityData as SerializedEntityData);
                 pamet.insertOne(entity);
             }
-
-            entitiesProcessed++;
         }
 
         progressCallback(1, 'Import complete.');

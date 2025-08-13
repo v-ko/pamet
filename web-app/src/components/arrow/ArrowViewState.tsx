@@ -367,7 +367,8 @@ export class ArrowViewState extends ElementViewState {
             if (this.tailAnchorNoteViewState === null) {
                 throw Error('Tail anchor type is AUTO, but no head note view state is set');
             }
-            effectiveTailAnchorType = inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState.note().rect());
+            effectiveTailAnchorType = inferArrowAnchorType(
+                secondPoint, new Rectangle(this.tailAnchorNoteViewState._noteData.geometry));
         } else {
             effectiveTailAnchorType = arrow.tailAnchorType;
         }
@@ -383,7 +384,8 @@ export class ArrowViewState extends ElementViewState {
             if (this.headAnchorNoteViewState === null) {
                 throw Error('Head anchor type is AUTO, but no head note view state is set');
             }
-            effectiveHeadAnchorType = inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState.note().rect());
+            effectiveHeadAnchorType = inferArrowAnchorType(
+                secondPoint, new Rectangle(this.headAnchorNoteViewState._noteData.geometry));
         } else {
             effectiveHeadAnchorType = arrow.headAnchorType;
         }

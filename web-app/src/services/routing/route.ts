@@ -34,6 +34,12 @@ export class PametRoute {
     mediaItemId?: string = undefined;
     mediaItemContentHash?: string = undefined;
 
+    constructor(props?: Partial<PametRoute>) {
+        if (props) {
+            Object.assign(this, props);
+        }
+    }
+
     _parseSubProjectParts(subProjectParts: string[]): void {
         if (subProjectParts[0] == 'page') {
             const pageId = subProjectParts[1];
@@ -47,7 +53,13 @@ export class PametRoute {
     }
 
     static fromUrl(url: string): PametRoute {
-        const url_ = new URL(url);
+        let url_: URL;
+        try{
+            url_ = new URL(url);
+        } catch (e) {
+            log.error(`Invalid URL: ${url}`, e);
+            throw new Error(`Invalid URL: "${url}"`);
+        }
 
         // Local urls start with project:///, globals are regular with a host
         let route = new PametRoute();

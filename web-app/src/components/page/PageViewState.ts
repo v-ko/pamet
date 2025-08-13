@@ -3,7 +3,7 @@ import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EY
 import { Point2D } from 'fusion/primitives/Point2D';
 import { Page, PageData } from "@/model/Page";
 import { Viewport } from "@/components/page/Viewport";
-import { RectangleData } from 'fusion/primitives/Rectangle';
+import { Rectangle, RectangleData } from 'fusion/primitives/Rectangle';
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { pamet } from "@/core/facade";
@@ -372,8 +372,7 @@ export class PageViewState{
 
     *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
         for (let noteViewState of this.noteViewStatesByOwnId.values()) {
-            let note = noteViewState.note();
-            let intersectRect = note.rect()
+            let intersectRect = new Rectangle([...noteViewState._noteData.geometry])
             if (radius > 0) {
                 intersectRect.setSize(intersectRect.size().add(new Size([radius * 2, radius * 2])))
                 intersectRect.setTopLeft(intersectRect.topLeft().subtract(new Point2D([radius, radius])))

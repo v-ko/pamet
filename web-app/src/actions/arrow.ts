@@ -1,7 +1,7 @@
 import { action } from "fusion/registries/Action";
 import { PageMode, PageViewState } from "@/components/page/PageViewState";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
-import { Arrow, ArrowAnchorOnNoteType } from "@/model/Arrow";
+import { Arrow, ArrowAnchorOnNoteType, ArrowAnchorTypeToString } from "@/model/Arrow";
 import { Point2D, PointData } from "fusion/primitives/Point2D";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { DEFAULT_ARROW_THICKNESS } from "@/core/constants";
@@ -58,12 +58,12 @@ class ArrowActions {
                 tail: {
                     position: tail_coords,
                     noteAnchorId: tail_note_id,
-                    noteAnchorType: anchorUnderMouse.toString(),
+                    noteAnchorType: ArrowAnchorTypeToString[anchorUnderMouse],
                 },
                 head: {
                     position: null,
                     noteAnchorId: null,
-                    noteAnchorType: ArrowAnchorOnNoteType.none.toString(),
+                    noteAnchorType: ArrowAnchorTypeToString[ArrowAnchorOnNoteType.none],
                 },
                 mid_points: [],
                 style: {

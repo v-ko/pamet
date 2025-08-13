@@ -17,7 +17,7 @@ export class InternalLinkNoteCanvasView extends NoteCanvasView {
         let textLayout = calculateTextLayout(text, textRect(note.rect()), DEFAULT_FONT_STRING)
         this.drawText(context, textLayout);
 
-        if (note.targetPage() !== undefined) {
+        if (note.targetPageId() !== undefined) {
             this.drawBorder(context, BorderType.Solid)
         } else {
             this.drawBorder(context, BorderType.Dashed)

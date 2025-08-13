@@ -5,19 +5,20 @@ import { elementId } from "@/model/Element";
 import { currentTime, timestamp } from "fusion/util/base";
 import { PametRoute } from "@/services/routing/route";
 
-const MISSING_PAGE_TITLE = '(missing)'
+
 
 @entityType('InternalLinkNote')
 export class InternalLinkNote extends Note {
-    static createNew(parentPageId: string, targetPageId: string): Note {
+    static createNew(page: Page): Note {
         let ownId = getEntityId();
-        let id = elementId(parentPageId, ownId);
+        let id = elementId(page.id, ownId);
         let currentTimestamp = timestamp(currentTime());
 
         let note = new InternalLinkNote({
             id: id,
             content: {
-                url: targetPage.url()
+                text: page.name,
+                url: new PametRoute({pageId: page.id}).toProjectScopedURI(),
             },
             geometry: [0, 0, 200, 100],
             style: {
@@ -31,26 +32,11 @@ export class InternalLinkNote extends Note {
         });
         return note;
     }
-    get text(): string {
-        let page = this.targetPage()
-        if (page !== undefined) {
-            return page!.name
-        } else {
-            return MISSING_PAGE_TITLE
-        }
-    }
     targetPageId(): string | undefined {
         let url = this.content.url
         if (url === undefined){
             return undefined
         }
         return PametRoute.fromUrl(url).pageId // pamet:/p/<page_id>
-    }
-    targetPage(): Page | undefined {
-        let pageId = this.targetPageId()
-        if (pageId === undefined) {
-            return undefined
-        }
-        return pamet.page(pageId)
     }
 }

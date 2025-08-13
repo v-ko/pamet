@@ -54,13 +54,6 @@ export class Viewport {
   realBounds(): Rectangle {
     return new Rectangle(this._realGeometry)
   }
-  get xProjected(): number {
-    return this.projectX(this.xReal);
-  }
-
-  get yProjected(): number {
-    return this.projectY(this.yReal);
-  }
 
   get realCenter(): Point2D {
     return this.realBounds().center();

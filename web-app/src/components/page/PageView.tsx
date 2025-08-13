@@ -22,6 +22,7 @@ import { appActions } from "@/actions/app";
 import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from 'fusion/model/MediaItem';
+import { Page } from '@/model/Page';
 
 
 let log = getLogger('Page.tsx')
@@ -234,7 +235,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y)
 
-  }, [mouse]);
+  }, [mouse, state.viewportGeometry, state.viewportHeight]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
     let mousePos = new Point2D([event.clientX, event.clientY]);
@@ -380,6 +381,13 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [state, mouse.positionOnPress, mouse]);
 
   const handleWheel = useCallback((event: WheelEvent) => {
+    // If the event is happening in a scrollable element that is not the page view,
+    // don't do anything.. There's probably a more elegant way, but ok.
+    let target = event.target as HTMLElement;
+    if (target.closest('.page-view') !== superContainerRef.current) {
+        return;
+    }
+
     event.preventDefault();
     navDeviceAutoSwitcher.registerScrollEvent(new Point2D([event.deltaX, event.deltaY]));
 
@@ -513,17 +521,16 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   // Add native handlers for key/shortcut and wheel events
   useEffect(() => {
-    // Existing keydown handler remains unchanged
-
-
+    let container = superContainerRef.current;
+    if (!container) {
+        return;
+    }
     // Add both event listeners
-    window.addEventListener("wheel", handleWheel, { passive: false }); // Set passive to false to allow preventDefault
-
-    // Cleanup function to remove both event listeners
+    container.addEventListener("wheel", handleWheel, { passive: false }); // Set passive to false to allow preventDefault
     return () => {
-      window.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("wheel", handleWheel);
     };
-  }, [state, handleWheel]);
+  }, [state, handleWheel, superContainerRef]);
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     let mousePos = new Point2D([event.clientX, event.clientY]);
@@ -546,7 +553,11 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       let note = noteVS_underMouse.note();
       // For an internal link - follow it
       if (note instanceof InternalLinkNote) {
-        let targetPage = note.targetPage();
+        let targetPage: Page | undefined;
+        let targetPageId = note.targetPageId();
+        if (targetPageId !== undefined ) {
+          targetPage = pamet.page(targetPageId)
+        }
         if (targetPage !== undefined) {
           appActions.setCurrentPage(pamet.appViewState, targetPage.id)
           return;

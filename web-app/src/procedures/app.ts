@@ -67,7 +67,8 @@ export async function switchToProject(projectId: string | null): Promise<void> {
         // If the project is the same - again we update the view state for good measure
         if (shouldAttachNew || (idsMatch && projectData)) {
             appActions.reflectCurrentProjectState(appState, projectData!);
-
+            projectActions.goToDefaultPage(pamet.appViewState);
+            return;
             // If the request is to detach the FDS - reflect that
         } else if (projectId === null) {
             appActions.reflectCurrentProjectState(appState, null);
@@ -77,10 +78,8 @@ export async function switchToProject(projectId: string | null): Promise<void> {
             appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
         }
 
-        // The state is updated - so produce a route from it and apply it to
-        // the app. There may be a more elegant way in the future
-        // But this works and will
-        await pamet.router.pushRoute(appState.route())
+        // The state is updated - update the url
+        pamet.router.pushRoute(appState.route())
     } finally {
         projectSwithLock = false;
         appActions.updateSystemDialogState(appState, null);

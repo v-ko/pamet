@@ -13,17 +13,21 @@ let log = getLogger("WebAppActions");
 
 class AppActions {
     @action
-    setCurrentPage(state: WebAppState, pageId: string) {
+    setCurrentPage(state: WebAppState, pageId: string | null) {
         log.info(`Setting current page to ${pageId}`);
 
-        let page = pamet.page(pageId);
+        let page = pageId ? pamet.page(pageId) : null;
+        
+        if (page === undefined) {
+            log.error('Page not found in the domain store.', pageId)
+        }
+
         if (page) {
             state.currentPageId = pageId;
             state.currentPageViewState = new PageViewState(page);
             state.currentPageViewState.createElementViewStates();
             state.pageError = PageError.NoError;
         } else {
-            log.error('Page not found in the domain store.', pageId)
             state.currentPageId = null;
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;

@@ -11,6 +11,7 @@ import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";
 import type { ProjectData } from "@/model/config/Project";
 import { getLogger } from "fusion/logging";
+import { appActions } from "@/actions/app";
 
 const log = getLogger("ProjectActions");
 
@@ -81,7 +82,7 @@ class ProjectActions {
 
     // Create a forward link note on the given location in the current page
     let currentPage = appState.currentPageViewState.page
-    let forwardLink = InternalLinkNote.createNew(currentPage.id, newPage.id)
+    let forwardLink = InternalLinkNote.createNew(newPage)
     // Autosize and set at location
     let minimalSize = minimalNonelidedSize(forwardLink);
     let rect = forwardLink.rect();
@@ -92,7 +93,7 @@ class ProjectActions {
     pamet.insertNote(forwardLink);
 
     // Create a back link note in the new page (to the current)
-    let backLink = InternalLinkNote.createNew(newPage.id, currentPage.id)
+    let backLink = InternalLinkNote.createNew(currentPage)
     // Autosize and set at center
     rect = backLink.rect();
     rect.setSize(minimalSize);
@@ -127,6 +128,27 @@ class ProjectActions {
         }
       });
       pamet.updateNote(textNote);
+    }
+  }
+
+  @action
+  goToDefaultPage(appState: WebAppState) {
+    const projectData = appState.currentProject();
+    if (!projectData) {
+      throw Error('No current project');
+    }
+    const defaultPageId = projectData.defaultPageId;
+
+    if (defaultPageId){
+      appActions.setCurrentPage(appState, defaultPageId);
+    } else {
+      let firstPage = pamet.pages().next().value;
+      if (firstPage) {
+        appActions.setCurrentPage(appState, firstPage.id);
+      } else {
+        appState.currentPageId = null;
+        appState.currentPageViewState = null;
+      }
     }
   }
 }

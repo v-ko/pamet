@@ -211,7 +211,7 @@ export function approximateMidpointOfBezierCurve(startPoint: Point2D, cp1: Point
             let ct = i / numSegments;
             bezierPoint_inplace(ct, startPoint, cp1, cp2, endPoint, currentPoint);
             length += previousPoint.distanceTo(currentPoint);
-            previousPoint = currentPoint;
+            previousPoint = currentPoint.copy();
         }
         return length;
     }
