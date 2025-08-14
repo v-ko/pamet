@@ -23,6 +23,7 @@ import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from 'fusion/model/MediaItem';
 import { Page } from '@/model/Page';
+import { createImageNoteFromBlob } from '@/procedures/page';
 
 
 let log = getLogger('Page.tsx')
@@ -32,6 +33,8 @@ let log = getLogger('Page.tsx')
 
 
 export const PageView = observer(({ state }: { state: PageViewState }) => {
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [isDropAllowed, setIsDropAllowed] = useState(false);
   /**  */
   // trace(true)
 
@@ -570,6 +573,55 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.startNoteCreation(state, realMousePos);
     }
   }
+    const handleDragEnter = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDraggingOver(true);
+
+        // Check if the dragged items are files and if they are of a supported type
+        const items = event.dataTransfer.items;
+        if (items && items.length > 0) {
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+                    setIsDropAllowed(true);
+                    return;
+                }
+            }
+        }
+        setIsDropAllowed(false);
+    };
+
+    const handleDragLeave = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDraggingOver(false);
+        setIsDropAllowed(false);
+    };
+
+    const handleDragOver = (event: React.DragEvent) => {
+        event.preventDefault(); // This is necessary to allow dropping
+    };
+
+    const handleDrop = async (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDraggingOver(false);
+
+        const files = event.dataTransfer.files;
+        if (files && files.length > 0) {
+            let position = state.viewport.unprojectPoint(new Point2D([event.clientX, event.clientY]));
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+            for (const imageFile of imageFiles) {
+                try {
+                    position = await createImageNoteFromBlob(state.page.id, position, imageFile);
+                } catch (error) {
+                    log.error('Error creating image note from dropped file:', error);
+                }
+            }
+        }
+        setIsDropAllowed(false);
+    };
 
 
   // Rendering related
@@ -622,7 +674,25 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
+        {isDraggingOver &&
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: isDropAllowed ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                    zIndex: 10000,
+                    pointerEvents: 'none' // Make sure it doesn't interfere with drop events
+                }}
+            />
+        }
 
         {/* Old pamet-canvas element rendering */}
         {/* <CanvasReactComponent state={state} /> */}

@@ -26,18 +26,17 @@ const log = getLogger('PageProcedures');
  * @param mimeType - The MIME type of the image
  * @returns The position for the next paste item
  */
-export async function pasteImage(
+export async function createImageNoteFromBlob(
     pageId: string,
     position: Point2D,
-    imageBlob: Blob,
-    mimeType: string
+    imageBlob: Blob
 ): Promise<Point2D> {
     let finalImageBlob = imageBlob;
     let note;
 
     try {
         const { width, height } = await extractImageDimensions(imageBlob);
-        const verdict = shouldCompressImage({ width, height, size: imageBlob.size, mimeType });
+        const verdict = shouldCompressImage({ width, height, size: imageBlob.size, mimeType: imageBlob.type });
 
         if (verdict === ImageVerdict.Reject) {
             const errorText = `Image is too large to process (${width}x${height}). Maximum allowed is ${MAX_IMAGE_DIMENSION_FOR_COMPRESSION}px.`;
@@ -46,8 +45,8 @@ export async function pasteImage(
         }
 
         if (verdict === ImageVerdict.Compress) {
-            const preset = determineConversionPreset(mimeType);
-            const imageFile = new File([imageBlob], "pasted_image", { type: mimeType });
+            const preset = determineConversionPreset(imageBlob.type);
+            const imageFile = new File([imageBlob], "pasted_image", { type: imageBlob.type });
             finalImageBlob = await convertImage(imageFile, preset);
         }
 
@@ -127,7 +126,7 @@ export async function pasteSpecial(
             } else if (item.type === 'image') {
                 if (item.image_blob && item.mime_type) {
                     try {
-                        pasteAt = await pasteImage(pageId, pasteAt, item.image_blob, item.mime_type);
+                        pasteAt = await createImageNoteFromBlob(pageId, pasteAt, item.image_blob);
                     } catch (error) {
                         log.error('Error pasting image:', error);
                     }

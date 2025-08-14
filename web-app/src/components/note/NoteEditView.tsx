@@ -44,6 +44,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     dumpToDict(state.targetNote) as SerializedNote
   );
   const [, setForceUpdate] = useState(0);
+   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isDropAllowed, setIsDropAllowed] = useState(false);
+
 
   const updateNoteData = (newData: Partial<SerializedNote>) => {
     noteData.current = { ...noteData.current, ...newData };
@@ -117,21 +120,19 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-    // If removing the original image
-    if (!originalImageForTrashing) {
-      const originalMediaItem = pamet.mediaItem(currentImageId);
+      // If there is an image associated with the note and it wasn't yet deleted
+      let originalMediaItem: MediaItem | undefined;
+    if (!originalImageForTrashing && state.targetNote.content.image_id) {
+      originalMediaItem = pamet.mediaItem(currentImageId);
       if (!originalMediaItem) {
         throw new Error("Original media item not found for the image.");
       }
       setOriginalImageForTrashing(originalMediaItem.data());
-    } else { // If there is an original image for trashing, then the current image has been added in this editing session
-      // If removing an image added in the editing session - delete it from the store permanently
-      // Get the set media item from the state
-      if (!uncommitedImage) {
-        throw new Error("No uncommitted image to remove.");
-      } else if (uncommitedImage.id !== currentImageId) {
-        throw new Error("Uncommitted image ID does not match the current image ID.");
-      }
+    } else if (uncommitedImage) {
+      // If there is an original image for trashing, then the current image has
+      // been added in this editing session
+      // If removing an image added in the editing session - delete it from the
+      //store permanently.  Get the set media item from the state
       await pamet.deleteMediaFromStore(new MediaItem(uncommitedImage))
     }
 
@@ -248,8 +249,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;
 
-  console.log("Rendering NoteEditView", geometry);
-
   // Check if the window is outside the screen on the bottom and right
   if (left + width > window.innerWidth) {
     left = window.innerWidth - width;
@@ -266,13 +265,79 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     top = 0;
   }
 
+  const handleDragEnter = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(true);
+
+    const items = event.dataTransfer.items;
+    if (items && items.length > 0 && items[0].kind === 'file' && items[0].type.startsWith('image/')) {
+        setIsDropAllowed(true);
+    } else {
+        setIsDropAllowed(false);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Check if the mouse is still inside the drop zone
+      if (wrapperRef.current && wrapperRef.current.contains(event.relatedTarget as Node)) {
+          return;
+      }
+
+      setIsDraggingOver(false);
+      setIsDropAllowed(false);
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+      event.preventDefault();
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDraggingOver(false);
+      setIsDropAllowed(false);
+
+      const files = event.dataTransfer.files;
+      if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+          const imageFile = files[0];
+          if (noteData.current.content.image_id) {
+              await removeNoteImage();
+          }
+          const path = `images/pasted_image-${Date.now()}.${imageFile.name.split('.').pop()}`;
+          await setNoteImage(imageFile, path);
+          setImageButtonToggled(true);
+      }
+  };
   return (
     <div
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
       className={`note-edit-view${state.isBeingDragged ? ' dragged' : ''}`}
       style={{ left, top }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
+        {isDraggingOver &&
+            <div
+                className='drop-overlay'
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: isDropAllowed ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)',
+                    pointerEvents: 'none',
+                    zIndex: 3000,
+                }}
+            />
+        }
       {/* Title bar */}
       <div className="title-bar">
         {/* move icon area */}
@@ -323,6 +388,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
             ref={textAreaRef}
             placeholder="Note text"
             tabIndex={PametTabIndex.NoteEditViewWidget1}
+            style={{ pointerEvents: isDraggingOver ? 'none' : 'auto' }}
             defaultValue={state.targetNote.content.text}
             onChange={(e) => {
                 updateNoteData({ content: { ...noteData.current.content, text: e.target.value } });

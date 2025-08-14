@@ -301,6 +301,16 @@ export class CanvasPageRenderer {
             ctx.fillRect(...state.dragSelectionRectData);
         }
 
+        // // draw the mouse with a red circle
+        // if (state.projectedMousePosition) {
+        //     ctx.save();
+        //     ctx.fillStyle = 'red';
+        //     ctx.beginPath();
+        //     ctx.arc(state.projectedMousePosition.x, state.projectedMousePosition.y, 5, 0, 2 * Math.PI);
+        //     ctx.fill();
+        //     ctx.restore();
+        // }
+
         // Draw elements
         this._drawElements(state, ctx);
 
