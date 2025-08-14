@@ -7,6 +7,7 @@ import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "@/core/c
 import { old_color_to_role } from "fusion/primitives/Color";
 import { pamet } from "@/core/facade";
 import { PametRoute } from "@/services/routing/route";
+import { MediaItem } from "fusion/model/MediaItem";
 
 let log = getLogger('ApiClient');
 
@@ -56,7 +57,7 @@ export class DesktopImporter extends BaseApiClient {
                 } else if (childData.content.url) {
                     let url: string = childData.content.url
                     if (url.startsWith('pamet:/p')) {
-                        childData.content.url = url.replace('>pamet:/p', 'project:/page')
+                        childData.content.url = url.replace('pamet:/p', 'project:/page')
                         childData.type_name = 'InternalLinkNote'
                     } else {
                         childData.type_name = 'ExternalLinkNote'
@@ -253,46 +254,47 @@ export class DesktopImporter extends BaseApiClient {
             }
         }
 
-        // 4. Process image notes
+        // 4. Process entities
+        progressCallback(50, 'Processing entities...');
+        for (const entityData of otherEntityDatas) {
+            const entity = loadFromDict(entityData as SerializedEntityData);
+            pamet.insertOne(entity);
+        }
+
+        // 5. Process image notes
+        progressCallback(50, 'Processing image notes...');
         let imageNoteCounter = 0
+        let imageRelatedEntities = []
         for (const imageData of imageNoteDatas) {
             const imageUrl = imageData.content.image.url; // e.g. 'project:/desktop/fs/C:/Users/user/image.png'
             const fsPath = imageUrl.replace('project:/desktop/fs', '');
 
             // Fetch image blob from desktop server
             const blobUrl = this.endpointUrl(`desktop/fs${fsPath}`);
-
+            let mediaItem: MediaItem;
             try {
                 const blob = await this.getBlob(blobUrl);
-
-                const mediaItem = await pamet.addMediaToStore(blob, fsPath, imageData.id);
-                pamet.insertOne(mediaItem);
-
-                // Update imageNoteData
-                imageData.content.image_id = mediaItem.id;
-                delete imageData.content.image; // remove the old image url structure
-
-                // Insert note
-                const imageNote = loadFromDict(imageData as SerializedEntityData);
-                pamet.insertOne(imageNote);
-
+                mediaItem = await pamet.addMediaToStore(blob, fsPath, imageData.id);
             } catch (e) {
                 log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);
+                continue
             }
+
+            imageRelatedEntities.push(mediaItem);
+
+            // Update imageNoteData
+            imageData.content.image_id = mediaItem.id;
+            delete imageData.content.image; // remove the old image url structure
+            const imageNote = loadFromDict(imageData as SerializedEntityData);
+            imageRelatedEntities.push(imageNote);
 
             imageNoteCounter++;
-            progressCallback(50 + 50 * (imageNoteCounter/ imageNoteDatas.length), `Importing media files... ${imageNoteCounter}/${imageNoteDatas.length}`);
+            progressCallback(50 + 50 * (imageNoteCounter / imageNoteDatas.length), `Importing media files... ${imageNoteCounter}/${imageNoteDatas.length}`);
         }
 
-        // 5. Process other entities
-        for (const entityData of otherEntityDatas) {
-             if (entityData.type_name === 'Page') {
-                const page = new Page(entityData as PageData);
-                pamet.insertOne(page);
-            } else {
-                const entity = loadFromDict(entityData as SerializedEntityData);
-                pamet.insertOne(entity);
-            }
+        // Add image related entities to the store
+        for (const entity of imageRelatedEntities) {
+            pamet.insertOne(entity);
         }
 
         progressCallback(1, 'Import complete.');

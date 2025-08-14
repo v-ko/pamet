@@ -176,7 +176,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
       // Trigger on changes in all of the below
       return {
-        viewport: state.viewport,
+        viewport: state.viewportCenter,
+        viewportHeight: state.viewportHeight,
+        viewportGeometry: state.viewportGeometry,
         selectedElements: state.selectedElementsVS.values(),
         dragSelectionRectData: state.dragSelectionRectData,
         mode: state.mode,
@@ -415,7 +417,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       let newViewportCenter = state.viewportCenter.add(delta.divide(state.viewport.heightScaleFactor()));
       pageActions.updateViewport(state, newViewportCenter, state.viewportHeight);
     }
-  }, [state, navDeviceAutoSwitcher]);
+  }, [state.viewportCenter, state.viewportHeight, state.viewportGeometry, navDeviceAutoSwitcher]);
 
   // Touch event handlers
   const handleTouchStart = useCallback((event: React.TouchEvent) => {

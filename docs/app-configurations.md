@@ -4,6 +4,7 @@ The codebase is setup to be reusable in different scenarios across devices/platf
 ## In-browser web app for the desktop
 The main considerations are
 - Service worker API availability - for managing storage efficiently and having client-side media storage via cache API fetch intercepts
+    - Gets disabled on hard refresh
 - IndexedDB - for domain data offline storage
 - BroadcastChannel - for communication of storage updates between tabs and/or the storage service
 

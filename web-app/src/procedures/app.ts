@@ -333,6 +333,7 @@ export async function importDesktopDataForTesting() {
         // 6. Close the dialog
         appActions.updateSystemDialogState(appState, null);
     }
+    projectActions.goToDefaultPage(appState);
 }
 
 export async function createProject(newProject: ProjectData): Promise<void> {
