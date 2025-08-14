@@ -14,10 +14,10 @@
 
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
-import { TourSegment } from '../model/Page';
-import { parsePametUrl } from '../util';
-import { pageActions } from '../actions/page';
-import { PageViewState } from "./page/PageViewState";
+import { TourSegment } from "@/model/Page";
+import { parsePametUrl } from "@/util";
+import { pageActions } from "@/actions/page";
+import { PageViewState } from "@/components/page/PageViewState";
 
 
 const MIN_SCROLL_BUFFER_POS = -100;

@@ -1,0 +1,91 @@
+.image-edit-props-widget {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    width: 100%;
+    align-items: stretch;
+    box-sizing: border-box; /* Added to include padding and border in the element's total width and height */
+}
+
+.buttons-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+
+.image-preview-container {
+    flex-grow: 1;
+}
+
+.buttons-container .tool-button:hover {
+  background: #ccc;
+}
+.url-input-container {
+    display: flex;
+    gap: 5px;
+}
+
+.url-input-container input {
+    flex-grow: 1;
+}
+
+.image-preview-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100px;
+    border: 1px dashed #ccc;
+    border-radius: 4px;
+    transition: border-color 0.2s, background-color 0.2s;
+    outline: none;
+  }
+
+  .image-preview-container.dragging-over,
+  .image-preview-container:focus {
+    border-color: var(--color-accent);
+    background-color: var(--color-bg-light-accent);
+  }
+
+  /* Make the children of the drop zone ignore pointer events */
+  /* Make the placeholder of the drop zone ignore pointer events */
+  .image-preview-placeholder {
+      pointer-events: none;
+  }
+
+.remove-image-button {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    font-size: 24px;
+    line-height: 1;
+    padding: 5px 10px;
+    z-index: 10;
+}
+
+.image-preview-placeholder {
+    color: #999;
+}
+
+.buttons-container .action-button {
+  font-size: var(--type-md);
+  padding: var(--space-1) var(--space-3, 1.5rem);
+  border: 0.1rem solid var(--color-light-border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.2s;
+  box-sizing: border-box;
+  background: var(--color-bg-medium);
+}
+
+.buttons-container .action-button:hover,
+.buttons-container .action-button:focus {
+  background: #ccc;
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.tool-button.toggled {
+    background-color: #ccc;
+}

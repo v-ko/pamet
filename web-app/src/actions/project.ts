@@ -1,16 +1,17 @@
-import { action } from "fusion/libs/Action";
-import { AppDialogMode, WebAppState } from "../containers/app/App";
-import { pamet } from "../core/facade";
-import { Page, PageData } from "../model/Page";
-import { currentTime, timestamp } from "fusion/util";
-import { minimalNonelidedSize } from "../components/note/util";
-import { TextNote } from "../model/TextNote";
-import { Point2D } from "../util/Point2D";
-import { InternalLinkNote } from "../model/InternalLinkNote";
-import { getEntityId } from "fusion/libs/Entity";
-import { snapVectorToGrid } from "../util";
-import type { ProjectData } from "../model/config/Project";
+import { action } from "fusion/registries/Action";
+import { AppDialogMode, WebAppState } from "@/containers/app/WebAppState";
+import { pamet } from "@/core/facade";
+import { Page, PageData } from "@/model/Page";
+import { currentTime, timestamp } from "fusion/util/base";
+import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
+import { TextNote } from "@/model/TextNote";
+import { Point2D } from "fusion/primitives/Point2D";
+import { InternalLinkNote } from "@/model/InternalLinkNote";
+import { getEntityId } from "fusion/model/Entity";
+import { snapVectorToGrid } from "@/util";
+import type { ProjectData } from "@/model/config/Project";
 import { getLogger } from "fusion/logging";
+import { appActions } from "@/actions/app";
 
 const log = getLogger("ProjectActions");
 
@@ -44,7 +45,7 @@ class ProjectActions {
     note.content.text = 'Press H for help'
     let noteRect = note.rect()
     noteRect.setSize(minimalNonelidedSize(note))
-    noteRect.moveCenter(new Point2D(0, 0))
+    noteRect.moveCenter(new Point2D([0, 0]))
     note.setRect(noteRect)
     pamet.insertNote(note)
 
@@ -64,7 +65,7 @@ class ProjectActions {
   }
 
   @action
-  createNewPage(appState: WebAppState, name: string) {
+  createNewPage(appState: WebAppState, name: string): Page {
     if (!appState.currentPageViewState) {
       throw Error('No current page. Cannot create a new page via createNewPage. Use createDefaultPage instead.')
     }
@@ -81,7 +82,7 @@ class ProjectActions {
 
     // Create a forward link note on the given location in the current page
     let currentPage = appState.currentPageViewState.page
-    let forwardLink = InternalLinkNote.createNew(currentPage.id, newPage.id)
+    let forwardLink = InternalLinkNote.createNew(newPage)
     // Autosize and set at location
     let minimalSize = minimalNonelidedSize(forwardLink);
     let rect = forwardLink.rect();
@@ -92,17 +93,15 @@ class ProjectActions {
     pamet.insertNote(forwardLink);
 
     // Create a back link note in the new page (to the current)
-    let backLink = InternalLinkNote.createNew(newPage.id, currentPage.id)
+    let backLink = InternalLinkNote.createNew(currentPage)
     // Autosize and set at center
     rect = backLink.rect();
     rect.setSize(minimalSize);
-    rect.moveCenter(new Point2D(0, 0));
+    rect.moveCenter(new Point2D([0, 0]));
     backLink.setRect(rect);
     pamet.insertNote(backLink);
 
-    // Switch to new page
-
-    // Open settings view | IMPLEMENT LATER
+    return newPage;
   }
 
   @action
@@ -129,6 +128,27 @@ class ProjectActions {
         }
       });
       pamet.updateNote(textNote);
+    }
+  }
+
+  @action
+  goToDefaultPage(appState: WebAppState) {
+    const projectData = appState.currentProject();
+    if (!projectData) {
+      throw Error('No current project');
+    }
+    const defaultPageId = projectData.defaultPageId;
+
+    if (defaultPageId){
+      appActions.setCurrentPage(appState, defaultPageId);
+    } else {
+      let firstPage = pamet.pages().next().value;
+      if (firstPage) {
+        appActions.setCurrentPage(appState, firstPage.id);
+      } else {
+        appState.currentPageId = null;
+        appState.currentPageViewState = null;
+      }
     }
   }
 }

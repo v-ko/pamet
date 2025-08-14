@@ -1,16 +1,16 @@
-import { action } from "fusion/libs/Action";
-import { PageMode, PageViewState } from "../components/page/PageViewState";
-import { ArrowViewState } from "../components/arrow/ArrowViewState";
-import { Arrow, ArrowAnchorOnNoteType } from "../model/Arrow";
-import { Point2D, PointData } from "../util/Point2D";
-import { NoteViewState } from "../components/note/NoteViewState";
-import { DEFAULT_ARROW_THICKNESS } from "../core/constants";
-import { pamet } from "../core/facade";
-import { elementId } from "../model/Element";
-import { getEntityId } from "fusion/libs/Entity";
+import { action } from "fusion/registries/Action";
+import { PageMode, PageViewState } from "@/components/page/PageViewState";
+import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { Arrow, ArrowAnchorOnNoteType, ArrowAnchorTypeToString } from "@/model/Arrow";
+import { Point2D, PointData } from "fusion/primitives/Point2D";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { DEFAULT_ARROW_THICKNESS } from "@/core/constants";
+import { pamet } from "@/core/facade";
+import { elementId } from "@/model/Element";
+import { getEntityId } from "fusion/model/Entity";
 import { getLogger } from "fusion/logging";
-import { snapVectorToGrid } from "../util";
-import { Note } from "../model/Note";
+import { snapVectorToGrid } from "@/util";
+import { Note } from "@/model/Note";
 
 let log = getLogger('ArrowActions.ts');
 
@@ -58,12 +58,12 @@ class ArrowActions {
                 tail: {
                     position: tail_coords,
                     noteAnchorId: tail_note_id,
-                    noteAnchorType: anchorUnderMouse,
+                    noteAnchorType: ArrowAnchorTypeToString[anchorUnderMouse],
                 },
                 head: {
                     position: null,
                     noteAnchorId: null,
-                    noteAnchorType: ArrowAnchorOnNoteType.none,
+                    noteAnchorType: ArrowAnchorTypeToString[ArrowAnchorOnNoteType.none],
                 },
                 mid_points: [],
                 style: {

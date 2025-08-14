@@ -1,35 +1,38 @@
-import { AppDialogMode, PageError, ProjectError, WebAppState } from "../containers/app/App";
-import type { LocalStorageState } from "../containers/app/App";
-import { pamet } from "../core/facade";
+import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/containers/app/WebAppState";
+import { LoadingDialogState } from "@/components/system-modal-dialog/state";
+import type { LocalStorageState } from "@/containers/app/WebAppState";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
+import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
-import { action } from "fusion/libs/Action";
-import { PageViewState } from "../components/page/PageViewState";
-import type { ProjectData } from "../model/config/Project";
-import { currentTime, timestamp } from "fusion/util";
-import { deleteProjectAndSwitch } from "../procedures/app";
-import { routeFromAppState } from "../services/routing/route";
+import { action } from "fusion/registries/Action";
+import { PageViewState } from "@/components/page/PageViewState";
+import type { ProjectData } from "@/model/config/Project";
+import { Entity } from "fusion/model/Entity";
 
 let log = getLogger("WebAppActions");
 
 class AppActions {
     @action
-    setCurrentPage(state: WebAppState, pageId: string) {
+    setCurrentPage(state: WebAppState, pageId: string | null) {
         log.info(`Setting current page to ${pageId}`);
 
-        let page = pamet.page(pageId);
+        let page = pageId ? pamet.page(pageId) : null;
+        
+        if (page === undefined) {
+            log.error('Page not found in the domain store.', pageId)
+        }
+
         if (page) {
             state.currentPageId = pageId;
             state.currentPageViewState = new PageViewState(page);
             state.currentPageViewState.createElementViewStates();
             state.pageError = PageError.NoError;
         } else {
-            console.log("Page not found. FDS:", pamet.frontendDomainStore)
-            log.error('Page not found in the domain store.', pageId)
             state.currentPageId = null;
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
         }
-        pamet.router.pushRoute(routeFromAppState(state));
+        pamet.router.pushRoute(state.route());
     }
 
     @action({ issuer: 'service' })
@@ -75,40 +78,53 @@ class AppActions {
     }
 
     @action
-    createDefaultProject(): ProjectData {
-        const userData = pamet.config.userData;
-        if (!userData) {
-            throw new Error("User data not found");
+    updateSystemDialogState(appState: WebAppState, props: Partial<LoadingDialogState> | LoadingDialogState | null) {
+        if (appState.loadingDialogState === null){  // Open dialog
+            if (props === null) {
+                throw new Error("Cannot open loading dialog without props");
+            }
+            appState.loadingDialogState = new LoadingDialogState(props.title || '', props.taskDescription || '', props.taskProgress || -1, props.showAfterUnixTime || 0);
+        } else {
+            // Update dialog state
+            if (props === null) {
+                appState.loadingDialogState = null; // Close dialog
+            } else {
+                if (props.title !== undefined) {
+                    appState.loadingDialogState.title = props.title;
+                }
+                if (props.taskDescription !== undefined) {
+                    appState.loadingDialogState.taskDescription = props.taskDescription;
+                }
+                if (props.taskProgress !== undefined) {
+                    appState.loadingDialogState.taskProgress = props.taskProgress;
+                }
+                if (props.showAfterUnixTime !== undefined) {
+                    appState.loadingDialogState.showAfterUnixTime = props.showAfterUnixTime;
+                }
+            }
         }
-        if (userData.projects && userData.projects.length > 0) {
-            throw new Error("Cannot create default project: projects already exist");
-        }
-
-        const project: ProjectData = {
-            id: 'notebook',
-            title: "Notebook",
-            owner: userData.id,
-            description: 'Default project',
-            created: timestamp(currentTime())
-        };
-
-        userData.projects = [project];
-        pamet.config.userData = userData;
-
-        log.info("Created default project", project);
-        return project;
     }
 
     @action
-    createProject(project: ProjectData) {
-        pamet.config.addProject(project);
+    importEntitiesAction(entities: Entity<any>[]) {
+        for (const entity of entities) {
+            pamet.insertOne(entity);
+        }
     }
 
     @action
-    startProjectDeletionProcedure(project: ProjectData) {
-        deleteProjectAndSwitch(project).catch((e) => {
-            log.error("Error in startProjectDeletionProcedure", e);
-        });
+    openPageAndCommandPalette(appState: WebAppState, initialInput: string) {
+        appState.commandPaletteState = new PageAndCommandPaletteState(initialInput);
+    }
+
+    @action
+    openProjectPalette(appState: WebAppState) {
+        appState.commandPaletteState = new ProjectPaletteState('');
+    }
+
+    @action
+    closeCommandPalette(appState: WebAppState) {
+        appState.commandPaletteState = null;
     }
 }
 

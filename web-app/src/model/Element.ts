@@ -1,4 +1,4 @@
-import { Entity, EntityData } from "fusion/libs/Entity";
+import { Entity, EntityData } from "fusion/model/Entity";
 
 export interface PametElementData extends EntityData {
     // page_id: string;
@@ -26,7 +26,7 @@ export function elementOwnId(id: string): string {
 }
 
 
-export class PametElement<T extends PametElementData> extends Entity<T> implements PametElementData {
+export class PametElement<T extends PametElementData> extends Entity<T> {
 
 
     get page_id(): string {

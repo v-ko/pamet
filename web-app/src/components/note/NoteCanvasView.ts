@@ -1,16 +1,18 @@
-import { NoteViewState } from "./NoteViewState";
-import { NO_SCALE_LINE_SPACING } from "../../core/constants";
-import { TextLayout } from "../../util";
-import { color_role_to_hex_color } from "../../util/Color";
-import { calculateTextLayout } from "./util";
-import { Point2D } from "../../util/Point2D";
-import { Rectangle } from "../../util/Rectangle";
-import { BaseCanvasView } from "./BaseCanvasView";
-import { pamet } from "../../core/facade";
-import { DEFAULT_FONT_STRING } from "../../core/constants";
-import { textRect, imageRect } from "./util";
-import { Size } from "../../util/Size";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { NO_SCALE_LINE_SPACING } from "@/core/constants";
+import { color_role_to_hex_color, TextLayout } from "@/util";
+
+import { calculateTextLayout } from "@/components/note/note-dependent-utils";
+import { Rectangle } from "fusion/primitives/Rectangle";
+import { BaseCanvasView } from "@/components/note/BaseCanvasView";
+import { pamet } from "@/core/facade";
+import { DEFAULT_FONT_STRING } from "@/core/constants";
+import { textRect, imageGeometryToFitAre } from "@/components/note/util";
+import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
+import { ImageNote } from "@/model/ImageNote";
+import { mediaItemRoute } from "@/services/routing/route";
+import { MediaItem } from "fusion/model/MediaItem";
 
 let log = getLogger('NoteCanvasView');
 
@@ -51,10 +53,10 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
         // Center align vertically in textRect
         let textHeight = textLayout.lines.length * NO_SCALE_LINE_SPACING;
-        textTopLeft.y = textTopLeft.y + (textRect_.height - textHeight) / 2;
+        textTopLeft.y += (textRect_.height() - textHeight) / 2;
 
         // Adjust for the text body to be drawn in the middle of the line
-        let adjTopLeft = new Point2D(textTopLeft.x, textTopLeft.y);
+        let adjTopLeft = textTopLeft.copy();
         let hackyPadding = NO_SCALE_LINE_SPACING / 7.5; // TODO: Should be dependent on font descent
         adjTopLeft.y = adjTopLeft.y + hackyPadding;
 
@@ -63,11 +65,11 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         // textRect.setHeight(textHeight);
         // ctx.strokeStyle = 'red';
         // ctx.lineWidth = 1;
-        // ctx.strokeRect(textRect.x, textRect.y, textRect.width(), textRect.height());
+        // ctx.strokeRect(textRect.left(), textRect.top(), textRect.width(), textRect.height());
 
         // Correct for ctx center align behavior
         if (textLayout.alignment === 'center') {
-            adjTopLeft.x = adjTopLeft.x + textRect_.width / 2;
+            adjTopLeft.x = adjTopLeft.x + textRect_.width() / 2;
         }
 
         // Draw text
@@ -104,23 +106,41 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
     drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
         let note = this.noteViewState.note();
+        if (!(note instanceof ImageNote)) {
+            log.error('drawImage called on non-ImageNote', note);
+            return;
+        }
         let noteRect = note.rect();
-        let imageMetadata = note.content.image;
-        if (imageMetadata === undefined) {
+        if (!note.content.image_id) {
             // Display error text instead
+            let textLayout = calculateTextLayout('Image not set', textRect(noteRect), DEFAULT_FONT_STRING)
+            this.drawText(context, textLayout);
+            return;
+        }
+
+        const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
+        if (!mediaItem) {
             let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
             return;
         }
 
-        let image = this.renderer.getImage(pamet.apiClient.projectScopedUrlToGlobal(imageMetadata.url));
+        let userId = pamet.appViewState.userId;
+        let projectId = pamet.appViewState.currentProjectId;
+        if (userId === null || projectId === null) {
+            log.error('Cannot draw image: userId or projectId is undefined');
+            return;
+        }
+        let mediaItemRoute_ = mediaItemRoute(mediaItem, userId, projectId);
+
+        let image = this.renderer.getImage(mediaItemRoute_.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = IMAGE_NOT_LOADED_TEXT;
         } else if (!image.complete) { // still loading
             errorText = IMAGE_NOT_LOADED_TEXT;
         } else if (image.naturalWidth === 0) { // loaded unsuccessfully
-            errorText = IMAGE_MISSING_TEXT;
+            errorText = 'Loading failed';
         }
         if (errorText !== undefined) {
             let textLayout = calculateTextLayout(errorText, textRect(noteRect), DEFAULT_FONT_STRING)
@@ -128,8 +148,12 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        let imgRect = imageRect(imageArea, new Size(image!.naturalWidth, image!.naturalHeight));
+        let imgRect = imageGeometryToFitAre(imageArea, new Size([image!.naturalWidth, image!.naturalHeight]));
         context.drawImage(image!, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
+
+        context.strokeStyle = '#dddddd';
+        context.lineWidth = 0.5;
+        context.strokeRect(noteRect.x, noteRect.y, noteRect.w, noteRect.h);
     }
 
     abstract render(context: CanvasRenderingContext2D): void;

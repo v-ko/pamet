@@ -1,5 +1,5 @@
 import { getLogger } from "fusion/logging";
-import { BaseConfigAdapter } from "./BaseConfigAdapter";
+import { BaseConfigAdapter } from "@/services/config/BaseConfigAdapter";
 
 const log = getLogger('LocalStorageConfigAdapter');
 

@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { appActions } from 'web-app/src/actions/app';
-import { pamet } from 'web-app/src/core/facade';
-import { timestamp, currentTime } from 'fusion/util';
-import { switchToProject } from '../procedures/app';
+import { pamet } from '@/core/facade';
+import { timestamp, currentTime } from 'fusion/util/base';
+import { createProject, switchToProject } from "@/procedures/app";
 
 interface CreateProjectDialogProps {
   onClose: () => void;
@@ -74,24 +73,10 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
     }, 0);
   }, []);
 
-  function handleClose() {
-    const dialog = dialogRef.current;
-    if (dialog?.open) {
-      dialog.close();
-    }
-    onClose();
-  }
-
-  function handleBackgroundClick(event: React.MouseEvent) {
-    if (event.target === dialogRef.current) {
-      handleClose();
-    }
-  }
-
-  function handleCreate(e: FormEvent) {
-    e.preventDefault();
+  async function handleCreate(e: FormEvent) {
     const error = validateId(id);
     if (error) {
+      e.preventDefault();
       setIdError(error);
       return;
     }
@@ -104,18 +89,20 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
       created: timestamp(currentTime())
     };
 
-    appActions.createProject(newProject);
-    switchToProject(newProject.id).catch(e => {
-      console.error('Failed to switch to the new project', e);
-    });
-    handleClose();
+    await createProject(newProject);
+    await switchToProject(newProject.id);
+    // No need to call onClose, the dialog will close automatically
   }
 
   return (
-    <dialog ref={dialogRef} onCancel={handleClose} onClick={handleBackgroundClick}>
+    <dialog ref={dialogRef} onClose={onClose} onClick={(e) => {
+        if (e.target === dialogRef.current) { // Close on outside click
+            onClose();
+        }
+    }}>
       <div className="content-wrapper">
         <h3>Create Project</h3>
-        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <form method="dialog" onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <input
               ref={titleInputRef}
@@ -160,7 +147,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <button type="button" onClick={handleClose}>Cancel</button>
+            <button type="button" onClick={onClose}>Cancel</button>
             <button type="submit" disabled={!id.trim() || !title.trim() || idError !== null}>
               Create
             </button>

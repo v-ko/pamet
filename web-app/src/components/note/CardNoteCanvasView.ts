@@ -1,42 +1,36 @@
-import { registerElementView } from "../elementViewLibrary";
-import { CardNote } from "../../model/CardNote";
-import { ImageNote } from "../../model/ImageNote";
-import { TextNote } from "../../model/TextNote";
-import { calculateTextLayout } from "./util";
-import { NoteCanvasView } from "./NoteCanvasView";
-import { textRect } from "./util";
-import { DEFAULT_FONT_STRING } from "../../core/constants";
+import { registerElementView } from "@/components/elementViewLibrary";
+import { CardNote } from "@/model/CardNote";
+import { ImageNote } from "@/model/ImageNote";
+import { TextNote } from "@/model/TextNote";
+import { calculateTextLayout } from "@/components/note/note-dependent-utils";
+import { NoteCanvasView } from "@/components/note/NoteCanvasView";
+import { textRect } from "@/components/note/util";
+import { DEFAULT_FONT_STRING } from "@/core/constants";
 
 
 
 export class CardNoteCanvasView extends NoteCanvasView {
 
     render(context: CanvasRenderingContext2D) {
-        let note = this.noteViewState.note() as CardNote;
+        let note = this.noteViewState.note();
         let noteRect = note.rect();
-
-        let hasText = note.content.text !== undefined
-        let hasImage = note.content.image !== undefined
 
         // In all cases - draw the background
         this.drawBackground(context)
 
-        // If there's no content - draw the background and finish
-        if (!hasText && !hasImage) {
-            return
-        } else if (hasText && !hasImage) { // Only text
-            let text = note.content.text || '';
-            let textLayout = calculateTextLayout(text, textRect(noteRect), DEFAULT_FONT_STRING);
-            this.drawText(context, textLayout);
-
-        } else if (!hasText && hasImage) { // Only image
-            this.drawImage(context, noteRect)
-        } else { // Both text and image
+        // Render based on note type, most specific first
+        if (note instanceof CardNote) { // Must be first because it extends both TextNote and ImageNote
             let layout = note.layout()
             let textRect_ = textRect(layout.textArea)
             let textLayout = calculateTextLayout(note.content.text || '', textRect_, DEFAULT_FONT_STRING)
             this.drawText(context, textLayout)
             this.drawImage(context, layout.imageArea)
+        } else if (note instanceof ImageNote) {
+            this.drawImage(context, noteRect)
+        } else if (note instanceof TextNote) {
+            let text = note.content.text || '';
+            let textLayout = calculateTextLayout(text, textRect(noteRect), DEFAULT_FONT_STRING);
+            this.drawText(context, textLayout);
         }
 
         // console.log('DRAWING CARD NOTE')

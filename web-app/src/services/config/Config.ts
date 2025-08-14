@@ -1,8 +1,8 @@
 import { getLogger } from "fusion/logging";
-import { DeviceData } from "../../model/config/Device";
-import { ProjectData } from "../../model/config/Project";
-import { UserData } from "../../model/config/User";
-import { BaseConfigAdapter } from "./BaseConfigAdapter";
+import { DeviceData } from "@/model/config/Device";
+import { ProjectData } from "@/model/config/Project";
+import { UserData } from "@/model/config/User";
+import { BaseConfigAdapter } from "@/services/config/BaseConfigAdapter";
 
 const log = getLogger('PametConfigService');
 
@@ -22,6 +22,11 @@ export class PametConfigService {
 
     setUpdateHandler(handler: () => void) {
         this._adapter.setUpdateHandler(handler);
+    }
+
+    data(): object {
+        // Returns the whole config data as an object
+        return this._adapter.data();
     }
 
     clear() {

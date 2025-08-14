@@ -1,76 +1,30 @@
-import styled from 'styled-components';
-import { Point2D } from '../../util/Point2D';
-import { computed, makeObservable, observable } from 'mobx';
+// NoteEditView.tsx
+import React, { useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Rectangle } from '../../util/Rectangle';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Note, SerializedNote } from 'web-app/src/model/Note';
-import { pamet } from '../../core/facade';
-import { dumpToDict, loadFromDict } from 'fusion/libs/Entity';
-import { currentTime, timestamp } from 'fusion/util';
+import { Rectangle } from 'fusion/primitives/Rectangle';
+import { Note, SerializedNote } from '@/model/Note';
+import { TextNote } from '@/model/TextNote';
+import { ImageNote } from '@/model/ImageNote';
+import { CardNote } from '@/model/CardNote';
+import { pamet } from "@/core/facade";
+import { dumpToDict, loadFromDict } from 'fusion/model/Entity';
+import { currentTime, timestamp } from 'fusion/util/base';
 import { getLogger } from 'fusion/logging';
-import { PametTabIndex } from '../../core/constants';
+import { PametTabIndex } from "@/core/constants";
+import "@/components/note/NoteEditView.css";
+import { ImageEditPropsWidget } from "@/components/note/edit-window/ImageEditPropsWidget";
+import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
+import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('EditComponent');
 
 interface EditComponentProps {
-  state: NoteEditViewState;
-  onTitlebarPress: (event: React.MouseEvent) => void;
-  onTitlebarRelease: (event: React.MouseEvent) => void;
-  onCancel: () => void; // added to avoid a dependency to the pageViewState
-  onSave: (note: Note) => void;
+    state: NoteEditViewState;
+    onTitlebarPress: (event: React.MouseEvent) => void;
+    onTitlebarRelease: (event: React.MouseEvent) => void;
+    onCancel: () => void; // added to avoid a dependency to the pageViewState
+    onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
 }
-
-export class NoteEditViewState {
-  targetNote: Note;
-  center: Point2D;
-
-  // Drag-by-title-bar related
-  isBeingDragged: boolean = false;
-  topLeftOnDragStart: Point2D = new Point2D(0, 0);
-  dragStartClickPos: Point2D = new Point2D(0, 0);
-
-  // Note content
-  // _noteData: SerializedNote;
-
-  constructor(centerAt: Point2D, note: Note) {
-    this.center = centerAt; // Pixel space
-    this.targetNote = note;
-    // this._noteData = dumpToDict(note) as SerializedNote;
-
-    makeObservable(this, {
-      center: observable,
-      targetNote: observable,
-      isBeingDragged: observable,
-      creatingNote: computed,
-    });
-  }
-
-  get creatingNote() {
-    return pamet.note(this.targetNote.id) === undefined;
-  }
-}
-
-const ToolButton = styled.button`
-    width: 1.8em;
-    height: 1.8em;
-    font-size: 1.3em;
-    // center content
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  background: #fff;
-  border: 1px solid #000;
-  border-radius: 2px;
-  color: #000;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: #000;
-    color: #fff;
-  }
-`;
 
 const NoteEditView: React.FC<EditComponentProps> = observer((
   { state,
@@ -81,35 +35,176 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   }: EditComponentProps) => {
 
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [geometry, setGeometry] = useState<Rectangle>(new Rectangle(state.center.x, state.center.y, 400, 400));
-  const [noteData, setNoteData] = useState<SerializedNote>(dumpToDict(state.targetNote) as SerializedNote);
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const committed = useRef(false);
+  const [geometry, setGeometry] = useState<Rectangle>(
+    new Rectangle([state.center.x, state.center.y, 400, 400])
+  );
+  const noteData = useRef(
+    dumpToDict(state.targetNote) as SerializedNote
+  );
+  const [, setForceUpdate] = useState(0);
+   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isDropAllowed, setIsDropAllowed] = useState(false);
 
-  // Update context on unmount
+
+  const updateNoteData = (newData: Partial<SerializedNote>) => {
+    noteData.current = { ...noteData.current, ...newData };
+    setForceUpdate(x => x + 1);
+  };
+
+  const [uncommitedImage, setUncommitedImage] = useState<MediaItemData | null>(null);
+  const [originalImageForTrashing, setOriginalImageForTrashing] = useState<MediaItemData | null>(null);
+
+  const [textButtonToggled, setTextButtonToggled] = useState(() => {
+    const note = state.targetNote;
+    return note instanceof TextNote || note instanceof CardNote;
+  });
+  const [imageButtonToggled, setImageButtonToggled] = useState(() => {
+      const note = state.targetNote;
+      return note instanceof ImageNote || note instanceof CardNote;
+  });
+  const [linkButtonToggled, setLinkButtonToggled] = useState(false);
+
+  // Handle Note type changes
   useEffect(() => {
-    pamet.setContext('noteEditViewFocused', true);
-    return () => pamet.setContext('noteEditViewFocused', false);
+    let newNote: Note;
+    const currentNote = loadFromDict(noteData.current) as Note;
+
+    if (textButtonToggled && imageButtonToggled) {
+      if (currentNote instanceof CardNote) return;
+      newNote = new CardNote(noteData.current);
+    } else if (textButtonToggled) {
+      if (currentNote instanceof TextNote && !(currentNote instanceof CardNote)) return;
+      newNote = new TextNote(noteData.current);
+    } else if (imageButtonToggled) {
+      if (currentNote instanceof ImageNote && !(currentNote instanceof CardNote)) return;
+      newNote = new ImageNote(noteData.current);
+    } else { // Should not happen with proper logic
+      setTextButtonToggled(true);
+      return;
+    }
+    updateNoteData(dumpToDict(newNote) as SerializedNote);
+  }, [textButtonToggled, imageButtonToggled]);
+
+  useEffect(() => {
+    // Focus the text area on mount if it's visible
+    if (textButtonToggled) {
+        textAreaRef.current?.focus();
+    }
+  }, [textButtonToggled]);
+
+  // Effect for cleaning up uncommitted media on component unmount
+  useEffect(() => {
+    return () => {
+      // If the component unmounts and there's an uncommitted item, delete it
+      if (uncommitedImage && !committed.current) {
+        const projectId = pamet.appViewState.currentProjectId;
+        if (projectId) {
+          log.info('Cleaning up uncommitted media item on unmount:', uncommitedImage);
+          pamet.storageService.removeMedia(projectId, uncommitedImage.id, uncommitedImage.contentHash)
+            .catch(err => log.error('Failed to clean up media item', err));
+        }
+      }
+    };
   }, []);
 
-  const bakeNoteAndSave = useCallback(() => {
-    /**
-     * Returns a note object with the changes from the editing actions applied
-     */
-    let data = noteData;
+  const removeNoteImage = async () => {
+    const currentImageId = noteData.current.content.image_id;
+    if (!currentImageId) {
+        throw new Error("removeOriginalImage called when there is no image.");
+    }
+
+    const projectid = pamet.appViewState.currentProjectId;
+    if (!projectid) {
+      throw new Error('No project loaded');
+    }
+
+      // If there is an image associated with the note and it wasn't yet deleted
+      let originalMediaItem: MediaItem | undefined;
+    if (!originalImageForTrashing && state.targetNote.content.image_id) {
+      originalMediaItem = pamet.mediaItem(currentImageId);
+      if (!originalMediaItem) {
+        throw new Error("Original media item not found for the image.");
+      }
+      setOriginalImageForTrashing(originalMediaItem.data());
+    } else if (uncommitedImage) {
+      // If there is an original image for trashing, then the current image has
+      // been added in this editing session
+      // If removing an image added in the editing session - delete it from the
+      //store permanently.  Get the set media item from the state
+      await pamet.deleteMediaFromStore(new MediaItem(uncommitedImage))
+    }
+
+    // Clear the image from the note data state
+    updateNoteData({ content: { ...noteData.current.content, image_id: undefined } });
+  };
+
+  const setNoteImage = async (blob: Blob, path: string) => {
+    const projectId = pamet.appViewState.currentProjectId;
+    if (!projectId) {
+      throw new Error('No project loaded');
+    }
+
+    if (noteData.current.content.image_id) {
+        throw new Error("setNoteImage called when there is already an image.");
+    }
+
+    const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path, noteData.current.id);
+    setUncommitedImage(newMediaItem);
+    updateNoteData({ content: { ...noteData.current.content, image_id: newMediaItem.id } });
+  };
+
+  const bakeNoteAndSave = () => {
+    // Deep copy to avoid mutating state directly
+    let data = noteData.current
+
+    // Determine the definitive note type based on content
+    const hasText = data.content.text && data.content.text.trim().length > 0;
+    const hasImage = !!data.content.image_id;
+    let FinalNoteClass: typeof Note;
+
+    if (hasText && hasImage) {
+        FinalNoteClass = CardNote;
+    } else if (hasImage) {
+        FinalNoteClass = ImageNote;
+    } else { // Default to TextNote if only text is present, or if both are empty
+        FinalNoteClass = TextNote;
+    }
+
+    // Apply the class change to the data object
+    data.type_name = FinalNoteClass.name;
+
+    // Clean the content object based on the definitive type
+    const finalContent: any = {};
+    if (FinalNoteClass === TextNote || FinalNoteClass === CardNote) {
+        finalContent.text = data.content.text;
+    }
+    if (FinalNoteClass === ImageNote || FinalNoteClass === CardNote) {
+        finalContent.image_id = data.content.image_id;
+    }
+    data.content = finalContent;
+
+    // Apply timestamp logic
     if (state.creatingNote) {
       data.created = timestamp(currentTime());
     }
-
-    // Update the modified time if the content has changed
-    // Do a deep comparison of the content objects
     let oldContent = state.targetNote.content;
-    let newContent = data.content;
-    if (JSON.stringify(oldContent) !== JSON.stringify(newContent)) {
+    if (JSON.stringify(oldContent) !== JSON.stringify(data.content)) {
       data.modified = timestamp(currentTime());
     }
 
     let note = loadFromDict(data) as Note;
-    onSave(note);
-  }, [noteData, onSave, state.creatingNote, state.targetNote]);
+    committed.current = true;
+    const addedMediaItem = uncommitedImage ? new MediaItem(uncommitedImage) : null;
+    const removedMediaItem = originalImageForTrashing ? new MediaItem(originalImageForTrashing) : null;
+    onSave(note, addedMediaItem, removedMediaItem);
+
+    // On successful save, the media items are committed. Clear the state.
+    setUncommitedImage(null);
+    setOriginalImageForTrashing(null);
+
+  };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
@@ -119,46 +214,40 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       event.preventDefault();
       bakeNoteAndSave();
     }
-
-    // TODO: Add exceptions for global key bindings
     event.stopPropagation();
-    log.info("Key pressed: " + event.key)
-  }
+    log.info("Key pressed: " + event.key);
+  };
 
   // Setup geometry update handling on resize
   useEffect(() => {
     const updateGeometryHandler = () => {
       let wrapper = wrapperRef.current;
       if (wrapper === null) {
-        console.log("[resize handler] wrapperRef is null")
+        log.warning("[resize handler] wrapperRef is null");
         return;
       }
-
       const rect = wrapper.getBoundingClientRect();
-      setGeometry(new Rectangle(rect.left, rect.top, rect.width, rect.height));
+      setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
     };
 
     // Use a resize observer to bind the updateGeometry function to resize events
     // of the superContainer
     let wrapper = wrapperRef.current;
     if (wrapper === null) {
-      console.log("[resize watch effect] wrapperRef is null")
+      log.warning("[resize watch effect] wrapperRef is null");
       return;
     }
-
     const resizeObserver = new ResizeObserver(updateGeometryHandler);
     resizeObserver.observe(wrapper);
     return () => resizeObserver.disconnect();
   }, [wrapperRef]);
 
   // Limit the position of the window to the screen
-  let width = geometry.width;
-  let height = geometry.height;
+  let width = geometry.width();
+  let height = geometry.height();
 
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;
-
-  console.log("Rendering NoteEditView", geometry)
 
   // Check if the window is outside the screen on the bottom and right
   if (left + width > window.innerWidth) {
@@ -176,205 +265,154 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     top = 0;
   }
 
+  const handleDragEnter = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(true);
+
+    const items = event.dataTransfer.items;
+    if (items && items.length > 0 && items[0].kind === 'file' && items[0].type.startsWith('image/')) {
+        setIsDropAllowed(true);
+    } else {
+        setIsDropAllowed(false);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      // Check if the mouse is still inside the drop zone
+      if (wrapperRef.current && wrapperRef.current.contains(event.relatedTarget as Node)) {
+          return;
+      }
+
+      setIsDraggingOver(false);
+      setIsDropAllowed(false);
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+      event.preventDefault();
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setIsDraggingOver(false);
+      setIsDropAllowed(false);
+
+      const files = event.dataTransfer.files;
+      if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+          const imageFile = files[0];
+          if (noteData.current.content.image_id) {
+              await removeNoteImage();
+          }
+          const path = `images/pasted_image-${Date.now()}.${imageFile.name.split('.').pop()}`;
+          await setNoteImage(imageFile, path);
+          setImageButtonToggled(true);
+      }
+  };
   return (
     <div
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
-      style={{
-        left: left,
-        top: top,
-        // background: `rgba(255, 255, 255, ${state.isBeingDragged ? 0.6 : 1})`,
-        pointerEvents: state.isBeingDragged ? 'none' : 'auto',
-
-        position: 'absolute',
-        width: '400px',
-        height: '400px',
-        background: '#fff',
-        color: '#000',
-        resize: 'both',
-        overflow: 'auto',
-        minHeight: '300px',
-        minWidth: '300px',
-        maxWidth: '95%',
-
-        border: '1px solid #000',
-        borderRadius: '2px',
-        display: 'grid',
-        gridTemplateColumns: '100%',
-        gridTemplateRows: '36px 46px auto 50px',
-        zIndex: 1003,
-      }}
+      className={`note-edit-view${state.isBeingDragged ? ' dragged' : ''}`}
+      style={{ left, top }}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
+        {isDraggingOver &&
+            <div
+                className='drop-overlay'
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: isDropAllowed ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)',
+                    pointerEvents: 'none',
+                    zIndex: 3000,
+                }}
+            />
+        }
       {/* Title bar */}
-      <div
-        style={{
-          position: 'relative',
-          background: '#000',
-          color: '#fff',
-          display: 'flex',
-          alignItems: 'center',
-          borderBottom: '1px solid #000',
-        }}
-      >
+      <div className="title-bar">
         {/* move icon area */}
         <div
           onMouseDown={onTitlebarPress}
           onMouseUp={onTitlebarRelease}
-          style={{
-            cursor: 'move',
-            flexGrow: 1,
-            // minimal “grab area” for moving the dialog
-          }}
+          className="move-area"
         />
         {/* Close button */}
         <button
+          className="close-button"
           onClick={onCancel}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            width: '36px',
-            height: '36px',
-            color: '#fff',
-            fontSize: '18px',
-            cursor: 'pointer',
-            transition: '0.2s',
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#444')}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-        >
-          ×
-        </button>
-        <div // Display the title separately on top (there's probably a nicer way)
-          style={{
-            position: 'absolute',
-            width: '100%',
-            height: '100%',
-            top: 0,
-            left: 0,
-            textAlign: 'center',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-          }}
-        >
-          {/* Set the text to 'Edit note' or 'Create note' */}
+        >×</button>
+        <div className="title-text">
           {state.creatingNote ? 'Create note' : 'Edit note'}
         </div>
       </div>
 
       {/* Tool buttons row */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          padding: '5px',
-          gap: '2px',
-        }}>
-        <ToolButton>T</ToolButton>
-        <ToolButton>🔗</ToolButton>
-        <ToolButton>🖼️</ToolButton>
-        <ToolButton>🗑️</ToolButton>
-        <ToolButton>⋮</ToolButton>
+      <div className="tool-buttons">
+        <button
+          className={`tool-button ${textButtonToggled ? 'toggled' : ''}`}
+          onClick={() => {
+            if (!imageButtonToggled) return;
+            setTextButtonToggled(!textButtonToggled)
+          }}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 3}
+        >T</button>
+        <button className="tool-button" tabIndex={PametTabIndex.NoteEditViewWidget1 + 4}>🔗</button>
+        <button
+          className={`tool-button ${imageButtonToggled ? 'toggled' : ''}`}
+          onClick={() => setImageButtonToggled(!imageButtonToggled)}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 5}
+        >🖼️</button>
+        <button className="tool-button" tabIndex={PametTabIndex.NoteEditViewWidget1 + 6}>⋮</button>
       </div>
 
       {/* Main content */}
-      <div
-        className="main-content"
-        style={{
-          padding: '8px',
-          overflow: 'none',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '10px',
-        }}
-      >
-        {/* Main content */}
-        {/* Text edit related */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            width: '100%',
-            height: '100%',
-            overflow: 'none',
-          }}
-        >
-          <label
-            style={{
-              fontSize: '0.9em',
-              fontWeight: 'bold',
-              marginBottom: '5px',
-            }}
-          >
-            Text:
-          </label>
+      <div className="main-content">
+        {imageButtonToggled && <ImageEditPropsWidget
+          noteData={noteData.current}
+          uncommitedMediaItem={uncommitedImage}
+          setNoteImage={setNoteImage}
+          removeNoteImage={removeNoteImage}
+        />}
+        {textButtonToggled && <div className="text-container">
           <textarea
-            // placeholder="Enter text here"
+            ref={textAreaRef}
+            placeholder="Note text"
             tabIndex={PametTabIndex.NoteEditViewWidget1}
-            autoFocus={true}
+            style={{ pointerEvents: isDraggingOver ? 'none' : 'auto' }}
             defaultValue={state.targetNote.content.text}
             onChange={(e) => {
-              setNoteData({
-                ...noteData,
-                content: {
-                  ...noteData.content,
-                  text: e.target.value,
-                },
-              });
+                updateNoteData({ content: { ...noteData.current.content, text: e.target.value } });
             }}
-            style={{
-              flexGrow: 1,
-              resize: 'none',
-              border: '1px solid #000',
-              borderRadius: '2px',
-              padding: '8px',
-              fontSize: '14px',
-              color: '#000',
-            }}
-            onFocus={() => pamet.setContext('noteEditViewFocused', true)}
-            onBlur={() => pamet.setContext('noteEditViewFocused', false)}
           />
-        </div>
+        </div>}
       </div>
 
       {/* Footer / actions */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '8px',
-          borderTop: '1px solid #000',
-        }}
-      >
+      <div className="footer">
         <button
+          className="cancel-button"
           onClick={onCancel}
-          style={{
-            padding: '6px 12px',
-            border: '1px solid #000',
-            borderRadius: '2px',
-            background: '#fff',
-            color: '#000',
-            cursor: 'pointer',
-          }}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 2}
         >
-          Cancel (Esc)</button>
+          Cancel (Esc)
+        </button>
         <button
+          className="save-button"
           onClick={bakeNoteAndSave}
-          style={{
-            padding: '6px 12px',
-            border: '1px solid #000',
-            borderRadius: '2px',
-            background: '#000',
-            color: '#fff',
-            cursor: 'pointer',
-          }}
+          tabIndex={PametTabIndex.NoteEditViewWidget1 + 1}
         >
-          Save (Ctrl+S)</button>
+          Save (Ctrl+S)
+        </button>
       </div>
     </div>
   );

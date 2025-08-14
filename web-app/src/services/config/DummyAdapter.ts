@@ -1,4 +1,4 @@
-import { BaseConfigAdapter } from "./BaseConfigAdapter";
+import { BaseConfigAdapter } from "@/services/config/BaseConfigAdapter";
 
 export class DummyConfigAdapter extends BaseConfigAdapter {
     private _data: any = {};

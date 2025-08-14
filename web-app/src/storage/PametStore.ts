@@ -1,9 +1,41 @@
+import { MediaItem } from 'fusion/model/MediaItem';
+import { Change } from 'fusion/model/Change'
+import { Store, SearchFilter } from 'fusion/storage/domain-store/BaseStore'
+import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'fusion/storage/domain-store/InMemoryStore'
+import { Arrow } from "@/model/Arrow"
+import { Note } from "@/model/Note"
+import { Page } from "@/model/Page"
 
-import { Change } from 'fusion/Change'
-import { Store, SearchFilter } from 'fusion/storage/BaseStore'
-import { Arrow } from '../model/Arrow'
-import { Note } from '../model/Note'
-import { Page } from '../model/Page'
+// Pamet-specific index definitions including entity type indexing
+export const PAMET_INMEMORY_STORE_CONFIG: readonly IndexConfig[] = [
+    { name: "id", fields: [{ indexKey: "id" }], isUnique: true },
+    {
+        name: "type_id",
+        fields: [
+            { indexKey: ENTITY_TYPE_INDEX_KEY, allowedTypes: ['Page', 'Note', 'Arrow', 'MediaItem'] },
+            { indexKey: 'id' }
+        ],
+        isUnique: true
+    },
+    {
+        name: "parentId",
+        fields: [{ indexKey: "parentId" }],
+        isUnique: false
+    },
+    {
+        name: "type_parentId",
+        fields: [
+            { indexKey: ENTITY_TYPE_INDEX_KEY, allowedTypes: ['Page', 'Note', 'Arrow', 'MediaItem'] },
+            { indexKey: 'parentId' }
+        ],
+        isUnique: false
+    },
+    {
+        name: "path",
+        fields: [{ indexKey: 'path' }],
+        isUnique: true
+    }
+];
 
 
 export abstract class PametStore extends Store {
@@ -76,5 +108,10 @@ export abstract class PametStore extends Store {
     }
     arrow(arrow_id: string): Arrow | undefined {
         return this.findOne({id: arrow_id}) as Arrow | undefined
+    }
+
+    // MediaItem CRUD
+    mediaItem(id: string): MediaItem | undefined {
+        return this.findOne({ id: id, type: MediaItem }) as MediaItem | undefined
     }
 }

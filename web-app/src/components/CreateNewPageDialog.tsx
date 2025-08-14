@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
-import { pamet } from '../core/facade';
-import { Page } from '../model/Page';
+import { pamet } from "@/core/facade";
+import { Page } from "@/model/Page";
+import { getLogger } from 'fusion/logging';
+
+let log = getLogger('CreatePageDialog');
 
 interface CreatePageDialogProps {
   onClose: () => void;
@@ -30,15 +33,6 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     }
   }, []);
 
-  // Close helper
-  function handleClose() {
-    const dialog = dialogRef.current;
-    if (dialog?.open) {
-      dialog.close();
-    }
-    onClose();
-  }
-
   // Check if name is already taken
   const isNameTaken = useMemo(() => {
     const trimmed = pageName.trim();
@@ -46,26 +40,23 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
   }, [pageName]);
 
   function handleCreate(e: FormEvent) {
-    e.preventDefault();
     const trimmed = pageName.trim();
     if (!isNameTaken && trimmed) {
+      log.info(`Creating new page: ${trimmed}`);
       onCreate(trimmed);
-      handleClose();
-    }
-  }
-
-  // Close dialog on background click
-  function handleBackgroundClick(event: React.MouseEvent) {
-    if (event.target === dialogRef.current) {
-      handleClose();
+      // No need to call onClose, the dialog will close automatically
     }
   }
 
   return (
-    <dialog ref={dialogRef} onCancel={handleClose} onClick={handleBackgroundClick}>
+    <dialog ref={dialogRef} onCancel={onClose} onClick={(e) => {
+        if (e.target === dialogRef.current) { // Close on outside click
+            onClose();
+        }
+    }}>
       <div className="content-wrapper">
         <h3>Create page</h3>
-        <form onSubmit={handleCreate}>
+        <form method="dialog" onSubmit={handleCreate}>
           <input
             autoFocus
             type="text"

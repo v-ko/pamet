@@ -1,16 +1,16 @@
-import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData } from '../../model/Arrow';
+import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData } from "@/model/Arrow";
 import { computed, makeObservable, observable, toJS } from 'mobx';
-import { NoteViewState } from '../note/NoteViewState';
+import { NoteViewState } from "@/components/note/NoteViewState";
 import { getLogger } from 'fusion/logging';
-import { Point2D } from '../../util/Point2D';
-import { Rectangle } from '../../util/Rectangle';
-import { approximateMidpointOfBezierCurve } from '../../util';
-import { ElementViewState } from '../page/ElementViewState';
+import { Point2D } from 'fusion/primitives/Point2D';
+import { Rectangle } from 'fusion/primitives/Rectangle';
+import { approximateMidpointOfBezierCurve } from "@/util";
+import { ElementViewState } from "@/components/page/ElementViewState";
 import paper from 'paper';
-import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from '../../core/constants';
-import { Change } from 'fusion/Change';
-import { pamet } from '../../core/facade';
-import { elementPageId } from '../../model/Element';
+import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/core/constants";
+import { Change } from 'fusion/model/Change';
+import { pamet } from "@/core/facade";
+import { elementPageId } from "@/model/Element";
 
 let log = getLogger('ArrowViewState');
 
@@ -64,7 +64,6 @@ export class ArrowViewState extends ElementViewState {
     }
 
     updateFromChange(change: Change) {
-        log.info('updateFromChange', change);
         if (!change.isUpdate) {
             log.error('Can only update from an update type change');
             return;
@@ -81,18 +80,18 @@ export class ArrowViewState extends ElementViewState {
         // so that upon bugs related to that - the user can see the arrow and delete it
         if (arrow.headNoteId && !headNVS) {
             log.error('Arrow head note not found', arrow.headNoteId, 'setting head to (0, 0)')
-            arrow.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+            arrow.setHead(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none)
         } else if (!arrow.headNoteId && arrow.headAnchorType !== ArrowAnchorOnNoteType.none) {
             log.error('No head note id, but anchor is not fixed. Overwriting in view state.')
-            arrow.setHead(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+            arrow.setHead(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none)
         }
 
         if (arrow.tailNoteId && !tailNVS) {
             log.error('Arrow tail note not found', arrow.tailNoteId, 'setting tail to (0, 0)')
-            arrow.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+            arrow.setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none)
         } else if (!arrow.tailNoteId && arrow.tailAnchorType !== ArrowAnchorOnNoteType.none) {
             log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
-            arrow.setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none)
+            arrow.setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none)
         }
 
         // console.log('setting anchors', tailNVS, headNVS)
@@ -121,7 +120,7 @@ export class ArrowViewState extends ElementViewState {
     }
 
     updateFromArrow(arrow: Arrow) {
-        this.arrow().setTail(new Point2D(0, 0), null, ArrowAnchorOnNoteType.none);
+        this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
         let change = this.arrow().changeFrom(arrow);
         this.updateFromChange(change);
     }
@@ -257,8 +256,8 @@ export class ArrowViewState extends ElementViewState {
         if (arrow.midPoints.length === 0 && tailPoint.equals(headPoint)) {
             let controlPointDistance = CP_BASE_DISTANCE;
             // Set perpendicular control points
-            let cp1 = tailPoint.add(new Point2D(controlPointDistance, 0));
-            let cp2 = tailPoint.add(new Point2D(0, controlPointDistance));
+            let cp1 = tailPoint.add(new Point2D([controlPointDistance, 0]));
+            let cp2 = tailPoint.add(new Point2D([0, controlPointDistance]));
             curves.push([tailPoint, cp1, cp2, headPoint]);
             return curves;
         }
@@ -348,13 +347,13 @@ export class ArrowViewState extends ElementViewState {
             let k = controlPointDistance / headOrTailPosition.distanceTo(adjacentPoint);
             return headOrTailPosition.add(adjacentPoint.subtract(headOrTailPosition).multiply(k));
         } else if (effectiveAnchorType === ArrowAnchorOnNoteType.mid_left) {
-            return headOrTailPosition.subtract(new Point2D(controlPointDistance, 0));
+            return headOrTailPosition.subtract(new Point2D([controlPointDistance, 0]));
         } else if (effectiveAnchorType === ArrowAnchorOnNoteType.top_mid) {
-            return headOrTailPosition.subtract(new Point2D(0, controlPointDistance));
+            return headOrTailPosition.subtract(new Point2D([0, controlPointDistance]));
         } else if (effectiveAnchorType === ArrowAnchorOnNoteType.mid_right) {
-            return headOrTailPosition.add(new Point2D(controlPointDistance, 0));
+            return headOrTailPosition.add(new Point2D([controlPointDistance, 0]));
         } else if (effectiveAnchorType === ArrowAnchorOnNoteType.bottom_mid) {
-            return headOrTailPosition.add(new Point2D(0, controlPointDistance));
+            return headOrTailPosition.add(new Point2D([0, controlPointDistance]));
         } else {
             throw Error('Effective type should have been inferred (!=auto). Type: ' + effectiveAnchorType);
         }
@@ -368,7 +367,8 @@ export class ArrowViewState extends ElementViewState {
             if (this.tailAnchorNoteViewState === null) {
                 throw Error('Tail anchor type is AUTO, but no head note view state is set');
             }
-            effectiveTailAnchorType = inferArrowAnchorType(secondPoint, this.tailAnchorNoteViewState.note().rect());
+            effectiveTailAnchorType = inferArrowAnchorType(
+                secondPoint, new Rectangle(this.tailAnchorNoteViewState._noteData.geometry));
         } else {
             effectiveTailAnchorType = arrow.tailAnchorType;
         }
@@ -384,7 +384,8 @@ export class ArrowViewState extends ElementViewState {
             if (this.headAnchorNoteViewState === null) {
                 throw Error('Head anchor type is AUTO, but no head note view state is set');
             }
-            effectiveHeadAnchorType = inferArrowAnchorType(secondPoint, this.headAnchorNoteViewState.note().rect());
+            effectiveHeadAnchorType = inferArrowAnchorType(
+                secondPoint, new Rectangle(this.headAnchorNoteViewState._noteData.geometry));
         } else {
             effectiveHeadAnchorType = arrow.headAnchorType;
         }

@@ -1,6 +1,6 @@
-import { Entity, EntityData, entityType } from "fusion/libs/Entity"
-import { timestamp } from 'fusion/util.js';
-import { PametRoute } from "../services/routing/route";
+import { Entity, EntityData, entityType } from "fusion/model/Entity"
+import { timestamp } from 'fusion/util/base.js';
+import { PametRoute } from "@/services/routing/route";
 
 export interface TourSegment {
   link: string;
@@ -16,7 +16,7 @@ export interface PageData extends EntityData {
 
 
 @entityType('Page')
-export class Page extends Entity<PageData> implements PageData {
+export class Page extends Entity<PageData> {
   toString(): string {
     return `<Page id=${this.id} name=${this.name}>`;
   }
@@ -25,10 +25,10 @@ export class Page extends Entity<PageData> implements PageData {
     return '';
   }
 
-  url(): string {
+  projectScopedURI(): string {
     let route = new PametRoute()
     route.pageId = this.id
-    return route.toLocalUrl()
+    return route.toProjectScopedURI()
   }
 
   get datetimeCreated(): Date {

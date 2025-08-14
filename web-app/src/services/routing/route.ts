@@ -1,4 +1,8 @@
-import { WebAppState } from "../../containers/app/App";
+import { MediaItem } from "fusion/model/MediaItem";
+import { getLogger } from "fusion/logging";
+
+let log = getLogger('PametRoute');
+
 
 export const PROJECT_PROTOCOL = 'project:';
 
@@ -11,60 +15,87 @@ export enum PametRoutes {
 }
 
 export class PametRoute {
+    // General
+    originalPath: string = '';
     protocol?: string = undefined;
+    host?: string = undefined;
+
+    // Pamet specific
     userId?: string = undefined;
     projectId?: string = undefined;
+
+    // Page specific
     pageId?: string = undefined;
     viewportCenter?: [number, number] = undefined;
     viewportEyeHeight?: number = undefined;
     focusedNoteId?: string = undefined;
-    originalPath: string = '';
+
+    // Media specific
+    mediaItemId?: string = undefined;
+    mediaItemContentHash?: string = undefined;
+
+    constructor(props?: Partial<PametRoute>) {
+        if (props) {
+            Object.assign(this, props);
+        }
+    }
+
+    _parseSubProjectParts(subProjectParts: string[]): void {
+        if (subProjectParts[0] == 'page') {
+            const pageId = subProjectParts[1];
+            this.pageId = pageId;
+        } else if (subProjectParts[0] == 'media' && subProjectParts[1] == 'item') {
+            // Media item route  like /media/item/{mediaItemId}#{mediaItemContentHash}
+            const mediaItemId = subProjectParts[2];
+            this.mediaItemId = mediaItemId;
+            // Later we can add /media/path/MEDIA_PATH#hash for more readable urls
+        }
+    }
 
     static fromUrl(url: string): PametRoute {
-        const url_ = new URL(url);
-        const path = url_.pathname;
-        const search = url_.search;
-        const hash = url_.hash;
-
-        let route = new PametRoute();
+        let url_: URL;
+        try{
+            url_ = new URL(url);
+        } catch (e) {
+            log.error(`Invalid URL: ${url}`, e);
+            throw new Error(`Invalid URL: "${url}"`);
+        }
 
         // Local urls start with project:///, globals are regular with a host
-        route.protocol = url_.protocol
+        let route = new PametRoute();
+
+        if (url_.protocol) {
+            route.protocol = url_.protocol
+        }
+        if (url_.host) {
+            route.host = url_.host;
+        }
+
+        const path = url_.pathname;
         route.originalPath = path;
-        let subProjectPath: string;
+
         if (url_.protocol === PROJECT_PROTOCOL) {
-            subProjectPath = path;
-        } else {
-            // Get the user (first part) if any. If it's 'local' there's no registration
-            const pathParts = path.split('/');
-            let subUserPath: string;
-            if (pathParts.length >= 2) {
-                if (pathParts[1] === 'local') {
-                    route.userId = pathParts[1];
-                }
-                subUserPath = pathParts.slice(2).join('/');
-            } else {
-                subUserPath = '';
+            route._parseSubProjectParts(path.split('/').slice(1)); // Remove leading slash
+        } else if (path) {  // Should be a network protocol htpp/https
+
+            // The user is the first segment if specfied
+            const pathParts = path.split('/');  // pathname starts with leading /,
+
+            if (pathParts[1].length > 0) {
+                route.userId = pathParts[1];
             }
 
             // Get the project id from the path
-            // Check that there's at least a project id and it's 8 characters long
+            // Check that there's at least a project id
             if (pathParts.length >= 3) {
                 route.projectId = pathParts[2];
-                subProjectPath = pathParts.slice(3).join('/');
-            } else {
-                subProjectPath = '';
             }
 
-        }
-
-        // Get the page id if any
-        if (subProjectPath.startsWith('/page/')) {
-            const pageId = subProjectPath.substring(6);
-            route.pageId = pageId;
+            route._parseSubProjectParts(pathParts.slice(3));
         }
 
         // Parse the search
+        const search = url_.search;
         const searchParams = new URLSearchParams(search);
         const eye_at = searchParams.get('eye_at');
         if (eye_at) {
@@ -76,9 +107,12 @@ export class PametRoute {
         }
 
         // Parse the hash
+        const hash = url_.hash;
         if (hash.startsWith('#note=')) {
-            route.focusedNoteId = decodeURIComponent(
-                hash.substring(6)); // remove the '#note='
+            route.focusedNoteId = hash.substring(6); // remove the '#note='
+        } else if (route.mediaItemId && hash.length === 33) {
+            // If media item id is set, the hash should be the content hash
+            route.mediaItemContentHash = hash.substring(1); // remove the '#'
         }
 
         return route;
@@ -89,28 +123,21 @@ export class PametRoute {
     }
 
     projectScopedPath(): string {
-        return toProjectScopedPath(this);
+        return toProjectScopedRelativeReference(this);
     }
 
-    path(): string {
+    toRelativeReference(): string {
         let path = '/';
 
-        // For internal paths. This should probably be fixed at some point
-        if (this.isInternal) {
-            return this.originalPath
-        }
-
-        let userId = this.userId;
-        if (!this.userId) {
-            userId = 'local';
-        }
-        path += `${userId}/`;
-
         if (this.projectId) {
+            if (this.userId === undefined) {
+                throw new Error(`Project id set without user id. Got userId: ${this.userId}, projectId: ${this.projectId}`);
+            }
+            path += `${this.userId}/`;
             path += `${this.projectId}`;
         }
 
-        let projectScopedPath = toProjectScopedPath(this);
+        let projectScopedPath = toProjectScopedRelativeReference(this);
         if (projectScopedPath !== '/') {
             path += projectScopedPath;
         }
@@ -118,58 +145,65 @@ export class PametRoute {
         return path;
     }
 
-    toLocalUrl(): string {
-        let path = toProjectScopedPath(this);
+    toProjectScopedURI(): string {
+        let path = toProjectScopedRelativeReference(this);
         return `project://${path}`;
     }
 
-    toUrl(host: string): string {
-        // If the host is not in the format schema://host - add the schema
-        if (!host.indexOf('://')) {
-            host = `https://${host}`;
+    toUrlString(): string {
+        if (!this.host) {
+            throw new Error('Host is not set. Cannot create URL string.');
         }
-        let url = new URL(host);
-        url.pathname = this.path();
+        if (!this.protocol) {
+            throw new Error('Protocol is not set. Cannot create URL string.');
+        }
+        const base = this.protocol + '//' + this.host;
+        const url = new URL(this.toRelativeReference(), base);
         return url.toString();
+    }
+
+    toString(): string {
+        return this.toUrlString();
     }
 }
 
-export function toProjectScopedPath(route: PametRoute): string {
+export function toProjectScopedRelativeReference(route: PametRoute): string {
     // same as the tuUrlPath logic but for the subpath after project
     let path = '/';
 
     if (route.pageId && route.pageId.length === 8) {
-        path += `page/${encodeURIComponent(route.pageId)}`;
+        path += `page/${route.pageId}`;
+    } else if (route.mediaItemId) {
+        // For media items, userId and projectId are required to match cache format
+        if (!route.userId || !route.projectId) {
+            throw new Error(`Media item routes require userId and projectId. Got userId: ${route.userId}, projectId: ${route.projectId}`);
+        }
+        path += `media/item/${route.mediaItemId}`;
+        if (route.mediaItemContentHash) {
+            path += `#${route.mediaItemContentHash}`;
+        }
+        return path; // Return early for media items, no search params or note hash
     }
 
     let search = '';
     if (route.viewportEyeHeight && route.viewportCenter) {
-        search = `?eye_at=${encodeURIComponent(route.viewportEyeHeight.toString())}/${encodeURIComponent(route.viewportCenter[0].toString())}/${encodeURIComponent(route.viewportCenter[1].toString())}`;
+        search = `?eye_at=${route.viewportEyeHeight.toString()}/${route.viewportCenter[0].toString()}/${route.viewportCenter[1].toString()}`;
     }
 
     let hash = '';
     if (route.focusedNoteId) {
-        hash = `#note=${encodeURIComponent(route.focusedNoteId)}`;
+        hash = `#note=${route.focusedNoteId}`;
     }
 
     return path + search + hash;
 }
 
-export function routeFromAppState(state: WebAppState): PametRoute {
+// Get the project-scoped URL for this media item
+export function mediaItemRoute(mediaItem: MediaItem, userId: string, projectId: string): PametRoute {
     let route = new PametRoute();
-    let projectId = state.currentProjectId;
-    let pageId = state.currentPageId;
-
-    if (projectId === null && pageId !== null) {
-        throw new Error('Page id set without project id. Removing page id.');
-    }
-
-    if (projectId) {
-        route.projectId = projectId;
-    }
-    if (pageId) {
-        route.pageId = pageId;
-    }
-
-    return route;
+    route.mediaItemId = mediaItem.id;
+    route.mediaItemContentHash = mediaItem.contentHash;
+    route.userId = userId;
+    route.projectId = projectId;
+    return route
 }

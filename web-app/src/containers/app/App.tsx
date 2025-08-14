@@ -1,143 +1,37 @@
-import "./App.css";
-import { useEffect } from "react";
-import { makeObservable, observable } from "mobx";
+import "@/containers/app/App.css";
+import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
-import { MouseState, PageView } from "../../components/page/PageView";
-import { PageViewState } from "../../components/page/PageViewState";
+import { PageView } from "@/components/page/PageView";
 
 import { getLogger } from "fusion/logging";
-import { DeviceData } from "web-app/src/model/config/Device";
-import { UserData } from "web-app/src/model/config/User";
-import { pamet } from "../../core/facade";
 import { styled } from "styled-components";
-import Panel from "../../components/Panel";
+import Panel from "@/components/Panel";
 
-import cloudOffIconUrl from '../../resources/icons/cloud-off.svg';
-import shareIconUrl from '../../resources/icons/share-2.svg';
-import accountCircleIconUrl from '../../resources/icons/account-circle.svg';
-import helpCircleIconUrl from '../../resources/icons/help-circle.svg';
-import { commands, confirmPageDeletion } from "../../core/commands";
-import { pageActions } from "../../actions/page";
-import NoteEditView from "../../components/note/NoteEditView";
-import { Point2D } from "../../util/Point2D";
-import { projectActions } from "../../actions/project";
-import { CreatePageDialog } from "../../components/CreateNewPageDialog";
-import { appActions } from "../../actions/app";
-import { PagePropertiesDialog } from "../../components/PagePropertiesDialog";
-import { ProjectPropertiesDialog } from "../../components/ProjectPropertiesDialog";
-import { ProjectsDialog } from "../../components/ProjectsDialog";
-import { CreateProjectDialog } from "../../components/CreateProjectDialog";
-import { ProjectData } from "../../model/config/Project";
+import cloudOffIconUrl from "@/resources/icons/cloud-off.svg";
+import shareIconUrl from "@/resources/icons/share-2.svg";
+import accountCircleIconUrl from "@/resources/icons/account-circle.svg";
+import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
+import { commands, confirmPageDeletion } from "@/core/commands";
+import { pageActions } from "@/actions/page";
+import NoteEditView from "@/components/note/NoteEditView";
+import { Point2D } from "fusion/primitives/Point2D";
+import { projectActions } from "@/actions/project";
+import { CreatePageDialog } from "@/components/CreateNewPageDialog";
+import { appActions } from "@/actions/app";
+import { PagePropertiesDialog } from "@/components/PagePropertiesDialog";
+import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
+import { ProjectsDialog } from "@/components/ProjectsDialog";
+import { CreateProjectDialog } from "@/components/CreateProjectDialog";
+import { DebugDialog } from "@/components/DebugDialog";
+import { importDesktopDataForTesting, updateAppFromRouteOrAutoassist } from "@/procedures/app";
+import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
+import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
+import { PageAndCommandPalette, ProjectPalette } from "@/components/CommandPalette";
+import { pamet } from "@/core/facade";
 
 let log = getLogger("App");
-
-export enum AppDialogMode {
-  Closed,
-  CreateNewPage,
-  CreateNewProject,
-  ProjectProperties,
-  PageProperties,
-  ProjectsDialog
-}
-
-export enum PageError {
-  NoError,
-  NotFound
-}
-
-export enum ProjectError {
-  NoError,
-  NotFound
-}
-
-export interface LocalStorageState {
-  available: boolean;
-
-}
-export interface PametStorageState {
-  localStorage: LocalStorageState;
-  //
-}
-
-
-export class WebAppState {
-  deviceId: string | null = null;
-  userId: string | null = null;
-
-  currentProjectId: string | null = null;
-  currentProjectState: ProjectData | null = null;
-  projectError: ProjectError = ProjectError.NoError;
-
-  currentPageId: string | null = null;
-  currentPageViewState: PageViewState | null = null;
-  pageError: PageError = PageError.NoError;
-
-  storageState: PametStorageState = {
-    localStorage: {
-      available: false
-    }
-  }
-
-  dialogMode: AppDialogMode = AppDialogMode.Closed;
-  focusPointOnDialogOpen: Point2D = new Point2D(0, 0);  // Either the mouse location or the center of the screen
-  mouse: MouseState = new MouseState();
-
-  constructor() {
-    makeObservable(this, {
-      deviceId: observable,
-      userId: observable,
-      currentProjectId: observable,
-      currentProjectState: observable,
-      currentPageViewState: observable,
-      storageState: observable,
-      pageError: observable,
-      projectError: observable,
-      dialogMode: observable,
-    });
-  }
-
-  get device(): DeviceData | null {
-    if (!this.deviceId) {
-      return null
-    }
-    let deviceData = pamet.config.deviceData
-    if (!deviceData) {
-      throw new Error("DeviceData missing.")
-    }
-    return deviceData
-  }
-  get user(): UserData | null {
-    if (!this.userId) {
-      return null
-    }
-    let userData = pamet.config.userData
-    if (!userData) {
-      throw new Error("UserData missing.")
-    }
-    return userData
-  }
-  currentProject() {
-    if (!this.currentProjectId) {
-      return null
-    }
-    let projectData = pamet.project(this.currentProjectId)
-    if (!projectData) {
-      throw new Error("ProjectData missing.")
-    }
-    return projectData
-  }
-
-  pageViewState(pageId: string): PageViewState {
-    // Since there's no caching just returns the current if it's the correct
-    // page id. Else throws an error
-    if (this.currentPageViewState && this.currentPageViewState.page.id === pageId) {
-      return this.currentPageViewState
-    }
-    throw new Error("PageViewState not found")
-  }
-}
-
 
 // Vertical line component
 const VerticalSeparator = styled.div`
@@ -148,7 +42,8 @@ const VerticalSeparator = styled.div`
 
 const WebApp = observer(({ state }: { state: WebAppState }) => {
   let errorMessages: string[] = []
-
+  const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -158,6 +53,37 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       document.title = "Pamet";
     }
   }, [state.currentPageViewState]);
+
+  useEffect(() => {
+    // Set delayed system modal dialog visibility to avoid
+    // Brief pop-up on short tasks
+    const dialogState = state.loadingDialogState;
+    if (!dialogState) {
+      setShowLoadingDialog(false);
+      return;
+    }
+
+    if (dialogState.showAfterUnixTime === null) {
+      setShowLoadingDialog(true);
+      return;
+    }
+
+    const now = Date.now();
+    const delay = dialogState.showAfterUnixTime - now;
+
+    if (delay <= 0) {
+      setShowLoadingDialog(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowLoadingDialog(true);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [state.loadingDialogState]);
 
   // Check for resurce availability, and prep error messages if needed
   let shouldDisplayPage = true
@@ -258,12 +184,32 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       </Panel>
 
       <Panel align='top-right'>
+        <div
+          title='Debug info'
+          onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
+        >
+          {'</>'}
+        </div>
+        <VerticalSeparator />
+        <div
+          title='Desktop import (dbg)'
+          style={{ cursor: 'pointer' }}
+          onClick={() => importDesktopDataForTesting()}
+        >
+          {/* Use a unicode symbol for import */}
+          &#x21E9;
+        </div>
+        <VerticalSeparator />
         <img src={helpCircleIconUrl} alt="Help"
           style={{ cursor: 'pointer' }}
           onClick={() => { commands.showHelp(); }}
         />
         <VerticalSeparator />
-        <div>{currentPageVS ? currentPageVS.page.name : '(no page open)'}</div>
+        <div
+          onClick={() => appActions.openPageProperties(state)}
+          style={{ cursor: 'pointer' }}
+          title="Page properties"
+        >{currentPageVS ? currentPageVS.page.name : '(no page open)'}</div>
         <VerticalSeparator />
         <img src={accountCircleIconUrl} alt="Login/Sign up" />
       </Panel>
@@ -283,11 +229,12 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           state={currentPageVS.noteEditWindowState}
           onTitlebarPress={(event: React.MouseEvent) => {
             event.preventDefault();
-            let mousePos = new Point2D(event.clientX, event.clientY);
+            let mousePos = new Point2D([event.clientX, event.clientY]);
             state.mouse.applyPressEvent(event);
             pageActions.startEditWindowDrag(currentPageVS, mousePos);
           }}
           onTitlebarRelease={(event: React.MouseEvent) => {
+            console.log('Titlebar released', event);
             event.preventDefault();
             state.mouse.applyReleaseEvent(event);
             pageActions.endEditWindowDrag(currentPageVS);
@@ -295,15 +242,22 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onCancel={() => {
             pageActions.closeNoteEditWindow(currentPageVS)
           }}
-          onSave={(note) => {
-            pageActions.saveEditedNote(currentPageVS, note)
+          onSave={(note, addedMediaItem, removedMediaItem) => {
+            pageActions.saveEditedNote(currentPageVS, note, addedMediaItem, removedMediaItem);
           }}
         />}
 
       {state.dialogMode === AppDialogMode.CreateNewPage && (
         <CreatePageDialog
           onClose={() => appActions.closeAppDialog(state)}
-          onCreate={(name: string) => projectActions.createNewPage(state, name)}
+          onCreate={(name: string) => {
+            log.info(`Creating new page: ${name}`);
+            let page = projectActions.createNewPage(state, name)
+            log.info(`Setting current page to ${name}`);
+            appActions.setCurrentPage(state, page.id);
+
+            // Open settings view | IMPLEMENT LATER
+          }}
         />
       )}
 
@@ -315,6 +269,12 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onDelete={(page) => {
             if (confirmPageDeletion(page.name)) {
               projectActions.deletePageAndUpdateReferences(page);
+              appActions.closeAppDialog(state);
+              let route = pamet.router.currentRoute();
+              route.pageId = undefined
+              updateAppFromRouteOrAutoassist(route).catch((err) => {
+                log.error("Error updating app from route after page deletion", err);
+              });
             }
           }}
         />
@@ -338,6 +298,20 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onClose={() => appActions.closeAppDialog(state)}
         />
       )}
+
+      {/* Debug Dialog */}
+      <DebugDialog
+        isOpen={debugInfoModalOpen}
+        onClose={() => setDebugInfoModalOpen(false)}
+      />
+
+      {showLoadingDialog && state.loadingDialogState && (
+        <MediaProcessingDialog state={state.loadingDialogState} />
+      )}
+      {state.commandPaletteState instanceof PageAndCommandPaletteState &&
+        <PageAndCommandPalette state={state.commandPaletteState} />}
+      {state.commandPaletteState instanceof ProjectPaletteState &&
+        <ProjectPalette state={state.commandPaletteState} />}
     </div>
   );
 });

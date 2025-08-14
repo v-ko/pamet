@@ -1,0 +1,12 @@
+@import '../../variables.css';
+
+.page-view {
+    content-visibility: auto;
+    flex-grow: 1;
+    flex-shrink: 1;
+    overflow: hidden;
+    touch-action: none;
+    min-width: 30px;
+    user-select: none;
+    /* To prevent text selection during drag */
+}

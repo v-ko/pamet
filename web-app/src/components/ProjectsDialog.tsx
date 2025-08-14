@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
-import { pamet } from 'web-app/src/core/facade';
-import { appActions } from 'web-app/src/actions/app';
-import { PametRoute } from '../services/routing/route';
+import { pamet } from '@/core/facade';
+import { appActions } from '@/actions/app';
+import { PametRoute } from "@/services/routing/route";
 
 interface ProjectsDialogProps {
   onClose: () => void;
@@ -18,25 +18,15 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
     }
   }, []);
 
-  function handleClose() {
-    const dialog = dialogRef.current;
-    if (dialog?.open) {
-      dialog.close();
-    }
-    onClose();
-  }
-
-  function handleBackgroundClick(event: React.MouseEvent) {
-    if (event.target === dialogRef.current) {
-      handleClose();
-    }
-  }
-
   return (
     <dialog
       ref={dialogRef}
-      onClick={handleBackgroundClick}
-      onCancel={handleClose}
+      onClose={onClose}
+      onClick={(e) => {
+        if (e.target === dialogRef.current) { // Close on outside click
+            onClose();
+        }
+      }}
       style={{
         border: 'none',
         borderRadius: '4px',
@@ -84,9 +74,9 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
                 href={(() => {
                   const route = new PametRoute();
                   route.projectId = project.id;
-                  return route.path();
+                  return route.toRelativeReference();
                 })()}
-                onClick={handleClose}
+                onClick={onClose}
                 style={{
                   flex: 1,
                   padding: '4px',

@@ -1,13 +1,13 @@
-import { InMemoryStore } from "fusion/storage/InMemoryStore"
-import { PametStore as PametStore } from "./PametStore";
-import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/BaseStore"
-import { Entity, EntityData } from "fusion/libs/Entity";
-import { Change } from "fusion/Change";
-import { updateViewModelFromDelta, pamet } from "../core/facade";
-import { action } from "fusion/libs/Action";
+import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore"
+import { PametStore as PametStore, PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
+import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/domain-store/BaseStore"
+import { Entity, EntityData } from "fusion/model/Entity";
+import { Change } from "fusion/model/Change";
+import { updateViewModelFromDelta, pamet } from "@/core/facade";
+import { action } from "fusion/registries/Action";
 import { getLogger } from "fusion/logging";
-import { Delta, DeltaData, squishDeltas } from "fusion/storage/Delta";
-import type { RepoUpdateData } from "fusion/storage/BaseRepository";
+import { Delta, DeltaData, squishDeltas } from "fusion/model/Delta";
+import type { RepoUpdateData } from "fusion/storage/repository/Repository";
 
 let log = getLogger('FrontendDomainStore');
 
@@ -34,7 +34,8 @@ export class FrontendDomainStore extends PametStore {
 
     constructor() {
         super()
-        this._store = new InMemoryStore();
+        // Use Pamet-specific index configuration with entity type support
+        this._store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
     }
     data(): SerializedStoreData {
         return this._store.data();
@@ -58,7 +59,7 @@ export class FrontendDomainStore extends PametStore {
 
     // Implement the Repository interface to use the InMemoryRepository
     insertOne(entity: Entity<EntityData>): Change {
-        log.info('Inserting entity', entity);
+        // log.info('Inserting entity', entity);
         let change = this._store.insertOne(entity);
         updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
         this._uncommittedChanges.push(change);
@@ -86,10 +87,6 @@ export class FrontendDomainStore extends PametStore {
 
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
         let result = this._store.findOne(filter);
-        log.info('FDS findOne',
-            'Filter:', filter,
-            'Store:', this._store,
-            'Result:', result);
         return result
     }
 

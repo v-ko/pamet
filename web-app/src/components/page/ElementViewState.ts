@@ -1,5 +1,5 @@
-import { Change } from "fusion/Change";
-import { PametElement, PametElementData } from "../../model/Element";
+import { Change } from "fusion/model/Change";
+import { PametElement, PametElementData } from "@/model/Element";
 
 export abstract class ElementViewState {
     abstract element(): PametElement<PametElementData>;

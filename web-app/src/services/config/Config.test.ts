@@ -1,6 +1,6 @@
-import { UserData } from '../../model/config/User';
-import { PametConfigService } from './Config';
-import { DummyConfigAdapter } from './DummyAdapter';
+import { UserData } from "@/model/config/User";
+import { PametConfigService } from "@/services/config/Config";
+import { DummyConfigAdapter } from "@/services/config/DummyAdapter";
 
 // prep for mocking localStorage
 

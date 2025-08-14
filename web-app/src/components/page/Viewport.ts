@@ -1,7 +1,7 @@
-import { NO_SCALE_LINE_SPACING } from '../../core/constants';
-import { Point2D } from '../../util/Point2D';
-import { RectangleData } from '../../util/Rectangle';
-import { Rectangle } from '../../util/Rectangle';
+import { NO_SCALE_LINE_SPACING } from "@/core/constants";
+import { Point2D } from 'fusion/primitives/Point2D';
+import { RectangleData } from 'fusion/primitives/Rectangle';
+import { Rectangle } from 'fusion/primitives/Rectangle';
 
 
 function unprojectX(xOnScreen: number, viewportLeftReal: number, heightScaleFactor: number): number {
@@ -52,14 +52,7 @@ export class Viewport {
   }
 
   realBounds(): Rectangle {
-    return new Rectangle(this._realGeometry[0], this._realGeometry[1], this._realGeometry[2], this._realGeometry[3])
-  }
-  get xProjected(): number {
-    return this.projectX(this.xReal);
-  }
-
-  get yProjected(): number {
-    return this.projectY(this.yReal);
+    return new Rectangle(this._realGeometry)
   }
 
   get realCenter(): Point2D {
@@ -73,7 +66,8 @@ export class Viewport {
   // Setters
 
   moveRealCenterTo(new_center: Point2D) {
-    const half_size = this.realBounds().size().divide(2);
+    const half_size = this.realBounds().size();
+    half_size.divide_inplace(2);
     this._realGeometry[0] = new_center.x - half_size.x;
     this._realGeometry[1] = new_center.y - half_size.y;
   }
@@ -120,13 +114,13 @@ export class Viewport {
   public projectPoint(point: Point2D): Point2D {  // TODO: optimize this
     const x = this.projectX(point.x);
     const y = this.projectY(point.y);
-    return new Point2D(x, y);
+    return new Point2D([x, y]);
   }
 
   public unprojectPoint(point: Point2D): Point2D {
     const x = this.unprojectX(point.x);
     const y = this.unprojectY(point.y);
-    return new Point2D(x, y);
+    return new Point2D([x, y]);
   }
 
   public projectRect(rect: Rectangle): Rectangle {

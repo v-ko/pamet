@@ -22,4 +22,11 @@ export abstract class BaseConfigAdapter {
     clear() {
         this.keys().forEach(key => this.setJSON(key, undefined));
     }
+    data(): object {
+        let data: { [key: string]: SettingsFieldValue } = {};
+        for (const key of this.keys()) {
+            data[key] = this.get(key) as SettingsFieldValue;
+        }
+        return data;
+    }
 }

@@ -1,22 +1,24 @@
-import * as util from "../util";
-import { PageMode, PageViewState, ViewportAutoNavAnimation } from "../components/page/PageViewState";
-import { Point2D } from "../util/Point2D";
+import * as util from "@/util";
+import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/components/page/PageViewState";
+import { Point2D } from "fusion/primitives/Point2D";
 
-import { action } from "fusion/libs/Action";
+import { action } from "fusion/registries/Action";
 
 import { getLogger } from "fusion/logging";
-import { Rectangle } from "../util/Rectangle";
-import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "../core/constants";
-import { NoteEditViewState } from "../components/note/NoteEditView";
-import { pamet } from "../core/facade";
-import { Note } from "../model/Note";
-import { TextNote } from "../model/TextNote";
-import { minimalNonelidedSize } from "../components/note/util";
-import { NoteViewState } from "../components/note/NoteViewState";
-import { PametElement, PametElementData } from "../model/Element";
-import { Arrow } from "../model/Arrow";
-import { ArrowViewState } from "../components/arrow/ArrowViewState";
-import { Page } from "../model/Page";
+import { Rectangle } from "fusion/primitives/Rectangle";
+import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "@/core/constants";
+import { pamet } from "@/core/facade";
+import { Note } from "@/model/Note";
+import { TextNote } from "@/model/TextNote";
+import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { PametElement, PametElementData } from "@/model/Element";
+import { Arrow } from "@/model/Arrow";
+import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { Page } from "@/model/Page";
+import { MediaItem } from "fusion/model/MediaItem";
+import { ImageNote } from "@/model/ImageNote";
+import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('MapActions');
 
@@ -131,12 +133,15 @@ class PageActions {
         if (t > 1) {
           t = 1;
         }
-        let newCenter = startCenter.add(
-          endCenter.subtract(startCenter).multiply(timingFunction(t)));
+        let newCenter = endCenter.copy();
+        newCenter.subtract_inplace(startCenter);
+        newCenter.multiply_inplace(timingFunction(t));
+        newCenter.add_inplace(startCenter);
+
         let newHeight = startHeight + (endHeight - startHeight) * timingFunction(t);
-        pageActions.updateViewport(state, newCenter, newHeight);
+        this.updateViewport(state, newCenter, newHeight);
         if (t === 1) {
-          pageActions.endAutoNavigation(state);
+          this.endAutoNavigation(state);
         }
         let lastUpdateTime = Date.now();
         // console.log('lastUpdateTime', lastUpdateTime)
@@ -177,7 +182,7 @@ class PageActions {
 
     // Get notes in the area
     for (let noteVS of state.noteViewStatesByOwnId.values()) {
-      let noteRect = noteVS.note().rect();
+      let noteRect = new Rectangle(noteVS._noteData.geometry);
       if (unprojectedRect.intersects(noteRect)) {
         state.dragSelectedElementsVS.add(noteVS);
       }
@@ -220,28 +225,45 @@ class PageActions {
   }
 
   @action
-  saveEditedNote(state: PageViewState, note: Note) {
-    let editWS = state.noteEditWindowState;
-
-    if (editWS === null) {
-      throw Error('saveEditedNote called without noteEditWindowState')
+  saveEditedNote(state: PageViewState, note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) {
+    const editWS = state.noteEditWindowState;
+    if (!editWS) {
+      throw new Error('saveEditedNote called without noteEditWindowState');
     }
 
-    // If creating
+    const projectId = pamet.appViewState.currentProjectId;
+    if (!projectId) {
+      throw new Error('No project loaded');
+    }
+
+    // Handle media item changes
+    if (addedMediaItem) {
+      pamet.insertOne(addedMediaItem);
+    }
+
+    if (removedMediaItem) {
+      if (!addedMediaItem) {
+        throw new Error('Removed media item without added media item');
+      }
+      pamet.moveMediaToTrash(removedMediaItem).catch(
+        err => log.error('Failed to move media to trash:', err));
+      pamet.removeOne(removedMediaItem);
+    }
+
+    // Save the note
     if (editWS.creatingNote) {
-      let newNote = note;
-      // Autosize the note
-      let minimalSize = minimalNonelidedSize(newNote);
-      let rect = newNote.rect();
-      rect.setSize(util.snapVectorToGrid(minimalSize));
-      rect.setTopLeft(util.snapVectorToGrid(rect.topLeft()));
-      newNote.setRect(rect);
-      pamet.insertNote(newNote);
-
-    } else { // If editing
-      let editedNote = note;
-      pamet.updateNote(editedNote);
+      const minimalSize = minimalNonelidedSize(note);
+      const rect = note.rect();
+      let snappedSize = util.snapVectorToGrid(minimalSize);
+      rect.setSize(snappedSize);
+      let snappedTopLeft = util.snapVectorToGrid(rect.topLeft())
+      rect.setTopLeft(snappedTopLeft);
+      note.setRect(rect);
+      pamet.insertNote(note);
+    } else {
+      pamet.updateNote(note);
     }
+
     state.noteEditWindowState = null;
   }
 
@@ -295,12 +317,12 @@ class PageActions {
       let note = noteVS.note();
       let minimalSize = minimalNonelidedSize(note);
       let rect = note.rect();
-      let newSize = util.snapVectorToGrid(minimalSize)
+      util.snapVectorToGrid_inplace(minimalSize)
 
-      if (rect.size().equals(newSize)) {  // Skip if the size is the same
+      if (rect.size().equals(minimalSize)) {  // Skip if the size is the same
         continue;
       }
-      rect.setSize(newSize);
+      rect.setSize(minimalSize);
       note.setRect(rect);
       pamet.updateNote(note);
     }
@@ -312,6 +334,7 @@ class PageActions {
     // add them for removal too
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
+    let mediaItemsForTrashing: MediaItem[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
     let pageId: string = elements[0].parentId;
 
@@ -319,6 +342,16 @@ class PageActions {
       if (element instanceof Note) {
         notesForRemoval.push(element)
         noteIds.add(element.own_id)
+
+        // Mark media for trashing if the note has an image
+        if (element instanceof ImageNote) {  // Should catch both card notes and image notes
+          let mediaItem = pamet.mediaItem(element.content.image_id!);
+          if (mediaItem) {
+            mediaItemsForTrashing.push(mediaItem);
+          } else {
+            log.warning(`ImageNote with id ${element.id} has no media item associated.`);
+          }
+        }
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }
@@ -339,12 +372,21 @@ class PageActions {
       }
     }
 
-    // Remove the elements
+    // Remove the notes
     for (let note of notesForRemoval) {
       pamet.removeNote(note);
     }
+
+    // Remove the arrows
     for (let arrow of arrowsForRemoval) {
       pamet.removeArrow(arrow);
+    }
+
+    // Trash media items
+    for (let mediaItem of mediaItemsForTrashing) {
+      pamet.moveMediaToTrash(mediaItem).catch(
+        err => log.error('Failed to move media to trash:', err));
+      pamet.removeOne(mediaItem);
     }
   }
 
@@ -391,6 +433,18 @@ class PageActions {
     pamet.updatePage(newPageState);
   }
 
+  @action({ issuer: 'paste-special-procedure' })
+  pasteSpecialAddElements(notes: Note[], mediaItems: MediaItem[]) {
+    // Add new media items via facade
+    for (let mediaItem of mediaItems) {
+      pamet.insertOne(mediaItem);
+    }
+
+    // Add new notes via facade
+    for (let note of notes) {
+      pamet.insertNote(note);
+    }
+  }
 }
 
 export const pageActions = new PageActions();

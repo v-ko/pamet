@@ -1,0 +1,46 @@
+@import '../../variables.css';
+
+.loading-dialog {
+    border: none;
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    background-color: var(--color-bg-light);
+    box-shadow: var(--shadow-lg);
+    max-width: 300px;
+    width: 90vw;
+}
+
+.dialog-title {
+    margin: 0;
+    margin-bottom: var(--space-2);
+    font-size: var(--type-lg);
+    font-weight: bold;
+}
+
+.task-description {
+    margin: 0;
+    margin-bottom: var(--space-3);
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-left-color: var(--color-text);
+    animation: spin 1s ease infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+progress {
+    width: 100%;
+}

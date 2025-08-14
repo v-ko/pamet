@@ -1,24 +1,29 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import styled from 'styled-components';
 import { observer } from 'mobx-react-lite';
 
-import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from '../../core/constants';
-import { Point2D } from '../../util/Point2D';
-import { pageActions } from '../../actions/page';
-import { PageMode, PageViewState } from './PageViewState';
-import { Viewport } from './Viewport';
+import { DEFAULT_EYE_HEIGHT, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, PametTabIndex } from "@/core/constants";
+import { Point2D } from 'fusion/primitives/Point2D';
+import { pageActions } from "@/actions/page";
+import { PageMode, PageViewState } from "@/components/page/PageViewState";
+import { Viewport } from "@/components/page/Viewport";
 import { getLogger } from 'fusion/logging';
 import { reaction } from 'mobx';
 import React from 'react';
 import paper from 'paper';
-import { ElementViewState } from './ElementViewState';
-import { pamet } from '../../core/facade';
-import { NavigationDevice, NavigationDeviceAutoSwitcher } from './NavigationDeviceAutoSwitcher';
+import "@/components/page/PageView.css";
+import { ElementViewState } from "@/components/page/ElementViewState";
+import { pamet } from "@/core/facade";
+import { NavigationDevice, NavigationDeviceAutoSwitcher } from "@/components/page/NavigationDeviceAutoSwitcher";
 
-import { arrowActions } from '../../actions/arrow';
-import { noteActions } from '../../actions/note';
-import { InternalLinkNote } from '../../model/InternalLinkNote';
-import { appActions } from '../../actions/app';
+import { arrowActions } from "@/actions/arrow";
+import { noteActions } from "@/actions/note";
+import { InternalLinkNote } from "@/model/InternalLinkNote";
+import { appActions } from "@/actions/app";
+import { ImageNote } from "@/model/ImageNote";
+import { mediaItemRoute } from "@/services/routing/route";
+import { MediaItem } from 'fusion/model/MediaItem';
+import { Page } from '@/model/Page';
+import { createImageNoteFromBlob } from '@/procedures/page';
 
 
 let log = getLogger('Page.tsx')
@@ -27,41 +32,9 @@ let log = getLogger('Page.tsx')
 // type Status = 'loading' | 'error' | 'loaded';
 
 
-export const PageOverlay = styled.main`
-content-visibility: auto;
-flex-grow: 1;
-flex-shrink: 1;
-overflow: hidden;
-touch-action: none;
-min-width: 30px;
-`
-
-
-export class MouseState {
-  buttons: number = 0;
-  position: Point2D = new Point2D(0, 0);
-  positionOnPress: Point2D = new Point2D(0, 0);
-  buttonsOnLeave: number = 0;
-
-  get rightIsPressed() {
-    return (this.buttons & 2) !== 0;
-  }
-  get leftIsPressed() {
-    return (this.buttons & 1) !== 0;
-  }
-  applyPressEvent(event: React.MouseEvent) {
-    this.positionOnPress = new Point2D(event.clientX, event.clientY);
-    this.buttons = event.buttons;
-  }
-  applyMoveEvent(event: React.MouseEvent) {
-    this.position = new Point2D(event.clientX, event.clientY);
-  }
-  applyReleaseEvent(event: React.MouseEvent) {
-    this.buttons = event.buttons;
-  }
-}
-
 export const PageView = observer(({ state }: { state: PageViewState }) => {
+    const [isDraggingOver, setIsDraggingOver] = useState(false);
+    const [isDropAllowed, setIsDropAllowed] = useState(false);
   /**  */
   // trace(true)
 
@@ -71,7 +44,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const [pinchStartDistance, setPinchStartDistance] = useState<number>(0);
   const [pinchInProgress, setPinchInProgress] = useState<boolean>(false);
   const [pinchStartViewportHeight, setPinchStartViewportHeight] = useState<number>(DEFAULT_EYE_HEIGHT);
-  const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D(0, 0));
+  const [initialPinchCenter, setInitialPinchCenter] = useState<Point2D>(new Point2D([0, 0]));
 
   const superContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -239,9 +212,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   // Mouse event handlers
   const handleMouseDown = useCallback((event: React.MouseEvent) => {
-    event.preventDefault();
     // let mousePos = mapClientPointToSuperContainer(new Point2D(event.clientX, event.clientY));
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
     mouse.applyPressEvent(event);
 
     if (event.button === 0) { // left mouse
@@ -266,10 +238,10 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y)
 
-  }, [mouse]);
+  }, [mouse, state.viewportGeometry, state.viewportHeight]);
 
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
     let pressPos = mouse.positionOnPress;
     let delta = pressPos.subtract(mousePos);
 
@@ -279,7 +251,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       if (mouse.rightIsPressed) {
         pageActions.startDragNavigation(state)
         pageActions.dragNavigationMove(state, delta)
-        navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D(event.movementX, event.movementY));
+        navDeviceAutoSwitcher.registerRightMouseDrag(new Point2D([event.movementX, event.movementY]));
       } else if (mouse.leftIsPressed) {
         console.log('Mouse move', PageMode[state.mode], 'left button')
 
@@ -340,7 +312,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [mouse.leftIsPressed, mouse.positionOnPress, navDeviceAutoSwitcher, mouse.rightIsPressed, state]);
 
   const handleMouseUp = useCallback((event: React.MouseEvent) => {
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
 
     let pressPos = mouse.positionOnPress;
     let realPos = state.viewport.unprojectPoint(mousePos);
@@ -355,7 +327,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     console.log('Mouse up', PageMode[state.mode], 'button', event.button, elementUnderMouse)
 
-    event.preventDefault();
     mouse.buttons = event.buttons;
 
     if (event.button === 0) { // Left press (different from the .buttons left button index, because fu)
@@ -413,15 +384,22 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   }, [state, mouse.positionOnPress, mouse]);
 
   const handleWheel = useCallback((event: WheelEvent) => {
+    // If the event is happening in a scrollable element that is not the page view,
+    // don't do anything.. There's probably a more elegant way, but ok.
+    let target = event.target as HTMLElement;
+    if (target.closest('.page-view') !== superContainerRef.current) {
+        return;
+    }
+
     event.preventDefault();
-    navDeviceAutoSwitcher.registerScrollEvent(new Point2D(event.deltaX, event.deltaY));
+    navDeviceAutoSwitcher.registerScrollEvent(new Point2D([event.deltaX, event.deltaY]));
 
     let new_height = state.viewportHeight * Math.exp((event.deltaY / 120) * 0.1);
     new_height = Math.max(
       MIN_HEIGHT_SCALE,
       Math.min(new_height, MAX_HEIGHT_SCALE))
 
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
 
     // console.log(mouse_pos)
     let mouse_pos_unproj = state.viewport.unprojectPoint(mousePos)
@@ -433,7 +411,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
       pageActions.updateViewport(state, new_center, new_height);
     } else if (navDeviceAutoSwitcher.device === NavigationDevice.TOUCHPAD) {
-      let delta = new Point2D(event.deltaX, event.deltaY);
+      let delta = new Point2D([event.deltaX, event.deltaY]);
       let newViewportCenter = state.viewportCenter.add(delta.divide(state.viewport.heightScaleFactor()));
       pageActions.updateViewport(state, newViewportCenter, state.viewportHeight);
     }
@@ -443,7 +421,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const handleTouchStart = useCallback((event: React.TouchEvent) => {
     // Only for single finger touch
     if (event.touches.length === 1) {
-      let touchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
+      let touchPos = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
       mouse.positionOnPress = touchPos;  // Revize this
       pageActions.startDragSelection(state, touchPos)
     } else if (event.touches.length === 2) {
@@ -451,8 +429,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // so we enter DragNavigation mode and also update the viewport height
 
       console.log('pinch start')
-      let touch1 = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
-      let touch2 = new Point2D(event.touches[1].clientX, event.touches[1].clientY);
+      let touch1 = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      let touch2 = new Point2D([event.touches[1].clientX, event.touches[1].clientY]);
       // touch1 = mapClientPointToSuperContainer(touch1); // NOT TESTED
       // touch2 = mapClientPointToSuperContainer(touch2);
       let distance = touch1.distanceTo(touch2);
@@ -469,12 +447,12 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   const handeTouchMove = useCallback((event: React.TouchEvent) => {
     if (event.touches.length === 1) {
-      let newTouchPos = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
+      let newTouchPos = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
       pageActions.updateDragSelection(state, newTouchPos);
 
     } else if (event.touches.length === 2) {
-      let touch1 = new Point2D(event.touches[0].clientX, event.touches[0].clientY);
-      let touch2 = new Point2D(event.touches[1].clientX, event.touches[1].clientY);
+      let touch1 = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      let touch2 = new Point2D([event.touches[1].clientX, event.touches[1].clientY]);
 
       if (pinchInProgress) {
         // Calculate the new height
@@ -533,10 +511,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     // Currently only dragging navigation/selection can be resumed on reentry.
     // Everything else should be cancelled on mouseleave
 
-    console.log('MOUSE ENTER!!')
-
     // Update the mouse position in the state
-    pageActions.updateMousePosition(state, new Point2D(event.clientX, event.clientY));
+    pageActions.updateMousePosition(state, new Point2D([event.clientX, event.clientY]));
 
     // If the mouse was released outside of the page, we need to clear the mode
     if (mouse.buttonsOnLeave > event.buttons) {
@@ -548,20 +524,19 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   // Add native handlers for key/shortcut and wheel events
   useEffect(() => {
-    // Existing keydown handler remains unchanged
-
-
+    let container = superContainerRef.current;
+    if (!container) {
+        return;
+    }
     // Add both event listeners
-    window.addEventListener("wheel", handleWheel, { passive: false }); // Set passive to false to allow preventDefault
-
-    // Cleanup function to remove both event listeners
+    container.addEventListener("wheel", handleWheel, { passive: false }); // Set passive to false to allow preventDefault
     return () => {
-      window.removeEventListener("wheel", handleWheel);
+      container.removeEventListener("wheel", handleWheel);
     };
-  }, [state, handleWheel]);
+  }, [state, handleWheel, superContainerRef]);
 
   const handleDoubleClick = (event: React.MouseEvent) => {
-    let mousePos = new Point2D(event.clientX, event.clientY);
+    let mousePos = new Point2D([event.clientX, event.clientY]);
     let realPos = state.viewport.unprojectPoint(mousePos);
 
     // If an arrow is selected and a control point is under the mouse - delete it
@@ -581,7 +556,11 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       let note = noteVS_underMouse.note();
       // For an internal link - follow it
       if (note instanceof InternalLinkNote) {
-        let targetPage = note.targetPage();
+        let targetPage: Page | undefined;
+        let targetPageId = note.targetPageId();
+        if (targetPageId !== undefined ) {
+          targetPage = pamet.page(targetPageId)
+        }
         if (targetPage !== undefined) {
           appActions.setCurrentPage(pamet.appViewState, targetPage.id)
           return;
@@ -594,6 +573,55 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       pageActions.startNoteCreation(state, realMousePos);
     }
   }
+    const handleDragEnter = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDraggingOver(true);
+
+        // Check if the dragged items are files and if they are of a supported type
+        const items = event.dataTransfer.items;
+        if (items && items.length > 0) {
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+                    setIsDropAllowed(true);
+                    return;
+                }
+            }
+        }
+        setIsDropAllowed(false);
+    };
+
+    const handleDragLeave = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDraggingOver(false);
+        setIsDropAllowed(false);
+    };
+
+    const handleDragOver = (event: React.DragEvent) => {
+        event.preventDefault(); // This is necessary to allow dropping
+    };
+
+    const handleDrop = async (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setIsDraggingOver(false);
+
+        const files = event.dataTransfer.files;
+        if (files && files.length > 0) {
+            let position = state.viewport.unprojectPoint(new Point2D([event.clientX, event.clientY]));
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+
+            for (const imageFile of imageFiles) {
+                try {
+                    position = await createImageNoteFromBlob(state.page.id, position, imageFile);
+                } catch (error) {
+                    log.error('Error creating image note from dropped file:', error);
+                }
+            }
+        }
+        setIsDropAllowed(false);
+    };
 
 
   // Rendering related
@@ -601,16 +629,31 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
   let imageUrls: Set<string> = new Set();
+  const config = pamet.config;
+  const userData = config.userData;
+  const projectId = pamet.appViewState.currentProjectId;
+
   for (let noteVS of state.noteViewStatesByOwnId.values()) {
+    if (!userData || !projectId) { // Lazy. Could be done outside of the loop
+      continue
+    }
+
     let note = noteVS.note()
-    if (note.content.image !== undefined) {
-      let url = note.content.image.url;
-      imageUrls.add(pamet.apiClient.projectScopedUrlToGlobal(url));
+    if (note.content.image_id && note instanceof ImageNote) {
+      const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
+      if (!mediaItem) {
+          continue;
+      }
+      let mediaItemRoute_ = mediaItemRoute(mediaItem, userData.id, projectId);
+      // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
+      let mediaItemPath = mediaItemRoute_.toRelativeReference();
+
+      imageUrls.add(mediaItemPath);
     }
   }
 
   return (
-      <PageOverlay
+      <main
       className='page-view'  // index.css
       // Set cursor to cross if we're in arrow creation mode
       style={{ cursor: state.mode === PageMode.CreateArrow ? 'crosshair' : 'default' }}
@@ -631,9 +674,25 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onContextMenu={(event) => { event.preventDefault() }}
-        onFocus={() => { pamet.setContext('canvasFocus', true) }}
-        onBlur={() => { pamet.setContext('canvasFocus', false) }}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
+        {isDraggingOver &&
+            <div
+                style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: isDropAllowed ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                    zIndex: 10000,
+                    pointerEvents: 'none' // Make sure it doesn't interfere with drop events
+                }}
+            />
+        }
 
         {/* Old pamet-canvas element rendering */}
         {/* <CanvasReactComponent state={state} /> */}
@@ -685,6 +744,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
           />
         ))}
 
-      </PageOverlay>
+      </main>
   );
 });

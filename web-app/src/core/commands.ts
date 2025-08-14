@@ -1,15 +1,17 @@
-import { pageActions } from "../actions/page";
-import { pamet } from "./facade";
-import { command } from "fusion/libs/Command";
+import { pageActions } from "@/actions/page";
+import { pamet } from "@/core/facade";
+import { command } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
-import { appActions } from "../actions/app";
-import { Point2D } from "../util/Point2D";
-import { arrowActions } from "../actions/arrow";
-import { projectActions } from "../actions/project";
-import { Note } from "../model/Note";
-import { NoteViewState } from "../components/note/NoteViewState";
-import { PageViewState } from "../components/page/PageViewState";
-import { buildHashTree } from "fusion/storage/HashTree";
+import { appActions } from "@/actions/app";
+import { Point2D } from "fusion/primitives/Point2D";
+import { arrowActions } from "@/actions/arrow";
+import { projectActions } from "@/actions/project";
+import { Note } from "@/model/Note";
+import { NoteViewState } from "@/components/note/NoteViewState";
+import { PageViewState } from "@/components/page/PageViewState";
+import { buildHashTree } from "fusion/storage/version-control/HashTree";
+import { parseClipboardContents } from "@/util";
+import { pasteSpecial as pasteSpecialProcedure } from "@/procedures/page";
 
 let log = getLogger('PametCommands');
 
@@ -209,6 +211,48 @@ class PametCommands {
     @command('Create new project')
     createNewProject() {
         appActions.openCreateProjectDialog(pamet.appViewState);
+    }
+
+    @command('Paste special')
+    async pasteSpecial() {
+        try {
+            // Get the current page view state
+            let pageVS = getCurrentPageViewState();
+
+            // Get the mouse position or use viewport center
+            let mousePos = pageVS.projectedMousePosition;
+            let position: Point2D;
+
+            if (mousePos === null) {
+                position = pageVS.viewport.realCenter;
+            } else {
+                position = pageVS.viewport.unprojectPoint(mousePos);
+            }
+
+            // Get clipboard contents
+            const clipboardContents = await parseClipboardContents();
+
+            // Pass the data to the action
+            pasteSpecialProcedure(pageVS.page.id, position, clipboardContents).catch((error) => {
+                log.error('Error in pasteSpecial procedure:', error);
+              });
+        } catch (error) {
+            log.error('Error in paste special command:', error);
+        }
+    }
+
+    @command('Open command palette')
+    openCommandPalette() {
+        appActions.openPageAndCommandPalette(pamet.appViewState, '>');
+    }
+    @command('Open page search')
+    openPagePalette() {
+        appActions.openPageAndCommandPalette(pamet.appViewState, '');
+    }
+
+    @command('Open project search')
+    openCommandPaletteWithProjectSwitch() {
+        appActions.openProjectPalette(pamet.appViewState);
     }
 }
 

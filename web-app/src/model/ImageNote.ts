@@ -1,19 +1,31 @@
-import { imageRect } from "../components/note/util";
-import { entityType } from "fusion/libs/Entity";
-import { Rectangle } from "../util/Rectangle";
-import { Size } from "../util/Size";
-import { Note } from "./Note";
+import { entityType, getEntityId } from "fusion/model/Entity";
+import { RectangleData } from "fusion/primitives/Rectangle";
+import { Note } from "@/model/Note";
+import { elementId } from "@/model/Element";
+import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
+import { currentTime, timestamp } from "fusion/util/base";
 
 @entityType('ImageNote')
 export class ImageNote extends Note {
-    imageRect(): Rectangle {
-        let image = this.content.image!;
-        if (image === undefined) {
-            throw Error('ImageNote has no image');
+    static createNew(pageId: string): ImageNote {
+        let ownId = getEntityId();
+        let id = elementId(pageId, ownId);
+
+        let noteData = {
+            id: id,
+            content: {
+                image_id: ''  // Media items have the note for parent, so no use in setting something here for now
+            },
+            geometry: [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT] as RectangleData,
+            style: {
+                background_color_role: DEFAULT_BACKGROUND_COLOR_ROLE,
+                color_role: DEFAULT_TEXT_COLOR_ROLE,
+            },
+            created: timestamp(currentTime()),
+            modified: timestamp(currentTime()),
+            metadata: {},
+            tags: []
         }
-        if (image.width <= 0 && image.height <= 0) {
-            throw Error('ImageNote has no image size');
-        }
-        return imageRect(this.rect(), new Size(image.width, image.height));
+        return new ImageNote(noteData);
     }
 }

@@ -1,6 +1,6 @@
 import { getLogger } from "fusion/logging";
-import { PametRoute } from "./route";
-import { updateAppFromRouteOrAutoassist } from "../../procedures/app";
+import { PametRoute } from "@/services/routing/route";
+import { updateAppFromRouteOrAutoassist } from "@/procedures/app";
 
 const log = getLogger('RoutingService');
 
@@ -17,13 +17,13 @@ export class RoutingService {
     }
     replaceRoute(route: PametRoute): void {
         log.info('Setting route', route)
-        const url = route.path();
+        const url = route.toRelativeReference();
         window.history.replaceState({}, '', url);
     }
 
     pushRoute(route: PametRoute): void {
         log.info('Pushing route', route);
-        const url = route.path();
+        const url = route.toRelativeReference();
         window.history.pushState({}, '', url);
     }
 
@@ -38,27 +38,4 @@ export class RoutingService {
         this.pushRoute(route);
         window.location.reload();
     }
-
-    // setHandleRouteChange(enable: boolean): void {
-    //     if (enable) {
-    //         if (this.routingListener) {
-    //             throw Error('Route change handling already enabled');
-    //         }
-    //         this.routingListener = () => {
-    //             log.info('Route changed, calling handler');
-    //             const route = this.currentRoute();
-    //             updateAppFromRouteOrAutoassist(route).catch((e) => {
-    //                 log.error('[routeChangeHandler] Failed in applyRouteOrAutoassist', route, e);
-    //             });
-    //         };
-    //         window.addEventListener('popstate', this.routingListener);
-    //     } else if (!enable) {
-    //         if (this.routingListener) {
-    //             window.removeEventListener('popstate', this.routingListener);
-    //             this.routingListener = null;
-    //         } else {
-    //             throw Error('Route change handling already disabled');
-    //         }
-    //     }
-    // }
 }

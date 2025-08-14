@@ -1,7 +1,7 @@
-import { entityType } from 'fusion/libs/Entity';
-import { Point2D, PointData } from '../util/Point2D';
-import { PametElement, PametElementData } from './Element';
-import { Note } from './Note';
+import { entityType } from 'fusion/model/Entity';
+import { Point2D, PointData } from 'fusion/primitives/Point2D';
+import { PametElement, PametElementData } from "@/model/Element";
+import { Note } from "@/model/Note";
 
 
 export type ArrowLineType = 'solid';  // To be extended
@@ -214,13 +214,13 @@ export function arrowAnchorPosition(note: Note, anchorType: ArrowAnchorOnNoteTyp
     const rect = note.rect();
     switch (anchorType) {
         case ArrowAnchorOnNoteType.mid_left:
-            return rect.topLeft().add(new Point2D(0, rect.height / 2));
+            return rect.topLeft().add(new Point2D([0, rect.height() / 2]));
         case ArrowAnchorOnNoteType.top_mid:
-            return rect.topLeft().add(new Point2D(rect.width / 2, 0));
+            return rect.topLeft().add(new Point2D([rect.width() / 2, 0]));
         case ArrowAnchorOnNoteType.mid_right:
-            return rect.topRight().add(new Point2D(0, rect.height / 2));
+            return rect.topRight().add(new Point2D([0, rect.height() / 2]));
         case ArrowAnchorOnNoteType.bottom_mid:
-            return rect.bottomLeft().add(new Point2D(rect.width / 2, 0));
+            return rect.bottomLeft().add(new Point2D([rect.width() / 2, 0]));
         default:
             throw new Error('Invalid anchor type' + anchorType);
     }

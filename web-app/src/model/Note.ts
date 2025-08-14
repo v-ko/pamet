@@ -1,20 +1,13 @@
-import { Rectangle } from "../util/Rectangle";
+import { Rectangle } from "fusion/primitives/Rectangle";
 
-import { PametElement, PametElementData } from "./Element";
-import { textRect } from "../components/note/util";
-
-export interface ImageMetadata {
-    url: string;
-    width: number;
-    height: number;
-}
+import { PametElement, PametElementData } from "@/model/Element";
+import { textRect } from "@/components/note/util";
+import { entityType } from "fusion/model/Entity";
 
 export interface NoteContent {
     text?: string;
     url?: string;
-    // image_url?: string; // remove that
-    // local_image_url?: string; //refactor that to 'image'
-    image?: ImageMetadata;
+    image_id?: string;
 }
 export interface NoteStyle {
     color_role: string;
@@ -37,11 +30,11 @@ export interface SerializedNote extends NoteData {
     type_name: string;
 }
 
-// @entityType('Note') - no, this is just a base class
-export class Note extends PametElement<NoteData> implements NoteData {
+@entityType('Note') // was removed .. ? but it's needed for the inmem store search at minimum (instanceof matching)
+export class Note extends PametElement<NoteData> {
     // This is only a base class, static helpers should go in the subclasses
     rect(): Rectangle {
-        return new Rectangle(...this._data.geometry);
+        return new Rectangle([...this._data.geometry]);
     }
     setRect(rect: Rectangle) {
         this._data.geometry = rect.data();

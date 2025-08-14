@@ -1,27 +1,26 @@
-import { WebAppState } from "../containers/app/App";
+import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
-import { SearchFilter } from 'fusion/storage/BaseStore';
-import { Change } from "fusion/Change";
-import { PametStore } from "../storage/PametStore";
-import { Entity, EntityData } from "fusion/libs/Entity";
-import { ApiClient } from "../storage/ApiClient";
-import { appActions } from "../actions/app";
-import { Note } from "../model/Note";
-import { Arrow } from "../model/Arrow";
-import { FrontendDomainStore } from "../storage/FrontendDomainStore";
-import { PametConfigService } from "../services/config/Config";
-import { StorageService } from "../storage/StorageService";
-import { ProjectStorageConfig, StorageAdapterNames } from "../storage/ProjectStorageManager";
-import { RepoUpdateData } from "fusion/storage/BaseRepository";
-import { RoutingService } from "../services/routing/RoutingService";
-import { PametRoute } from "../services/routing/route";
-import { registerRootActionCompletedHook } from "fusion/libs/Action";
-import { ProjectData } from "../model/config/Project";
-import { KeybindingService } from "../services/KeybindingService";
-import { commands } from "./commands";
-import { FocusManager } from "../services/FocusManager";
-import { Delta } from "fusion/storage/Delta";
-import { updateAppStateFromConfig } from "../procedures/app";
+import { SearchFilter } from 'fusion/storage/domain-store/BaseStore';
+import { Change } from "fusion/model/Change";
+import { PAMET_INMEMORY_STORE_CONFIG, PametStore } from "@/storage/PametStore";
+import { Entity, EntityData } from "fusion/model/Entity";
+import { appActions } from "@/actions/app";
+import { Note } from "@/model/Note";
+import { Arrow } from "@/model/Arrow";
+import { MediaItem } from "fusion/model/MediaItem";
+import { FrontendDomainStore } from "@/storage/FrontendDomainStore";
+import { PametConfigService } from "@/services/config/Config";
+import { StorageService } from "fusion/storage/management/StorageService";
+import { MediaStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
+import { RepoUpdateData, StorageAdapterNames } from "fusion/storage/repository/Repository";
+import { RoutingService } from "@/services/routing/RoutingService";
+import { PametRoute } from "@/services/routing/route";
+import { registerRootActionCompletedHook } from "fusion/registries/Action";
+import { ProjectData } from "@/model/config/Project";
+import { Keybinding, KeybindingService } from "@/services/KeybindingService";
+import { FocusManager } from "@/services/FocusManager";
+import { Delta } from "fusion/model/Delta";
+import { updateAppStateFromConfig, restartServiceWorker } from "@/procedures/app";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -32,18 +31,25 @@ export interface PageQueryFilter { [key: string]: any }
 
 
 // Service related
-function indexedDB_storeConfigFactory(projectId: string) {
-    let device = this.config.deviceData;
+export function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
+    let device = pamet.config.deviceData;
     if (!device) {
         throw Error('Device not set');
     }
     return {
-        currentBranchName: device.id,
-        localRepoConfig: {
-            name: 'IndexedDB' as StorageAdapterNames, // I really want to remove this cast
+        deviceBranchName: device.id,
+        storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
+        onDeviceRepo: {
+            name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,
-                defaultBranchName: device.id,
+                localBranchName: device.id,
+            }
+        },
+        onDeviceMediaStore: {
+            name: 'CacheAPI' as MediaStoreAdapterNames,
+            args: {
+                projectId: projectId
             }
         }
     }
@@ -55,128 +61,26 @@ export class PametFacade extends PametStore {
         throw new Error("Method not implemented.");
     }
     private _frontendDomainStore: FrontendDomainStore | null = null;
-    private _apiClient: ApiClient;
     private _appViewState: WebAppState | null = null;
     private _config: PametConfigService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
-    keybindingService: KeybindingService = new KeybindingService();
-    focusService: FocusManager = new FocusManager();
+    keybindingService: KeybindingService | null = null;
+    _focusManager: FocusManager | null = null;
     context: any = {};
-    projectManagerConfigFactory: (projectId: string) => ProjectStorageConfig = indexedDB_storeConfigFactory
+    _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
+    procedures: {
+        restartServiceWorker: () => Promise<void>;
+    }
     // Focus handling (context related): Except when receiving focus/blur
     // events - the context change should be applied in the unmount hook
     // (callback returned by useEffect)
 
     constructor() {
         super()
-        this._apiClient = new ApiClient('http://localhost', 11352, '', true);
-
-        this.keybindingService.setKeybindings([
-            // No modifier commands (assuming "when: noModifiers" is checked in contextConditionFulfilled):
-            {
-                key: 'n',
-                command: commands.createNewNote.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'e',
-                command: commands.editSelectedNote.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'l',
-                command: commands.createArrow.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'a',
-                command: commands.autoSizeSelectedNotes.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'escape',
-                command: commands.cancelPageAction.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'h',
-                command: commands.showHelp.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'delete',
-                command: commands.deleteSelectedElements.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '1',
-                command: commands.colorSelectedElementsPrimary.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '2',
-                command: commands.colorSelectedElementsSuccess.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '3',
-                command: commands.colorSelectedElementsError.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '4',
-                command: commands.colorSelectedElementsSurfaceDim.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: '5',
-                command: commands.setNoteBackgroundToTransparent.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'p',
-                command: commands.createNewPage.name,
-                when: 'canvasFocus'
-            },
-
-            {
-                key: 'ctrl+=',
-                command: commands.pageZoomIn.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+-',
-                command: commands.pageZoomOut.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+0',
-                command: commands.pageZoomReset.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+a',
-                command: commands.selectAll.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+e',
-                command: commands.openPageProperties.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+shift+y',  // tmp, could not find a sane shortcut
-                command: commands.createNewPage.name,
-                when: 'canvasFocus'
-            },
-            {
-                key: 'ctrl+shift+u',  // tmp, could not find a sane shortcut
-                command: commands.storeStateToClipboard.name,
-                when: 'canvasFocus'
-            },
-        ]);
-
+        this.procedures = {
+            restartServiceWorker: restartServiceWorker,
+        };
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
             // Better do the registration here, so that we don't have to worry
@@ -197,6 +101,21 @@ export class PametFacade extends PametStore {
         });
     }
 
+    get projectStorageConfigFactory(): (projectId: string) => ProjectStorageConfig {
+        if (this._projectStorageConfigFactory === null) {
+            throw Error('Project storage config factory not set');
+        }
+        return this._projectStorageConfigFactory;
+    }
+
+    setProjectStorageConfigFactory(factory: (projectId: string) => ProjectStorageConfig) {
+        this._projectStorageConfigFactory = factory;
+    }
+
+    projectStorageConfig(projectId: string): ProjectStorageConfig {
+        return this.projectStorageConfigFactory(projectId);
+    }
+
     get frontendDomainStore(): FrontendDomainStore {
         if (!this._frontendDomainStore) {
             throw Error('Frontend domain store not set');
@@ -212,10 +131,6 @@ export class PametFacade extends PametStore {
         this._frontendDomainStore = store;
     }
 
-    get apiClient() {
-        return this._apiClient;
-    }
-
     get storageService() {
         if (!this._storageService) {
             throw Error('Storage service not set');
@@ -228,6 +143,27 @@ export class PametFacade extends PametStore {
 
 
     // UI related
+    setKeybindings(keybindings: Keybinding[]) {
+        log.info('Setting keybindings', keybindings);
+        if (!this.keybindingService) {
+            this.keybindingService = new KeybindingService();
+        }
+        this.keybindingService.setKeybindings(keybindings);
+    }
+
+    setupFocusManager() {
+        if (this._focusManager) {
+            throw Error('Focus manager already set, not setting up again');
+        }
+        this._focusManager = new FocusManager();
+    }
+    get focusManager(): FocusManager {
+        if (!this._focusManager) {
+            throw Error('Focus manager not set up');
+        }
+        return this._focusManager;
+    }
+
     setContext(key: string, value: boolean) {
         console.log('Setting context', key, value)
         this.context[key] = value;
@@ -257,8 +193,13 @@ export class PametFacade extends PametStore {
             // This handler will be called whenever the repo is updated
             pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
         }
-        await pamet.storageService.loadRepo(
-            projectId, pamet.projectManagerConfigFactory(projectId), repoUpdateHandler)
+        try {
+            await pamet.storageService.loadProject(
+                projectId, pamet.projectStorageConfig(projectId), repoUpdateHandler)
+
+        } catch (e) {
+            log.error('Error loading project', e);
+        }
 
         // Load the entities after loading the repo
         let headState = await pamet.storageService.headState(projectId)
@@ -283,7 +224,7 @@ export class PametFacade extends PametStore {
         }
 
         this._frontendDomainStore = null;
-        await this.storageService.unloadRepo(currentProject.id).catch(
+        await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
                 log.error('Error unloading project', e);
             }
@@ -342,6 +283,38 @@ export class PametFacade extends PametStore {
     findOne(filter: SearchFilter): Entity<EntityData> | undefined {
         return this.frontendDomainStore.findOne(filter);
     }
+
+    // Media CRUD methods
+    async addMediaToStore(blob: Blob, path: string, parentId: string): Promise<MediaItem> {
+        const currentProjectId = this.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set');
+        }
+
+        // Create the MediaItem through the storage service
+        // This will handle blob storage, dimension extraction, and hash generation
+        const mediaItemData = await this.storageService.addMedia(currentProjectId, blob, path, parentId);
+
+        return new MediaItem(mediaItemData);
+    }
+    async deleteMediaFromStore(mediaItem: MediaItem): Promise<void> {
+        const currentProjectId = this.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set');
+        }
+
+        // Remove the media item using the storage service
+        await this.storageService.removeMedia(currentProjectId, mediaItem.id, mediaItem.contentHash);
+    }
+    async moveMediaToTrash(mediaItem: MediaItem): Promise<void> {
+        const currentProjectId = this.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set');
+        }
+
+        // Move the media to trash in the storage service
+        await this.storageService.moveMediaToTrash(currentProjectId, mediaItem.id, mediaItem.contentHash);
+    }
 }
 
 
@@ -352,7 +325,7 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
      */
-    console.log('Applying delta to view states', delta)
+    // console.log('Applying delta to view states', delta)
 
     for (let change of delta.changes()) {
         let currentPageVS = appState.currentPageViewState
@@ -367,11 +340,16 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
                 if (currentPageVS.page.id === change.entityId) {
+                    let userId = appState.userId;
+                    if (userId === null) {
+                        throw Error('No user set');
+                    }
                     let projectId = appState.currentProjectId;
                     if (projectId === null) {
                         throw Error('No project set');
                     }
                     let route = new PametRoute();
+                    route.userId = userId;
                     route.projectId = projectId;
                     pamet.router.replaceRoute(route);
                 }
