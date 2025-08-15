@@ -70,7 +70,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({initialInput, upd
           value={inputValue}
           onChange={e => setInputValue(e.target.value)}
           autoFocus
-          onBlur={() => appActions.closeCommandPalette(pamet.appViewState)}
+          onBlur={() => {
+            if (pamet.appViewState.commandPaletteState != null){
+                appActions.closeCommandPalette(pamet.appViewState)
+            }
+        }}
         />
         <ul className="command-list">
           {filteredCommands.map((command, index) => (
@@ -107,8 +111,10 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
                         id: cmd.name,
                         title: cmd.title,
                         action: () => {
+                            if (pamet.appViewState.commandPaletteState != null) {
+                                appActions.closeCommandPalette(appState);
+                            }
                             cmd.function();
-                            appActions.closeCommandPalette(appState);
                         }
                     });
                 }
@@ -131,8 +137,10 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
                     action: () => {
                         // appActions.navigateToPage(page.id);
                         log.info(`Navigating to page ${page.name}`);
+                        if (pamet.appViewState.commandPaletteState != null) {
+                            appActions.closeCommandPalette(appState);
+                        }
                         appActions.setCurrentPage(pamet.appViewState, page.id);
-                        appActions.closeCommandPalette(appState);
                     }
                 });
             }
@@ -158,10 +166,12 @@ export const ProjectPalette: React.FC<{ state: ProjectPaletteState }> = observer
                 id: project.id,
                 title: project.title,
                 action: () => {
+                    if (pamet.appViewState.commandPaletteState != null) {
+                        appActions.closeCommandPalette(appState);
+                    }
                     switchToProject(project.id).catch((error) => {
                         console.error(`Error switching to project ${project.title}:`, error);
                     });
-                    appActions.closeCommandPalette(appState);
                 }
             });
         }

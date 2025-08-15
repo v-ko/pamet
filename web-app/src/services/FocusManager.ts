@@ -98,6 +98,9 @@ export class FocusManager {
   }
 
   handleFocusIn(event: FocusEvent): void {
+    /**
+     * When an element receives focus - we update the context if it's registered for that
+     */
     const target = event.target as HTMLElement;
     // log.info('FocusIn event on', target);
 
@@ -137,6 +140,7 @@ export class FocusManager {
       this.lastFocusedElement = target;
     } else if (target && target.tabIndex === -1) {
       // log.info('Focused element has tabIndex -1, correcting focus.');
+      // Correct focus always sets to a tabIndex != -1 element, so no recursion risk supposedly
       this.correctFocus();
     }
   }
@@ -146,7 +150,8 @@ export class FocusManager {
     // log.info('FocusOut event, related target is', relatedTarget);
 
     if (!relatedTarget) {
-      // log.info('Focus left the document, correcting focus.');
+      // When the element with focus is removed (e.g. the command palette is closed),
+      // we need to correct focus to a sensible element.
       this.correctFocus();
       return;
     }
@@ -165,65 +170,69 @@ export class FocusManager {
   }
 
   private correctFocus(): void {
-    setTimeout(() => {
-      let elementToFocus: HTMLElement | null = null;
+    /**
+     * Corrects focus to a sensible element based on the last focused element or
+     * registered elements.
+     *
+     * Always switches to an element with a tabindex set.
+     */
+    let elementToFocus: HTMLElement | null = null;
 
-      // Strategy 1: Go back to what you were doing.
-      // We check what was the last thing you clicked on.
-      if (this.lastFocusedElement) {
-        // Find the main component area (e.g., the note editor or the page view) that contains the last element.
-        // We pick the most specific one (e.g., note editor wins over the page view if it's inside it).
-        const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
-        for (const reg of this.focusRegistrations.values()) {
-          const el = this.lastFocusedElement.closest(reg.selector);
-          if (el) {
-            matchedElements.set(el as HTMLElement, reg);
-          }
-        }
-        const dominantElement = this.getDominantElement(Array.from(matchedElements.keys()));
-
-        if (dominantElement) {
-          // If that main area itself can be focused, let's focus it.
-          if (dominantElement.matches('[tabindex]:not([tabindex="-1"])')) {
-            elementToFocus = dominantElement;
-          } else {
-            // Otherwise, find the first thing we can focus inside it.
-            elementToFocus = dominantElement.querySelector<HTMLElement>('[tabindex]:not([tabindex="-1"])');
-          }
+    // Strategy 1: Go back to what you were doing.
+    // We check what was the last thing you clicked on.
+    if (this.lastFocusedElement) {
+      // Find the main component area (e.g., the note editor or the page view) that contains the last element.
+      // We pick the most specific one (e.g., note editor wins over the page view if it's inside it).
+      const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
+      for (const reg of this.focusRegistrations.values()) {
+        const el = this.lastFocusedElement.closest(reg.selector);
+        if (el) {
+          matchedElements.set(el as HTMLElement, reg);
         }
       }
+      const dominantElement = this.getDominantElement(Array.from(matchedElements.keys()));
 
-      // Strategy 2: If strategy 1 fails, find any active component on screen.
-      // This is a fallback in case the last thing you were doing is now gone.
-      if (!elementToFocus) {
-        // Find all visible registered components (e.g., page view, note editor).
-        const allVisibleElements = [];
-        for (const reg of this.focusRegistrations.values()) {
-          const el = document.querySelector(reg.selector) as HTMLElement | null;
-          if (el && el.offsetParent !== null) { // is visible
-            allVisibleElements.push(el);
-          }
-        }
-        // Pick the most specific one that's visible.
-        const dominantVisibleElement = this.getDominantElement(allVisibleElements);
-        if (dominantVisibleElement) {
-          // If that main area itself can be focused, let's focus it.
-          if (dominantVisibleElement.matches('[tabindex]:not([tabindex="-1"])')) {
-            elementToFocus = dominantVisibleElement;
-          } else {
-            // Otherwise, find the first thing we can focus inside it.
-            elementToFocus = dominantVisibleElement.querySelector<HTMLElement>('[tabindex]:not([tabindex="-1"])');
-          }
+      if (dominantElement) {
+        // If that main area itself can be focused, let's focus it.
+        if (dominantElement.matches('[tabindex]:not([tabindex="-1"])')) {
+          elementToFocus = dominantElement;
+        } else {
+          // Otherwise, find the first thing we can focus inside it.
+          elementToFocus = dominantElement.querySelector<HTMLElement>('[tabindex]:not([tabindex="-1"])');
         }
       }
+    }
 
-      if (elementToFocus) {
-        log.info('Correcting focus to', elementToFocus);
-        elementToFocus.focus();
-      } else {
-        log.warning('Could not find any element to correct focus to.');
+    // Strategy 2: If strategy 1 fails, find any registered component on screen.
+    // This is a fallback in case the last thing you were doing is now gone.
+    if (!elementToFocus) {
+      // Find all visible registered components (e.g., page view, note editor).
+      const allVisibleElements = [];
+      for (const reg of this.focusRegistrations.values()) {
+        const el = document.querySelector(reg.selector) as HTMLElement | null;
+        if (el && el.offsetParent !== null) { // is visible
+          allVisibleElements.push(el);
+        }
       }
-    }, 0);
+      // Pick the most specific one that's visible.
+      const dominantVisibleElement = this.getDominantElement(allVisibleElements);
+      if (dominantVisibleElement) {
+        // If that main area itself can be focused, let's focus it.
+        if (dominantVisibleElement.matches('[tabindex]:not([tabindex="-1"])')) {
+          elementToFocus = dominantVisibleElement;
+        } else {
+          // Otherwise, find the first thing we can focus inside it.
+          elementToFocus = dominantVisibleElement.querySelector<HTMLElement>('[tabindex]:not([tabindex="-1"])');
+        }
+      }
+    }
+
+    if (elementToFocus) {
+      log.info('Correcting focus to', elementToFocus);
+      elementToFocus.focus();
+    } else {
+      log.warning('Could not find any element to correct focus to.');
+    }
   }
 
   destroy(): void {
