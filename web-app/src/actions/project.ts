@@ -4,14 +4,13 @@ import { pamet } from "@/core/facade";
 import { Page, PageData } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
-import { TextNote } from "@/model/TextNote";
 import { Point2D } from "fusion/primitives/Point2D";
-import { InternalLinkNote } from "@/model/InternalLinkNote";
 import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";
 import type { ProjectData } from "@/model/config/Project";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
+import { CardNote } from "@/model/CardNote";
 
 const log = getLogger("ProjectActions");
 
@@ -41,7 +40,7 @@ class ProjectActions {
     pamet.insertPage(page)
 
     // Add a "Press H for help" note in the center
-    let note = TextNote.createNew(page.id)
+    let note = CardNote.createNew({pageId: page.id})
     note.content.text = 'Press H for help'
     let noteRect = note.rect()
     noteRect.setSize(minimalNonelidedSize(note))
@@ -82,7 +81,7 @@ class ProjectActions {
 
     // Create a forward link note on the given location in the current page
     let currentPage = appState.currentPageViewState.page
-    let forwardLink = InternalLinkNote.createNew(newPage)
+    let forwardLink = CardNote.createInternalLinkNote(newPage)
     // Autosize and set at location
     let minimalSize = minimalNonelidedSize(forwardLink);
     let rect = forwardLink.rect();
@@ -93,7 +92,7 @@ class ProjectActions {
     pamet.insertNote(forwardLink);
 
     // Create a back link note in the new page (to the current)
-    let backLink = InternalLinkNote.createNew(currentPage)
+    let backLink = CardNote.createInternalLinkNote(currentPage)
     // Autosize and set at center
     rect = backLink.rect();
     rect.setSize(minimalSize);
@@ -115,19 +114,19 @@ class ProjectActions {
     pamet.removePageWithChildren(page);
 
     // Find all internal link notes pointing to this page
-    const internalLinks = Array.from(pamet.find({
-      type: InternalLinkNote
-    }) as Generator<InternalLinkNote>).filter((note: InternalLinkNote) => note.targetPageId() === page.id);
+    const notesWithInternalLinks = Array.from(pamet
+      .find({ hasInternalLink: true }) as Generator<CardNote>)
+      .filter((note: CardNote) => note.internalLinkRoute()?.pageId === page.id);
 
     // Convert each internal link to a text note showing the page was removed
-    for (const link of internalLinks) {
-      const textNote = new TextNote({
+    for (const link of notesWithInternalLinks) {
+      const note = new CardNote({
         ...link.data(),
         content: {
           text: `(page "${page.name}" removed)`
         }
       });
-      pamet.updateNote(textNote);
+      pamet.updateNote(note);
     }
   }
 
@@ -139,7 +138,7 @@ class ProjectActions {
     }
     const defaultPageId = projectData.defaultPageId;
 
-    if (defaultPageId){
+    if (defaultPageId) {
       appActions.setCurrentPage(appState, defaultPageId);
     } else {
       let firstPage = pamet.pages().next().value;

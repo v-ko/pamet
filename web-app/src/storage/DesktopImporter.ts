@@ -58,11 +58,9 @@ export class DesktopImporter extends BaseApiClient {
                     let url: string = childData.content.url
                     if (url.startsWith('pamet:/p')) {
                         childData.content.url = url.replace('pamet:/p', 'project:/page')
-                        childData.type_name = 'InternalLinkNote'
-                    } else {
-                        childData.type_name = 'ExternalLinkNote'
                     }
                 }
+                childData.type_name = 'CardNote'
             }
 
             // Set empty content where missing
@@ -218,19 +216,17 @@ export class DesktopImporter extends BaseApiClient {
             log.info(`Page ${pageData.id} (${pageData.name}) added to pageIdToName map`);
         }
 
-        // Fix internal links
+        // Fix internal links to include the page name as .text
         for (const entityData of allMigratedEntities) {
-            if (entityData.type_name === 'InternalLinkNote') {
+            if (entityData?.content?.url?.startsWith('project:/page/')) {
                 let pageId: string | undefined;
-                if (entityData.content.url.startsWith('pamet:/p/')) {
-                    // Extract pageId from the URL
-                    const urlParts = entityData.content.url.split('/');
-                    if (urlParts.length < 3) {
-                        log.error(`Invalid internal link URL: ${entityData.content.url}`);
-                        continue;
-                    }
-                    pageId = urlParts[2]; // e.g. 'p/12345' -> '12345'
+                // Extract pageId from the URL
+                const urlParts = entityData.content.url.split('/');
+                if (urlParts.length < 3) {
+                    log.error(`Invalid internal link URL: ${entityData.content.url}`);
+                    continue;
                 }
+                pageId = urlParts[2]; // e.g. 'p/12345' -> '12345'
                 if (pageId && pageIdToName[pageId]) {
                     entityData.content.text = pageIdToName[pageId];
                     entityData.content.url = new PametRoute({ pageId: pageId }).toProjectScopedURI();
@@ -247,7 +243,7 @@ export class DesktopImporter extends BaseApiClient {
         const otherEntityDatas: Record<string, any>[] = [];
 
         for (const entityData of allMigratedEntities) {
-            if (entityData.type_name === 'ImageNote' && entityData.content.image?.url?.startsWith('project:/desktop/fs')) {
+            if (entityData.content?.image?.url?.startsWith('project:/desktop/fs')) {
                 imageNoteDatas.push(entityData);
             } else {
                 otherEntityDatas.push(entityData);

@@ -89,17 +89,25 @@ export const COLOR_ROLE_MAP: { [key: string]: HexColorData } = {
 // Alert dialog?
 export enum PametTabIndex {
     Page = 0,
-    NoteEditViewWidget1 = 10,
-    NoteEditViewWidget2 = 11,
-    NoteEditViewWidget3 = 12,
-    NoteEditViewWidget4 = 13,
-    NoteEditViewWidget5 = 14,
-    NoteEditViewWidget6 = 15,
-    NoteEditViewWidget7 = 16,
-    NoteEditViewWidget8 = 17,
-    NoteEditViewWidget9 = 18,
-    NoteEditViewWidget10 = 19,
-    NoteEditViewWidget11 = 20,
+
+    // Note Edit View tab indices
+    NoteEditView_Tool1 = 10,
+    NoteEditView_Tool2 = 11,
+    NoteEditView_Tool3 = 12,
+    NoteEditView_Tool4 = 13,
+
+    NoteEditView_ImageDropZone = 14,
+    NoteEditView_ImageUploadFile = 15,
+    NoteEditView_ImageFromUrl = 16,
+    NoteEditView_ImageCreateNew = 17,
+
+    NoteEditView_LinkInput = 18,
+    NoteEditView_InternalLinkRemoveButton = 19,
+    NoteEditView_LinkGetTitleButton = 20,
+
+    NoteEditViewText = 21,
+    NoteEditViewSave = 22,
+    NoteEditViewCancel = 23,
 }
 
 // Media related

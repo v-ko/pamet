@@ -1,0 +1,137 @@
+/* LinkEditWidget.css (trimmed) */
+
+/* Row container + anchor for suggestions */
+.link-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+  }
+
+  /* Single “shell” that looks like an input */
+  .link-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    border: 0.1rem solid var(--color-light-border);
+    border-radius: var(--radius-sm);
+    padding: var(--space-1);
+    background: #fff;
+    color: var(--color-text);
+    font-size: var(--type-md);
+    box-sizing: border-box;
+    min-height:  2.7rem; /* default height; adjust via --control-h */
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Borderless inner input (inherits color/font-size) */
+  .link-input {
+    border: none;
+    padding: 0;
+    background: transparent;
+    outline: none;
+    font-size: inherit;                 /* fixes “too small” text */
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* --- Get title button + squeeze hide --- */
+
+  .get-title-button-wrapper {
+    overflow: hidden;
+    display: inline-flex;
+    max-width: 12rem;                  /* enough for label */
+    margin-left: var(--space-1);
+    transition: max-width 180ms ease, margin-left 180ms ease;
+  }
+
+  .get-title-button {
+    padding: var(--space-1) var(--space-3, 1.5rem);
+    border: 0.1rem solid var(--color-light-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-light);
+    cursor: pointer;
+    box-sizing: border-box;
+    white-space: nowrap;
+    transform-origin: right center;
+    transition: background 180ms ease, transform 180ms ease, opacity 120ms ease, padding 180ms ease;
+    font-size: var(--type-md);
+  }
+
+  .get-title-button:hover { background: var(--color-hover-light); }
+
+  .get-title-button-wrapper.is-hidden {
+    max-width: 0;
+    margin-left: 0;
+  }
+
+  .get-title-button-wrapper.is-hidden .get-title-button {
+    transform: scaleX(0);
+    opacity: 0;
+    padding-left: 0;
+    padding-right: 0;
+    pointer-events: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .get-title-button-wrapper,
+    .get-title-button { transition: none; }
+  }
+
+  /* --- Suggestions dropdown --- */
+
+  .suggestion-list {
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    background: var(--color-bg-light);
+    border: 1px solid var(--color-light-border);
+    border-radius: 4px;
+    list-style: none;
+    margin-top: 2px;
+    padding: 0;
+    z-index: 1000;
+    max-height: 200px;
+    overflow-y: auto;
+    font-size: var(--type-md);
+  }
+
+  .suggestion-item { padding: 8px 12px; cursor: pointer; }
+
+  .suggestion-item.highlighted,
+  .suggestion-item:hover { background: var(--color-hover-light); }
+
+  /* --- Inline pill --- */
+
+  .pill--inline {
+    display: flex;
+    align-items: center;
+    background: var(--color-bg-medium);
+    border: 1px solid var(--color-light-border);
+    border-radius: 16px;
+    padding: 2px 8px;
+    max-width: 50%;
+    min-width: 0;
+  }
+
+  .pill-text {
+    margin-right: 6px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .remove-pill-button {
+    background: none;
+    border: none;
+    color: var(--color-text);
+    cursor: pointer;
+    padding: 0;
+    font-size: 1.1em;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .remove-pill-button:hover { color: var(--color-danger); }

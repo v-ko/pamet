@@ -26,8 +26,9 @@ export class Page extends Entity<PageData> {
   }
 
   projectScopedURI(): string {
-    let route = new PametRoute()
-    route.pageId = this.id
+    let route = new PametRoute({
+      pageId: this.id,
+    })
     return route.toProjectScopedURI()
   }
 

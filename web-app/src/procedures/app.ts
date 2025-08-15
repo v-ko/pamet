@@ -55,11 +55,11 @@ export async function switchToProject(projectId: string | null): Promise<void> {
         // Unload the current project if there is one
         // and if it's not the same as the one we're switching to
         if (shouldDetach) {
-            await pamet.detachFrontendDomainStore(currentProjectId!);
+            await pamet.detachFromProject(currentProjectId!);
         }
 
         if (shouldAttachNew) {
-            await pamet.setupFrontendDomainStore(projectData!.id);
+            await pamet.attachProjectAsCurrent(projectData!.id);
         }
 
         // Reflect the new project state in the app state
@@ -182,9 +182,10 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
             return;
         } else {
             log.info('Switching to the first project');
-            let firstProjectRoute = new PametRoute()
-            firstProjectRoute.userId = userData.id;
-            firstProjectRoute.projectId = projects[0].id;
+            let firstProjectRoute = new PametRoute({
+                userId: userData.id,
+                projectId: projects[0].id,
+            })
             await pamet.router.changeRouteAndApplyToApp(firstProjectRoute); // calls this function inside (recurses)
             return;
         }

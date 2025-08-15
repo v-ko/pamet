@@ -34,8 +34,26 @@ export const PAMET_INMEMORY_STORE_CONFIG: readonly IndexConfig[] = [
         name: "path",
         fields: [{ indexKey: 'path' }],
         isUnique: true
+    },
+    {
+        name: "hasInternalPageLink",
+        fields: [{ indexKey: 'path' }],
+        isUnique: false
+    },
+    {
+        name: "hasExternalPageLink",
+        fields: [{ indexKey: 'path' }],
+        isUnique: false
     }
 ];
+
+export interface PametSearchFilter extends SearchFilter {
+    type?: new (...args: any[]) => Page | Note | Arrow | MediaItem;
+    path?: string;
+    hasInternalPageLink?: boolean;
+    hasExternalPageLink?: boolean;
+}
+
 
 
 export abstract class PametStore extends Store {
@@ -66,7 +84,7 @@ export abstract class PametStore extends Store {
     removePage(page: Page): Change {
         return this.removeOne(page)
     }
-    pages(filter: SearchFilter = {}): Generator<Page>{
+    pages(filter: Omit<PametSearchFilter, 'type'> = {}): Generator<Page>{
         filter.type = Page
         return this.find(filter) as Generator<Page>
     }
@@ -84,7 +102,7 @@ export abstract class PametStore extends Store {
     removeNote(note: Note): Change {
         return this.removeOne(note)
     }
-    notes(filter: SearchFilter = {}): Generator<Note>{
+    notes(filter: Omit<PametSearchFilter, 'type'> = {}): Generator<Note>{
         filter.type = Note
         return this.find(filter) as Generator<Note>
     }
@@ -102,7 +120,7 @@ export abstract class PametStore extends Store {
     removeArrow(arrow: Arrow): Change {
         return this.removeOne(arrow)
     }
-    arrows(filter: SearchFilter = {}): Generator<Arrow>{
+    arrows(filter: Omit<PametSearchFilter, 'type'> = {}): Generator<Arrow>{
         filter.type = Arrow
         return this.find(filter) as Generator<Arrow>
     }

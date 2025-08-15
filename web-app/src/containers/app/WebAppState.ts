@@ -115,7 +115,7 @@ export class WebAppState {
     if (this.currentPageViewState && this.currentPageViewState.page.id === pageId) {
       return this.currentPageViewState;
     }
-    throw new Error("PageViewState not found");
+    throw new Error(`PageViewState not found for pageId: ${pageId}.`);
   }
 
   route(): PametRoute {
@@ -127,7 +127,7 @@ export class WebAppState {
       throw new Error('Page id set without project id.');
     }
 
-    let route = new PametRoute();
+    let route = new PametRoute({});
 
     if (userId) {
       route.userId = userId;

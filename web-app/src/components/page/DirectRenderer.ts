@@ -11,6 +11,7 @@ import { Rectangle } from "fusion/primitives/Rectangle";
 import { ElementView, getElementView } from "@/components/elementViewLibrary";
 import { ArrowCanvasView } from "@/components/arrow/ArrowCanvasView";
 import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
+import { pamet } from "@/core/facade";
 
 let log = getLogger('DirectRenderer');
 
@@ -134,15 +135,11 @@ export class CanvasPageRenderer {
         let view
         try {
             view = new ViewType(this, elementVS);
-        } catch (e) {
-            log.error('Error creating view for element', element, e);
-            return;
-        }
-        try {
             context.save();
             view.render(context);
         } catch (e) {
             log.error('Error rendering element', element, e);
+            pamet.reportEntityProblem(elementVS.element().id);
         } finally {
             context.restore();
         }

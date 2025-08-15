@@ -1,5 +1,4 @@
 import { DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, DEFAULT_FONT_STRING, MAX_NOTE_WIDTH, ALIGNMENT_GRID_UNIT, PREFERRED_TEXT_NOTE_ASPECT_RATIO, MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT } from "@/core/constants";
-import { ImageNote } from "@/model/ImageNote";
 import { imageGeometryToFitAre } from "@/components/note/util";
 import { Note } from "@/model/Note";
 import { TextLayout, EMPTY_TOKEN, truncateText } from "@/util";
@@ -221,11 +220,9 @@ export function minimalNonelidedSize(note: Note): Size {
     let defaultNoteSize = new Size([DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT]);
     let noteFont = DEFAULT_FONT_STRING;
 
-    // If it's an image note - fit to the image (if no image - default size)
-    if (note instanceof ImageNote) {
-        let imageNote = note as ImageNote;
-
-        const mediaItem = pamet.findOne({ id: imageNote.content.image_id }) as MediaItem;
+    // If it's a note with just an image - fit to the image (if no image - default size)
+    if (note.content.image_id && !note.content.text) {
+        const mediaItem = pamet.findOne({ id: note.content.image_id }) as MediaItem;
         if (!mediaItem || !mediaItem.width || !mediaItem.height) {
             return defaultNoteSize; // Used just for the aspect ratio
         }

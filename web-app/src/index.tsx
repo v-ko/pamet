@@ -11,8 +11,6 @@ import { registerEntityClasses } from "@/core/entityRegistrationHack";
 registerEntityClasses();
 
 // Canvas view imports (still needed for UI components)
-import { InternalLinkNoteCanvasView } from "@/components/note/InternalLinkCanvasView";
-import { ExternalLinkNoteCanvasView } from "@/components/note/ExternalLinkCanvasView";
 import { ScriptNoteCanvasView } from "@/components/note/ScriptNoteCanvasView";
 import { CardNoteCanvasView } from "@/components/note/CardNoteCanvasView";
 import { ActionState } from 'fusion/registries/Action';
@@ -36,8 +34,6 @@ import { StorageAdapterNames } from 'fusion/storage/repository/Repository';
 
 // Keep canvas view imports to prevent tree-shaking
 let dummyImports: any[] = [];
-dummyImports.push(InternalLinkNoteCanvasView)
-dummyImports.push(ExternalLinkNoteCanvasView)
 dummyImports.push(ScriptNoteCanvasView)
 dummyImports.push(CardNoteCanvasView)
 
@@ -131,7 +127,7 @@ export function inMainThreadConfigFactory(projectId: string): ProjectStorageConf
     return {
         deviceBranchName: device.id,
         storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        onDeviceRepo: {
+        onDeviceStorageAdapter: {
             name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,

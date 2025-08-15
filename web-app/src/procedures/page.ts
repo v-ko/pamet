@@ -1,6 +1,4 @@
 import { Point2D } from "fusion/primitives/Point2D";
-import { TextNote } from "@/model/TextNote";
-import { ImageNote } from "@/model/ImageNote";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import * as util from "@/util";
 import { pamet } from "@/core/facade";
@@ -12,6 +10,7 @@ import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "@/core/constants";
 import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "@/core/policies";
 import { convertImage, extractImageDimensions } from "fusion/util/media";
 import { mapMimeTypeToFileExtension } from "fusion/util/base";
+import { CardNote } from "@/model/CardNote";
 
 const log = getLogger('PageProcedures');
 
@@ -26,7 +25,7 @@ const log = getLogger('PageProcedures');
  * @param mimeType - The MIME type of the image
  * @returns The position for the next paste item
  */
-export async function createImageNoteFromBlob(
+export async function createNoteWithImageFromBlob(
     pageId: string,
     position: Point2D,
     imageBlob: Blob
@@ -54,7 +53,7 @@ export async function createImageNoteFromBlob(
         const extension = mapMimeTypeToFileExtension(finalImageBlob.type);
         const imagePath = `images/pasted_image-${timestamp}.${extension}`;
 
-        note = ImageNote.createNew(pageId);
+        note = CardNote.createNew({pageId: pageId});
         const mediaItem = await pamet.addMediaToStore(finalImageBlob, imagePath, note.id);
         note.content.image_id = mediaItem.id;
 
@@ -111,22 +110,22 @@ export async function pasteSpecial(
             // await new Promise(resolve => setTimeout(resolve, 1000));
 
             if (item.type === 'text') {
-                let textNote = TextNote.createNew(pageId);
-                textNote.content.text = item.text;
+                let note = CardNote.createNew({pageId: pageId});
+                note.content.text = item.text;
 
-                let rect = textNote.rect();
+                let rect = note.rect();
                 rect.setTopLeft(pasteAt);
-                let size = util.snapVectorToGrid(minimalNonelidedSize(textNote));
+                let size = util.snapVectorToGrid(minimalNonelidedSize(note));
                 rect.setSize(size);
-                textNote.setRect(rect);
+                note.setRect(rect);
 
-                pageActions.pasteSpecialAddElements([textNote], []);
+                pageActions.pasteSpecialAddElements([note], []);
                 pasteAt = pasteAt.add(new Point2D([0, size.y + AGU]));
 
             } else if (item.type === 'image') {
                 if (item.image_blob && item.mime_type) {
                     try {
-                        pasteAt = await createImageNoteFromBlob(pageId, pasteAt, item.image_blob);
+                        pasteAt = await createNoteWithImageFromBlob(pageId, pasteAt, item.image_blob);
                     } catch (error) {
                         log.error('Error pasting image:', error);
                     }

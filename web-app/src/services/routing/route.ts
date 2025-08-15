@@ -54,15 +54,15 @@ export class PametRoute {
 
     static fromUrl(url: string): PametRoute {
         let url_: URL;
+        let route = new PametRoute();
         try{
             url_ = new URL(url);
         } catch (e) {
-            log.error(`Invalid URL: ${url}`, e);
-            throw new Error(`Invalid URL: "${url}"`);
+            route.originalPath = url;
+            return route;
         }
 
         // Local urls start with project:///, globals are regular with a host
-        let route = new PametRoute();
 
         if (url_.protocol) {
             route.protocol = url_.protocol
@@ -72,7 +72,6 @@ export class PametRoute {
         }
 
         const path = url_.pathname;
-        route.originalPath = path;
 
         if (url_.protocol === PROJECT_PROTOCOL) {
             route._parseSubProjectParts(path.split('/').slice(1)); // Remove leading slash
@@ -200,10 +199,11 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
 
 // Get the project-scoped URL for this media item
 export function mediaItemRoute(mediaItem: MediaItem, userId: string, projectId: string): PametRoute {
-    let route = new PametRoute();
-    route.mediaItemId = mediaItem.id;
-    route.mediaItemContentHash = mediaItem.contentHash;
-    route.userId = userId;
-    route.projectId = projectId;
+    let route = new PametRoute({
+        userId: userId,
+        projectId: projectId,
+        mediaItemId: mediaItem.id,
+        mediaItemContentHash: mediaItem.contentHash,
+    });
     return route
 }

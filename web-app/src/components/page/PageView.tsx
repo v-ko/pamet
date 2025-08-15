@@ -17,13 +17,13 @@ import { NavigationDevice, NavigationDeviceAutoSwitcher } from "@/components/pag
 
 import { arrowActions } from "@/actions/arrow";
 import { noteActions } from "@/actions/note";
-import { InternalLinkNote } from "@/model/InternalLinkNote";
 import { appActions } from "@/actions/app";
-import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from 'fusion/model/MediaItem';
 import { Page } from '@/model/Page';
-import { createImageNoteFromBlob } from '@/procedures/page';
+import { createNoteWithImageFromBlob } from '@/procedures/page';
+import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
+import { CardNote } from '@/model/CardNote';
 
 
 let log = getLogger('Page.tsx')
@@ -557,9 +557,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // If it's a link note - open the link
       let note = noteVS_underMouse.note();
       // For an internal link - follow it
-      if (note instanceof InternalLinkNote) {
+      if (note instanceof CardNote && note.hasInternalPageLink) {
         let targetPage: Page | undefined;
-        let targetPageId = note.targetPageId();
+        let targetPageId = note.internalLinkRoute()?.pageId;
         if (targetPageId !== undefined ) {
           targetPage = pamet.page(targetPageId)
         }
@@ -569,6 +569,15 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         }
       }
       // For an external link - open in new tab
+      if (note instanceof CardNote && note.hasExternalLink) {
+        log.info('Opening external link note:', note.content.url);
+        let url = note.content.url;
+        if (!url?.startsWith('http://') && !url?.startsWith('https://')) {
+            url = '//' + url;
+        }
+        window.open(url, '_blank');
+        return;
+      }
       pageActions.startEditingNote(state, noteVS_underMouse.note());
     } else {
       let realMousePos = state.viewport.unprojectPoint(mousePos);
@@ -616,7 +625,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
             for (const imageFile of imageFiles) {
                 try {
-                    position = await createImageNoteFromBlob(state.page.id, position, imageFile);
+                    position = await createNoteWithImageFromBlob(state.page.id, position, imageFile);
                 } catch (error) {
                     log.error('Error creating image note from dropped file:', error);
                 }
@@ -641,7 +650,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
 
     let note = noteVS.note()
-    if (note.content.image_id && note instanceof ImageNote) {
+    if (note.content.image_id) {
       const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
       if (!mediaItem) {
           continue;

@@ -10,7 +10,6 @@ import { DEFAULT_FONT_STRING } from "@/core/constants";
 import { textRect, imageGeometryToFitAre } from "@/components/note/util";
 import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
-import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from "fusion/model/MediaItem";
 
@@ -106,10 +105,6 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
     drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
         let note = this.noteViewState.note();
-        if (!(note instanceof ImageNote)) {
-            log.error('drawImage called on non-ImageNote', note);
-            return;
-        }
         let noteRect = note.rect();
         if (!note.content.image_id) {
             // Display error text instead
