@@ -30,30 +30,31 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     onCancel,
     onSave
   }: EditComponentProps) => {
+/**
+ * Logic for the tool/check-buttons and props visibility:
+ * - We init them from the note content - if text/image/url is present - show them (minmum text)
+ * - If a button is toggled - the useEffect controls some combinations (dont allow none to be selected, links always have text, etc)
+ * - On content changes - that is reflected in _noteData (the local copy of the note .. data)
+ * - On save - we "bake" the note - i.e. apply final changes to the note data and save it
+ *  - A relevant detail - if we hide the e.g. text props - text is not deleted (the user might want it on clicking toggle back)
+ */
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const committed = useRef(false);
+
   const [geometry, setGeometry] = useState<Rectangle>(
     new Rectangle([state.center.x, state.center.y, 400, 400])
-  );
-  const [isMeasured, setIsMeasured] = useState(false);
-
-  const noteData = useRef(
-    dumpToDict(state.targetNote) as SerializedNote
   );
   const [, setForceUpdate] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isDropAllowed, setIsDropAllowed] = useState(false);
 
-  const updateNoteData = (newData: Partial<SerializedNote>) => {
-    noteData.current = { ...noteData.current, ...newData };
-    setForceUpdate(x => x + 1);
-  };
-
+  const noteData = useRef(dumpToDict(state.targetNote) as SerializedNote);
+  const committed = useRef(false);
   const [uncommitedImage, setUncommitedImage] = useState<MediaItemData | null>(null);
   const [originalImageForTrashing, setOriginalImageForTrashing] = useState<MediaItemData | null>(null);
 
+  // Initial toggle button positions
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
     return (state.targetNote.content.text !== undefined ||
       state.targetNote.content.url !== undefined);
@@ -65,6 +66,16 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     return state.targetNote.content.url !== undefined;
   });
 
+  const [internalLinkIsSet, setInternalLinkIsSet] = useState(() => {
+    return state.targetNote.content.url?.startsWith('project://') || false;
+  });
+
+  const updateNoteData = (newData: Partial<SerializedNote>) => {
+    noteData.current = { ...noteData.current, ...newData };
+    setInternalLinkIsSet(!!newData.content?.url?.startsWith('project://'));
+    setForceUpdate(x => x + 1);
+  };
+
   // Measure once before first paint to avoid flicker
   useLayoutEffect(() => {
     const el = wrapperRef.current;
@@ -72,40 +83,34 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     const rect = el.getBoundingClientRect();
     // Use current width/height; position will be computed from center
     setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
-    setIsMeasured(true);
   }, []);
 
-  // Handle Note type changes
+  // Handle toggle button changes to restrict some combinations
   useEffect(() => {
     const currentNote = loadFromDict(noteData.current) as Note;
-    const textPropPresent = currentNote.content.text !== undefined;
-    const imagePropPresent = currentNote.content.image_id !== undefined;
-    const urlPropPresent = currentNote.content.url !== undefined;
+    const noButtonsToggled = !textButtonToggled && !imageButtonToggled && !linkButtonToggled;
 
-    if (textButtonToggled && !textPropPresent) {
-      currentNote.content.text = '';
-    } else if (!textButtonToggled && textPropPresent) {
-      delete currentNote.content.text;
+    // Apply toggle rules restrictions
+    if (noButtonsToggled ||  // At minimum text should be toggled
+      internalLinkIsSet) {   // Internal links always have text that equals the page name
+      setTextButtonToggled(true);
+      return;
     }
 
-    if (imageButtonToggled && !imagePropPresent) {
-      currentNote.content.image_id = '';
-    } else if (!imageButtonToggled && imagePropPresent) {
-      delete currentNote.content.image_id;
-    }
-
-    if (linkButtonToggled && !urlPropPresent) {
-      currentNote.content.url = '';
-    } else if (!linkButtonToggled && urlPropPresent) {
-      delete currentNote.content.url;
+    // A note with a link should have some other content too
+    if (linkButtonToggled && !imageButtonToggled && !textButtonToggled) {
+      setTextButtonToggled(true);
+      return;
     }
 
     updateNoteData(dumpToDict(currentNote));
-  }, [textButtonToggled, imageButtonToggled, linkButtonToggled]);
+  }, [textButtonToggled, imageButtonToggled, linkButtonToggled, internalLinkIsSet]);
 
   useEffect(() => {
     // Focus the text area on mount if it's visible
+    log.info("Text button toggled HOOOOK:", textButtonToggled);
     if (textButtonToggled) {
+      log.info("Text button toggle true:", textButtonToggled, textAreaRef.current);
       textAreaRef.current?.focus();
     }
   }, [textButtonToggled]);
@@ -176,9 +181,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     let data = noteData.current
 
     // Determine the definitive note type based on content
-    const hasText = data.content.text && data.content.text.trim().length > 0;
-    const hasImage = !!data.content.image_id?.trim();
-    const hasLink = !!data.content.url?.trim();
+    const hasText = textButtonToggled && data.content.text && data.content.text?.trim().length > 0;
+    const hasImage = imageButtonToggled && !!data.content.image_id?.trim();
+    const hasLink = linkButtonToggled && !!data.content.url?.trim();
 
     // Clean the content object based on the definitive type
     const finalContent: NoteContent = {};
@@ -255,29 +260,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     return () => resizeObserver.disconnect();
   }, [wrapperRef]);
 
-  // Limit the position of the window to the screen
-  let width = geometry.width();
-  let height = geometry.height();
-
-  let left = state.center.x - width / 2;
-  let top = state.center.y - height / 2;
-
-  // Check if the window is outside the screen on the bottom and right
-  if (left + width > window.innerWidth) {
-    left = window.innerWidth - width;
-  }
-  if (top + height > window.innerHeight) {
-    top = window.innerHeight - height;
-  }
-
-  // Check if the window is outside the screen on the top and left
-  if (left < 0) {
-    left = 0;
-  }
-  if (top < 0) {
-    top = 0;
-  }
-
   const handleDragEnter = (event: React.DragEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -326,14 +308,35 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     }
   };
 
-  const isInternalLinkSelected = noteData.current.content.url?.startsWith('project://');
+  // Limit the position of the window to the screen
+  let width = geometry.width();
+  let height = geometry.height();
+
+  let left = state.center.x - width / 2;
+  let top = state.center.y - height / 2;
+
+  // Check if the window is outside the screen on the bottom and right
+  if (left + width > window.innerWidth) {
+    left = window.innerWidth - width;
+  }
+  if (top + height > window.innerHeight) {
+    top = window.innerHeight - height;
+  }
+
+  // Check if the window is outside the screen on the top and left
+  if (left < 0) {
+    left = 0;
+  }
+  if (top < 0) {
+    top = 0;
+  }
 
   return (
     <div
       ref={wrapperRef}
       onKeyDown={handleKeyDown}
       className={`note-edit-view${state.isBeingDragged ? ' dragged' : ''}`}
-      style={{ left, top, visibility: isMeasured ? 'visible' : 'hidden' }}
+      style={{ left, top }}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
@@ -411,7 +414,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
             tabIndex={PametTabIndex.NoteEditViewText}
             style={{ pointerEvents: isDraggingOver ? 'none' : 'auto' }}
             value={noteData.current.content.text || ''}
-            disabled={isInternalLinkSelected}
+            disabled={internalLinkIsSet}
             onChange={(e) => {
               updateNoteData({ content: { ...noteData.current.content, text: e.target.value } });
             }}
