@@ -135,7 +135,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
     }
 
-    get midPoints(): Point2D[] {
+    midPoints(): Point2D[] {
         return this._data.mid_points.map((mid_point) => Point2D.fromData(mid_point));
     }
     getMidPoint(idx: number): Point2D {
@@ -173,7 +173,7 @@ export class Arrow extends PametElement<ArrowData> {
         return !!this._data.head.position;
     }
     controlPointIndices(): number[] {
-        let midPointCount = 2 + this.midPoints.length;
+        let midPointCount = 2 + this._data.mid_points.length;
         return Array.from(Array(midPointCount).keys());
     }
     potentialControlPointIndices(): number[] {
@@ -192,7 +192,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
 
         this.tailPoint = fixed_pos;
-        this._data.tail.noteAnchorId = anchorNote ? anchorNote.own_id : null;
+        this._data.tail.noteAnchorId = anchorNote ? anchorNote.id : null;
         this.tailAnchorType = anchor_type;
     }
     setHead(fixed_pos: Point2D | null, anchorNote: Note | null, anchor_type: ArrowAnchorOnNoteType) {
@@ -205,7 +205,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
 
         this.headPoint = fixed_pos;
-        this._data.head.noteAnchorId = anchorNote ? anchorNote.own_id : null;
+        this._data.head.noteAnchorId = anchorNote ? anchorNote.id : null;
         this.headAnchorType = anchor_type;
     }
 }
@@ -214,13 +214,13 @@ export function arrowAnchorPosition(note: Note, anchorType: ArrowAnchorOnNoteTyp
     const rect = note.rect();
     switch (anchorType) {
         case ArrowAnchorOnNoteType.mid_left:
-            return rect.topLeft().add(new Point2D([0, rect.height() / 2]));
+            return rect.topLeft().add(new Point2D([0, rect.height / 2]));
         case ArrowAnchorOnNoteType.top_mid:
-            return rect.topLeft().add(new Point2D([rect.width() / 2, 0]));
+            return rect.topLeft().add(new Point2D([rect.width / 2, 0]));
         case ArrowAnchorOnNoteType.mid_right:
-            return rect.topRight().add(new Point2D([0, rect.height() / 2]));
+            return rect.topRight().add(new Point2D([0, rect.height / 2]));
         case ArrowAnchorOnNoteType.bottom_mid:
-            return rect.bottomLeft().add(new Point2D([rect.width() / 2, 0]));
+            return rect.bottomLeft().add(new Point2D([rect.width / 2, 0]));
         default:
             throw new Error('Invalid anchor type' + anchorType);
     }

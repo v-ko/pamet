@@ -33,7 +33,7 @@ export class PametConfigService {
         this._adapter.clear();
     }
 
-    get userData() : UserData | undefined {
+    getUserData() : UserData | undefined {
         let userData = this._adapter.get('user');
         if (userData) {
             return userData as UserData;
@@ -41,11 +41,11 @@ export class PametConfigService {
             return undefined;
         }
     }
-    set userData(userData: UserData) {
+    setUserData(userData: UserData) {
         this._adapter.set('user', userData);
     }
 
-    get deviceData() : DeviceData | undefined {
+    getDeviceData() : DeviceData | undefined {
         let deviceData = this._adapter.get('device');
         if (deviceData) {
             return deviceData as DeviceData;
@@ -53,21 +53,21 @@ export class PametConfigService {
             return undefined;
         }
     }
-    set deviceData(deviceData: DeviceData) {
+    setDeviceData(deviceData: DeviceData) {
         this._adapter.set('device', deviceData);
     }
 
     addProject(project: ProjectData){
-        let userData = this.userData;
+        let userData = this.getUserData();
         if (!userData) {
             throw new Error("User data not found");
         }
 
         userData.projects.push(project);
-        this.userData = userData;
+        this.setUserData(userData);
     }
     removeProject(projectId: string) {
-        let userData = this.userData;
+        let userData = this.getUserData();
         if (!userData) {
             throw new Error("User data not found");
         }
@@ -79,11 +79,11 @@ export class PametConfigService {
         }
         projects.splice(index, 1);
         userData.projects = projects;
-        this.userData = userData;
+        this.setUserData(userData);
     }
     projectData(projectId: string): ProjectData | undefined {
         // For the current user
-        let userData = this.userData;
+        let userData = this.getUserData();
         if (!userData) {
             throw new Error("User data not found");
         }
@@ -92,7 +92,7 @@ export class PametConfigService {
     }
     updateProjectData(projectData: ProjectData) {
         // For the current user
-        let userData = this.userData;
+        let userData = this.getUserData();
         if (!userData) {
             throw new Error("User data not found");
         }
@@ -105,6 +105,6 @@ export class PametConfigService {
         log.info("Updating project in config", projectData);
         projects[index] = projectData;
         userData.projects = projects;
-        this.userData = userData;
+        this.setUserData(userData);
     }
 }

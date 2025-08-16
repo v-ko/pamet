@@ -17,13 +17,13 @@ import { NavigationDevice, NavigationDeviceAutoSwitcher } from "@/components/pag
 
 import { arrowActions } from "@/actions/arrow";
 import { noteActions } from "@/actions/note";
-import { InternalLinkNote } from "@/model/InternalLinkNote";
 import { appActions } from "@/actions/app";
-import { ImageNote } from "@/model/ImageNote";
 import { mediaItemRoute } from "@/services/routing/route";
 import { MediaItem } from 'fusion/model/MediaItem';
 import { Page } from '@/model/Page';
-import { createImageNoteFromBlob } from '@/procedures/page';
+import { createNoteWithImageFromBlob } from '@/procedures/page';
+import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
+import { CardNote } from '@/model/CardNote';
 
 
 let log = getLogger('Page.tsx')
@@ -162,8 +162,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     const renderDisposer = reaction(() => {
       // Get note and arrow changes by accessing the computed elements
-      let notes = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS._noteData)
-      let arrows = Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => arrowVS._arrowData);
+      let notes = Array.from(state.noteViewStatesById.values()).map((noteVS) => noteVS._noteData)
+      let arrows = Array.from(state.arrowViewStatesById.values()).map((arrowVS) => arrowVS._arrowData);
 
       let mousePosIfRelevant: Point2D | null = null;
       // Trigger rendering if the mouse pos has changed AND it's
@@ -201,15 +201,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // imgRefUpdateDisposer();
     }
   }, [state, canvasRef]);
-
-  // // Should be a command
-  // const copySelectedToClipboard = useCallback(() => {
-  //   let notesData = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS.note.data());
-  //   // this is broken, selected children has noteVS objects
-  //   // let selected_notes = notesData.filter((note) => state.selectedChildren.has(note.id.toString()));
-  //   let text = selected_notes.map((note) => note.content.text).join('\n\n');
-  //   navigator.clipboard.writeText(text);
-  // }, [state.noteViewStatesByOwnId, state.selectedChildren]);
 
 
   // Mouse event handlers
@@ -557,9 +548,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // If it's a link note - open the link
       let note = noteVS_underMouse.note();
       // For an internal link - follow it
-      if (note instanceof InternalLinkNote) {
+      if (note instanceof CardNote && note.hasInternalPageLink) {
         let targetPage: Page | undefined;
-        let targetPageId = note.targetPageId();
+        let targetPageId = note.internalLinkRoute()?.pageId;
         if (targetPageId !== undefined ) {
           targetPage = pamet.page(targetPageId)
         }
@@ -569,6 +560,15 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         }
       }
       // For an external link - open in new tab
+      if (note instanceof CardNote && note.hasExternalLink) {
+        log.info('Opening external link note:', note.content.url);
+        let url = note.content.url;
+        if (!url?.startsWith('http://') && !url?.startsWith('https://')) {
+            url = '//' + url;
+        }
+        window.open(url, '_blank');
+        return;
+      }
       pageActions.startEditingNote(state, noteVS_underMouse.note());
     } else {
       let realMousePos = state.viewport.unprojectPoint(mousePos);
@@ -616,7 +616,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
             for (const imageFile of imageFiles) {
                 try {
-                    position = await createImageNoteFromBlob(state.page.id, position, imageFile);
+                    position = await createNoteWithImageFromBlob(state.page().id, position, imageFile);
                 } catch (error) {
                     log.error('Error creating image note from dropped file:', error);
                 }
@@ -631,22 +631,21 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
   let imageUrls: Set<string> = new Set();
-  const config = pamet.config;
-  const userData = config.userData;
+  const userId = pamet.appViewState.userId;
   const projectId = pamet.appViewState.currentProjectId;
 
-  for (let noteVS of state.noteViewStatesByOwnId.values()) {
-    if (!userData || !projectId) { // Lazy. Could be done outside of the loop
+  for (let noteVS of state.noteViewStatesById.values()) {
+    if (!userId || !projectId) { // Lazy. Could be done outside of the loop
       continue
     }
 
     let note = noteVS.note()
-    if (note.content.image_id && note instanceof ImageNote) {
+    if (note.content.image_id) {
       const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
       if (!mediaItem) {
           continue;
       }
-      let mediaItemRoute_ = mediaItemRoute(mediaItem, userData.id, projectId);
+      let mediaItemRoute_ = mediaItemRoute(mediaItem, userId, projectId);
       // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
       let mediaItemPath = mediaItemRoute_.toRelativeReference();
 

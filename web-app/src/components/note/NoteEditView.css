@@ -142,13 +142,14 @@
   resize: none;
   border: 0.1rem solid var(--color-light-border);
   border-radius: var(--radius-sm);
-  padding: var(--space-2);
+  padding: var(--space-1);
   font-size: var(--type-md);
   background: #fff;
   color: var(--color-text);
   outline: none;
   box-sizing: border-box;
 }
+
 
 /* Footer */
 .footer {
@@ -223,4 +224,9 @@
 
 .image-preview-placeholder {
   color: #999;
+}
+
+.text-container textarea:disabled {
+  background-color: var(--color-bg-subtle);
+  color: var(--color-text-faded);
 }

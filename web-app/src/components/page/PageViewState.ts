@@ -14,7 +14,6 @@ import { ElementViewState as CanvasElementViewState } from "@/components/page/El
 import { Size } from 'fusion/primitives/Size';
 import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 import { Change } from 'fusion/model/Change';
-import { elementOwnId } from "@/model/Element";
 import React from 'react';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
@@ -51,8 +50,8 @@ export class PageViewState{
     _renderer: CanvasPageRenderer;
 
     // Elements
-    noteViewStatesByOwnId: ObservableMap<string, NoteViewState>;
-    arrowViewStatesByOwnId: ObservableMap<string, ArrowViewState>;
+    noteViewStatesById: ObservableMap<string, NoteViewState>;
+    arrowViewStatesById: ObservableMap<string, ArrowViewState>;
 
     // Viewport
     viewportCenter: Point2D = new Point2D([0, 0]);
@@ -98,15 +97,15 @@ export class PageViewState{
         this._pageData = page.data();
         this._renderer = new CanvasPageRenderer();
 
-        this.noteViewStatesByOwnId = new ObservableMap<string, NoteViewState>();
-        this.arrowViewStatesByOwnId = new ObservableMap<string, ArrowViewState>();
+        this.noteViewStatesById = new ObservableMap<string, NoteViewState>();
+        this.arrowViewStatesById = new ObservableMap<string, ArrowViewState>();
 
         makeObservable(this, {
             _pageData: observable,
             // page: computed, This returns instances with the same data object (and entities arer expected to be generally immutable )
 
-            noteViewStatesByOwnId: observable,
-            arrowViewStatesByOwnId: observable,
+            noteViewStatesById: observable,
+            arrowViewStatesById: observable,
 
             viewportCenter: observable,
             viewportHeight: observable,
@@ -126,11 +125,6 @@ export class PageViewState{
 
             viewport: computed
         });
-
-        // // test note updat reaction
-        // reaction(() => Array.from(this.noteViewStatesByOwnId.values()).map((noteVS) => toJS(noteVS._noteData)), (values) => {
-        //     log.info('Note view states changed', values);
-        // });
     }
 
     updateFromChange(change: Change) {
@@ -146,28 +140,29 @@ export class PageViewState{
     }
 
     createElementViewStates() {
-        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
+        const pageId = this.page().id;
+        const notes = Array.from(pamet.notes({ parentId: pageId }))
         this._updateNoteViewStates(notes);
-        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
+        const arrows = Array.from(pamet.arrows({ parentId: pageId }))
         this._updateArrowViewStates(arrows);
     }
 
     _addViewStateForNote(element: Note) {
-        if (this.noteViewStatesByOwnId.has(element.own_id)) {
+        if (this.noteViewStatesById.has(element.id)) {
             log.error('Note already exists in page view state', element)
             return;
         }
         let nvs = new NoteViewState(element);
-        this.noteViewStatesByOwnId.set(element.own_id, nvs);
+        this.noteViewStatesById.set(element.id, nvs);
     }
 
     _addViewStateForArrow(element: Arrow){
-        if (this.arrowViewStatesByOwnId.has(element.own_id)) {
+        if (this.arrowViewStatesById.has(element.id)) {
             log.error('Arrow already exists in page view state', element)
             return;
         }
 
-        this.arrowViewStatesByOwnId.set(element.own_id, new ArrowViewState(element));
+        this.arrowViewStatesById.set(element.id, new ArrowViewState(element));
     }
 
     addViewStateForElement(element: Note | Arrow) {
@@ -188,9 +183,9 @@ export class PageViewState{
 
     removeViewStateForElement(element: Note | Arrow) {
         if (element instanceof Note) {
-            this.noteViewStatesByOwnId.delete(element.own_id);
+            this.noteViewStatesById.delete(element.id);
         } else if (element instanceof Arrow) {
-            this.arrowViewStatesByOwnId.delete(element.own_id);
+            this.arrowViewStatesById.delete(element.id);
         }
     }
 
@@ -198,7 +193,7 @@ export class PageViewState{
         /* Get the NoteViewStates for the arrow's head and tail notes */
         let headNVS: NoteViewState | null = null;
         if (arrow.headNoteId) {
-            headNVS = this.noteViewStatesByOwnId.get(arrow.headNoteId) || null
+            headNVS = this.noteViewStatesById.get(arrow.headNoteId) || null
             if (!headNVS) {
                 throw Error('Head note not found ' + arrow.headNoteId)
             }
@@ -206,7 +201,7 @@ export class PageViewState{
 
         let tailNVS: NoteViewState | null = null;
         if (arrow.tailNoteId) {
-            tailNVS = this.noteViewStatesByOwnId.get(arrow.tailNoteId) || null
+            tailNVS = this.noteViewStatesById.get(arrow.tailNoteId) || null
             if (!tailNVS) {
                 throw Error('Tail note not found ' + arrow.tailNoteId)
             }
@@ -220,20 +215,19 @@ export class PageViewState{
 
         let nvsHasNoteMap = new Map<string, boolean>();
         for (let note of notes) {
-            nvsHasNoteMap.set(note.own_id, true);
+            nvsHasNoteMap.set(note.id, true);
         }
 
         // Remove NoteViewStates for notes that have been removed
-        for (let noteOwnId of this.noteViewStatesByOwnId.keys()) {
-            if (!nvsHasNoteMap.has(noteOwnId)) {
-                // console.log('REMOVING note', noteOwnId)
-                this.removeViewStateForElement(this.noteViewStatesByOwnId.get(noteOwnId)!.note());
+        for (let noteId of this.noteViewStatesById.keys()) {
+            if (!nvsHasNoteMap.has(noteId)) {
+                this.removeViewStateForElement(this.noteViewStatesById.get(noteId)!.note());
             }
         }
 
         // Add NoteViewStates for new notes
         for (let note of notes) {
-            if (!this.noteViewStatesByOwnId.has(note.own_id)) {
+            if (!this.noteViewStatesById.has(note.id)) {
                 // console.log('ADDING note', note.own_id)
                 this.addViewStateForElement(note);
             }
@@ -243,38 +237,36 @@ export class PageViewState{
     _updateArrowViewStates(arrows: Iterable<Arrow>) {
         let arrowavsHasArrowMap = new Map<string, boolean>();
         for (let arrow of arrows) {
-            arrowavsHasArrowMap.set(arrow.own_id, true);
+            arrowavsHasArrowMap.set(arrow.id, true);
         }
 
         // Remove ArrowViewStates for arrows that have been removed
-        for (let arrowOwnId of this.arrowViewStatesByOwnId.keys()) {
-            if (!arrowavsHasArrowMap.has(arrowOwnId)) {
-                // console.log('REMOVING arrow', arrowOwnId)
-                this.removeViewStateForElement(this.arrowViewStatesByOwnId.get(arrowOwnId)!.arrow());
+        for (let arrowId of this.arrowViewStatesById.keys()) {
+            if (!arrowavsHasArrowMap.has(arrowId)) {
+                this.removeViewStateForElement(this.arrowViewStatesById.get(arrowId)!.arrow());
             }
         }
 
         // Add ArrowViewStates for new arrows
         for (let arrow of arrows) {
-            if (!this.arrowViewStatesByOwnId.has(arrow.own_id)) {
+            if (!this.arrowViewStatesById.has(arrow.id)) {
                 this.addViewStateForElement(arrow);
             }
         }
     }
 
-    viewStateForElement(elementOwnId: string): NoteViewState | ArrowViewState | null {
-        return this.noteViewStatesByOwnId.get(elementOwnId) || this.arrowViewStatesByOwnId.get(elementOwnId) || null;
+    getViewStateForElement(elementId: string): NoteViewState | ArrowViewState | null {
+        return this.noteViewStatesById.get(elementId) || this.arrowViewStatesById.get(elementId) || null;
     }
-    viewStateForElementId(elementId: string): NoteViewState | ArrowViewState | null {
+    viewStateForElementId(id: string): NoteViewState | ArrowViewState | null {
         try {
-            let ownId = elementOwnId(elementId);
-            return this.viewStateForElement(ownId);
+            return this.getViewStateForElement(id);
         } catch {
             return null;
         }
     }
 
-    get page() {
+    page() {
         let pageData = toJS(this._pageData);
         return new Page(pageData)
     }
@@ -371,7 +363,7 @@ export class PageViewState{
     }
 
     *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
-        for (let noteViewState of this.noteViewStatesByOwnId.values()) {
+        for (let noteViewState of this.noteViewStatesById.values()) {
             let intersectRect = new Rectangle([...noteViewState._noteData.geometry])
             if (radius > 0) {
                 intersectRect.setSize(intersectRect.size().add(new Size([radius * 2, radius * 2])))
@@ -390,7 +382,7 @@ export class PageViewState{
     }
 
     *arrowsViewsAt(position: Point2D): Generator<ArrowViewState> {
-        for (let arrowVS of this.arrowViewStatesByOwnId.values()) {
+        for (let arrowVS of this.arrowViewStatesById.values()) {
             if (arrowVS.intersectsCircle(position, ARROW_SELECTION_RADIUS)) {
                 yield arrowVS;
             }
@@ -469,7 +461,7 @@ export class PageViewState{
         // is closest to the mouse position (if within RESIZE_CIRCLE_RADIUS)
         let closestNoteVS: NoteViewState | null = null;
         let closestDistance = Number.MAX_VALUE;
-        for (let noteVS of this.noteViewStatesByOwnId.values()) {
+        for (let noteVS of this.noteViewStatesById.values()) {
             let note = noteVS.note();
             let bottomRight = note.rect().bottomRight();
             let distance = bottomRight.distanceTo(realPosition);
@@ -482,25 +474,6 @@ export class PageViewState{
             return closestNoteVS;
         }
         return null;
-    }
-
-    get selectedNotesVSs(): NoteViewState[] {
-        let selectedNoteVSs = [];
-        for (let elementVS of this.selectedElementsVS) {
-            if (elementVS instanceof NoteViewState) {
-                selectedNoteVSs.push(elementVS);
-            }
-        }
-        return selectedNoteVSs;
-    }
-    get selectedArrowsVSs(): ArrowViewState[] {
-        let selectedArrowVSs = [];
-        for (let elementVS of this.selectedElementsVS) {
-            if (elementVS instanceof ArrowViewState) {
-                selectedArrowVSs.push(elementVS);
-            }
-        }
-        return selectedArrowVSs;
     }
 }
 

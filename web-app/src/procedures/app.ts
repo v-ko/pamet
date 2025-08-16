@@ -55,11 +55,11 @@ export async function switchToProject(projectId: string | null): Promise<void> {
         // Unload the current project if there is one
         // and if it's not the same as the one we're switching to
         if (shouldDetach) {
-            await pamet.detachFrontendDomainStore(currentProjectId!);
+            await pamet.detachFromProject(currentProjectId!);
         }
 
         if (shouldAttachNew) {
-            await pamet.setupFrontendDomainStore(projectData!.id);
+            await pamet.attachProjectAsCurrent(projectData!.id);
         }
 
         // Reflect the new project state in the app state
@@ -79,7 +79,7 @@ export async function switchToProject(projectId: string | null): Promise<void> {
         }
 
         // The state is updated - update the url
-        pamet.router.pushRoute(appState.route())
+        pamet.router.pushRoute(appState.toRoute())
     } finally {
         projectSwithLock = false;
         appActions.updateSystemDialogState(appState, null);
@@ -163,10 +163,10 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
     log.info('updateAppFromRouteOrAutoassist for route', route);
 
     // Get project data from config
-    let userData = pamet.config.userData;
-    if (!userData || userData.id == undefined) {
-        log.error('User not set.');
-        throw Error('User data not loaded');
+    let userId = pamet.appViewState.userId;
+    if (userId === null) {
+        log.error('User ID is not set. Cannot update app from route.');
+        return;
     }
 
     // If no project id - go to default project (or create one)
@@ -182,9 +182,10 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
             return;
         } else {
             log.info('Switching to the first project');
-            let firstProjectRoute = new PametRoute()
-            firstProjectRoute.userId = userData.id;
-            firstProjectRoute.projectId = projects[0].id;
+            let firstProjectRoute = new PametRoute({
+                userId: userId,
+                projectId: projects[0].id,
+            })
             await pamet.router.changeRouteAndApplyToApp(firstProjectRoute); // calls this function inside (recurses)
             return;
         }
@@ -245,7 +246,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
 
         if (goToPageId !== undefined) {
             let defaultPageRoute = new PametRoute();
-            defaultPageRoute.userId = userData.id;
+            defaultPageRoute.userId = userId;
             defaultPageRoute.projectId = projectId;
             defaultPageRoute.pageId = goToPageId;
             await pamet.router.changeRouteAndApplyToApp(defaultPageRoute);
@@ -257,7 +258,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
 
 export async function updateAppStateFromConfig(appState: WebAppState) {
     // Device
-    let device = pamet.config.deviceData;
+    let device = pamet.config.getDeviceData();
     if (device === undefined) {
         appState.deviceId = null;
     } else {
@@ -265,7 +266,7 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
     }
 
     // User
-    let user = pamet.config.userData;
+    let user = pamet.config.getUserData();
     if (user === undefined) {
         appState.userId = null;
     } else {
@@ -309,7 +310,7 @@ export async function importDesktopDataForTesting() {
             id: `desktop-import-${createId()}`,
             title: 'Desktop Import',
             description: 'Imported from desktop server',
-            owner: pamet.config.userData!.id,
+            owner: pamet.config.getUserData()!.id,
             created: timestamp(currentTime()),
         };
         await createProject(newProject);
@@ -348,7 +349,7 @@ export async function createDefaultProject(): Promise<ProjectData> {
         id: 'notebook',
         title: 'Notebook',
         description: 'Default project',
-        owner: pamet.config.userData!.id,
+        owner: pamet.config.getUserData()!.id,
         created: timestamp(currentTime()),
     };
     await createProject(newProject);

@@ -285,7 +285,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                     className='action-button'
                     onClick={handleUploadFileClick}
                     disabled={isLoading}
-                    tabIndex={PametTabIndex.NoteEditViewWidget1 + 9}
+                    tabIndex={PametTabIndex.NoteEditView_ImageUploadFile}
                 >
                     Upload file
                 </button>
@@ -293,13 +293,13 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                     className='action-button'
                     onClick={handleAddFromUrl}
                     disabled={isLoading}
-                    tabIndex={PametTabIndex.NoteEditViewWidget1 + 10}
+                    tabIndex={PametTabIndex.NoteEditView_ImageFromUrl}
                 >Add from URL</button>
                 <button
                     className='action-button'
                     onClick={() => alert('This feature is not yet implemented, sorry :)')}
                     disabled={isLoading}
-                    tabIndex={PametTabIndex.NoteEditViewWidget1 + 11}
+                    tabIndex={PametTabIndex.NoteEditView_ImageCreateNew}
                 >New image</button>
             </div>
             <div
@@ -309,7 +309,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                 onDragLeave={handleDragLeave}
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
-                tabIndex={PametTabIndex.NoteEditViewWidget1 + 8} // Make it focusable for paste events
+                tabIndex={PametTabIndex.NoteEditView_ImageDropZone} // Make it focusable for paste events
                 onPaste={handlePaste}
                 onFocus={handleFocus}
                 onBlur={handleBlur}

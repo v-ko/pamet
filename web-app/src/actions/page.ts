@@ -9,7 +9,6 @@ import { Rectangle } from "fusion/primitives/Rectangle";
 import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "@/core/constants";
 import { pamet } from "@/core/facade";
 import { Note } from "@/model/Note";
-import { TextNote } from "@/model/TextNote";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { PametElement, PametElementData } from "@/model/Element";
@@ -17,8 +16,8 @@ import { Arrow } from "@/model/Arrow";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { Page } from "@/model/Page";
 import { MediaItem } from "fusion/model/MediaItem";
-import { ImageNote } from "@/model/ImageNote";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
+import { CardNote } from "@/model/CardNote";
 
 let log = getLogger('MapActions');
 
@@ -181,7 +180,7 @@ class PageActions {
     state.dragSelectedElementsVS.clear();
 
     // Get notes in the area
-    for (let noteVS of state.noteViewStatesByOwnId.values()) {
+    for (let noteVS of state.noteViewStatesById.values()) {
       let noteRect = new Rectangle(noteVS._noteData.geometry);
       if (unprojectedRect.intersects(noteRect)) {
         state.dragSelectedElementsVS.add(noteVS);
@@ -189,7 +188,7 @@ class PageActions {
     }
 
     // Get the arrows in the area
-    for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
+    for (let arrowVS of state.arrowViewStatesById.values()) {
       if (arrowVS.intersectsRect(unprojectedRect)) {
         state.dragSelectedElementsVS.add(arrowVS);
       }
@@ -208,7 +207,7 @@ class PageActions {
   @action
   startNoteCreation(state: PageViewState, realPosition: Point2D) {
     let pixSpacePosition = state.viewport.projectPoint(realPosition);
-    let note = TextNote.createNew(state.page.id);
+    let note = CardNote.createNew({pageId: state.page().id});
     let noteRect = note.rect()
     noteRect.setTopLeft(realPosition)
     note.setRect(noteRect)
@@ -341,15 +340,15 @@ class PageActions {
     for (let element of elements) {
       if (element instanceof Note) {
         notesForRemoval.push(element)
-        noteIds.add(element.own_id)
+        noteIds.add(element.id)
 
         // Mark media for trashing if the note has an image
-        if (element instanceof ImageNote) {  // Should catch both card notes and image notes
+        if (element instanceof CardNote && element.content.image_id) {  // Should catch both card notes and image notes
           let mediaItem = pamet.mediaItem(element.content.image_id!);
           if (mediaItem) {
             mediaItemsForTrashing.push(mediaItem);
           } else {
-            log.warning(`ImageNote with id ${element.id} has no media item associated.`);
+            log.warning(`Note with id ${element.id} and image_id ${element.content.image_id} has no media item associated.`);
           }
         }
       } else if (element instanceof Arrow) {

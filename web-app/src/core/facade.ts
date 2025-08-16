@@ -1,8 +1,7 @@
 import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
-import { SearchFilter } from 'fusion/storage/domain-store/BaseStore';
 import { Change } from "fusion/model/Change";
-import { PAMET_INMEMORY_STORE_CONFIG, PametStore } from "@/storage/PametStore";
+import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { appActions } from "@/actions/app";
 import { Note } from "@/model/Note";
@@ -20,7 +19,7 @@ import { ProjectData } from "@/model/config/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
-import { updateAppStateFromConfig, restartServiceWorker } from "@/procedures/app";
+import { updateAppStateFromConfig } from "@/procedures/app";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -32,14 +31,14 @@ export interface PageQueryFilter { [key: string]: any }
 
 // Service related
 export function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
-    let device = pamet.config.deviceData;
+    let device = pamet.config.getDeviceData();
     if (!device) {
         throw Error('Device not set');
     }
     return {
         deviceBranchName: device.id,
         storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        onDeviceRepo: {
+        onDeviceStorageAdapter: {
             name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,
@@ -69,18 +68,10 @@ export class PametFacade extends PametStore {
     _focusManager: FocusManager | null = null;
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
-    procedures: {
-        restartServiceWorker: () => Promise<void>;
-    }
-    // Focus handling (context related): Except when receiving focus/blur
-    // events - the context change should be applied in the unmount hook
-    // (callback returned by useEffect)
+    _entityProblemCounts: Map<string, number> = new Map();
 
     constructor() {
         super()
-        this.procedures = {
-            restartServiceWorker: restartServiceWorker,
-        };
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
             // Better do the registration here, so that we don't have to worry
@@ -185,7 +176,7 @@ export class PametFacade extends PametStore {
         this._appViewState = state;
     }
 
-    async setupFrontendDomainStore(projectId: string) {
+    async attachProjectAsCurrent(projectId: string) {
         pamet._frontendDomainStore = new FrontendDomainStore()
 
         // Load the new project and connect it to the Frontend domain store
@@ -208,27 +199,31 @@ export class PametFacade extends PametStore {
         appActions.setLocalStorageState(this.appViewState, { available: true });
     }
 
-    async detachFrontendDomainStore(projectId: string) {
+    async detachFromProject(projectId: string) {
         log.info('Detaching FDS for project', projectId);
-        let currentProject = this.appViewState.currentProject();
-
-        // Mark the local storage as unavailable
-        appActions.setLocalStorageState(pamet.appViewState, { available: false });
-
-        if (!currentProject) {
-            log.error('Trying to detach FDS without a project');
-            return;
-        } else if (currentProject.id !== projectId) {
-            log.error('Wrong project id passed for FDS detachment');
+        let currentProject: ProjectData;
+        try{
+            currentProject = this.appViewState.getCurrentProject();
+        } catch (e) {
+            log.error('Error getting current project', e);
             return;
         }
 
+        // Mark the local storage as unavailable
+        appActions.setLocalStorageState(pamet.appViewState, { available: false });
+        
         this._frontendDomainStore = null;
         await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
                 log.error('Error unloading project', e);
             }
         )
+
+        this._entityProblemCounts.clear();
+    }
+
+    reportEntityProblem(entityId: string) {
+        this._entityProblemCounts.set(entityId, (this._entityProblemCounts.get(entityId) || 0) + 1);
     }
 
     // Model related
@@ -253,7 +248,7 @@ export class PametFacade extends PametStore {
     }
 
     projects(): ProjectData[] {
-        let userData = this.config.userData;
+        let userData = this.config.getUserData();
         if (!userData) {
             throw Error('User data not set');
         }
@@ -276,11 +271,11 @@ export class PametFacade extends PametStore {
         return this.frontendDomainStore.removeOne(entity);
     }
 
-    find(filter: SearchFilter = {}): Generator<Entity<EntityData>> {
+    find(filter: PametSearchFilter = {}): Generator<Entity<EntityData>> {
         return this.frontendDomainStore.find(filter);
     }
 
-    findOne(filter: SearchFilter): Entity<EntityData> | undefined {
+    findOne(filter: PametSearchFilter): Entity<EntityData> | undefined {
         return this.frontendDomainStore.findOne(filter);
     }
 
@@ -334,12 +329,12 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
         }
 
         // If it's the current page
-        let currentPageId = currentPageVS.page.id;
+        let currentPageId = currentPageVS.page().id;
         let childVS = currentPageVS.viewStateForElementId(change.entityId)
         if (currentPageId === change.entityId) {
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
-                if (currentPageVS.page.id === change.entityId) {
+                if (currentPageId === change.entityId) {
                     let userId = appState.userId;
                     if (userId === null) {
                         throw Error('No user set');
@@ -348,9 +343,10 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    let route = new PametRoute();
-                    route.userId = userId;
-                    route.projectId = projectId;
+                    let route = new PametRoute({
+                        userId: userId,
+                        projectId: projectId
+                    });
                     pamet.router.replaceRoute(route);
                 }
             }
@@ -368,7 +364,7 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
             let entity = pamet.findOne({ id: change.entityId });
             if (entity instanceof Note || entity instanceof Arrow) {
                 // get current page vs
-                if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
+                if (!currentPageVS || currentPageId !== entity.parentId) {
                     // Skip processing if the parent of the element is not open
                     continue;
                 }

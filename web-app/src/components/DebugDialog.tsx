@@ -1,17 +1,39 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { pamet } from "@/core/facade";
+import { Entity } from 'fusion/model/Entity';
+import { restartServiceWorker } from '@/procedures/app';
 
 interface DebugDialogProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
+interface ProblematicEntityInfo {
+  id: string;
+  count: number;
+  entity: Entity<any>;
+}
+
 export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [repoHeadState, setRepoHeadState] = useState<any>(null);
   const [fdsState, setFdsState] = useState<any>(null);
+  const [problematicEntities, setProblematicEntities] = useState<ProblematicEntityInfo[]>([]);
 
   useEffect(() => {
+    if (isOpen) {
+        // Update the problematic entities list every time the dialog is opened.
+        const problematicEntitiesMap = pamet._entityProblemCounts;
+        const entitiesInfo: ProblematicEntityInfo[] = [];
+
+        for (const [entityId, count] of problematicEntitiesMap.entries()) {
+            const entity = pamet.findOne({ id: entityId });
+            if (entity) {
+                entitiesInfo.push({ id: entityId, count, entity: entity });
+            }
+        }
+        setProblematicEntities(entitiesInfo);
+    }
     const dialog = dialogRef.current;
     if (!dialog) return;
 
@@ -38,7 +60,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
 
   const a_restartServiceWorker = async () => {
     try {
-        await pamet.procedures.restartServiceWorker();
+        await restartServiceWorker();
     } catch (error) {
         console.error('Error restarting service worker:', error);
         alert('Error restarting service worker. See console for details.');
@@ -131,6 +153,41 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       <button onClick={a_restartServiceWorker}>
         Restart Service Worker
       </button>
+
+      {/* Problematic entities display */}
+      <details open={problematicEntities.length > 0}>
+        <summary>
+          Problematic Entities ({problematicEntities.length})
+        </summary>
+        <div style={{
+          maxHeight: '300px',
+          overflowY: 'auto',
+          border: '1px solid black',
+          padding: '10px',
+          marginTop: '10px'
+        }}>
+          {problematicEntities.length > 0 ? (
+            problematicEntities.map(info => (
+              <details key={info.id}>
+                <summary>
+                  ID: {info.id}, Type: {info.entity.constructor.name}, Errors: {info.count}
+                </summary>
+                <pre style={{
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-all',
+                  background: '#f5f5f5',
+                  padding: '5px',
+                  border: '1px solid #ddd'
+                }}>
+                  {JSON.stringify(info.entity.data(), null, 2)}
+                </pre>
+              </details>
+            ))
+          ) : (
+            <p>No problematic entities found.</p>
+          )}
+        </div>
+      </details>
     </dialog>
   );
 };

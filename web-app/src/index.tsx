@@ -11,8 +11,6 @@ import { registerEntityClasses } from "@/core/entityRegistrationHack";
 registerEntityClasses();
 
 // Canvas view imports (still needed for UI components)
-import { InternalLinkNoteCanvasView } from "@/components/note/InternalLinkCanvasView";
-import { ExternalLinkNoteCanvasView } from "@/components/note/ExternalLinkCanvasView";
 import { ScriptNoteCanvasView } from "@/components/note/ScriptNoteCanvasView";
 import { CardNoteCanvasView } from "@/components/note/CardNoteCanvasView";
 import { ActionState } from 'fusion/registries/Action';
@@ -36,8 +34,6 @@ import { StorageAdapterNames } from 'fusion/storage/repository/Repository';
 
 // Keep canvas view imports to prevent tree-shaking
 let dummyImports: any[] = [];
-dummyImports.push(InternalLinkNoteCanvasView)
-dummyImports.push(ExternalLinkNoteCanvasView)
 dummyImports.push(ScriptNoteCanvasView)
 dummyImports.push(CardNoteCanvasView)
 
@@ -84,13 +80,13 @@ const config = new PametConfigService(new LocalStorageConfigAdapter())
 // Generate device if none. Generate anonymous user and default project and page if none
 
 // Check if the device is set - if missing - generate metadata
-let deviceData = config.deviceData;
+let deviceData = config.getDeviceData();
 if (!deviceData) {
     deviceData = {
         id: "device-" + crypto.randomUUID(),
         name: "WebApp",
     }
-    config.deviceData = deviceData;
+    config.setDeviceData(deviceData);
 }
 
 // Check for user. If none - create with default 'local' user
@@ -98,13 +94,13 @@ if (!deviceData) {
 // with a real user account, the project should be moved explicitly from 'local'
 // to the actual user. This allows the app to work immediately without requiring
 // user registration, while still supporting proper user-scoped storage later.
-if (!config.userData) {
+if (!config.getUserData()) {
     let userData = {
         id: "local",
         name: "Local User",
         projects: []
     }
-    config.userData = userData;
+    config.setUserData(userData);
 }
 
 pamet.setConfig(config)
@@ -124,14 +120,14 @@ setupWebWorkerLoggingChannel();
 
 // Service related
 export function inMainThreadConfigFactory(projectId: string): ProjectStorageConfig {
-    let device = pamet.config.deviceData;
+    let device = pamet.config.getDeviceData();
     if (!device) {
         throw Error('Device not set');
     }
     return {
         deviceBranchName: device.id,
         storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        onDeviceRepo: {
+        onDeviceStorageAdapter: {
             name: 'IndexedDB' as StorageAdapterNames,
             args: {
                 projectId: projectId,

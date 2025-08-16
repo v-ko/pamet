@@ -1,5 +1,4 @@
 import { DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, DEFAULT_FONT_STRING, MAX_NOTE_WIDTH, ALIGNMENT_GRID_UNIT, PREFERRED_TEXT_NOTE_ASPECT_RATIO, MIN_NOTE_WIDTH, MIN_NOTE_HEIGHT } from "@/core/constants";
-import { ImageNote } from "@/model/ImageNote";
 import { imageGeometryToFitAre } from "@/components/note/util";
 import { Note } from "@/model/Note";
 import { TextLayout, EMPTY_TOKEN, truncateText } from "@/util";
@@ -103,11 +102,11 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         }
 
         // Find the coordinates and dimentions of the line
-        let lineRect = new Rectangle([textRect.left(), lineY, textRect.width(), lineSpacing]);
+        let lineRect = new Rectangle([textRect.left(), lineY, textRect.width, lineSpacing]);
 
         // Fill the line word by word
         let wordsOnLine: string[] = [];
-        let widthLeft = textRect.width();
+        let widthLeft = textRect.width;
         let usedWords = 0;
 
         let truncateLine = false;
@@ -182,7 +181,7 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         //     log.info('line before truncate', lineText)
         // }
         if (truncateLine) {
-            let width = textRect.width() - ellipsisWidth;
+            let width = textRect.width - ellipsisWidth;
             lineText = truncateText(lineText, width, canvasContext);
         }
 
@@ -221,11 +220,9 @@ export function minimalNonelidedSize(note: Note): Size {
     let defaultNoteSize = new Size([DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT]);
     let noteFont = DEFAULT_FONT_STRING;
 
-    // If it's an image note - fit to the image (if no image - default size)
-    if (note instanceof ImageNote) {
-        let imageNote = note as ImageNote;
-
-        const mediaItem = pamet.findOne({ id: imageNote.content.image_id }) as MediaItem;
+    // If it's a note with just an image - fit to the image (if no image - default size)
+    if (note.content.image_id && !note.content.text) {
+        const mediaItem = pamet.findOne({ id: note.content.image_id }) as MediaItem;
         if (!mediaItem || !mediaItem.width || !mediaItem.height) {
             return defaultNoteSize; // Used just for the aspect ratio
         }
@@ -275,14 +272,14 @@ export function minimalNonelidedSize(note: Note): Size {
     // Adjust the height
     testRect.setSize(new Size([width, height]));
     let textLayout = calculateTextLayout(text, note.textRect(), noteFont);
-    while (testRect.width() >= MIN_NOTE_WIDTH && testRect.height() >= MIN_NOTE_HEIGHT) {
+    while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
         if (textLayout.isElided) {
             break;
         } else {
-            height = testRect.height();
+            height = testRect.height;
         }
 
-        testRect.setSize(new Size([testRect.width(), testRect.height() - unit]));
+        testRect.setSize(new Size([testRect.width, testRect.height - unit]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
     }
 
@@ -291,14 +288,14 @@ export function minimalNonelidedSize(note: Note): Size {
     let textBeforeAdjust = textLayout.text();
     text = textBeforeAdjust;
     testRect.setSize(new Size([width, height]));
-    while (testRect.width() >= MIN_NOTE_WIDTH && testRect.height() >= MIN_NOTE_HEIGHT) {
+    while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
         if (text !== textBeforeAdjust) {
             break;
         } else {
-            width = testRect.width();
+            width = testRect.width;
         }
 
-        testRect.setSize(new Size([testRect.width() - unit, testRect.height()]));
+        testRect.setSize(new Size([testRect.width - unit, testRect.height]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
         text = textLayout.text();
     }

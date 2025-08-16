@@ -39,7 +39,7 @@ class PametCommands {
         let creationPos: Point2D;
 
         if (mousePos === null) {
-            creationPos = pageVS.viewport.realCenter;
+            creationPos = pageVS.viewport.realCenter();
         } else {
             creationPos = pageVS.viewport.unprojectPoint(mousePos);
         }
@@ -121,7 +121,7 @@ class PametCommands {
         let mousePos = pageVS.projectedMousePosition;
         let forwardLinkLocation: Point2D;
         if (mousePos === null) {
-            forwardLinkLocation = pageVS.viewport.realCenter;
+            forwardLinkLocation = pageVS.viewport.realCenter();
         } else {
             forwardLinkLocation = pageVS.viewport.unprojectPoint(mousePos);
         }
@@ -174,10 +174,10 @@ class PametCommands {
         let pageVS = getCurrentPageViewState();
         // Select all
         let selectionMap = new Map();
-        for (let noteVS of pageVS.noteViewStatesByOwnId.values()) {
+        for (let noteVS of pageVS.noteViewStatesById.values()) {
             selectionMap.set(noteVS, true);
         }
-        for (let arrowVS of pageVS.arrowViewStatesByOwnId.values()) {
+        for (let arrowVS of pageVS.arrowViewStatesById.values()) {
             selectionMap.set(arrowVS, true);
         }
         pageActions.updateSelection(pageVS, selectionMap);
@@ -190,9 +190,9 @@ class PametCommands {
 
     @command('Delete current page')
     deleteCurrentPage() {
-        const pageVS = getCurrentPageViewState();
-        if (confirmPageDeletion(pageVS.page.name)) {
-            projectActions.deletePageAndUpdateReferences(pageVS.page);
+        const page = getCurrentPageViewState().page();
+        if (confirmPageDeletion(page.name)) {
+            projectActions.deletePageAndUpdateReferences(page);
         }
     }
 
@@ -224,7 +224,7 @@ class PametCommands {
             let position: Point2D;
 
             if (mousePos === null) {
-                position = pageVS.viewport.realCenter;
+                position = pageVS.viewport.realCenter();
             } else {
                 position = pageVS.viewport.unprojectPoint(mousePos);
             }
@@ -233,7 +233,7 @@ class PametCommands {
             const clipboardContents = await parseClipboardContents();
 
             // Pass the data to the action
-            pasteSpecialProcedure(pageVS.page.id, position, clipboardContents).catch((error) => {
+            pasteSpecialProcedure(pageVS.page().id, position, clipboardContents).catch((error) => {
                 log.error('Error in pasteSpecial procedure:', error);
               });
         } catch (error) {

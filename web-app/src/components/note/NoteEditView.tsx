@@ -1,11 +1,7 @@
-// NoteEditView.tsx
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { Rectangle } from 'fusion/primitives/Rectangle';
-import { Note, SerializedNote } from '@/model/Note';
-import { TextNote } from '@/model/TextNote';
-import { ImageNote } from '@/model/ImageNote';
-import { CardNote } from '@/model/CardNote';
+import { Note, NoteContent, SerializedNote } from '@/model/Note';
 import { pamet } from "@/core/facade";
 import { dumpToDict, loadFromDict } from 'fusion/model/Entity';
 import { currentTime, timestamp } from 'fusion/util/base';
@@ -13,17 +9,18 @@ import { getLogger } from 'fusion/logging';
 import { PametTabIndex } from "@/core/constants";
 import "@/components/note/NoteEditView.css";
 import { ImageEditPropsWidget } from "@/components/note/edit-window/ImageEditPropsWidget";
+import { LinkEditWidget } from "@/components/note/edit-window/LinkEditWidget";
 import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 
 let log = getLogger('EditComponent');
 
 interface EditComponentProps {
-    state: NoteEditViewState;
-    onTitlebarPress: (event: React.MouseEvent) => void;
-    onTitlebarRelease: (event: React.MouseEvent) => void;
-    onCancel: () => void; // added to avoid a dependency to the pageViewState
-    onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
+  state: NoteEditViewState;
+  onTitlebarPress: (event: React.MouseEvent) => void;
+  onTitlebarRelease: (event: React.MouseEvent) => void;
+  onCancel: () => void; // added to avoid a dependency to the pageViewState
+  onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
 }
 
 const NoteEditView: React.FC<EditComponentProps> = observer((
@@ -33,64 +30,88 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     onCancel,
     onSave
   }: EditComponentProps) => {
+/**
+ * Logic for the tool/check-buttons and props visibility:
+ * - We init them from the note content - if text/image/url is present - show them (minmum text)
+ * - If a button is toggled - the useEffect controls some combinations (dont allow none to be selected, links always have text, etc)
+ * - On content changes - that is reflected in _noteData (the local copy of the note .. data)
+ * - On save - we "bake" the note - i.e. apply final changes to the note data and save it
+ *  - A relevant detail - if we hide the e.g. text props - text is not deleted (the user might want it on clicking toggle back)
+ */
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
-  const committed = useRef(false);
+
   const [geometry, setGeometry] = useState<Rectangle>(
     new Rectangle([state.center.x, state.center.y, 400, 400])
   );
-  const noteData = useRef(
-    dumpToDict(state.targetNote) as SerializedNote
-  );
   const [, setForceUpdate] = useState(0);
-   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isDropAllowed, setIsDropAllowed] = useState(false);
 
-
-  const updateNoteData = (newData: Partial<SerializedNote>) => {
-    noteData.current = { ...noteData.current, ...newData };
-    setForceUpdate(x => x + 1);
-  };
-
+  const noteData = useRef(dumpToDict(state.targetNote) as SerializedNote);
+  const committed = useRef(false);
   const [uncommitedImage, setUncommitedImage] = useState<MediaItemData | null>(null);
   const [originalImageForTrashing, setOriginalImageForTrashing] = useState<MediaItemData | null>(null);
 
+  // Initial toggle button positions
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
-    const note = state.targetNote;
-    return note instanceof TextNote || note instanceof CardNote;
+    return (state.targetNote.content.text !== undefined ||
+      state.targetNote.content.url !== undefined);
   });
   const [imageButtonToggled, setImageButtonToggled] = useState(() => {
-      const note = state.targetNote;
-      return note instanceof ImageNote || note instanceof CardNote;
+    return state.targetNote.content.image_id !== undefined;
   });
-  const [linkButtonToggled, setLinkButtonToggled] = useState(false);
+  const [linkButtonToggled, setLinkButtonToggled] = useState(() => {
+    return state.targetNote.content.url !== undefined;
+  });
 
-  // Handle Note type changes
+  const [internalLinkIsSet, setInternalLinkIsSet] = useState(() => {
+    return state.targetNote.content.url?.startsWith('project://') || false;
+  });
+
+  const updateNoteData = (newData: Partial<SerializedNote>) => {
+    noteData.current = { ...noteData.current, ...newData };
+    setInternalLinkIsSet(!!newData.content?.url?.startsWith('project://'));
+    setForceUpdate(x => x + 1);
+  };
+
+  // Measure once before first paint to avoid flicker
+  useLayoutEffect(() => {
+    const el = wrapperRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    // Use current width/height; position will be computed from center
+    setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
+  }, []);
+
+  // Handle toggle button changes to restrict some combinations
   useEffect(() => {
-    let newNote: Note;
     const currentNote = loadFromDict(noteData.current) as Note;
+    const noButtonsToggled = !textButtonToggled && !imageButtonToggled && !linkButtonToggled;
 
-    if (textButtonToggled && imageButtonToggled) {
-      if (currentNote instanceof CardNote) return;
-      newNote = new CardNote(noteData.current);
-    } else if (textButtonToggled) {
-      if (currentNote instanceof TextNote && !(currentNote instanceof CardNote)) return;
-      newNote = new TextNote(noteData.current);
-    } else if (imageButtonToggled) {
-      if (currentNote instanceof ImageNote && !(currentNote instanceof CardNote)) return;
-      newNote = new ImageNote(noteData.current);
-    } else { // Should not happen with proper logic
+    // Apply toggle rules restrictions
+    if (noButtonsToggled ||  // At minimum text should be toggled
+      internalLinkIsSet) {   // Internal links always have text that equals the page name
       setTextButtonToggled(true);
       return;
     }
-    updateNoteData(dumpToDict(newNote) as SerializedNote);
-  }, [textButtonToggled, imageButtonToggled]);
+
+    // A note with a link should have some other content too
+    if (linkButtonToggled && !imageButtonToggled && !textButtonToggled) {
+      setTextButtonToggled(true);
+      return;
+    }
+
+    updateNoteData(dumpToDict(currentNote));
+  }, [textButtonToggled, imageButtonToggled, linkButtonToggled, internalLinkIsSet]);
 
   useEffect(() => {
     // Focus the text area on mount if it's visible
+    log.info("Text button toggled HOOOOK:", textButtonToggled);
     if (textButtonToggled) {
-        textAreaRef.current?.focus();
+      log.info("Text button toggle true:", textButtonToggled, textAreaRef.current);
+      textAreaRef.current?.focus();
     }
   }, [textButtonToggled]);
 
@@ -112,7 +133,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   const removeNoteImage = async () => {
     const currentImageId = noteData.current.content.image_id;
     if (!currentImageId) {
-        throw new Error("removeOriginalImage called when there is no image.");
+      throw new Error("removeOriginalImage called when there is no image.");
     }
 
     const projectid = pamet.appViewState.currentProjectId;
@@ -120,8 +141,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-      // If there is an image associated with the note and it wasn't yet deleted
-      let originalMediaItem: MediaItem | undefined;
+    // If there is an image associated with the note and it wasn't yet deleted
+    let originalMediaItem: MediaItem | undefined;
     if (!originalImageForTrashing && state.targetNote.content.image_id) {
       originalMediaItem = pamet.mediaItem(currentImageId);
       if (!originalMediaItem) {
@@ -147,7 +168,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     }
 
     if (noteData.current.content.image_id) {
-        throw new Error("setNoteImage called when there is already an image.");
+      throw new Error("setNoteImage called when there is already an image.");
     }
 
     const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path, noteData.current.id);
@@ -160,28 +181,26 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     let data = noteData.current
 
     // Determine the definitive note type based on content
-    const hasText = data.content.text && data.content.text.trim().length > 0;
-    const hasImage = !!data.content.image_id;
-    let FinalNoteClass: typeof Note;
-
-    if (hasText && hasImage) {
-        FinalNoteClass = CardNote;
-    } else if (hasImage) {
-        FinalNoteClass = ImageNote;
-    } else { // Default to TextNote if only text is present, or if both are empty
-        FinalNoteClass = TextNote;
-    }
-
-    // Apply the class change to the data object
-    data.type_name = FinalNoteClass.name;
+    const hasText = textButtonToggled && data.content.text && data.content.text?.trim().length > 0;
+    const hasImage = imageButtonToggled && !!data.content.image_id?.trim();
+    const hasLink = linkButtonToggled && !!data.content.url?.trim();
 
     // Clean the content object based on the definitive type
-    const finalContent: any = {};
-    if (FinalNoteClass === TextNote || FinalNoteClass === CardNote) {
-        finalContent.text = data.content.text;
+    const finalContent: NoteContent = {};
+    if (hasText) {
+      finalContent.text = data.content.text;
+    } else {
+      finalContent.text = undefined;
     }
-    if (FinalNoteClass === ImageNote || FinalNoteClass === CardNote) {
-        finalContent.image_id = data.content.image_id;
+    if (hasImage) {
+      finalContent.image_id = data.content.image_id;
+    } else {
+      finalContent.image_id = undefined;
+    }
+    if (hasLink) {
+      finalContent.url = data.content.url;
+    } else {
+      finalContent.url = undefined;
     }
     data.content = finalContent;
 
@@ -203,7 +222,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     // On successful save, the media items are committed. Clear the state.
     setUncommitedImage(null);
     setOriginalImageForTrashing(null);
-
   };
 
   const handleKeyDown = (event: React.KeyboardEvent) => {
@@ -222,7 +240,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   useEffect(() => {
     const updateGeometryHandler = () => {
       let wrapper = wrapperRef.current;
-      if (wrapper === null) {
+      if (!wrapper) {
         log.warning("[resize handler] wrapperRef is null");
         return;
       }
@@ -233,7 +251,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     // Use a resize observer to bind the updateGeometry function to resize events
     // of the superContainer
     let wrapper = wrapperRef.current;
-    if (wrapper === null) {
+    if (!wrapper) {
       log.warning("[resize watch effect] wrapperRef is null");
       return;
     }
@@ -242,9 +260,57 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     return () => resizeObserver.disconnect();
   }, [wrapperRef]);
 
+  const handleDragEnter = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(true);
+
+    const items = event.dataTransfer.items;
+    if (items && items.length > 0 && items[0].kind === 'file' && items[0].type.startsWith('image/')) {
+      setIsDropAllowed(true);
+    } else {
+      setIsDropAllowed(false);
+    }
+  };
+
+  const handleDragLeave = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Check if the mouse is still inside the drop zone
+    if (wrapperRef.current && wrapperRef.current.contains(event.relatedTarget as Node)) {
+      return;
+    }
+
+    setIsDraggingOver(false);
+    setIsDropAllowed(false);
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDraggingOver(false);
+    setIsDropAllowed(false);
+
+    const files = event.dataTransfer.files;
+    if (files && files.length > 0 && files[0].type.startsWith('image/')) {
+      const imageFile = files[0];
+      if (noteData.current.content.image_id) {
+        await removeNoteImage();
+      }
+      const path = `images/pasted_image-${Date.now()}.${imageFile.name.split('.').pop()}`;
+      await setNoteImage(imageFile, path);
+      setImageButtonToggled(true);
+    }
+  };
+
   // Limit the position of the window to the screen
-  let width = geometry.width();
-  let height = geometry.height();
+  let width = geometry.width;
+  let height = geometry.height;
 
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;
@@ -265,53 +331,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     top = 0;
   }
 
-  const handleDragEnter = (event: React.DragEvent) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setIsDraggingOver(true);
-
-    const items = event.dataTransfer.items;
-    if (items && items.length > 0 && items[0].kind === 'file' && items[0].type.startsWith('image/')) {
-        setIsDropAllowed(true);
-    } else {
-        setIsDropAllowed(false);
-    }
-  };
-
-  const handleDragLeave = (event: React.DragEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-
-      // Check if the mouse is still inside the drop zone
-      if (wrapperRef.current && wrapperRef.current.contains(event.relatedTarget as Node)) {
-          return;
-      }
-
-      setIsDraggingOver(false);
-      setIsDropAllowed(false);
-  };
-
-  const handleDragOver = (event: React.DragEvent) => {
-      event.preventDefault();
-  };
-
-  const handleDrop = async (event: React.DragEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      setIsDraggingOver(false);
-      setIsDropAllowed(false);
-
-      const files = event.dataTransfer.files;
-      if (files && files.length > 0 && files[0].type.startsWith('image/')) {
-          const imageFile = files[0];
-          if (noteData.current.content.image_id) {
-              await removeNoteImage();
-          }
-          const path = `images/pasted_image-${Date.now()}.${imageFile.name.split('.').pop()}`;
-          await setNoteImage(imageFile, path);
-          setImageButtonToggled(true);
-      }
-  };
   return (
     <div
       ref={wrapperRef}
@@ -323,21 +342,21 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-        {isDraggingOver &&
-            <div
-                className='drop-overlay'
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    backgroundColor: isDropAllowed ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)',
-                    pointerEvents: 'none',
-                    zIndex: 3000,
-                }}
-            />
-        }
+      {isDraggingOver &&
+        <div
+          className='drop-overlay'
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: isDropAllowed ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 0, 0, 0.2)',
+            pointerEvents: 'none',
+            zIndex: 3000,
+          }}
+        />
+      }
       {/* Title bar */}
       <div className="title-bar">
         {/* move icon area */}
@@ -360,19 +379,19 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       <div className="tool-buttons">
         <button
           className={`tool-button ${textButtonToggled ? 'toggled' : ''}`}
-          onClick={() => {
-            if (!imageButtonToggled) return;
-            setTextButtonToggled(!textButtonToggled)
-          }}
-          tabIndex={PametTabIndex.NoteEditViewWidget1 + 3}
+          onClick={() => setTextButtonToggled(!textButtonToggled)}
+          tabIndex={PametTabIndex.NoteEditView_Tool1}
         >T</button>
-        <button className="tool-button" tabIndex={PametTabIndex.NoteEditViewWidget1 + 4}>🔗</button>
+        <button
+            className={`tool-button ${linkButtonToggled ? 'toggled' : ''}`}
+            onClick={() => setLinkButtonToggled(!linkButtonToggled)}
+            tabIndex={PametTabIndex.NoteEditView_Tool2}>🔗</button>
         <button
           className={`tool-button ${imageButtonToggled ? 'toggled' : ''}`}
           onClick={() => setImageButtonToggled(!imageButtonToggled)}
-          tabIndex={PametTabIndex.NoteEditViewWidget1 + 5}
+          tabIndex={PametTabIndex.NoteEditView_Tool3}
         >🖼️</button>
-        <button className="tool-button" tabIndex={PametTabIndex.NoteEditViewWidget1 + 6}>⋮</button>
+        <button className="tool-button" tabIndex={PametTabIndex.NoteEditView_Tool4}>⋮</button>
       </div>
 
       {/* Main content */}
@@ -383,15 +402,21 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
           setNoteImage={setNoteImage}
           removeNoteImage={removeNoteImage}
         />}
+        {linkButtonToggled && <LinkEditWidget
+          noteData={noteData.current}
+          updateNoteData={updateNoteData}
+          isDraggingOver={isDraggingOver}
+        />}
         {textButtonToggled && <div className="text-container">
           <textarea
             ref={textAreaRef}
             placeholder="Note text"
-            tabIndex={PametTabIndex.NoteEditViewWidget1}
+            tabIndex={PametTabIndex.NoteEditViewText}
             style={{ pointerEvents: isDraggingOver ? 'none' : 'auto' }}
-            defaultValue={state.targetNote.content.text}
+            value={noteData.current.content.text || ''}
+            disabled={internalLinkIsSet}
             onChange={(e) => {
-                updateNoteData({ content: { ...noteData.current.content, text: e.target.value } });
+              updateNoteData({ content: { ...noteData.current.content, text: e.target.value } });
             }}
           />
         </div>}
@@ -402,14 +427,14 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         <button
           className="cancel-button"
           onClick={onCancel}
-          tabIndex={PametTabIndex.NoteEditViewWidget1 + 2}
+          tabIndex={PametTabIndex.NoteEditViewCancel}
         >
           Cancel (Esc)
         </button>
         <button
           className="save-button"
           onClick={bakeNoteAndSave}
-          tabIndex={PametTabIndex.NoteEditViewWidget1 + 1}
+          tabIndex={PametTabIndex.NoteEditViewSave}
         >
           Save (Ctrl+S)
         </button>
