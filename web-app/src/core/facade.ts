@@ -1,6 +1,6 @@
 import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
-import { Change } from "fusion/model/Change";
+import { Change, ChangeType } from "fusion/model/Change";
 import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { appActions } from "@/actions/app";
@@ -69,6 +69,7 @@ export class PametFacade extends PametStore {
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
+    debugging = true;
 
     constructor() {
         super()
@@ -211,7 +212,7 @@ export class PametFacade extends PametStore {
 
         // Mark the local storage as unavailable
         appActions.setLocalStorageState(pamet.appViewState, { available: false });
-        
+
         this._frontendDomainStore = null;
         await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
@@ -264,7 +265,7 @@ export class PametFacade extends PametStore {
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        return this.frontendDomainStore.updateOne(entity);
+        const change = this.frontendDomainStore.updateOne(entity);
     }
 
     removeOne(entity: Entity<EntityData>): Change {
@@ -370,6 +371,8 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
                 }
                 currentPageVS.addViewStateForElement(entity);
             }
+        } else {
+            // Change is empty
         }
     }
 }

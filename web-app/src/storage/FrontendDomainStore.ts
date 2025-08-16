@@ -70,7 +70,11 @@ export class FrontendDomainStore extends PametStore {
         log.info('Updating entity', entity);
         let change = this._store.updateOne(entity);
         updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
-        this._uncommittedChanges.push(change);
+        if (!change.isEmpty()) {
+            this._uncommittedChanges.push(change);
+        } else if (pamet.debugging) {
+            log.warning('Update change is empty, not pushing to uncommitted changes', change);
+        }
         return change;
     }
     removeOne(entity: Entity<EntityData>): Change {
