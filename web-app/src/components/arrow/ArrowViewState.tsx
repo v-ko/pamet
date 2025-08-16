@@ -30,8 +30,6 @@ function specialSigmoid(x: number): number {
 
 export class ArrowViewState extends ElementViewState {
     _arrowData!: ArrowData;
-    // headAnchorNoteViewState: NoteViewState | null = null;
-    // tailAnchorNoteViewState: NoteViewState | null = null;
     pathCalculationPrecision: number = 1;
     _paperPath: paper.Path | null = null;
 
@@ -42,9 +40,6 @@ export class ArrowViewState extends ElementViewState {
 
         makeObservable(this, {
             _arrowData: observable,
-            // _arrow: computed, This returns instances with the same data object (and entities arer expected to be generally immutable )
-            // headAnchorNoteViewState: observable,
-            // tailAnchorNoteViewState: observable,
             bezierCurveParams: computed,
             bezierCurveArrayMidpoints: computed,
             paperPath: computed,
@@ -98,23 +93,23 @@ export class ArrowViewState extends ElementViewState {
         // this.headAnchorNoteViewState = headNVS;
     }
 
-    get headAnchorNoteViewState(): NoteViewState | null {
+    headAnchorNoteViewState(): NoteViewState | null {
         if (!this._arrowData.head.noteAnchorId) {
             console.log('no head anchor')
             return null;
         }
         let pageVS = pamet.appViewState.pageViewState(this._arrowData.parent_id);
-        let headNVS = pageVS.viewStateForElement(this._arrowData.head.noteAnchorId) as NoteViewState | null;
+        let headNVS = pageVS.getViewStateForElement(this._arrowData.head.noteAnchorId) as NoteViewState | null;
         return headNVS;
     }
 
-    get tailAnchorNoteViewState() {
+    tailAnchorNoteViewState() {
         if (!this._arrowData.tail.noteAnchorId) {
             console.log('no tail anchor')
             return null;
         }
-        let pageVS = pamet.appViewState.pageViewState(this._arrowData.id);
-        let tailNVS = pageVS.viewStateForElement(this._arrowData.tail.noteAnchorId ) as NoteViewState | null;
+        let pageVS = pamet.appViewState.pageViewState(this._arrowData.parent_id);
+        let tailNVS = pageVS.getViewStateForElement(this._arrowData.tail.noteAnchorId ) as NoteViewState | null;
         return tailNVS;
     }
 
@@ -125,7 +120,8 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get bezierCurveParams(): BezierCurve[] {
-        let arrow = this.arrow()
+        let arrow = this.arrow();
+        const midPoints = arrow.midPoints();
         let curves: BezierCurve[] = [];
 
         // Calculate head and tail static positions and anchor types
@@ -141,21 +137,22 @@ export class ArrowViewState extends ElementViewState {
 
             // If both have anchors and both anchors are Auto and there's no mid-points
             // infer from the geometry of the notes
-        } if (arrow.tailAnchoredOnNote && arrow.headAnchoredOnNote &&
+        } else if (arrow.tailAnchoredOnNote && arrow.headAnchoredOnNote &&
             (arrow.headAnchorType === ArrowAnchorOnNoteType.auto) &&
             (arrow.tailAnchorType === ArrowAnchorOnNoteType.auto) &&
-            arrow.midPoints.length === 0) {
+            midPoints.length === 0) {
 
             // Check tha note view states are present
             if (this.tailAnchorNoteViewState === null) {
                 throw Error('Tail anchor is set, but tail anchor note view state is not');
             }
-            if (this.headAnchorNoteViewState === null) {
+            const headAnchorNVS = this.headAnchorNoteViewState();
+            if (headAnchorNVS === null) {
                 throw Error('Head anchor is set, but head anchor note view state is not');
             }
 
-            let tailNote = this.headAnchorNoteViewState.note();
-            let headNote = this.headAnchorNoteViewState.note();
+            let tailNote = headAnchorNVS.note();
+            let headNote = headAnchorNVS.note();
             let tailRect = tailNote.rect();
             let headRect = headNote.rect();
 
@@ -196,17 +193,17 @@ export class ArrowViewState extends ElementViewState {
 
             // If one of the anchors is auto and there is at least one midpoint
         } else if ( // Only one of the anchors is possibly auto
-            (arrow.midPoints.length > 0)) {
+            (midPoints.length > 0)) {
             // TODO: use the inferArrowAnchor func from adjacent point using the adj. midpoint
             // where the anchor is on a note
-            let tailAdjacentPoint = arrow.midPoints[0];
-            let headAdjacentPoint = arrow.midPoints[arrow.midPoints.length - 1];
+            let tailAdjacentPoint = midPoints[0];
+            let headAdjacentPoint = midPoints[midPoints.length - 1];
 
             effectiveTailAnchorType = this.inferTailAnchorType(tailAdjacentPoint);
             effectiveHeadAnchorType = this.inferHeadAnchorType(headAdjacentPoint);
 
         } else if (  // Only one of the anchors is possibly auto
-            (arrow.midPoints.length === 0)) {
+            (midPoints.length === 0)) {
             // if one of the anchors is auto and there's no midpoints
             // TODO: Infer from the adjacent point (using the non-auto anchor as adjacent)
             // If the tail is auto - get the head point and infer the tail anchor
@@ -215,7 +212,7 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.headPoint) {
                     headPoint = arrow.headPoint;
                 } else {
-                    headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), arrow.headAnchorType);
+                    headPoint = arrowAnchorPosition(this.headAnchorNoteViewState()!.note(), arrow.headAnchorType);
                 }
                 effectiveTailAnchorType = this.inferTailAnchorType(headPoint);
                 effectiveHeadAnchorType = arrow.headAnchorType;
@@ -224,7 +221,7 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.tailPoint) {
                     tailPoint = arrow.tailPoint;
                 } else {
-                    tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), arrow.tailAnchorType);
+                    tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState()!.note(), arrow.tailAnchorType);
                 }
                 effectiveHeadAnchorType = this.inferHeadAnchorType(tailPoint);
                 effectiveTailAnchorType = arrow.tailAnchorType;
@@ -241,18 +238,18 @@ export class ArrowViewState extends ElementViewState {
         if (effectiveTailAnchorType === ArrowAnchorOnNoteType.none) {
             tailPoint = arrow.tailPoint!;
         } else {
-            tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), effectiveTailAnchorType);
+            tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState()!.note(), effectiveTailAnchorType);
         }
 
         if (effectiveHeadAnchorType === ArrowAnchorOnNoteType.none) {
             headPoint = arrow.headPoint!;
         } else {
-            headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), effectiveHeadAnchorType);
+            headPoint = arrowAnchorPosition(this.headAnchorNoteViewState()!.note(), effectiveHeadAnchorType);
         }
 
 
         // If the head and tail are on the same point with no midpoints - set control points such that the arrow is a loop
-        if (arrow.midPoints.length === 0 && tailPoint.equals(headPoint)) {
+        if (midPoints.length === 0 && tailPoint.equals(headPoint)) {
             let controlPointDistance = CP_BASE_DISTANCE;
             // Set perpendicular control points
             let cp1 = tailPoint.add(new Point2D([controlPointDistance, 0]));
@@ -264,9 +261,9 @@ export class ArrowViewState extends ElementViewState {
         // Infer adjacent points in order to calculate the first and last bezier control points
         let tailAdjacentPoint: Point2D;
         let headAdjacentPoint: Point2D;
-        if (arrow.midPoints.length > 0) {
-            tailAdjacentPoint = arrow.midPoints[0];
-            headAdjacentPoint = arrow.midPoints[arrow.midPoints.length - 1];
+        if (midPoints.length > 0) {
+            tailAdjacentPoint = midPoints[0];
+            headAdjacentPoint = midPoints[midPoints.length - 1];
         } else {
             tailAdjacentPoint = headPoint;
             headAdjacentPoint = tailPoint;
@@ -278,15 +275,15 @@ export class ArrowViewState extends ElementViewState {
         // Add the second control point for the first curve
         // and all the middle curves (if any), excluding the last control point
         let prevPoint: Point2D = tailPoint;
-        for (let idx = 0; idx < arrow.midPoints.length; idx++) {
-            let currentPoint = arrow.midPoints[idx];
+        for (let idx = 0; idx < midPoints.length; idx++) {
+            let currentPoint = midPoints[idx];
 
             /// If we're at the last point
             let nextPoint: Point2D;
-            if (idx + 1 === arrow.midPoints.length) {
+            if (idx + 1 === midPoints.length) {
                 nextPoint = headPoint;
             } else {
-                nextPoint = arrow.midPoints[idx + 1];
+                nextPoint = midPoints[idx + 1];
             }
 
             // Calculate alpha (see the schematic for details)
@@ -363,11 +360,12 @@ export class ArrowViewState extends ElementViewState {
         let arrow = this.arrow();
         let effectiveTailAnchorType: ArrowAnchorOnNoteType;
         if (arrow.tailAnchorType === ArrowAnchorOnNoteType.auto) {
-            if (this.tailAnchorNoteViewState === null) {
+            const tailAnchorNVS = this.tailAnchorNoteViewState();
+            if (tailAnchorNVS === null) {
                 throw Error('Tail anchor type is AUTO, but no head note view state is set');
             }
             effectiveTailAnchorType = inferArrowAnchorType(
-                secondPoint, new Rectangle(this.tailAnchorNoteViewState._noteData.geometry));
+                secondPoint, new Rectangle(tailAnchorNVS._noteData.geometry));
         } else {
             effectiveTailAnchorType = arrow.tailAnchorType;
         }
@@ -380,11 +378,12 @@ export class ArrowViewState extends ElementViewState {
         let arrow = this.arrow();
         let effectiveHeadAnchorType: ArrowAnchorOnNoteType;
         if (arrow.headAnchorType === ArrowAnchorOnNoteType.auto) {
-            if (this.headAnchorNoteViewState === null) {
+            const headAnchorNVS = this.headAnchorNoteViewState();
+            if (headAnchorNVS === null) {
                 throw Error('Head anchor type is AUTO, but no head note view state is set');
             }
             effectiveHeadAnchorType = inferArrowAnchorType(
-                secondPoint, new Rectangle(this.headAnchorNoteViewState._noteData.geometry));
+                secondPoint, new Rectangle(headAnchorNVS._noteData.geometry));
         } else {
             effectiveHeadAnchorType = arrow.headAnchorType;
         }

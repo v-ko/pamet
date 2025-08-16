@@ -616,7 +616,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
             for (const imageFile of imageFiles) {
                 try {
-                    position = await createNoteWithImageFromBlob(state.page.id, position, imageFile);
+                    position = await createNoteWithImageFromBlob(state.page().id, position, imageFile);
                 } catch (error) {
                     log.error('Error creating image note from dropped file:', error);
                 }
@@ -631,12 +631,11 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
   let imageUrls: Set<string> = new Set();
-  const config = pamet.config;
-  const userData = config.userData;
+  const userId = pamet.appViewState.userId;
   const projectId = pamet.appViewState.currentProjectId;
 
   for (let noteVS of state.noteViewStatesById.values()) {
-    if (!userData || !projectId) { // Lazy. Could be done outside of the loop
+    if (!userId || !projectId) { // Lazy. Could be done outside of the loop
       continue
     }
 
@@ -646,7 +645,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       if (!mediaItem) {
           continue;
       }
-      let mediaItemRoute_ = mediaItemRoute(mediaItem, userData.id, projectId);
+      let mediaItemRoute_ = mediaItemRoute(mediaItem, userId, projectId);
       // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
       let mediaItemPath = mediaItemRoute_.toRelativeReference();
 

@@ -30,16 +30,16 @@ describe('PametConfig', () => {
 
     test('userData', () => {
         let userData: UserData = { id: '123', name: 'John Doe', projects: []}
-        config.userData = userData;
+        config.setUserData(userData);
 
-        expect(config.userData).toEqual(userData);
+        expect(config.getUserData()).toEqual(userData);
         expect(adapter.get('user')).toEqual(userData);
     });
 
     test('setUpdateHandler', () => {
         let handler = jest.fn();
         config.setUpdateHandler(handler);
-        config.deviceData = { id: '123', name: 'WebApp' };
+        config.setDeviceData({ id: '123', name: 'WebApp' });
 
         // Expect the handler to fire
         expect(handler).toHaveBeenCalled();

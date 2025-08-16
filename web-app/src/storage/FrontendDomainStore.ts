@@ -106,10 +106,7 @@ export class FrontendDomainStore extends PametStore {
         this._expectedDelta.mergeWithPriority(delta);
 
         // Send the delta to the storage service
-        let currentProject = pamet.appViewState.currentProject();
-        if (!currentProject) {
-            throw Error('No current project set');
-        }
+        let currentProject = pamet.appViewState.getCurrentProject();
         pamet.storageService.commit(currentProject.id, delta.data, 'Auto-commit')
     }
 

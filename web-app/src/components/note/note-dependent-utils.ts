@@ -102,11 +102,11 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         }
 
         // Find the coordinates and dimentions of the line
-        let lineRect = new Rectangle([textRect.left(), lineY, textRect.width(), lineSpacing]);
+        let lineRect = new Rectangle([textRect.left(), lineY, textRect.width, lineSpacing]);
 
         // Fill the line word by word
         let wordsOnLine: string[] = [];
-        let widthLeft = textRect.width();
+        let widthLeft = textRect.width;
         let usedWords = 0;
 
         let truncateLine = false;
@@ -181,7 +181,7 @@ export function calculateTextLayout(text: string, textRect: Rectangle, font: str
         //     log.info('line before truncate', lineText)
         // }
         if (truncateLine) {
-            let width = textRect.width() - ellipsisWidth;
+            let width = textRect.width - ellipsisWidth;
             lineText = truncateText(lineText, width, canvasContext);
         }
 
@@ -272,14 +272,14 @@ export function minimalNonelidedSize(note: Note): Size {
     // Adjust the height
     testRect.setSize(new Size([width, height]));
     let textLayout = calculateTextLayout(text, note.textRect(), noteFont);
-    while (testRect.width() >= MIN_NOTE_WIDTH && testRect.height() >= MIN_NOTE_HEIGHT) {
+    while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
         if (textLayout.isElided) {
             break;
         } else {
-            height = testRect.height();
+            height = testRect.height;
         }
 
-        testRect.setSize(new Size([testRect.width(), testRect.height() - unit]));
+        testRect.setSize(new Size([testRect.width, testRect.height - unit]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
     }
 
@@ -288,14 +288,14 @@ export function minimalNonelidedSize(note: Note): Size {
     let textBeforeAdjust = textLayout.text();
     text = textBeforeAdjust;
     testRect.setSize(new Size([width, height]));
-    while (testRect.width() >= MIN_NOTE_WIDTH && testRect.height() >= MIN_NOTE_HEIGHT) {
+    while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
         if (text !== textBeforeAdjust) {
             break;
         } else {
-            width = testRect.width();
+            width = testRect.width;
         }
 
-        testRect.setSize(new Size([testRect.width() - unit, testRect.height()]));
+        testRect.setSize(new Size([testRect.width - unit, testRect.height]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
         text = textLayout.text();
     }

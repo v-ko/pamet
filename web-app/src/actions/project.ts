@@ -41,7 +41,7 @@ class ProjectActions {
     pamet.insertPage(page)
 
     // Add a "Press H for help" note in the center
-    let note = CardNote.createNew({pageId: page.id})
+    let note = CardNote.createNew({ pageId: page.id })
     note.content.text = 'Press H for help'
     let noteRect = note.rect()
     noteRect.setSize(minimalNonelidedSize(note))
@@ -50,10 +50,8 @@ class ProjectActions {
     pamet.insertNote(note)
 
     // Set page as default for the project
-    let projectData = appState.currentProject()
-    if (!projectData) {
-      throw Error('No current project')
-    }
+
+    let projectData = appState.getCurrentProject();
     projectData.defaultPageId = page.id
     this.updateProject(projectData)
   }
@@ -82,7 +80,7 @@ class ProjectActions {
     pamet.insertPage(newPage)
 
     // Create a forward link note on the given location in the current page
-    let currentPage = appState.currentPageViewState.page
+    let currentPage = appState.currentPageViewState.page()
     let forwardLink = CardNote.createInternalLinkNote(newPage)
     // Autosize and set at location
     let minimalSize = minimalNonelidedSize(forwardLink);
@@ -134,10 +132,7 @@ class ProjectActions {
 
   @action
   goToDefaultPage(appState: WebAppState) {
-    const projectData = appState.currentProject();
-    if (!projectData) {
-      throw Error('No current project');
-    }
+    const projectData = appState.getCurrentProject();
     const defaultPageId = projectData.defaultPageId;
 
     if (defaultPageId) {

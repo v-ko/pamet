@@ -140,9 +140,10 @@ export class PageViewState{
     }
 
     createElementViewStates() {
-        const notes = Array.from(pamet.notes({ parentId: this.page.id }))
+        const pageId = this.page().id;
+        const notes = Array.from(pamet.notes({ parentId: pageId }))
         this._updateNoteViewStates(notes);
-        const arrows = Array.from(pamet.arrows({ parentId: this.page.id }))
+        const arrows = Array.from(pamet.arrows({ parentId: pageId }))
         this._updateArrowViewStates(arrows);
     }
 
@@ -254,18 +255,18 @@ export class PageViewState{
         }
     }
 
-    viewStateForElement(elementId: string): NoteViewState | ArrowViewState | null {
+    getViewStateForElement(elementId: string): NoteViewState | ArrowViewState | null {
         return this.noteViewStatesById.get(elementId) || this.arrowViewStatesById.get(elementId) || null;
     }
     viewStateForElementId(id: string): NoteViewState | ArrowViewState | null {
         try {
-            return this.viewStateForElement(id);
+            return this.getViewStateForElement(id);
         } catch {
             return null;
         }
     }
 
-    get page() {
+    page() {
         let pageData = toJS(this._pageData);
         return new Page(pageData)
     }
@@ -473,25 +474,6 @@ export class PageViewState{
             return closestNoteVS;
         }
         return null;
-    }
-
-    get selectedNotesVSs(): NoteViewState[] {
-        let selectedNoteVSs = [];
-        for (let elementVS of this.selectedElementsVS) {
-            if (elementVS instanceof NoteViewState) {
-                selectedNoteVSs.push(elementVS);
-            }
-        }
-        return selectedNoteVSs;
-    }
-    get selectedArrowsVSs(): ArrowViewState[] {
-        let selectedArrowVSs = [];
-        for (let elementVS of this.selectedElementsVS) {
-            if (elementVS instanceof ArrowViewState) {
-                selectedArrowVSs.push(elementVS);
-            }
-        }
-        return selectedArrowVSs;
     }
 }
 

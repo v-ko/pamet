@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { pamet } from '@/core/facade';
 import { timestamp, currentTime } from 'fusion/util/base';
 import { createProject, switchToProject } from "@/procedures/app";
+import { ProjectData } from '@/model/config/Project';
 
 interface CreateProjectDialogProps {
   onClose: () => void;
@@ -81,10 +82,15 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
       return;
     }
 
-    const newProject = {
+    const userId = pamet.appViewState.userId;
+    if (!userId) {
+      throw new Error('User ID is not set. Cannot create project.');
+    }
+
+    const newProject: ProjectData = {
       id,
       title,
-      owner: pamet.config.userData!.id,
+      owner: userId,
       description,
       created: timestamp(currentTime())
     };

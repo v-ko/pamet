@@ -47,16 +47,13 @@ export class Viewport {
   get yReal(): number {
     return this._realGeometry[1];
   }
-  projectedBounds(): Rectangle {
-    return this.projectRect(this.realBounds());
-  }
 
-  realBounds(): Rectangle {
+  get realBounds(): Rectangle {
     return new Rectangle(this._realGeometry)
   }
 
-  get realCenter(): Point2D {
-    return this.realBounds().center();
+  realCenter(): Point2D {
+    return this.realBounds.center();
   }
 
   public heightScaleFactor(): number {
@@ -66,7 +63,7 @@ export class Viewport {
   // Setters
 
   moveRealCenterTo(new_center: Point2D) {
-    const half_size = this.realBounds().size();
+    const half_size = this.realBounds.size();
     half_size.divide_inplace(2);
     this._realGeometry[0] = new_center.x - half_size.x;
     this._realGeometry[1] = new_center.y - half_size.y;

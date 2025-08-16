@@ -108,7 +108,7 @@ class NoteActions {
                 pamet.updateNote(initialNote);
             } else {
                 viewStateNote.setRect(rect);
-                let noteVS = state.viewStateForElement(viewStateNote.id) as NoteViewState;
+                let noteVS = state.getViewStateForElement(viewStateNote.id) as NoteViewState;
                 noteVS.updateFromNote(viewStateNote);
             }
         }
@@ -138,7 +138,7 @@ class NoteActions {
 
             // If both head and tail are anchored to notes which move - move midpoints
             if (tailMoved && headMoved) {
-                let midPoints = initialArrow.midPoints.map(
+                let midPoints = initialArrow.midPoints().map(
                     (p) => snapVectorToGrid(p.add(realDelta)));
                 viewStateArrow.replaceMidpoints(midPoints);
             }
@@ -146,10 +146,10 @@ class NoteActions {
             if (final) {
                 initialArrow.tailPoint = viewStateArrow.tailPoint;
                 initialArrow.headPoint = viewStateArrow.headPoint;
-                initialArrow.replaceMidpoints(viewStateArrow.midPoints);
+                initialArrow.replaceMidpoints(viewStateArrow.midPoints());
                 pamet.updateArrow(initialArrow);
             } else {
-                let arrowVS = state.viewStateForElement(viewStateArrow.id) as ArrowViewState;
+                let arrowVS = state.getViewStateForElement(viewStateArrow.id) as ArrowViewState;
                 arrowVS.updateFromArrow(viewStateArrow);
             }
         }

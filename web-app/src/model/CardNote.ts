@@ -98,9 +98,9 @@ export class CardNote extends Note {
                 ]);
 
                 textArea = new Rectangle([
-                    noteRect.x + imageArea.width(),
+                    noteRect.x + imageArea.width,
                     noteRect.y,
-                    noteSize.x - imageArea.width(),
+                    noteSize.x - imageArea.width,
                     noteSize.y
                 ]);
             } else { // Image is wide or similar to the note, align the card vertically
@@ -112,9 +112,9 @@ export class CardNote extends Note {
                 ]);
                 textArea = new Rectangle([
                     noteRect.x,
-                    noteRect.y + imageArea.height(),
+                    noteRect.y + imageArea.height,
                     noteSize.x,
-                    noteSize.y - imageArea.height()
+                    noteSize.y - imageArea.height
                 ]);
             }
         }

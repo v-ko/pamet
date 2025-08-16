@@ -17,7 +17,7 @@ class AppActions {
         log.info(`Setting current page to ${pageId}`);
 
         let page = pageId ? pamet.page(pageId) : null;
-        
+
         if (page === undefined) {
             log.error('Page not found in the domain store.', pageId)
         }
@@ -32,7 +32,7 @@ class AppActions {
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
         }
-        pamet.router.pushRoute(state.route());
+        pamet.router.pushRoute(state.toRoute());
     }
 
     @action({ issuer: 'service' })

@@ -46,7 +46,7 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     let note = noteVS.note();
     ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
     let rect = note.rect();
-    drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width(), rect.height(), 20);
+    drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
 }
 
 
@@ -176,7 +176,7 @@ export class CanvasPageRenderer {
             return false;
         }
         let offscreenCanvas = new OffscreenCanvas(
-            cacheRectAfterDPR.width(), cacheRectAfterDPR.height());
+            cacheRectAfterDPR.width, cacheRectAfterDPR.height);
 
         let ctx = offscreenCanvas.getContext('2d') as CanvasRenderingContext2D | null;
         if (!ctx) {
@@ -204,7 +204,7 @@ export class CanvasPageRenderer {
         ctx.restore()
 
         let imageBitmap = offscreenCanvas.transferToImageBitmap();
-        if (imageBitmap.width !== cacheRectAfterDPR.width() || imageBitmap.height !== cacheRectAfterDPR.height()) {
+        if (imageBitmap.width !== cacheRectAfterDPR.width || imageBitmap.height !== cacheRectAfterDPR.height) {
             log.error('Image bitmap size does not match cache rect size', imageBitmap, cacheRectAfterDPR);
         } else {
         }
@@ -248,7 +248,7 @@ export class CanvasPageRenderer {
         // mainCtx.imageSmoothingQuality = 'low'
         mainCtx.drawImage(
             imageBitmap,
-            cacheRectReal.x, cacheRectReal.y, cacheRectReal.width(), cacheRectReal.height()
+            cacheRectReal.x, cacheRectReal.y, cacheRectReal.width, cacheRectReal.height
         )
 
         mainCtx.restore()
@@ -323,7 +323,7 @@ export class CanvasPageRenderer {
         // // Draw viewport boundaries (for debugging)
         // ctx.strokeStyle = 'black';
         // ctx.lineWidth = 1;
-        // ctx.strokeRect(...state.viewport.realBounds().data());
+        // ctx.strokeRect(...state.viewport.realBounds.data());
 
         // Draw a rectangle for the page outline if the viewport is zoomed out
         // enough
@@ -382,11 +382,12 @@ export class CanvasPageRenderer {
                 let newArrowVS = new ArrowViewState(
                     arrow)
                 let view = new ArrowCanvasView(this, newArrowVS);
-                try{
+                try {
                     ctx.save();
                     view.render(ctx);
                 } catch (e) {
                     log.error('Error rendering new arrow', e);
+                    pamet.reportEntityProblem(newArrowVS.element().id);
                 } finally {
                     ctx.restore();
                 }
@@ -475,7 +476,7 @@ export class CanvasPageRenderer {
         }
 
         // Draw notes
-        let viewportRect = state.viewport.realBounds()
+        let viewportRect = state.viewport.realBounds
 
         let drawStats: ElementDrawStats = {
             total: 0,
@@ -510,7 +511,7 @@ export class CanvasPageRenderer {
             const cacheRectAfterDPR = this.cacheRectAfterDPR(noteVS, state.viewport);
             if (imageBitmap !== undefined) {
                 cachePresent = true;
-                sizeMatches = imageBitmap.width === cacheRectAfterDPR.width() && imageBitmap.height === cacheRectAfterDPR.height();
+                sizeMatches = imageBitmap.width === cacheRectAfterDPR.width && imageBitmap.height === cacheRectAfterDPR.height;
             } else {
                 cachePresent = false;
                 sizeMatches = false;
@@ -583,6 +584,7 @@ export class CanvasPageRenderer {
                 let view = new ArrowCanvasView(this, arrowVS);
                 view.render(ctx);
             } catch (e) {
+                pamet.reportEntityProblem(arrowVS.element().id);
                 log.error('Error rendering arrow', arrowVS, e);
             }
         }
@@ -599,13 +601,13 @@ export class CanvasPageRenderer {
         // Overview
 
         // Draw stats
-        let pixelSpaceRect = state.viewport.projectedBounds();
+        let pixelSpaceRect = state.viewport.projectRect(state.viewport.realBounds);
         ctx.save()
         ctx.resetTransform()
         ctx.fillStyle = 'black';
         ctx.font = '15px sans-serif';
         let xStats = 10;
-        let yStats = pixelSpaceRect.height() - 10;
+        let yStats = pixelSpaceRect.height - 10;
         ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
         ctx.restore()
 
@@ -640,6 +642,7 @@ export class CanvasPageRenderer {
                 ctx.save();
                 arrowView.renderSelectionOverlay(ctx);
             } catch (e) {
+                pamet.reportEntityProblem(childVS.element().id);
                 log.error('Error rendering arrow selection overlay', e);
             } finally {
                 ctx.restore();

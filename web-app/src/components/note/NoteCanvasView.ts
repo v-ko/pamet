@@ -52,7 +52,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
         // Center align vertically in textRect
         let textHeight = textLayout.lines.length * NO_SCALE_LINE_SPACING;
-        textTopLeft.y += (textRect_.height() - textHeight) / 2;
+        textTopLeft.y += (textRect_.height - textHeight) / 2;
 
         // Adjust for the text body to be drawn in the middle of the line
         let adjTopLeft = textTopLeft.copy();
@@ -68,7 +68,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
         // Correct for ctx center align behavior
         if (textLayout.alignment === 'center') {
-            adjTopLeft.x = adjTopLeft.x + textRect_.width() / 2;
+            adjTopLeft.x = adjTopLeft.x + textRect_.width / 2;
         }
 
         // Draw text

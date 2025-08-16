@@ -309,8 +309,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   };
 
   // Limit the position of the window to the screen
-  let width = geometry.width();
-  let height = geometry.height();
+  let width = geometry.width;
+  let height = geometry.height;
 
   let left = state.center.x - width / 2;
   let top = state.center.y - height / 2;

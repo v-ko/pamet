@@ -78,29 +78,9 @@ export class WebAppState {
     });
   }
 
-  get device(): DeviceData | null {
-    if (!this.deviceId) {
-      return null;
-    }
-    let deviceData = pamet.config.deviceData;
-    if (!deviceData) {
-      throw new Error("DeviceData missing.");
-    }
-    return deviceData;
-  }
-  get user(): UserData | null {
-    if (!this.userId) {
-      return null;
-    }
-    let userData = pamet.config.userData;
-    if (!userData) {
-      throw new Error("UserData missing.");
-    }
-    return userData;
-  }
-  currentProject() {
+  getCurrentProject(): ProjectData {
     if (!this.currentProjectId) {
-      return null;
+      throw new Error("No current project id set.");
     }
     let projectData = pamet.project(this.currentProjectId);
     if (!projectData) {
@@ -112,13 +92,13 @@ export class WebAppState {
   pageViewState(pageId: string): PageViewState {
     // Since there's no caching just returns the current if it's the correct
     // page id. Else throws an error
-    if (this.currentPageViewState && this.currentPageViewState.page.id === pageId) {
+    if (this.currentPageViewState && this.currentPageViewState.page().id === pageId) {
       return this.currentPageViewState;
     }
     throw new Error(`PageViewState not found for pageId: ${pageId}.`);
   }
 
-  route(): PametRoute {
+  toRoute(): PametRoute {
     let userId = this.userId;
     let projectId = this.currentProjectId;
     let pageId = this.currentPageId;

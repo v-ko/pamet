@@ -48,7 +48,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   // Change the title when the current page changes
   useEffect(() => {
     if (state.currentPageViewState) {
-      document.title = state.currentPageViewState.page.name;
+      document.title = state.currentPageViewState.page().name;
     } else {
       document.title = "Pamet";
     }
@@ -88,7 +88,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   // Check for resurce availability, and prep error messages if needed
   let shouldDisplayPage = true
 
-  if (!state.device) {
+  if (!state.deviceId) {
     errorMessages.push('DeviceData missing. This is a pretty critical error.')
   }
   // let localStorageAvailable = state.storageState.localStorage.available;
@@ -209,7 +209,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onClick={() => appActions.openPageProperties(state)}
           style={{ cursor: 'pointer' }}
           title="Page properties"
-        >{currentPageVS ? currentPageVS.page.name : '(no page open)'}</div>
+        >{currentPageVS ? currentPageVS.page().name : '(no page open)'}</div>
         <VerticalSeparator />
         <img src={accountCircleIconUrl} alt="Login/Sign up" />
       </Panel>
@@ -263,7 +263,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
       {state.dialogMode === AppDialogMode.PageProperties && state.currentPageViewState && (
         <PagePropertiesDialog
-          page={state.currentPageViewState.page}
+          page={state.currentPageViewState.page()}
           onClose={() => appActions.closeAppDialog(state)}
           onSave={(page) => pageActions.updatePageProperties(page)}
           onDelete={(page) => {

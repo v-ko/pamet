@@ -31,7 +31,7 @@ export interface PageQueryFilter { [key: string]: any }
 
 // Service related
 export function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
-    let device = pamet.config.deviceData;
+    let device = pamet.config.getDeviceData();
     if (!device) {
         throw Error('Device not set');
     }
@@ -201,19 +201,17 @@ export class PametFacade extends PametStore {
 
     async detachFromProject(projectId: string) {
         log.info('Detaching FDS for project', projectId);
-        let currentProject = this.appViewState.currentProject();
-
-        // Mark the local storage as unavailable
-        appActions.setLocalStorageState(pamet.appViewState, { available: false });
-
-        if (!currentProject) {
-            log.error('Trying to detach FDS without a project');
-            return;
-        } else if (currentProject.id !== projectId) {
-            log.error('Wrong project id passed for FDS detachment');
+        let currentProject: ProjectData;
+        try{
+            currentProject = this.appViewState.getCurrentProject();
+        } catch (e) {
+            log.error('Error getting current project', e);
             return;
         }
 
+        // Mark the local storage as unavailable
+        appActions.setLocalStorageState(pamet.appViewState, { available: false });
+        
         this._frontendDomainStore = null;
         await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
@@ -250,7 +248,7 @@ export class PametFacade extends PametStore {
     }
 
     projects(): ProjectData[] {
-        let userData = this.config.userData;
+        let userData = this.config.getUserData();
         if (!userData) {
             throw Error('User data not set');
         }
@@ -331,12 +329,12 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
         }
 
         // If it's the current page
-        let currentPageId = currentPageVS.page.id;
+        let currentPageId = currentPageVS.page().id;
         let childVS = currentPageVS.viewStateForElementId(change.entityId)
         if (currentPageId === change.entityId) {
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
-                if (currentPageVS.page.id === change.entityId) {
+                if (currentPageId === change.entityId) {
                     let userId = appState.userId;
                     if (userId === null) {
                         throw Error('No user set');
@@ -366,7 +364,7 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
             let entity = pamet.findOne({ id: change.entityId });
             if (entity instanceof Note || entity instanceof Arrow) {
                 // get current page vs
-                if (!currentPageVS || currentPageVS.page.id !== entity.parentId) {
+                if (!currentPageVS || currentPageId !== entity.parentId) {
                     // Skip processing if the parent of the element is not open
                     continue;
                 }
