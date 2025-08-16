@@ -162,8 +162,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
     const renderDisposer = reaction(() => {
       // Get note and arrow changes by accessing the computed elements
-      let notes = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS._noteData)
-      let arrows = Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => arrowVS._arrowData);
+      let notes = Array.from(state.noteViewStatesById.values()).map((noteVS) => noteVS._noteData)
+      let arrows = Array.from(state.arrowViewStatesById.values()).map((arrowVS) => arrowVS._arrowData);
 
       let mousePosIfRelevant: Point2D | null = null;
       // Trigger rendering if the mouse pos has changed AND it's
@@ -201,15 +201,6 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
       // imgRefUpdateDisposer();
     }
   }, [state, canvasRef]);
-
-  // // Should be a command
-  // const copySelectedToClipboard = useCallback(() => {
-  //   let notesData = Array.from(state.noteViewStatesByOwnId.values()).map((noteVS) => noteVS.note.data());
-  //   // this is broken, selected children has noteVS objects
-  //   // let selected_notes = notesData.filter((note) => state.selectedChildren.has(note.id.toString()));
-  //   let text = selected_notes.map((note) => note.content.text).join('\n\n');
-  //   navigator.clipboard.writeText(text);
-  // }, [state.noteViewStatesByOwnId, state.selectedChildren]);
 
 
   // Mouse event handlers
@@ -644,7 +635,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   const userData = config.userData;
   const projectId = pamet.appViewState.currentProjectId;
 
-  for (let noteVS of state.noteViewStatesByOwnId.values()) {
+  for (let noteVS of state.noteViewStatesById.values()) {
     if (!userData || !projectId) { // Lazy. Could be done outside of the loop
       continue
     }

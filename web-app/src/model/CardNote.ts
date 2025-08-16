@@ -6,7 +6,6 @@ import { pamet } from "@/core/facade";
 import { MediaItem } from "fusion/model/MediaItem";
 import { PametRoute } from "@/services/routing/route";
 import { Page } from "@/model/Page";
-import { elementId } from "@/model/Element";
 import { currentTime, timestamp } from "fusion/util/base";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
 
@@ -21,11 +20,11 @@ export interface CardNoteLayout {
 @entityType('CardNote')
 export class CardNote extends Note {
     static createNew(props: Partial<NoteData> & { pageId: string }): Note {
-        let ownId = getEntityId();
-        let id = elementId(props.pageId, ownId);
+        let id = getEntityId()
 
-        let noteData = {
+        let noteData: NoteData = {
             id: id,
+            parent_id: props.pageId,
             content: {
                 text: ''
             },
@@ -43,12 +42,12 @@ export class CardNote extends Note {
         return new CardNote(noteData);
     }
     static createInternalLinkNote(page: Page): CardNote {
-        let ownId = getEntityId();
-        let id = elementId(page.id, ownId);
+        let id = getEntityId();
         let currentTimestamp = timestamp(currentTime());
 
         let note = new CardNote({
             id: id,
+            parent_id: page.id,
             content: {
                 text: page.name,
                 url: new PametRoute({ pageId: page.id }).toProjectScopedURI(),

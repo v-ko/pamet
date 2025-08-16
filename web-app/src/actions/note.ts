@@ -99,7 +99,7 @@ class NoteActions {
                 throw new Error('Entity for moved note not found');
             }
 
-            movedNoteIds.push(initialNote.own_id);
+            movedNoteIds.push(initialNote.id);
 
             let rect = initialNote.rect();
             rect.setTopLeft(snapVectorToGrid(rect.topLeft().add(realDelta)));
@@ -108,7 +108,7 @@ class NoteActions {
                 pamet.updateNote(initialNote);
             } else {
                 viewStateNote.setRect(rect);
-                let noteVS = state.viewStateForElement(viewStateNote.own_id) as NoteViewState;
+                let noteVS = state.viewStateForElement(viewStateNote.id) as NoteViewState;
                 noteVS.updateFromNote(viewStateNote);
             }
         }
@@ -149,7 +149,7 @@ class NoteActions {
                 initialArrow.replaceMidpoints(viewStateArrow.midPoints);
                 pamet.updateArrow(initialArrow);
             } else {
-                let arrowVS = state.viewStateForElement(viewStateArrow.own_id) as ArrowViewState;
+                let arrowVS = state.viewStateForElement(viewStateArrow.id) as ArrowViewState;
                 arrowVS.updateFromArrow(viewStateArrow);
             }
         }

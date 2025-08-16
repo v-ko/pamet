@@ -493,7 +493,7 @@ export class CanvasPageRenderer {
         let withCorrectCache = new Set<NoteViewState>(); // Render all with correct cache
         let withExpiredCache = new Set<NoteViewState>(); // Render all with correct cache
         let withNoCache = new Set<NoteViewState>(); // nvs in the viewport without cache
-        for (const noteVS of state.noteViewStatesByOwnId.values()) {
+        for (const noteVS of state.noteViewStatesById.values()) {
             // Skip if the note is outside the viewport
             if (!viewportRect.intersects(new Rectangle(noteVS._noteData.geometry))) {
                 continue;
@@ -573,7 +573,7 @@ export class CanvasPageRenderer {
 
 
         // Draw arrows
-        for (const arrowVS of state.arrowViewStatesByOwnId.values()) {
+        for (const arrowVS of state.arrowViewStatesById.values()) {
             // Skip if the arrow is outside the viewport | does not really speed up anything
             // if (!arrowVS.intersectsRect(viewportRect)) {
             //     continue;

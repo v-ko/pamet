@@ -33,6 +33,7 @@ class ProjectActions {
     let pageData: PageData = {
       name: 'Home Page',
       id: getEntityId(),
+      parent_id: '',
       created: currentTimestamp,
       modified: currentTimestamp,
     }
@@ -74,6 +75,7 @@ class ProjectActions {
     let newPage = new Page({
       name: name,
       id: getEntityId(),
+      parent_id: '', // Pages are project scoped and don't need to point to a parent for now
       created: currentTimestamp,
       modified: currentTimestamp,
     })

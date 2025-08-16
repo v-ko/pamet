@@ -10,7 +10,6 @@ import paper from 'paper';
 import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/core/constants";
 import { Change } from 'fusion/model/Change';
 import { pamet } from "@/core/facade";
-import { elementPageId } from "@/model/Element";
 
 let log = getLogger('ArrowViewState');
 
@@ -104,7 +103,7 @@ export class ArrowViewState extends ElementViewState {
             console.log('no head anchor')
             return null;
         }
-        let pageVS = pamet.appViewState.pageViewState(elementPageId(this._arrowData.id));
+        let pageVS = pamet.appViewState.pageViewState(this._arrowData.parent_id);
         let headNVS = pageVS.viewStateForElement(this._arrowData.head.noteAnchorId) as NoteViewState | null;
         return headNVS;
     }
@@ -114,7 +113,7 @@ export class ArrowViewState extends ElementViewState {
             console.log('no tail anchor')
             return null;
         }
-        let pageVS = pamet.appViewState.pageViewState(elementPageId(this._arrowData.id));
+        let pageVS = pamet.appViewState.pageViewState(this._arrowData.id);
         let tailNVS = pageVS.viewStateForElement(this._arrowData.tail.noteAnchorId ) as NoteViewState | null;
         return tailNVS;
     }

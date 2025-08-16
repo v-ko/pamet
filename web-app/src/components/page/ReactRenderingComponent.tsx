@@ -47,7 +47,7 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
             }}
         >
 
-            {Array.from(state.noteViewStatesByOwnId.values()).map((noteViewState) => (
+            {Array.from(state.noteViewStatesById.values()).map((noteViewState) => (
                 <NoteComponent
                     key={noteViewState.note().id}
                     noteViewState={noteViewState}
@@ -68,11 +68,11 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
                 }}
             >
                 <defs>
-                    {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
+                    {Array.from(state.arrowViewStatesById.values()).map((arrowVS) => (
                         <ArrowHeadComponent key={arrowVS.arrow().id} arrowViewState={arrowVS} />
                     ))}
                 </defs>
-                {Array.from(state.arrowViewStatesByOwnId.values()).map((arrowVS) => (
+                {Array.from(state.arrowViewStatesById.values()).map((arrowVS) => (
                     <ArrowComponent
                         key={arrowVS.arrow().id}
                         arrowViewState={arrowVS}

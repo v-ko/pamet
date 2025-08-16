@@ -174,10 +174,10 @@ class PametCommands {
         let pageVS = getCurrentPageViewState();
         // Select all
         let selectionMap = new Map();
-        for (let noteVS of pageVS.noteViewStatesByOwnId.values()) {
+        for (let noteVS of pageVS.noteViewStatesById.values()) {
             selectionMap.set(noteVS, true);
         }
-        for (let arrowVS of pageVS.arrowViewStatesByOwnId.values()) {
+        for (let arrowVS of pageVS.arrowViewStatesById.values()) {
             selectionMap.set(arrowVS, true);
         }
         pageActions.updateSelection(pageVS, selectionMap);

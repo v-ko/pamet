@@ -180,7 +180,7 @@ class PageActions {
     state.dragSelectedElementsVS.clear();
 
     // Get notes in the area
-    for (let noteVS of state.noteViewStatesByOwnId.values()) {
+    for (let noteVS of state.noteViewStatesById.values()) {
       let noteRect = new Rectangle(noteVS._noteData.geometry);
       if (unprojectedRect.intersects(noteRect)) {
         state.dragSelectedElementsVS.add(noteVS);
@@ -188,7 +188,7 @@ class PageActions {
     }
 
     // Get the arrows in the area
-    for (let arrowVS of state.arrowViewStatesByOwnId.values()) {
+    for (let arrowVS of state.arrowViewStatesById.values()) {
       if (arrowVS.intersectsRect(unprojectedRect)) {
         state.dragSelectedElementsVS.add(arrowVS);
       }
@@ -340,7 +340,7 @@ class PageActions {
     for (let element of elements) {
       if (element instanceof Note) {
         notesForRemoval.push(element)
-        noteIds.add(element.own_id)
+        noteIds.add(element.id)
 
         // Mark media for trashing if the note has an image
         if (element instanceof CardNote && element.content.image_id) {  // Should catch both card notes and image notes

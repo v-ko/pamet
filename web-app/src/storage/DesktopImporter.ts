@@ -1,8 +1,7 @@
-import { Page, PageData } from "@/model/Page";
 import { getLogger } from "fusion/logging";
 import { BaseApiClient } from "fusion/storage/BaseApiClient";
 import { SerializedEntityData, loadFromDict } from "fusion/model/Entity";
-import { elementId } from "@/model/Element";
+// import { elementId } from "@/model/Element";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
 import { old_color_to_role } from "fusion/primitives/Color";
 import { pamet } from "@/core/facade";
@@ -17,13 +16,13 @@ export class DesktopImporter extends BaseApiClient {
 
         // This is the original migration function, unmodified, nested here for use.
         function tmpDynamicMigration(childData: Record<string, any>) {
-            // Additional tasks for the migration:
-            // - Add size metadata for images where it's missing
-            let [page_id, own_id] = childData.id;
-            if (page_id === undefined || own_id === undefined) {
-                throw new Error('Bad id')
-            }
-            childData.id = elementId(page_id, own_id);
+            // No composite id anymore , for old ones where the id can be the same for different pages - keep the composite and treat it as unique plain id
+            
+            // let [page_id, own_id] = childData.id;
+            // if (page_id === undefined || own_id === undefined) {
+            //     throw new Error('Bad id')
+            // }
+            // childData.id = own_id //elementId(page_id, own_id);
 
             // Fill style where missing and convert colors to roles
             if (childData.style === undefined) {

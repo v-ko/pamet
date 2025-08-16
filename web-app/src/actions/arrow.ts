@@ -6,7 +6,6 @@ import { Point2D, PointData } from "fusion/primitives/Point2D";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { DEFAULT_ARROW_THICKNESS } from "@/core/constants";
 import { pamet } from "@/core/facade";
-import { elementId } from "@/model/Element";
 import { getEntityId } from "fusion/model/Entity";
 import { getLogger } from "fusion/logging";
 import { snapVectorToGrid } from "@/util";
@@ -46,7 +45,7 @@ class ArrowActions {
             if (noteVS_underMouse) {
                 let note = noteVS_underMouse.note();
                 tail_coords = null;
-                tail_note_id = note.own_id;
+                tail_note_id = note.id;
                 colorRole = note.style.color_role;
             } else {
                 tail_coords = anchorPos.data();
@@ -54,7 +53,8 @@ class ArrowActions {
             }
 
             let arrow = new Arrow({
-                id: elementId(state.page.id, getEntityId()),
+                id: getEntityId(),
+                parent_id: state.page.id,
                 tail: {
                     position: tail_coords,
                     noteAnchorId: tail_note_id,

@@ -192,7 +192,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
 
         this.tailPoint = fixed_pos;
-        this._data.tail.noteAnchorId = anchorNote ? anchorNote.own_id : null;
+        this._data.tail.noteAnchorId = anchorNote ? anchorNote.id : null;
         this.tailAnchorType = anchor_type;
     }
     setHead(fixed_pos: Point2D | null, anchorNote: Note | null, anchor_type: ArrowAnchorOnNoteType) {
@@ -205,7 +205,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
 
         this.headPoint = fixed_pos;
-        this._data.head.noteAnchorId = anchorNote ? anchorNote.own_id : null;
+        this._data.head.noteAnchorId = anchorNote ? anchorNote.id : null;
         this.headAnchorType = anchor_type;
     }
 }
