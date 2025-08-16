@@ -3,7 +3,7 @@ import { PametStore as PametStore, PAMET_INMEMORY_STORE_CONFIG } from "@/storage
 import { SearchFilter, SerializedStoreData, Store } from "fusion/storage/domain-store/BaseStore"
 import { Entity, EntityData } from "fusion/model/Entity";
 import { Change } from "fusion/model/Change";
-import { updateViewModelFromDelta, pamet } from "@/core/facade";
+import { entityDeltaToViewModelReducer, pamet } from "@/core/facade";
 import { action } from "fusion/registries/Action";
 import { getLogger } from "fusion/logging";
 import { Delta, DeltaData, squishDeltas } from "fusion/model/Delta";
@@ -61,7 +61,7 @@ export class FrontendDomainStore extends PametStore {
     insertOne(entity: Entity<EntityData>): Change {
         // log.info('Inserting entity', entity);
         let change = this._store.insertOne(entity);
-        updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
+        entityDeltaToViewModelReducer(pamet.appViewState, Delta.fromChanges([change]));
         this._uncommittedChanges.push(change);
         return change;
     }
@@ -69,7 +69,7 @@ export class FrontendDomainStore extends PametStore {
     updateOne(entity: Entity<EntityData>): Change {
         log.info('Updating entity', entity);
         let change = this._store.updateOne(entity);
-        updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
+        entityDeltaToViewModelReducer(pamet.appViewState, Delta.fromChanges([change]));
         if (!change.isEmpty()) {
             this._uncommittedChanges.push(change);
         } else if (pamet.debugging) {
@@ -80,7 +80,7 @@ export class FrontendDomainStore extends PametStore {
     removeOne(entity: Entity<EntityData>): Change {
         log.info('Removing entity', entity);
         let change = this._store.removeOne(entity);
-        updateViewModelFromDelta(pamet.appViewState, Delta.fromChanges([change]));
+        entityDeltaToViewModelReducer(pamet.appViewState, Delta.fromChanges([change]));
         this._uncommittedChanges.push(change);
         return change;
     }
@@ -156,7 +156,7 @@ export class FrontendDomainStore extends PametStore {
             this._store.applyDelta(unexpectedDelta);
 
             // Apply the result to the repo
-            updateViewModelFromDelta(pamet.appViewState, unexpectedDelta);
+            entityDeltaToViewModelReducer(pamet.appViewState, unexpectedDelta);
         } catch (e) {
             log.error('Inconsistency between received commit deltas and expected changes. Exception:', e);
             alert('Critical error (check the console). Please reload the page');

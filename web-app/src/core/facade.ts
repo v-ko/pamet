@@ -1,6 +1,6 @@
 import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
-import { Change, ChangeType } from "fusion/model/Change";
+import { Change } from "fusion/model/Change";
 import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { appActions } from "@/actions/app";
@@ -203,7 +203,7 @@ export class PametFacade extends PametStore {
     async detachFromProject(projectId: string) {
         log.info('Detaching FDS for project', projectId);
         let currentProject: ProjectData;
-        try{
+        try {
             currentProject = this.appViewState.getCurrentProject();
         } catch (e) {
             log.error('Error getting current project', e);
@@ -265,7 +265,7 @@ export class PametFacade extends PametStore {
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        const change = this.frontendDomainStore.updateOne(entity);
+        return this.frontendDomainStore.updateOne(entity);
     }
 
     removeOne(entity: Entity<EntityData>): Change {
@@ -314,25 +314,32 @@ export class PametFacade extends PametStore {
 }
 
 
-export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
+export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delta) {
     /**
      * A reducer-like function to map entity changes to ViewStates
      * Will be used synchrously from the facade entity CRUD methods (inside actions)
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
+     *
+     *
      */
     // console.log('Applying delta to view states', delta)
 
-    for (let change of delta.changes()) {
-        let currentPageVS = appState.currentPageViewState
-        if (!currentPageVS) {
-            continue
-        }
+    let currentPageVS = appState.currentPageViewState
+    if (currentPageVS === null) {
+        log.error('No current page view state set, skipping delta', delta);
+        return;
+    }
+    let userId = appState.userId;
+    if (userId === null) {
+        log.error('No user set, cannot process delta', delta);
+        return;
+    }
 
+    for (let change of delta.changes()) {
         // If it's the current page
         let currentPageId = currentPageVS.page().id;
-        let childVS = currentPageVS.viewStateForElementId(change.entityId)
-        if (currentPageId === change.entityId) {
+        if (currentPageId === change.entityId) { // If it's a change of the entity of the currently opened page
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
                 if (currentPageId === change.entityId) {
@@ -355,25 +362,45 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
                 // update view state
                 currentPageVS.updateFromChange(change);
             }
-        } else if (childVS && change.isDelete()) {
-            currentPageVS.removeViewStateForElement(childVS.element());
-        } else if (childVS && change.isUpdate()) {
-            // update view state
-            childVS.updateFromChange(change);
+        }
+
+        // Process notes and arrows
+        let elementVS = currentPageVS.viewStateForElementId(change.entityId)
+        if (elementVS && change.isDelete()) {
+            currentPageVS.removeViewStateForElement(elementVS.element() as Note | Arrow);
+
+        } else if (elementVS && change.isUpdate()) {
+            elementVS.updateFromChange(change);
+
         } else if (change.isCreate()) {
-            // If it's a new element
-            let entity = pamet.findOne({ id: change.entityId });
-            if (entity instanceof Note || entity instanceof Arrow) {
-                // get current page vs
-                if (!currentPageVS || currentPageId !== entity.parentId) {
-                    // Skip processing if the parent of the element is not open
-                    continue;
-                }
-                currentPageVS.addViewStateForElement(entity);
+            const element = pamet.findOne({ id: change.entityId, parentId: currentPageId }); // Filter only for current page
+            if (element) {
+                currentPageVS.addViewStateForElement(element as Note | Arrow);
             }
         } else {
             // Change is empty
         }
+
+        // Process media item changes
+        let url = currentPageVS.mediaUrlsByItemId.get(change.entityId);
+        if (url && change.isDelete()) {
+            // Remove the media item from the view state
+            currentPageVS.mediaUrlsByItemId.delete(change.entityId);
+        } else if (url && change.isUpdate()) {
+            // Update the media item URL in the view state
+            currentPageVS.mediaUrlsByItemId.set(change.entityId, url);
+        } else if (change.isCreate()) {
+            // If it's a media item, add it to the view state
+            const mediaItem = pamet.mediaItem(change.entityId);
+            if (mediaItem) {
+                const note = pamet.note(mediaItem?.parentId);
+                if (note?.parentId !== currentPageId) {  // Add only media items for page notes
+                    continue;
+                }
+                currentPageVS.addUrlForMediaItem(mediaItem);
+            }
+        }
+
     }
 }
 

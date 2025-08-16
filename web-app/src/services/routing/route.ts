@@ -126,6 +126,9 @@ export class PametRoute {
     }
 
     toRelativeReference(): string {
+        /**
+         * This is not called path, because it also includes anchors and search params.
+         */
         let path = '/';
 
         if (this.projectId) {

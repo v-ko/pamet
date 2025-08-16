@@ -24,8 +24,10 @@ class AppActions {
 
         if (page) {
             state.currentPageId = pageId;
-            state.currentPageViewState = new PageViewState(page);
-            state.currentPageViewState.createElementViewStates();
+            let notes = Array.from(pamet.notes({ parentId: pageId }));
+            let arrows = Array.from(pamet.arrows({ parentId: pageId }));
+            state.currentPageViewState = new PageViewState(page, notes, arrows);
+
             state.pageError = PageError.NoError;
         } else {
             state.currentPageId = null;
@@ -79,7 +81,7 @@ class AppActions {
 
     @action
     updateSystemDialogState(appState: WebAppState, props: Partial<LoadingDialogState> | LoadingDialogState | null) {
-        if (appState.loadingDialogState === null){  // Open dialog
+        if (appState.loadingDialogState === null) {  // Open dialog
             if (props === null) {
                 throw new Error("Cannot open loading dialog without props");
             }

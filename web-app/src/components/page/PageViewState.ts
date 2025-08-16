@@ -16,6 +16,8 @@ import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 import { Change } from 'fusion/model/Change';
 import React from 'react';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
+import { mediaItemRoute } from '@/services/routing/route';
+import { MediaItem } from 'fusion/model/MediaItem';
 
 let log = getLogger('PageViewState');
 
@@ -45,7 +47,7 @@ export enum PageMode {
 }
 
 
-export class PageViewState{
+export class PageViewState {
     _pageData!: PageData;
     _renderer: CanvasPageRenderer;
 
@@ -88,17 +90,37 @@ export class PageViewState{
     movedArrowVSs: ArrowViewState[] = []; // Also marker for restoring state on abort
 
     // Arrow related
-    // Arrow creation
+    // Creation
     newArrowViewState: ArrowViewState | null = null;
-    // Arrow editing
+    // Editing
     draggedControlPointIndex: number | null = null;
 
-    constructor(page: Page) {
+    // Media items
+    mediaUrlsByItemId: ObservableMap<string, string> = observable.map();
+
+    constructor(page: Page, notes: Note[], arrows: Arrow[]) {
         this._pageData = page.data();
         this._renderer = new CanvasPageRenderer();
 
         this.noteViewStatesById = new ObservableMap<string, NoteViewState>();
         this.arrowViewStatesById = new ObservableMap<string, ArrowViewState>();
+
+        // Create element view states
+        for (let note of notes) {
+            this.addViewStateForElement(note);
+
+            if (note.content.image_id) {
+                let mediaItem = pamet.mediaItem(note.content.image_id);
+                if (!mediaItem) {
+                    log.error('Media item not found for note', note.id);
+                    continue;
+                }
+                this.addUrlForMediaItem(mediaItem);
+            }
+        }
+        for (let arrow of arrows) {
+            this.addViewStateForElement(arrow);
+        }
 
         makeObservable(this, {
             _pageData: observable,
@@ -139,14 +161,6 @@ export class PageViewState{
         return this._renderer;
     }
 
-    createElementViewStates() {
-        const pageId = this.page().id;
-        const notes = Array.from(pamet.notes({ parentId: pageId }))
-        this._updateNoteViewStates(notes);
-        const arrows = Array.from(pamet.arrows({ parentId: pageId }))
-        this._updateArrowViewStates(arrows);
-    }
-
     _addViewStateForNote(element: Note) {
         if (this.noteViewStatesById.has(element.id)) {
             log.error('Note already exists in page view state', element)
@@ -156,7 +170,7 @@ export class PageViewState{
         this.noteViewStatesById.set(element.id, nvs);
     }
 
-    _addViewStateForArrow(element: Arrow){
+    _addViewStateForArrow(element: Arrow) {
         if (this.arrowViewStatesById.has(element.id)) {
             log.error('Arrow already exists in page view state', element)
             return;
@@ -189,6 +203,20 @@ export class PageViewState{
         }
     }
 
+    addUrlForMediaItem(mediaItem: MediaItem) {
+        /* Adds a media item URL to the page view state.
+         * If the media item already exists, it will be overwritten.
+         */
+        const userId = pamet.appViewState.userId;
+        const pametProjectId = pamet.appViewState.currentProjectId;
+        if (!userId || !pametProjectId) {
+            log.error('Cannot add media item URL without userId or projectId');
+            return;
+        }
+        const mediaRoute = mediaItemRoute(mediaItem, userId, pametProjectId);
+        this.mediaUrlsByItemId.set(mediaItem.id, mediaRoute.toRelativeReference());
+    }
+
     noteVS_anchorsForArrow(arrow: Arrow) {
         /* Get the NoteViewStates for the arrow's head and tail notes */
         let headNVS: NoteViewState | null = null;
@@ -208,51 +236,6 @@ export class PageViewState{
         }
 
         return { headNVS, tailNVS }
-    }
-
-    _updateNoteViewStates(notes: Iterable<Note>) {
-        console.log('Updating note view states from notes', notes)
-
-        let nvsHasNoteMap = new Map<string, boolean>();
-        for (let note of notes) {
-            nvsHasNoteMap.set(note.id, true);
-        }
-
-        // Remove NoteViewStates for notes that have been removed
-        for (let noteId of this.noteViewStatesById.keys()) {
-            if (!nvsHasNoteMap.has(noteId)) {
-                this.removeViewStateForElement(this.noteViewStatesById.get(noteId)!.note());
-            }
-        }
-
-        // Add NoteViewStates for new notes
-        for (let note of notes) {
-            if (!this.noteViewStatesById.has(note.id)) {
-                // console.log('ADDING note', note.own_id)
-                this.addViewStateForElement(note);
-            }
-        }
-    }
-
-    _updateArrowViewStates(arrows: Iterable<Arrow>) {
-        let arrowavsHasArrowMap = new Map<string, boolean>();
-        for (let arrow of arrows) {
-            arrowavsHasArrowMap.set(arrow.id, true);
-        }
-
-        // Remove ArrowViewStates for arrows that have been removed
-        for (let arrowId of this.arrowViewStatesById.keys()) {
-            if (!arrowavsHasArrowMap.has(arrowId)) {
-                this.removeViewStateForElement(this.arrowViewStatesById.get(arrowId)!.arrow());
-            }
-        }
-
-        // Add ArrowViewStates for new arrows
-        for (let arrow of arrows) {
-            if (!this.arrowViewStatesById.has(arrow.id)) {
-                this.addViewStateForElement(arrow);
-            }
-        }
     }
 
     getViewStateForElement(elementId: string): NoteViewState | ArrowViewState | null {
@@ -304,7 +287,7 @@ export class PageViewState{
         // If element move was aborted - restore the geometries from the entities
         if (this.movedNoteVSs.length > 0) {
             for (let noteVS of this.movedNoteVSs) {
-                let note = pamet.findOne({id: noteVS.note().id});
+                let note = pamet.findOne({ id: noteVS.note().id });
                 if (!(note instanceof Note)) {
                     log.error('Note not found for note view state being moved', noteVS.note().id)
                     continue;
@@ -312,7 +295,7 @@ export class PageViewState{
                 noteVS.updateFromNote(note);
             }
             for (let arrowVS of this.movedArrowVSs) {
-                let arrow = pamet.findOne({id: arrowVS.arrow().id});
+                let arrow = pamet.findOne({ id: arrowVS.arrow().id });
                 if (!(arrow instanceof Arrow)) {
                     log.error('Arrow not found for arrow view state being moved', arrowVS.arrow().id)
                     continue;
@@ -333,7 +316,7 @@ export class PageViewState{
                 log.error('Arrow control point drag mode but no arrow view state with control points visible')
                 return;
             }
-            let arrow = pamet.findOne({id: editedArrowVS!.arrow().id});
+            let arrow = pamet.findOne({ id: editedArrowVS!.arrow().id });
             if (!(arrow instanceof Arrow)) {
                 log.error('Arrow not found for cp-dragged arrow with id', editedArrowVS.arrow().id)
                 return;
@@ -505,25 +488,25 @@ export class AnchorOnNoteSuggestion {
 }
 
 export class MouseState {
-  buttons: number = 0;
-  position: Point2D = new Point2D([0, 0]);
-  positionOnPress: Point2D = new Point2D([0, 0]);
-  buttonsOnLeave: number = 0;
+    buttons: number = 0;
+    position: Point2D = new Point2D([0, 0]);
+    positionOnPress: Point2D = new Point2D([0, 0]);
+    buttonsOnLeave: number = 0;
 
-  get rightIsPressed() {
-    return (this.buttons & 2) !== 0;
-  }
-  get leftIsPressed() {
-    return (this.buttons & 1) !== 0;
-  }
-  applyPressEvent(event: React.MouseEvent) {
-    this.positionOnPress = new Point2D([event.clientX, event.clientY]);
-    this.buttons = event.buttons;
-  }
-  applyMoveEvent(event: React.MouseEvent) {
-    this.position = new Point2D([event.clientX, event.clientY]);
-  }
-  applyReleaseEvent(event: React.MouseEvent) {
-    this.buttons = event.buttons;
-  }
+    get rightIsPressed() {
+        return (this.buttons & 2) !== 0;
+    }
+    get leftIsPressed() {
+        return (this.buttons & 1) !== 0;
+    }
+    applyPressEvent(event: React.MouseEvent) {
+        this.positionOnPress = new Point2D([event.clientX, event.clientY]);
+        this.buttons = event.buttons;
+    }
+    applyMoveEvent(event: React.MouseEvent) {
+        this.position = new Point2D([event.clientX, event.clientY]);
+    }
+    applyReleaseEvent(event: React.MouseEvent) {
+        this.buttons = event.buttons;
+    }
 }

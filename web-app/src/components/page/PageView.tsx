@@ -18,18 +18,12 @@ import { NavigationDevice, NavigationDeviceAutoSwitcher } from "@/components/pag
 import { arrowActions } from "@/actions/arrow";
 import { noteActions } from "@/actions/note";
 import { appActions } from "@/actions/app";
-import { mediaItemRoute } from "@/services/routing/route";
-import { MediaItem } from 'fusion/model/MediaItem';
 import { Page } from '@/model/Page';
 import { createNoteWithImageFromBlob } from '@/procedures/page';
-import { i } from 'node_modules/vite/dist/node/types.d-aGj9QkWt';
 import { CardNote } from '@/model/CardNote';
 
 
 let log = getLogger('Page.tsx')
-
-// const DEFAULT_VIEWPORT_TRANSITION_T = 0.05;
-// type Status = 'loading' | 'error' | 'loaded';
 
 
 export const PageView = observer(({ state }: { state: PageViewState }) => {
@@ -630,28 +624,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
 
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
-  let imageUrls: Set<string> = new Set();
-  const userId = pamet.appViewState.userId;
-  const projectId = pamet.appViewState.currentProjectId;
-
-  for (let noteVS of state.noteViewStatesById.values()) {
-    if (!userId || !projectId) { // Lazy. Could be done outside of the loop
-      continue
-    }
-
-    let note = noteVS.note()
-    if (note.content.image_id) {
-      const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
-      if (!mediaItem) {
-          continue;
-      }
-      let mediaItemRoute_ = mediaItemRoute(mediaItem, userId, projectId);
-      // let globalUrl = pamet.apiClient.projectScopedUrlToGlobal(projectScopedUrl);
-      let mediaItemPath = mediaItemRoute_.toRelativeReference();
-
-      imageUrls.add(mediaItemPath);
-    }
-  }
+  let imageUrls: Set<string> = new Set(state.mediaUrlsByItemId.values());
 
   return (
       <main
