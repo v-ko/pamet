@@ -98,6 +98,9 @@ export class PageViewState {
     // Media items
     mediaUrlsByItemId: ObservableMap<string, string> = observable.map();
 
+    // Debugging. It's for the RenderProfiler stuff. It might be unneded even for that (since state is mutable)
+    renderId: number = 0; // Incremented on every render to force re-rendering
+
     constructor(page: Page, notes: Note[], arrows: Arrow[]) {
         this._pageData = page.data();
         this._renderer = new CanvasPageRenderer();

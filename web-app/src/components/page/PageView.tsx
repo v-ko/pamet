@@ -86,8 +86,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     }
 
     // Adjust for device pixel ratio, otherwise small objects will be blurry
-    let dpr = window.devicePixelRatio || 1;
-
+    let dpr = window.devicePixelRatio || 1;  // How many of the screen's actual pixels should be used to draw a single CSS pixel
     // Set the canvas size in real coordinates
     canvas.width = boundingRect.width * dpr;
     canvas.height = boundingRect.height * dpr;
@@ -120,6 +119,19 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     paper.setup(paperCanvas);
     paper.view.autoUpdate = false;
 
+    const canvas = canvasRef.current;
+    if (canvas === null) {
+      log.error("[canvasCtx] canvas is null")
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+
+    if (ctx === null) {
+      log.error("[canvasCtx] canvas context is null")
+      return;
+    }
+    state.renderer.setContext(ctx)
   }, [state, canvasCtx, paperCanvasRef]);
 
   // Setup geometry update handling on resize
@@ -168,6 +180,8 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
         mousePosIfRelevant = null;
       }
 
+      pamet.renderProfiler.setMobxReaction(state.renderId!);
+      pamet.renderProfiler.logTimeSinceMouseMove('Mobx reaction', state.renderId!)
       // Trigger on changes in all of the below
       return {
         viewport: state.viewportCenter,
@@ -184,7 +198,7 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     },
       () => {
         try {
-          state.renderer.renderPage(state, ctx);
+         state.renderer.renderPage(state);
         } catch (e) {
           log.error('Error rendering page:', e)
         }
@@ -231,6 +245,9 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
     let mousePos = new Point2D([event.clientX, event.clientY]);
     let pressPos = mouse.positionOnPress;
     let delta = pressPos.subtract(mousePos);
+
+    // state.renderId++;
+    // pamet.renderProfiler.addRenderId(state.renderId)
 
     pageActions.updateMousePosition(state, mousePos);
 
@@ -625,6 +642,10 @@ export const PageView = observer(({ state }: { state: PageViewState }) => {
   // We'll crate hidden img elements for notes with images and use them in the
   // canvas renderer
   let imageUrls: Set<string> = new Set(state.mediaUrlsByItemId.values());
+
+  // let rp = pamet.renderProfiler;
+  // rp.setReactRender(state.renderId!);
+  // rp.logTimeSinceMouseMove('React render', state.renderId!)
 
   return (
       <main

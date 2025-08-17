@@ -15,8 +15,6 @@ export class ArrowCanvasView extends BaseCanvasView {
     }
 
     _renderArrowHead(context: CanvasRenderingContext2D) {
-        let arrow = this.arrowViewState.arrow();
-
         // Draw the arrow head - get the point at an ARROW_HAND_LENGTH from the
         // end of the path and get the inclination of the path using that
         // (which determines the direction of the arrow head)

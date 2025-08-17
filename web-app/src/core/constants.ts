@@ -39,6 +39,8 @@ export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${NO_SCALE_LINE_
     `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
     `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
 
+export const NOTE_BORDER_WIDTH = 0.5
+
 // Arrow related
 export const ARROW_SELECTION_RADIUS = 10
 

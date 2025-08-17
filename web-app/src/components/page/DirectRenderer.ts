@@ -37,8 +37,6 @@ export interface ElementDrawStats {
     render_time: number
 }
 
-const MIN_RERENDER_TIME = 5; // ms
-
 const selectionColor = color_role_to_hex_color(SELECTED_ITEM_OVERLAY_COLOR_ROLE);
 const dragSelectRectColor = color_role_to_hex_color(DRAG_SELECT_COLOR_ROLE);
 
@@ -53,8 +51,10 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
 export class CanvasPageRenderer {
     private _nvsCache: Map<NoteViewState, ImageBitmap> = new Map();
     private _nvsCacheSize: number = 0;
-    private renderTimeout: NodeJS.Timeout | null = null;
+    private reqeustAnimationFrameRet: number | null = null;
     private _followupRenderSteps: number = 0;
+    private _context: CanvasRenderingContext2D | null = null;
+
     // Image cache: one per nvs, and clear
     private _imageCache: Map<string, HTMLImageElement> = new Map();
 
@@ -62,16 +62,9 @@ export class CanvasPageRenderer {
         return this._nvsCacheSize;
     }
 
-    // getImage(src: string): HTMLImageElement | null {
-    //     // Lazy load image
-    //     let image = this._imageCache.get(src);
-    //     if (image === undefined) {
-    //         image = new Image();
-    //         image.src = src;
-    //         this._imageCache.set(src, image);
-    //     }
-    //     return image;
-    // }
+    setContext(context: CanvasRenderingContext2D) {
+        this._context = context;
+    }
 
     getImage(src: string): HTMLImageElement | null {
         // console.log('-----------------getImage', src)
@@ -262,15 +255,15 @@ export class CanvasPageRenderer {
 
 
 
-    renderPage(state: PageViewState, context: CanvasRenderingContext2D) {
+    renderPage(state: PageViewState) {
         // Debounce redundant rendering
-        if (this.renderTimeout !== null) {
+        if (this.reqeustAnimationFrameRet !== null || !this._context) {
             return;
         }
-        this.renderTimeout = setTimeout(() => {
-            this.renderTimeout = null;
-            this._render(state, context);
-        }, MIN_RERENDER_TIME);
+        this.reqeustAnimationFrameRet = requestAnimationFrame(() => {
+            this.reqeustAnimationFrameRet = null;
+            this._render(state);
+        });
     }
 
     _applyProjectionMatrix(state: PageViewState, ctx: CanvasRenderingContext2D) {
@@ -284,8 +277,18 @@ export class CanvasPageRenderer {
         ctx.translate(-state.viewport.xReal, -state.viewport.yReal);
     }
 
-    _render(state: PageViewState, ctx: CanvasRenderingContext2D) {
+    _render(state: PageViewState) {//) { //
+        if (!this._context) {
+            log.error('No context set for rendering');
+            return;
+        }
+        let ctx = this._context;
+
         // console.log('Rendering at', state.viewport);
+        // let rp = pamet.renderProfiler
+        // rp.setDirectRendererInvoke(state.renderId!);
+        // rp.logTimeSinceMouseMove('DirectRenderer invoked', state.renderId!);
+        // rp.clear(state.renderId!);
 
         // Clear the canvas
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -608,6 +611,7 @@ export class CanvasPageRenderer {
         ctx.font = '15px sans-serif';
         let xStats = 10;
         let yStats = pixelSpaceRect.height - 10;
+
         ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
         ctx.restore()
 
@@ -660,7 +664,7 @@ export class CanvasPageRenderer {
             this._followupRenderSteps = 0;
             return;
         }
-        this.renderPage(state, context);
+        this.renderPage(state);
     }
 }
 
