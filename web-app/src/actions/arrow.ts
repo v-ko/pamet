@@ -75,7 +75,7 @@ class ArrowActions {
                     tail_shape: "arrow",
                 }
             });
-            state.newArrowViewState = new ArrowViewState(arrow);
+            state.newArrowViewState = new ArrowViewState(arrow, state);
 
         } else { // Second click - finish note creation
             // createArrow mode and newArrowViewState present implies second click

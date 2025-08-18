@@ -54,6 +54,96 @@ export function webStorageConfigFactory(projectId: string): ProjectStorageConfig
     }
 }
 
+class RenderProfiler {
+    mouseMoveTime?: number;
+    renderIds: Set<number> = new Set();
+    // mouseMoveEventCounts: number = 0;
+
+    reactRender?: number;
+    reactRenderCounts: number = 0;
+
+    mobxReaction?: number;
+    mobxReactionCounts: number = 0;
+
+    directRendererInvoke?: number;
+    directRendererInvokeCounts: number = 0;
+
+    propSetSkips: number = 0;
+
+    constructor() {
+        // clear
+    }
+
+    addRenderId(renderId: number) {
+        // if (this.mouseMoveTime || !renderId) {
+        //     this.propSetSkips++;
+        //     return;
+        // }
+        if (!this.mouseMoveTime) {
+            this.mouseMoveTime = performance.now();
+            // log.info('Starting render with id:', renderId);
+        }
+        // log.info(`Render id added: ${renderId}.`);
+        this.renderIds.add(renderId);
+    }
+    setReactRender(renderId: number) {
+        this.reactRenderCounts++;
+        if (renderId && this.renderIds?.has(renderId)) {
+            this.propSetSkips++;
+        }
+        this.reactRender = performance.now();
+    }
+    setMobxReaction(renderId: number) {
+        this.mobxReactionCounts++;
+        if (renderId && this.renderIds?.has(renderId)) {
+            this.propSetSkips++;
+        }
+        this.mobxReaction = performance.now();
+    }
+    setDirectRendererInvoke(renderId: number) {
+        this.directRendererInvokeCounts++;
+        if (renderId && this.renderIds?.has(renderId)) {
+            this.propSetSkips++;
+        }
+        this.directRendererInvoke = performance.now();
+    }
+    logTimeSinceMouseMove(message: string, renderId: number) {
+        if (!renderId || !this.renderIds?.has(renderId) || !this.mouseMoveTime) {
+            // log.info(`Skipping for request with mouse position ${renderId}.`);
+            return;
+        }
+        let timeSinceMouseMove = performance.now() - this.mouseMoveTime;
+        // log.info(`${message} - Time since last mouse move: ${timeSinceMouseMove} ms. Skip count: ${this.propSetSkips}`);
+    }
+
+    clear(renderId: number): any {
+        // log.info(`Clearing render profiler data. Counts: renderIds.size=${this.renderIds.size}, reactRender=${this.reactRenderCounts}, mobxReaction=${this.mobxReactionCounts}, directRendererInvoke=${this.directRendererInvokeCounts}, propSetSkips=${this.propSetSkips}`);
+        if ((!renderId || !this.renderIds?.has(renderId))
+            // && !(this.mouseMoveTime && (this.mouseMoveTime + 1000 > performance.now()))
+        ) { // if the mouse coordinates are from an e.g. skipped render - timeout and clear
+            this.propSetSkips++;
+            return;
+        }
+
+        let stats = {
+
+        }
+
+        this.mouseMoveTime = undefined;
+
+        this.renderIds.clear()
+        this.reactRender = undefined;
+        this.reactRenderCounts = 0;
+
+        this.mobxReaction = undefined;
+        this.mobxReactionCounts = 0;
+
+        this.directRendererInvoke = undefined;
+        this.directRendererInvokeCounts = 0;
+
+        this.propSetSkips = 0;
+    }
+}
 
 export class PametFacade extends PametStore {
     getEntityId() {
@@ -70,6 +160,8 @@ export class PametFacade extends PametStore {
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
     debugging = true;
+    debugPaintOperations = true;
+    renderProfiler = new RenderProfiler();
 
     constructor() {
         super()
@@ -203,7 +295,7 @@ export class PametFacade extends PametStore {
     async detachFromProject(projectId: string) {
         log.info('Detaching FDS for project', projectId);
         let currentProject: ProjectData;
-        try{
+        try {
             currentProject = this.appViewState.getCurrentProject();
         } catch (e) {
             log.error('Error getting current project', e);
@@ -314,25 +406,32 @@ export class PametFacade extends PametStore {
 }
 
 
-export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
+export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delta) {
     /**
      * A reducer-like function to map entity changes to ViewStates
      * Will be used synchrously from the facade entity CRUD methods (inside actions)
      * And will be used by the domain store watcher service (responcible for
      * updating the view states after external domain store changes)
+     *
+     *
      */
     // console.log('Applying delta to view states', delta)
 
-    for (let change of delta.changes()) {
-        let currentPageVS = appState.currentPageViewState
-        if (!currentPageVS) {
-            continue
-        }
+    let currentPageVS = appState.currentPageViewState
+    if (currentPageVS === null) {
+        log.error('No current page view state set, skipping delta', delta);
+        return;
+    }
+    let userId = appState.userId;
+    if (userId === null) {
+        log.error('No user set, cannot process delta', delta);
+        return;
+    }
 
+    for (let change of delta.changes()) {
         // If it's the current page
         let currentPageId = currentPageVS.page().id;
-        let childVS = currentPageVS.viewStateForElementId(change.entityId)
-        if (currentPageId === change.entityId) {
+        if (currentPageId === change.entityId) { // If it's a change of the entity of the currently opened page
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
                 if (currentPageId === change.entityId) {
@@ -355,25 +454,50 @@ export function updateViewModelFromDelta(appState: WebAppState, delta: Delta) {
                 // update view state
                 currentPageVS.updateFromChange(change);
             }
-        } else if (childVS && change.isDelete()) {
-            currentPageVS.removeViewStateForElement(childVS.element());
-        } else if (childVS && change.isUpdate()) {
-            // update view state
-            childVS.updateFromChange(change);
+        }
+
+        // Process notes and arrows
+        let elementVS = currentPageVS.viewStateForElementId(change.entityId)
+        if (elementVS && change.isDelete()) {
+            currentPageVS.removeViewStateForElement(elementVS.element() as Note | Arrow);
+
+        } else if (elementVS && change.isUpdate()) {
+            elementVS.updateFromChange(change);
+
         } else if (change.isCreate()) {
-            // If it's a new element
-            let entity = pamet.findOne({ id: change.entityId });
-            if (entity instanceof Note || entity instanceof Arrow) {
-                // get current page vs
-                if (!currentPageVS || currentPageId !== entity.parentId) {
-                    // Skip processing if the parent of the element is not open
-                    continue;
-                }
-                currentPageVS.addViewStateForElement(entity);
+            const element = pamet.findOne({ id: change.entityId, parentId: currentPageId }); // Filter only for current page
+            if (element) {
+                currentPageVS.addViewStateForElement(element as Note | Arrow);
             }
         } else {
             // Change is empty
         }
+        // Process media item changes
+        let url = currentPageVS.mediaUrlsByItemId.get(change.entityId);
+        if (url && change.isDelete()) {
+            // Remove the media item from the view state
+            currentPageVS.mediaUrlsByItemId.delete(change.entityId);
+        } else if (url && change.isUpdate()) {
+            // Update the media item URL in the view state
+            currentPageVS.mediaUrlsByItemId.set(change.entityId, url);
+        } else if (change.isCreate()) {
+            // If it's a media item, add it to the view state
+            const mediaItem = pamet.mediaItem(change.entityId);
+            if (mediaItem) {
+                const note = pamet.note(mediaItem?.parentId);
+                if (!note) {
+                    throw new Error(`Note for media item ${mediaItem.id} not found`);
+                }
+                if (note?.parentId !== currentPageId) {  // Add only media items for page notes
+                    log.info('Skipping media item for note not on current page', note?.parentId, currentPageId);
+                    continue;
+                }
+                currentPageVS.addUrlForMediaItem(mediaItem);
+            }
+        } else {
+            // Change is empty
+        }
+
     }
 }
 

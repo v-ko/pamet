@@ -39,6 +39,8 @@ export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${NO_SCALE_LINE_
     `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
     `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
 
+export const NOTE_BORDER_WIDTH = 0.5
+
 // Arrow related
 export const ARROW_SELECTION_RADIUS = 10
 
@@ -52,7 +54,7 @@ export const ARROW_CONTROL_POINT_RADIUS = 1.5 * AGU
 export const ARROW_POTENTIAL_CONTROL_POINT_RADIUS = ARROW_CONTROL_POINT_RADIUS * 0.7
 
 // Page render and cache related
-export const MAX_RENDER_TIME = 0.04  // (in seconds) ~24 fps
+export const MAX_RENDER_TIME = 0.025  // (in seconds) ~24 fps
 export const IMAGE_CACHE_PADDING = 3;
 
 // Colors

@@ -1,5 +1,5 @@
-import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData } from "@/model/Arrow";
-import { computed, makeObservable, observable, toJS } from 'mobx';
+import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData, SerializedArrow } from "@/model/Arrow";
+import { computed, makeObservable, observable, reaction, toJS } from 'mobx';
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { getLogger } from 'fusion/logging';
 import { Point2D } from 'fusion/primitives/Point2D';
@@ -10,6 +10,7 @@ import paper from 'paper';
 import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/core/constants";
 import { Change } from 'fusion/model/Change';
 import { pamet } from "@/core/facade";
+import { PageViewState } from "@/components/page/PageViewState";
 
 let log = getLogger('ArrowViewState');
 
@@ -29,17 +30,15 @@ function specialSigmoid(x: number): number {
 }
 
 export class ArrowViewState extends ElementViewState {
-    _arrowData!: ArrowData;
+    _elementData!: SerializedArrow; // Set in the constructor
     pathCalculationPrecision: number = 1;
     _paperPath: paper.Path | null = null;
 
-    constructor(arrow: Arrow) {
-        super();
-
-        this._arrowData = { ...arrow.data() };
+    constructor(arrow: Arrow, pageViewState: PageViewState) {
+        super(arrow, pageViewState);
 
         makeObservable(this, {
-            _arrowData: observable,
+            _elementData: observable,
             bezierCurveParams: computed,
             bezierCurveArrayMidpoints: computed,
             paperPath: computed,
@@ -47,7 +46,7 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get _arrow(): Arrow {
-        let arrowData = toJS(this._arrowData) as ArrowData;
+        let arrowData = toJS(this._elementData) as ArrowData;
         return new Arrow(arrowData);
     }
     arrow(): Arrow {
@@ -63,7 +62,7 @@ export class ArrowViewState extends ElementViewState {
             return;
         }
         let update = change.forwardComponent as Partial<ArrowData>;
-        this._arrowData = { ...this._arrowData, ...update };
+        this._elementData = { ...this._elementData, ...update };
 
         let arrow = this.arrow();
         let pageVS = pamet.appViewState.pageViewState(arrow.parentId);
@@ -93,26 +92,21 @@ export class ArrowViewState extends ElementViewState {
         // this.headAnchorNoteViewState = headNVS;
     }
 
-    headAnchorNoteViewState(): NoteViewState | null {
-        if (!this._arrowData.head.noteAnchorId) {
-            console.log('no head anchor')
-            return null;
-        }
-        let pageVS = pamet.appViewState.pageViewState(this._arrowData.parent_id);
-        let headNVS = pageVS.getViewStateForElement(this._arrowData.head.noteAnchorId) as NoteViewState | null;
-        return headNVS;
-    }
-
-    tailAnchorNoteViewState() {
-        if (!this._arrowData.tail.noteAnchorId) {
+    get tailAnchorNoteViewState(): NoteViewState | null {
+        if (!this._elementData.tail.noteAnchorId) {
             console.log('no tail anchor')
             return null;
         }
-        let pageVS = pamet.appViewState.pageViewState(this._arrowData.parent_id);
-        let tailNVS = pageVS.getViewStateForElement(this._arrowData.tail.noteAnchorId ) as NoteViewState | null;
-        return tailNVS;
+        return this.pageViewState.getViewStateForElement(this._elementData.tail.noteAnchorId ) as NoteViewState | null;
     }
 
+    get headAnchorNoteViewState() : NoteViewState | null {
+        if (!this._elementData.head.noteAnchorId) {
+            console.log('no head anchor')
+            return null;
+        }
+        return this.pageViewState.getViewStateForElement(this._elementData.head.noteAnchorId) as NoteViewState | null;
+    }
     updateFromArrow(arrow: Arrow) {
         this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
         let change = this.arrow().changeFrom(arrow);
@@ -146,7 +140,7 @@ export class ArrowViewState extends ElementViewState {
             if (this.tailAnchorNoteViewState === null) {
                 throw Error('Tail anchor is set, but tail anchor note view state is not');
             }
-            const headAnchorNVS = this.headAnchorNoteViewState();
+            const headAnchorNVS = this.headAnchorNoteViewState;
             if (headAnchorNVS === null) {
                 throw Error('Head anchor is set, but head anchor note view state is not');
             }
@@ -212,7 +206,7 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.headPoint) {
                     headPoint = arrow.headPoint;
                 } else {
-                    headPoint = arrowAnchorPosition(this.headAnchorNoteViewState()!.note(), arrow.headAnchorType);
+                    headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), arrow.headAnchorType);
                 }
                 effectiveTailAnchorType = this.inferTailAnchorType(headPoint);
                 effectiveHeadAnchorType = arrow.headAnchorType;
@@ -221,7 +215,7 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.tailPoint) {
                     tailPoint = arrow.tailPoint;
                 } else {
-                    tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState()!.note(), arrow.tailAnchorType);
+                    tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), arrow.tailAnchorType);
                 }
                 effectiveHeadAnchorType = this.inferHeadAnchorType(tailPoint);
                 effectiveTailAnchorType = arrow.tailAnchorType;
@@ -238,13 +232,13 @@ export class ArrowViewState extends ElementViewState {
         if (effectiveTailAnchorType === ArrowAnchorOnNoteType.none) {
             tailPoint = arrow.tailPoint!;
         } else {
-            tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState()!.note(), effectiveTailAnchorType);
+            tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), effectiveTailAnchorType);
         }
 
         if (effectiveHeadAnchorType === ArrowAnchorOnNoteType.none) {
             headPoint = arrow.headPoint!;
         } else {
-            headPoint = arrowAnchorPosition(this.headAnchorNoteViewState()!.note(), effectiveHeadAnchorType);
+            headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), effectiveHeadAnchorType);
         }
 
 
@@ -360,12 +354,12 @@ export class ArrowViewState extends ElementViewState {
         let arrow = this.arrow();
         let effectiveTailAnchorType: ArrowAnchorOnNoteType;
         if (arrow.tailAnchorType === ArrowAnchorOnNoteType.auto) {
-            const tailAnchorNVS = this.tailAnchorNoteViewState();
+            const tailAnchorNVS = this.tailAnchorNoteViewState;
             if (tailAnchorNVS === null) {
                 throw Error('Tail anchor type is AUTO, but no head note view state is set');
             }
             effectiveTailAnchorType = inferArrowAnchorType(
-                secondPoint, new Rectangle(tailAnchorNVS._noteData.geometry));
+                secondPoint, new Rectangle(tailAnchorNVS._elementData.geometry));
         } else {
             effectiveTailAnchorType = arrow.tailAnchorType;
         }
@@ -378,12 +372,12 @@ export class ArrowViewState extends ElementViewState {
         let arrow = this.arrow();
         let effectiveHeadAnchorType: ArrowAnchorOnNoteType;
         if (arrow.headAnchorType === ArrowAnchorOnNoteType.auto) {
-            const headAnchorNVS = this.headAnchorNoteViewState();
+            const headAnchorNVS = this.headAnchorNoteViewState;
             if (headAnchorNVS === null) {
                 throw Error('Head anchor type is AUTO, but no head note view state is set');
             }
             effectiveHeadAnchorType = inferArrowAnchorType(
-                secondPoint, new Rectangle(headAnchorNVS._noteData.geometry));
+                secondPoint, new Rectangle(headAnchorNVS._elementData.geometry));
         } else {
             effectiveHeadAnchorType = arrow.headAnchorType;
         }

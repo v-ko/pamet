@@ -35,7 +35,7 @@ class PametCommands {
 
         // Get the real mouse pos on canvas (if it's over the viewport)
         let pageVS = getCurrentPageViewState();
-        let mousePos = pageVS.projectedMousePosition;
+        let mousePos = pamet.appViewState.mouseState.positionOnPress;
         let creationPos: Point2D;
 
         if (mousePos === null) {
@@ -118,7 +118,7 @@ class PametCommands {
         // in the center of the viewport
         // Get the real mouse pos on canvas (if it's over the viewport)
         let pageVS = getCurrentPageViewState();
-        let mousePos = pageVS.projectedMousePosition;
+        let mousePos = appState.mouseState.positionOnPress;
         let forwardLinkLocation: Point2D;
         if (mousePos === null) {
             forwardLinkLocation = pageVS.viewport.realCenter();
@@ -220,7 +220,7 @@ class PametCommands {
             let pageVS = getCurrentPageViewState();
 
             // Get the mouse position or use viewport center
-            let mousePos = pageVS.projectedMousePosition;
+            let mousePos = pamet.appViewState.mouseState.positionOnPress;
             let position: Point2D;
 
             if (mousePos === null) {

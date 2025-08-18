@@ -73,6 +73,10 @@ export interface ArrowData extends PametElementData {
     style: ArrowStyle;
 }
 
+export interface SerializedArrow extends ArrowData {
+    type_name: string;
+}
+
 // Use camelCase for property names
 @entityType('Arrow')
 export class Arrow extends PametElement<ArrowData> {

@@ -1,6 +1,6 @@
 import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
-import type { LocalStorageState } from "@/containers/app/WebAppState";
+import type { LocalStorageState, MouseState } from "@/containers/app/WebAppState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
@@ -24,8 +24,10 @@ class AppActions {
 
         if (page) {
             state.currentPageId = pageId;
-            state.currentPageViewState = new PageViewState(page);
-            state.currentPageViewState.createElementViewStates();
+            let notes = Array.from(pamet.notes({ parentId: pageId }));
+            let arrows = Array.from(pamet.arrows({ parentId: pageId }));
+            state.currentPageViewState = new PageViewState(page, notes, arrows);
+
             state.pageError = PageError.NoError;
         } else {
             state.currentPageId = null;
@@ -50,6 +52,12 @@ class AppActions {
         state.currentProjectState = projectData;
         state.projectError = projectError;
         state.currentPageId = null;
+    }
+
+    @action({ issuer: 'service' })
+    updateMouseState(state: WebAppState, mouseStateProps: Partial<MouseState>) {
+        // Update the mouse state with the given properties
+        Object.assign(state.mouseState, mouseStateProps);
     }
 
     @action
@@ -79,7 +87,7 @@ class AppActions {
 
     @action
     updateSystemDialogState(appState: WebAppState, props: Partial<LoadingDialogState> | LoadingDialogState | null) {
-        if (appState.loadingDialogState === null){  // Open dialog
+        if (appState.loadingDialogState === null) {  // Open dialog
             if (props === null) {
                 throw new Error("Cannot open loading dialog without props");
             }
