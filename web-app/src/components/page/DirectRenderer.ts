@@ -53,18 +53,16 @@ export class CanvasPageRenderer {
     private _nvsCacheSize: number = 0;
     private reqeustAnimationFrameRet: number | null = null;
     private _followupRenderSteps: number = 0;
-    private _context: CanvasRenderingContext2D | null = null;
+    private _context: CanvasRenderingContext2D;
+    private _pageVS: PageViewState;
+
+    constructor(ctx: CanvasRenderingContext2D, pageVS: PageViewState) {
+        this._context = ctx;
+        this._pageVS = pageVS;
+    }
 
     get nvsCacheSize(): number {
         return this._nvsCacheSize;
-    }
-
-    setContext(pageId:string, context: CanvasRenderingContext2D) {
-        if (pageId !== pamet.appViewState.currentPageId) {
-            log.error(`Trying to set context for page ${pageId} but current page is ${pamet.appViewState.currentPageId}`);
-            return;
-        }
-        this._context = context;
     }
 
     getImage(src: string): HTMLImageElement | null {
@@ -257,19 +255,14 @@ export class CanvasPageRenderer {
 
 
     renderCurrentPage() {
-        let currentPageVS = pamet.appViewState.currentPageViewState;
-        if (!currentPageVS) {
-            log.error(`No current page set, cannot render`);
-            return;
-        }
-
         // Debounce redundant rendering
-        if (this.reqeustAnimationFrameRet !== null || !this._context) {
+        if (this.reqeustAnimationFrameRet !== null) {
+            log.info('Skipping render request');
             return;
         }
         this.reqeustAnimationFrameRet = requestAnimationFrame(() => {
             this.reqeustAnimationFrameRet = null;
-            this._render(currentPageVS);
+            this._render(this._pageVS);
         });
     }
 
@@ -289,6 +282,7 @@ export class CanvasPageRenderer {
             log.error('No context set for rendering');
             return;
         }
+        log.info(`DIRECT RENDER Viewport center: `, pageVS.viewportCenter);
         let ctx = this._context;
 
         // console.log('Rendering at', state.viewport);

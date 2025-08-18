@@ -1,12 +1,11 @@
-import { computed, makeObservable, observable, reaction, toJS } from "mobx";
+import { computed, makeObservable, observable, toJS } from "mobx";
 import { Note, SerializedNote } from "@/model/Note";
 import { TextLayout } from "@/util";
 import { calculateTextLayout } from "@/components/note/note-dependent-utils";
 import { getLogger } from "fusion/logging";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "@/core/constants";
-import { dumpToDict, loadFromDict } from "fusion/model/Entity";
-import { pamet } from "@/core/facade";
+import { loadFromDict } from "fusion/model/Entity";
 import { Change } from "fusion/model/Change";
 import { PageViewState } from "@/components/page/PageViewState";
 
@@ -25,11 +24,6 @@ export class NoteViewState extends ElementViewState {
             textLayoutData: computed
         });
 
-        reaction(() => {
-            return {content: this._elementData.content, style: this._elementData.style}
-        }, () => {
-            pamet.pageRenderer.deleteNvsCache(this);
-        });
     }
 
     // Used to make use of mobx.computed, while making it visible that
