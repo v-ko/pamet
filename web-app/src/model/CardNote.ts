@@ -41,16 +41,16 @@ export class CardNote extends Note {
         noteData = Object.assign(noteData, props);
         return new CardNote(noteData);
     }
-    static createInternalLinkNote(page: Page): CardNote {
+    static createInternalLinkNote(targetPage: Page, parentId: string): CardNote {
         let id = getEntityId();
         let currentTimestamp = timestamp(currentTime());
 
         let note = new CardNote({
-            id: id,
-            parent_id: page.id,
+            id,
+            parent_id: parentId,
             content: {
-                text: page.name,
-                url: new PametRoute({ pageId: page.id }).toProjectScopedURI(),
+                text: targetPage.name,
+                url: new PametRoute({ pageId: targetPage.id }).toProjectScopedURI(),
             },
             geometry: [0, 0, 200, 100],
             style: {

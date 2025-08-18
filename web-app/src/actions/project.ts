@@ -81,7 +81,7 @@ class ProjectActions {
 
     // Create a forward link note on the given location in the current page
     let currentPage = appState.currentPageViewState.page()
-    let forwardLink = CardNote.createInternalLinkNote(newPage)
+    let forwardLink = CardNote.createInternalLinkNote(newPage, currentPage.id)
     // Autosize and set at location
     let minimalSize = minimalNonelidedSize(forwardLink);
     let rect = forwardLink.rect();
@@ -92,10 +92,11 @@ class ProjectActions {
     pamet.insertNote(forwardLink);
 
     // Create a back link note in the new page (to the current)
-    let backLink = CardNote.createInternalLinkNote(currentPage)
+    let backLink = CardNote.createInternalLinkNote(currentPage, newPage.id)
     // Autosize and set at center
     rect = backLink.rect();
-    rect.setSize(minimalSize);
+    const backMinimalSize = minimalNonelidedSize(backLink);
+    rect.setSize(backMinimalSize);
     rect.moveCenter(new Point2D([0, 0]));
     backLink.setRect(rect);
     pamet.insertNote(backLink);

@@ -1,4 +1,4 @@
-import { computed, makeObservable, observable, toJS } from "mobx";
+import { computed, makeObservable, observable, reaction, toJS } from "mobx";
 import { Note, SerializedNote } from "@/model/Note";
 import { TextLayout } from "@/util";
 import { calculateTextLayout } from "@/components/note/note-dependent-utils";
@@ -20,10 +20,8 @@ export class NoteViewState extends ElementViewState {
 
         makeObservable(this, {
             _elementData: observable,
-            // _note: computed,  This returns instances with the same data object (and entities arer expected to be generally immutable )
             textLayoutData: computed
         });
-
     }
 
     // Used to make use of mobx.computed, while making it visible that

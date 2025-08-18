@@ -224,11 +224,6 @@ class PageActions {
       throw new Error('No project loaded');
     }
 
-    // Handle media item changes
-    if (addedMediaItem) {
-      pamet.insertOne(addedMediaItem);
-    }
-
     if (removedMediaItem) {
       if (!addedMediaItem) {
         throw new Error('Removed media item without added media item');
@@ -250,6 +245,11 @@ class PageActions {
       pamet.insertNote(note);
     } else {
       pamet.updateNote(note);
+    }
+
+    // Handle media item changes
+    if (addedMediaItem) {
+      pamet.insertOne(addedMediaItem);
     }
 
     state.noteEditWindowState = null;

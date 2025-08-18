@@ -3,7 +3,7 @@ import { Viewport } from "@/components/page/Viewport";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { PageMode, PageViewState } from "@/components/page/PageViewState";
 import { NoteViewState } from "@/components/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals } from "@/util";
 
@@ -48,7 +48,7 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
 }
 
 
-export class CanvasPageRenderer {
+export class DirectRenderer {
     private _nvsCache: Map<NoteViewState, ImageBitmap> = new Map();
     private _nvsCacheSize: number = 0;
     private reqeustAnimationFrameRet: number | null = null;
@@ -59,6 +59,24 @@ export class CanvasPageRenderer {
     constructor(ctx: CanvasRenderingContext2D, pageVS: PageViewState) {
         this._context = ctx;
         this._pageVS = pageVS;
+    }
+
+    // Release resources and cancel any pending renders
+    dispose() {
+        if (this.reqeustAnimationFrameRet !== null) {
+            cancelAnimationFrame(this.reqeustAnimationFrameRet);
+            this.reqeustAnimationFrameRet = null;
+        }
+        // Release cached bitmaps
+        for (const [, imageBitmap] of this._nvsCache) {
+            try {
+                imageBitmap.close();
+            } catch {
+                // ignore errors from closing
+            }
+        }
+        this._nvsCache.clear();
+        this._nvsCacheSize = 0;
     }
 
     get nvsCacheSize(): number {
@@ -282,7 +300,6 @@ export class CanvasPageRenderer {
             log.error('No context set for rendering');
             return;
         }
-        log.info(`DIRECT RENDER Viewport center: `, pageVS.viewportCenter);
         let ctx = this._context;
 
         // console.log('Rendering at', state.viewport);
@@ -303,17 +320,29 @@ export class CanvasPageRenderer {
         }
 
         // // draw the mouse with a red circle
-        // if (state.projectedMousePosition) {
+        // let tmpMousePos = pamet.appViewState.mouseState.position;
+        // if (tmpMousePos) {
         //     ctx.save();
         //     ctx.fillStyle = 'red';
         //     ctx.beginPath();
-        //     ctx.arc(state.projectedMousePosition.x, state.projectedMousePosition.y, 5, 0, 2 * Math.PI);
+        //     ctx.arc(tmpMousePos.x, tmpMousePos.y, 5, 0, 2 * Math.PI);
         //     ctx.fill();
         //     ctx.restore();
         // }
 
         // Draw elements
-        this._drawElements(pageVS, ctx);
+        let drawStats = this._drawElements(pageVS, ctx);
+        // Draw stats
+        let pixelSpaceRect = pageVS.viewport.projectRect(pageVS.viewport.realBounds);
+        ctx.save()
+        ctx.resetTransform()
+        ctx.fillStyle = 'black';
+        ctx.font = '15px sans-serif';
+        let xStats = 10;
+        let yStats = pixelSpaceRect.height - 10;
+
+        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
+        ctx.restore()
 
         // Draw stuff in real space
         // Setup the projection matrix
@@ -324,10 +353,12 @@ export class CanvasPageRenderer {
         // ctx.fillStyle = 'red';
         // ctx.fillRect(0, 0, 100, 100);
 
-        // // Draw viewport boundaries (for debugging)
-        // ctx.strokeStyle = 'black';
-        // ctx.lineWidth = 1;
-        // ctx.strokeRect(...state.viewport.realBounds.data());
+        // Draw viewport boundaries (for debugging)
+        if (pamet.debugPaintOperations){
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(...pageVS.viewport.realBounds.data());
+        }
 
         // Draw a rectangle for the page outline if the viewport is zoomed out
         // enough
@@ -603,26 +634,13 @@ export class CanvasPageRenderer {
         drawStats.render_time = duration;
         // console.log(`Rendering took ${duration} ms`)
 
-        // Overview
-
-        // Draw stats
-        let pixelSpaceRect = state.viewport.projectRect(state.viewport.realBounds);
-        ctx.save()
-        ctx.resetTransform()
-        ctx.fillStyle = 'black';
-        ctx.font = '15px sans-serif';
-        let xStats = 10;
-        let yStats = pixelSpaceRect.height - 10;
-
-        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
-        ctx.restore()
-
         // Call the next render if some notes have not been fully rendered
         if (drawStats.deNovoAll > 0 || drawStats.pattern > 0) {
             this.requestFollowupRender();
         } else {
             this._followupRenderSteps = 0;
         }
+        return drawStats;
     }
 
     _drawSelectionOverlay(ctx: CanvasRenderingContext2D, childVS: ElementViewState) {

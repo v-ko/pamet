@@ -16,6 +16,7 @@ import { Change } from 'fusion/model/Change';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { mediaItemRoute } from '@/services/routing/route';
 import { MediaItem } from 'fusion/model/MediaItem';
+import { createId } from 'fusion/util/base';
 
 let log = getLogger('PageViewState');
 
@@ -46,6 +47,7 @@ export enum PageMode {
 
 
 export class PageViewState {
+    id: string = createId()
     _pageData!: PageData;
 
     // Elements
@@ -142,11 +144,6 @@ export class PageViewState {
             noteEditWindowState: observable,
 
             viewport: computed
-        });
-
-        log.info("PVS CONSTRUCTOR")
-        reaction(() => this.viewportCenter, (newPageData) => {
-         log.info('Viewport center changed', newPageData);
         });
     }
 

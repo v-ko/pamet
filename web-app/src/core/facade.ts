@@ -20,7 +20,6 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { updateAppStateFromConfig } from "@/procedures/app";
-import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -161,9 +160,8 @@ export class PametFacade extends PametStore {
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
     debugging = true;
-    debugPaintOperations = false;
+    debugPaintOperations = true;
     renderProfiler = new RenderProfiler();
-    pageRenderer: CanvasPageRenderer = new CanvasPageRenderer();
 
     constructor() {
         super()
@@ -474,7 +472,6 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
         } else {
             // Change is empty
         }
-
         // Process media item changes
         let url = currentPageVS.mediaUrlsByItemId.get(change.entityId);
         if (url && change.isDelete()) {
@@ -488,7 +485,11 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             const mediaItem = pamet.mediaItem(change.entityId);
             if (mediaItem) {
                 const note = pamet.note(mediaItem?.parentId);
+                if (!note) {
+                    throw new Error(`Note for media item ${mediaItem.id} not found`);
+                }
                 if (note?.parentId !== currentPageId) {  // Add only media items for page notes
+                    log.info('Skipping media item for note not on current page', note?.parentId, currentPageId);
                     continue;
                 }
                 currentPageVS.addUrlForMediaItem(mediaItem);

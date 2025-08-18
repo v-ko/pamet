@@ -138,11 +138,11 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         let image = this.renderer.getImage(mediaItemRoute_.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
-            errorText = IMAGE_NOT_LOADED_TEXT;
+            errorText = '(image element missing)';
         } else if (!image.complete) { // still loading
             errorText = IMAGE_NOT_LOADED_TEXT;
         } else if (image.naturalWidth === 0) { // loaded unsuccessfully
-            errorText = 'Loading failed';
+            errorText = '(loading failed)';
         }
         if (errorText !== undefined) {
             let textLayout = calculateTextLayout(errorText, textRect(noteRect), DEFAULT_FONT_STRING)

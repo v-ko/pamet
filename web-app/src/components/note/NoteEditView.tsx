@@ -126,9 +126,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
   // Focus the text area on mount if it's visible
   useEffect(() => {
-    log.info("Text button toggled HOOOOK:", textButtonToggled);
+    log.info("Text button toggled:", textButtonToggled);
     if (textButtonToggled) {
-      log.info("Text button toggle true:", textButtonToggled, textAreaRef.current);
       textAreaRef.current?.focus();
     }
   }, [textButtonToggled]);
