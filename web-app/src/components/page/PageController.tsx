@@ -5,16 +5,19 @@ import { pageActions } from '@/actions/page';
 import { DirectRenderer } from '@/components/page/DirectRenderer';
 import { ElementViewState } from '@/components/page/ElementViewState';
 import { NavigationDeviceAutoSwitcher, NavigationDevice } from '@/components/page/NavigationDeviceAutoSwitcher';
-import { log } from '@/components/page/PageView';
 import { PageViewState, PageMode } from '@/components/page/PageViewState';
 import { MouseState } from '@/containers/app/WebAppState';
-import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE } from '@/core/constants';
+import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_EYE_HEIGHT } from '@/core/constants';
 import { pamet } from '@/core/facade';
 import { CardNote } from '@/model/CardNote';
 import { Page } from '@/model/Page';
+import { Viewport } from '@/components/page/Viewport';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { reaction } from 'mobx';
+import { getLogger } from 'fusion/logging';
 import React from 'react';
+
+const log = getLogger('PageController');
 
 
 
@@ -26,6 +29,12 @@ export class PageController {
   private mobxReactionRegistration?: () => void;
   private _renderer?: DirectRenderer;
   private resizeObserver?: ResizeObserver;
+
+  // Touch / pinch state
+  private pinchStartDistance: number = 0;
+  private pinchInProgress: boolean = false;
+  private pinchStartViewportHeight: number = DEFAULT_EYE_HEIGHT;
+  private initialPinchCenter: Point2D = new Point2D([0, 0]);
 
   public get renderer(): DirectRenderer | undefined {
     return this._renderer;
@@ -376,6 +385,65 @@ export class PageController {
     }
   };
 
+  // Touch handlers (ported from PageView)
+  handleTouchStart = (event: TouchEvent) => {
+    if (event.touches.length === 1) {
+      const touchPos = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      appActions.updateMouseState(pamet.appViewState, { positionOnPress: touchPos });
+      pageActions.startDragSelection(this.pageVS, touchPos);
+    } else if (event.touches.length === 2) {
+      const touch1 = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      const touch2 = new Point2D([event.touches[1].clientX, event.touches[1].clientY]);
+      const distance = touch1.distanceTo(touch2);
+      const initPinchCenter = touch1.add(touch2).divide(2);
+
+      this.pinchStartDistance = distance;
+      this.pinchStartViewportHeight = this.pageVS.viewportHeight;
+      this.pinchInProgress = true;
+      this.initialPinchCenter = initPinchCenter;
+
+      pageActions.startDragNavigation(this.pageVS);
+    }
+  };
+
+  handleTouchMove = (event: TouchEvent) => {
+    if (event.touches.length === 1) {
+      const newTouchPos = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      pageActions.updateDragSelection(this.pageVS, newTouchPos);
+    } else if (event.touches.length === 2) {
+      const touch1 = new Point2D([event.touches[0].clientX, event.touches[0].clientY]);
+      const touch2 = new Point2D([event.touches[1].clientX, event.touches[1].clientY]);
+
+      if (this.pinchInProgress) {
+        const distance = touch1.distanceTo(touch2);
+        const newPinchCenter = touch1.add(touch2).divide(2);
+        let new_height = this.pinchStartViewportHeight * (this.pinchStartDistance / distance);
+        new_height = Math.max(MIN_HEIGHT_SCALE, Math.min(new_height, MAX_HEIGHT_SCALE));
+
+        // Move the center according to the pinch center
+        const delta = this.initialPinchCenter.subtract(newPinchCenter);
+        const delta_unproj = delta.divide(this.pageVS.viewport.heightScaleFactor());
+        let new_center = this.pageVS.viewportCenterOnModeStart.add(delta_unproj);
+
+        // Apply correction to focus zoom at pinch center
+        const old_viewport = new Viewport(this.pageVS.viewportGeometry, this.pinchStartViewportHeight);
+        old_viewport.moveRealCenterTo(this.pageVS.viewportCenterOnModeStart);
+        const unprInitPinchCenter = old_viewport.unprojectPoint(this.initialPinchCenter);
+        const focusDelta = unprInitPinchCenter.subtract(this.pageVS.viewportCenterOnModeStart);
+        const correction = focusDelta.multiply(1 - new_height / this.pinchStartViewportHeight);
+        new_center = new_center.add(correction);
+
+        pageActions.updateViewport(this.pageVS, new_center, new_height);
+      }
+    }
+  };
+
+  handleTouchEnd = (_event: TouchEvent) => {
+    if (this.pageVS.mode === PageMode.DragNavigation) {
+      pageActions.endDragNavigation(this.pageVS);
+    }
+    this.pinchInProgress = false;
+  };
   bindEvents(canvas: HTMLCanvasElement) {
     log.info('Binding events to PageViewController');
     this.setupResizeObserver(canvas);
@@ -429,13 +497,13 @@ export class PageController {
     },
       () => {
         try {
-          log.info('RENDEIRNG REACTION', this.pageVS.viewportGeometry, pamet.appViewState.currentPageViewState?.viewportGeometry);
           this._renderer?.renderCurrentPage();
         } catch (e) {
           log.error('Error rendering page:', e);
         }
       });
 
+    // Mouse events
     el.addEventListener('mouseleave', this.handleMouseLeave);
     el.addEventListener('mouseenter', this.handleMouseEnter);
     el.addEventListener('mousedown', this.handleMouseDown);
@@ -444,6 +512,11 @@ export class PageController {
     el.addEventListener('dblclick', this.handleDoubleClick);
     el.addEventListener('wheel', this.handleWheel, { passive: false });
     el.addEventListener('contextmenu', this.handleContextMenu);
+
+    // Touch events (pinch + drag-selection)
+    el.addEventListener('touchstart', this.handleTouchStart, { passive: true });
+    el.addEventListener('touchmove', this.handleTouchMove, { passive: true });
+    el.addEventListener('touchend', this.handleTouchEnd);
   }
 
   unbindEvents() {
@@ -464,6 +537,7 @@ export class PageController {
       return;
     }
 
+    // Mouse
     el.removeEventListener('mouseleave', this.handleMouseLeave);
     el.removeEventListener('mouseenter', this.handleMouseEnter);
     el.removeEventListener('mousedown', this.handleMouseDown);
@@ -472,5 +546,10 @@ export class PageController {
     el.removeEventListener('dblclick', this.handleDoubleClick);
     el.removeEventListener('wheel', this.handleWheel);
     el.removeEventListener('contextmenu', this.handleContextMenu);
+
+    // Touch
+    el.removeEventListener('touchstart', this.handleTouchStart);
+    el.removeEventListener('touchmove', this.handleTouchMove);
+    el.removeEventListener('touchend', this.handleTouchEnd);
   }
 }

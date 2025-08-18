@@ -275,7 +275,6 @@ export class DirectRenderer {
     renderCurrentPage() {
         // Debounce redundant rendering
         if (this.reqeustAnimationFrameRet !== null) {
-            log.info('Skipping render request');
             return;
         }
         this.reqeustAnimationFrameRet = requestAnimationFrame(() => {
