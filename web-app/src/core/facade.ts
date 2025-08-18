@@ -1,6 +1,6 @@
 import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
-import { Change } from "fusion/model/Change";
+import { Change, ChangeType } from "fusion/model/Change";
 import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { appActions } from "@/actions/app";
@@ -357,7 +357,7 @@ export class PametFacade extends PametStore {
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        return this.frontendDomainStore.updateOne(entity);
+        const change = this.frontendDomainStore.updateOne(entity);
     }
 
     removeOne(entity: Entity<EntityData>): Change {
@@ -494,6 +494,8 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                 }
                 currentPageVS.addUrlForMediaItem(mediaItem);
             }
+        } else {
+            // Change is empty
         }
 
     }
