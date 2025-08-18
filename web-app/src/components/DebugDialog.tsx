@@ -19,6 +19,14 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
   const [repoHeadState, setRepoHeadState] = useState<any>(null);
   const [fdsState, setFdsState] = useState<any>(null);
   const [problematicEntities, setProblematicEntities] = useState<ProblematicEntityInfo[]>([]);
+  const [mobxStateSize, setMobxStateSize] = useState<number | null>(null);
+  const [debugPaintOperations, setDebugPaintOperations] = useState(pamet.debugPaintOperations);
+
+    const handleDebugPaintOperationsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const newValue = event.target.checked;
+        pamet.debugPaintOperations = newValue;
+        setDebugPaintOperations(newValue);
+    };
 
   useEffect(() => {
     if (isOpen) {
@@ -75,6 +83,19 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
     } catch (error) {
       console.error('Error fetching FDS state:', error);
       setFdsState({ error: String(error) });
+    }
+  };
+
+  const calculateMobxStateSize = () => {
+    try {
+      const mobxState = pamet.appViewState;
+      const jsonString = JSON.stringify(mobxState);
+      const sizeInBytes = new Blob([jsonString]).size;
+      setMobxStateSize(sizeInBytes);
+    } catch (error) {
+      console.error('Error calculating MobX state size:', error);
+      setMobxStateSize(null);
+      alert('Error calculating MobX state size. See console for details.');
     }
   };
 
@@ -150,9 +171,29 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
           </pre>
         </details>
       )}
+
+      {/* Button to calculate MobX state size */}
+        <button onClick={calculateMobxStateSize}>
+            Calculate MobX State Size
+        </button>
+        {mobxStateSize !== null && (
+            <p>MobX State Size: {(mobxStateSize / 1024).toFixed(2)} KB</p>
+        )}
+
       <button onClick={a_restartServiceWorker}>
         Restart Service Worker
       </button>
+
+        <div>
+            <label>
+                <input
+                    type="checkbox"
+                    checked={debugPaintOperations}
+                    onChange={handleDebugPaintOperationsChange}
+                />
+                Debug Paint Operations
+            </label>
+        </div>
 
       {/* Problematic entities display */}
       <details open={problematicEntities.length > 0}>

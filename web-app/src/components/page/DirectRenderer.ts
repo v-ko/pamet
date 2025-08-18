@@ -3,7 +3,7 @@ import { Viewport } from "@/components/page/Viewport";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { PageMode, PageViewState } from "@/components/page/PageViewState";
 import { NoteViewState } from "@/components/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, ARROW_SELECTION_THICKNESS_DELTA, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals } from "@/util";
 
@@ -37,8 +37,6 @@ export interface ElementDrawStats {
     render_time: number
 }
 
-const MIN_RERENDER_TIME = 5; // ms
-
 const selectionColor = color_role_to_hex_color(SELECTED_ITEM_OVERLAY_COLOR_ROLE);
 const dragSelectRectColor = color_role_to_hex_color(DRAG_SELECT_COLOR_ROLE);
 
@@ -50,28 +48,40 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
 }
 
 
-export class CanvasPageRenderer {
+export class DirectRenderer {
     private _nvsCache: Map<NoteViewState, ImageBitmap> = new Map();
     private _nvsCacheSize: number = 0;
-    private renderTimeout: NodeJS.Timeout | null = null;
+    private reqeustAnimationFrameRet: number | null = null;
     private _followupRenderSteps: number = 0;
-    // Image cache: one per nvs, and clear
-    private _imageCache: Map<string, HTMLImageElement> = new Map();
+    private _context: CanvasRenderingContext2D;
+    private _pageVS: PageViewState;
+
+    constructor(ctx: CanvasRenderingContext2D, pageVS: PageViewState) {
+        this._context = ctx;
+        this._pageVS = pageVS;
+    }
+
+    // Release resources and cancel any pending renders
+    dispose() {
+        if (this.reqeustAnimationFrameRet !== null) {
+            cancelAnimationFrame(this.reqeustAnimationFrameRet);
+            this.reqeustAnimationFrameRet = null;
+        }
+        // Release cached bitmaps
+        for (const [, imageBitmap] of this._nvsCache) {
+            try {
+                imageBitmap.close();
+            } catch {
+                // ignore errors from closing
+            }
+        }
+        this._nvsCache.clear();
+        this._nvsCacheSize = 0;
+    }
 
     get nvsCacheSize(): number {
         return this._nvsCacheSize;
     }
-
-    // getImage(src: string): HTMLImageElement | null {
-    //     // Lazy load image
-    //     let image = this._imageCache.get(src);
-    //     if (image === undefined) {
-    //         image = new Image();
-    //         image.src = src;
-    //         this._imageCache.set(src, image);
-    //     }
-    //     return image;
-    // }
 
     getImage(src: string): HTMLImageElement | null {
         // console.log('-----------------getImage', src)
@@ -262,15 +272,15 @@ export class CanvasPageRenderer {
 
 
 
-    renderPage(state: PageViewState, context: CanvasRenderingContext2D) {
+    renderCurrentPage() {
         // Debounce redundant rendering
-        if (this.renderTimeout !== null) {
+        if (this.reqeustAnimationFrameRet !== null) {
             return;
         }
-        this.renderTimeout = setTimeout(() => {
-            this.renderTimeout = null;
-            this._render(state, context);
-        }, MIN_RERENDER_TIME);
+        this.reqeustAnimationFrameRet = requestAnimationFrame(() => {
+            this.reqeustAnimationFrameRet = null;
+            this._render(this._pageVS);
+        });
     }
 
     _applyProjectionMatrix(state: PageViewState, ctx: CanvasRenderingContext2D) {
@@ -284,8 +294,18 @@ export class CanvasPageRenderer {
         ctx.translate(-state.viewport.xReal, -state.viewport.yReal);
     }
 
-    _render(state: PageViewState, ctx: CanvasRenderingContext2D) {
+    _render(pageVS: PageViewState) {//) { //
+        if (!this._context) {
+            log.error('No context set for rendering');
+            return;
+        }
+        let ctx = this._context;
+
         // console.log('Rendering at', state.viewport);
+        // let rp = pamet.renderProfiler
+        // rp.setDirectRendererInvoke(state.renderId!);
+        // rp.logTimeSinceMouseMove('DirectRenderer invoked', state.renderId!);
+        // rp.clear(state.renderId!);
 
         // Clear the canvas
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -293,43 +313,57 @@ export class CanvasPageRenderer {
 
         // Drawing without transformation
         // Draw drag selection rectangle
-        if (state.mode === PageMode.DragSelection && state.dragSelectionRectData !== null) {
+        if (pageVS.mode === PageMode.DragSelection && pageVS.dragSelectionRectData !== null) {
             ctx.fillStyle = dragSelectRectColor;
-            ctx.fillRect(...state.dragSelectionRectData);
+            ctx.fillRect(...pageVS.dragSelectionRectData);
         }
 
         // // draw the mouse with a red circle
-        // if (state.projectedMousePosition) {
+        // let tmpMousePos = pamet.appViewState.mouseState.position;
+        // if (tmpMousePos) {
         //     ctx.save();
         //     ctx.fillStyle = 'red';
         //     ctx.beginPath();
-        //     ctx.arc(state.projectedMousePosition.x, state.projectedMousePosition.y, 5, 0, 2 * Math.PI);
+        //     ctx.arc(tmpMousePos.x, tmpMousePos.y, 5, 0, 2 * Math.PI);
         //     ctx.fill();
         //     ctx.restore();
         // }
 
         // Draw elements
-        this._drawElements(state, ctx);
+        let drawStats = this._drawElements(pageVS, ctx);
+        // Draw stats
+        let pixelSpaceRect = pageVS.viewport.projectRect(pageVS.viewport.realBounds);
+        ctx.save()
+        ctx.resetTransform()
+        ctx.fillStyle = 'black';
+        ctx.font = '15px sans-serif';
+        let xStats = 10;
+        let yStats = pixelSpaceRect.height - 10;
+
+        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
+        ctx.restore()
 
         // Draw stuff in real space
         // Setup the projection matrix
         ctx.save()
-        this._applyProjectionMatrix(state, ctx);
+        this._applyProjectionMatrix(pageVS, ctx);
 
         // // Draw test rect
         // ctx.fillStyle = 'red';
         // ctx.fillRect(0, 0, 100, 100);
 
-        // // Draw viewport boundaries (for debugging)
-        // ctx.strokeStyle = 'black';
-        // ctx.lineWidth = 1;
-        // ctx.strokeRect(...state.viewport.realBounds.data());
+        // Draw viewport boundaries (for debugging)
+        if (pamet.debugPaintOperations){
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(...pageVS.viewport.realBounds.data());
+        }
 
         // Draw a rectangle for the page outline if the viewport is zoomed out
         // enough
-        if (state.viewportHeight > MAX_HEIGHT_SCALE * 0.9) {
+        if (pageVS.viewportHeight > MAX_HEIGHT_SCALE * 0.9) {
             ctx.save();
-            let heightScaleFactor = state.viewport.heightScaleFactor()
+            let heightScaleFactor = pageVS.viewport.heightScaleFactor()
             ctx.strokeStyle = '#dddddd';
             ctx.lineWidth = 1 / heightScaleFactor;
             ctx.beginPath();
@@ -339,22 +373,23 @@ export class CanvasPageRenderer {
         }
         // Draw selection overlays
         // If drag selection is active - add drag selected children to the selection
-        if (state.mode === PageMode.DragSelection) {
-            for (const childVS of state.dragSelectedElementsVS) {
+        if (pageVS.mode === PageMode.DragSelection) {
+            for (const childVS of pageVS.dragSelectedElementsVS) {
                 this._drawSelectionOverlay(ctx, childVS);
             }
         }
 
         // Draw regular selection overlays
-        for (const childVS of state.selectedElementsVS) {
+        for (const childVS of pageVS.selectedElementsVS) {
             this._drawSelectionOverlay(ctx, childVS);
         }
 
         // Draw anchor suggestions (when creating an arrow) and new arrow
-        if (state.mode === PageMode.CreateArrow && state.projectedMousePosition) {
+        const mousePos = pamet.appViewState.mouseState.positionOnPress;
+        if (pageVS.mode === PageMode.CreateArrow && mousePos) {
             // Draw anchor suggestions
-            let realMousePos = state.viewport.unprojectPoint(state.projectedMousePosition);
-            let anchorSuggestion = state.noteAnchorSuggestionAt(realMousePos);
+            let realMousePos = pageVS.viewport.unprojectPoint(mousePos);
+            let anchorSuggestion = pageVS.noteAnchorSuggestionAt(realMousePos);
             if (anchorSuggestion.onAnchor || anchorSuggestion.onNote) {
                 let note = anchorSuggestion.noteViewState.note();
 
@@ -374,13 +409,13 @@ export class CanvasPageRenderer {
             }
 
             // Draw the currently created arrow
-            if (state.newArrowViewState !== null) {
-                console.log('Drawing new arrow', state.newArrowViewState);
+            if (pageVS.newArrowViewState !== null) {
+                console.log('Drawing new arrow', pageVS.newArrowViewState);
                 // Head should be null, and we want to set it to the mouse pos
-                let arrow = state.newArrowViewState.arrow()
+                let arrow = pageVS.newArrowViewState.arrow()
                 arrow.setHead(realMousePos, null, ArrowAnchorOnNoteType.none);
                 let newArrowVS = new ArrowViewState(
-                    arrow)
+                    arrow, pageVS)
                 let view = new ArrowCanvasView(this, newArrowVS);
                 try {
                     ctx.save();
@@ -392,9 +427,9 @@ export class CanvasPageRenderer {
                     ctx.restore();
                 }
             }
-        } else if (state.mode === PageMode.NoteResize || state.mode === PageMode.MoveElements) {
+        } else if (pageVS.mode === PageMode.NoteResize || pageVS.mode === PageMode.MoveElements) {
             // Draw note alignment lines
-            for (let elementVS of state.selectedElementsVS) {
+            for (let elementVS of pageVS.selectedElementsVS) {
                 if (elementVS instanceof NoteViewState) {
                     // Draw four lines that extend all rect sides with ALIGNM
                     let note = elementVS.note();
@@ -433,7 +468,7 @@ export class CanvasPageRenderer {
         }
 
         // When a single arrow is selected - draw the control points for editing it
-        let editableArrowVS = state.arrowVS_withVisibleControlPoints();
+        let editableArrowVS = pageVS.arrowVS_withVisibleControlPoints();
         if (editableArrowVS !== null) {
             // Display control points and suggested control points
             let arrow = editableArrowVS.arrow();
@@ -496,7 +531,7 @@ export class CanvasPageRenderer {
         let withNoCache = new Set<NoteViewState>(); // nvs in the viewport without cache
         for (const noteVS of state.noteViewStatesById.values()) {
             // Skip if the note is outside the viewport
-            if (!viewportRect.intersects(new Rectangle(noteVS._noteData.geometry))) {
+            if (!viewportRect.intersects(new Rectangle(noteVS._elementData.geometry))) {
                 continue;
             }
 
@@ -598,25 +633,13 @@ export class CanvasPageRenderer {
         drawStats.render_time = duration;
         // console.log(`Rendering took ${duration} ms`)
 
-        // Overview
-
-        // Draw stats
-        let pixelSpaceRect = state.viewport.projectRect(state.viewport.realBounds);
-        ctx.save()
-        ctx.resetTransform()
-        ctx.fillStyle = 'black';
-        ctx.font = '15px sans-serif';
-        let xStats = 10;
-        let yStats = pixelSpaceRect.height - 10;
-        ctx.fillText(`Render stats | total: ${drawStats.total} | reused: ${drawStats.reused} | reusedDirty: ${drawStats.reusedDirty} | deNovoRedraw: ${drawStats.deNovoRedraw} | deNovoClean: ${drawStats.deNovoClean} | pattern: ${drawStats.pattern} | direct: ${drawStats.direct} | render_time: ${drawStats.render_time.toFixed(2)} ms`, xStats, yStats);
-        ctx.restore()
-
         // Call the next render if some notes have not been fully rendered
         if (drawStats.deNovoAll > 0 || drawStats.pattern > 0) {
-            this.requestFollowupRender(state, ctx, dpr);
+            this.requestFollowupRender();
         } else {
             this._followupRenderSteps = 0;
         }
+        return drawStats;
     }
 
     _drawSelectionOverlay(ctx: CanvasRenderingContext2D, childVS: ElementViewState) {
@@ -651,7 +674,7 @@ export class CanvasPageRenderer {
     }
 
 
-    requestFollowupRender(state: PageViewState, context: CanvasRenderingContext2D, dpr: number) {
+    requestFollowupRender() {
         this._followupRenderSteps++;
 
         // Prevent infinite loop
@@ -660,7 +683,7 @@ export class CanvasPageRenderer {
             this._followupRenderSteps = 0;
             return;
         }
-        this.renderPage(state, context);
+        this.renderCurrentPage();
     }
 }
 

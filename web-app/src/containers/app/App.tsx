@@ -15,7 +15,6 @@ import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
 import { commands, confirmPageDeletion } from "@/core/commands";
 import { pageActions } from "@/actions/page";
 import NoteEditView from "@/components/note/NoteEditView";
-import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "@/actions/project";
 import { CreatePageDialog } from "@/components/CreateNewPageDialog";
 import { appActions } from "@/actions/app";
@@ -141,7 +140,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
 
       {/* If page data - display the page */}
-      {shouldDisplayPage && <PageView state={state.currentPageViewState!} />}
+      {shouldDisplayPage && <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />}
 
 
       {/* Main panel - logo, project name, save state, help button */}
@@ -227,24 +226,6 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
         <NoteEditView
           state={currentPageVS.noteEditWindowState}
-          onTitlebarPress={(event: React.MouseEvent) => {
-            event.preventDefault();
-            let mousePos = new Point2D([event.clientX, event.clientY]);
-            state.mouse.applyPressEvent(event);
-            pageActions.startEditWindowDrag(currentPageVS, mousePos);
-          }}
-          onTitlebarRelease={(event: React.MouseEvent) => {
-            console.log('Titlebar released', event);
-            event.preventDefault();
-            state.mouse.applyReleaseEvent(event);
-            pageActions.endEditWindowDrag(currentPageVS);
-          }}
-          onCancel={() => {
-            pageActions.closeNoteEditWindow(currentPageVS)
-          }}
-          onSave={(note, addedMediaItem, removedMediaItem) => {
-            pageActions.saveEditedNote(currentPageVS, note, addedMediaItem, removedMediaItem);
-          }}
         />}
 
       {state.dialogMode === AppDialogMode.CreateNewPage && (

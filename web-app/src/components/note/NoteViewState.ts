@@ -5,30 +5,22 @@ import { calculateTextLayout } from "@/components/note/note-dependent-utils";
 import { getLogger } from "fusion/logging";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "@/core/constants";
-import { dumpToDict, loadFromDict } from "fusion/model/Entity";
-import { pamet } from "@/core/facade";
+import { loadFromDict } from "fusion/model/Entity";
 import { Change } from "fusion/model/Change";
+import { PageViewState } from "@/components/page/PageViewState";
 
 let log = getLogger('NoteViewState.ts');
 
 
 export class NoteViewState extends ElementViewState {
-    _noteData!: SerializedNote; // initialized in updateFromNote
+    _elementData!: SerializedNote; // initialized in the element constructor
 
-    constructor(note: Note) {
-        super();
-        this._noteData = dumpToDict(note) as SerializedNote;
+    constructor(note: Note, pageViewState: PageViewState) {
+        super(note, pageViewState);
 
         makeObservable(this, {
-            _noteData: observable,
-            // _note: computed,  This returns instances with the same data object (and entities arer expected to be generally immutable )
+            _elementData: observable,
             textLayoutData: computed
-        });
-
-        reaction(() => {
-            return {content: this._noteData.content, style: this._noteData.style}
-        }, () => {
-            pamet.appViewState.currentPageViewState?._renderer.deleteNvsCache(this);
         });
     }
 
@@ -38,7 +30,7 @@ export class NoteViewState extends ElementViewState {
         // We need to copy the _data, since it's wrapped in a mobx.observable
         // and we want to drop the wrapper
         // https://mobx.js.org/observable-state.html#converting-observables-back-to-vanilla-javascript-collections
-        let noteData = toJS(this._noteData);
+        let noteData = toJS(this._elementData);
         return loadFromDict(noteData) as Note
         // return loadFromDict(this._noteData) as Note << this won't work
         // Using the pamet.find method will cause problems with outdated state
@@ -55,7 +47,7 @@ export class NoteViewState extends ElementViewState {
             return;
         }
         let update = change.forwardComponent as Partial<SerializedNote>;
-        this._noteData = { ...this._noteData, ...update };
+        this._elementData = { ...this._elementData, ...update };
     }
 
     updateFromNote(note: Note) {

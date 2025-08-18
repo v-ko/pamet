@@ -1,13 +1,12 @@
 import { makeObservable, observable } from "mobx";
-import { DeviceData } from "@/model/config/Device";
-import { UserData } from "@/model/config/User";
-import { MouseState, PageViewState } from "@/components/page/PageViewState";
+import { PageViewState } from "@/components/page/PageViewState";
 import { pamet } from "@/core/facade";
 import { ProjectData } from "@/model/config/Project";
 import { Point2D } from "fusion/primitives/Point2D";
 import { PametRoute } from "@/services/routing/route";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
 import { CommandPaletteState } from "@/components/CommandPaletteState";
+import React from "react";
 
 
 export enum AppDialogMode {
@@ -59,7 +58,7 @@ export class WebAppState {
   dialogMode: AppDialogMode = AppDialogMode.Closed;
   focusPointOnDialogOpen: Point2D = new Point2D([0, 0]); // Either the mouse location or the center of the screen
   loadingDialogState: LoadingDialogState | null = null;
-  mouse: MouseState = new MouseState();
+  mouseState: MouseState = new MouseState();
   commandPaletteState: CommandPaletteState | null = null;
 
   constructor() {
@@ -123,3 +122,56 @@ export class WebAppState {
   }
 
 }
+
+interface MouseStateData {
+  buttons: number;
+  position: Point2D | null;
+  positionOnPress: Point2D | null;
+  buttonsOnLeave: number;
+}
+
+export class MouseState {
+    buttons: number = 0;
+    position: Point2D | null = null;
+    positionOnPress: Point2D | null = null;
+    buttonsOnLeave: number = 0;
+
+    constructor() {
+        makeObservable(this, {
+            position: observable,
+            positionOnPress: observable,
+            buttons: observable,
+            buttonsOnLeave: observable,
+        });
+    }
+
+    get mouseIsPresent(): boolean {
+        return this.position !== null;
+    }
+
+    get rightIsPressed() {
+        return (this.buttons & 2) !== 0;
+    }
+    get leftIsPressed() {
+        return (this.buttons & 1) !== 0;
+    }
+    data(): MouseStateData {
+        return {
+            buttons: this.buttons,
+            position: this.position,
+            positionOnPress: this.positionOnPress,
+            buttonsOnLeave: this.buttonsOnLeave
+        };
+    }
+    applyPressEvent(event: React.MouseEvent) {
+        this.positionOnPress = new Point2D([event.clientX, event.clientY]);
+        this.buttons = event.buttons;
+    }
+    applyMoveEvent(event: React.MouseEvent) {
+        this.position = new Point2D([event.clientX, event.clientY]);
+    }
+    applyReleaseEvent(event: React.MouseEvent) {
+        this.buttons = event.buttons;
+    }
+}
+

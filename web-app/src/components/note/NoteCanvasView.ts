@@ -95,11 +95,18 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         let note = this.noteViewState.note();
         context.save()
         context.strokeStyle = color_role_to_hex_color(note.style.color_role);
-        context.lineWidth = 1;
+        const NOTE_BORDER_WIDTH = 0.5
+        context.lineWidth = NOTE_BORDER_WIDTH;
         if (borderType === BorderType.Dashed) {
             context.setLineDash([10, 5]);
         }
-        context.strokeRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
+        context.strokeRect(note.geometry[0] + NOTE_BORDER_WIDTH / 2, note.geometry[1] + NOTE_BORDER_WIDTH / 2, note.geometry[2] - NOTE_BORDER_WIDTH, note.geometry[3] - NOTE_BORDER_WIDTH);
+        if (pamet.debugPaintOperations) {
+            // Make the fine border position visible (canvas has some weird assumptions about the border position)
+            context.strokeStyle = 'orange';
+            context.lineWidth = 0.1;
+            context.strokeRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
+        }
         context.restore()
     }
 
@@ -113,7 +120,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        const mediaItem = pamet.findOne({id: note.content.image_id}) as MediaItem;
+        const mediaItem = pamet.findOne({ id: note.content.image_id }) as MediaItem;
         if (!mediaItem) {
             let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
@@ -131,11 +138,11 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         let image = this.renderer.getImage(mediaItemRoute_.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
-            errorText = IMAGE_NOT_LOADED_TEXT;
+            errorText = '(image element missing)';
         } else if (!image.complete) { // still loading
             errorText = IMAGE_NOT_LOADED_TEXT;
         } else if (image.naturalWidth === 0) { // loaded unsuccessfully
-            errorText = 'Loading failed';
+            errorText = '(loading failed)';
         }
         if (errorText !== undefined) {
             let textLayout = calculateTextLayout(errorText, textRect(noteRect), DEFAULT_FONT_STRING)

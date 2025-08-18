@@ -40,17 +40,6 @@ class PageActions {
     state.viewportHeight = viewportHeight
   }
 
-  // Don't include the mouse tracking with the user actions. We need it for
-  // the commands though (e.g. creating a note via command)
-  @action({ name: 'updateProjectedMousePosition', issuer: 'PageView' })
-  updateMousePosition(state: PageViewState, pixelSpaceMousePos: Point2D | null) {
-    if (pixelSpaceMousePos === null) {
-      state.projectedMousePosition = null;
-      return;
-    }
-    state.projectedMousePosition = pixelSpaceMousePos;
-  }
-
   @action
   startDragNavigation(
     state: PageViewState) {
@@ -181,7 +170,7 @@ class PageActions {
 
     // Get notes in the area
     for (let noteVS of state.noteViewStatesById.values()) {
-      let noteRect = new Rectangle(noteVS._noteData.geometry);
+      let noteRect = new Rectangle(noteVS._elementData.geometry);
       if (unprojectedRect.intersects(noteRect)) {
         state.dragSelectedElementsVS.add(noteVS);
       }
@@ -235,11 +224,6 @@ class PageActions {
       throw new Error('No project loaded');
     }
 
-    // Handle media item changes
-    if (addedMediaItem) {
-      pamet.insertOne(addedMediaItem);
-    }
-
     if (removedMediaItem) {
       if (!addedMediaItem) {
         throw new Error('Removed media item without added media item');
@@ -261,6 +245,11 @@ class PageActions {
       pamet.insertNote(note);
     } else {
       pamet.updateNote(note);
+    }
+
+    // Handle media item changes
+    if (addedMediaItem) {
+      pamet.insertOne(addedMediaItem);
     }
 
     state.noteEditWindowState = null;
