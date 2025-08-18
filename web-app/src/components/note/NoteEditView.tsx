@@ -12,32 +12,26 @@ import { ImageEditPropsWidget } from "@/components/note/edit-window/ImageEditPro
 import { LinkEditWidget } from "@/components/note/edit-window/LinkEditWidget";
 import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
+import { Point2D } from 'fusion/primitives/Point2D';
+import { pageActions } from '@/actions/page';
 
 let log = getLogger('EditComponent');
 
 interface EditComponentProps {
   state: NoteEditViewState;
-  onTitlebarPress: (event: React.MouseEvent) => void;
-  onTitlebarRelease: (event: React.MouseEvent) => void;
-  onCancel: () => void; // added to avoid a dependency to the pageViewState
-  onSave: (note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) => void;
 }
 
 const NoteEditView: React.FC<EditComponentProps> = observer((
   { state,
-    onTitlebarPress,
-    onTitlebarRelease,
-    onCancel,
-    onSave
   }: EditComponentProps) => {
-/**
- * Logic for the tool/check-buttons and props visibility:
- * - We init them from the note content - if text/image/url is present - show them (minmum text)
- * - If a button is toggled - the useEffect controls some combinations (dont allow none to be selected, links always have text, etc)
- * - On content changes - that is reflected in _noteData (the local copy of the note .. data)
- * - On save - we "bake" the note - i.e. apply final changes to the note data and save it
- *  - A relevant detail - if we hide the e.g. text props - text is not deleted (the user might want it on clicking toggle back)
- */
+  /**
+   * Logic for the tool/check-buttons and props visibility:
+   * - We init them from the note content - if text/image/url is present - show them (minmum text)
+   * - If a button is toggled - the useEffect controls some combinations (dont allow none to be selected, links always have text, etc)
+   * - On content changes - that is reflected in _noteData (the local copy of the note .. data)
+   * - On save - we "bake" the note - i.e. apply final changes to the note data and save it
+   *  - A relevant detail - if we hide the e.g. text props - text is not deleted (the user might want it on clicking toggle back)
+   */
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -85,6 +79,30 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
   }, []);
 
+  // Setup geometry update handling on resize
+  useEffect(() => {
+    const updateGeometryHandler = () => {
+      let wrapper = wrapperRef.current;
+      if (!wrapper) {
+        log.warning("[resize handler] wrapperRef is null");
+        return;
+      }
+      const rect = wrapper.getBoundingClientRect();
+      setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
+    };
+
+    // Use a resize observer to bind the updateGeometry function to resize events
+    // of the superContainer
+    let wrapper = wrapperRef.current;
+    if (!wrapper) {
+      log.warning("[resize watch effect] wrapperRef is null");
+      return;
+    }
+    const resizeObserver = new ResizeObserver(updateGeometryHandler);
+    resizeObserver.observe(wrapper);
+    return () => resizeObserver.disconnect();
+  }, [wrapperRef]);
+
   // Handle toggle button changes to restrict some combinations
   useEffect(() => {
     const currentNote = loadFromDict(noteData.current) as Note;
@@ -106,8 +124,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     updateNoteData(dumpToDict(currentNote));
   }, [textButtonToggled, imageButtonToggled, linkButtonToggled, internalLinkIsSet]);
 
+  // Focus the text area on mount if it's visible
   useEffect(() => {
-    // Focus the text area on mount if it's visible
     log.info("Text button toggled HOOOOK:", textButtonToggled);
     if (textButtonToggled) {
       log.info("Text button toggle true:", textButtonToggled, textAreaRef.current);
@@ -217,16 +235,31 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     committed.current = true;
     const addedMediaItem = uncommitedImage ? new MediaItem(uncommitedImage) : null;
     const removedMediaItem = originalImageForTrashing ? new MediaItem(originalImageForTrashing) : null;
-    onSave(note, addedMediaItem, removedMediaItem);
+
+    let currentPageVS = pamet.appViewState.currentPageViewState;
+    if (!currentPageVS) {
+      throw new Error('No current page view state found');
+    }
+    pageActions.saveEditedNote(currentPageVS, note, addedMediaItem, removedMediaItem);
 
     // On successful save, the media items are committed. Clear the state.
     setUncommitedImage(null);
     setOriginalImageForTrashing(null);
   };
 
+  // Cancel and save operations
+  const cancelEditing = () => {
+    const currentPageVS = pamet.appViewState.currentPageViewState;
+    if (!currentPageVS) {
+      throw new Error('No current page view state found');
+    }
+    pageActions.closeNoteEditWindow(currentPageVS);
+  }
+
+  // Input event handlers
   const handleKeyDown = (event: React.KeyboardEvent) => {
     if (event.key === 'Escape') {
-      onCancel();
+      cancelEditing();
     }
     if (event.code === 'KeyS' && event.ctrlKey) {
       event.preventDefault();
@@ -236,29 +269,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     log.info("Key pressed: " + event.key);
   };
 
-  // Setup geometry update handling on resize
-  useEffect(() => {
-    const updateGeometryHandler = () => {
-      let wrapper = wrapperRef.current;
-      if (!wrapper) {
-        log.warning("[resize handler] wrapperRef is null");
-        return;
-      }
-      const rect = wrapper.getBoundingClientRect();
-      setGeometry(new Rectangle([rect.left, rect.top, rect.width, rect.height]));
-    };
-
-    // Use a resize observer to bind the updateGeometry function to resize events
-    // of the superContainer
-    let wrapper = wrapperRef.current;
-    if (!wrapper) {
-      log.warning("[resize watch effect] wrapperRef is null");
-      return;
-    }
-    const resizeObserver = new ResizeObserver(updateGeometryHandler);
-    resizeObserver.observe(wrapper);
-    return () => resizeObserver.disconnect();
-  }, [wrapperRef]);
 
   const handleDragEnter = (event: React.DragEvent) => {
     event.preventDefault();
@@ -361,14 +371,32 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       <div className="title-bar">
         {/* move icon area */}
         <div
-          onMouseDown={onTitlebarPress}
-          onMouseUp={onTitlebarRelease}
+          onMouseDown={(event: React.MouseEvent) => {
+            event.preventDefault();
+            let mousePos = new Point2D([event.clientX, event.clientY]);
+            let currentPageVS = pamet.appViewState.currentPageViewState;
+            if (!currentPageVS) {
+              throw new Error('No current page view state found');
+            }
+            pamet.appViewState.mouseState.applyPressEvent(event);
+            pageActions.startEditWindowDrag(currentPageVS, mousePos);
+          }}
+          onMouseUp={(event: React.MouseEvent) => {
+            console.log('Titlebar released', event);
+            event.preventDefault();
+            let currentPageVS = pamet.appViewState.currentPageViewState;
+            if (!currentPageVS) {
+              throw new Error('No current page view state found');
+            }
+            pamet.appViewState.mouseState.applyReleaseEvent(event);
+            pageActions.endEditWindowDrag(currentPageVS);
+          }}
           className="move-area"
         />
         {/* Close button */}
         <button
           className="close-button"
-          onClick={onCancel}
+          onClick={cancelEditing}
         >×</button>
         <div className="title-text">
           {state.creatingNote ? 'Create note' : 'Edit note'}
@@ -383,9 +411,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
           tabIndex={PametTabIndex.NoteEditView_Tool1}
         >T</button>
         <button
-            className={`tool-button ${linkButtonToggled ? 'toggled' : ''}`}
-            onClick={() => setLinkButtonToggled(!linkButtonToggled)}
-            tabIndex={PametTabIndex.NoteEditView_Tool2}>🔗</button>
+          className={`tool-button ${linkButtonToggled ? 'toggled' : ''}`}
+          onClick={() => setLinkButtonToggled(!linkButtonToggled)}
+          tabIndex={PametTabIndex.NoteEditView_Tool2}>🔗</button>
         <button
           className={`tool-button ${imageButtonToggled ? 'toggled' : ''}`}
           onClick={() => setImageButtonToggled(!imageButtonToggled)}
@@ -426,7 +454,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       <div className="footer">
         <button
           className="cancel-button"
-          onClick={onCancel}
+          onClick={cancelEditing}
           tabIndex={PametTabIndex.NoteEditViewCancel}
         >
           Cancel (Esc)

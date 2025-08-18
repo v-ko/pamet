@@ -1,6 +1,6 @@
 import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
-import type { LocalStorageState } from "@/containers/app/WebAppState";
+import type { LocalStorageState, MouseState } from "@/containers/app/WebAppState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
@@ -52,6 +52,12 @@ class AppActions {
         state.currentProjectState = projectData;
         state.projectError = projectError;
         state.currentPageId = null;
+    }
+
+    @action({ issuer: 'service' })
+    updateMouseState(state: WebAppState, mouseStateProps: Partial<MouseState>) {
+        // Update the mouse state with the given properties
+        Object.assign(state.mouseState, mouseStateProps);
     }
 
     @action

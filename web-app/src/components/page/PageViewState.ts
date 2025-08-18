@@ -12,9 +12,7 @@ import { Note } from "@/model/Note";
 import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
 import { ElementViewState as CanvasElementViewState } from "@/components/page/ElementViewState";
 import { Size } from 'fusion/primitives/Size';
-import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 import { Change } from 'fusion/model/Change';
-import React from 'react';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { mediaItemRoute } from '@/services/routing/route';
 import { MediaItem } from 'fusion/model/MediaItem';
@@ -49,7 +47,6 @@ export enum PageMode {
 
 export class PageViewState {
     _pageData!: PageData;
-    _renderer: CanvasPageRenderer;
 
     // Elements
     noteViewStatesById: ObservableMap<string, NoteViewState>;
@@ -63,8 +60,6 @@ export class PageViewState {
     // Common
     mode: PageMode = PageMode.None;
     viewportCenterOnModeStart: Point2D = new Point2D([0, 0]); // In real coords
-    projectedMousePosition: Point2D | null = null;  // If null - not on screen
-    // mouseButtons: number = 0;
 
     // Selection related
     selectedElementsVS: ObservableSet<CanvasElementViewState> = observable.set();
@@ -103,7 +98,6 @@ export class PageViewState {
 
     constructor(page: Page, notes: Note[], arrows: Arrow[]) {
         this._pageData = page.data();
-        this._renderer = new CanvasPageRenderer();
 
         this.noteViewStatesById = new ObservableMap<string, NoteViewState>();
         this.arrowViewStatesById = new ObservableMap<string, ArrowViewState>();
@@ -138,7 +132,6 @@ export class PageViewState {
 
             mode: observable,
             viewportCenterOnModeStart: observable,
-            projectedMousePosition: observable,
 
             selectedElementsVS: observable,
             mousePositionOnDragSelectionStart: observable,
@@ -160,16 +153,12 @@ export class PageViewState {
         this._pageData = { ...this._pageData, ...update };
     }
 
-    get renderer() {
-        return this._renderer;
-    }
-
     _addViewStateForNote(element: Note) {
         if (this.noteViewStatesById.has(element.id)) {
             log.error('Note already exists in page view state', element)
             return;
         }
-        let nvs = new NoteViewState(element);
+        let nvs = new NoteViewState(element, this);
         this.noteViewStatesById.set(element.id, nvs);
     }
 
@@ -179,7 +168,7 @@ export class PageViewState {
             return;
         }
 
-        this.arrowViewStatesById.set(element.id, new ArrowViewState(element));
+        this.arrowViewStatesById.set(element.id, new ArrowViewState(element, this));
     }
 
     addViewStateForElement(element: Note | Arrow) {
@@ -350,7 +339,7 @@ export class PageViewState {
 
     *noteViewsAt(position: Point2D, radius: number = 0): Generator<NoteViewState> {
         for (let noteViewState of this.noteViewStatesById.values()) {
-            let intersectRect = new Rectangle([...noteViewState._noteData.geometry])
+            let intersectRect = new Rectangle([...noteViewState._elementData.geometry])
             if (radius > 0) {
                 intersectRect.setSize(intersectRect.size().add(new Size([radius * 2, radius * 2])))
                 intersectRect.setTopLeft(intersectRect.topLeft().subtract(new Point2D([radius, radius])))
@@ -487,29 +476,5 @@ export class AnchorOnNoteSuggestion {
 
     get onNote(): boolean {
         return this._noteViewState !== null;
-    }
-}
-
-export class MouseState {
-    buttons: number = 0;
-    position: Point2D = new Point2D([0, 0]);
-    positionOnPress: Point2D = new Point2D([0, 0]);
-    buttonsOnLeave: number = 0;
-
-    get rightIsPressed() {
-        return (this.buttons & 2) !== 0;
-    }
-    get leftIsPressed() {
-        return (this.buttons & 1) !== 0;
-    }
-    applyPressEvent(event: React.MouseEvent) {
-        this.positionOnPress = new Point2D([event.clientX, event.clientY]);
-        this.buttons = event.buttons;
-    }
-    applyMoveEvent(event: React.MouseEvent) {
-        this.position = new Point2D([event.clientX, event.clientY]);
-    }
-    applyReleaseEvent(event: React.MouseEvent) {
-        this.buttons = event.buttons;
     }
 }

@@ -20,6 +20,7 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { updateAppStateFromConfig } from "@/procedures/app";
+import { CanvasPageRenderer } from "@/components/page/DirectRenderer";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -160,8 +161,9 @@ export class PametFacade extends PametStore {
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
     debugging = true;
-    debugPaintOperations = true;
+    debugPaintOperations = false;
     renderProfiler = new RenderProfiler();
+    pageRenderer: CanvasPageRenderer = new CanvasPageRenderer();
 
     constructor() {
         super()
