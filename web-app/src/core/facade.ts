@@ -20,6 +20,8 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { updateAppStateFromConfig } from "@/procedures/app";
+import { RenderProfiler } from "@/core/RenderProfiler";
+import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -54,97 +56,6 @@ export function webStorageConfigFactory(projectId: string): ProjectStorageConfig
     }
 }
 
-class RenderProfiler {
-    mouseMoveTime?: number;
-    renderIds: Set<number> = new Set();
-    // mouseMoveEventCounts: number = 0;
-
-    reactRender?: number;
-    reactRenderCounts: number = 0;
-
-    mobxReaction?: number;
-    mobxReactionCounts: number = 0;
-
-    directRendererInvoke?: number;
-    directRendererInvokeCounts: number = 0;
-
-    propSetSkips: number = 0;
-
-    constructor() {
-        // clear
-    }
-
-    addRenderId(renderId: number) {
-        // if (this.mouseMoveTime || !renderId) {
-        //     this.propSetSkips++;
-        //     return;
-        // }
-        if (!this.mouseMoveTime) {
-            this.mouseMoveTime = performance.now();
-            // log.info('Starting render with id:', renderId);
-        }
-        // log.info(`Render id added: ${renderId}.`);
-        this.renderIds.add(renderId);
-    }
-    setReactRender(renderId: number) {
-        this.reactRenderCounts++;
-        if (renderId && this.renderIds?.has(renderId)) {
-            this.propSetSkips++;
-        }
-        this.reactRender = performance.now();
-    }
-    setMobxReaction(renderId: number) {
-        this.mobxReactionCounts++;
-        if (renderId && this.renderIds?.has(renderId)) {
-            this.propSetSkips++;
-        }
-        this.mobxReaction = performance.now();
-    }
-    setDirectRendererInvoke(renderId: number) {
-        this.directRendererInvokeCounts++;
-        if (renderId && this.renderIds?.has(renderId)) {
-            this.propSetSkips++;
-        }
-        this.directRendererInvoke = performance.now();
-    }
-    logTimeSinceMouseMove(message: string, renderId: number) {
-        if (!renderId || !this.renderIds?.has(renderId) || !this.mouseMoveTime) {
-            // log.info(`Skipping for request with mouse position ${renderId}.`);
-            return;
-        }
-        let timeSinceMouseMove = performance.now() - this.mouseMoveTime;
-        // log.info(`${message} - Time since last mouse move: ${timeSinceMouseMove} ms. Skip count: ${this.propSetSkips}`);
-    }
-
-    clear(renderId: number): any {
-        // log.info(`Clearing render profiler data. Counts: renderIds.size=${this.renderIds.size}, reactRender=${this.reactRenderCounts}, mobxReaction=${this.mobxReactionCounts}, directRendererInvoke=${this.directRendererInvokeCounts}, propSetSkips=${this.propSetSkips}`);
-        if ((!renderId || !this.renderIds?.has(renderId))
-            // && !(this.mouseMoveTime && (this.mouseMoveTime + 1000 > performance.now()))
-        ) { // if the mouse coordinates are from an e.g. skipped render - timeout and clear
-            this.propSetSkips++;
-            return;
-        }
-
-        let stats = {
-
-        }
-
-        this.mouseMoveTime = undefined;
-
-        this.renderIds.clear()
-        this.reactRender = undefined;
-        this.reactRenderCounts = 0;
-
-        this.mobxReaction = undefined;
-        this.mobxReactionCounts = 0;
-
-        this.directRendererInvoke = undefined;
-        this.directRendererInvokeCounts = 0;
-
-        this.propSetSkips = 0;
-    }
-}
-
 export class PametFacade extends PametStore {
     getEntityId() {
         throw new Error("Method not implemented.");
@@ -163,8 +74,38 @@ export class PametFacade extends PametStore {
     debugPaintOperations = true;
     renderProfiler = new RenderProfiler();
 
+    undoService: UndoService;
+
     constructor() {
         super()
+        // Initialize UndoService
+        this.undoService = new UndoService(this);
+
+        // Register rootAction hook to record user-originated deltas for Undo before saving
+        registerRootActionCompletedHook((rootAction) => {
+            if (!this._frontendDomainStore) {
+                return;
+            }
+            if (!rootAction || rootAction.issuer !== 'user') {
+                return;
+            }
+            // Ignore undo/redo actions themselves
+            if (rootAction.name === UNDO_ACTION_NAME || rootAction.name === REDO_ACTION_NAME) {
+                return;
+            }
+            const uncommitted = this.frontendDomainStore.uncommittedChanges;
+            if (!uncommitted || uncommitted.length === 0) {
+                return;
+            }
+            const delta = Delta.fromChanges(uncommitted);
+            const currentPageId = this.appViewState.currentPageId;
+            if (!currentPageId) {
+                log.error('No current page id set, skipping delta record');
+                return;
+            }
+            this.undoService.recordChangeSet(delta, rootAction.name, currentPageId);
+        });
+
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
             // Better do the registration here, so that we don't have to worry
@@ -270,6 +211,8 @@ export class PametFacade extends PametStore {
     }
 
     async attachProjectAsCurrent(projectId: string) {
+        // Reset undo histories when switching projects
+        this.undoService.clearAll();
         pamet._frontendDomainStore = new FrontendDomainStore()
 
         // Load the new project and connect it to the Frontend domain store
@@ -294,6 +237,7 @@ export class PametFacade extends PametStore {
 
     async detachFromProject(projectId: string) {
         log.info('Detaching FDS for project', projectId);
+        this.undoService.clearAll();
         let currentProject: ProjectData;
         try {
             currentProject = this.appViewState.getCurrentProject();
@@ -357,7 +301,7 @@ export class PametFacade extends PametStore {
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        const change = this.frontendDomainStore.updateOne(entity);
+        return this.frontendDomainStore.updateOne(entity);
     }
 
     removeOne(entity: Entity<EntityData>): Change {
@@ -403,6 +347,12 @@ export class PametFacade extends PametStore {
         // Move the media to trash in the storage service
         await this.storageService.moveMediaToTrash(currentProjectId, mediaItem.id, mediaItem.contentHash);
     }
+    // Apply a delta locally (no uncommitted buffering, no commit)
+    applyDelta(delta: Delta): void {
+        this.frontendDomainStore._store.applyDelta(delta);
+        entityDeltaToViewModelReducer(this.appViewState, delta);
+    }
+
 }
 
 

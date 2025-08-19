@@ -123,5 +123,12 @@ export const DEFAULT_KEYBINDINGS = [
         command: commands.openCommandPaletteWithProjectSwitch.name,
         when: ''
     },
+    // Undo / Redo
+    { key: 'ctrl+z',        command: commands.undo.name, when: 'canvasFocus' },
+    { key: 'ctrl+shift+z',  command: commands.redo.name, when: 'canvasFocus' },
+    { key: 'ctrl+y',        command: commands.redo.name, when: 'canvasFocus' },
+    // macOS-friendly variants
+    { key: 'cmd+z',         command: commands.undo.name, when: 'canvasFocus' },
+    { key: 'cmd+shift+z',   command: commands.redo.name, when: 'canvasFocus' },
 
 ]

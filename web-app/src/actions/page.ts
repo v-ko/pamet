@@ -19,6 +19,9 @@ import { MediaItem } from "fusion/model/MediaItem";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 
+import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
+
+
 let log = getLogger('MapActions');
 
 export const AUTO_NAVIGATE_TRANSITION_DURATION = 0.5; // seconds
@@ -432,6 +435,16 @@ class PageActions {
     for (let note of notes) {
       pamet.insertNote(note);
     }
+  }
+
+  @action({ issuer: 'service', name: UNDO_ACTION_NAME })
+  undoCurrentPage(state: PageViewState) {
+    pamet.undoService.undo(state._pageData.id);
+  }
+
+  @action({ issuer: 'service', name: REDO_ACTION_NAME })
+  redoCurrentPage(state: PageViewState) {
+    pamet.undoService.redo(state._pageData.id);
   }
 }
 
