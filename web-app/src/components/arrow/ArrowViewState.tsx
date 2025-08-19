@@ -86,10 +86,6 @@ export class ArrowViewState extends ElementViewState {
             log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
             arrow.setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none)
         }
-
-        // console.log('setting anchors', tailNVS, headNVS)
-        // this.tailAnchorNoteViewState = tailNVS;
-        // this.headAnchorNoteViewState = headNVS;
     }
 
     get tailAnchorNoteViewState(): NoteViewState | null {
@@ -108,7 +104,7 @@ export class ArrowViewState extends ElementViewState {
         return this.pageViewState.getViewStateForElement(this._elementData.head.noteAnchorId) as NoteViewState | null;
     }
     updateFromArrow(arrow: Arrow) {
-        this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
+        // this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
         let change = this.arrow().changeFrom(arrow);
         this.updateFromChange(change);
     }

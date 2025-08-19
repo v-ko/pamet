@@ -102,7 +102,7 @@ export class FocusManager {
      * When an element receives focus - we update the context if it's registered for that
      */
     const target = event.target as HTMLElement;
-    // log.info('FocusIn event on', target);
+    log.info('FocusIn event on', target);
 
     const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
     for (const reg of this.focusRegistrations.values()) {
@@ -147,7 +147,7 @@ export class FocusManager {
 
   handleFocusOut(event: FocusEvent): void {
     const relatedTarget = event.relatedTarget as HTMLElement | null;
-    // log.info('FocusOut event, related target is', relatedTarget);
+    log.info('FocusOut event, related target is', relatedTarget);
 
     if (!relatedTarget) {
       // When the element with focus is removed (e.g. the command palette is closed),
