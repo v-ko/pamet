@@ -320,7 +320,13 @@ class PageActions {
   }
 
   @action
-  deleteElements(elements: PametElement<PametElementData>[]) {
+  deleteSelectedElements(state: PageViewState) {
+    let elements = Array.from(state.selectedElementsVS).map((elementVS) => elementVS.element());
+    if (elements.length === 0) {
+      log.warning('deleteSelectedElements called with no selected elements');
+      return;
+    }
+    
     // Split into notes and arrows and where a note has connected arrows -
     // add them for removal too
     let notesForRemoval: Note[] = [];
@@ -379,12 +385,6 @@ class PageActions {
         err => log.error('Failed to move media to trash:', err));
       pamet.removeOne(mediaItem);
     }
-  }
-
-  @action
-  deleteSelectedElements(state: PageViewState) {
-    let elements = Array.from(state.selectedElementsVS).map((elementVS) => elementVS.element());
-    this.deleteElements(elements);
     this.clearSelection(state);
   }
 
@@ -438,12 +438,12 @@ class PageActions {
   }
 
   @action({ issuer: 'service', name: UNDO_ACTION_NAME })
-  undoCurrentPage(state: PageViewState) {
+  undoUserAction(state: PageViewState) {
     pamet.undoService.undo(state._pageData.id);
   }
 
   @action({ issuer: 'service', name: REDO_ACTION_NAME })
-  redoCurrentPage(state: PageViewState) {
+  reduUserAction(state: PageViewState) {
     pamet.undoService.redo(state._pageData.id);
   }
 }

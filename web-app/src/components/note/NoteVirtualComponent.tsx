@@ -12,7 +12,7 @@ interface NoteCacheManagerProps {
   controller: PageController;
 }
 
-export const NoteCacheManager = observer(({ noteViewState, controller }: NoteCacheManagerProps) => {
+export const NoteVirtualComponent = observer(({ noteViewState, controller }: NoteCacheManagerProps) => {
   useEffect(() => {
     const disposer = reaction(() => {
         return {content: noteViewState._elementData.content, style: noteViewState._elementData.style}

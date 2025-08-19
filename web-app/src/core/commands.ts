@@ -154,13 +154,13 @@ class PametCommands {
     @command('Undo')
     undo() {
         const pageVS = getCurrentPageViewState();
-        pageActions.undoCurrentPage(pageVS);
+        pageActions.undoUserAction(pageVS);
     }
 
     @command('Redo')
     redo() {
         const pageVS = getCurrentPageViewState();
-        pageActions.redoCurrentPage(pageVS);
+        pageActions.reduUserAction(pageVS);
     }
 
     @command('Page: Zoom in')

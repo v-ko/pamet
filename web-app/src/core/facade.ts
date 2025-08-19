@@ -111,7 +111,7 @@ export class PametFacade extends PametStore {
             // Better do the registration here, so that we don't have to worry
             // about unregistering when swapping out the FDS
             if (!this._frontendDomainStore) {
-                // log.warning('No frontend domain store set');
+                log.warning('No frontend domain store set');
                 return;
             }
             this.frontendDomainStore.saveUncommitedChanges()
@@ -347,9 +347,8 @@ export class PametFacade extends PametStore {
         // Move the media to trash in the storage service
         await this.storageService.moveMediaToTrash(currentProjectId, mediaItem.id, mediaItem.contentHash);
     }
-    // Apply a delta locally (no uncommitted buffering, no commit)
     applyDelta(delta: Delta): void {
-        this.frontendDomainStore._store.applyDelta(delta);
+        this.frontendDomainStore.applyDelta(delta);
         entityDeltaToViewModelReducer(this.appViewState, delta);
     }
 
@@ -412,6 +411,7 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             currentPageVS.removeViewStateForElement(elementVS.element() as Note | Arrow);
 
         } else if (elementVS && change.isUpdate()) {
+            log.info('Updating view state for element', change.entityId, change.data);
             elementVS.updateFromChange(change);
 
         } else if (change.isCreate()) {
@@ -419,9 +419,8 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             if (element) {
                 currentPageVS.addViewStateForElement(element as Note | Arrow);
             }
-        } else {
-            // Change is empty
         }
+
         // Process media item changes
         let url = currentPageVS.mediaUrlsByItemId.get(change.entityId);
         if (url && change.isDelete()) {
@@ -444,10 +443,7 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                 }
                 currentPageVS.addUrlForMediaItem(mediaItem);
             }
-        } else {
-            // Change is empty
         }
-
     }
 }
 

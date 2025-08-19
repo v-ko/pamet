@@ -56,9 +56,6 @@ export class NavigationDeviceAutoSwitcher {
             if (isUniform) {
                 this.setDevice(NavigationDevice.MOUSE)
             }
-            else {
-                this.setDevice(NavigationDevice.TOUCHPAD)
-            }
         }
     }
 

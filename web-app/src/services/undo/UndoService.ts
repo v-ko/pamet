@@ -1,5 +1,6 @@
 import { Delta } from "fusion/model/Delta";
 import { getLogger } from "fusion/logging";
+import { PametFacade } from "@/core/facade";
 
 const log = getLogger("UndoService");
 
@@ -85,7 +86,7 @@ class UndoHistory {
  *       Future iteration can split by page id if needed.
  */
 export class UndoService {
-  constructor(private _facade: { applyDelta(delta: Delta): void }) {}
+  constructor(private _facade: PametFacade) {}
   private _historiesByPageId = new Map<string, UndoHistory>();
 
   private history(pageId: string): UndoHistory {
