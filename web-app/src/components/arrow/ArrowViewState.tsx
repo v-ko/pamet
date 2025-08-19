@@ -11,6 +11,7 @@ import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/co
 import { Change } from 'fusion/model/Change';
 import { pamet } from "@/core/facade";
 import { PageViewState } from "@/components/page/PageViewState";
+import { dumpToDict, loadFromDict } from "fusion/model/Entity";
 
 let log = getLogger('ArrowViewState');
 
@@ -43,9 +44,15 @@ export class ArrowViewState extends ElementViewState {
             bezierCurveArrayMidpoints: computed,
             paperPath: computed,
         });
+
+        reaction(() => this._elementData, (newData) => {
+            log.info('ArrowViewState reaction triggered', newData);
+            this._paperPath = null; // Reset the paper path to recalculate it
+        });
     }
 
     get _arrow(): Arrow {
+        // log.info('new arrow calculated from data', this._elementData);
         let arrowData = toJS(this._elementData) as ArrowData;
         return new Arrow(arrowData);
     }
@@ -57,14 +64,14 @@ export class ArrowViewState extends ElementViewState {
     }
 
     updateFromChange(change: Change) {
-        if (!change.isUpdate) {
-            log.error('Can only update from an update type change');
-            return;
+        if (!change.isUpdate()) {
+            throw Error(`Can only update from an update type change ${change.data}`);
+            // return;
         }
+        log.info('Updating arrow view state from change', change);
         let update = change.forwardComponent as Partial<ArrowData>;
-        this._elementData = { ...this._elementData, ...update };
 
-        let arrow = this.arrow();
+        let arrow = loadFromDict({ ...this._elementData, ...update }) as Arrow;
         let pageVS = pamet.appViewState.pageViewState(arrow.parentId);
 
         let { headNVS, tailNVS } = pageVS.noteVS_anchorsForArrow(arrow)
@@ -86,10 +93,7 @@ export class ArrowViewState extends ElementViewState {
             log.error('No tail note id, but anchor is not fixed. Overwriting in view state.')
             arrow.setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none)
         }
-
-        // console.log('setting anchors', tailNVS, headNVS)
-        // this.tailAnchorNoteViewState = tailNVS;
-        // this.headAnchorNoteViewState = headNVS;
+        this._elementData = dumpToDict(arrow) as SerializedArrow;
     }
 
     get tailAnchorNoteViewState(): NoteViewState | null {
@@ -108,8 +112,12 @@ export class ArrowViewState extends ElementViewState {
         return this.pageViewState.getViewStateForElement(this._elementData.head.noteAnchorId) as NoteViewState | null;
     }
     updateFromArrow(arrow: Arrow) {
-        this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
+        // this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
         let change = this.arrow().changeFrom(arrow);
+        if(!change.isUpdate()) {  // may be empty
+            // log.error('[updateFromArrow] Was expecting an update, but change is', change.data);
+            return;
+        }
         this.updateFromChange(change);
     }
 

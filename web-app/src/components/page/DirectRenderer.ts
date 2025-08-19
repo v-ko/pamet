@@ -385,7 +385,7 @@ export class DirectRenderer {
         }
 
         // Draw anchor suggestions (when creating an arrow) and new arrow
-        const mousePos = pamet.appViewState.mouseState.positionOnPress;
+        const mousePos = pamet.appViewState.mouseState.position;
         if (pageVS.mode === PageMode.CreateArrow && mousePos) {
             // Draw anchor suggestions
             let realMousePos = pageVS.viewport.unprojectPoint(mousePos);

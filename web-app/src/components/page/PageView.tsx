@@ -11,8 +11,9 @@ import "@/components/page/PageView.css";
 
 import { createNoteWithImageFromBlob } from '@/procedures/page';
 import { MouseState } from '@/containers/app/WebAppState';
-import { NoteCacheManager } from '../note/NoteCacheManager';
+import { NoteVirtualComponent } from '../note/NoteVirtualComponent';
 import { PageController } from '@/components/page/PageController';
+import { ArrowVirtualComponent } from '@/components/arrow/ArrowVirtualComponent';
 
 
 export let log = getLogger('Page.tsx')
@@ -144,6 +145,7 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
   // rp.logTimeSinceMouseMove('React render', state.renderId!)
 
   const noteViewStates = Array.from(state.noteViewStatesById.values());
+  const arrowViewStates = Array.from(state.arrowViewStatesById.values());
 
   return (
     <main
@@ -159,11 +161,18 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      {/* Mock components to register mobx reactions for cache invalidation with */}
+      {/* Mock components to register mobx reactions for cache invalidation and arrow updates */}
       {noteViewStates.map(nvs =>
-        <NoteCacheManager
+        <NoteVirtualComponent
           key={nvs._elementData.id}
           noteViewState={nvs}
+          controller={controller}
+        />)
+      }
+      {arrowViewStates.map(avs =>
+        <ArrowVirtualComponent
+          key={avs._elementData.id}
+          arrowViewState={avs}
           controller={controller}
         />)
       }

@@ -501,7 +501,8 @@ export class PageController {
         } catch (e) {
           log.error('Error rendering page:', e);
         }
-      });
+      }
+    );
 
     // Mouse events
     el.addEventListener('mouseleave', this.handleMouseLeave);

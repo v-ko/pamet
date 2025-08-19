@@ -19,6 +19,9 @@ import { MediaItem } from "fusion/model/MediaItem";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 
+import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
+
+
 let log = getLogger('MapActions');
 
 export const AUTO_NAVIGATE_TRANSITION_DURATION = 0.5; // seconds
@@ -317,7 +320,13 @@ class PageActions {
   }
 
   @action
-  deleteElements(elements: PametElement<PametElementData>[]) {
+  deleteSelectedElements(state: PageViewState) {
+    let elements = Array.from(state.selectedElementsVS).map((elementVS) => elementVS.element());
+    if (elements.length === 0) {
+      log.warning('deleteSelectedElements called with no selected elements');
+      return;
+    }
+    
     // Split into notes and arrows and where a note has connected arrows -
     // add them for removal too
     let notesForRemoval: Note[] = [];
@@ -376,12 +385,6 @@ class PageActions {
         err => log.error('Failed to move media to trash:', err));
       pamet.removeOne(mediaItem);
     }
-  }
-
-  @action
-  deleteSelectedElements(state: PageViewState) {
-    let elements = Array.from(state.selectedElementsVS).map((elementVS) => elementVS.element());
-    this.deleteElements(elements);
     this.clearSelection(state);
   }
 
@@ -432,6 +435,16 @@ class PageActions {
     for (let note of notes) {
       pamet.insertNote(note);
     }
+  }
+
+  @action({ issuer: 'service', name: UNDO_ACTION_NAME })
+  undoUserAction(state: PageViewState) {
+    pamet.undoService.undo(state._pageData.id);
+  }
+
+  @action({ issuer: 'service', name: REDO_ACTION_NAME })
+  reduUserAction(state: PageViewState) {
+    pamet.undoService.redo(state._pageData.id);
   }
 }
 
