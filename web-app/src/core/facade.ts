@@ -338,18 +338,9 @@ export class PametFacade extends PametStore {
         // Remove the media item using the storage service
         await this.storageService.removeMedia(currentProjectId, mediaItem.id, mediaItem.contentHash);
     }
-    async moveMediaToTrash(mediaItem: MediaItem): Promise<void> {
-        const currentProjectId = this.appViewState.currentProjectId;
-        if (!currentProjectId) {
-            throw new Error('No current project set');
-        }
 
-        // Move the media to trash in the storage service
-        await this.storageService.moveMediaToTrash(currentProjectId, mediaItem.id, mediaItem.contentHash);
-    }
     applyDelta(delta: Delta): void {
-        this.frontendDomainStore.applyDelta(delta);
-        entityDeltaToViewModelReducer(this.appViewState, delta);
+        this.frontendDomainStore.applyDelta(delta); // The viewModel reducer is aplied when the CRUD calls are made for each change in the delta
     }
 
 }
@@ -408,6 +399,7 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
         // Process notes and arrows
         let elementVS = currentPageVS.viewStateForElementId(change.entityId)
         if (elementVS && change.isDelete()) {
+            log.info('Removing view state for element', change.entityId, delta);
             currentPageVS.removeViewStateForElement(elementVS.element() as Note | Arrow);
 
         } else if (elementVS && change.isUpdate()) {
@@ -417,31 +409,25 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
         } else if (change.isCreate()) {
             const element = pamet.findOne({ id: change.entityId, parentId: currentPageId }); // Filter only for current page
             if (element) {
+                log.info('Adding view state for element', change.entityId, delta);
                 currentPageVS.addViewStateForElement(element as Note | Arrow);
             }
         }
 
-        // Process media item changes
-        let url = currentPageVS.mediaUrlsByItemId.get(change.entityId);
-        if (url && change.isDelete()) {
-            // Remove the media item from the view state
-            currentPageVS.mediaUrlsByItemId.delete(change.entityId);
-        } else if (url && change.isUpdate()) {
-            // Update the media item URL in the view state
-            currentPageVS.mediaUrlsByItemId.set(change.entityId, url);
-        } else if (change.isCreate()) {
-            // If it's a media item, add it to the view state
-            const mediaItem = pamet.mediaItem(change.entityId);
-            if (mediaItem) {
-                const note = pamet.note(mediaItem?.parentId);
-                if (!note) {
-                    throw new Error(`Note for media item ${mediaItem.id} not found`);
+        // Process media item changes (parent is Page)
+        const mediaItem = pamet.mediaItem(change.entityId);
+        if (mediaItem) {
+            if (change.isDelete()) {
+                // Remove the media item from the view state
+                currentPageVS.mediaUrlsByItemId.delete(mediaItem.id);
+            } else {
+                // On create/update: reflect only media items whose parent is the current page
+                if (mediaItem.parentId === currentPageId) {
+                    currentPageVS.addUrlForMediaItem(mediaItem);
+                } else {
+                    // If it moved away from this page, ensure it's not shown here
+                    currentPageVS.mediaUrlsByItemId.delete(mediaItem.id);
                 }
-                if (note?.parentId !== currentPageId) {  // Add only media items for page notes
-                    log.info('Skipping media item for note not on current page', note?.parentId, currentPageId);
-                    continue;
-                }
-                currentPageVS.addUrlForMediaItem(mediaItem);
             }
         }
     }

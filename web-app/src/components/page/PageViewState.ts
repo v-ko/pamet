@@ -190,7 +190,12 @@ export class PageViewState {
     }
 
     removeViewStateForElement(element: Note | Arrow) {
+        let elementVS = this.viewStateForElementId(element.id);
+        if (this.selectedElementsVS.has(elementVS!)) {
+            this.selectedElementsVS.delete(elementVS!);
+        }
         if (element instanceof Note) {
+            log.info('Proper removing note view state for element', element.id, this)
             this.noteViewStatesById.delete(element.id);
         } else if (element instanceof Arrow) {
             this.arrowViewStatesById.delete(element.id);

@@ -190,6 +190,10 @@ export class PageController {
           if (elementUnderMouse !== null) {
             let selectionMap = new Map([[elementUnderMouse, true]]);
             pageActions.updateSelection(this.pageVS, selectionMap);
+
+            if(pamet.debugging) {
+              log.info('Selected element on mouse up:', elementUnderMouse.element().data());
+            }
           }
         }
       }

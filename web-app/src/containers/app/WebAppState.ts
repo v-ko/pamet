@@ -7,6 +7,9 @@ import { PametRoute } from "@/services/routing/route";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
 import { CommandPaletteState } from "@/components/CommandPaletteState";
 import React from "react";
+import { Note } from "@/model/Note";
+import { Arrow } from "@/model/Arrow";
+import { MediaItem } from "fusion/model/MediaItem";
 
 
 export enum AppDialogMode {
@@ -61,6 +64,9 @@ export class WebAppState {
   mouseState: MouseState = new MouseState();
   commandPaletteState: CommandPaletteState | null = null;
 
+  // Internal clipboard for copy/cut/paste (entities stored with relative coordinates)
+  clipboard: (Note | Arrow | MediaItem)[] = [];
+
   constructor() {
     makeObservable(this, {
       deviceId: observable,
@@ -74,6 +80,7 @@ export class WebAppState {
       dialogMode: observable,
       loadingDialogState: observable,
       commandPaletteState: observable,
+      clipboard: observable,
     });
   }
 

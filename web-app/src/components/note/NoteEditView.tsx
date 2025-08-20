@@ -188,7 +188,27 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error("setNoteImage called when there is already an image.");
     }
 
-    const newMediaItem = await pamet.storageService.addMedia(projectId, blob, path, noteData.current.id);
+    // Enforce a 5-second timeout on saving to avoid silent hangs
+    let timeoutHandle: ReturnType<typeof setTimeout>;
+    const timeoutMs = 5000;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(new Error('Saving image timed out after 5 seconds. Reload the page and try again.'));
+      }, timeoutMs);
+    });
+
+    const addMediaPromise = pamet.storageService.addMedia(
+      projectId,
+      blob,
+      path,
+      state.targetNote.parentId
+    );
+
+    const newMediaItem = await Promise.race([addMediaPromise, timeoutPromise]) as MediaItemData;
+
+    // Clear the timer if addMedia resolved first
+    clearTimeout(timeoutHandle!);
+
     setUncommitedImage(newMediaItem);
     updateNoteData({ content: { ...noteData.current.content, image_id: newMediaItem.id } });
   };

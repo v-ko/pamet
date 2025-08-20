@@ -11,15 +11,14 @@ import { pamet } from "@/core/facade";
 import { Note } from "@/model/Note";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import { NoteViewState } from "@/components/note/NoteViewState";
-import { PametElement, PametElementData } from "@/model/Element";
 import { Arrow } from "@/model/Arrow";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { Page } from "@/model/Page";
 import { MediaItem } from "fusion/model/MediaItem";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
-
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
+import { WebAppState } from "@/containers/app/WebAppState";
 
 
 let log = getLogger('MapActions');
@@ -199,7 +198,7 @@ class PageActions {
   @action
   startNoteCreation(state: PageViewState, realPosition: Point2D) {
     let pixSpacePosition = state.viewport.projectPoint(realPosition);
-    let note = CardNote.createNew({pageId: state.page().id});
+    let note = CardNote.createNew({ pageId: state.page().id });
     let noteRect = note.rect()
     noteRect.setTopLeft(realPosition)
     note.setRect(noteRect)
@@ -228,11 +227,8 @@ class PageActions {
     }
 
     if (removedMediaItem) {
-      if (!addedMediaItem) {
-        throw new Error('Removed media item without added media item');
-      }
-      pamet.moveMediaToTrash(removedMediaItem).catch(
-        err => log.error('Failed to move media to trash:', err));
+      // If an existing media item was removed, just remove the entity.
+      // Storage commit-time automation will move the blob to trash.
       pamet.removeOne(removedMediaItem);
     }
 
@@ -326,7 +322,7 @@ class PageActions {
       log.warning('deleteSelectedElements called with no selected elements');
       return;
     }
-    
+
     // Split into notes and arrows and where a note has connected arrows -
     // add them for removal too
     let notesForRemoval: Note[] = [];
@@ -379,10 +375,8 @@ class PageActions {
       pamet.removeArrow(arrow);
     }
 
-    // Trash media items
+    // Remove media entities; storage commit-time automation will move blobs to trash
     for (let mediaItem of mediaItemsForTrashing) {
-      pamet.moveMediaToTrash(mediaItem).catch(
-        err => log.error('Failed to move media to trash:', err));
       pamet.removeOne(mediaItem);
     }
     this.clearSelection(state);
@@ -437,6 +431,55 @@ class PageActions {
     }
   }
 
+  @action({ issuer: 'user' })
+  pasteInternalAddElements(
+    appState: WebAppState,
+    state: PageViewState,
+    notes: Note[],
+    arrows: Arrow[],
+    mediaItems: MediaItem[]) {
+
+    for (let note of notes) {
+      pamet.insertNote(note);
+    }
+    for (let mediaItem of mediaItems) {
+      pamet.insertOne(mediaItem);
+    }
+    for (let arrow of arrows) {
+      pamet.insertArrow(arrow);
+    }
+    // Clear the clipboard after pasting
+    // appState.clipboard = [];
+    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows and', mediaItems.length, 'media items');
+    // Clear selection
+    this.clearSelection(state);
+  }
+
+  @action({ issuer: 'user' })
+  cutRemoveElements(
+    appState: WebAppState,
+    state: PageViewState,
+    notes: Note[],
+    arrows: Arrow[],
+    mediaItems: MediaItem[]
+  ) {
+    // Remove media entities from the domain store (blob is already moved to trash by the procedure)
+    for (let mediaItem of mediaItems) {
+      pamet.removeOne(mediaItem);
+    }
+    // Remove arrows
+    for (let arrow of arrows) {
+      pamet.removeArrow(arrow);
+    }
+    // Remove notes
+    for (let note of notes) {
+      pamet.removeNote(note);
+    }
+    // Clear selection after cut
+    this.clearSelection(state);
+    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows, ${mediaItems.length} media items`);
+  }
+
   @action({ issuer: 'service', name: UNDO_ACTION_NAME })
   undoUserAction(state: PageViewState) {
     pamet.undoService.undo(state._pageData.id);
@@ -446,6 +489,81 @@ class PageActions {
   reduUserAction(state: PageViewState) {
     pamet.undoService.redo(state._pageData.id);
   }
+
+  @action
+  copySelectedElements(appState: WebAppState, state: PageViewState, relativeTo: Point2D) {
+    // Gather selected notes
+    const selectedNotes: Note[] = [];
+    const selectedNoteIds = new Set<string>();
+
+    for (const elementVS of state.selectedElementsVS) {
+      if (elementVS instanceof NoteViewState) {
+        const note = elementVS.note();
+        selectedNotes.push(note);
+        selectedNoteIds.add(note.id);
+      }
+    }
+
+    if (selectedNotes.length === 0) {
+      log.warning('copySelectedElements called with no selected notes');
+      appState.clipboard = [];
+      return;
+    }
+
+    const clipboardEntities: (Note | Arrow | MediaItem)[] = [];
+
+    // Clone and transform notes to relative coordinates
+    for (const note of selectedNotes) {
+      const cloned = note.copy() as Note;
+      const rect = cloned.rect();
+      rect.setTopLeft(rect.topLeft().subtract(relativeTo));
+      cloned.setRect(rect);
+      clipboardEntities.push(cloned);
+    }
+
+    // Include eligible arrows from the current page
+    for (const arrow of pamet.arrows({ parentId: state.page().id })) {
+      // If anchored, both endpoints must be within selected notes; otherwise skip
+      if (arrow.headNoteId && !selectedNoteIds.has(arrow.headNoteId)) {
+        continue;
+      }
+      if (arrow.tailNoteId && !selectedNoteIds.has(arrow.tailNoteId)) {
+        continue;
+      }
+
+      const cloned = arrow.copy() as Arrow;
+
+      // Adjust absolute endpoints relative to anchor
+      if (cloned.headPositionIsAbsolute && cloned.headPoint) {
+        cloned.headPoint = cloned.headPoint.subtract(relativeTo);
+      }
+      if (cloned.tailPositionIsAbsolute && cloned.tailPoint) {
+        cloned.tailPoint = cloned.tailPoint.subtract(relativeTo);
+      }
+
+      // Adjust midpoints
+      const mids = cloned.midPoints().map(p => p.subtract(relativeTo));
+      cloned.replaceMidpoints(mids);
+
+      clipboardEntities.push(cloned);
+    }
+
+    // Include associated MediaItems for image notes (1-1 with notes; no dedup required)
+    for (const note of selectedNotes) {
+      if (note instanceof CardNote && note.content.image_id) {
+        const mediaItem = pamet.mediaItem(note.content.image_id);
+        if (mediaItem) {
+          clipboardEntities.push(mediaItem);
+        } else {
+          log.warning(`Media item ${note.content.image_id} not found for note ${note.id}`);
+        }
+      }
+    }
+
+    appState.clipboard = clipboardEntities;
+    log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
+  }
+
 }
 
 export const pageActions = new PageActions();

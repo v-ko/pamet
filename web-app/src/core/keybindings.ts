@@ -88,6 +88,39 @@ export const DEFAULT_KEYBINDINGS = [
         command: commands.selectAll.name,
         when: 'canvasFocus'
     },
+    // Copy
+    {
+        key: 'ctrl+c',
+        command: commands.copySelectedElements.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'cmd+c',
+        command: commands.copySelectedElements.name,
+        when: 'canvasFocus'
+    },
+    // Cut
+    {
+        key: 'ctrl+x',
+        command: commands.cutSelectedElements.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'cmd+x',
+        command: commands.cutSelectedElements.name,
+        when: 'canvasFocus'
+    },
+    // Paste (internal clipboard)
+    {
+        key: 'ctrl+v',
+        command: commands.paste.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'cmd+v',
+        command: commands.paste.name,
+        when: 'canvasFocus'
+    },
     {
         key: 'ctrl+e',
         command: commands.openPageProperties.name,
@@ -124,11 +157,31 @@ export const DEFAULT_KEYBINDINGS = [
         when: ''
     },
     // Undo / Redo
-    { key: 'ctrl+z',        command: commands.undo.name, when: 'canvasFocus' },
-    { key: 'ctrl+shift+z',  command: commands.redo.name, when: 'canvasFocus' },
-    { key: 'ctrl+y',        command: commands.redo.name, when: 'canvasFocus' },
+    {
+        key: 'ctrl+z',
+        command: commands.undo.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+shift+z',
+        command: commands.redo.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'ctrl+y',
+        command: commands.redo.name,
+        when: 'canvasFocus'
+    },
     // macOS-friendly variants
-    { key: 'cmd+z',         command: commands.undo.name, when: 'canvasFocus' },
-    { key: 'cmd+shift+z',   command: commands.redo.name, when: 'canvasFocus' },
+    {
+        key: 'cmd+z',
+        command: commands.undo.name,
+        when: 'canvasFocus'
+    },
+    {
+        key: 'cmd+shift+z',
+        command: commands.redo.name,
+        when: 'canvasFocus'
+    },
 
 ]

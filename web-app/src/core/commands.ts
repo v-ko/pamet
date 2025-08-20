@@ -10,8 +10,9 @@ import { Note } from "@/model/Note";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { PageViewState } from "@/components/page/PageViewState";
 import { buildHashTree } from "fusion/storage/version-control/HashTree";
+import { Rectangle } from "fusion/primitives/Rectangle";
 import { parseClipboardContents } from "@/util";
-import { pasteSpecial as pasteSpecialProcedure } from "@/procedures/page";
+import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
 
 let log = getLogger('PametCommands');
 
@@ -28,6 +29,42 @@ function getCurrentPageViewState(): PageViewState {
     return pageVS;
 }
 
+// Shared utility: compute anchor for copy/cut commands
+function computeSelectionAnchor(selectedNotes: Note[], mousePosPix: Point2D | null, pageVS: PageViewState): Point2D {
+    if (selectedNotes.length === 0) {
+        return pageVS.viewport.realCenter();
+    }
+    if (selectedNotes.length === 1) {
+        return selectedNotes[0].rect().topLeft();
+    }
+
+    // Combined rect of selected notes
+    let minX = Number.POSITIVE_INFINITY, minY = Number.POSITIVE_INFINITY;
+    let maxX = Number.NEGATIVE_INFINITY, maxY = Number.NEGATIVE_INFINITY;
+
+    for (const note of selectedNotes) {
+        const r = note.rect();
+        const tl = r.topLeft();
+        const br = r.bottomRight();
+        if (tl.x < minX) minX = tl.x;
+        if (tl.y < minY) minY = tl.y;
+        if (br.x > maxX) maxX = br.x;
+        if (br.y > maxY) maxY = br.y;
+    }
+
+    const rectCenter = new Point2D([(minX + maxX) / 2, (minY + maxY) / 2]);
+
+    let anchor = rectCenter;
+    if (mousePosPix !== null) {
+        const mouseReal = pageVS.viewport.unprojectPoint(mousePosPix);
+        const combinedRect = Rectangle.fromPoints(new Point2D([minX, minY]), new Point2D([maxX, maxY]));
+        if (combinedRect.contains(mouseReal)) {
+            anchor = mouseReal;
+        }
+    }
+
+    return anchor;
+}
 class PametCommands {
     @command('Create new note')
     createNewNote() {
@@ -114,6 +151,9 @@ class PametCommands {
     createNewPage() {
         let appState = pamet.appViewState;
 
+        // If no current page - some weird state where the default isnt auto-created - just create default
+        projectActions.createDefaultPage(appState);
+
         // Determine forward link location - either under mouse or
         // in the center of the viewport
         // Get the real mouse pos on canvas (if it's over the viewport)
@@ -195,6 +235,46 @@ class PametCommands {
         pageActions.updateSelection(pageVS, selectionMap);
     }
 
+    @command('Copy selected elements')
+    copySelectedElements() {
+        const appState = pamet.appViewState;
+        const pageVS = getCurrentPageViewState();
+
+        // Collect selected notes
+        const selectedNotes: Note[] = [];
+        for (let elementVS of pageVS.selectedElementsVS.values()) {
+            if (elementVS instanceof NoteViewState) {
+                selectedNotes.push(elementVS.note());
+            }
+        }
+
+        // Compute relativeTo via shared helper
+        const relativeTo = computeSelectionAnchor(selectedNotes, appState.mouseState.positionOnPress, pageVS);
+
+        pageActions.copySelectedElements(appState, pageVS, relativeTo);
+    }
+
+    @command('Cut')
+    cutSelectedElements() {
+        const appState = pamet.appViewState;
+        const pageVS = getCurrentPageViewState();
+
+        // Collect selected notes for anchor calculation
+        const selectedNotes: Note[] = [];
+        for (let elementVS of pageVS.selectedElementsVS.values()) {
+            if (elementVS instanceof NoteViewState) {
+                selectedNotes.push(elementVS.note());
+            }
+        }
+
+        // Compute relativeTo via shared helper
+        const relativeTo = computeSelectionAnchor(selectedNotes, appState.mouseState.position, pageVS);
+
+        cutInternalProcedure(appState, pageVS, relativeTo).catch((error) => {
+            log.error('Error in internal cut procedure:', error);
+        });
+    }
+
     @command('Open page properties')
     openPageProperties() {
         appActions.openPageProperties(pamet.appViewState);
@@ -225,32 +305,48 @@ class PametCommands {
         appActions.openCreateProjectDialog(pamet.appViewState);
     }
 
+    @command('Paste')
+    paste() {
+        const appState = pamet.appViewState;
+        const pageVS = getCurrentPageViewState();
+
+        // Compute relative anchor for internal clipboard paste:
+        // use mouse position if available, else viewport center.
+        const mousePos = appState.mouseState.position;
+        const relativeTo: Point2D = mousePos === null
+            ? pageVS.viewport.realCenter()
+            : pageVS.viewport.unprojectPoint(mousePos);
+
+        pasteInternalProcedure(appState, pageVS, relativeTo).catch((error) => {
+            log.error('Error in internal paste procedure:', error);
+        });
+    }
+
     @command('Paste special')
-    async pasteSpecial() {
-        try {
-            // Get the current page view state
-            let pageVS = getCurrentPageViewState();
+    pasteSpecial() {
+        // Get the current page view state
+        let pageVS = getCurrentPageViewState();
 
-            // Get the mouse position or use viewport center
-            let mousePos = pamet.appViewState.mouseState.positionOnPress;
-            let position: Point2D;
+        // Get the mouse position or use viewport center
+        let mousePos = pamet.appViewState.mouseState.position;
+        let position: Point2D;
 
-            if (mousePos === null) {
-                position = pageVS.viewport.realCenter();
-            } else {
-                position = pageVS.viewport.unprojectPoint(mousePos);
-            }
+        if (mousePos === null) {
+            position = pageVS.viewport.realCenter();
+        } else {
+            position = pageVS.viewport.unprojectPoint(mousePos);
+        }
 
-            // Get clipboard contents
-            const clipboardContents = await parseClipboardContents();
-
+        // Get clipboard contents
+        parseClipboardContents().then(clipboardContents => {
             // Pass the data to the action
             pasteSpecialProcedure(pageVS.page().id, position, clipboardContents).catch((error) => {
                 log.error('Error in pasteSpecial procedure:', error);
-              });
-        } catch (error) {
-            log.error('Error in paste special command:', error);
-        }
+            });
+
+        }).catch((error) => {
+            log.error('Error parsing clipboard contents:', error);
+        });
     }
 
     @command('Open command palette')
