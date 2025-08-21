@@ -125,6 +125,15 @@ export class WebAppState {
       route.pageId = pageId;
     }
 
+    // Include viewport parameters for stable back/forward and toggling restoration
+    if (this.currentPageViewState) {
+      route.viewportCenter = [
+        this.currentPageViewState.viewportCenter.x,
+        this.currentPageViewState.viewportCenter.y
+      ];
+      route.viewportEyeHeight = this.currentPageViewState.viewportHeight;
+    }
+
     return route;
   }
 
@@ -138,47 +147,47 @@ interface MouseStateData {
 }
 
 export class MouseState {
-    buttons: number = 0;
-    position: Point2D | null = null;
-    positionOnPress: Point2D | null = null;
-    buttonsOnLeave: number = 0;
+  buttons: number = 0;
+  position: Point2D | null = null;
+  positionOnPress: Point2D | null = null;
+  buttonsOnLeave: number = 0;
 
-    constructor() {
-        makeObservable(this, {
-            position: observable,
-            positionOnPress: observable,
-            buttons: observable,
-            buttonsOnLeave: observable,
-        });
-    }
+  constructor() {
+    makeObservable(this, {
+      position: observable,
+      positionOnPress: observable,
+      buttons: observable,
+      buttonsOnLeave: observable,
+    });
+  }
 
-    get mouseIsPresent(): boolean {
-        return this.position !== null;
-    }
+  get mouseIsPresent(): boolean {
+    return this.position !== null;
+  }
 
-    get rightIsPressed() {
-        return (this.buttons & 2) !== 0;
-    }
-    get leftIsPressed() {
-        return (this.buttons & 1) !== 0;
-    }
-    data(): MouseStateData {
-        return {
-            buttons: this.buttons,
-            position: this.position,
-            positionOnPress: this.positionOnPress,
-            buttonsOnLeave: this.buttonsOnLeave
-        };
-    }
-    applyPressEvent(event: React.MouseEvent) {
-        this.positionOnPress = new Point2D([event.clientX, event.clientY]);
-        this.buttons = event.buttons;
-    }
-    applyMoveEvent(event: React.MouseEvent) {
-        this.position = new Point2D([event.clientX, event.clientY]);
-    }
-    applyReleaseEvent(event: React.MouseEvent) {
-        this.buttons = event.buttons;
-    }
+  get rightIsPressed() {
+    return (this.buttons & 2) !== 0;
+  }
+  get leftIsPressed() {
+    return (this.buttons & 1) !== 0;
+  }
+  data(): MouseStateData {
+    return {
+      buttons: this.buttons,
+      position: this.position,
+      positionOnPress: this.positionOnPress,
+      buttonsOnLeave: this.buttonsOnLeave
+    };
+  }
+  applyPressEvent(event: React.MouseEvent) {
+    this.positionOnPress = new Point2D([event.clientX, event.clientY]);
+    this.buttons = event.buttons;
+  }
+  applyMoveEvent(event: React.MouseEvent) {
+    this.position = new Point2D([event.clientX, event.clientY]);
+  }
+  applyReleaseEvent(event: React.MouseEvent) {
+    this.buttons = event.buttons;
+  }
 }
 

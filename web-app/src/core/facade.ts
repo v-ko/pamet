@@ -1,6 +1,6 @@
 import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
-import { Change, ChangeType } from "fusion/model/Change";
+import { Change } from "fusion/model/Change";
 import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { appActions } from "@/actions/app";
@@ -13,7 +13,7 @@ import { StorageService } from "fusion/storage/management/StorageService";
 import { MediaStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData, StorageAdapterNames } from "fusion/storage/repository/Repository";
 import { RoutingService } from "@/services/routing/RoutingService";
-import { PametRoute } from "@/services/routing/route";
+import { projectActions } from "@/actions/project";
 import { registerRootActionCompletedHook } from "fusion/registries/Action";
 import { ProjectData } from "@/model/config/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
@@ -383,11 +383,9 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    let route = new PametRoute({
-                        userId: userId,
-                        projectId: projectId
-                    });
-                    pamet.router.replaceRoute(route);
+                    // Current page removed: switch to project default/first page and let router reaction sync the URL
+                    projectActions.goToDefaultPage(appState);
+                    return;
                 }
             }
             else if (change.isUpdate()) {

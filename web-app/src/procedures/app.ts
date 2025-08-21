@@ -8,6 +8,8 @@ import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
 import { createId, currentTime, timestamp } from "fusion/util/base";
 import { DesktopImporter } from "@/storage/DesktopImporter";
+import { pageActions } from "@/actions/page";
+import { Point2D } from "fusion/primitives/Point2D";
 
 const log = getLogger('AppProcedures');
 
@@ -78,8 +80,7 @@ export async function switchToProject(projectId: string | null): Promise<void> {
             appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
         }
 
-        // The state is updated - update the url
-        pamet.router.pushRoute(appState.toRoute())
+        // The state is updated - URL will sync via router reaction
     } finally {
         projectSwithLock = false;
         appActions.updateSystemDialogState(appState, null);
@@ -151,11 +152,33 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
 
 export async function updateAppFromRoute(route: PametRoute): Promise<void> {
-    // Reflects the route in the app state without any side effects
+    // Reflects the route in the app state without any URL mutations
     log.info('updateAppFromRoute for route', route);
 
-    let projectId = route.projectId;
-    // If no project id -
+    const appState = pamet.appViewState;
+
+    // 1) Project
+    const targetProjectId = route.projectId ?? null;
+    if (appState.currentProjectId !== targetProjectId) {
+        await switchToProject(targetProjectId);
+    }
+
+    // 2) Page
+    const targetPageId = route.pageId ?? null;
+    if (appState.currentPageId !== targetPageId) {
+        if (targetPageId) {
+            appActions.setCurrentPage(appState, targetPageId);
+        } else {
+            // Leave current page as-is when clearing pageId via pure reflect
+            // If needed, higher-level auto-assist decides defaults
+        }
+    }
+
+    // 3) Viewport (view_at) for current page, if provided
+    if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+        const [x, y] = route.viewportCenter;
+        pageActions.updateViewport(appState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
+    }
 }
 
 export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise<void> {
@@ -186,7 +209,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
                 userId: userId,
                 projectId: projects[0].id,
             })
-            await pamet.router.changeRouteAndApplyToApp(firstProjectRoute); // calls this function inside (recurses)
+            await switchToProject(projects[0].id);
             return;
         }
     }
@@ -204,6 +227,11 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
     let pageId = route.pageId;
     if (pageId !== undefined) {
         appActions.setCurrentPage(pamet.appViewState, pageId);
+        // Apply viewport (eye_at) if provided
+        if (pamet.appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+            const [x, y] = route.viewportCenter;
+            pageActions.updateViewport(pamet.appViewState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
+        }
     } else {  // If there's no page id
         // Goto first/default page
         let goToPageId: string | undefined = undefined;
@@ -245,11 +273,12 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
         }
 
         if (goToPageId !== undefined) {
-            let defaultPageRoute = new PametRoute();
-            defaultPageRoute.userId = userId;
-            defaultPageRoute.projectId = projectId;
-            defaultPageRoute.pageId = goToPageId;
-            await pamet.router.changeRouteAndApplyToApp(defaultPageRoute);
+            appActions.setCurrentPage(pamet.appViewState, goToPageId);
+            // Apply viewport (eye_at) if provided
+            if (pamet.appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+                const [x, y] = route.viewportCenter;
+                pageActions.updateViewport(pamet.appViewState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
+            }
         } else {
             log.error('Could not find/create a page to go to.');
         }

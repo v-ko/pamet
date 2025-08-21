@@ -56,6 +56,7 @@ export const ARROW_POTENTIAL_CONTROL_POINT_RADIUS = ARROW_CONTROL_POINT_RADIUS *
 // Page render and cache related
 export const MAX_RENDER_TIME = 0.025  // (in seconds) ~24 fps
 export const IMAGE_CACHE_PADDING = 3;
+export const MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME = 2;
 
 // Colors
 export const DEFAULT_TEXT_COLOR_ROLE = 'onPrimary'

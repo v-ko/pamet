@@ -362,6 +362,12 @@ class PametCommands {
     openCommandPaletteWithProjectSwitch() {
         appActions.openProjectPalette(pamet.appViewState);
     }
+
+    @command('Toggle last page')
+    toggleLastPage() {
+        log.info('Toggling last page');
+        pamet.router.toggleLastPage();
+    }
 }
 
 async function storeStateToClipboard() {

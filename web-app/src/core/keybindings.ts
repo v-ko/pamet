@@ -183,5 +183,9 @@ export const DEFAULT_KEYBINDINGS = [
         command: commands.redo.name,
         when: 'canvasFocus'
     },
-
+    {
+        key: 'backspace',
+        command: commands.toggleLastPage.name,
+        when: 'canvasFocus'
+    }
 ]

@@ -96,9 +96,9 @@ export class PametRoute {
         // Parse the search
         const search = url_.search;
         const searchParams = new URLSearchParams(search);
-        const eye_at = searchParams.get('eye_at');
-        if (eye_at) {
-            const [eyeHeight, x, y] = eye_at.split('/').map(parseFloat);
+        const view_at = searchParams.get('view_at');
+        if (view_at) {
+            const [eyeHeight, x, y] = view_at.split('/').map(parseFloat);
             if (!isNaN(eyeHeight) && !isNaN(x) && !isNaN(y)) {
                 route.viewportEyeHeight = eyeHeight;
                 route.viewportCenter = [x, y];
@@ -189,7 +189,8 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
 
     let search = '';
     if (route.viewportEyeHeight && route.viewportCenter) {
-        search = `?eye_at=${route.viewportEyeHeight.toString()}/${route.viewportCenter[0].toString()}/${route.viewportCenter[1].toString()}`;
+        const to2 = (n: number) => n.toFixed(2);
+        search = `?view_at=${to2(route.viewportEyeHeight)}/${to2(route.viewportCenter[0])}/${to2(route.viewportCenter[1])}`;
     }
 
     let hash = '';

@@ -165,6 +165,9 @@ async function initializeApp() {
         log.error("Failed to initialize storage service", e);
     }
 
+    // Initialize router after config and initial URL → State hydration
+    pamet.router.init(pamet.appViewState);
+
     // Handle the route
     try{
         await updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
@@ -172,8 +175,6 @@ async function initializeApp() {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
     }
 }
-
-
 initializeApp().catch((e) => {
     log.error("Error in initializeApp", e);
     alert("Failed to initialize app. Please check the console for details.");

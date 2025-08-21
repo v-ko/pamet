@@ -34,7 +34,7 @@ class AppActions {
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
         }
-        pamet.router.pushRoute(state.toRoute());
+        // URL synchronization is handled by the RoutingService reaction (State -> URL)
     }
 
     @action({ issuer: 'service' })

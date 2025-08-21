@@ -3,7 +3,7 @@ import { Viewport } from "@/components/page/Viewport";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { PageMode, PageViewState } from "@/components/page/PageViewState";
 import { NoteViewState } from "@/components/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals } from "@/util";
 
@@ -574,7 +574,7 @@ export class DirectRenderer {
         // Render notes with no cache (with priority)
         let dpr = state.viewport.devicePixelRatio;
         for (const noteVS of withNoCache) {
-            if (noTimeLeft() && drawStats.deNovoAll >= 2) {
+            if (noTimeLeft() && drawStats.deNovoAll >= MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME) {
                 renderPattern(ctx, noteVS);
                 drawStats.pattern++;
                 continue;
