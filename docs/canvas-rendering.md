@@ -1,3 +1,0 @@
-- Blurry lines - the problem is that with scaling 1px width lines inevitably take up non-integer pixel counts, and non-filled pixels are filled with reduced color values, which produces the blur...devising an ML strategy for adapting the zoom path and quantization to optimal values - i just reduced border size, and looks good...done
-  - Quantization solution - we move the line to take up 2 pixels instead of 3 (or 1 instead of 2) by adjusting the coordinates. OR we adjust the line width (or both) (qt does something similar. lines seem to jitter)
-  - Scale factor - zoom to scales that produce integer widths

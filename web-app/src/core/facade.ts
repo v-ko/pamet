@@ -70,8 +70,8 @@ export class PametFacade extends PametStore {
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
-    debugging = true;
-    debugPaintOperations = true;
+    debug = true;
+    debugPaintOperations = false;
     renderProfiler = new RenderProfiler();
 
     undoService: UndoService;

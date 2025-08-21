@@ -1,3 +1,6 @@
 [submodule "fusion"]
 	path = fusion
 	url = https://github.com/v-ko/fusion
+[submodule "wiki"]
+	path = wiki
+	url = https://github.com/v-ko/pamet.wiki.git
