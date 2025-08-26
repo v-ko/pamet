@@ -228,9 +228,9 @@ export class PametFacade extends PametStore {
             log.error('Error loading project', e);
         }
 
-        // Load the entities after loading the repo
-        let headState = await pamet.storageService.headState(projectId)
-        pamet.frontendDomainStore.loadData(headState);
+        // Initialize the FDS from the storage service
+        const storageConfig = pamet.projectStorageConfig(projectId);
+        await pamet.frontendDomainStore.initialize(projectId, storageConfig.deviceBranchName);
 
         appActions.setLocalStorageState(this.appViewState, { available: true });
     }

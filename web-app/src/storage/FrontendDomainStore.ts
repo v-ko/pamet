@@ -6,8 +6,11 @@ import { Change } from "fusion/model/Change";
 import { entityDeltaToViewModelReducer, pamet } from "@/core/facade";
 import { action } from "fusion/registries/Action";
 import { getLogger } from "fusion/logging";
-import { Delta, DeltaData, squishDeltas } from "fusion/model/Delta";
+import { Delta } from "fusion/model/Delta";
 import type { RepoUpdateData } from "fusion/storage/repository/Repository";
+import { CommitGraph } from "fusion/storage/version-control/CommitGraph";
+import { Commit } from "fusion/storage/version-control/Commit";
+import { computeRepoSyncDelta } from "fusion/storage/management/sync-utils";
 
 let log = getLogger('FrontendDomainStore');
 
@@ -26,6 +29,8 @@ export class FrontendDomainStore extends PametStore {
      *
      */
     _store: Store;
+    private _localCommitGraph: CommitGraph;
+    private _currentBranch: string | null = null;
 
     private _uncommittedChanges: Change[] = [];
     // private _expectedDeltas: DeltaData[] = []; // Sent to the repo service to create commits with
@@ -36,12 +41,56 @@ export class FrontendDomainStore extends PametStore {
         super()
         // Use Pamet-specific index configuration with entity type support
         this._store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
+        this._localCommitGraph = new CommitGraph();
     }
     data(): SerializedStoreData {
         return this._store.data();
     }
     loadData(data: SerializedStoreData): void {
         this._store.loadData(data);
+    }
+
+    /**
+     * Initialize the FDS by hydrating from the storage service.
+     * This mimics the Repository.pull logic.
+     */
+    async initialize(projectId: string, currentBranch: string): Promise<void> {
+        try {
+            // Get the remote commit graph and any commits we need
+            const remoteGraphData = await pamet.storageService.getCommitGraph(projectId);
+            const remoteGraph = CommitGraph.fromData(remoteGraphData);
+
+            // For initial load, we assume local graph is empty but create the default branch
+            const emptyLocalGraph = new CommitGraph();
+            emptyLocalGraph.createBranch(currentBranch);
+
+            // Get all commits from the remote (for initial hydration)
+            const allCommits = remoteGraph.commits();
+            const allCommitIds = allCommits.map(c => c.id);
+            let upsertedCommits: Commit[] = [];
+
+            if (allCommitIds.length > 0) {
+                const commitDataArray = await pamet.storageService.getCommits(projectId, allCommitIds);
+                upsertedCommits = commitDataArray.map(data => new Commit(data));
+            }
+
+            // Use the pure function to compute what delta to apply
+            const syncDelta = computeRepoSyncDelta(emptyLocalGraph, remoteGraph, upsertedCommits, currentBranch);            if (syncDelta) {
+                // Apply the delta to get the store in sync
+                this._store.applyDelta(syncDelta);
+                // Apply to view model
+                entityDeltaToViewModelReducer(pamet.appViewState, syncDelta);
+            }
+
+            // Update our local commit graph to match remote and store current branch
+            this._localCommitGraph = remoteGraph;
+            this._currentBranch = currentBranch;
+
+            log.info('FDS initialized successfully');
+        } catch (error) {
+            log.error('Failed to initialize FDS:', error);
+            throw error;
+        }
     }
 
     get uncommittedChanges(): Change[] {
@@ -118,98 +167,63 @@ export class FrontendDomainStore extends PametStore {
     receiveRepoUpdate(repoUpdate: RepoUpdateData) {
         log.info('Received repo update', repoUpdate);
 
-        // Aggregate the deltas from the commits
-        let deltasData: DeltaData[] = []
-        for (let commitData of repoUpdate.newCommits) {
-            let deltaData = commitData.deltaData;
-            if (deltaData === undefined) {
-                throw Error('Received undefined delta data')
-            }
-            deltasData.push(deltaData)
-        }
-        let aggregatedDeltas = squishDeltas(deltasData);
-
-        // Reverse the expected delta and merge it with the received one
-        // The remainder is what we need to apply to get the store in sync
-        // What happens in detail:
-        // 1. User makes change in action and the change is applied synchronously
-        // in the FDS._store (lets call it S1), and the change/delta - C.
-        // So S2 = S1 + C
-        // 2. We save the change and request a commit with it. It's created in
-        // the storage service. It has the same state S, but also may receive
-        // changes from elsewhere, so we assume that the commit hash is
-        // f(S2'), where C' are the expected changes +- other stuff, and S2'=S1+C'
-        // 3. We receive the new commit and accept it as ground truth. But we
-        // need to sync the FDS._store to the StorageService state.
-        // So we do:
-        // S2 - C = S1
-        // S1 + C' = S2'
-        // Or for efficiency sake we combine the deltas before applying them
-        // (order matters)
-        // S2 + (reversed(C) + C') = S2'
-        let reversedExpectedDelta = this._expectedDelta.reversed();
-        this._expectedDelta = new Delta({});
-
         try {
-            reversedExpectedDelta.mergeWithPriority(aggregatedDeltas);
-            let unexpectedDelta = reversedExpectedDelta;
-            this._store.applyDelta(unexpectedDelta);
+            // Convert the repo update data to objects
+            const remoteGraph = CommitGraph.fromData(repoUpdate.commitGraph);
+            const upsertedCommits = repoUpdate.upsertedCommits.map(data => new Commit(data));
 
-            // Apply the result to the repo
-            entityDeltaToViewModelReducer(pamet.appViewState, unexpectedDelta);
+            // Use the stored current branch or default to the first branch
+            if (!this._currentBranch) {
+                log.error('Current branch not set, FDS may not be initialized properly');
+                return;
+            }
+
+            // Use the pure function to compute the delta needed for sync
+            const repoSyncDelta = computeRepoSyncDelta(this._localCommitGraph, remoteGraph, upsertedCommits, this._currentBranch);
+
+            if (!repoSyncDelta) {
+                log.info('No repo sync changes needed');
+                return;
+            }
+
+            // Reverse the expected delta and merge it with the repo sync delta
+            // This handles the case where local changes were made but remote changes also occurred
+            // What happens in detail:
+            // 1. User makes change in action and the change is applied synchronously
+            // in the FDS._store (lets call it S1), and the change/delta - C.
+            // So S2 = S1 + C
+            // 2. We save the change and request a commit with it. It's created in
+            // the storage service. It has the same state S, but also may receive
+            // changes from elsewhere, so we assume that the commit hash is
+            // f(S2'), where C' are the expected changes +- other stuff, and S2'=S1+C'
+            // 3. We receive the new commit and accept it as ground truth. But we
+            // need to sync the FDS._store to the StorageService state.
+            // So we do:
+            // S2 - C = S1
+            // S1 + C' = S2'
+            // Or for efficiency sake we combine the deltas before applying them
+            // (order matters)
+            // S2 + (reversed(C) + C') = S2'
+            let reversedExpectedDelta = this._expectedDelta.reversed();
+            this._expectedDelta = new Delta({});
+
+            // Combine the deltas: first reverse local changes, then apply remote changes
+            reversedExpectedDelta.mergeWithPriority(repoSyncDelta);
+            let finalDelta = reversedExpectedDelta;
+
+            // Apply the combined delta to the store
+            this._store.applyDelta(finalDelta);
+
+            // Apply to view model
+            entityDeltaToViewModelReducer(pamet.appViewState, finalDelta);
+
+            // Update our local commit graph to match remote
+            this._localCommitGraph = remoteGraph;
+
+            log.info('Successfully applied repo update');
         } catch (e) {
-            log.error('Inconsistency between received commit deltas and expected changes. Exception:', e);
+            log.error('Error applying repo update:', e);
             alert('Critical error (check the console). Please reload the page');
-            // window.location.reload();
         }
-
-        // // Check that the last commit hash is the same as the one of the
-        // // store state after the update... Cannot be done, hashing is async.
-        // // Also this class should be lean
-
-        // // Integrity check (TMP)
-        // // Check that the store hash is the same as the commit
-        // let hashTreePromise = buildHashTree(this._store);
-        // hashTreePromise.then((hashTree) => {
-        //     let storeHash = hashTree.rootHash();
-        //     let commitHash = repoUpdate.newCommits[repoUpdate.newCommits.length - 1].snapshotHash;
-        //     if (storeHash !== commitHash) {
-        //         log.error('Hash tree integrity check failed',
-        //             'Current hash:', storeHash,
-        //             'Expected hash:', commitHash);
-        //     } else {
-        //         log.info('FDS store hash equals commit hash');
-        //         log.info('Store hash:', storeHash);
-        //     }
-        // }).catch((e) => {
-        //     log.error('Error in hash tree building', e);
-        // })
-        // // Get head state from the store and compare with the FDS.inMemoryRepo
-        // let headStatePromise = pamet.storageService.headState(
-        //     pamet.appViewState.currentProjectId!)
-
-        // headStatePromise.then((headState) => {
-        //     log.info('Head state', JSON.stringify(headState, null, 2));
-        //     let store = new InMemoryStore();
-        //     store.loadData(headState);
-        //     let headHashTreePromise = buildHashTree(store);
-        //     headHashTreePromise.then((headHashTree) => {
-        //         let headHash = headHashTree.rootHash();
-        //         log.info('Head state hash:', headHash);
-        //         let commitHash = repoUpdate.newCommits[repoUpdate.newCommits.length - 1].snapshotHash;
-        //         if (headHash !== commitHash) {
-        //             log.error('Head state integrity check failed',
-        //                 'FDS hash:', headHash,
-        //                 'Commit hash:', headHash);
-        //         } else{
-        //             log.info('Head state hash equals commit hash');
-        //             log.info('Head state hash:', headHash);
-        //         }
-        //     }).catch((e) => {
-        //         log.error('Error in head hash tree', e);
-        //     })
-        // }).catch((e) => {
-        //     log.error('Error in head state', e);
-        // })
     }
 }

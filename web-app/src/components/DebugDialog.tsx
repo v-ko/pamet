@@ -16,7 +16,7 @@ interface ProblematicEntityInfo {
 
 export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [repoHeadState, setRepoHeadState] = useState<any>(null);
+  const [commitStats, setCommitStats] = useState<any>(null);
   const [fdsState, setFdsState] = useState<any>(null);
   const [problematicEntities, setProblematicEntities] = useState<ProblematicEntityInfo[]>([]);
   const [mobxStateSize, setMobxStateSize] = useState<number | null>(null);
@@ -52,17 +52,39 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
     }
   }, [isOpen]);
 
-  const fetchRepoHeadState = async () => {
+  const fetchCommitStats = async () => {
     try {
       const currentProjectId = pamet.appViewState.currentProjectId;
-      console.log('Fetching repo head state for project ID:', currentProjectId);
+      console.log('Fetching commit stats for project ID:', currentProjectId);
       if (currentProjectId) {
-        const headState = await pamet.storageService.headState(currentProjectId);
-        setRepoHeadState(headState);
+        // Get commit graph and commits from storage service
+        const commitGraphData = await pamet.storageService.getCommitGraph(currentProjectId);
+        const allCommitIds = commitGraphData.commits.map(c => c.id);
+        const commits = allCommitIds.length > 0 ? await pamet.storageService.getCommits(currentProjectId, allCommitIds) : [];
+
+        // Calculate statistics
+        const branches = commitGraphData.branches;
+        const currentBranch = 'main'; // Default branch
+        const headCommit = branches.find(b => b.name === currentBranch);
+
+        // Get commits for current branch (simplified - just show all for now)
+        const commitStats = commits.map(commit => ({
+          id: commit.id.substring(0, 8),
+          message: commit.message,
+          timestamp: new Date(commit.timestamp).toLocaleString(),
+          deltaSize: JSON.stringify(commit.deltaData).length
+        }));
+
+        setCommitStats({
+          branches: branches,
+          headCommitId: headCommit?.headCommitId?.substring(0, 8) || 'none',
+          totalCommits: commits.length,
+          commits: commitStats
+        });
       }
     } catch (error) {
-      console.error('Error fetching repo head state:', error);
-      setRepoHeadState({ error: String(error) });
+      console.error('Error fetching commit stats:', error);
+      setCommitStats({ error: String(error) });
     }
   };
 
@@ -136,21 +158,37 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
         <pre>{JSON.stringify(pamet.config.data(), null, 2)}</pre>
       </details>
 
-      {/* Repo head state button and display */}
-      <button onClick={fetchRepoHeadState}>
-        Fetch Repo Head State
+      {/* Commit stats button and display */}
+      <button onClick={fetchCommitStats}>
+        Fetch Commit Statistics
       </button>
 
-      {repoHeadState && (
+      {commitStats && (
         <details>
-          <summary>Repo Head State</summary>
-          <pre style={{
+          <summary>Commit Statistics</summary>
+          <div style={{
             maxHeight: '300px',
             overflow: 'auto',
-            border: '1px solid black'
+            border: '1px solid black',
+            padding: '10px'
           }}>
-            {JSON.stringify(repoHeadState, null, 2)}
-          </pre>
+            {commitStats.error ? (
+              <p>Error: {commitStats.error}</p>
+            ) : (
+              <>
+                <p><strong>Branches:</strong> {commitStats.branches?.map((b: any) => `${b.name} (${b.headCommitId?.substring(0, 8) || 'empty'})`).join(', ') || 'none'}</p>
+                <p><strong>Head Commit:</strong> {commitStats.headCommitId}</p>
+                <p><strong>Total Commits:</strong> {commitStats.totalCommits}</p>
+                <h4>Commits:</h4>
+                {commitStats.commits?.map((commit: any, index: number) => (
+                  <div key={index} style={{ marginBottom: '8px', fontSize: '12px' }}>
+                    <div><strong>{commit.id}</strong> - {commit.message}</div>
+                    <div style={{ color: '#666' }}>{commit.timestamp} | Delta size: {commit.deltaSize} bytes</div>
+                  </div>
+                )) || <p>No commits</p>}
+              </>
+            )}
+          </div>
         </details>
       )}
 
