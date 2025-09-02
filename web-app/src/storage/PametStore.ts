@@ -89,7 +89,7 @@ export abstract class PametStore extends Store {
         return this.find(filter) as Generator<Page>
     }
     page(page_id: string): Page | undefined {
-        return this.findOne({id: page_id}) as Page | undefined
+        return this.findOne({id: page_id, type: Page}) as Page | undefined
     }
 
     // Note CRUD
@@ -107,7 +107,7 @@ export abstract class PametStore extends Store {
         return this.find(filter) as Generator<Note>
     }
     note(note_id: string): Note | undefined {
-        return this.findOne({id: note_id}) as Note | undefined
+        return this.findOne({id: note_id, type: Note}) as Note | undefined
     }
 
     //Arrow CRUD

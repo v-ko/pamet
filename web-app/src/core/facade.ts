@@ -22,6 +22,7 @@ import { Delta } from "fusion/model/Delta";
 import { updateAppStateFromConfig } from "@/procedures/app";
 import { RenderProfiler } from "@/core/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
+import { SearchService } from "@/services/SearchService";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -67,6 +68,7 @@ export class PametFacade extends PametStore {
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService | null = null;
     _focusManager: FocusManager | null = null;
+    searchService: SearchService = new SearchService();
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
@@ -232,12 +234,18 @@ export class PametFacade extends PametStore {
         const storageConfig = pamet.projectStorageConfig(projectId);
         await pamet.frontendDomainStore.initialize(projectId, storageConfig.deviceBranchName);
 
+        // Initialize search indices with all notes and pages
+        const allNotes = Array.from(this.notes());
+        const allPages = Array.from(this.pages());
+        await this.searchService.initializeIndices(allNotes, allPages);
+
         appActions.setLocalStorageState(this.appViewState, { available: true });
     }
 
     async detachFromProject(projectId: string) {
         log.info('Detaching FDS for project', projectId);
         this.undoService.clearAll();
+        this.searchService.clear();
         let currentProject: ProjectData;
         try {
             currentProject = this.appViewState.getCurrentProject();
@@ -342,7 +350,45 @@ export class PametFacade extends PametStore {
     applyDelta(delta: Delta): void {
         this.frontendDomainStore.applyDelta(delta); // The viewModel reducer is aplied when the CRUD calls are made for each change in the delta
     }
+}
 
+/**
+ * Updates search indices based on entity changes
+ * This is separated from the view model reducer to allow for future refactoring
+ */
+export function updateSearchIndicesFromDelta(searchService: SearchService, delta: Delta, facade: PametFacade) {
+    if (!searchService.isInitialized) {
+        return; // Skip if search not initialized
+    }
+
+    for (let change of delta.changes()) {
+        if (change.isDelete()) {
+            // Try to remove from both indices (one will be a no-op)
+            searchService.removeNote(change.entityId);
+            searchService.removePage(change.entityId);
+        } else if (change.isCreate() || change.isUpdate()) {
+            // Check if it's a note
+            const note = facade.note(change.entityId);
+            if (note) {
+                if (change.isCreate()) {
+                    searchService.addNote(note);
+                } else {
+                    searchService.updateNote(note);
+                }
+                continue;
+            }
+
+            // Check if it's a page
+            const page = facade.page(change.entityId);
+            if (page) {
+                if (change.isCreate()) {
+                    searchService.addPage(page);
+                } else {
+                    searchService.updatePage(page);
+                }
+            }
+        }
+    }
 }
 
 
@@ -428,6 +474,13 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                 }
             }
         }
+    }
+
+    // Update search indices (separated logic for potential future refactoring)
+    try{
+    updateSearchIndicesFromDelta(pamet.searchService, delta, pamet);
+    } catch(e) {
+        log.error('Error while updating search index from delta', e, delta)
     }
 }
 

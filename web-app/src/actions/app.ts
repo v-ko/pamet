@@ -2,6 +2,8 @@ import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/container
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
 import type { LocalStorageState, MouseState } from "@/containers/app/WebAppState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
+import { LocalSearchViewState } from "@/components/search/LocalSearchViewState";
+import { GlobalSearchViewState } from "@/components/search/GlobalSearchViewState";
 import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
@@ -133,6 +135,32 @@ class AppActions {
     @action
     closeCommandPalette(appState: WebAppState) {
         appState.commandPaletteState = null;
+    }
+
+    @action
+    openLocalSearch(appState: WebAppState, initialQuery: string = '') {
+        appState.localSearchViewState = new LocalSearchViewState(initialQuery);
+    }
+
+    @action
+    closeLocalSearch(appState: WebAppState) {
+        appState.localSearchViewState = null;
+    }
+
+    @action
+    openGlobalSearch(appState: WebAppState, initialQuery: string = '') {
+        if (appState.globalSearchViewState) {
+            // If already open, increment focus counter to trigger re-focus
+            appState.globalSearchViewState.incrementFocusCounter();
+        } else {
+            // Create new instance if not open
+            appState.globalSearchViewState = new GlobalSearchViewState(initialQuery);
+        }
+    }
+
+    @action
+    closeGlobalSearch(appState: WebAppState) {
+        appState.globalSearchViewState = null;
     }
 }
 

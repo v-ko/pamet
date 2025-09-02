@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@types/styled-components": "^5.1.34",
+    "flexsearch": "^0.8.205",
     "idb": "^8.0.0",
     "mobx": "^6.13.1",
     "mobx-react-lite": "^4.0.7",
@@ -25,6 +26,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.8",
     "@testing-library/react": "^16.0.0",
+    "@types/flexsearch": "^0.7.6",
     "@types/jest": "^29.5.12",
     "@types/node": "^22.1.0",
     "@types/react": "^18.3.3",
@@ -52,10 +54,19 @@
         "displayName": "fusion",
         "preset": "ts-jest/presets/default-esm",
         "testEnvironment": "node",
-        "testMatch": ["<rootDir>/fusion/js-src/src/**/*.test.ts"],
-        "extensionsToTreatAsEsm": [".ts"],
+        "testMatch": [
+          "<rootDir>/fusion/js-src/src/**/*.test.ts"
+        ],
+        "extensionsToTreatAsEsm": [
+          ".ts"
+        ],
         "transform": {
-          "^.+\\.tsx?$": ["ts-jest", { "useESM": true }]
+          "^.+\\.tsx?$": [
+            "ts-jest",
+            {
+              "useESM": true
+            }
+          ]
         },
         "moduleNameMapper": {
           "^fusion/(.*)$": "<rootDir>/fusion/js-src/src/$1"
@@ -65,11 +76,23 @@
         "displayName": "web-app",
         "preset": "ts-jest/presets/default-esm",
         "testEnvironment": "jsdom",
-        "testMatch": ["<rootDir>/web-app/src/**/*.test.{ts,tsx}"],
-        "setupFilesAfterEnv": ["<rootDir>/web-app/src/setupTests.ts"],
-        "extensionsToTreatAsEsm": [".ts", ".tsx"],
+        "testMatch": [
+          "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
+        ],
+        "setupFilesAfterEnv": [
+          "<rootDir>/web-app/src/setupTests.ts"
+        ],
+        "extensionsToTreatAsEsm": [
+          ".ts",
+          ".tsx"
+        ],
         "transform": {
-          "^.+\\.tsx?$": ["ts-jest", { "useESM": true }]
+          "^.+\\.tsx?$": [
+            "ts-jest",
+            {
+              "useESM": true
+            }
+          ]
         },
         "moduleNameMapper": {
           "\\.(css|less|scss|sass)$": "identity-obj-proxy",

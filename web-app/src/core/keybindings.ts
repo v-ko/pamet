@@ -141,7 +141,7 @@ export const DEFAULT_KEYBINDINGS = [
         command: commands.pasteSpecial.name,
         when: 'canvasFocus'
     },
-    {
+        {
         key: 'ctrl+p',
         command: commands.openPagePalette.name,
         when: ''
@@ -154,6 +154,16 @@ export const DEFAULT_KEYBINDINGS = [
     {
         key: 'ctrl+alt+p',
         command: commands.openCommandPaletteWithProjectSwitch.name,
+        when: ''
+    },
+    {
+        key: 'ctrl+f',
+        command: commands.openLocalSearch.name,
+        when: ''
+    },
+    {
+        key: 'ctrl+shift+f',
+        command: commands.openGlobalSearch.name,
         when: ''
     },
     // Undo / Redo

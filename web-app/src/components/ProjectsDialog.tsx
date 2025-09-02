@@ -2,6 +2,9 @@ import { useRef, useEffect } from 'react';
 import { pamet } from '@/core/facade';
 import { appActions } from '@/actions/app';
 import { PametRoute } from "@/services/routing/route";
+import { getLogger } from 'fusion/logging';
+
+let log = getLogger('ProjectsDialog')
 
 interface ProjectsDialogProps {
   onClose: () => void;
@@ -72,7 +75,14 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
             >
               <a
                 href={(() => {
-                  const route = new PametRoute(({projectId: project.id}));
+                  const userId = pamet.appViewState.userId;
+                  if (!userId) {
+                    log.error('Trying to open projects dialog with no userId set')
+                    return;
+                  }
+                  const route = new PametRoute(({
+                    userId: userId,
+                    projectId: project.id}));
                   return route.toRelativeReference();
                 })()}
                 onClick={onClose}

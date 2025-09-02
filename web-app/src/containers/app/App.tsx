@@ -1,4 +1,5 @@
 import "@/containers/app/App.css";
+import "@/components/PanelLayer.css";
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
 
@@ -28,6 +29,8 @@ import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/container
 import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { PageAndCommandPalette, ProjectPalette } from "@/components/CommandPalette";
+import { LocalSearch } from "@/components/search/LocalSearch";
+import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { pamet } from "@/core/facade";
 
 let log = getLogger("App");
@@ -142,9 +145,10 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
       {/* If page data - display the page */}
       {shouldDisplayPage && <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />}
 
-
-      {/* Main panel - logo, project name, save state, help button */}
-      <Panel align='top-left'>
+      {/* Panel Layer - Grid layout for panels and sidebars */}
+      <div className="panel-layer">
+        {/* Main panel - logo, project name, save state, help button */}
+        <Panel align='top-left'>
 
         <div
           style={{
@@ -158,6 +162,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         <VerticalSeparator />
 
         <div
+          className="project-name"
           style={{
             cursor: 'pointer'
           }}
@@ -212,6 +217,11 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         <VerticalSeparator />
         <img src={accountCircleIconUrl} alt="Login/Sign up" />
       </Panel>
+
+        {/* Global search sidebar */}
+        {state.globalSearchViewState &&
+          <GlobalSearch state={state.globalSearchViewState} />}
+      </div>
 
       {/* Edit window (if open) */}
       {currentPageVS && currentPageVS.noteEditWindowState &&
@@ -293,6 +303,8 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         <PageAndCommandPalette state={state.commandPaletteState} />}
       {state.commandPaletteState instanceof ProjectPaletteState &&
         <ProjectPalette state={state.commandPaletteState} />}
+      {state.localSearchViewState &&
+        <LocalSearch state={state.localSearchViewState} />}
     </div>
   );
 });

@@ -17,6 +17,62 @@ interface PaletteItemAttributes {
   action: () => void;
 }
 
+// Helper function to close command palette
+const closeCommandPalette = () => {
+    if (pamet.appViewState.commandPaletteState != null) {
+        appActions.closeCommandPalette(pamet.appViewState);
+    }
+};
+
+// Helper function to create page navigation action
+const createPageNavigationAction = (page: any) => () => {
+    log.info(`Navigating to page ${page.name}`);
+    closeCommandPalette();
+    appActions.setCurrentPage(pamet.appViewState, page.id);
+};
+
+// Helper function to create project switch action
+const createProjectSwitchAction = (project: any) => () => {
+    closeCommandPalette();
+    switchToProject(project.id).catch((error) => {
+        console.error(`Error switching to project ${project.title}:`, error);
+    });
+};
+
+// Helper function to get pages for the palette
+const getPagesForPalette = (searchText: string, currentPageId: string): PaletteItemAttributes[] => {
+    const pageCommands: PaletteItemAttributes[] = [];
+
+    if (searchText.trim()) {
+        // Use search service for fuzzy search when there's text input
+        const searchResults = pamet.searchService.searchPages(searchText, 20);
+
+        for (const pageId of searchResults) {
+            if (pageId === currentPageId) continue; // Skip the current page
+            const page = pamet.page(pageId);
+            if (page) {
+                pageCommands.push({
+                    id: page.id,
+                    title: page.name,
+                    action: createPageNavigationAction(page)
+                });
+            }
+        }
+    } else {
+        // Show all pages when no search text (fallback to original behavior)
+        const pages = Array.from(pamet.pages());
+        for (let page of pages) {
+            if (page.id === currentPageId) continue; // Skip the current page
+            pageCommands.push({
+                id: page.id,
+                title: page.name,
+                action: createPageNavigationAction(page)
+            });
+        }
+    }
+    return pageCommands;
+};
+
 interface CommandPaletteProps {
     initialInput: string;
     updateItems: (text: string) => PaletteItemAttributes[];
@@ -98,8 +154,6 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({initialInput, upd
 // New components will return the original for now
 export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState }> = observer(({ state }) => {
     const updateItems = (text: string): PaletteItemAttributes[] => {
-        const appState = pamet.appViewState;
-
         if (text.startsWith('>')) {
             const filterText = text.substring(1).toLowerCase();
             const allCommands = getCommands();
@@ -111,40 +165,15 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
                         id: cmd.name,
                         title: cmd.title,
                         action: () => {
-                            if (pamet.appViewState.commandPaletteState != null) {
-                                appActions.closeCommandPalette(appState);
-                            }
+                            closeCommandPalette();
                             cmd.function();
                         }
                     });
                 }
             }
             return commandItems;
-
         } else {
-            const pages = Array.from(pamet.pages());
-            let pageCommands: PaletteItemAttributes[] = [];
-            for (let page of pages) {
-                if (page.id === appState.currentPageId) {
-                    continue; // Skip the current page
-                }
-                if (!page.name.toLowerCase().includes(text.toLowerCase())) {
-                    continue;
-                }
-                pageCommands.push({
-                    id: page.id,
-                    title: page.name,
-                    action: () => {
-                        // appActions.navigateToPage(page.id);
-                        log.info(`Navigating to page ${page.name}`);
-                        if (pamet.appViewState.commandPaletteState != null) {
-                            appActions.closeCommandPalette(appState);
-                        }
-                        appActions.setCurrentPage(pamet.appViewState, page.id);
-                    }
-                });
-            }
-            return pageCommands;
+            return getPagesForPalette(text, pamet.appViewState.currentPageId || '');
         }
     };
     return <CommandPalette initialInput={state.initialInput} updateItems={updateItems} placeholder="Search pages or type > for commands..." />;
@@ -165,14 +194,7 @@ export const ProjectPalette: React.FC<{ state: ProjectPaletteState }> = observer
             projectCommands.push({
                 id: project.id,
                 title: project.title,
-                action: () => {
-                    if (pamet.appViewState.commandPaletteState != null) {
-                        appActions.closeCommandPalette(appState);
-                    }
-                    switchToProject(project.id).catch((error) => {
-                        console.error(`Error switching to project ${project.title}:`, error);
-                    });
-                }
+                action: createProjectSwitchAction(project)
             });
         }
         return projectCommands;

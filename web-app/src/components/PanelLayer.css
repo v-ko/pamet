@@ -1,0 +1,67 @@
+@import '../variables.css';
+
+.panel-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: grid;
+  grid-template-columns: min-content 1fr auto;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "top-left . top-right"
+    "sidebar-left . .";
+  gap: var(--space-1);
+  pointer-events: none; /* Allow clicks to pass through empty areas */
+  z-index: 1002;
+  padding: var(--space-1);
+  box-sizing: border-box;
+}
+
+/* Grid area assignments */
+.panel-layer .panel-top-left {
+  grid-area: top-left;
+  position: static; /* Override absolute positioning */
+  top: unset;
+  left: unset;
+}
+
+.panel-layer .panel-top-right {
+  grid-area: top-right;
+  position: static; /* Override absolute positioning */
+  top: unset;
+  right: unset;
+}
+
+.panel-layer .global-search {
+  grid-area: sidebar-left;
+  position: static; /* Override fixed positioning */
+  top: unset;
+  left: unset;
+}
+
+/* Restore pointer events for actual content */
+.panel-layer > * {
+  pointer-events: auto;
+}
+
+/* Panel updates for grid layout */
+.panel-layer .panel {
+  position: static;
+  z-index: inherit;
+}
+
+/* Project name truncation in left panel */
+.panel-layer .panel-top-left .project-name {
+  max-width: 200px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Global search content wrapping */
+.panel-layer .global-search {
+  min-width: 0; /* Allow shrinking */
+  overflow: hidden; /* Prevent expansion beyond grid cell */
+}

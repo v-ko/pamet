@@ -6,6 +6,8 @@ import { Point2D } from "fusion/primitives/Point2D";
 import { PametRoute } from "@/services/routing/route";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
 import { CommandPaletteState } from "@/components/CommandPaletteState";
+import { LocalSearchViewState } from "@/components/search/LocalSearchViewState";
+import { GlobalSearchViewState } from "@/components/search/GlobalSearchViewState";
 import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
@@ -63,6 +65,8 @@ export class WebAppState {
   loadingDialogState: LoadingDialogState | null = null;
   mouseState: MouseState = new MouseState();
   commandPaletteState: CommandPaletteState | null = null;
+  localSearchViewState: LocalSearchViewState | null = null;
+  globalSearchViewState: GlobalSearchViewState | null = null;
 
   // Internal clipboard for copy/cut/paste (entities stored with relative coordinates)
   clipboard: (Note | Arrow | MediaItem)[] = [];
@@ -80,6 +84,8 @@ export class WebAppState {
       dialogMode: observable,
       loadingDialogState: observable,
       commandPaletteState: observable,
+      localSearchViewState: observable,
+      globalSearchViewState: observable,
       clipboard: observable,
     });
   }

@@ -358,9 +358,19 @@ class PametCommands {
         appActions.openPageAndCommandPalette(pamet.appViewState, '');
     }
 
-    @command('Open project search')
+    @command('Open project switch palette')
     openCommandPaletteWithProjectSwitch() {
         appActions.openProjectPalette(pamet.appViewState);
+    }
+
+    @command('Open local search')
+    openLocalSearch() {
+        appActions.openLocalSearch(pamet.appViewState);
+    }
+
+    @command('Open global search')
+    openGlobalSearch() {
+        appActions.openGlobalSearch(pamet.appViewState);
     }
 
     @command('Toggle last page')
