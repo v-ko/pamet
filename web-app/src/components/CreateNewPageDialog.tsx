@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from "@/core/facade";
 import { Page } from "@/model/Page";
 import { getLogger } from 'fusion/logging';
+import "@/components/dialogs/Dialog.css";
 
 let log = getLogger('CreatePageDialog');
 
@@ -49,25 +50,33 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
   }
 
   return (
-    <dialog ref={dialogRef} onCancel={onClose} onClick={(e) => {
+    <dialog
+      ref={dialogRef}
+      onCancel={onClose}
+      onClick={(e) => {
         if (e.target === dialogRef.current) { // Close on outside click
             onClose();
         }
-    }}>
-      <div className="content-wrapper">
-        <h3>Create page</h3>
-        <form method="dialog" onSubmit={handleCreate}>
+      }}
+      className="app-dialog"
+    >
+      <div className="dialog-content">
+        <h3 className="dialog-title">Create page</h3>
+        <form method="dialog" onSubmit={handleCreate} className="form-vertical">
           <input
             autoFocus
             type="text"
             value={pageName}
             onChange={e => setPageName(e.target.value)}
             placeholder="Page name"
+            className="dialog-input"
           />
-          {isNameTaken && <div>This name is already taken.</div>}
-          <button type="submit" disabled={isNameTaken || !pageName.trim()}>
-            Create
-          </button>
+          {isNameTaken && <div className="dialog-error">This name is already taken.</div>}
+          <div className="dialog-actions">
+            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()}>
+              Create
+            </button>
+          </div>
         </form>
       </div>
     </dialog>

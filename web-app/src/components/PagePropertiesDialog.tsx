@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from '@/core/facade';
+import "@/components/dialogs/Dialog.css";
 import { Page } from '@/model/Page';
 
 interface PagePropertiesDialogProps {
@@ -31,14 +32,15 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
   }, [pageName, page.name]);
 
   function handleSave(e: FormEvent) {
-    e.preventDefault();
     const trimmed = pageName.trim();
-    if (!isNameTaken && trimmed) {
-      const updatedPage = page;
-      updatedPage.name = trimmed;
-      onSave(updatedPage);
-      // The dialog will close automatically because of the form method="dialog"
+    if (isNameTaken || !trimmed) {
+      e.preventDefault();
+      return;
     }
+    const updatedPage = page;
+    updatedPage.name = trimmed;
+    onSave(updatedPage);
+    // Allow default submit to close the dialog (method="dialog")
   }
 
   function handleDelete() {
@@ -55,31 +57,33 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
             onClose();
         }
       }}
-      style={{
-        border: 'none',
-        borderRadius: '4px',
-        padding: '16px',
-        maxWidth: '300px'
-      }}
+      className="app-dialog"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <h3 style={{ margin: 0 }}>Page Properties</h3>
-        <form method="dialog" onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div className="dialog-content">
+        <h3 className="dialog-title">Page Properties</h3>
+        <button
+          type="button"
+          className="icon-button dialog-close"
+          onClick={() => dialogRef.current?.close()}
+        >
+          ×
+        </button>
+        <form method="dialog" onSubmit={handleSave} className="form-vertical">
           <input
             autoFocus
             type="text"
             value={pageName}
             onChange={e => setPageName(e.target.value)}
             placeholder="Page name"
-            style={{ padding: '4px' }}
+            className="dialog-input"
           />
-          {isNameTaken && <div style={{ color: 'red', fontSize: '14px' }}>This name is already taken.</div>}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-            <button type="submit" disabled={isNameTaken || !pageName.trim()}>
-              Save
-            </button>
-            <button type="button" onClick={handleDelete} style={{ backgroundColor: '#dc3545', color: 'white', border: 'none' }}>
+          {isNameTaken && <div className="dialog-error">This name is already taken.</div>}
+          <div className="dialog-actions row-between">
+            <button className="btn btn-danger" type="button" onClick={handleDelete}>
               Delete Page
+            </button>
+            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()}>
+              Save
             </button>
           </div>
         </form>

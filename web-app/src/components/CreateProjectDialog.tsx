@@ -3,6 +3,7 @@ import { pamet } from '@/core/facade';
 import { timestamp, currentTime } from 'fusion/util/base';
 import { createProject, switchToProject } from "@/procedures/app";
 import { ProjectData } from '@/model/config/Project';
+import "@/components/dialogs/Dialog.css";
 
 interface CreateProjectDialogProps {
   onClose: () => void;
@@ -101,15 +102,20 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
   }
 
   return (
-    <dialog ref={dialogRef} onClose={onClose} onClick={(e) => {
+    <dialog
+      ref={dialogRef}
+      onClose={onClose}
+      onClick={(e) => {
         if (e.target === dialogRef.current) { // Close on outside click
             onClose();
         }
-    }}>
-      <div className="content-wrapper">
-        <h3>Create Project</h3>
-        <form method="dialog" onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      }}
+      className="app-dialog"
+    >
+      <div className="dialog-content">
+        <h3 className="dialog-title">Create Project</h3>
+        <form method="dialog" onSubmit={handleCreate} className="form-vertical">
+          <div className="field">
             <input
               ref={titleInputRef}
               autoFocus
@@ -124,10 +130,11 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
                   setIdError(validateId(newId));
                 }
               }}
+              className="dialog-input"
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div className="field">
             <input
               placeholder="Project ID"
               value={id}
@@ -136,25 +143,26 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
                 setId(newId);
                 setIdError(validateId(newId));
               }}
+              className="dialog-input"
             />
             {idError ? (
-              <small style={{ color: 'red' }}>{idError}</small>
+              <small className="dialog-error">{idError}</small>
             ) : (
-              <small>The ID should be short, suitable for an url.</small>
+              <small className="dialog-hint">The ID should be short, suitable for an url.</small>
             )}
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div className="field">
             <textarea
               placeholder="Project Description"
               value={description}
               onChange={e => setDescription(e.target.value)}
+              className="dialog-textarea"
             />
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-            <button type="button" onClick={onClose}>Cancel</button>
-            <button type="submit" disabled={!id.trim() || !title.trim() || idError !== null}>
+          <div className="dialog-actions" style={{ justifyContent: 'flex-end' }}>
+            <button className="btn btn-primary" type="submit" disabled={!id.trim() || !title.trim() || idError !== null}>
               Create
             </button>
           </div>

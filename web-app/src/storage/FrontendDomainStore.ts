@@ -116,7 +116,7 @@ export class FrontendDomainStore extends PametStore {
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        log.info('Updating entity', entity);
+        // log.info('Updating entity', entity);
         let change = this._store.updateOne(entity);
         entityDeltaToViewModelReducer(pamet.appViewState, Delta.fromChanges([change]));
         if (!change.isEmpty()) {

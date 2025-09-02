@@ -4,6 +4,7 @@ import { projectActions } from "@/actions/project";
 import { pamet } from "@/core/facade";
 import { deleteProjectAndSwitch } from '@/procedures/app';
 import { getLogger } from 'fusion/logging';
+import "@/components/dialogs/Dialog.css";
 
 let log = getLogger("ProjectPropertiesDialog");
 
@@ -54,21 +55,20 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           onClose();
         }
       }}
-      style={{
-        border: 'none',
-        borderRadius: '4px',
-        padding: '16px',
-        backgroundColor: 'white',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        maxWidth: '300px',
-        width: '90vw'
-      }}
+      className="app-dialog"
     >
-      <h3 style={{ margin: 0, marginBottom: '12px' }}>Project Properties</h3>
+      <h3 className="dialog-title">Project Properties</h3>
+      <button
+        type="button"
+        className="icon-button dialog-close"
+        onClick={() => dialogRef.current?.close()}
+      >
+        ×
+      </button>
 
       <form
         method="dialog"
-        style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
+        className="form-vertical"
         onSubmit={(e) => {
           // Note: when the form method is "dialog", the submit event fires, but
           // the default action is to close the dialog, not to submit the form.
@@ -88,7 +88,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           }
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div className="field">
           <input
             type="text"
             value={title}
@@ -98,14 +98,10 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
               setTitleError(validateTitle(newTitle));
             }}
             placeholder="Project Title"
-            style={{
-              padding: '4px',
-              border: '1px solid #ddd',
-              borderRadius: '4px'
-            }}
+            className="dialog-input"
           />
           {titleError && (
-            <small style={{ color: 'red' }}>{titleError}</small>
+            <small className="dialog-error">{titleError}</small>
           )}
         </div>
 
@@ -114,62 +110,28 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           value={project.id}
           disabled
           title="Project ID cannot be changed"
-          style={{
-            padding: '4px',
-            backgroundColor: '#f5f5f5',
-            cursor: 'not-allowed',
-            border: '1px solid #ddd',
-            borderRadius: '4px'
-          }}
+          className="dialog-input"
         />
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px' }}>
-          <button
-            type="submit"
-            disabled={!title.trim() || titleError !== null}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              backgroundColor: titleError || !title.trim() ? '#f5f5f5' : '#0066cc',
-              color: titleError || !title.trim() ? '#666' : 'white',
-              cursor: titleError || !title.trim() ? 'not-allowed' : 'pointer'
-            }}
-          >
-            Save
-          </button>
+        <div className="dialog-actions row-between">
           <button
             type="button"
             onClick={() => onDelete(project)}
-            style={{
-              padding: '8px 16px',
-              border: 'none',
-              borderRadius: '4px',
-              backgroundColor: '#dc3545',
-              color: 'white',
-              cursor: 'pointer'
-            }}
+            className="btn btn-danger"
           >
             Delete Project
+          </button>
+          <button
+            type="submit"
+            disabled={!title.trim() || titleError !== null}
+            className="btn btn-primary"
+          >
+            Save
           </button>
         </div>
       </form>
 
-      <button
-        formMethod="dialog"
-        formNoValidate
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          border: 'none',
-          background: 'none',
-          cursor: 'pointer',
-          fontSize: '18px'
-        }}
-      >
-        ×
-      </button>
+      
     </dialog>
   );
 }

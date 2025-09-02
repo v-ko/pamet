@@ -1,0 +1,159 @@
+@import '../../variables.css';
+
+/* Base dialog */
+.app-dialog {
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background-color: var(--color-bg-white);
+  box-shadow: var(--shadow-lg);
+  max-width: 32rem;
+  width: 90vw;
+  color: var(--color-text);
+}
+
+/* Title */
+.dialog-title {
+  margin: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--type-lg);
+  font-weight: bold;
+}
+
+/* Content layout */
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dialog-input,
+.dialog-textarea {
+  padding: var(--space-1);
+  border: 1px solid var(--color-light-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--type-md);
+  background: var(--color-bg-white);
+  color: var(--color-text);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.dialog-input:disabled {
+  background: var(--color-bg-light);
+  color: var(--color-text-muted, #666);
+  cursor: not-allowed;
+}
+
+.dialog-textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.dialog-hint {
+  font-size: var(--type-sm);
+  color: var(--color-text-muted, #666);
+}
+
+.dialog-error {
+  font-size: var(--type-sm);
+  color: var(--color-danger, #dc3545);
+}
+
+/* Actions */
+.dialog-actions {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: flex-end;
+}
+
+.justify-between { justify-content: space-between; }
+
+.dialog-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+/* Buttons */
+.btn {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-light-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg-light);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--color-primary, #0066cc);
+  color: var(--color-primary-contrast, #fff);
+  border: none;
+}
+
+.btn-danger {
+  background: var(--color-danger, #dc3545);
+  color: var(--color-danger-contrast, #fff);
+  border: none;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: none;
+}
+
+.icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: var(--space-1);
+  font-size: var(--type-lg);
+}
+
+/* Lists (for project list) */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-1);
+  background: var(--color-bg-light);
+  border-radius: var(--radius-sm);
+}
+
+.list-item a {
+  flex: 1;
+  padding: var(--space-1);
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* Simple flex row utils */
+.row-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}

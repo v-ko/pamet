@@ -445,17 +445,17 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
         // Process notes and arrows
         let elementVS = currentPageVS.viewStateForElementId(change.entityId)
         if (elementVS && change.isDelete()) {
-            log.info('Removing view state for element', change.entityId, delta);
+            // log.info('Removing view state for element', change.entityId, delta);
             currentPageVS.removeViewStateForElement(elementVS.element() as Note | Arrow);
 
         } else if (elementVS && change.isUpdate()) {
-            log.info('Updating view state for element', change.entityId, change.data);
+            // log.info('Updating view state for element', change.entityId, change.data);
             elementVS.updateFromChange(change);
 
         } else if (change.isCreate()) {
             const element = pamet.findOne({ id: change.entityId, parentId: currentPageId }); // Filter only for current page
             if (element) {
-                log.info('Adding view state for element', change.entityId, delta);
+                // log.info('Adding view state for element', change.entityId, delta);
                 currentPageVS.addViewStateForElement(element as Note | Arrow);
             }
         }

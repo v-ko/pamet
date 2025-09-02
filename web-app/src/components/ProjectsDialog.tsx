@@ -3,6 +3,7 @@ import { pamet } from '@/core/facade';
 import { appActions } from '@/actions/app';
 import { PametRoute } from "@/services/routing/route";
 import { getLogger } from 'fusion/logging';
+import "@/components/dialogs/Dialog.css";
 
 let log = getLogger('ProjectsDialog')
 
@@ -30,28 +31,13 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
             onClose();
         }
       }}
-      style={{
-        border: 'none',
-        borderRadius: '4px',
-        padding: '16px',
-        backgroundColor: 'white',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-        maxWidth: '400px',
-        width: '90vw'
-      }}
+      className="app-dialog"
     >
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ margin: 0 }}>Projects</h3>
+      <div className="dialog-content">
+        <div className="row-between">
+          <h3 className="dialog-title">Projects</h3>
           <button
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '4px',
-              fontSize: '20px',
-              color: '#007bff'
-            }}
+            className="icon-button"
             title="Create new project"
             onClick={() => {
               appActions.openCreateProjectDialog(pamet.appViewState);
@@ -60,18 +46,11 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
             +
           </button>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        <div className="list">
           {projects.map((project) => (
             <div
               key={project.id}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '8px',
-                backgroundColor: '#f5f5f5',
-                borderRadius: '4px'
-              }}
+              className="list-item"
             >
               <a
                 href={(() => {
@@ -86,28 +65,10 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
                   return route.toRelativeReference();
                 })()}
                 onClick={onClose}
-                style={{
-                  flex: 1,
-                  padding: '4px',
-                  color: 'inherit',
-                  textDecoration: 'none',
-                  cursor: 'pointer'
-                }}
               >
                 {project.title}
               </a>
-              <button
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '4px',
-                  fontSize: '16px'
-                }}
-                title="Project menu"
-              >
-                ⋮
-              </button>
+              <button className="icon-button" title="Project menu">⋮</button>
             </div>
           ))}
         </div>

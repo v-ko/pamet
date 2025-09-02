@@ -23,6 +23,7 @@
   --color-bg-title: #dddddd;
 
   --color-text: #333;
+  --color-text-muted: #666;
 
   --color-light-border: #ddd;
   --color-dark-border: #5f5f5f;
@@ -30,6 +31,12 @@
   --color-hover-dark: #555;
   --color-hover-light: #e0e0e0;
   --color-close-hover: #777;
+
+  /* Accents */
+  --color-primary: #0066cc;
+  --color-primary-contrast: #ffffff;
+  --color-danger: #dc3545;
+  --color-danger-contrast: #ffffff;
 
   /* Shadow */
   --shadow-sm: 0 0 0.5rem rgba(0,0,0,0.2);
