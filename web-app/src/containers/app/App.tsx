@@ -32,6 +32,7 @@ import { PageAndCommandPalette, ProjectPalette } from "@/components/CommandPalet
 import { LocalSearch } from "@/components/search/LocalSearch";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { pamet } from "@/core/facade";
+import Menu, { MenuItem } from "@/components/menu/Menu";
 
 let log = getLogger("App");
 
@@ -46,6 +47,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   let errorMessages: string[] = []
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  const [mainMenuPos, setMainMenuPos] = useState<{x:number,y:number} | null>(null);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -119,6 +121,49 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
   const currentPageVS = state.currentPageViewState
 
+  const getShortcut = (commandName: string): string | undefined => {
+    return pamet.keybindingService?.getShortcutForCommand(commandName) || undefined;
+  };
+
+  const mainMenuItems: MenuItem[] = [
+    {
+      label: 'Project',
+      submenu: [
+        { label: 'Open Projects…', onClick: () => appActions.openProjectsDialog(state) },
+        { label: 'Project Properties…', onClick: () => appActions.openProjectPropertiesDialog(state) },
+        { type: 'separator', label: '' },
+        { label: 'Create New Project…', onClick: () => appActions.openCreateProjectDialog(state) },
+      ]
+    },
+    {
+      label: 'Page',
+      submenu: [
+        { label: 'New Page…', onClick: () => commands.createNewPage(), shortcut: getShortcut(commands.createNewPage.name) },
+        { label: 'Page Properties…', onClick: () => appActions.openPageProperties(state), shortcut: getShortcut(commands.openPageProperties.name) },
+        { type: 'separator', label: '' },
+        { label: 'Delete Page', onClick: () => commands.deleteCurrentPage() },
+      ]
+    },
+    {
+      label: 'Search',
+      submenu: [
+        { label: 'Local Search', onClick: () => appActions.openLocalSearch(state), shortcut: getShortcut(commands.openLocalSearch.name) },
+        { label: 'Global Search', onClick: () => appActions.openGlobalSearch(state), shortcut: getShortcut(commands.openGlobalSearch.name) },
+        { label: 'Command Palette', onClick: () => commands.openCommandPalette(), shortcut: getShortcut(commands.openCommandPalette.name) },
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { label: 'Zoom In', onClick: () => commands.pageZoomIn(), shortcut: getShortcut(commands.pageZoomIn.name) },
+        { label: 'Zoom Out', onClick: () => commands.pageZoomOut(), shortcut: getShortcut(commands.pageZoomOut.name) },
+        { label: 'Reset Zoom', onClick: () => commands.pageZoomReset(), shortcut: getShortcut(commands.pageZoomReset.name) },
+      ]
+    }
+  ];
+
+  // Context menu handled within PageView directly.
+
 
   return (
     <div className="app">
@@ -143,7 +188,11 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
 
       {/* If page data - display the page */}
-      {shouldDisplayPage && <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />}
+      {shouldDisplayPage && (
+        <div style={{ width: '100%', height: '100%' }}>
+          <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />
+        </div>
+      )}
 
       {/* Panel Layer - Grid layout for panels and sidebars */}
       <div className="panel-layer">
@@ -180,7 +229,12 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             textAlign: 'center',
             cursor: 'pointer',
           }}
-          onClick={() => { alert('Not implemented yet') }}
+          onClick={(e) => {
+            const target = e.currentTarget as HTMLElement;
+            const panel = target.closest('.panel') as HTMLElement | null;
+            const r = (panel ?? target).getBoundingClientRect();
+            setMainMenuPos({ x: r.right, y: r.bottom + 6 });
+          }}
         >
           ☰
         </div>
@@ -305,6 +359,34 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
         <ProjectPalette state={state.commandPaletteState} />}
       {state.localSearchViewState &&
         <LocalSearch state={state.localSearchViewState} />}
+
+      {(mainMenuPos) && (
+        <div
+          // Overlay: close menus on outside click and swallow interactions beneath
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMainMenuPos(null);
+          }}
+          onMouseMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+        />
+      )}
+
+      {mainMenuPos && (
+        <Menu
+          items={mainMenuItems}
+          x={mainMenuPos.x}
+          y={mainMenuPos.y}
+          variant='main'
+          alignX='right'
+          onDismiss={() => setMainMenuPos(null)}
+        />
+      )}
+
+      {/* Context menu is rendered within PageView */}
     </div>
   );
 });

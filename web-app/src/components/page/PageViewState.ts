@@ -1,5 +1,5 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
-import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_EYE_HEIGHT, RESIZE_CIRCLE_RADIUS } from "@/core/constants";
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_VIEW_HEIGHT, RESIZE_CIRCLE_RADIUS } from "@/core/constants";
 import { Point2D } from 'fusion/primitives/Point2D';
 import { Page, PageData } from "@/model/Page";
 import { Viewport } from "@/components/page/Viewport";
@@ -56,7 +56,7 @@ export class PageViewState {
 
     // Viewport
     viewportCenter: Point2D = new Point2D([0, 0]);
-    viewportHeight: number = DEFAULT_EYE_HEIGHT;
+    viewportHeight: number = DEFAULT_VIEW_HEIGHT;
     viewportGeometry: [number, number, number, number] = [0, 0, 0, 0];
 
     // Common

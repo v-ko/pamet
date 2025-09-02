@@ -14,7 +14,7 @@ export const PROPOSED_MAX_PAGE_HEIGHT = 1000 * AGU;
 export const MIN_HEIGHT_SCALE = 0.2
 export const MAX_HEIGHT_SCALE = 200
 
-export const DEFAULT_EYE_HEIGHT = 40
+export const DEFAULT_VIEW_HEIGHT = 40
 
 
 // Note related

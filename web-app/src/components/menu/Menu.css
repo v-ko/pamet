@@ -1,0 +1,95 @@
+.MenuRoot {
+  position: absolute;
+  background: var(--color-bg-white);
+  color: inherit;
+  border: 1px solid var(--color-light-border);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-md);
+  min-width: 180px;
+  padding: 4px;
+  z-index: 10000;
+}
+
+.MenuRoot.main {
+  /* Slightly softer for main menu */
+  border-color: var(--color-light-border);
+}
+
+.MenuRoot.context {
+  /* Slightly stronger for context menu */
+  border-color: var(--color-dark-border);
+}
+
+.MenuList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.MenuItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--type-sm);
+  line-height: 1.8;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* subtle separators between items */
+.MenuRoot.main .MenuItem + .MenuItem {
+  border-top: 1px solid var(--color-light-border);
+}
+
+.MenuItem.disabled {
+  color: var(--color-text-muted);
+  cursor: default;
+}
+
+.MenuItem:not(.disabled):hover {
+  background: var(--color-bg-light);
+}
+
+/* Visual state for expanded submenu trigger */
+.MenuItem.open {
+  background: var(--color-bg-light);
+}
+.MenuItem.open .MenuRightIcon {
+  transform: rotate(90deg);
+}
+
+.MenuRightIcon {
+  opacity: 0.6;
+}
+
+.MenuRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.Shortcut {
+  color: var(--color-text-muted);
+  font-size: var(--type-xs);
+}
+
+.Submenu {
+  position: absolute;
+  top: 0; /* align with parent item top */
+  left: 100%;
+  margin-left: 0; /* no gap between parent and submenu */
+}
+
+.Separator {
+  height: 1px;
+  background: var(--color-light-border);
+  margin: 4px 2px;
+}
+
+/* Hide separators for context menus for a cleaner look */
+.MenuRoot.context .Separator {
+  display: none;
+}

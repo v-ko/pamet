@@ -13,6 +13,7 @@ import { createNoteWithImageFromBlob } from '@/procedures/page';
 import { MouseState } from '@/containers/app/WebAppState';
 import { NoteVirtualComponent } from '../note/NoteVirtualComponent';
 import { PageController } from '@/components/page/PageController';
+import Menu, { MenuItem } from '@/components/menu/Menu';
 import { ArrowVirtualComponent } from '@/components/arrow/ArrowVirtualComponent';
 
 
@@ -29,8 +30,11 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
   const paperCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Controller instance tied to current PageViewState
+  type CtxMenuState = { x: number, y: number, items: MenuItem[] } | null;
+  const [contextMenu, setContextMenu] = useState<CtxMenuState>(null);
+
   const controller = useMemo(
-    () => new PageController(state, mouseState, superContainerRef),
+    () => new PageController(state, mouseState, superContainerRef, setContextMenu),
     [state]
   );
 
@@ -148,6 +152,7 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
   const arrowViewStates = Array.from(state.arrowViewStatesById.values());
 
   return (
+    <>
     <main
       className='page-view'  // index.css
       // Set cursor to cross if we're in arrow creation mode
@@ -224,8 +229,16 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
         ref={paperCanvasRef}
       />
 
-
-
     </main>
+      {contextMenu && (
+        <Menu
+          items={contextMenu.items}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          variant='context'
+          onDismiss={() => setContextMenu(null)}
+        />
+      )}
+    </>
   );
 });

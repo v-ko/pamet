@@ -13,6 +13,7 @@ import { buildHashTree } from "fusion/storage/version-control/HashTree";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { parseClipboardContents } from "@/util";
 import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
+import { DEFAULT_VIEW_HEIGHT } from "@/core/constants";
 
 let log = getLogger('PametCommands');
 
@@ -228,7 +229,7 @@ class PametCommands {
     @command('Page: Reset zoom')
     pageZoomReset() {
         let pageVS = getCurrentPageViewState();
-        pageActions.updateViewport(pageVS, pageVS.viewportCenter, 1);
+        pageActions.updateViewport(pageVS, pageVS.viewportCenter, DEFAULT_VIEW_HEIGHT);
     }
 
     @command('Select all')

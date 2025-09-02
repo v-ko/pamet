@@ -253,6 +253,7 @@ export class KeybindingService {
 
         if (this.bindingMap.has(mapKey)) {
           log.warning(`Duplicate keybinding detected for: ${kb.key}`);
+          continue;
         }
 
         this.bindingMap.set(mapKey, original);
@@ -265,6 +266,23 @@ export class KeybindingService {
   public destroy(): void {
     window.removeEventListener('keydown', this.keyDownHandler);
     this.bindingMap.clear();
+  }
+
+  /**
+   * Return a display-friendly shortcut string for the given command, if any.
+   * Does not evaluate context conditions; prefer an always-available (when: '') binding,
+   * otherwise return the first matching binding.
+   */
+  public getShortcutForCommand(commandName: string): string | null {
+    let firstMatch: Keybinding | null = null;
+    for (const kb of this.bindingMap.values()) {
+      if (kb.command !== commandName) continue;
+      if (kb.when === '') {
+        return formatDisplayKey(kb.key);
+      }
+      if (!firstMatch) firstMatch = kb;
+    }
+    return firstMatch ? formatDisplayKey(firstMatch.key) : null;
   }
 
   private handleKeyDown(event: KeyboardEvent): void {
@@ -305,4 +323,18 @@ export class KeybindingService {
       log.error(`Command not found with name: ${matchedBinding.command}`);
     }
   }
+}
+
+function formatDisplayKey(key: string): string {
+  // Turn 'ctrl+shift+f' into 'Ctrl+Shift+F', keep symbols/digits as-is
+  return key.split('+').map(part => {
+    const lower = part.toLowerCase();
+    if (lower === 'ctrl') return 'Ctrl';
+    if (lower === 'cmd' || lower === 'meta') return 'Cmd';
+    if (lower === 'alt') return 'Alt';
+    if (lower === 'shift') return 'Shift';
+    if (lower.length === 1) return lower.toUpperCase();
+    // TitleCase for words like 'escape', 'delete', 'pageup'
+    return lower.charAt(0).toUpperCase() + lower.slice(1);
+  }).join('+');
 }

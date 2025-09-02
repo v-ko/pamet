@@ -7,8 +7,9 @@ import { ElementViewState } from '@/components/page/ElementViewState';
 import { NavigationDeviceAutoSwitcher, NavigationDevice } from '@/components/page/NavigationDeviceAutoSwitcher';
 import { PageViewState, PageMode } from '@/components/page/PageViewState';
 import { MouseState } from '@/containers/app/WebAppState';
-import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_EYE_HEIGHT } from '@/core/constants';
+import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_VIEW_HEIGHT } from '@/core/constants';
 import { pamet } from '@/core/facade';
+import { commands } from '@/core/commands';
 import { CardNote } from '@/model/CardNote';
 import { Page } from '@/model/Page';
 import { Viewport } from '@/components/page/Viewport';
@@ -16,6 +17,7 @@ import { Point2D } from 'fusion/primitives/Point2D';
 import { reaction } from 'mobx';
 import { getLogger } from 'fusion/logging';
 import React from 'react';
+import type { MenuItem } from '@/components/menu/Menu';
 
 const log = getLogger('PageController');
 
@@ -33,8 +35,10 @@ export class PageController {
   // Touch / pinch state
   private pinchStartDistance: number = 0;
   private pinchInProgress: boolean = false;
-  private pinchStartViewportHeight: number = DEFAULT_EYE_HEIGHT;
+  private pinchStartViewportHeight: number = DEFAULT_VIEW_HEIGHT;
   private initialPinchCenter: Point2D = new Point2D([0, 0]);
+  private setContextMenu?: (state: { x: number, y: number, items: MenuItem[] } | null) => void;
+  private onRequestContextMenu?: (x: number, y: number) => void;
 
   public get renderer(): DirectRenderer | undefined {
     return this._renderer;
@@ -43,11 +47,13 @@ export class PageController {
   constructor(
     state: PageViewState,
     mouseState: MouseState,
-    superContainerRef: React.RefObject<HTMLDivElement>
+    superContainerRef: React.RefObject<HTMLDivElement>,
+    setContextMenu?: (state: { x: number, y: number, items: MenuItem[] } | null) => void,
   ) {
     this.pageVS = state;
     this.mouseState = mouseState;
     this.superContainerRef = superContainerRef;
+    this.setContextMenu = setContextMenu;
 
   }
 
@@ -141,6 +147,7 @@ export class PageController {
         arrowActions.arrowCreationClick(this.pageVS, mousePos);
       }
     } else if (event.button === 2) { // right mouse
+      // no-op here; drag navigation will start on move while pressed
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y);
 
@@ -219,10 +226,73 @@ export class PageController {
 
       // If it's a click - show context menu
       if (pressPos && mousePos.equals(pressPos)) {
-        alert('Context menu not implemented yet');
+        // If over a note that's not selected, select it (single select)
+        const realPos = this.pageVS.viewport.unprojectPoint(mousePos);
+        const noteVS_underMouse = this.pageVS.noteViewStateAt(realPos);
+        if (noteVS_underMouse && !this.pageVS.selectedElementsVS.has(noteVS_underMouse)) {
+          pageActions.clearSelection(this.pageVS);
+          pageActions.updateSelection(this.pageVS, new Map([[noteVS_underMouse, true]]));
+        }
+        const items = this.buildContextMenuItems(event.clientX, event.clientY);
+        this.setContextMenu?.({ x: event.clientX, y: event.clientY, items });
       }
     }
+    // Clear press position after handling mouse up to avoid stale deltas
+    appActions.updateMouseState(pamet.appViewState, {
+      positionOnPress: null,
+    });
   };
+
+  private buildContextMenuItems(clientX: number, clientY: number): MenuItem[] {
+    const getShortcut = (commandName: string): string | undefined => pamet.keybindingService?.getShortcutForCommand(commandName) || undefined;
+    const items: MenuItem[] = [];
+
+    // If right-clicked over a note, prefer Edit Note as the first item
+    try {
+      const realPos = this.pageVS.viewport.unprojectPoint(new Point2D([clientX, clientY]));
+      const noteVS_underMouse = this.pageVS.noteViewStateAt(realPos);
+      if (noteVS_underMouse) {
+        items.push({ label: 'Edit Note', onClick: () => pageActions.startEditingNote(this.pageVS, noteVS_underMouse.note()), shortcut: getShortcut(commands.editSelectedNote.name) });
+      } else {
+        items.push({ label: 'New Note', onClick: () => commands.createNewNote(), shortcut: getShortcut(commands.createNewNote.name) });
+      }
+    } catch {}
+
+    items.push({ label: 'Create Arrow', onClick: () => commands.createArrow(), shortcut: getShortcut(commands.createArrow.name) });
+
+    // Auto-size selected (always available command; we keep it enabled regardless of selection)
+    items.push({ label: 'Auto-size Selected', onClick: () => commands.autoSizeSelectedNotes(), shortcut: getShortcut(commands.autoSizeSelectedNotes.name) });
+
+    try {
+      const realPos = this.pageVS.viewport.unprojectPoint(new Point2D([clientX, clientY]));
+      const editableArrowVS = this.pageVS.arrowVS_withVisibleControlPoints();
+      if (editableArrowVS) {
+        const cpIndex = editableArrowVS.controlPointAt(realPos);
+        if (cpIndex !== null && cpIndex % 1 === 0) {
+          items.push({ type: 'separator', label: '' });
+          items.push({ label: 'Delete Control Point', onClick: () => arrowActions.deleteControlPoint(editableArrowVS, cpIndex), shortcut: 'Double-click' });
+        }
+      }
+    } catch {}
+
+    items.push({ type: 'separator', label: '' });
+    const hasSelection = this.pageVS.selectedElementsVS.size > 0;
+    const hasClipboard = pamet.appViewState.clipboard.length > 0;
+    items.push(
+      { label: 'Copy', onClick: () => commands.copySelectedElements(), shortcut: getShortcut(commands.copySelectedElements.name), disabled: !hasSelection },
+      { label: 'Cut', onClick: () => commands.cutSelectedElements(), shortcut: getShortcut(commands.cutSelectedElements.name), disabled: !hasSelection },
+      { label: 'Paste', onClick: () => commands.paste(), shortcut: getShortcut(commands.paste.name), disabled: !hasClipboard },
+      { label: 'Paste Special', onClick: () => commands.pasteSpecial(), shortcut: getShortcut(commands.pasteSpecial.name) },
+    );
+
+    items.push({ type: 'separator', label: '' });
+    items.push(
+      { label: 'New Page…', onClick: () => commands.createNewPage(), shortcut: getShortcut(commands.createNewPage.name) },
+      { label: 'Page Properties…', onClick: () => appActions.openPageProperties(pamet.appViewState), shortcut: getShortcut(commands.openPageProperties.name) },
+    );
+
+    return items;
+  }
 
   handleMouseMove = (event: MouseEvent) => {
     let mousePos = new Point2D([event.clientX, event.clientY]);
@@ -363,6 +433,8 @@ export class PageController {
   };
 
   handleContextMenu = (event: MouseEvent) => {
+    // Prevent native menu. The right-button release still triggers handleMouseUp
+    // which opens our context menu if there was no movement.
     event.preventDefault();
   }
   handleWheel = (event: WheelEvent) => {
