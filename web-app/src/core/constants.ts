@@ -140,3 +140,5 @@ export const IMAGE_CONVERSION_PRESET_PNG: ImageConversionPreset = {
     // It's effectively lossless but without control over compression level.
 };
 
+// Animation related
+export const SEARCH_RESULT_ANIMATION_TIME = 200 // ms

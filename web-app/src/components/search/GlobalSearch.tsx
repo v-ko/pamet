@@ -6,6 +6,8 @@ import { pamet } from '@/core/facade';
 import { appActions } from '@/actions/app';
 import { pageActions } from '@/actions/page';
 import { Point2D } from 'fusion/primitives/Point2D';
+import { PageAnimation } from '@/components/page/render-utils';
+import { SEARCH_RESULT_ANIMATION_TIME } from '@/core/constants';
 
 interface SearchResultItem {
     id: string;
@@ -127,10 +129,23 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = observer(({ state }) =>
             setTimeout(() => {
                 const currentPageVS = pamet.appViewState.currentPageViewState;
                 if (currentPageVS) {
-                    // Update viewport to center on the note, keeping current zoom level
-                    pageActions.updateViewport(currentPageVS, noteCenter, currentPageVS.viewportHeight);
+                    // Store current viewport state for animation
+                    const currentCenter = currentPageVS.viewportCenter.copy();
+                    const currentHeight = currentPageVS.viewportHeight;
 
-                    // Select the note
+                    // Update viewport to center on the note (this is the main state change)
+                    pageActions.updateViewport(currentPageVS, noteCenter, currentHeight);
+
+                    // Add smooth animation overlay using the animation service
+                    // This will smoothly transition FROM the old state TO the new state
+                    PageAnimation.viewportChangeAnimation(
+                        currentPageVS.page().id,
+                        currentCenter, // start from the old viewport center
+                        currentHeight,
+                        noteCenter, // animate to the new center
+                        currentHeight, // keep same zoom level
+                        SEARCH_RESULT_ANIMATION_TIME
+                    );                    // Select the note
                     let noteVS = currentPageVS.viewStateForElementId(note.id)
                     if (noteVS) {
                         pageActions.clearSelection(currentPageVS)
@@ -139,8 +154,6 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = observer(({ state }) =>
                 }
             }, 100); // Small delay to ensure page is loaded
         }
-
-        appActions.closeGlobalSearch(pamet.appViewState);
     };
 
     return (

@@ -3,7 +3,7 @@ import { Viewport } from "@/components/page/Viewport";
 import { ElementViewState } from "@/components/page/ElementViewState";
 import { PageMode, PageViewState } from "@/components/page/PageViewState";
 import { NoteViewState } from "@/components/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_HEIGHT, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals } from "@/util";
 
@@ -12,6 +12,7 @@ import { ElementView, getElementView } from "@/components/elementViewLibrary";
 import { ArrowCanvasView } from "@/components/arrow/ArrowCanvasView";
 import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
 import { pamet } from "@/core/facade";
+import { getPageNavigationState, PageAnimation } from "@/components/page/render-utils";
 
 let log = getLogger('DirectRenderer');
 
@@ -138,7 +139,7 @@ export class DirectRenderer {
         let ViewType: ElementView<any>;
         try {
             ViewType = getElementView(element.constructor as any);
-        } catch (e) {
+        } catch {
             log.error('Skipping drawing for element (no ViewType found)', element);
             return;
         }
@@ -283,15 +284,42 @@ export class DirectRenderer {
         });
     }
 
-    _applyProjectionMatrix(state: PageViewState, ctx: CanvasRenderingContext2D) {
+    _applyProjectionMatrix(viewport: Viewport, ctx: CanvasRenderingContext2D) {
         // Apply DPR correction
-        let dpr = state.viewport.devicePixelRatio;
+        let dpr = viewport.devicePixelRatio;
         ctx.scale(dpr, dpr);
         // Scale to the zoom level
-        let heightScaleFactor = state.viewport.heightScaleFactor();
+        let heightScaleFactor = viewport.heightScaleFactor();
         ctx.scale(heightScaleFactor, heightScaleFactor);
         // Translate
-        ctx.translate(-state.viewport.xReal, -state.viewport.yReal);
+        ctx.translate(-viewport.xReal, -viewport.yReal);
+    }
+
+    _handlePageNavigationAnimations(pageId: string, viewport: Viewport): Viewport {
+        // Get all active page navigation animations for this page
+        const pageNavAnimations = pamet.animationService.getByType('pageNavigation')
+            .filter(animation => animation.targetId === pageId)
+            .map(animation => animation as PageAnimation);
+
+        if (pageNavAnimations.length === 0) {
+            return viewport;
+        }
+
+        // For now, we only handle the first active animation
+        const animation = pageNavAnimations[0];
+        const currentTime = Date.now();
+
+        // Get the interpolated viewport state
+        const animatedState = getPageNavigationState(animation, currentTime);
+
+        // Request another frame to continue the animation
+        this.requestFollowupRender();
+
+        // Create new viewport with animated parameters using existing geometry but with new center and height
+        const animatedViewport = new Viewport(viewport.realBounds.data(), animatedState.viewportHeight);
+        animatedViewport.setDevicePixelRatio(viewport.devicePixelRatio);
+        animatedViewport.moveRealCenterTo(animatedState.viewportCenter);
+        return animatedViewport;
     }
 
     _render(pageVS: PageViewState) {//) { //
@@ -300,6 +328,9 @@ export class DirectRenderer {
             return;
         }
         let ctx = this._context;
+
+        // Check for active page navigation animations and get effective viewport
+        const effectiveViewport = this._handlePageNavigationAnimations(pageVS.page().id, pageVS.viewport);
 
         // console.log('Rendering at', state.viewport);
         // let rp = pamet.renderProfiler
@@ -330,7 +361,7 @@ export class DirectRenderer {
         // }
 
         // Draw elements
-        let drawStats = this._drawElements(pageVS, ctx);
+        let drawStats = this._drawElements(pageVS, ctx, effectiveViewport);
         // Draw stats
         let pixelSpaceRect = pageVS.viewport.projectRect(pageVS.viewport.realBounds);
         ctx.save()
@@ -346,14 +377,14 @@ export class DirectRenderer {
         // Draw stuff in real space
         // Setup the projection matrix
         ctx.save()
-        this._applyProjectionMatrix(pageVS, ctx);
+        this._applyProjectionMatrix(effectiveViewport, ctx);
 
         // // Draw test rect
         // ctx.fillStyle = 'red';
         // ctx.fillRect(0, 0, 100, 100);
 
         // Draw viewport boundaries (for debugging)
-        if (pamet.debugPaintOperations){
+        if (pamet.debugPaintOperations) {
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 1;
             ctx.strokeRect(...pageVS.viewport.realBounds.data());
@@ -497,9 +528,9 @@ export class DirectRenderer {
         ctx.restore()
     }
 
-    _drawElements(state: PageViewState, ctx: CanvasRenderingContext2D) {
+    _drawElements(state: PageViewState, ctx: CanvasRenderingContext2D, viewport: Viewport) {
         ctx.save()
-        this._applyProjectionMatrix(state, ctx);
+        this._applyProjectionMatrix(viewport, ctx);
 
         //Debug: time the rendering
         let paintStartT = performance.now();
@@ -511,7 +542,7 @@ export class DirectRenderer {
         }
 
         // Draw notes
-        let viewportRect = state.viewport.realBounds
+        let viewportRect = viewport.realBounds
 
         let drawStats: ElementDrawStats = {
             total: 0,
@@ -543,7 +574,7 @@ export class DirectRenderer {
             let sizeMatches: boolean;
 
             // Prep flags
-            const cacheRectAfterDPR = this.cacheRectAfterDPR(noteVS, state.viewport);
+            const cacheRectAfterDPR = this.cacheRectAfterDPR(noteVS, viewport);
             if (imageBitmap !== undefined) {
                 cachePresent = true;
                 sizeMatches = imageBitmap.width === cacheRectAfterDPR.width && imageBitmap.height === cacheRectAfterDPR.height;
@@ -566,22 +597,22 @@ export class DirectRenderer {
 
         // Draw notes with correct cache
         for (const noteVS of withCorrectCache) {
-            this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
+            this.canvasDrawNVS_fromCache(ctx, noteVS, viewport);
             drawStats.reused++;
         }
 
         // Update the cache while there is time left or for minimum 2 notes
         // Render notes with no cache (with priority)
-        let dpr = state.viewport.devicePixelRatio;
+        let dpr = viewport.devicePixelRatio;
         for (const noteVS of withNoCache) {
             if (noTimeLeft() && drawStats.deNovoAll >= MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME) {
                 renderPattern(ctx, noteVS);
                 drawStats.pattern++;
                 continue;
             }
-            let successful = this.renderNoteView_toCache(ctx, noteVS, state.viewport, dpr);
+            let successful = this.renderNoteView_toCache(ctx, noteVS, viewport, dpr);
             if (successful) {
-                this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
+                this.canvasDrawNVS_fromCache(ctx, noteVS, viewport);
                 drawStats.deNovoAll++;
                 drawStats.deNovoClean++;
             } else {
@@ -592,13 +623,13 @@ export class DirectRenderer {
         // Update those with expired cache or draw them if no time is left
         for (const noteVS of withExpiredCache) {
             if (noTimeLeft() && drawStats.deNovoAll >= 2) {
-                this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
+                this.canvasDrawNVS_fromCache(ctx, noteVS, viewport);
                 drawStats.reusedDirty++;
                 continue;
             }
-            let successful = this.renderNoteView_toCache(ctx, noteVS, state.viewport, dpr);
+            let successful = this.renderNoteView_toCache(ctx, noteVS, viewport, dpr);
             if (successful) {
-                this.canvasDrawNVS_fromCache(ctx, noteVS, state.viewport);
+                this.canvasDrawNVS_fromCache(ctx, noteVS, viewport);
                 drawStats.deNovoAll++;
                 drawStats.deNovoRedraw++;
             } else {

@@ -23,6 +23,7 @@ import { updateAppStateFromConfig } from "@/procedures/app";
 import { RenderProfiler } from "@/core/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { SearchService } from "@/services/SearchService";
+import { AnimationService } from "@/services/AnimationService";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -69,6 +70,7 @@ export class PametFacade extends PametStore {
     keybindingService: KeybindingService | null = null;
     _focusManager: FocusManager | null = null;
     searchService: SearchService = new SearchService();
+    animationService: AnimationService = new AnimationService();
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
