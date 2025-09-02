@@ -15,6 +15,8 @@ export interface NoteStyle {
 }
 
 export interface NoteMetadata {
+    // Marks a note as the project links index header
+    is_project_index_header?: boolean;
 }
 export interface NoteData extends PametElementData {
     content: NoteContent;

@@ -31,6 +31,11 @@ export class CardNoteCanvasView extends NoteCanvasView {
         }
 
         // Draw link decorations
+        // Project index header: render with solid border to indicate action on double-click
+        if (note.metadata?.is_project_index_header) {
+            this.drawBorder(context, BorderType.Solid);
+        }
+
         let internalLinkRoute = note.internalLinkRoute();
         if (internalLinkRoute) {
             if (internalLinkRoute.pageId) { // This is a bit of a hack

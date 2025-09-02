@@ -63,6 +63,28 @@ export class DesktopImporter extends BaseApiClient {
                 elementData.type_name = 'CardNote'
             }
 
+            // Migrate legacy OtherPageListNote to the new Project Index header
+            if (elementData.type_name === 'OtherPageListNote') {
+                // Ensure content/metadata/style blocks exist
+                if (elementData.content === undefined) {
+                    elementData.content = {};
+                }
+                if (elementData.metadata === undefined) {
+                    elementData.metadata = {};
+                }
+                if (elementData.style === undefined) {
+                    elementData.style = {};
+                }
+
+                elementData.type_name = 'CardNote';
+                elementData.metadata.is_project_index_header = true;
+                elementData.content.text = elementData.content.text ||
+                    'Project links index (double-click to generate missing links, for e.g. new pages)';
+                // Use neutral surface styling for the header
+                elementData.style.color_role = 'onSurface';
+                elementData.style.background_color_role = 'surfaceDim';
+            }
+
             // Set empty content where missing
             if (elementData.content === undefined) {
                 elementData.content = {}

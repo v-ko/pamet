@@ -118,6 +118,7 @@ export const MAX_MEDIA_NAME_LENGTH = 100;
 
 // Media constraints
 // See policies.ts for usage
+
 export const MAX_IMAGE_SIZE = 5 * 1000 * 1000; // 5 MB
 export const MAX_IMAGE_DIMENSION = 2560; // for either width or height
 export const MAX_IMAGE_DIMENSION_FOR_COMPRESSION = 8192; // Reject larger images to avoid memory problems
@@ -142,3 +143,6 @@ export const IMAGE_CONVERSION_PRESET_PNG: ImageConversionPreset = {
 
 // Animation related
 export const SEARCH_RESULT_ANIMATION_TIME = 200 // ms
+
+// Standard texts
+export const MISSING_PAGE_TITLE = '(missing)';

@@ -11,6 +11,7 @@ import type { ProjectData } from "@/model/config/Project";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
 import { CardNote } from "@/model/CardNote";
+import { MISSING_PAGE_TITLE } from "@/core/constants";
 
 const log = getLogger("ProjectActions");
 
@@ -114,20 +115,18 @@ class ProjectActions {
     // Delete the page and its contents
     pamet.removePageWithChildren(page);
 
-    // Find all internal link notes pointing to this page
-    const notesWithInternalLinks = Array.from(pamet
-      .find({ hasInternalLink: true }) as Generator<CardNote>)
-      .filter((note: CardNote) => note.internalLinkRoute()?.pageId === page.id);
-
-    // Convert each internal link to a text note showing the page was removed
-    for (const link of notesWithInternalLinks) {
-      const note = new CardNote({
-        ...link.data(),
-        content: {
-          text: `(page "${page.name}" removed)`
+    // Update link notes pointing to this page: set text to MISSING_PAGE_TITLE
+    for (const n of pamet.notes()) {
+      if (n instanceof CardNote && n.hasInternalPageLink) {
+        const pid = n.internalLinkRoute()?.pageId;
+        if (pid === page.id) {
+          const note = new CardNote({
+            ...n.data(),
+            content: { ...n.content, text: MISSING_PAGE_TITLE }
+          });
+          pamet.updateNote(note);
         }
-      });
-      pamet.updateNote(note);
+      }
     }
   }
 

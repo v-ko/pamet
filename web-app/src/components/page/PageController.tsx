@@ -323,6 +323,16 @@ export class PageController {
     if (noteVS_underMouse !== null) {
       // If it's a link note - open the link
       let note = noteVS_underMouse.note();
+      // If it's a project index header - generate missing links
+      if (note.metadata?.is_project_index_header === true) {
+        try {
+          const created = pageActions.generateProjectIndexMissingLinks(this.pageVS, note);
+          window.alert(`Added ${created} link(s).`);
+        } catch (e) {
+          log.error('Error generating project links index:', e);
+        }
+        return;
+      }
       // For an internal link - follow it
       if (note instanceof CardNote && note.hasInternalPageLink) {
         let targetPage: Page | undefined;

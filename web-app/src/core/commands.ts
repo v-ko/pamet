@@ -85,6 +85,16 @@ class PametCommands {
         pageActions.startNoteCreation(pageVS, creationPos);
     }
 
+    @command('Create Project Links Index')
+    createProjectLinksIndex() {
+        const pageVS = getCurrentPageViewState();
+        try {
+            pageActions.createProjectLinksIndex(pageVS);
+        } catch (e) {
+            log.error('Error creating project links index:', e);
+        }
+    }
+
     @command('Auto-size selected notes')
     autoSizeSelectedNotes() {
         let pageVS = getCurrentPageViewState();

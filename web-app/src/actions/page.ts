@@ -6,7 +6,8 @@ import { action } from "fusion/registries/Action";
 
 import { getLogger } from "fusion/logging";
 import { Rectangle } from "fusion/primitives/Rectangle";
-import { MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE } from "@/core/constants";
+import { Size } from "fusion/primitives/Size";
+import { AGU, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, MIN_NOTE_HEIGHT } from "@/core/constants";
 import { pamet } from "@/core/facade";
 import { Note } from "@/model/Note";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
@@ -31,6 +32,98 @@ class PageActions {
   @action
   updateGeometry(state: PageViewState, geometry: [number, number, number, number]) {
     state.viewportGeometry = geometry;
+  }
+
+  @action({ issuer: 'user' })
+  createProjectLinksIndex(state: PageViewState) {
+    const pageId = state.page().id;
+    const center = state.viewport.realCenter();
+
+    // Create header note
+    const header = CardNote.createNew({ pageId });
+    header.content.text = 'Project links index (double-click to generate missing links, for e.g. new pages)';
+    header.metadata.is_project_index_header = true;
+    // Use surface styling for the header
+    header.style.color_role = 'onSurface';
+    header.style.background_color_role = 'surfaceDim';
+
+    // Auto-size and center
+    const rect = header.rect();
+    const size = util.snapVectorToGrid(minimalNonelidedSize(header));
+    rect.setSize(size);
+    rect.moveCenter(center);
+    // Snap final position to grid
+    rect.setTopLeft(util.snapVectorToGrid(rect.topLeft()));
+    header.setRect(rect);
+
+    pamet.insertNote(header);
+
+    // Generate all missing links under the header (no alert here)
+    this.generateProjectIndexMissingLinks(state, header);
+  }
+
+  @action({ issuer: 'user' })
+  generateProjectIndexMissingLinks(state: PageViewState, header: Note): number {
+    const pageId = state.page().id;
+
+    // Collect all pages in store iteration order
+    const allPages = Array.from(pamet.pages());
+
+    // Represented page ids on current page
+    const represented = new Set<string>();
+    for (const note of pamet.notes({ parentId: pageId })) {
+      if (note instanceof CardNote && note.hasInternalPageLink) {
+        const pid = note.internalLinkRoute()?.pageId;
+        if (pid) represented.add(pid);
+      }
+    }
+
+    // Missing pages (include current page if not present)
+    const missingPages = allPages.filter(p => !represented.has(p.id));
+    if (missingPages.length === 0) return 0;
+
+    const headerRect = header.rect();
+    const itemLeft = headerRect.left() + AGU; // 1 AGU inset
+    const itemWidth = Math.max(AGU, headerRect.width - 2 * AGU); // fixed width under header
+    const itemHeight = MIN_NOTE_HEIGHT; // standard two-row height (3*AGU)
+
+    // Existing notes on page used for collision checks (notes only; arrows not blockers)
+    const existingNotes: Note[] = Array.from(pamet.notes({ parentId: pageId }));
+
+    let created = 0;
+    for (const p of missingPages) {
+      const link = CardNote.createInternalLinkNote(p, pageId);
+
+      // Seek a free slot scanning downward
+      let currentTop = headerRect.bottom() + AGU; // first row under header
+      while (true) {
+        const candidate = new Rectangle([itemLeft, currentTop, itemWidth, itemHeight]);
+        let collided = false;
+        for (const n of existingNotes) {
+          // Skip the header itself
+          if (n.id === header.id) continue;
+          const nr = n.rect();
+          if (candidate.intersects(nr)) {
+            currentTop = nr.bottom() + AGU;
+            collided = true;
+            break;
+          }
+        }
+        if (!collided) {
+          const rect = link.rect();
+          rect.setTopLeft(util.snapVectorToGrid(new Point2D([candidate.left(), candidate.top()])));
+          rect.setSize(new Size([itemWidth, itemHeight]));
+          link.setRect(rect);
+          break;
+        }
+      }
+
+      pamet.insertNote(link);
+      existingNotes.push(link);
+      created += 1;
+    }
+
+    return created;
   }
 
   @action
@@ -209,6 +302,11 @@ class PageActions {
 
   @action
   startEditingNote(state: PageViewState, note: Note) {
+    // Block editing for project index header notes and explain behavior
+    if (note.metadata?.is_project_index_header) {
+      window.alert('Project Links Index is not editable. Double-click it to generate or update links under it.');
+      return;
+    }
     let spawnPos = state.viewport.projectPoint(note.rect().topLeft());
     let editWindowState = new NoteEditViewState(spawnPos, note);
     state.noteEditWindowState = editWindowState;
@@ -415,7 +513,25 @@ class PageActions {
 
   @action
   updatePageProperties(newPageState: Page) {
+    // Detect name change to update internal link texts across project
+    const current = pamet.page(newPageState.id);
+    const oldName = current?.name;
+    const newName = newPageState.name;
+
     pamet.updatePage(newPageState);
+
+    if (oldName !== undefined && oldName !== newName) {
+      for (const n of pamet.notes()) {
+        if (n instanceof CardNote && n.hasInternalPageLink) {
+          const pid = n.internalLinkRoute()?.pageId;
+          if (pid === newPageState.id) {
+            // Update displayed text to match page name
+            const updated = new CardNote({ ...n.data(), content: { ...n.content, text: newName } });
+            pamet.updateNote(updated);
+          }
+        }
+      }
+    }
   }
 
   @action({ issuer: 'paste-special-procedure' })
