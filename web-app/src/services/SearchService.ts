@@ -180,7 +180,7 @@ export class SearchService {
      */
     searchPages(query: string, limit: number = 20): string[] {
         query = slugify(query)
-        
+
         if (!this._pagesIndex || !this._isInitialized) {
             log.warning('Pages index not initialized, returning empty results');
             return [];
@@ -218,7 +218,7 @@ export class SearchService {
         log.info(`Searching notes for query "${query}" with filter`, filter);
 
         const searchOptions: any = {
-            limit: 2000, // Hardcoded to a lot, since limit is otherwise applied before tag filtering
+            limit: limit,
             suggest: true,
             enrich: true, // Need enriched results for highlighting
             highlight: {
@@ -243,12 +243,7 @@ export class SearchService {
             return [];
         }
         log.info(`Search returned ${results.length} field results`);
-        let atResult = 0
         for (const fieldResult of results) {
-            atResult++;
-            if (atResult > limit) { // This is a workaround for the fact that flexsearch seems to apply limit before tag filtering
-                break;
-            }
             if (!fieldResult.result || !Array.isArray(fieldResult.result)) {
                 log.warning('Unexpected fieldResult format:', fieldResult);
                 continue;
