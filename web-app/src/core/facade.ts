@@ -281,11 +281,8 @@ export class PametFacade extends PametStore {
         return this._config;
     }
 
-    setConfig(config: PametConfigService) {
+    setConfigService(config: PametConfigService) {
         this._config = config;
-        updateAppStateFromConfig(this.appViewState).catch((e) => {
-            log.error('[setConfig] Error updating app state from config', e);
-        });
         config.setUpdateHandler(() => {
             log.info('Config updated');
             updateAppStateFromConfig(this.appViewState).catch((e) => {

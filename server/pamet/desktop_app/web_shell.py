@@ -7,9 +7,9 @@ from PySide6.QtWidgets import QMainWindow
 
 class WebShellWindow(QMainWindow):
 
-    def __init__(self, endpoint: str, parent=None):
+    def __init__(self, endpoint: str, show_dev_tools: bool = True, parent=None):
         super().__init__(parent=parent)
-        self.setWindowTitle('WebShell')
+        self.setWindowTitle('Pamet - WebShell')
         self.resize(800, 600)
         self.show()
 
@@ -30,7 +30,12 @@ class WebShellWindow(QMainWindow):
         # Connect to the loadFinished signal
         self.web_view.loadFinished.connect(self.handle_load_finished)
 
-        # Show the dev tools
+        # Conditionally show the dev tools
+        if show_dev_tools:
+            self._setup_dev_tools()
+
+    def _setup_dev_tools(self):
+        """Setup and show the developer tools window"""
         # Create a new window for the dev tools
         self.dev_tools_window = QMainWindow()
         self.dev_tools_window.setWindowTitle('Dev Tools')

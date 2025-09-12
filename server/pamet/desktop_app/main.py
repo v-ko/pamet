@@ -11,10 +11,10 @@ from pamet import channels as pamet_channels, commands, set_semantic_search_serv
 
 import pamet
 from pamet import desktop_app
-from pamet.actions import window as window_actions
 from pamet.actions import other as other_actions
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.init_config import configure_for_qt
+from pamet.desktop_app.web_shell import WebShellWindow
 from pamet.model.page import Page
 
 from pamet.services.backup import AnotherServiceAlreadyRunningException
@@ -27,7 +27,6 @@ from pamet.services.rest_api.desktop import DesktopServer
 from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
 from pamet.storage import FSStorageRepository
-from pamet.views.window.widget import WindowWidget
 
 log = fusion.get_logger(__name__)
 
@@ -35,7 +34,7 @@ log = fusion.get_logger(__name__)
 def raise_a_window():
     windows = [
         w for w in DesktopApp.instance().topLevelWidgets()
-        if isinstance(w, WindowWidget)
+        if isinstance(w, WebShellWindow)
     ]
     if windows:
         windows[0].show()
@@ -53,7 +52,8 @@ local_server_commands = {
 @click.argument('path', type=click.Path(exists=True), required=False)
 @click.option('--command', type=click.Choice(local_server_commands.keys()))
 @click.option('--config-path', type=click.Path())
-def main(path: str, command: str, config_path: str):
+@click.option('--use-frontend-server', type=str, help='Connect to frontend dev server at specified host (e.g. http://localhost:3000)')
+def main(path: str, command: str, config_path: str, use_frontend_server: str):
     if config_path:
         desktop_app.set_user_settings_path(Path(config_path))
 
@@ -69,19 +69,22 @@ def main(path: str, command: str, config_path: str):
     repo_settings = desktop_app.get_repo_settings(repo_path)
 
     # Check if another instance is running and/or start the local server
+    # When using frontend server, we might not need to check for other instances
     local_server = DesktopServer(
         commands=local_server_commands,
         media_store_path=repo_settings.media_store_path)
 
-    if local_server.another_instance_is_running():
-        port = local_server.get_port_from_lock_file()
-        if command:
-            DesktopServer.send_command(port, command)
-        else:
-            DesktopServer.send_command(port, 'raise_window')
-        return
-    else:
-        local_server.start()
+    if not use_frontend_server:  # Only check for other instances when using local server
+        if local_server.another_instance_is_running():
+            port = local_server.get_port_from_lock_file()
+            if command:
+                DesktopServer.send_command(port, command)
+            else:
+                DesktopServer.send_command(port, 'raise_window')
+            return
+
+    # Start the local server (needed for API endpoints even when using frontend server)
+    local_server.start()
 
     app = DesktopApp()
     app.aboutToQuit.connect(local_server.stop)
@@ -119,6 +122,16 @@ def main(path: str, command: str, config_path: str):
     pamet.set_undo_service(
         UndoService(pamet_channels.entity_change_sets_per_TLA))
 
+    # Determine the endpoint URL based on frontend server option
+    if use_frontend_server:
+        # Use the provided frontend server URL
+        endpoint_url = use_frontend_server
+        print(f"Using frontend dev server at {endpoint_url}")
+    else:
+        # Use the local server
+        endpoint_url = f'http://localhost:{local_server.port}'
+        print(f"Using local server at {endpoint_url}")
+
     # # Debug
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
@@ -127,19 +140,17 @@ def main(path: str, command: str, config_path: str):
     if not start_page:
         start_page = other_actions.create_default_page()
 
-    window_state = window_actions.new_browser_window()
-    window = WindowWidget(initial_state=window_state)
-    window.showMaximized()
+    # Create WebShellWindow - show dev tools when using frontend server
+    web_shell = WebShellWindow(endpoint=endpoint_url, show_dev_tools=bool(use_frontend_server))
+    web_shell.showMaximized()
 
-    window_actions.new_browser_tab(window_state, start_page)
+    # search_service = FuzzySearchService(
+    #     pamet_channels.entity_change_sets_per_TLA)
+    # search_service.load_all_content()
+    # pamet.set_search_service(search_service)
 
-    search_service = FuzzySearchService(
-        pamet_channels.entity_change_sets_per_TLA)
-    search_service.load_all_content()
-    pamet.set_search_service(search_service)
-
-    other_page_list_service = OtherPagesListUpdateService()
-    other_page_list_service.start()
+    # other_page_list_service = OtherPagesListUpdateService()
+    # other_page_list_service.start()
 
     # Setup exception reporting for failed actions
     if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
@@ -167,7 +178,7 @@ def main(path: str, command: str, config_path: str):
             log.info('Backup service not started. '
                      'Probably another instance is running')
             reply = QMessageBox.question(
-                window, 'Backup service conflict',
+                web_shell, 'Backup service conflict',
                 'A backup service lock is present. If you\'re sure there\'s '
                 'no other instances running on the same repo - '
                 'press Yes to override.')
@@ -180,17 +191,17 @@ def main(path: str, command: str, config_path: str):
             app.aboutToQuit.connect(backup_service.stop)
             pamet.desktop_app.set_backup_service(backup_service)
 
-    # Experimental semantic search
-    if repo_settings.semantic_search_enabled:
-        from pamet.services.search.semantic import SemanticSearchService
-        semantic_search_service = SemanticSearchService(
-            data_folder=repo_path / '__semantic_index__',
-            change_set_channel=pamet_channels.entity_change_sets_per_TLA)
+    # # Experimental semantic search
+    # if repo_settings.semantic_search_enabled:
+    #     from pamet.services.search.semantic import SemanticSearchService
+    #     semantic_search_service = SemanticSearchService(
+    #         data_folder=repo_path / '__semantic_index__',
+    #         change_set_channel=pamet_channels.entity_change_sets_per_TLA)
 
-        print('Loading semantic search index...')
-        semantic_search_service.load_all_content()
-        print('Semantic search index loaded')
-        set_semantic_search_service(semantic_search_service)
+    #     print('Loading semantic search index...')
+    #     semantic_search_service.load_all_content()
+    #     print('Semantic search index loaded')
+    #     set_semantic_search_service(semantic_search_service)
 
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title='Main loop exception'))

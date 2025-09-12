@@ -200,17 +200,10 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
         if (projects.length === 0) {
             log.info('No projects found. Creating a default one');
             let newProject = await createDefaultProject();
-            await switchToProject(newProject.id);
-            await updateAppFromRouteOrAutoassist(new PametRoute());
-            return;
+            projectId = newProject.id;
         } else {
             log.info('Switching to the first project');
-            let firstProjectRoute = new PametRoute({
-                userId: userId,
-                projectId: projects[0].id,
-            })
-            await switchToProject(projects[0].id);
-            return;
+            projectId = projects[0].id;
         }
     }
 
