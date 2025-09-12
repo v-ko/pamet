@@ -1,5 +1,6 @@
 from pathlib import Path
-from PySide6.QtCore import QDir, QUrl
+import secrets
+from PySide6.QtCore import QUrl
 from PySide6.QtWebEngineCore import QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow
@@ -11,6 +12,11 @@ class WebShellWindow(QMainWindow):
         super().__init__(parent=parent)
         self.setWindowTitle('Pamet - WebShell')
         self.resize(800, 600)
+
+        # Generate secure token for desktop access
+        self.desktop_access_token = secrets.token_urlsafe(32)
+        print(f"Generated desktop access token: {self.desktop_access_token}")
+
         self.show()
 
         # Set the main widget to a QWebEngineView
@@ -30,9 +36,29 @@ class WebShellWindow(QMainWindow):
         # Connect to the loadFinished signal
         self.web_view.loadFinished.connect(self.handle_load_finished)
 
+        # Inject desktop configuration immediately
+        self._inject_desktop_config()
+
         # Conditionally show the dev tools
         if show_dev_tools:
             self._setup_dev_tools()
+
+    def _inject_desktop_config(self):
+        """Inject desktop configuration into the web view"""
+        script_code = f"""
+        // Inject desktop configuration
+        window.PAMET_DESKTOP_MODE = true;
+        window.PAMET_DESKTOP_ACCESS_TOKEN = '{self.desktop_access_token}';
+
+        console.log('Desktop mode enabled with token:', window.PAMET_DESKTOP_ACCESS_TOKEN);
+        """
+
+        script = QWebEngineScript()
+        script.setSourceCode(script_code)
+        script.setInjectionPoint(QWebEngineScript.InjectionPoint.DocumentCreation)
+        script.setWorldId(QWebEngineScript.ScriptWorldId.ApplicationWorld)
+
+        self.web_view.page().scripts().insert(script)
 
     def _setup_dev_tools(self):
         """Setup and show the developer tools window"""
@@ -54,6 +80,8 @@ class WebShellWindow(QMainWindow):
     def handle_load_finished(self, ok):
         if ok:
             print("Page loaded successfully.")
+            # Re-inject desktop config after page load to ensure it's available
+            self._inject_desktop_config()
         else:
             print("Failed to load page.")
 

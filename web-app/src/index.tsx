@@ -17,8 +17,26 @@ import { initializeApp } from '@/init';
 
 const log = getLogger("index.tsx");
 
+// Check for desktop mode
+declare global {
+    interface Window {
+        PAMET_DESKTOP_MODE?: boolean;
+        PAMET_DESKTOP_ACCESS_TOKEN?: string;
+    }
+}
+
 // Pass the facade to all components
-(window as any).pamet = pamet; // For debugging
+(window as any).pamet = pamet; // For debugging convenience
+
+// Handle desktop mode configuration
+if (window.PAMET_DESKTOP_MODE && window.PAMET_DESKTOP_ACCESS_TOKEN) {
+    log.info("Desktop mode detected with token:", window.PAMET_DESKTOP_ACCESS_TOKEN);
+    console.log("Desktop mode enabled with token:", window.PAMET_DESKTOP_ACCESS_TOKEN);
+    // TODO: Configure desktop-repo-adapter when implemented
+    // For now, just log the token and continue with normal storage config
+} else {
+    log.info("Running in web mode");
+}
 
 // Configure storage adapters
 const configService = new PametConfigService(new LocalStorageConfigAdapter())

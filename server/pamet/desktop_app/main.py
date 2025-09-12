@@ -141,7 +141,10 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
         start_page = other_actions.create_default_page()
 
     # Create WebShellWindow - show dev tools when using frontend server
-    web_shell = WebShellWindow(endpoint=endpoint_url, show_dev_tools=bool(use_frontend_server))
+    web_shell = WebShellWindow(
+        endpoint=endpoint_url,
+        show_dev_tools=bool(use_frontend_server)
+    )
     web_shell.showMaximized()
 
     # search_service = FuzzySearchService(
