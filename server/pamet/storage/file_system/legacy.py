@@ -90,15 +90,16 @@ def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
     return new_id
 
 
-class LegacyFSRepoReader:
+class MigrationsManager:
 
-    def __init__(self) -> None:
+    def __init__(self, fs_repo) -> None:
+        self.fs_repo = fs_repo
         self.v2_note_checksum_by_page_name = {}
         self.v3_note_checksum_by_page_name = {}
         self.v2_notes_by_page_name = defaultdict(set)
 
     def convert_v3_to_v4(self, json_path: str | Path, backup_folder: Path,
-                         previous_v_repo_entities: dict):
+                         previous_v_repo_entities: dict | None):
         # V3 example: {
         # "is_displayed_first_on_startup": true
         # "notes": [
@@ -268,7 +269,7 @@ class LegacyFSRepoReader:
                 note.own_id,
                 note.created,
                 note.content,
-                notes_by_id.keys(),
+                list(notes_by_id.keys()),
             ))
             new_ids_by_old[old_id] = note.own_id
 
@@ -289,8 +290,8 @@ class LegacyFSRepoReader:
         # Remove arrows which start or end at notes with duplicate ids, because
         # we don't want to deal with that at all
         arrows = [
-            a for a in arrows if arrow.tail_note_id not in ids_with_duplicates
-            and arrow.head_note_id not in ids_with_duplicates
+            a for a in arrows if a.tail_note_id not in ids_with_duplicates
+            and a.head_note_id not in ids_with_duplicates
         ]
 
         for arrow in arrows:
@@ -343,8 +344,8 @@ class LegacyFSRepoReader:
         page.datetime_created = earliest_creation_time - timedelta(seconds=10)
         page.datetime_modified = earliest_creation_time - timedelta(seconds=10)
 
-        new_path = self.path_for_page(page)
-        page_json_str = self.serialize_page(page, notes, arrows)
+        new_path = self.fs_repo.path_for_page(page)
+        page_json_str = self.fs_repo.serialize_page(page, notes, arrows)
 
         # Disabled on DEBUG for now
         # if new_path.exists():
@@ -536,27 +537,27 @@ class LegacyFSRepoReader:
         if not isinstance(page, Page):
             raise Exception
 
-        notes = set(self.notes(page))
-        arrows = set(self.arrows(page))
+        notes = set(self.fs_repo.notes(page))
+        arrows = set(self.fs_repo.arrows(page))
 
         notes_updated = 0
         for note in notes:
             if note.url.is_empty():
                 continue
-            linked_page = self.find_one(type=Page, name=str(note.url))
+            linked_page = self.fs_repo.find_one(type=Page, name=str(note.url))
 
             if str(note.url) == 'Imagga':
                 pass
             if linked_page:
                 notes_updated += 1
                 note.url = linked_page.url()
-                InMemoryRepository.update_one(self, note)
+                InMemoryRepository.update_one(self.fs_repo, note)
 
         if len(set(notes)) != len(notes):
             raise Exception
 
         if notes_updated:
-            self.update_page_on_disk(page, notes, arrows)
+            self.fs_repo.update_page_on_disk(page, notes, arrows)
             log.info(f'Updated {notes_updated} internal links for '
                      f'imported legacy page "{page.name}"')
 
@@ -571,14 +572,14 @@ class LegacyFSRepoReader:
         #     del _cache[next(iter(_cache.keys()))]
         #     del _paths_cache[next(iter(_cache.keys()))]
 
-    def process_legacy_pages(self, previous_v_repo_entities: dict = None):
+    def process_legacy_pages(self, previous_v_repo_entities: dict | None = None):
         # Collect the legacy page paths
         v2_pages = []
         v3_pages = []
-        v2_bacup_folder = self.path / '__v2_legacy_pages_backup__'
-        v3_backup_folder = self.path / '__v3_legacy_pages_backup__'
-        for file in list(self.path.iterdir()):
-            if self.is_v4_page(file) or not file.is_file():
+        v2_bacup_folder = self.fs_repo.path / '__v2_legacy_pages_backup__'
+        v3_backup_folder = self.fs_repo.path / '__v3_legacy_pages_backup__'
+        for file in list(self.fs_repo.path.iterdir()):
+            if self.fs_repo.is_v4_page(file) or not file.is_file():
                 continue
 
             if file.name == '.misli_timeline_database.json':
@@ -633,7 +634,7 @@ class LegacyFSRepoReader:
                 v3_pages.append(new_path)
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
-                          f'{file.path}: {e}')
+                          f'{page_path}: {e}')
                 continue
 
         for page_path in v3_pages:
@@ -649,14 +650,14 @@ class LegacyFSRepoReader:
                 legacy_pages.append(new_path)
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
-                          f'{file.path}: {e}')
+                          f'{page_path}: {e}')
                 continue
 
         return legacy_pages
 
     def checksum_imported_page_notes(self, page: Page):
         note_count_in_repo = len([
-            nt for nt in self.find(parent_gid=page.gid())
+            nt for nt in self.fs_repo.find(parent_gid=page.gid())
             if isinstance(nt, Note)
         ])
 

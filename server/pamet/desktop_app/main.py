@@ -96,6 +96,18 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
     if user_config.changes_present:
         desktop_app.save_user_settings(user_config)
 
+    # Temporary restore logic for testing migrations
+    mock_repo_path = '/sync/projects/misli/mock_repo'
+    mock_repo_backup_path = '/sync/projects/misli/mock_repo_backup'
+    if str(repo_path) == mock_repo_path:
+        import shutil
+        if os.path.exists(mock_repo_backup_path):
+            log.info(f'Restoring mock repo from backup for migration testing')
+            if os.path.exists(mock_repo_path):
+                shutil.rmtree(mock_repo_path)
+            shutil.copytree(mock_repo_backup_path, mock_repo_path)
+            log.info(f'Mock repo restored from {mock_repo_backup_path}')
+
     # Init the repo
     if os.path.exists(repo_path):
         fs_repo = FSStorageRepository.open(repo_path,

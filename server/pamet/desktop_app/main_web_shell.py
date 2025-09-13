@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 import signal
 import click
 import fusion
@@ -55,6 +56,18 @@ def main(path: str, command: str, config_path: str, web_build_dir: str):
 
     repo_path = Path(path)
     log.info('Using repository: %s' % repo_path)
+
+    # Temporary restore logic for testing migrations
+    mock_repo_path = '/sync/projects/misli/mock_repo'
+    mock_repo_backup_path = '/sync/projects/misli/mock_repo_backup'
+    if str(repo_path) == mock_repo_path:
+        import shutil
+        if os.path.exists(mock_repo_backup_path):
+            log.info('Restoring mock repo from backup for migration testing')
+            if os.path.exists(mock_repo_path):
+                shutil.rmtree(mock_repo_path)
+            shutil.copytree(mock_repo_backup_path, mock_repo_path)
+            log.info(f'Mock repo restored from {mock_repo_backup_path}')
 
     if repo_path.exists():
         fs_repo = FSStorageRepository.open(repo_path,

@@ -1,9 +1,9 @@
 from pathlib import Path
 import secrets
-from PySide6.QtCore import QUrl
+from PySide6.QtCore import QUrl, Qt
 from PySide6.QtWebEngineCore import QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow, QSplitter
 
 
 class WebShellWindow(QMainWindow):
@@ -17,21 +17,34 @@ class WebShellWindow(QMainWindow):
         self.desktop_access_token = secrets.token_urlsafe(32)
         print(f"Generated desktop access token: {self.desktop_access_token}")
 
-        self.show()
-
-        # Set the main widget to a QWebEngineView
+        # Create the main web view
         self.web_view = QWebEngineView()
-        self.setCentralWidget(self.web_view)
+
+        # Store the show_dev_tools flag for layout decisions
+        self.show_dev_tools = show_dev_tools
+
+        if show_dev_tools:
+            # Create a splitter for elegant dev tools integration
+            self.splitter = QSplitter()
+            self.setCentralWidget(self.splitter)
+
+            # Add main web view to splitter
+            self.splitter.addWidget(self.web_view)
+
+            # We'll add dev tools view later after determining aspect ratio
+            self.dev_tools_view = None
+        else:
+            # Just use web view as central widget if no dev tools
+            self.setCentralWidget(self.web_view)
 
         # Load the index from the endpoint
         endpoint_url = QUrl(endpoint)
-        print(f"Loading URL: {endpoint_url.toString()}")  # Print the URL
+        print(f"Loading URL: {endpoint_url.toString()}")
 
         # Show the main window
         self.show()
 
         self.web_view.load(endpoint_url)
-        # self.web_view.load(QUrl("https://www.google.com/"))
 
         # Connect to the loadFinished signal
         self.web_view.loadFinished.connect(self.handle_load_finished)
@@ -39,7 +52,7 @@ class WebShellWindow(QMainWindow):
         # Inject desktop configuration immediately
         self._inject_desktop_config()
 
-        # Conditionally show the dev tools
+        # Setup dev tools if requested
         if show_dev_tools:
             self._setup_dev_tools()
 
@@ -61,21 +74,52 @@ class WebShellWindow(QMainWindow):
         self.web_view.page().scripts().insert(script)
 
     def _setup_dev_tools(self):
-        """Setup and show the developer tools window"""
-        # Create a new window for the dev tools
-        self.dev_tools_window = QMainWindow()
-        self.dev_tools_window.setWindowTitle('Dev Tools')
-        self.dev_tools_window.resize(800, 600)
-
-        # Create a new QWebEngineView to host the dev tools
+        """Setup and show the developer tools integrated in the same window"""
+        # Create the dev tools view
         self.dev_tools_view = QWebEngineView()
 
         # Set the dev tools page to the main view's page
         self.web_view.page().setDevToolsPage(self.dev_tools_view.page())
 
-        # Show the dev tools window
-        self.dev_tools_window.setCentralWidget(self.dev_tools_view)
-        self.dev_tools_window.show()
+        # Add the dev tools view to the splitter
+        self.splitter.addWidget(self.dev_tools_view)
+
+        # Set initial layout based on current aspect ratio
+        self._update_dev_tools_layout()
+
+        # Connect to resize events to update layout dynamically
+        self.resizeEvent = self._on_resize
+
+    def _update_dev_tools_layout(self):
+        """Update dev tools layout based on window aspect ratio"""
+        if not self.show_dev_tools or not self.dev_tools_view:
+            return
+
+        width = self.width()
+        height = self.height()
+        aspect_ratio = width / height if height > 0 else 1.0
+
+        # Determine orientation based on aspect ratio
+        # Wide windows (aspect ratio > 1.3) -> place dev tools to the right
+        # Tall/square windows (aspect ratio <= 1.3) -> place dev tools below
+        if aspect_ratio > 1.3:
+            # Wide layout: main content on left, dev tools on right
+            self.splitter.setOrientation(Qt.Orientation.Horizontal)
+            # Split equally (50% vs 50%)
+            self.splitter.setSizes([int(width * 0.5), int(width * 0.5)])
+        else:
+            # Tall layout: main content on top, dev tools below
+            self.splitter.setOrientation(Qt.Orientation.Vertical)
+            # Split equally (50% vs 50%)
+            self.splitter.setSizes([int(height * 0.5), int(height * 0.5)])
+
+    def _on_resize(self, event):
+        """Handle window resize events to update dev tools layout"""
+        # Call the original resize event handler
+        super().resizeEvent(event)
+
+        # Update dev tools layout based on new aspect ratio
+        self._update_dev_tools_layout()
 
     def handle_load_finished(self, ok):
         if ok:
@@ -83,7 +127,7 @@ class WebShellWindow(QMainWindow):
             # Re-inject desktop config after page load to ensure it's available
             self._inject_desktop_config()
         else:
-            print("Failed to load page.")
+            print("Failed to load page. Maybe you're debugging and the frontend server is not started?")
 
     def load_scripts(self, directory, page):
         # Get the script collection
