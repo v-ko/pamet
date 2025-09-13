@@ -1,4 +1,5 @@
-from ast import Tuple
+from __future__ import annotations
+
 from collections import defaultdict
 from copy import copy
 # from hashlib import md5
@@ -7,8 +8,9 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 import shutil
-from typing import List
+from typing import TYPE_CHECKING
 from fusion.libs.entity import load_from_dict
+from slugify import slugify
 
 from fusion.util import Point2D
 from fusion.util.rectangle import Rectangle
@@ -25,7 +27,13 @@ from pamet.model.note import Note
 from pamet.model.script_note import ScriptNote
 from pamet.model.text_note import TextNote
 
+if TYPE_CHECKING:
+    pass
+
+
 log = get_logger(__name__)
+
+V4_FILE_EXT = '.pam4.json'
 
 _cache = {}
 _paths_cache = {}
@@ -90,10 +98,17 @@ def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
     return new_id
 
 
+def path_for_page(page, repo_path: Path) -> Path:
+    """Standalone function to calculate the file path for a page"""
+    slug = slugify(page.name, separator='_', max_length=100)
+    filename = f'{slug}-{page.id}{V4_FILE_EXT}'
+    return repo_path / filename
+
+
 class MigrationsManager:
 
-    def __init__(self, fs_repo) -> None:
-        self.fs_repo = fs_repo
+    def __init__(self, repo_path: Path) -> None:
+        self.repo_path = Path(repo_path)
         self.v2_note_checksum_by_page_name = {}
         self.v3_note_checksum_by_page_name = {}
         self.v2_notes_by_page_name = defaultdict(set)
@@ -126,12 +141,17 @@ class MigrationsManager:
         #     "x": 1,
         #     "y": -2.5}]}
 
+        # Import the FSStorageRepository here to avoid circular imports
+        from pamet.storage.file_system.repository import FSStorageRepository
+
         json_path = Path(json_path)
         page_data = json.loads(json_path.read_text())
         notes_data = page_data.pop('notes')
 
         # Load the page
-        page = Page(name=json_path.stem, id=get_new_id(json_path.stem))
+        page = Page()
+        page.id = get_new_id(json_path.stem)
+        page.name = json_path.stem
         self.v3_note_checksum_by_page_name[page.name] = 0
 
         # Load the notes and arrows
@@ -178,6 +198,7 @@ class MigrationsManager:
             # Fuckit, use the local timezone
             created = created.astimezone()
             modified = modified.astimezone()
+
             nt['created'] = timestamp(created)
             nt['modified'] = timestamp(modified)
 
@@ -259,10 +280,6 @@ class MigrationsManager:
                 ids_with_duplicates.append(note.own_id)
                 log.warning(f'Detected duplicate for {note}. '
                             f'Links to/from it will be deleted.')
-                # f'Url: {note.url}, text: {note.text}. |'
-                # f'Duplicate {note}'
-                # f'Url: {notes_by_id[note.own_id].url}, '
-                # f'text: {notes_by_id[note.own_id].text}.')
 
             old_id = note.own_id
             note = note.with_id(own_id=new_id_for_legacy_note(
@@ -344,8 +361,10 @@ class MigrationsManager:
         page.datetime_created = earliest_creation_time - timedelta(seconds=10)
         page.datetime_modified = earliest_creation_time - timedelta(seconds=10)
 
-        new_path = self.fs_repo.path_for_page(page)
-        page_json_str = self.fs_repo.serialize_page(page, notes, arrows)
+        # Create a temporary repo instance to calculate the path and serialize
+        new_path = path_for_page(page, self.repo_path)
+
+        page_json_str = FSStorageRepository.serialize_page(page, notes, arrows)
 
         # Disabled on DEBUG for now
         # if new_path.exists():
@@ -517,7 +536,7 @@ class MigrationsManager:
         assert len(notes) == len(self.v2_notes_by_page_name[file_path.stem])
         assert len(notes) == self.v2_note_checksum_by_page_name[file_path.stem]
 
-        page_dict = {'notes': list(notes.values())}
+        page_dict: dict = {'notes': list(notes.values())}
         if is_displayed_first_on_startup:
             page_dict['is_displayed_first_on_startup'] = True
 
@@ -532,54 +551,66 @@ class MigrationsManager:
 
         return new_path
 
-    def fix_legacy_page_internal_links(self, page: Page):
+    # Methods for post-migration processing (to be called by FSStorageRepository)
+    # These methods are kept for backward compatibility but should be migrated
+    # to work with a repo instance passed as parameter
 
+    def fix_legacy_page_internal_links(self, fs_repo, page: Page):
+        """
+        This method should be called by FSStorageRepository after migrations are complete.
+        It requires an active repo instance to work.
+        """
         if not isinstance(page, Page):
             raise Exception
 
-        notes = set(self.fs_repo.notes(page))
-        arrows = set(self.fs_repo.arrows(page))
+        notes = set(fs_repo.notes(page))
+        arrows = set(fs_repo.arrows(page))
 
         notes_updated = 0
         for note in notes:
             if note.url.is_empty():
                 continue
-            linked_page = self.fs_repo.find_one(type=Page, name=str(note.url))
+            linked_page = fs_repo.find_one(type=Page, name=str(note.url))
 
             if str(note.url) == 'Imagga':
                 pass
             if linked_page:
                 notes_updated += 1
                 note.url = linked_page.url()
-                InMemoryRepository.update_one(self.fs_repo, note)
+                InMemoryRepository.update_one(fs_repo, note)
 
         if len(set(notes)) != len(notes):
             raise Exception
 
         if notes_updated:
-            self.fs_repo.update_page_on_disk(page, notes, arrows)
+            fs_repo.update_page_on_disk(page, notes, arrows)
             log.info(f'Updated {notes_updated} internal links for '
                      f'imported legacy page "{page.name}"')
 
-        # # TODO: remove:
-        # # Insert into cache
-        # new_path = self.path_for_page(page)
-        # old_path = new_to_old_path[new_path]
-        # page_md5 = md5_by_old_name[old_path.stem]
-        # _cache[page_md5] = new_path.read_text()
-        # _paths_cache[page_md5] = new_path
-        # if len(_cache) > MAX_CACHE:
-        #     del _cache[next(iter(_cache.keys()))]
-        #     del _paths_cache[next(iter(_cache.keys()))]
 
     def process_legacy_pages(self, previous_v_repo_entities: dict | None = None):
-        # Collect the legacy page paths
+        """
+        Process legacy pages in stages: v2→v3, then v3→v4.
+        This method incorporates the migration logic that was previously in main.py
+        and works independently without requiring an fs_repo instance.
+
+        Creates its own repository instance for post-migration processing.
+
+        Returns a list of migrated page paths and their metadata for post-migration processing.
+        """
+        # Stage 1: Collect the legacy page paths
         v2_pages = []
         v3_pages = []
-        v2_bacup_folder = self.fs_repo.path / '__v2_legacy_pages_backup__'
-        v3_backup_folder = self.fs_repo.path / '__v3_legacy_pages_backup__'
-        for file in list(self.fs_repo.path.iterdir()):
-            if self.fs_repo.is_v4_page(file) or not file.is_file():
+
+        v2_backup_folder = self.repo_path / '__v2_legacy_pages_backup__'
+        v3_backup_folder = self.repo_path / '__v3_legacy_pages_backup__'
+
+        for file in list(self.repo_path.iterdir()):
+            if not file.is_file():
+                continue
+
+            # Check if it's a v4 page (skip those)
+            if file.suffix == V4_FILE_EXT:
                 continue
 
             if file.name == '.misli_timeline_database.json':
@@ -599,65 +630,76 @@ class MigrationsManager:
         if not v2_pages and not v3_pages:
             return []
 
-        legacy_pages: List[Tuple] = []  # Tuples (page, notes, arrows)
+        legacy_page_info = []  # List of (page_path, page_id) tuples
 
-        # md5_by_old_name.clear()
-        # # Try to find them in the cache
-        # for page_path in copy(v2_pages):
-        #     page_md5 = md5(page_path.read_bytes()).hexdigest()
-        #     page_content = _cache.get(page_md5, None)
-        #     md5_by_old_name[page_path.stem] = md5
-        #     if page_content:
-        #         v2_pages.remove(page_path)
-        #         v4_path = _paths_cache[page_md5]
-        #         v4_path.write_text(page_content)
-
-        # for page_path in copy(v3_pages):
-        #     page_md5 = md5(page_path.read_bytes()).hexdigest()
-        #     page_content = _cache.get(page_md5, None)
-        #     md5_by_old_name[page_path.stem] = md5
-        #     if page_content:
-        #         v3_pages.remove(page_path)
-        #         v4_path = _paths_cache[page_md5]
-        #         v4_path.write_text(page_content)
-
-        # new_to_old_path.clear()  # Remove
-        # v2_to_v3_path = {}
-
-        # Process the legacy pages
+        # Stage 2: Process v2 → v3 migrations first
+        log.info(f'Starting v2→v3 migration for {len(v2_pages)} pages')
         for page_path in v2_pages:
             try:
                 new_path = self.convert_v2_to_v3(page_path,
-                                                 backup_folder=v2_bacup_folder)
-                # new_to_old_path[new_path] = page_path
-                # v2_to_v3_path[page_path] = new_path
+                                                 backup_folder=v2_backup_folder)
                 v3_pages.append(new_path)
+                log.info(f'Converted v2 page: {page_path} → {new_path}')
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
                           f'{page_path}: {e}')
                 continue
 
+        # Stage 3: Process v3 → v4 migrations
+        log.info(f'Starting v3→v4 migration for {len(v3_pages)} pages')
         for page_path in v3_pages:
             try:
                 new_path = self.convert_v3_to_v4(
                     page_path,
                     backup_folder=v3_backup_folder,
                     previous_v_repo_entities=previous_v_repo_entities)
-                # if page_path in v2_to_v3_path:  # v2 to v3
-                #     page_path = v2_to_v3_path[page_path]
-                # new_to_old_path[new_path] = page_path
 
-                legacy_pages.append(new_path)
+                # Extract page ID from the path for post-migration processing
+                # Format is: slug-page_id.pam4.json
+                filename = new_path.stem  # removes .pam4.json
+                parts = filename.rsplit('-', 1)  # Split from right, once
+                if len(parts) == 2:
+                    page_id = parts[1]
+                    legacy_page_info.append((new_path, page_id))
+                    log.info(f'Converted v3 page: {page_path} → {new_path}')
+                else:
+                    log.warning(f'Could not extract page ID from {new_path}')
+                    legacy_page_info.append((new_path, None))
+
             except Exception as e:
                 log.error(f'Exception raised when processing legacy page '
                           f'{page_path}: {e}')
                 continue
 
-        return legacy_pages
+        log.info(f'Migration completed. Processed {len(legacy_page_info)} pages')
 
-    def checksum_imported_page_notes(self, page: Page):
+        # Perform post-migration processing with a new repository instance
+        if legacy_page_info:  # Only if there were migrations to process
+            # Import here to avoid circular imports
+            from pamet.storage.file_system.repository import FSStorageRepository
+
+            log.info('Performing post-migration checksumming and link fixing')
+            fs_repo = FSStorageRepository.open(self.repo_path, queue_save_on_change=False)
+            fs_repo.load_all_pages()
+
+            # Checksum legacy pages and fix internal links in them
+            for page_path, page_id in legacy_page_info:
+                if page_id:
+                    pages = list(fs_repo.find(type=Page, id=page_id))
+                    if pages:
+                        page = pages[0]  # Get the first (and should be only) page
+                        self.checksum_imported_page_notes(fs_repo, page)
+                        self.fix_legacy_page_internal_links(fs_repo, page)
+
+        return legacy_page_info
+
+    def checksum_imported_page_notes(self, fs_repo, page: Page):
+        """
+        This method should be called by FSStorageRepository after migrations are complete.
+        It requires an active repo instance to work.
+        """
         note_count_in_repo = len([
-            nt for nt in self.fs_repo.find(parent_gid=page.gid())
+            nt for nt in fs_repo.find(parent_gid=page.gid())
             if isinstance(nt, Note)
         ])
 

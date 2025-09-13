@@ -89,7 +89,7 @@ class FSStorageRepository(PametInMemoryRepository):
         self.removed_pages = set()
 
         # Initialize the migrations manager
-        self.migrations_manager = MigrationsManager(self)
+        self.migrations_manager = MigrationsManager(self._path)
 
         # # Watcher related
         # self._fs_observer = None
@@ -510,15 +510,3 @@ class FSStorageRepository(PametInMemoryRepository):
         repo_settings = get_repo_settings(self.path)
         repo_settings.home_page = new_page.id
         desktop_app.save_repo_settings(repo_settings)
-
-    def process_legacy_pages(self, previous_v_repo_entities: dict | None = None):
-        """Delegate to migrations manager"""
-        return self.migrations_manager.process_legacy_pages(previous_v_repo_entities)
-
-    def checksum_imported_page_notes(self, page: Page):
-        """Delegate to migrations manager"""
-        return self.migrations_manager.checksum_imported_page_notes(page)
-
-    def fix_legacy_page_internal_links(self, page: Page):
-        """Delegate to migrations manager"""
-        return self.migrations_manager.fix_legacy_page_internal_links(page)

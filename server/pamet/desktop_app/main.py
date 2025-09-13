@@ -4,7 +4,7 @@ from PySide6.QtWidgets import QMessageBox
 import click
 
 import fusion
-from fusion.libs.action import actions_log_channel
+from fusion import actions_log_channel
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
 from pamet import channels as pamet_channels, commands, set_semantic_search_service
@@ -17,6 +17,7 @@ from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.web_shell import WebShellWindow
 from pamet.model.page import Page
 
+from pamet.storage.file_system.legacy import MigrationsManager
 from pamet.services.backup import AnotherServiceAlreadyRunningException
 from pamet.services.backup import FSStorageBackupService
 from pamet.services.file_note_watcher import FileNoteWatcherService
@@ -110,18 +111,14 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
 
     # Init the repo
     if os.path.exists(repo_path):
-        fs_repo = FSStorageRepository.open(repo_path,
-                                           queue_save_on_change=True)
-        legacy_page_paths = fs_repo.process_legacy_pages()
+        # First, run migrations independently
+                # Run migrations and post-migration processing
+        migrations_manager = MigrationsManager(repo_path)
+        migrations_manager.process_legacy_pages()
+
+        # Create the main repo instance
+        fs_repo = FSStorageRepository.open(repo_path, queue_save_on_change=True)
         fs_repo.load_all_pages()
-
-        # Checksum legacy pages and fix internal links in them
-        for page_path in legacy_page_paths:
-            page_id = fs_repo.id_from_page_path(page_path)
-            page = fs_repo.find_one(id=page_id)
-
-            fs_repo.checksum_imported_page_notes(page)
-            fs_repo.fix_legacy_page_internal_links(page)
     else:
         fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
 
