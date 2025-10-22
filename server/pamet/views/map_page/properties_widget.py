@@ -1,7 +1,6 @@
 from PySide6.QtWidgets import QMessageBox, QWidget
 from fusion.libs.entity.change import Change
 
-from fusion.libs.state import ViewState, view_state_type
 from fusion.platform.qt_widgets import bind_and_apply_state
 from fusion.view import View
 
@@ -10,16 +9,6 @@ from pamet import actions
 from pamet import commands
 from pamet.model.page import Page
 from .ui_properties_widget import Ui_MapPagePropertiesWidget
-
-
-@view_state_type
-class MapPagePropertiesViewState(ViewState):
-    focused_prop: str = ''
-
-    @property
-    def page_id(self):
-        return self.id
-
 
 class MapPagePropertiesWidget(View, QWidget):
 

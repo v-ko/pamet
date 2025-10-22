@@ -19,7 +19,7 @@ from pamet.model.card_note import CardNote
 from pamet.model.image_note import ImageNote
 from pamet.model.text_note import TextNote
 from pamet.views.arrow.widget import ArrowViewState
-from pamet.views.map_page.properties_widget import MapPagePropertiesViewState
+from pamet.views.map_page.properties_state import MapPagePropertiesViewState
 from pamet.views.map_page.state import MapPageMode, MapPageViewState
 from pamet.views.note.base.state import NoteViewState
 from pamet.views.note.qt_helpers import minimal_nonelided_size
