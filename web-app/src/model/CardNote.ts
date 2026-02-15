@@ -35,8 +35,7 @@ export class CardNote extends Note {
             },
             created: timestamp(currentTime()),
             modified: timestamp(currentTime()),
-            metadata: {},
-            tags: []
+            metadata: {}
         }
         noteData = Object.assign(noteData, props);
         return new CardNote(noteData);
@@ -59,8 +58,7 @@ export class CardNote extends Note {
             },
             created: currentTimestamp,
             modified: currentTimestamp,
-            metadata: {},
-            tags: []
+            metadata: {}
         });
         return note;
     }

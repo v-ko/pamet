@@ -162,6 +162,12 @@ class AppActions {
     closeGlobalSearch(appState: WebAppState) {
         appState.globalSearchViewState = null;
     }
+
+    @action({ issuer: 'service' })
+    updateIdentity(appState: WebAppState, deviceId: string | null, userId: string) {
+        appState.deviceId = deviceId;
+        appState.userId = userId;
+    }
 }
 
 export const appActions = new AppActions();

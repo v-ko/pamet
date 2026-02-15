@@ -333,11 +333,10 @@ export class RoutingService {
             log.error('toggleLastPage called before router init');
             return;
         }
-        const userId = this.appState.userId;
         const projectId = this.appState.currentProjectId;
         const currentPageId = this.appState.currentPageId;
 
-        if (!userId || !projectId || !currentPageId) {
+        if (!projectId || !currentPageId) {
             return;
         }
 

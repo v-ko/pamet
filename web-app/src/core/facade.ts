@@ -8,7 +8,7 @@ import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { MediaItem } from "fusion/model/MediaItem";
 import { FrontendDomainStore } from "@/storage/FrontendDomainStore";
-import { PametConfigService } from "@/services/config/Config";
+import { BasePametKeyValueService } from "@/services/config/Config";
 import { StorageService } from "fusion/storage/management/StorageService";
 import { MediaStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData, StorageAdapterNames } from "fusion/storage/repository/Repository";
@@ -64,7 +64,7 @@ export class PametFacade extends PametStore {
     }
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _appViewState: WebAppState | null = null;
-    private _config: PametConfigService | null = null;
+    private _config: BasePametKeyValueService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService | null = null;
@@ -274,14 +274,14 @@ export class PametFacade extends PametStore {
     }
 
     // Model related
-    get config(): PametConfigService {
+    get config(): BasePametKeyValueService {
         if (!this._config) {
             throw Error('Config not set');
         }
         return this._config;
     }
 
-    setConfigService(config: PametConfigService) {
+    setConfigService(config: BasePametKeyValueService) {
         this._config = config;
         config.setUpdateHandler(() => {
             log.info('Config updated');
@@ -292,11 +292,7 @@ export class PametFacade extends PametStore {
     }
 
     projects(): ProjectData[] {
-        let userData = this.config.getUserData();
-        if (!userData) {
-            throw Error('User data not set');
-        }
-        return userData.projects;
+        return this.config.getLocalProjects();
     }
 
     project(projectId: string): ProjectData | undefined {
@@ -407,11 +403,6 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
         log.error('No current page view state set, skipping delta', delta);
         return;
     }
-    let userId = appState.userId;
-    if (userId === null) {
-        log.error('No user set, cannot process delta', delta);
-        return;
-    }
 
     for (let change of delta.changes()) {
         // If it's the current page
@@ -420,10 +411,6 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
                 if (currentPageId === change.entityId) {
-                    let userId = appState.userId;
-                    if (userId === null) {
-                        throw Error('No user set');
-                    }
                     let projectId = appState.currentProjectId;
                     if (projectId === null) {
                         throw Error('No project set');

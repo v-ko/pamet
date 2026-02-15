@@ -1,17 +1,17 @@
 import { UserData } from "@/model/config/User";
-import { PametConfigService } from "@/services/config/Config";
+import { PametKeyValueStorageService } from "@/services/config/Config";
 import { DummyConfigAdapter } from "@/services/config/DummyAdapter";
 
 // prep for mocking localStorage
 
 
 describe('PametConfig', () => {
-    let config: PametConfigService;
+    let config: PametKeyValueStorageService;
     let adapter: DummyConfigAdapter;
 
     beforeEach(() => {
         adapter = new DummyConfigAdapter();
-        config = new PametConfigService(adapter);
+        config = new PametKeyValueStorageService(adapter);
     });
 
     afterEach(() => {
@@ -29,7 +29,7 @@ describe('PametConfig', () => {
     });
 
     test('userData', () => {
-        let userData: UserData = { id: '123', name: 'John Doe', projects: []}
+        let userData: UserData = { id: '123', name: 'John Doe' }
         config.setUserData(userData);
 
         expect(config.getUserData()).toEqual(userData);

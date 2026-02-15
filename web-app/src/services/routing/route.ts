@@ -132,7 +132,7 @@ export class PametRoute {
         let path = '/';
 
         if (this.projectId) {
-            if (this.userId === undefined) {
+            if (!this.userId) {
                 throw new Error(`Project id set without user id. Got userId: ${this.userId}, projectId: ${this.projectId}`);
             }
             path += `${this.userId}/`;
@@ -176,9 +176,10 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
     if (route.pageId && route.pageId.length === 8) {
         path += `page/${route.pageId}`;
     } else if (route.mediaItemId) {
-        // For media items, userId and projectId are required to match cache format
-        if (!route.userId || !route.projectId) {
-            throw new Error(`Media item routes require userId and projectId. Got userId: ${route.userId}, projectId: ${route.projectId}`);
+        // For media items, projectId is required for routing context
+        // (even though the actual media store keys don't include it)
+        if (!route.projectId) {
+            throw new Error(`Media item routes require projectId. Got projectId: ${route.projectId}`);
         }
         path += `media/item/${route.mediaItemId}`;
         if (route.mediaItemContentHash) {

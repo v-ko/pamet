@@ -27,7 +27,7 @@ import pamet
 from pamet.model.page import Page
 from pamet.model.note import Note
 
-from .legacy import MigrationsManager
+from ..migrations.manager import MigrationManager
 
 log = get_logger(__name__)
 
@@ -89,7 +89,7 @@ class FSStorageRepository(PametInMemoryRepository):
         self.removed_pages = set()
 
         # Initialize the migrations manager
-        self.migrations_manager = MigrationsManager(self._path)
+        self.migrations_manager = MigrationManager(self._path)
 
         # # Watcher related
         # self._fs_observer = None

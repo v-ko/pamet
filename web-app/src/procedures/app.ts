@@ -10,6 +10,7 @@ import { createId, currentTime, timestamp } from "fusion/util/base";
 import { DesktopImporter } from "@/storage/DesktopImporter";
 import { pageActions } from "@/actions/page";
 import { Point2D } from "fusion/primitives/Point2D";
+import { LOCAL_USER_ID } from "@/core/constants";
 
 const log = getLogger('AppProcedures');
 
@@ -185,13 +186,6 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
     // "Reaches" the route by executing the necessary app configuration
     log.info('updateAppFromRouteOrAutoassist for route', route);
 
-    // Get project data from config
-    let userId = pamet.appViewState.userId;
-    if (userId === null) {
-        log.error('User ID is not set. Cannot update app from route.');
-        return;
-    }
-
     // If no project id - go to default project (or create one)
     let projectId = route.projectId;
     if (projectId === undefined) {
@@ -281,19 +275,23 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
 export async function updateAppStateFromConfig(appState: WebAppState) {
     // Device
     let device = pamet.config.getDeviceData();
-    if (device === undefined) {
-        appState.deviceId = null;
-    } else {
-        appState.deviceId = device.id;
-    }
+    let deviceId = device ? device.id : null;
 
-    // User
+    // User - For now UserData has no id/name, so we use LOCAL_USER_ID
+    // Later when cloud auth is implemented, this will set the actual user ID
     let user = pamet.config.getUserData();
-    if (user === undefined) {
-        appState.userId = null;
+    let userId: string;
+    if (!user) {
+        userId = LOCAL_USER_ID;
     } else {
-        appState.userId = user.id;
+        if (!user.id){
+            throw new Error('User data is missing id field');
+        }
+        userId = user.id!;
     }
+    // TODO: When cloud auth is implemented, add: else { appState.userId = user.id; }
+
+    appActions.updateIdentity(appState, deviceId, userId);
 
     // Settings - not yet implemented
 
@@ -332,7 +330,6 @@ export async function importDesktopDataForTesting() {
             id: `desktop-import-${createId()}`,
             title: 'Desktop Import',
             description: 'Imported from desktop server',
-            owner: pamet.config.getUserData()!.id,
             created: timestamp(currentTime()),
         };
         await createProject(newProject);
@@ -371,7 +368,6 @@ export async function createDefaultProject(): Promise<ProjectData> {
         id: 'notebook',
         title: 'Notebook',
         description: 'Default project',
-        owner: pamet.config.getUserData()!.id,
         created: timestamp(currentTime()),
     };
     await createProject(newProject);

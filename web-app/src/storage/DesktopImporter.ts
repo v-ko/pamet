@@ -195,7 +195,7 @@ export class DesktopImporter extends BaseApiClient {
 
                 // Convert style properties
                 elementData.style = {
-                    color_role: old_color_to_role(elementData.color),
+                    // color_role: old_color_to_role(elementData.color), // done above
                     line_type: elementData.line_type || 'solid',
                     thickness: elementData.line_thickness || 1,
                     line_function: elementData.line_function_name || 'bezier_cubic',

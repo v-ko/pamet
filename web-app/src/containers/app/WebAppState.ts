@@ -44,7 +44,7 @@ export interface PametStorageState {
 
 export class WebAppState {
   deviceId: string | null = null;
-  userId: string | null = null;
+  userId: string;
 
   currentProjectId: string | null = null;
   currentProjectState: ProjectData | null = null;
@@ -71,7 +71,8 @@ export class WebAppState {
   // Internal clipboard for copy/cut/paste (entities stored with relative coordinates)
   clipboard: (Note | Arrow | MediaItem)[] = [];
 
-  constructor() {
+  constructor(options: { userId: string }) {
+    this.userId = options.userId;
     makeObservable(this, {
       deviceId: observable,
       userId: observable,
@@ -121,9 +122,7 @@ export class WebAppState {
 
     let route = new PametRoute({});
 
-    if (userId) {
-      route.userId = userId;
-    }
+    route.userId = userId;  // Always set
     if (projectId) {
       route.projectId = projectId;
     }

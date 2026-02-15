@@ -15,7 +15,6 @@ from pamet.model.text_note import TextNote
 from pamet.util import snap_to_grid
 from pamet.constants import ALIGNMENT_GRID_UNIT
 from pamet.util.url import Url
-from pamet.views.note.qt_helpers import minimal_nonelided_size
 from fusion import get_logger
 
 log = get_logger(__name__)

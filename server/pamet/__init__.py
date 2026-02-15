@@ -46,6 +46,8 @@ _semantic_search_service = None
 _broken_entities = {}  # the entity as key, and exception as value
 
 _sync_repo: PametRepository = None  # Should be set via the setter method
+_media_backend_service = None  # Media storage backend service (desktop)
+_project_folder_manager = None  # Handles project filesystem and migrations
 
 # _persistence_manager = PersistenceManager()
 _undo_service = None
@@ -118,6 +120,35 @@ def undo_service():
 def set_undo_service(undo_service_):
     global _undo_service
     _undo_service = undo_service_
+
+
+def media_backend_service():
+    """Return the media backend service. Raises if not set."""
+    if _media_backend_service is None:
+        raise Exception(
+            'Media storage backend service not set. '
+            'Instantiate and set it in the desktop main before starting the server.'
+        )
+    return _media_backend_service
+
+
+def set_media_backend_service(service):
+    global _media_backend_service
+    _media_backend_service = service
+
+
+def project_folder_manager():
+    """Return the project folder manager. Raises if not set."""
+    if _project_folder_manager is None:
+        raise Exception(
+            'ProjectFolderManager not set. Instantiate it in desktop main and set via set_project_folder_manager().'  # noqa: E501
+        )
+    return _project_folder_manager
+
+
+def set_project_folder_manager(manager):
+    global _project_folder_manager
+    _project_folder_manager = manager
 
 
 def sync_repo():

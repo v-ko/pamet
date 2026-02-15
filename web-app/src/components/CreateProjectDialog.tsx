@@ -83,15 +83,9 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
       return;
     }
 
-    const userId = pamet.appViewState.userId;
-    if (!userId) {
-      throw new Error('User ID is not set. Cannot create project.');
-    }
-
     const newProject: ProjectData = {
       id,
       title,
-      owner: userId,
       description,
       created: timestamp(currentTime())
     };

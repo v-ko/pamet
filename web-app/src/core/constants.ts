@@ -1,6 +1,9 @@
 import { ImageConversionPreset } from "fusion/util/media";
 import { HexColorData } from "fusion/primitives/Color";
 
+// User identity when not logged in and storing repos locally
+export const LOCAL_USER_ID = 'local';  // Used in URLs when no user is authenticated
+
 // Base geometry
 export const NO_SCALE_LINE_SPACING = 20
 

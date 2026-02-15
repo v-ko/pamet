@@ -1,27 +1,30 @@
 from __future__ import annotations
-from copy import copy
+
 import json
+from copy import copy
 from pathlib import Path
-from PySide6.QtGui import QColor
 
 from fusion.logging import get_logger
-
 from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import RepoSettings, UserDesktopSettings
+from pamet.desktop_app.config import (
+    DEFAULT_DATA_FOLDER_PATH,
+    RepoSettings,
+    UserDesktopSettings,
+)
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
 from pamet.services.media_store import MediaStore
 from pamet.services.script_runner import ScriptRunner
-from pamet.desktop_app.config import pamet_data_folder_path
+from PySide6.QtGui import QColor
 
 log = get_logger(__name__)
 
-SETTINGS_JSON = 'settings.json'
+SETTINGS_JSON = "settings.json"
+PROJECTS_JSON = "projects.json"
 
 icons = PametQtWidgetsCachedIcons()
 
-selection_overlay_qcolor = QColor(
-    *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
+selection_overlay_qcolor = QColor(*SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
 
 _app = None
 _media_store = None
@@ -30,22 +33,31 @@ _backup_service = None
 _default_note_font = None
 script_runner = ScriptRunner()
 
-_config_path = None
+_app_data_folder_path = DEFAULT_DATA_FOLDER_PATH
+_config_path = DEFAULT_DATA_FOLDER_PATH / SETTINGS_JSON
 
 
 def set_user_settings_path(config_path: Path):
     global _config_path
+    global _app_data_folder_path
+    _app_data_folder_path = config_path.parent
     _config_path = config_path
 
 
 def user_settings_path() -> Path:
-    if not _config_path:
-        return pamet_data_folder_path / SETTINGS_JSON
     return _config_path
 
 
+def desktop_config_dir() -> Path:
+    return _app_data_folder_path
+
+
 def repo_settings_path(repo_path: Path) -> Path:
-    return repo_path / '.pamet' / SETTINGS_JSON
+    return repo_path / ".pamet" / SETTINGS_JSON
+
+
+def projects_index_path() -> Path:
+    return desktop_config_dir() / PROJECTS_JSON
 
 
 # Config handling
@@ -62,11 +74,25 @@ def get_user_settings() -> UserDesktopSettings:
 
 
 def save_user_settings(updated_config: UserDesktopSettings):
-    config_str = json.dumps(updated_config.asdict(),
-                            indent=4,
-                            ensure_ascii=False)
+    config_str = json.dumps(updated_config.asdict(), indent=4, ensure_ascii=False)
     config_path = user_settings_path()
     config_path.write_text(config_str)
+
+
+def get_projects_index() -> dict[str, dict]:
+    index_path = projects_index_path()
+    if not index_path.exists():
+        return {}
+
+    with open(index_path) as index_file:
+        index = json.load(index_file)
+    if not isinstance(index, dict):
+        raise TypeError("projects.json root must be an object")
+    return index
+
+
+def get_local_projects() -> dict[str, dict]:
+    return get_projects_index()
 
 
 def get_repo_settings(repo_path: Path) -> RepoSettings:
@@ -79,7 +105,7 @@ def get_repo_settings(repo_path: Path) -> RepoSettings:
     with open(config_path) as config_file:
         config_dict = json.load(config_file)
         dict_on_load = copy(config_dict)
-        settings_id = config_dict.pop('id')
+        settings_id = config_dict.pop("id")
         settings = RepoSettings(id=settings_id, repo_path=repo_path)
         settings.replace_silent(**config_dict)
         settings._dict_on_load = dict_on_load
@@ -87,9 +113,7 @@ def get_repo_settings(repo_path: Path) -> RepoSettings:
 
 
 def save_repo_settings(repo_settings: RepoSettings):
-    config_str = json.dumps(repo_settings.asdict(),
-                            indent=4,
-                            ensure_ascii=False)
+    config_str = json.dumps(repo_settings.asdict(), indent=4, ensure_ascii=False)
     config_path = repo_settings_path(repo_settings.repo_path)
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(config_str)

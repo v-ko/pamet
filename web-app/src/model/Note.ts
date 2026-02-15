@@ -25,7 +25,6 @@ export interface NoteData extends PametElementData {
     created: string;
     modified: string;
     metadata: NoteMetadata;
-    tags: string[];
 }
 
 export interface SerializedNote extends NoteData {
@@ -54,9 +53,6 @@ export class Note extends PametElement<NoteData> {
     }
     get metadata(): NoteMetadata {
         return this._data.metadata;
-    }
-    get tags(): string[] {
-        return this._data.tags;
     }
     get style(): NoteStyle {
         return this._data.style;

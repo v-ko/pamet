@@ -3,13 +3,20 @@ import react from '@vitejs/plugin-react'
 import * as path from 'path';
 
 // https://vitejs.dev/config/
+// Support multiple build modes: 'web' (default) and 'desktop'
+const buildMode = process.env.BUILD_MODE || 'web';
+const isDesktop = buildMode === 'desktop';
+
 export default defineConfig({
   root: './web-app/src',
   publicDir: '../public',
   build: {
-    outDir: '../dist',
+    outDir: isDesktop ? '../dist-desktop' : '../dist',
     sourcemap: true,
     emptyOutDir: true,
+    rollupOptions: {
+      input: path.resolve(__dirname, 'web-app/src/index.html'),
+    }
   },
   plugins: [
     react(),
@@ -23,4 +30,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './web-app/src'),
     },
   },
+  define: {
+    'import.meta.env.BUILD_MODE': JSON.stringify(buildMode),
+  }
 })
