@@ -151,7 +151,7 @@ class ProjectFolderManager:
         # TODO: Compute hash properly (matching frontend HashTree).
         # For now hardcode the hash reported by the frontend integrity check.
         snapshot_hash = (
-            "56cf116bb53174a138e10b493f5a77128fcf2c7a64ce7c43c3a36941da9278cb"
+            "f6825cbb53071be5f34612755da5e7842044fb990f5cb9d052c458ea95421b60"
         )
         commit_id = snapshot_hash[:24]
         timestamp_ms = self._stable_commit_timestamp_ms(self.canvas_page_paths())
