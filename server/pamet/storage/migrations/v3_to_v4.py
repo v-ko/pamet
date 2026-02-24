@@ -502,7 +502,7 @@ def migrate_v3_to_v4(repo_path: Path) -> list[Path]:
     global v3_note_checksum_by_page_name
 
     repo_path = Path(repo_path)
-    backup_folder = repo_path / "__v3_pages_backup__"
+    backup_folder = repo_path / "__migration_backup_v3_to_v4__"
 
     # Reset migration state
     v3_note_checksum_by_page_name.clear()

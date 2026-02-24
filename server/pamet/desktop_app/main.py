@@ -70,7 +70,10 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
     if path:
         repo_path = Path(path)
     else:
-        repo_path = Path(user_config.repository_path)
+        if user_config.recent_projects:
+            repo_path = Path(user_config.repository_path)
+        else:
+            repo_path = desktop_app.desktop_config_dir() / "repo"
     log.info("Using repository: %s" % repo_path)
 
     repo_path_str = str(repo_path)
@@ -83,6 +86,7 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
     local_server = DesktopServer(
         commands=local_server_commands,
         media_store_path=repo_settings.media_store_path,
+        config_dir=desktop_app.desktop_config_dir(),
     )
 
     if (

@@ -233,7 +233,7 @@ def migrate_v2_to_v3(repo_path: Path) -> list[Path]:
     global note_checksum_by_page_name, notes_by_page_name
 
     repo_path = Path(repo_path)
-    backup_folder = repo_path / "__v2_legacy_pages_backup__"
+    backup_folder = repo_path / "__migration_backup_v2_to_v3__"
 
     # Reset migration state
     note_checksum_by_page_name.clear()

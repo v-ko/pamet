@@ -65,17 +65,24 @@ def get_user_settings() -> UserDesktopSettings:
     settings_path = user_settings_path()
     if not settings_path.exists():
         settings = UserDesktopSettings()
+        if not settings.recent_projects:
+            settings.repository_path = str(desktop_config_dir() / "repo")
         save_user_settings(settings)
         return settings
 
     with open(settings_path) as settings_file:
         config_dict = json.load(settings_file)
-        return UserDesktopSettings.load(config_dict)
+        settings = UserDesktopSettings.load(config_dict)
+        if not settings.recent_projects:
+            settings.repository_path = str(desktop_config_dir() / "repo")
+            save_user_settings(settings)
+        return settings
 
 
 def save_user_settings(updated_config: UserDesktopSettings):
     config_str = json.dumps(updated_config.asdict(), indent=4, ensure_ascii=False)
     config_path = user_settings_path()
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(config_str)
 
 

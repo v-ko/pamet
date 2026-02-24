@@ -38,9 +38,10 @@ def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
 
 
 def backup_file(file_path: Path, backup_folder: Path) -> Path:
-    """Backup a file to the backup folder with .backup suffix.
+    """Backup a file to the backup folder preserving the original filename.
 
-    If a backup already exists, appends a unique ID to avoid conflicts.
+    If a backup with the same name already exists, appends a unique ID to avoid
+    conflicts.
 
     Args:
         file_path: Path to file to backup
@@ -50,10 +51,10 @@ def backup_file(file_path: Path, backup_folder: Path) -> Path:
         Path to the created backup file
     """
     backup_folder.mkdir(parents=True, exist_ok=True)
-    backup_path = backup_folder / (file_path.name + ".backup")
+    backup_path = backup_folder / file_path.name
 
     if backup_path.exists():
-        backup_name = backup_path.stem + f".backup-{get_new_id()}"
+        backup_name = f"{file_path.stem}-{get_new_id()}{file_path.suffix}"
         backup_path = backup_folder / backup_name
 
     shutil.copy(file_path, backup_path)

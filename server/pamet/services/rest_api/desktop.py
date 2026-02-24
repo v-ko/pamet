@@ -6,7 +6,6 @@ from time import sleep
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pamet.desktop_app.config import DEFAULT_DATA_FOLDER_PATH
 from pamet.services.media_backend import MediaStorageBackendService
 from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
 from pamet.services.rest_api.routes.desktop import (
@@ -49,7 +48,9 @@ class DesktopServer:
         threading.Thread.__init__(self)
         self.media_store_path = Path(media_store_path)
         self.commands = commands or {}
-        self.config_dir = Path(config_dir or DEFAULT_DATA_FOLDER_PATH)
+        if config_dir is None:
+            config_dir = pamet.desktop_app.desktop_config_dir()
+        self.config_dir = Path(config_dir)
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
 
         self.web_app_static_build_path = None
@@ -60,7 +61,6 @@ class DesktopServer:
 
         self.thread = None
         self._port = port or DEFAULT_PORT
-        print(f"In the constructor the port is {self._port}")
 
         self.app = FastAPI()
         self.app.add_middleware(
@@ -120,6 +120,7 @@ class DesktopServer:
 
     def write_port_to_lock_file(self, port: int):
         lock_file = self.lock_path()
+        lock_file.parent.mkdir(parents=True, exist_ok=True)
         lock_file.write_text(str(port))
 
     def another_instance_is_running(self):

@@ -14,6 +14,14 @@ from PySide6.QtCore import QFileSystemWatcher
 log = get_logger(__name__)
 
 
+_IGNORED_DIRS = {
+    ".pamet",
+    "__migration_backup_v2_to_v3__",
+    "__migration_backup_v3_to_v4__",
+    "__migration_backup_v4_to_v5__",
+}
+
+
 class ProjectFolderManager:
     """
     Manages the project folder (repository path):
@@ -28,11 +36,13 @@ class ProjectFolderManager:
         self._watcher: QFileSystemWatcher | None = None
         self.migration_manager = MigrationManager(self.repo_path)
 
+    def _prune_ignored_dirs(self, dirnames: list[str]) -> None:
+        dirnames[:] = [dirname for dirname in dirnames if dirname not in _IGNORED_DIRS]
+
     # ----- Canvas pages (.pam5.json) -----
     def _iter_canvas_page_paths(self) -> Iterable[Path]:
         for dirpath, dirnames, filenames in os.walk(self.repo_path):
-            # Skip internal metadata folder
-            dirnames[:] = [d for d in dirnames if d != ".pamet"]
+            self._prune_ignored_dirs(dirnames)
             for fname in filenames:
                 if fname.endswith(V5_FILE_EXT):
                     yield Path(dirpath) / fname
@@ -185,8 +195,7 @@ class ProjectFolderManager:
         root_str = str(self.repo_path)
         paths.append(root_str)
         for dirpath, dirnames, _filenames in os.walk(self.repo_path):
-            # Skip .pamet internal folder
-            dirnames[:] = [d for d in dirnames if d != ".pamet"]
+            self._prune_ignored_dirs(dirnames)
             # Add each directory encountered
             paths.extend(str(Path(dirpath) / d) for d in dirnames)
         # QFileSystemWatcher ignores duplicates silently
@@ -249,6 +258,7 @@ class ProjectFolderManager:
         count = 0
         should_do_migration = False
         for dirpath, dirnames, filenames in os.walk(self.repo_path):
+            self._prune_ignored_dirs(dirnames)
             # Minimal check to see if a migration is needed.
             for fname in filenames:
                 if self.migration_manager.entry_is_legacy(Path(dirpath) / fname):

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 # from hashlib import md5
-import shutil
 from collections import defaultdict
 from pathlib import Path
 
@@ -48,19 +47,6 @@ DEFAULT_BACKGROUND_COLOR_ROLE = "primary"
 
 
 """old_color_to_role now imported from color_roles (legacy_normalized_rgba_to_role)."""
-
-
-def backup_file(file_path: Path, backup_folder: Path):
-    backup_folder.mkdir(parents=True, exist_ok=True)
-    backup_path = backup_folder / (file_path.name + ".backup")
-    if backup_path.exists():
-        backup_name = backup_path.stem + f".backup-{get_new_id()}"
-        backup_path = backup_folder / backup_name
-
-    shutil.copy(file_path, backup_path)
-    log.info(f"Backed up file {file_path} to {backup_path}")
-
-    return backup_path
 
 
 def new_legacy_id_for_legacy_note(

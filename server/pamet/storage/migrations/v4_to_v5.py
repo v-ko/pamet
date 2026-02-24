@@ -26,8 +26,13 @@ V5_FILE_EXT = ".pam5.json"
 DEFAULT_TEXT_COLOR_ROLE = "onPrimary"
 DEFAULT_BACKGROUND_COLOR_ROLE = "primary"
 
-NOTE_LEGACY_TYPES = {"TextNote", "ImageNote", "ScriptNote", "CardNote",
-                     "OtherPageListNote"}
+NOTE_LEGACY_TYPES = {
+    "TextNote",
+    "ImageNote",
+    "ScriptNote",
+    "CardNote",
+    "OtherPageListNote",
+}
 
 
 def is_v4_page_file(path: Path) -> bool:
@@ -79,14 +84,14 @@ def convert_v4_to_v5_element(
 
         if isinstance(style.get("background_color"), list):
             style["background_color_role"] = _color_to_role(
-                style.pop("background_color"))
+                style.pop("background_color")
+            )
         else:
             style.pop("background_color", None)
             style.setdefault("background_color_role", DEFAULT_BACKGROUND_COLOR_ROLE)
 
         if isinstance(style.get("border_color"), list):
-            style["border_color_role"] = _color_to_role(
-                style.pop("border_color"))
+            style["border_color_role"] = _color_to_role(style.pop("border_color"))
         else:
             style.pop("border_color", None)
 
@@ -102,7 +107,8 @@ def convert_v4_to_v5_element(
             content.setdefault(
                 "text",
                 "Project links index (double-click to generate missing "
-                "links, for e.g. new pages)")
+                "links, for e.g. new pages)",
+            )
             style["color_role"] = "onSurface"
             style["background_color_role"] = "surfaceDim"
 
@@ -117,16 +123,17 @@ def convert_v4_to_v5_element(
         local_image_url = content.pop("local_image_url", None)
         if local_image_url:
             width, height = 0, 0
-            if (isinstance(image_size, list) and len(image_size) >= 2
-                    and all(isinstance(v, (int, float))
-                            for v in image_size[:2])):
+            if (
+                isinstance(image_size, list)
+                and len(image_size) >= 2
+                and all(isinstance(v, (int, float)) for v in image_size[:2])
+            ):
                 width, height = image_size[:2]
             if local_image_url.startswith("pamet:/p"):
                 image_url = local_image_url.replace("pamet:/p", "project:/p")
             else:
                 image_url = f"project:/desktop/fs{local_image_url}"
-            content["image"] = {"url": image_url, "width": width,
-                                "height": height}
+            content["image"] = {"url": image_url, "width": width, "height": height}
         content.pop("image_url", None)  # remove redundant legacy field
 
     # --- Arrows ---
@@ -141,14 +148,12 @@ def convert_v4_to_v5_element(
         element_data["tail"] = {
             "position": element_data.get("tail_coords"),
             "noteAnchorId": element_data.get("tail_note_id"),
-            "noteAnchorType": (
-                element_data.get("tail_anchor", "none").lower()),
+            "noteAnchorType": (element_data.get("tail_anchor", "none").lower()),
         }
         element_data["head"] = {
             "position": element_data.get("head_coords"),
             "noteAnchorId": element_data.get("head_note_id"),
-            "noteAnchorType": (
-                element_data.get("head_anchor", "none").lower()),
+            "noteAnchorType": (element_data.get("head_anchor", "none").lower()),
         }
 
         # Mid points
@@ -168,17 +173,28 @@ def convert_v4_to_v5_element(
         # Arrow style properties (with defaults for null V4 values)
         style["line_type"] = element_data.get("line_type") or "solid"
         style["thickness"] = element_data.get("line_thickness") or 1
-        style["line_function"] = (element_data.get("line_function_name")
-                                  or "bezier_cubic")
+        style["line_function"] = (
+            element_data.get("line_function_name") or "bezier_cubic"
+        )
         style["head_shape"] = element_data.get("head_shape") or "arrow"
         style["tail_shape"] = element_data.get("tail_shape") or "arrow"
 
         # Remove all legacy arrow fields
-        for field in ("tail_coords", "head_coords", "tail_note_id",
-                      "head_note_id", "tail_anchor", "head_anchor",
-                      "mid_point_coords", "color", "line_type",
-                      "line_thickness", "line_function_name",
-                      "head_shape", "tail_shape"):
+        for field in (
+            "tail_coords",
+            "head_coords",
+            "tail_note_id",
+            "head_note_id",
+            "tail_anchor",
+            "head_anchor",
+            "mid_point_coords",
+            "color",
+            "line_type",
+            "line_thickness",
+            "line_function_name",
+            "head_shape",
+            "tail_shape",
+        ):
             element_data.pop(field, None)
 
     element_data["style"] = style
@@ -197,17 +213,14 @@ def convert_v4_to_v5_page_dict(page_data: Dict[str, Any]) -> Dict[str, Any]:
 
     if "children" in result:
         result["children"] = [
-            convert_v4_to_v5_element(ch, page_id)
-            for ch in result["children"]
+            convert_v4_to_v5_element(ch, page_id) for ch in result["children"]
         ]
     else:
         result["notes"] = [
-            convert_v4_to_v5_element(n, page_id)
-            for n in result.get("notes", [])
+            convert_v4_to_v5_element(n, page_id) for n in result.get("notes", [])
         ]
         result["arrows"] = [
-            convert_v4_to_v5_element(a, page_id)
-            for a in result.get("arrows", [])
+            convert_v4_to_v5_element(a, page_id) for a in result.get("arrows", [])
         ]
     return result
 
@@ -227,22 +240,22 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
 
     For each V4 page file:
       1. Convert to V5 format
-      2. Back up the original into __v4_legacy_pages_backup__/
+      2. Back up the original into __migration_backup_v4_to_v5__/
       3. Remove the original .pam4.json
 
     Returns list of created .pam5.json paths.
     """
     repo_path = Path(repo_path)
-    v4_backup_folder = repo_path / "__v4_legacy_pages_backup__"
+    v4_backup_folder = repo_path / "__migration_backup_v4_to_v5__"
 
-    v4_pages = [f for f in repo_path.iterdir()
-                if f.is_file() and f.name.endswith(V4_FILE_EXT)]
+    v4_pages = [
+        f for f in repo_path.iterdir() if f.is_file() and f.name.endswith(V4_FILE_EXT)
+    ]
 
     if not v4_pages:
         return []
 
-    log.info(
-        f"migrate_v4_to_v5: converting {len(v4_pages)} page(s) in {repo_path}")
+    log.info(f"migrate_v4_to_v5: converting {len(v4_pages)} page(s) in {repo_path}")
     converted = []
 
     for v4_path in v4_pages:
@@ -266,6 +279,5 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
             log.error(f"  FAILED to convert {v4_path.name}: {e}")
             continue
 
-    log.info(
-        f"migrate_v4_to_v5: done, {len(converted)}/{len(v4_pages)} converted")
+    log.info(f"migrate_v4_to_v5: done, {len(converted)}/{len(v4_pages)} converted")
     return converted
