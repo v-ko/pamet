@@ -10,8 +10,7 @@ import { DEFAULT_FONT_STRING } from "@/core/constants";
 import { textRect, imageGeometryToFitAre } from "@/components/note/util";
 import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
-import { mediaItemRoute } from "@/services/routing/route";
-import { MediaItem } from "fusion/model/MediaItem";
+import { fileItemRoute } from "@/services/routing/route";
 
 let log = getLogger('NoteCanvasView');
 
@@ -120,7 +119,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        const mediaItem = pamet.findOne({ id: note.content.image_id }) as MediaItem;
+        const mediaItem = pamet.imageItem(note.content.image_id);
         if (!mediaItem) {
             let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
@@ -133,9 +132,9 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             log.error('Cannot draw image: userId or projectId is undefined');
             return;
         }
-        let mediaItemRoute_ = mediaItemRoute(mediaItem, userId, projectId);
+        let fileRoute = fileItemRoute(mediaItem, userId, projectId);
 
-        let image = this.renderer.getImage(mediaItemRoute_.toRelativeReference());
+        let image = this.renderer.getImage(fileRoute.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = '(image element missing)';

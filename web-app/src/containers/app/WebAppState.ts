@@ -11,7 +11,7 @@ import { GlobalSearchViewState } from "@/components/search/GlobalSearchViewState
 import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { MediaItem } from "fusion/model/MediaItem";
+import { ImageItem } from "fusion/model/ImageItem";
 
 
 export enum AppDialogMode {
@@ -69,7 +69,7 @@ export class WebAppState {
   globalSearchViewState: GlobalSearchViewState | null = null;
 
   // Internal clipboard for copy/cut/paste (entities stored with relative coordinates)
-  clipboard: (Note | Arrow | MediaItem)[] = [];
+  clipboard: (Note | Arrow | ImageItem)[] = [];
 
   constructor(options: { userId: string }) {
     this.userId = options.userId;

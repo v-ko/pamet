@@ -6,7 +6,8 @@ import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "@/core/c
 import { old_color_to_role } from "fusion/primitives/Color";
 import { pamet } from "@/core/facade";
 import { PametRoute } from "@/services/routing/route";
-import { MediaItem } from "fusion/model/MediaItem";
+import { ImageItem } from "fusion/model/ImageItem";
+import { extractImageDimensions } from "fusion/util/media";
 
 let log = getLogger('ApiClient');
 
@@ -297,25 +298,26 @@ export class DesktopImporter extends BaseApiClient {
 
             // Fetch image blob from desktop server
             const blobUrl = this.endpointUrl(`desktop/fs${fsPath}`);
-            let mediaItem: MediaItem;
+            let imageItem: ImageItem;
             try {
                 const blob = await this.getBlob(blobUrl);
-                mediaItem = await pamet.addMediaToStore(blob, fsPath, imageData.id);
+                const { width, height } = await extractImageDimensions(blob);
+                imageItem = await pamet.addFileToStore(blob, fsPath, imageData.id, { width, height });
             } catch (e) {
                 log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);
                 continue
             }
 
-            imageRelatedEntities.push(mediaItem);
+            imageRelatedEntities.push(imageItem);
 
             // Update imageNoteData
-            imageData.content.image_id = mediaItem.id;
+            imageData.content.image_id = imageItem.id;
             delete imageData.content.image; // remove the old image url structure
             const imageNote = loadFromDict(imageData as SerializedEntityData);
             imageRelatedEntities.push(imageNote);
 
             imageNoteCounter++;
-            progressCallback(50 + 50 * (imageNoteCounter / imageNoteDatas.length), `Importing media files... ${imageNoteCounter}/${imageNoteDatas.length}`);
+            progressCallback(50 + 50 * (imageNoteCounter / imageNoteDatas.length), `Importing image files... ${imageNoteCounter}/${imageNoteDatas.length}`);
         }
 
         // Add image related entities to the store

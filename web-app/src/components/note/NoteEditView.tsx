@@ -10,7 +10,8 @@ import { PametTabIndex } from "@/core/constants";
 import "@/components/note/NoteEditView.css";
 import { ImageEditPropsWidget } from "@/components/note/edit-window/ImageEditPropsWidget";
 import { LinkEditWidget } from "@/components/note/edit-window/LinkEditWidget";
-import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
+import { ImageItem, ImageItemData } from 'fusion/model/ImageItem';
+import { extractImageDimensions } from 'fusion/util/media';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { Point2D } from 'fusion/primitives/Point2D';
 import { pageActions } from '@/actions/page';
@@ -45,8 +46,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
   const noteData = useRef(dumpToDict(state.targetNote) as SerializedNote);
   const committed = useRef(false);
-  const [uncommitedImage, setUncommitedImage] = useState<MediaItemData | null>(null);
-  const [originalImageForTrashing, setOriginalImageForTrashing] = useState<MediaItemData | null>(null);
+  const [uncommitedImage, setUncommitedImage] = useState<ImageItemData | null>(null);
+  const [originalImageForTrashing, setOriginalImageForTrashing] = useState<ImageItemData | null>(null);
 
   // Initial toggle button positions
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
@@ -132,16 +133,16 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     }
   }, [textButtonToggled]);
 
-  // Effect for cleaning up uncommitted media on component unmount
+  // Effect for cleaning up uncommitted image items on component unmount
   useEffect(() => {
     return () => {
       // If the component unmounts and there's an uncommitted item, delete it
       if (uncommitedImage && !committed.current) {
         const projectId = pamet.appViewState.currentProjectId;
         if (projectId) {
-          log.info('Cleaning up uncommitted media item on unmount:', uncommitedImage);
-          pamet.storageService.removeMedia(projectId, uncommitedImage.id, uncommitedImage.contentHash)
-            .catch(err => log.error('Failed to clean up media item', err));
+          log.info('Cleaning up uncommitted image item on unmount:', uncommitedImage);
+          pamet.storageService.removeFile(projectId, uncommitedImage.id, uncommitedImage.contentHash)
+            .catch(err => log.error('Failed to clean up image item', err));
         }
       }
     };
@@ -159,9 +160,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     }
 
     // If there is an image associated with the note and it wasn't yet deleted
-    let originalMediaItem: MediaItem | undefined;
+    let originalMediaItem: ImageItem | undefined;
     if (!originalImageForTrashing && state.targetNote.content.image_id) {
-      originalMediaItem = pamet.mediaItem(currentImageId);
+      originalMediaItem = pamet.imageItem(currentImageId);
       if (!originalMediaItem) {
         throw new Error("Original media item not found for the image.");
       }
@@ -171,7 +172,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       // been added in this editing session
       // If removing an image added in the editing session - delete it from the
       //store permanently.  Get the set media item from the state
-      await pamet.deleteMediaFromStore(new MediaItem(uncommitedImage))
+      await pamet.deleteFileFromStore(new ImageItem(uncommitedImage))
     }
 
     // Clear the image from the note data state
@@ -188,6 +189,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error("setNoteImage called when there is already an image.");
     }
 
+    // Extract image dimensions before storing
+    const { width, height } = await extractImageDimensions(blob);
+
     // Enforce a 5-second timeout on saving to avoid silent hangs
     let timeoutHandle: ReturnType<typeof setTimeout>;
     const timeoutMs = 5000;
@@ -197,20 +201,21 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       }, timeoutMs);
     });
 
-    const addMediaPromise = pamet.storageService.addMedia(
+    const addFilePromise = pamet.storageService.addFile(
       projectId,
       blob,
       path,
-      state.targetNote.parentId
+      state.targetNote.parentId,
+      { width, height }
     );
 
-    const newMediaItem = await Promise.race([addMediaPromise, timeoutPromise]) as MediaItemData;
+    const newImageItem = await Promise.race([addFilePromise, timeoutPromise]) as ImageItemData;
 
-    // Clear the timer if addMedia resolved first
+    // Clear the timer if addFile resolved first
     clearTimeout(timeoutHandle!);
 
-    setUncommitedImage(newMediaItem);
-    updateNoteData({ content: { ...noteData.current.content, image_id: newMediaItem.id } });
+    setUncommitedImage(newImageItem);
+    updateNoteData({ content: { ...noteData.current.content, image_id: newImageItem.id } });
   };
 
   const bakeNoteAndSave = () => {
@@ -252,8 +257,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
     let note = loadFromDict(data) as Note;
     committed.current = true;
-    const addedMediaItem = uncommitedImage ? new MediaItem(uncommitedImage) : null;
-    const removedMediaItem = originalImageForTrashing ? new MediaItem(originalImageForTrashing) : null;
+    const addedMediaItem = uncommitedImage ? new ImageItem(uncommitedImage) : null;
+    const removedMediaItem = originalImageForTrashing ? new ImageItem(originalImageForTrashing) : null;
 
     let currentPageVS = pamet.appViewState.currentPageViewState;
     if (!currentPageVS) {

@@ -14,8 +14,8 @@ import { ElementViewState as CanvasElementViewState } from "@/components/page/El
 import { Size } from 'fusion/primitives/Size';
 import { Change } from 'fusion/model/Change';
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
-import { mediaItemRoute } from '@/services/routing/route';
-import { MediaItem } from 'fusion/model/MediaItem';
+import { fileItemRoute } from '@/services/routing/route';
+import { ImageItem } from 'fusion/model/ImageItem';
 import { createId } from 'fusion/util/base';
 
 let log = getLogger('PageViewState');
@@ -92,8 +92,8 @@ export class PageViewState {
     // Editing
     draggedControlPointIndex: number | null = null;
 
-    // Media items
-    mediaUrlsByItemId: ObservableMap<string, string> = observable.map();
+    // File items
+    fileUrlsByItemId: ObservableMap<string, string> = observable.map();
 
     // Debugging. It's for the RenderProfiler stuff. It might be unneded even for that (since state is mutable)
     renderId: number = 0; // Incremented on every render to force re-rendering
@@ -109,12 +109,12 @@ export class PageViewState {
             this.addViewStateForElement(note);
 
             if (note.content.image_id) {
-                let mediaItem = pamet.mediaItem(note.content.image_id);
-                if (!mediaItem) {
-                    log.error('Media item not found for note', note.id);
+                let imageItem = pamet.imageItem(note.content.image_id);
+                if (!imageItem) {
+                    log.error('Image item not found for note', note.id);
                     continue;
                 }
-                this.addUrlForMediaItem(mediaItem);
+                this.addUrlForFileItem(imageItem);
             }
         }
         for (let arrow of arrows) {
@@ -202,18 +202,18 @@ export class PageViewState {
         }
     }
 
-    addUrlForMediaItem(mediaItem: MediaItem) {
-        /* Adds a media item URL to the page view state.
-         * If the media item already exists, it will be overwritten.
+    addUrlForFileItem(imageItem: ImageItem) {
+        /* Adds a file item URL to the page view state.
+         * If the file item already exists, it will be overwritten.
          */
         const userId = pamet.appViewState.userId;
         const pametProjectId = pamet.appViewState.currentProjectId;
         if (!userId || !pametProjectId) {
-            log.error('Cannot add media item URL without userId or projectId');
+            log.error('Cannot add file item URL without userId or projectId');
             return;
         }
-        const mediaRoute = mediaItemRoute(mediaItem, userId, pametProjectId);
-        this.mediaUrlsByItemId.set(mediaItem.id, mediaRoute.toRelativeReference());
+        const fileRoute = fileItemRoute(imageItem, userId, pametProjectId);
+        this.fileUrlsByItemId.set(imageItem.id, fileRoute.toRelativeReference());
     }
 
     noteVS_anchorsForArrow(arrow: Arrow) {

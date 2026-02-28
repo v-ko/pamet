@@ -1,4 +1,4 @@
-import { MediaItem } from "fusion/model/MediaItem";
+import { FileItem } from "fusion/model/FileItem";
 import { getLogger } from "fusion/logging";
 
 let log = getLogger('PametRoute');
@@ -11,7 +11,7 @@ export enum PametRoutes {
     ROOT = 'root',
     PROJECT = 'project',
     PAGE = 'page',
-    MEDIA = 'media'
+    FILE = 'file'
 }
 
 export class PametRoute {
@@ -30,9 +30,9 @@ export class PametRoute {
     viewportEyeHeight?: number = undefined;
     focusedNoteId?: string = undefined;
 
-    // Media specific
-    mediaItemId?: string = undefined;
-    mediaItemContentHash?: string = undefined;
+    // File item specific
+    fileItemId?: string = undefined;
+    fileItemContentHash?: string = undefined;
 
     constructor(props?: Partial<PametRoute>) {
         if (props) {
@@ -45,9 +45,9 @@ export class PametRoute {
             const pageId = subProjectParts[1];
             this.pageId = pageId;
         } else if (subProjectParts[0] == 'media' && subProjectParts[1] == 'item') {
-            // Media item route  like /media/item/{mediaItemId}#{mediaItemContentHash}
-            const mediaItemId = subProjectParts[2];
-            this.mediaItemId = mediaItemId;
+            // File item route  like /media/item/{fileItemId}#{fileItemContentHash}
+            const fileItemId = subProjectParts[2];
+            this.fileItemId = fileItemId;
             // Later we can add /media/path/MEDIA_PATH#hash for more readable urls
         }
     }
@@ -109,9 +109,9 @@ export class PametRoute {
         const hash = url_.hash;
         if (hash.startsWith('#note=')) {
             route.focusedNoteId = hash.substring(6); // remove the '#note='
-        } else if (route.mediaItemId && hash.length === 33) {
-            // If media item id is set, the hash should be the content hash
-            route.mediaItemContentHash = hash.substring(1); // remove the '#'
+        } else if (route.fileItemId && hash.length === 33) {
+            // If file item id is set, the hash should be the content hash
+            route.fileItemContentHash = hash.substring(1); // remove the '#'
         }
 
         return route;
@@ -175,17 +175,17 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
 
     if (route.pageId && route.pageId.length === 8) {
         path += `page/${route.pageId}`;
-    } else if (route.mediaItemId) {
-        // For media items, projectId is required for routing context
-        // (even though the actual media store keys don't include it)
+    } else if (route.fileItemId) {
+        // For file items, projectId is required for routing context
+        // (even though the actual file store keys don't include it)
         if (!route.projectId) {
-            throw new Error(`Media item routes require projectId. Got projectId: ${route.projectId}`);
+            throw new Error(`File item routes require projectId. Got projectId: ${route.projectId}`);
         }
-        path += `media/item/${route.mediaItemId}`;
-        if (route.mediaItemContentHash) {
-            path += `#${route.mediaItemContentHash}`;
+        path += `media/item/${route.fileItemId}`;
+        if (route.fileItemContentHash) {
+            path += `#${route.fileItemContentHash}`;
         }
-        return path; // Return early for media items, no search params or note hash
+        return path; // Return early for file items, no search params or note hash
     }
 
     let search = '';
@@ -202,13 +202,13 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
     return path + search + hash;
 }
 
-// Get the project-scoped URL for this media item
-export function mediaItemRoute(mediaItem: MediaItem, userId: string, projectId: string): PametRoute {
+// Get the project-scoped URL for this file item
+export function fileItemRoute(fileItem: FileItem, userId: string, projectId: string): PametRoute {
     let route = new PametRoute({
         userId: userId,
         projectId: projectId,
-        mediaItemId: mediaItem.id,
-        mediaItemContentHash: mediaItem.contentHash,
+        fileItemId: fileItem.id,
+        fileItemContentHash: fileItem.contentHash,
     });
     return route
 }

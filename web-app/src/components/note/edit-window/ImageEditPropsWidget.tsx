@@ -4,20 +4,20 @@ import { SerializedNote } from "@/model/Note";
 import "@/components/note/edit-window/ImageEditPropsWidget.css";
 import { MAX_MEDIA_NAME_LENGTH, PametTabIndex } from "@/core/constants";
 import { pamet } from "@/core/facade";
-import { MediaItem, MediaItemData } from 'fusion/model/MediaItem';
+import { ImageItem, ImageItemData } from 'fusion/model/ImageItem';
 import { getLogger } from 'fusion/logging';
 import { parseClipboardContents } from "@/util";
 import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/util/base";
 import { determineConversionPreset, ImageVerdict, shouldCompressImage } from "@/core/policies";
 import { convertImage, extractImageDimensions } from 'fusion/util/media';
 import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from "@/core/constants";
-import { mediaItemRoute } from "@/services/routing/route";
+import { fileItemRoute } from "@/services/routing/route";
 
 let log = getLogger('ImageEditPropsWidget');
 
 interface ImageEditPropsWidgetProps {
     noteData: SerializedNote;
-    uncommitedMediaItem: MediaItemData | null;
+    uncommitedMediaItem: ImageItemData | null;
     setNoteImage: (blob: Blob, path: string) => Promise<void>;
     removeNoteImage: () => Promise<void>;
 }
@@ -242,13 +242,13 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
     }
 
     let imageUrl = '';
-    let mediaItem: MediaItem | undefined;
+    let mediaItem: ImageItem | undefined;
     if (noteData.content.image_id) {
         if (uncommitedMediaItem) {  // If it's added in this session
-            mediaItem = new MediaItem(uncommitedMediaItem);
+            mediaItem = new ImageItem(uncommitedMediaItem);
 
         } else {  // If it's been in the note before it's open for editing
-            let retrievedMediaItem = pamet.mediaItem(noteData.content.image_id);
+            let retrievedMediaItem = pamet.imageItem(noteData.content.image_id);
             if (retrievedMediaItem) {
                 mediaItem = retrievedMediaItem;
             } else {
@@ -257,7 +257,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
         }
 
         if (mediaItem){ // Couldn't get it because of the above error
-            const route = mediaItemRoute(mediaItem, pamet.appViewState.userId!, pamet.appViewState.currentProjectId!);
+            const route = fileItemRoute(mediaItem, pamet.appViewState.userId!, pamet.appViewState.currentProjectId!);
             route.host = window.location.host;
             route.protocol = window.location.protocol;
             imageUrl = route.toString();

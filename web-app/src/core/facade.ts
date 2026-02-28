@@ -6,11 +6,12 @@ import { Entity, EntityData } from "fusion/model/Entity";
 import { appActions } from "@/actions/app";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { MediaItem } from "fusion/model/MediaItem";
+import { ImageItem } from "fusion/model/ImageItem";
+import { FileItemMetadata } from "fusion/model/FileItem";
 import { FrontendDomainStore } from "@/storage/FrontendDomainStore";
 import { BasePametKeyValueService } from "@/services/config/Config";
 import { StorageService } from "fusion/storage/management/StorageService";
-import { MediaStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
+import { FileStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData, StorageAdapterNames } from "fusion/storage/repository/Repository";
 import { RoutingService } from "@/services/routing/RoutingService";
 import { projectActions } from "@/actions/project";
@@ -49,8 +50,8 @@ export function webStorageConfigFactory(projectId: string): ProjectStorageConfig
                 localBranchName: device.id,
             }
         },
-        onDeviceMediaStore: {
-            name: 'CacheAPI' as MediaStoreAdapterNames,
+        onDeviceFileStore: {
+            name: 'CacheAPI' as FileStoreAdapterNames,
             args: {
                 projectId: projectId
             }
@@ -319,27 +320,27 @@ export class PametFacade extends PametStore {
         return this.frontendDomainStore.findOne(filter);
     }
 
-    // Media CRUD methods
-    async addMediaToStore(blob: Blob, path: string, parentId: string): Promise<MediaItem> {
+    // File CRUD methods
+    async addFileToStore(blob: Blob, path: string, parentId: string, metadata: FileItemMetadata): Promise<ImageItem> {
         const currentProjectId = this.appViewState.currentProjectId;
         if (!currentProjectId) {
             throw new Error('No current project set');
         }
 
-        // Create the MediaItem through the storage service
-        // This will handle blob storage, dimension extraction, and hash generation
-        const mediaItemData = await this.storageService.addMedia(currentProjectId, blob, path, parentId);
+        // Create the FileItem through the storage service
+        // This will handle blob storage and hash generation
+        const fileItemData = await this.storageService.addFile(currentProjectId, blob, path, parentId, metadata);
 
-        return new MediaItem(mediaItemData);
+        return new ImageItem(fileItemData);
     }
-    async deleteMediaFromStore(mediaItem: MediaItem): Promise<void> {
+    async deleteFileFromStore(imageItem: ImageItem): Promise<void> {
         const currentProjectId = this.appViewState.currentProjectId;
         if (!currentProjectId) {
             throw new Error('No current project set');
         }
 
-        // Remove the media item using the storage service
-        await this.storageService.removeMedia(currentProjectId, mediaItem.id, mediaItem.contentHash);
+        // Remove the file item using the storage service
+        await this.storageService.removeFile(currentProjectId, imageItem.id, imageItem.contentHash);
     }
 
     applyDelta(delta: Delta): void {
@@ -444,19 +445,19 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             }
         }
 
-        // Process media item changes (parent is Page)
-        const mediaItem = pamet.mediaItem(change.entityId);
-        if (mediaItem) {
+        // Process image item changes (parent is Page)
+        const imageItem = pamet.imageItem(change.entityId);
+        if (imageItem) {
             if (change.isDelete()) {
-                // Remove the media item from the view state
-                currentPageVS.mediaUrlsByItemId.delete(mediaItem.id);
+                // Remove the image item from the view state
+                currentPageVS.fileUrlsByItemId.delete(imageItem.id);
             } else {
-                // On create/update: reflect only media items whose parent is the current page
-                if (mediaItem.parentId === currentPageId) {
-                    currentPageVS.addUrlForMediaItem(mediaItem);
+                // On create/update: reflect only image items whose parent is the current page
+                if (imageItem.parentId === currentPageId) {
+                    currentPageVS.addUrlForFileItem(imageItem);
                 } else {
                     // If it moved away from this page, ensure it's not shown here
-                    currentPageVS.mediaUrlsByItemId.delete(mediaItem.id);
+                    currentPageVS.fileUrlsByItemId.delete(imageItem.id);
                 }
             }
         }

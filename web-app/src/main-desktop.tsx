@@ -15,7 +15,7 @@ import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigA
 import WebApp from "@/containers/app/App";
 
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
-import { MediaStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
+import { FileStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
 import { StorageAdapterNames } from 'fusion/storage/repository/Repository';
 import { StorageService } from "fusion/storage/management/StorageService";
 import { registerEntityClasses } from "@/core/entityRegistrationHack";
@@ -78,8 +78,8 @@ function desktopStorageConfigFactory(projectId: string): ProjectStorageConfig {
                 auth: desktopAuth,
             }
         },
-        onDeviceMediaStore: {
-            name: 'RestApi' as MediaStoreAdapterNames,
+        onDeviceFileStore: {
+            name: 'RestApi' as FileStoreAdapterNames,
             args: {
                 projectId: projectId,
                 baseUrl: baseUrl,

@@ -3,7 +3,7 @@ import { entityType, getEntityId } from "fusion/model/Entity";
 import { Rectangle, RectangleData } from "fusion/primitives/Rectangle";
 import { Note, NoteData } from "@/model/Note";
 import { pamet } from "@/core/facade";
-import { MediaItem } from "fusion/model/MediaItem";
+import { ImageItem } from "fusion/model/ImageItem";
 import { PametRoute } from "@/services/routing/route";
 import { Page } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
@@ -77,7 +77,7 @@ export class CardNote extends Note {
             imageArea = noteRect;
         } else if (hasText && hasImage) {
             let imageAspectRatio = 1;
-            const mediaItem = pamet.findOne({ id: this.content.image_id }) as MediaItem;
+            const mediaItem = pamet.findOne({ id: this.content.image_id }) as ImageItem;
             if (mediaItem && mediaItem.width > 0 && mediaItem.height > 0) {
                 imageAspectRatio = mediaItem.width / mediaItem.height;
             }

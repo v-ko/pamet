@@ -13,7 +13,7 @@ import { mapMimeTypeToFileExtension } from "fusion/util/base";
 import { CardNote } from "@/model/CardNote";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { MediaItem } from "fusion/model/MediaItem";
+import { ImageItem } from "fusion/model/ImageItem";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { dumpToDict, getEntityId, loadFromDict } from "fusion/model/Entity";
@@ -23,8 +23,8 @@ import { PageViewState } from "@/components/page/PageViewState";
 const log = getLogger('PageProcedures');
 
 type MediaOp =
-  | { type: 'restore'; media: MediaItem; newParentId: string }
-  | { type: 'duplicate'; media: MediaItem; newParentId: string };
+  | { type: 'restore'; media: ImageItem; newParentId: string }
+  | { type: 'duplicate'; media: ImageItem; newParentId: string };
 
 function preparePasteTransform(appState: WebAppState, state: PageViewState, relativeTo: Point2D) {
     const clipboard = appState.clipboard;
@@ -33,11 +33,11 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
     // Split clipboard content by type
     const clipboardNotes: Note[] = [];
     const clipboardArrows: Arrow[] = [];
-    const clipboardMedia: MediaItem[] = [];
+    const clipboardMedia: ImageItem[] = [];
     for (const e of clipboard) {
       if (e instanceof Note) clipboardNotes.push(e);
       else if (e instanceof Arrow) clipboardArrows.push(e);
-      else if (e instanceof MediaItem) clipboardMedia.push(e);
+      else if (e instanceof ImageItem) clipboardMedia.push(e);
     }
 
     // Build id remap tables (preserve ids when no collision)
@@ -112,7 +112,7 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
     // Media operations plan:
     // For each CardNote in clipboard with an image_id, decide whether to restore (if the media
     // is not present in the FDS → it was cut) or duplicate (if present → it was copied).
-    const mediaIndexById = new Map<string, MediaItem>();
+    const mediaIndexById = new Map<string, ImageItem>();
     for (const m of clipboardMedia) mediaIndexById.set(m.id, m);
 
     const mediaOps: MediaOp[] = [];
@@ -152,7 +152,7 @@ export async function pasteInternal(
     // Prepare transformed notes/arrows and a media ops plan
     const { notesToInsert, arrowsToInsert, mediaOps } = preparePasteTransform(appState, state, relativeTo);
 
-    const mediaToInsert: MediaItem[] = [];
+    const mediaToInsert: ImageItem[] = [];
     const newMediaIdByNewNoteId = new Map<string, string>(); // newNoteId -> newMediaId
 
     const currentProjectId = pamet.appViewState.currentProjectId;
@@ -160,20 +160,20 @@ export async function pasteInternal(
         throw new Error('No current project set for pasteInternal');
     }
 
-    // Execute media plan: ensure blobs are present by duplicating or restoring
+    // Execute file plan: ensure blobs are present by duplicating or restoring
     for (const op of mediaOps as MediaOp[]) {
         if (op.type === 'duplicate') {
             const ts = generateFilenameTimestamp();
             const ext = mapMimeTypeToFileExtension(op.media.mimeType);
             const imagePath = `images/pasted_image-${ts}.${ext}`;
 
-            // Fetch original blob and create a brand-new media item under this page
-            const srcBlob = await pamet.storageService.getMedia(currentProjectId, op.media.id, op.media.contentHash);
-            const created = await pamet.addMediaToStore(srcBlob, imagePath, state.page().id);
+            // Fetch original blob and create a brand-new file item under this page
+            const srcBlob = await pamet.storageService.getFile(currentProjectId, op.media.id, op.media.contentHash);
+            const created = await pamet.addFileToStore(srcBlob, imagePath, state.page().id, { width: op.media.width, height: op.media.height });
 
             mediaToInsert.push(created);
             newMediaIdByNewNoteId.set(op.newParentId, created.id);
-        } else if (op.type === 'restore') {  // Is restored by the media service automatically at commit time
+        } else if (op.type === 'restore') {  // Is restored by the file service automatically at commit time
             mediaToInsert.push(op.media);
             newMediaIdByNewNoteId.set(op.newParentId, op.media.id);
         }
@@ -235,8 +235,8 @@ export async function pasteInternal(
         const imagePath = `images/pasted_image-${timestamp}.${extension}`;
 
         note = CardNote.createNew({pageId: pageId});
-        const mediaItem = await pamet.addMediaToStore(finalImageBlob, imagePath, pageId);
-        note.content.image_id = mediaItem.id;
+        const imageItem = await pamet.addFileToStore(finalImageBlob, imagePath, pageId, { width, height });
+        note.content.image_id = imageItem.id;
 
         // Configure note position and size
         let rect = note.rect();
@@ -245,7 +245,7 @@ export async function pasteInternal(
         rect.setSize(size);
         note.setRect(rect);
 
-        pageActions.pasteSpecialAddElements([note], [mediaItem]);
+        pageActions.pasteSpecialAddElements([note], [imageItem]);
 
         return position.add(new Point2D([0, size.y + AGU]));
 
@@ -347,7 +347,7 @@ export async function cutInternal(
     const selectedNoteIds = new Set<string>(selectedNotes.map(n => n.id));
 
     // 1) Prepare clipboard payload: notes/arrows with relative coords + trashed media for image notes
-    const clipboardEntities: (Note | Arrow | MediaItem)[] = [];
+    const clipboardEntities: (Note | Arrow | ImageItem)[] = [];
 
     // Clone notes and shift to relative coordinates
     for (const note of selectedNotes) {
@@ -393,17 +393,17 @@ export async function cutInternal(
         clipboardEntities.push(cloned);
     }
 
-    // 2) Collect associated media for clipboard and schedule entity removal (blob handling is backend-managed)
-    const mediaToRemove: MediaItem[] = [];
+    // 2) Collect associated image items for clipboard and schedule entity removal (blob handling is backend-managed)
+    const mediaToRemove: ImageItem[] = [];
     for (const note of selectedNotes) {
         if (note instanceof CardNote && note.content.image_id) {
-            const mediaItem = pamet.mediaItem(note.content.image_id);
-            if (!mediaItem) {
-                log.warning(`Cut: media item ${note.content.image_id} not found for note ${note.id}`);
+            const imageItem = pamet.imageItem(note.content.image_id);
+            if (!imageItem) {
+                log.warning(`Cut: image item ${note.content.image_id} not found for note ${note.id}`);
                 continue;
             }
-            clipboardEntities.push(mediaItem); // Keep metadata on clipboard
-            mediaToRemove.push(mediaItem);     // Remove entity via action; storage will trash blob on commit
+            clipboardEntities.push(imageItem); // Keep metadata on clipboard
+            mediaToRemove.push(imageItem);     // Remove entity via action; storage will trash blob on commit
         }
     }
 

@@ -1,5 +1,5 @@
 import { StorageServiceActual } from 'fusion/storage/management/StorageService';
-import { parsePametMediaUrl } from "@/storage/storage-utils";
+import { parsePametFileUrl } from "@/storage/storage-utils";
 import { setupServiceWorker } from 'fusion/storage/management/service-worker-utils';
 
 import { getLogger } from 'fusion/logging';
@@ -10,6 +10,6 @@ getLogger('service-worker');
 // Register entity classes in service worker context
 registerEntityClasses();
 
-let storageService = new StorageServiceActual(parsePametMediaUrl);
-storageService.setupMediaRequestInterception();
+let storageService = new StorageServiceActual(parsePametFileUrl);
+storageService.setupFileRequestInterception();
 setupServiceWorker(storageService);

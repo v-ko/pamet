@@ -15,11 +15,12 @@ import { NoteViewState } from "@/components/note/NoteViewState";
 import { Arrow } from "@/model/Arrow";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { Page } from "@/model/Page";
-import { MediaItem } from "fusion/model/MediaItem";
+import { ImageItem } from "fusion/model/ImageItem";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { WebAppState } from "@/containers/app/WebAppState";
+import { FileItem } from "fusion/model/FileItem";
 
 
 let log = getLogger('MapActions');
@@ -313,7 +314,7 @@ class PageActions {
   }
 
   @action
-  saveEditedNote(state: PageViewState, note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) {
+  saveEditedNote(state: PageViewState, note: Note, addedFileItem: FileItem | null, removedFileItem: FileItem | null) {
     const editWS = state.noteEditWindowState;
     if (!editWS) {
       throw new Error('saveEditedNote called without noteEditWindowState');
@@ -324,10 +325,10 @@ class PageActions {
       throw new Error('No project loaded');
     }
 
-    if (removedMediaItem) {
-      // If an existing media item was removed, just remove the entity.
+    if (removedFileItem) {
+      // If an existing file item was removed, just remove the entity.
       // Storage commit-time automation will move the blob to trash.
-      pamet.removeOne(removedMediaItem);
+      pamet.removeOne(removedFileItem);
     }
 
     // Save the note
@@ -344,9 +345,9 @@ class PageActions {
       pamet.updateNote(note);
     }
 
-    // Handle media item changes
-    if (addedMediaItem) {
-      pamet.insertOne(addedMediaItem);
+    // Handle file item changes
+    if (addedFileItem) {
+      pamet.insertOne(addedFileItem);
     }
 
     state.noteEditWindowState = null;
@@ -425,7 +426,7 @@ class PageActions {
     // add them for removal too
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
-    let mediaItemsForTrashing: MediaItem[] = [];
+    let fileItemsForTrashing: FileItem[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
     let pageId: string = elements[0].parentId;
 
@@ -434,13 +435,13 @@ class PageActions {
         notesForRemoval.push(element)
         noteIds.add(element.id)
 
-        // Mark media for trashing if the note has an image
+        // Mark file item for trashing if the note has an attached file
         if (element instanceof CardNote && element.content.image_id) {  // Should catch both card notes and image notes
-          let mediaItem = pamet.mediaItem(element.content.image_id!);
-          if (mediaItem) {
-            mediaItemsForTrashing.push(mediaItem);
+          let fileItem = pamet.imageItem(element.content.image_id!);
+          if (fileItem) {
+            fileItemsForTrashing.push(fileItem);
           } else {
-            log.warning(`Note with id ${element.id} and image_id ${element.content.image_id} has no media item associated.`);
+            log.warning(`Note with id ${element.id} and image_id ${element.content.image_id} has no file item associated.`);
           }
         }
       } else if (element instanceof Arrow) {
@@ -473,9 +474,9 @@ class PageActions {
       pamet.removeArrow(arrow);
     }
 
-    // Remove media entities; storage commit-time automation will move blobs to trash
-    for (let mediaItem of mediaItemsForTrashing) {
-      pamet.removeOne(mediaItem);
+    // Remove file item entities; storage commit-time automation will move blobs to trash
+    for (let fileItem of fileItemsForTrashing) {
+      pamet.removeOne(fileItem);
     }
     this.clearSelection(state);
   }
@@ -535,10 +536,10 @@ class PageActions {
   }
 
   @action({ issuer: 'paste-special-procedure' })
-  pasteSpecialAddElements(notes: Note[], mediaItems: MediaItem[]) {
-    // Add new media items via facade
-    for (let mediaItem of mediaItems) {
-      pamet.insertOne(mediaItem);
+  pasteSpecialAddElements(notes: Note[], fileItems: FileItem[]) {
+    // Add new file items via facade
+    for (let fileItem of fileItems) {
+      pamet.insertOne(fileItem);
     }
 
     // Add new notes via facade
@@ -553,20 +554,20 @@ class PageActions {
     state: PageViewState,
     notes: Note[],
     arrows: Arrow[],
-    mediaItems: MediaItem[]) {
+    fileItems: FileItem[]) {
 
     for (let note of notes) {
       pamet.insertNote(note);
     }
-    for (let mediaItem of mediaItems) {
-      pamet.insertOne(mediaItem);
+    for (let fileItem of fileItems) {
+      pamet.insertOne(fileItem);
     }
     for (let arrow of arrows) {
       pamet.insertArrow(arrow);
     }
     // Clear the clipboard after pasting
     // appState.clipboard = [];
-    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows and', mediaItems.length, 'media items');
+    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows and', fileItems.length, 'file items');
     // Clear selection
     this.clearSelection(state);
   }
@@ -577,11 +578,11 @@ class PageActions {
     state: PageViewState,
     notes: Note[],
     arrows: Arrow[],
-    mediaItems: MediaItem[]
+    fileItems: FileItem[]
   ) {
-    // Remove media entities from the domain store (blob is already moved to trash by the procedure)
-    for (let mediaItem of mediaItems) {
-      pamet.removeOne(mediaItem);
+    // Remove file entities from the domain store (blob is already moved to trash by the procedure)
+    for (let fileItem of fileItems) {
+      pamet.removeOne(fileItem);
     }
     // Remove arrows
     for (let arrow of arrows) {
@@ -593,7 +594,7 @@ class PageActions {
     }
     // Clear selection after cut
     this.clearSelection(state);
-    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows, ${mediaItems.length} media items`);
+    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows, ${fileItems.length} file items`);
   }
 
   @action({ issuer: 'service', name: UNDO_ACTION_NAME })
@@ -626,7 +627,7 @@ class PageActions {
       return;
     }
 
-    const clipboardEntities: (Note | Arrow | MediaItem)[] = [];
+    const clipboardEntities: (Note | Arrow | ImageItem)[] = [];
 
     // Clone and transform notes to relative coordinates
     for (const note of selectedNotes) {
@@ -664,14 +665,14 @@ class PageActions {
       clipboardEntities.push(cloned);
     }
 
-    // Include associated MediaItems for image notes (1-1 with notes; no dedup required)
+    // Include associated file items for image notes (1-1 with notes; no dedup required)
     for (const note of selectedNotes) {
       if (note instanceof CardNote && note.content.image_id) {
-        const mediaItem = pamet.mediaItem(note.content.image_id);
-        if (mediaItem) {
-          clipboardEntities.push(mediaItem);
+        const imageItem = pamet.imageItem(note.content.image_id);
+        if (imageItem) {
+          clipboardEntities.push(imageItem);
         } else {
-          log.warning(`Media item ${note.content.image_id} not found for note ${note.id}`);
+          log.warning(`Image item ${note.content.image_id} not found for note ${note.id}`);
         }
       }
     }
