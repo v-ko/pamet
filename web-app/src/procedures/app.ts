@@ -122,33 +122,26 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         taskProgress: -1,
     });
 
-    // Remove from config which will signal the other tabs to unload the project
-    pamet.config.removeProject(project.id);
+    try {
+        // Remove from config which will signal the other tabs to unload the project
+        pamet.config.removeProject(project.id);
 
-    await pamet.storageService.deleteProject(
-        project.id,
-        pamet.projectStorageConfig(project.id)
-    )
-    // auto-creation is handled in auto-assist i think
-    // // If there's no projects left, create a default one
-    // if (pamet.projects().length === 0) {
-    //     log.info("No projects left - creating a default one");
-    //     appActions.updateSystemDialogState(pamet.appViewState, {
-    //         title: 'Creating default project...',
-    //         taskProgress: 100,
-    //     });
-    //     let newProject = await createDefaultProject();
-    //     await switchToProject(newProject.id);
-    // }
+        await pamet.storageService.deleteProject(
+            project.id,
+            pamet.projectStorageConfig(project.id)
+        )
 
-    // If the current project is null (i.e. we've deleted the current project)
-    // Use the auto-assist to switch to the first project in the list
-    // and create default page if needed, etc
-    if (pamet.appViewState.currentProjectId === null) {
-        await updateAppFromRouteOrAutoassist(new PametRoute());
+        // If the current project is null (i.e. we've deleted the current project)
+        // Use the auto-assist to switch to the first project in the list
+        // and create default page if needed, etc
+        if (pamet.appViewState.currentProjectId === null) {
+            await updateAppFromRouteOrAutoassist(new PametRoute());
+        }
+
+        log.info("Project deletion procedure completed");
+    } finally {
+        appActions.updateSystemDialogState(pamet.appViewState, null);
     }
-
-    log.info("Project deletion procedure completed");
 }
 
 

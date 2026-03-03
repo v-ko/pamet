@@ -445,20 +445,16 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             }
         }
 
-        // Process image item changes (parent is Page)
+        // Process image item changes
         const imageItem = pamet.imageItem(change.entityId);
         if (imageItem) {
             if (change.isDelete()) {
-                // Remove the image item from the view state
                 currentPageVS.fileUrlsByItemId.delete(imageItem.id);
             } else {
-                // On create/update: reflect only image items whose parent is the current page
-                if (imageItem.parentId === currentPageId) {
-                    currentPageVS.addUrlForFileItem(imageItem);
-                } else {
-                    // If it moved away from this page, ensure it's not shown here
-                    currentPageVS.fileUrlsByItemId.delete(imageItem.id);
-                }
+                // On create/update: always register the URL so notes on the
+                // current page can reference it (ImageItems are root-level
+                // entities, not children of pages).
+                currentPageVS.addUrlForFileItem(imageItem);
             }
         }
     }

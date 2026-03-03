@@ -314,7 +314,7 @@ class PageActions {
   }
 
   @action
-  saveEditedNote(state: PageViewState, note: Note, addedFileItem: FileItem | null, removedFileItem: FileItem | null) {
+  saveEditedNote(state: PageViewState, note: Note, addedFileItem: FileItem | null) {
     const editWS = state.noteEditWindowState;
     if (!editWS) {
       throw new Error('saveEditedNote called without noteEditWindowState');
@@ -325,11 +325,8 @@ class PageActions {
       throw new Error('No project loaded');
     }
 
-    if (removedFileItem) {
-      // If an existing file item was removed, just remove the entity.
-      // Storage commit-time automation will move the blob to trash.
-      pamet.removeOne(removedFileItem);
-    }
+    // FileItems are NOT removed when an image is replaced on a note — they are
+    // project-level entities that may be referenced by other notes.
 
     // Save the note
     if (editWS.creatingNote) {
@@ -426,7 +423,6 @@ class PageActions {
     // add them for removal too
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
-    let fileItemsForTrashing: FileItem[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
     let pageId: string = elements[0].parentId;
 
@@ -434,16 +430,6 @@ class PageActions {
       if (element instanceof Note) {
         notesForRemoval.push(element)
         noteIds.add(element.id)
-
-        // Mark file item for trashing if the note has an attached file
-        if (element instanceof CardNote && element.content.image_id) {  // Should catch both card notes and image notes
-          let fileItem = pamet.imageItem(element.content.image_id!);
-          if (fileItem) {
-            fileItemsForTrashing.push(fileItem);
-          } else {
-            log.warning(`Note with id ${element.id} and image_id ${element.content.image_id} has no file item associated.`);
-          }
-        }
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }
@@ -474,10 +460,8 @@ class PageActions {
       pamet.removeArrow(arrow);
     }
 
-    // Remove file item entities; storage commit-time automation will move blobs to trash
-    for (let fileItem of fileItemsForTrashing) {
-      pamet.removeOne(fileItem);
-    }
+    // FileItems are NOT removed when notes are deleted — they are project-level
+    // entities that may be referenced by other notes. Orphan cleanup is a TODO.
     this.clearSelection(state);
   }
 
@@ -554,20 +538,19 @@ class PageActions {
     state: PageViewState,
     notes: Note[],
     arrows: Arrow[],
-    fileItems: FileItem[]) {
+    fileItems: FileItem[] = []) {
 
-    for (let note of notes) {
-      pamet.insertNote(note);
-    }
+    // Insert new FileItems (e.g. from cross-project paste) into the domain store
     for (let fileItem of fileItems) {
       pamet.insertOne(fileItem);
+    }
+    for (let note of notes) {
+      pamet.insertNote(note);
     }
     for (let arrow of arrows) {
       pamet.insertArrow(arrow);
     }
-    // Clear the clipboard after pasting
-    // appState.clipboard = [];
-    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows and', fileItems.length, 'file items');
+    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows,', fileItems.length, 'file items');
     // Clear selection
     this.clearSelection(state);
   }
@@ -577,13 +560,8 @@ class PageActions {
     appState: WebAppState,
     state: PageViewState,
     notes: Note[],
-    arrows: Arrow[],
-    fileItems: FileItem[]
+    arrows: Arrow[]
   ) {
-    // Remove file entities from the domain store (blob is already moved to trash by the procedure)
-    for (let fileItem of fileItems) {
-      pamet.removeOne(fileItem);
-    }
     // Remove arrows
     for (let arrow of arrows) {
       pamet.removeArrow(arrow);
@@ -592,9 +570,12 @@ class PageActions {
     for (let note of notes) {
       pamet.removeNote(note);
     }
+    // FileItems are NOT removed on cut — they are project-level entities.
+    // The clipboard holds references for paste; the FileItem stays in the store.
+
     // Clear selection after cut
     this.clearSelection(state);
-    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows, ${fileItems.length} file items`);
+    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows`);
   }
 
   @action({ issuer: 'service', name: UNDO_ACTION_NAME })
@@ -624,6 +605,7 @@ class PageActions {
     if (selectedNotes.length === 0) {
       log.warning('copySelectedElements called with no selected notes');
       appState.clipboard = [];
+      appState.clipboardProjectId = null;
       return;
     }
 
@@ -678,6 +660,7 @@ class PageActions {
     }
 
     appState.clipboard = clipboardEntities;
+    appState.clipboardProjectId = appState.currentProjectId;
     log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
   }
 

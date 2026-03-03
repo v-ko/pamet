@@ -194,9 +194,9 @@ export class DesktopImporter extends BaseApiClient {
                 }
                 delete elementData.mid_point_coords;
 
-                // Convert style properties
+                // Convert style properties (carry over color_role set by the generic migration above)
                 elementData.style = {
-                    // color_role: old_color_to_role(elementData.color), // done above
+                    color_role: elementData.style.color_role,
                     line_type: elementData.line_type || 'solid',
                     thickness: elementData.line_thickness || 1,
                     line_function: elementData.line_function_name || 'bezier_cubic',
@@ -302,7 +302,12 @@ export class DesktopImporter extends BaseApiClient {
             try {
                 const blob = await this.getBlob(blobUrl);
                 const { width, height } = await extractImageDimensions(blob);
-                imageItem = await pamet.addFileToStore(blob, fsPath, imageData.id, { width, height });
+                const currentProjectId = pamet.appViewState.currentProjectId;
+                if (!currentProjectId) {
+                    throw new Error('No current project set during desktop import');
+                }
+                // parentId is '' — FileItems are root-level entities
+                imageItem = await pamet.addFileToStore(blob, fsPath, '', { width, height, size: blob.size, mimeType: blob.type });
             } catch (e) {
                 log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);
                 continue

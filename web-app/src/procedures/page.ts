@@ -22,22 +22,17 @@ import { PageViewState } from "@/components/page/PageViewState";
 
 const log = getLogger('PageProcedures');
 
-type MediaOp =
-  | { type: 'restore'; media: ImageItem; newParentId: string }
-  | { type: 'duplicate'; media: ImageItem; newParentId: string };
-
 function preparePasteTransform(appState: WebAppState, state: PageViewState, relativeTo: Point2D) {
     const clipboard = appState.clipboard;
     const pageId = state.page().id;
 
-    // Split clipboard content by type
+    // Split clipboard content by type (ImageItems on clipboard are ignored —
+    // FileItems are project-level and already in the store; notes just keep their image_id)
     const clipboardNotes: Note[] = [];
     const clipboardArrows: Arrow[] = [];
-    const clipboardMedia: ImageItem[] = [];
     for (const e of clipboard) {
       if (e instanceof Note) clipboardNotes.push(e);
       else if (e instanceof Arrow) clipboardArrows.push(e);
-      else if (e instanceof ImageItem) clipboardMedia.push(e);
     }
 
     // Build id remap tables (preserve ids when no collision)
@@ -52,7 +47,8 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
     // Compute snapped paste offset once
     const pasteOffset = util.snapVectorToGrid(relativeTo);
 
-    // Notes: assign ids/parent, position
+    // Notes: assign ids/parent, position.
+    // image_id references are preserved — the pasted note points to the same FileItem.
     const notesToInsert: Note[] = [];
     for (const src of clipboardNotes) {
       const targetId = nextFreeIdOrSame(src.id);
@@ -109,33 +105,7 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
       arrowsToInsert.push(arrow);
     }
 
-    // Media operations plan:
-    // For each CardNote in clipboard with an image_id, decide whether to restore (if the media
-    // is not present in the FDS → it was cut) or duplicate (if present → it was copied).
-    const mediaIndexById = new Map<string, ImageItem>();
-    for (const m of clipboardMedia) mediaIndexById.set(m.id, m);
-
-    const mediaOps: MediaOp[] = [];
-    for (const srcNote of clipboardNotes) {
-      if (srcNote instanceof CardNote && srcNote.content.image_id) {
-        const media = mediaIndexById.get(srcNote.content.image_id);
-        const newParentId = noteIdMap.get(srcNote.id) || srcNote.id;
-        if (!media) {
-          log.warning('Clipboard media for note not found; will drop image ref on paste', srcNote.id, srcNote.content.image_id);
-          continue;
-        }
-        const mediaStillInFDS = !!pamet.findOne({ id: media.id });
-        if (mediaStillInFDS) {
-          mediaOps.push({ type: 'duplicate', media, newParentId });
-        } else {
-          mediaOps.push({ type: 'restore', media, newParentId });
-        }
-      }
-    }
-
-    // Return transformed entities and media ops plan
-    // @ts-ignore
-    return { notesToInsert, arrowsToInsert, mediaOps };
+    return { notesToInsert, arrowsToInsert };
   }
 
 export async function pasteInternal(
@@ -149,50 +119,76 @@ export async function pasteInternal(
         return;
     }
 
-    // Prepare transformed notes/arrows and a media ops plan
-    const { notesToInsert, arrowsToInsert, mediaOps } = preparePasteTransform(appState, state, relativeTo);
+    // Prepare transformed notes/arrows (FileItems are shared — notes keep their image_id)
+    const { notesToInsert, arrowsToInsert } = preparePasteTransform(appState, state, relativeTo);
 
-    const mediaToInsert: ImageItem[] = [];
-    const newMediaIdByNewNoteId = new Map<string, string>(); // newNoteId -> newMediaId
-
-    const currentProjectId = pamet.appViewState.currentProjectId;
-    if (!currentProjectId) {
-        throw new Error('No current project set for pasteInternal');
-    }
-
-    // Execute file plan: ensure blobs are present by duplicating or restoring
-    for (const op of mediaOps as MediaOp[]) {
-        if (op.type === 'duplicate') {
-            const ts = generateFilenameTimestamp();
-            const ext = mapMimeTypeToFileExtension(op.media.mimeType);
-            const imagePath = `images/pasted_image-${ts}.${ext}`;
-
-            // Fetch original blob and create a brand-new file item under this page
-            const srcBlob = await pamet.storageService.getFile(currentProjectId, op.media.id, op.media.contentHash);
-            const created = await pamet.addFileToStore(srcBlob, imagePath, state.page().id, { width: op.media.width, height: op.media.height });
-
-            mediaToInsert.push(created);
-            newMediaIdByNewNoteId.set(op.newParentId, created.id);
-        } else if (op.type === 'restore') {  // Is restored by the file service automatically at commit time
-            mediaToInsert.push(op.media);
-            newMediaIdByNewNoteId.set(op.newParentId, op.media.id);
+    // Cross-project paste: if clipboard came from a different project,
+    // copy blobs into the current project and remap image_ids on pasted notes.
+    const currentProjectId = appState.currentProjectId;
+    const sourceProjectId = appState.clipboardProjectId;
+    const newImageItems: ImageItem[] = [];
+    if (currentProjectId && sourceProjectId && sourceProjectId !== currentProjectId) {
+        // Collect ImageItems from clipboard for lookup
+        const clipboardImageItems = new Map<string, ImageItem>();
+        for (const e of clipboard) {
+            if (e instanceof ImageItem) {
+                clipboardImageItems.set(e.id, e);
+            }
         }
-    }
 
-    // Update notes to point to their new media ids (if any)
-    for (const note of notesToInsert) {
-        if (note instanceof CardNote) {
-            const mappedMediaId = newMediaIdByNewNoteId.get(note.id);
-            if (mappedMediaId) {
-                note.content.image_id = mappedMediaId;
-            } else if (note.content.image_id) {
-                delete (note as any)._data.content.image_id;
+        if (clipboardImageItems.size > 0) {
+            // Show loading dialog for cross-project file copy
+            appActions.updateSystemDialogState(appState, {
+                title: 'Copying files from source project...',
+            });
+
+            const sourceConfig = pamet.projectStorageConfig(sourceProjectId);
+            try {
+                // Temporarily load the source project for file access
+                await pamet.storageService.loadProject(sourceProjectId, sourceConfig);
+
+                const imageIdRemap = new Map<string, string>(); // old image_id -> new image_id
+                for (const note of notesToInsert) {
+                    if (note instanceof CardNote && note.content.image_id) {
+                        const oldImageId = note.content.image_id;
+                        if (imageIdRemap.has(oldImageId)) {
+                            note.content.image_id = imageIdRemap.get(oldImageId)!;
+                            continue;
+                        }
+                        const sourceImageItem = clipboardImageItems.get(oldImageId);
+                        if (!sourceImageItem) {
+                            log.warning(`Cross-project paste: ImageItem ${oldImageId} not on clipboard`);
+                            continue;
+                        }
+                        try {
+                            const blob = await pamet.storageService.getFile(
+                                sourceProjectId, sourceImageItem.id, sourceImageItem.contentHash
+                            );
+                            const newImageItem = await pamet.addFileToStore(
+                                blob, sourceImageItem.path, '',
+                                { width: sourceImageItem.width, height: sourceImageItem.height, size: blob.size, mimeType: blob.type }
+                            );
+                            imageIdRemap.set(oldImageId, newImageItem.id);
+                            note.content.image_id = newImageItem.id;
+                            newImageItems.push(newImageItem);
+                            log.info(`Cross-project paste: remapped image ${oldImageId} -> ${newImageItem.id}`);
+                        } catch (err) {
+                            log.error(`Cross-project paste: failed to copy file for image ${oldImageId}`, err);
+                        }
+                    }
+                }
+            } finally {
+                // Unload only if it was successfully loaded (ref count > 0)
+                await pamet.storageService.unloadProject(sourceProjectId).catch(
+                    (e) => log.error('Error unloading source project after paste', e)
+                );
+                appActions.updateSystemDialogState(appState, null);
             }
         }
     }
 
     // Insert via action to update FDS and View state in one place
-    pageActions.pasteInternalAddElements(appState, state, notesToInsert, arrowsToInsert, mediaToInsert);
+    pageActions.pasteInternalAddElements(appState, state, notesToInsert, arrowsToInsert, newImageItems);
 }
 
 /**
@@ -235,7 +231,11 @@ export async function pasteInternal(
         const imagePath = `images/pasted_image-${timestamp}.${extension}`;
 
         note = CardNote.createNew({pageId: pageId});
-        const imageItem = await pamet.addFileToStore(finalImageBlob, imagePath, pageId, { width, height });
+        const currentProjectId = pamet.appViewState.currentProjectId;
+        if (!currentProjectId) {
+            throw new Error('No current project set when pasting image');
+        }
+        const imageItem = await pamet.addFileToStore(finalImageBlob, imagePath, '', { width, height, size: finalImageBlob.size, mimeType: finalImageBlob.type });
         note.content.image_id = imageItem.id;
 
         // Configure note position and size
@@ -340,6 +340,7 @@ export async function cutInternal(
     if (selectedNotes.length === 0 && selectedArrowsDirect.length === 0) {
         log.warning('cutInternal called with no selected elements');
         appState.clipboard = [];
+        appState.clipboardProjectId = null;
         return;
     }
 
@@ -393,8 +394,7 @@ export async function cutInternal(
         clipboardEntities.push(cloned);
     }
 
-    // 2) Collect associated image items for clipboard and schedule entity removal (blob handling is backend-managed)
-    const mediaToRemove: ImageItem[] = [];
+    // 2) Collect associated image items for clipboard reference (for display/re-reference on paste)
     for (const note of selectedNotes) {
         if (note instanceof CardNote && note.content.image_id) {
             const imageItem = pamet.imageItem(note.content.image_id);
@@ -402,13 +402,13 @@ export async function cutInternal(
                 log.warning(`Cut: image item ${note.content.image_id} not found for note ${note.id}`);
                 continue;
             }
-            clipboardEntities.push(imageItem); // Keep metadata on clipboard
-            mediaToRemove.push(imageItem);     // Remove entity via action; storage will trash blob on commit
+            clipboardEntities.push(imageItem); // Keep metadata on clipboard for reference
         }
     }
 
     // Place payload on internal clipboard
     appState.clipboard = clipboardEntities;
+    appState.clipboardProjectId = appState.currentProjectId;
 
     // 3) Compute elements to remove from the document
     // Notes: exactly the selected notes
@@ -429,6 +429,6 @@ export async function cutInternal(
         }
     }
 
-    // 4) Apply removals via sync action (does not touch media blobs; media already moved to trash)
-    pageActions.cutRemoveElements(appState as any, state, notesForRemoval, arrowsForRemoval, mediaToRemove as any);
+    // 4) Apply removals — only notes and arrows. FileItems are project-level and kept intact.
+    pageActions.cutRemoveElements(appState as any, state, notesForRemoval, arrowsForRemoval);
 }

@@ -47,7 +47,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   const noteData = useRef(dumpToDict(state.targetNote) as SerializedNote);
   const committed = useRef(false);
   const [uncommitedImage, setUncommitedImage] = useState<ImageItemData | null>(null);
-  const [originalImageForTrashing, setOriginalImageForTrashing] = useState<ImageItemData | null>(null);
 
   // Initial toggle button positions
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
@@ -141,7 +140,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         const projectId = pamet.appViewState.currentProjectId;
         if (projectId) {
           log.info('Cleaning up uncommitted image item on unmount:', uncommitedImage);
-          pamet.storageService.removeFile(projectId, uncommitedImage.id, uncommitedImage.contentHash)
+          pamet.storageService.removeFile(projectId, uncommitedImage.id, uncommitedImage.content.hash)
             .catch(err => log.error('Failed to clean up image item', err));
         }
       }
@@ -159,21 +158,15 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-    // If there is an image associated with the note and it wasn't yet deleted
-    let originalMediaItem: ImageItem | undefined;
-    if (!originalImageForTrashing && state.targetNote.content.image_id) {
-      originalMediaItem = pamet.imageItem(currentImageId);
-      if (!originalMediaItem) {
-        throw new Error("Original media item not found for the image.");
-      }
-      setOriginalImageForTrashing(originalMediaItem.data());
-    } else if (uncommitedImage) {
-      // If there is an original image for trashing, then the current image has
-      // been added in this editing session
-      // If removing an image added in the editing session - delete it from the
-      //store permanently.  Get the set media item from the state
-      await pamet.deleteFileFromStore(new ImageItem(uncommitedImage))
+    if (uncommitedImage) {
+      // The current image was added during this editing session and never saved.
+      // Delete it from the store permanently since it was never committed.
+      await pamet.deleteFileFromStore(new ImageItem(uncommitedImage));
+      setUncommitedImage(null);
     }
+    // If it's a previously saved image — we just clear the reference from the note.
+    // The FileItem entity is NOT deleted — it's project-level and may be referenced
+    // by other notes. Orphan cleanup is a TODO.
 
     // Clear the image from the note data state
     updateNoteData({ content: { ...noteData.current.content, image_id: undefined } });
@@ -206,7 +199,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       blob,
       path,
       state.targetNote.parentId,
-      { width, height }
+      { width, height, size: blob.size, mimeType: blob.type }
     );
 
     const newImageItem = await Promise.race([addFilePromise, timeoutPromise]) as ImageItemData;
@@ -258,17 +251,15 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     let note = loadFromDict(data) as Note;
     committed.current = true;
     const addedMediaItem = uncommitedImage ? new ImageItem(uncommitedImage) : null;
-    const removedMediaItem = originalImageForTrashing ? new ImageItem(originalImageForTrashing) : null;
 
     let currentPageVS = pamet.appViewState.currentPageViewState;
     if (!currentPageVS) {
       throw new Error('No current page view state found');
     }
-    pageActions.saveEditedNote(currentPageVS, note, addedMediaItem, removedMediaItem);
+    pageActions.saveEditedNote(currentPageVS, note, addedMediaItem);
 
     // On successful save, the media items are committed. Clear the state.
     setUncommitedImage(null);
-    setOriginalImageForTrashing(null);
   };
 
   // Cancel and save operations

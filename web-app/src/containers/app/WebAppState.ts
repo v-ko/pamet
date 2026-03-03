@@ -70,6 +70,8 @@ export class WebAppState {
 
   // Internal clipboard for copy/cut/paste (entities stored with relative coordinates)
   clipboard: (Note | Arrow | ImageItem)[] = [];
+  // The project ID the clipboard entities originate from (for cross-project paste)
+  clipboardProjectId: string | null = null;
 
   constructor(options: { userId: string }) {
     this.userId = options.userId;
@@ -88,6 +90,7 @@ export class WebAppState {
       localSearchViewState: observable,
       globalSearchViewState: observable,
       clipboard: observable,
+      clipboardProjectId: observable,
     });
   }
 
