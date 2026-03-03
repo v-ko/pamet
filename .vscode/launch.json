@@ -72,7 +72,7 @@
         //     "justMyCode": true
         // },
         {
-            "name": "Web front server",
+            "name": "Frontend:webapp vite",
             "type": "node",
             "request": "launch",
             "cwd": "${workspaceFolder}",
@@ -93,7 +93,7 @@
                 "run",
                 "dev:desktop"
             ],
-            "console": "integratedTerminal",
+            "console": "integratedTerminal"
         },
         {
             "name": "Web Debugger",
