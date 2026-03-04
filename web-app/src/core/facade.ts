@@ -3,7 +3,6 @@ import { getLogger } from 'fusion/logging';
 import { Change } from "fusion/model/Change";
 import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
-import { appActions } from "@/actions/app";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { ImageItem } from "fusion/model/ImageItem";
@@ -25,12 +24,20 @@ import { RenderProfiler } from "@/core/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { SearchService } from "@/services/SearchService";
 import { AnimationService } from "@/services/AnimationService";
+import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
+import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
+import { StorageConnectionPhase } from "fusion/storage/management/StorageService";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
 
 // Make that more specific as the API clears up
 export interface PageQueryFilter { [key: string]: any }
+
+export interface StorageStatusIconSet {
+    healthyIconUrl: string;
+    failedIconUrl: string;
+}
 
 
 
@@ -75,6 +82,10 @@ export class PametFacade extends PametStore {
     context: any = {};
     _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
     _entityProblemCounts: Map<string, number> = new Map();
+    private _storageStatusIconSet: StorageStatusIconSet = {
+        healthyIconUrl: folderWarningIconUrl,
+        failedIconUrl: folderCloseIconUrl,
+    };
     debug = true;
     debugPaintOperations = false;
     renderProfiler = new RenderProfiler();
@@ -171,6 +182,21 @@ export class PametFacade extends PametStore {
         this._storageService = storageService;
     }
 
+    setStorageStatusIconSet(iconSet: StorageStatusIconSet) {
+        this._storageStatusIconSet = iconSet;
+    }
+
+    get storageStatusIconSet(): StorageStatusIconSet {
+        return this._storageStatusIconSet;
+    }
+
+    getStorageStatusIconUrl(connectionPhase: StorageConnectionPhase): string {
+        if (connectionPhase === 'disconnected' || connectionPhase === 'fatal') {
+            return this._storageStatusIconSet.failedIconUrl;
+        }
+        return this._storageStatusIconSet.healthyIconUrl;
+    }
+
 
     // UI related
     setKeybindings(keybindings: Keybinding[]) {
@@ -218,12 +244,12 @@ export class PametFacade extends PametStore {
     async attachProjectAsCurrent(projectId: string) {
         // Reset undo histories when switching projects
         this.undoService.clearAll();
-        pamet._frontendDomainStore = new FrontendDomainStore()
+        const frontendDomainStore = new FrontendDomainStore();
 
         // Load the new project and connect it to the Frontend domain store
         let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
             // This handler will be called whenever the repo is updated
-            pamet.frontendDomainStore!.receiveRepoUpdate(repoUpdate)
+            frontendDomainStore.receiveRepoUpdate(repoUpdate)
         }
         try {
             await pamet.storageService.loadProject(
@@ -231,7 +257,10 @@ export class PametFacade extends PametStore {
 
         } catch (e) {
             log.error('Error loading project', e);
+            throw e;
         }
+
+        pamet._frontendDomainStore = frontendDomainStore
 
         // Initialize the FDS from the storage service
         const storageConfig = pamet.projectStorageConfig(projectId);
@@ -241,8 +270,6 @@ export class PametFacade extends PametStore {
         const allNotes = Array.from(this.notes());
         const allPages = Array.from(this.pages());
         await this.searchService.initializeIndices(allNotes, allPages);
-
-        appActions.setLocalStorageState(this.appViewState, { available: true });
     }
 
     async detachFromProject(projectId: string) {
@@ -256,9 +283,6 @@ export class PametFacade extends PametStore {
             log.error('Error getting current project', e);
             return;
         }
-
-        // Mark the local storage as unavailable
-        appActions.setLocalStorageState(pamet.appViewState, { available: false });
 
         this._frontendDomainStore = null;
         await this.storageService.unloadProject(currentProject.id).catch(
@@ -343,8 +367,8 @@ export class PametFacade extends PametStore {
         await this.storageService.removeFile(currentProjectId, imageItem.id, imageItem.contentHash);
     }
 
-    applyDelta(delta: Delta): void {
-        this.frontendDomainStore.applyDelta(delta); // The viewModel reducer is aplied when the CRUD calls are made for each change in the delta
+    applyDelta(delta: Delta, skipIrrationalOperations: boolean = false): Delta {
+        return this.frontendDomainStore.applyDelta(delta, skipIrrationalOperations); // The viewModel reducer is aplied when the CRUD calls are made for each change in the delta
     }
 }
 

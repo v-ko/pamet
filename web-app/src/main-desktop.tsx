@@ -8,11 +8,14 @@ import { pamet } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
 import { updateAppFromRouteOrAutoassist, updateAppStateFromConfig } from "@/procedures/app";
+import { appActions } from "@/actions/app";
 
 import { DesktopPametConfigService } from "@/services/config/Config";
 import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
 
 import WebApp from "@/containers/app/App";
+import folderCheckIconUrl from "@/resources/icons/folder-check-line.svg";
+import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { FileStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
@@ -90,6 +93,10 @@ function desktopStorageConfigFactory(projectId: string): ProjectStorageConfig {
 }
 
 pamet.setProjectStorageConfigFactory(desktopStorageConfigFactory);
+pamet.setStorageStatusIconSet({
+    healthyIconUrl: folderCheckIconUrl,
+    failedIconUrl: folderCloseIconUrl,
+});
 
 // Initialize the desktop app
 async function initializeDesktopApp() {
@@ -148,11 +155,14 @@ async function initializeDesktopApp() {
     });
 
     // Init storage service
+    let storageService = new StorageService();
+    storageService.setStateChangeHandler((nextState) => {
+        appActions.setStorageServiceState(appState, nextState);
+    });
+    pamet.setStorageService(storageService);
     try {
         log.info("Initializing storage service in desktop mode...");
-        let storageService = new StorageService();
         await storageService.setupInServiceWorker(serviceWorkerUrl);
-        pamet.setStorageService(storageService);
         log.info("Storage service initialized in desktop mode");
     } catch (e) {
         log.error("Failed to initialize storage service", e);

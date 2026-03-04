@@ -8,11 +8,14 @@ import { pamet } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
 import { updateAppFromRouteOrAutoassist, updateAppStateFromConfig } from "@/procedures/app";
+import { appActions } from "@/actions/app";
 
 import { PametKeyValueStorageService } from "@/services/config/Config";
 import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
 
 import WebApp from "@/containers/app/App";
+import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
+import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { FileStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
@@ -60,6 +63,10 @@ function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
 }
 
 pamet.setProjectStorageConfigFactory(webStorageConfigFactory);
+pamet.setStorageStatusIconSet({
+    healthyIconUrl: folderWarningIconUrl,
+    failedIconUrl: folderCloseIconUrl,
+});
 
 // Initialize the web app
 async function initializeWebApp() {
@@ -113,11 +120,18 @@ async function initializeWebApp() {
     });
 
     // Init storage service
+    let storageService = new StorageService();
+    storageService.setStateChangeHandler((nextState) => {
+        appActions.setStorageServiceState(appState, nextState);
+    });
+    pamet.setStorageService(storageService);
     try {
         log.info("Initializing storage service in web mode...");
-        let storageService = new StorageService();
-        await storageService.setupInServiceWorker(serviceWorkerUrl);
-        pamet.setStorageService(storageService);
+        if ('serviceWorker' in navigator) {
+            await storageService.setupInServiceWorker(serviceWorkerUrl);
+        } else {
+            storageService.setupInMainThread();
+        }
         log.info("Storage service initialized in web mode");
     } catch (e) {
         log.error("Failed to initialize storage service", e);

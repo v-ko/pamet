@@ -15,7 +15,7 @@ import { LOCAL_USER_ID } from "@/core/constants";
 const log = getLogger('AppProcedures');
 
 
-let projectSwithLock = false;
+let projectSwitchInFlight: Promise<void> | null = null;
 
 export async function switchToProject(projectId: string | null): Promise<void> {
     // A procedure to switch the storage backend to a new project. This
@@ -26,67 +26,73 @@ export async function switchToProject(projectId: string | null): Promise<void> {
     // Swap out the frontend domain store (+ initial state) and connect it
     // to the latter (for auto-save, etc.)
 
-    if (projectSwithLock) {
+    if (projectSwitchInFlight) {
         log.error('Project switch already in progress');
-        return;
+        return projectSwitchInFlight;
     }
-    projectSwithLock = true;
-    log.info('Switching to project', projectId);
+    projectSwitchInFlight = (async () => {
+        log.info('Switching to project', projectId);
 
-    const appState = pamet.appViewState;
-    appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
-    // await new Promise(resolve => setTimeout(resolve, 50)); // Simulate delay
+        const appState = pamet.appViewState;
+        appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
+        // await new Promise(resolve => setTimeout(resolve, 50)); // Simulate delay
 
-    let currentProjectId = pamet.appViewState.currentProjectId;
-    let idsMatch = currentProjectId === projectId;
+        let currentProjectId = pamet.appViewState.currentProjectId;
+        let idsMatch = currentProjectId === projectId;
 
-    // Setup the logic as flags
+        // Setup the logic as flags
 
-    // If there's an FDS setup, and it's not the same as the one we're switching
-    // to - detach it
-    let shouldDetach = !!currentProjectId && !idsMatch;
+        // If there's an FDS setup, and it's not the same as the one we're switching
+        // to - detach it
+        let shouldDetach = !!currentProjectId && !idsMatch;
 
-    // Check if the project for the id actually exists
-    let projectData = projectId ? pamet.project(projectId) : undefined;
-    let projectFound = !!projectData;
+        // Check if the project for the id actually exists
+        let projectData = projectId ? pamet.project(projectId) : undefined;
+        let projectFound = !!projectData;
 
-    // If there's a project id, and the project exists, and it's not the same
-    // as the one we're switching to - attach it
-    let shouldAttachNew = projectFound && !idsMatch;
+        // If there's a project id, and the project exists, and it's not the same
+        // as the one we're switching to - attach it
+        let shouldAttachNew = projectFound && !idsMatch;
+
+        try {
+            // Unload the current project if there is one
+            // and if it's not the same as the one we're switching to
+            if (shouldDetach) {
+                await pamet.detachFromProject(currentProjectId!);
+            }
+
+            if (shouldAttachNew) {
+                await pamet.attachProjectAsCurrent(projectData!.id);
+            }
+
+            // Reflect the new project state in the app state
+            // If we've attached a new project we update the view state
+            // If the project is the same - again we update the view state for good measure
+            if (shouldAttachNew || (idsMatch && projectData)) {
+                appActions.reflectCurrentProjectState(appState, projectData!);
+                projectActions.goToDefaultPage(pamet.appViewState);
+                return;
+                // If the request is to detach the FDS - reflect that
+            } else if (projectId === null) {
+                appActions.reflectCurrentProjectState(appState, null);
+
+                // If a request is made to load a project but it's not found, set error
+            } else if (projectId !== null && !projectFound) {
+                appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
+            }
+
+            // The state is updated - URL will sync via router reaction
+        } finally {
+            appActions.updateSystemDialogState(appState, null);
+        }
+        log.info('Project switch finished. App state:', pamet.appViewState);
+    })();
 
     try {
-        // Unload the current project if there is one
-        // and if it's not the same as the one we're switching to
-        if (shouldDetach) {
-            await pamet.detachFromProject(currentProjectId!);
-        }
-
-        if (shouldAttachNew) {
-            await pamet.attachProjectAsCurrent(projectData!.id);
-        }
-
-        // Reflect the new project state in the app state
-        // If we've attached a new project we update the view state
-        // If the project is the same - again we update the view state for good measure
-        if (shouldAttachNew || (idsMatch && projectData)) {
-            appActions.reflectCurrentProjectState(appState, projectData!);
-            projectActions.goToDefaultPage(pamet.appViewState);
-            return;
-            // If the request is to detach the FDS - reflect that
-        } else if (projectId === null) {
-            appActions.reflectCurrentProjectState(appState, null);
-
-            // If a request is made to load a project but it's not found, set error
-        } else if (projectId !== null && !projectFound) {
-            appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
-        }
-
-        // The state is updated - URL will sync via router reaction
+        await projectSwitchInFlight;
     } finally {
-        projectSwithLock = false;
-        appActions.updateSystemDialogState(appState, null);
+        projectSwitchInFlight = null;
     }
-    log.info('Project switch finished. App state:', pamet.appViewState);
 }
 
 

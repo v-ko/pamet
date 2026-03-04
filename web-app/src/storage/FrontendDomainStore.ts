@@ -161,6 +161,26 @@ export class FrontendDomainStore extends PametStore {
         // Send the delta to the storage service
         let currentProject = pamet.appViewState.getCurrentProject();
         pamet.storageService.commit(currentProject.id, delta.data, 'Auto-commit')
+            .then((result) => {
+                const appliedDeltaData = result.commit.deltaData;
+                const unappliedDelta = delta.copy();
+                unappliedDelta.mergeWithPriority(new Delta(appliedDeltaData).reversed());
+                if (!unappliedDelta.isEmpty()) {
+                    log.warning('Auto-commit skipped conflicting local changes.', {
+                        projectId: currentProject.id,
+                        unappliedDelta: unappliedDelta.data,
+                        appliedDelta: appliedDeltaData,
+                        commit: result.commit,
+                    });
+                }
+            })
+            .catch((error) => {
+                log.error('Auto-commit failed. Discarded uncommitted delta.', {
+                    error,
+                    projectId: currentProject.id,
+                    delta: delta.data,
+                });
+            });
     }
 
     @action({ issuer: 'service' })

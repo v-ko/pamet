@@ -9,7 +9,6 @@ import { getLogger } from "fusion/logging";
 import { styled } from "styled-components";
 import Panel from "@/components/Panel";
 
-import cloudOffIconUrl from "@/resources/icons/cloud-off.svg";
 import shareIconUrl from "@/resources/icons/share-2.svg";
 import accountCircleIconUrl from "@/resources/icons/account-circle.svg";
 import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
@@ -33,6 +32,7 @@ import { LocalSearch } from "@/components/search/LocalSearch";
 import { GlobalSearch } from "@/components/search/GlobalSearch";
 import { pamet } from "@/core/facade";
 import Menu, { MenuItem } from "@/components/menu/Menu";
+import { StorageStatusDialog } from "@/components/StorageStatusDialog";
 
 let log = getLogger("App");
 
@@ -95,11 +95,6 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   if (!state.deviceId) {
     errorMessages.push('DeviceData missing. This is a pretty critical error.')
   }
-  // let localStorageAvailable = state.storageState.localStorage.available;
-  // if (!localStorageAvailable) {
-  //   errorMessages.push("Local storage not initialized/available.")
-  //   shouldDisplayPage = false
-  // }
   if (state.currentPageViewState === null) {
     shouldDisplayPage = false
   }
@@ -120,6 +115,27 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
   }
 
   const currentPageVS = state.currentPageViewState
+  const storageConnectionPhase = state.storageState.service.connectionPhase;
+  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase);
+
+  const storageStatusTitle = (() => {
+    switch (storageConnectionPhase) {
+      case 'ready':
+        return 'Storage connected';
+      case 'connecting':
+      case 'registering':
+      case 'waiting-for-controller':
+        return 'Storage connecting';
+      case 'disconnected':
+        return 'Storage disconnected';
+      case 'fatal':
+        return 'Storage error';
+      case 'main-thread-ready':
+        return 'Storage running in main thread';
+      default:
+        return 'Storage status';
+    }
+  })();
 
   const getShortcut = (commandName: string): string | undefined => {
     return pamet.keybindingService?.getShortcutForCommand(commandName) || undefined;
@@ -218,7 +234,13 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onClick={() => appActions.openProjectPropertiesDialog(state)}
           title="Project properties"
         >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
-        <img src={cloudOffIconUrl} alt="Not saved" />
+        <img
+          src={storageStatusIconUrl}
+          alt="Storage status"
+          title={storageStatusTitle}
+          style={{ cursor: 'pointer' }}
+          onClick={() => appActions.openStorageStatusDialog(state)}
+        />
         <VerticalSeparator />
         <img src={shareIconUrl} alt="Share" />
         <VerticalSeparator />
@@ -340,6 +362,13 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
 
       {state.dialogMode === AppDialogMode.CreateNewProject && (
         <CreateProjectDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.StorageStatus && (
+        <StorageStatusDialog
+          state={state}
           onClose={() => appActions.closeAppDialog(state)}
         />
       )}

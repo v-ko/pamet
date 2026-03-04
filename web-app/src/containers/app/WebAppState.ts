@@ -12,6 +12,7 @@ import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { ImageItem } from "fusion/model/ImageItem";
+import { StorageServiceRuntimeState, createInitialStorageServiceRuntimeState } from "fusion/storage/management/StorageService";
 
 
 export enum AppDialogMode {
@@ -20,7 +21,8 @@ export enum AppDialogMode {
   CreateNewProject,
   ProjectProperties,
   PageProperties,
-  ProjectsDialog
+  ProjectsDialog,
+  StorageStatus,
 }
 
 export enum PageError {
@@ -33,12 +35,8 @@ export enum ProjectError {
   NotFound
 }
 
-export interface LocalStorageState {
-  available: boolean;
-
-}
 export interface PametStorageState {
-  localStorage: LocalStorageState;
+  service: StorageServiceRuntimeState;
 }
 
 
@@ -55,9 +53,7 @@ export class WebAppState {
   pageError: PageError = PageError.NoError;
 
   storageState: PametStorageState = {
-    localStorage: {
-      available: false
-    }
+    service: createInitialStorageServiceRuntimeState()
   };
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;
@@ -198,4 +194,3 @@ export class MouseState {
     this.buttons = event.buttons;
   }
 }
-

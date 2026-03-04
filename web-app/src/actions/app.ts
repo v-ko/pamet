@@ -1,6 +1,6 @@
 import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
-import type { LocalStorageState, MouseState } from "@/containers/app/WebAppState";
+import type { MouseState } from "@/containers/app/WebAppState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { LocalSearchViewState } from "@/components/search/LocalSearchViewState";
 import { GlobalSearchViewState } from "@/components/search/GlobalSearchViewState";
@@ -10,6 +10,7 @@ import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/components/page/PageViewState";
 import type { ProjectData } from "@/model/config/Project";
 import { Entity } from "fusion/model/Entity";
+import { StorageServiceRuntimeState } from "fusion/storage/management/StorageService";
 
 let log = getLogger("WebAppActions");
 
@@ -40,9 +41,8 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    setLocalStorageState(state: WebAppState, localStorageState: LocalStorageState) {
-        // Unload the last project
-        state.storageState.localStorage = localStorageState;
+    setStorageServiceState(state: WebAppState, storageServiceState: StorageServiceRuntimeState) {
+        state.storageState.service = storageServiceState;
     }
 
     @action({ issuer: 'service' })
@@ -85,6 +85,11 @@ class AppActions {
     @action
     openCreateProjectDialog(appState: WebAppState) {
         appState.dialogMode = AppDialogMode.CreateNewProject;
+    }
+
+    @action
+    openStorageStatusDialog(appState: WebAppState) {
+        appState.dialogMode = AppDialogMode.StorageStatus;
     }
 
     @action
