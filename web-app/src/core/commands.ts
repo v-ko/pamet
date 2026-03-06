@@ -389,6 +389,11 @@ class PametCommands {
         log.info('Toggling last page');
         pamet.router.toggleLastPage();
     }
+
+    @command('Refresh page')
+    refresh() {
+        window.location.reload();
+    }
 }
 
 async function storeStateToClipboard() {

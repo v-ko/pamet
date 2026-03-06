@@ -197,5 +197,10 @@ export const DEFAULT_KEYBINDINGS = [
         key: 'backspace',
         command: commands.toggleLastPage.name,
         when: 'canvasFocus'
+    },
+    {
+        key: 'f5',
+        command: commands.refresh.name,
+        when: ''
     }
 ]
