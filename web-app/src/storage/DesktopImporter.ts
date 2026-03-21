@@ -306,8 +306,13 @@ export class DesktopImporter extends BaseApiClient {
                 if (!currentProjectId) {
                     throw new Error('No current project set during desktop import');
                 }
-                // parentId is '' — FileItems are root-level entities
-                imageItem = await pamet.addFileToStore(blob, fsPath, '', { width, height, size: blob.size, mimeType: blob.type });
+                const parentId = typeof imageData.parent_id === 'string' ? imageData.parent_id : '';
+                imageItem = await pamet.addFileToStore(
+                    blob,
+                    fsPath,
+                    parentId,
+                    { width, height, size: blob.size, mimeType: blob.type },
+                );
             } catch (e) {
                 log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);
                 continue

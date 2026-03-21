@@ -1,37 +1,35 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-import time
-from typing import Dict, Generator, List
-import os
 import json
+import os
+import time
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Dict, Generator, List
+
+from fusion.libs.channel import Channel
+from fusion.libs.entity import Entity, dump_to_dict, load_from_dict
+from fusion.libs.entity.change import Change
+from fusion.storage.in_memory_repository import InMemoryRepository
+from pamet.desktop_app.config import get_repo_settings, save_repo_settings
+from pamet.model.arrow import Arrow
+from pamet.model.note import Note
+from pamet.model.page import Page
+from pamet.model.page_child import PageChild
+from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
+from slugify import slugify
 
 # from watchdog.observers import Observer
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
-from slugify import slugify
-
-from pamet import desktop_app
-from pamet.desktop_app import get_repo_settings
-from pamet.model.arrow import Arrow
-from pamet.model.page_child import PageChild
-from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
-
-from fusion.libs.entity import Entity, dump_to_dict, load_from_dict
-from fusion.libs.entity.change import Change
-from fusion.libs.channel import Channel
-from fusion.storage.in_memory_repository import InMemoryRepository
-from fusion import get_logger
 
 import pamet
-from pamet.model.page import Page
-from pamet.model.note import Note
+from fusion import get_logger
 
 from ..migrations.manager import MigrationManager
 
 log = get_logger(__name__)
 
-V4_FILE_EXT = '.pam4.json'
+V4_FILE_EXT = ".pam4.json"
 
 
 # On this implementation:
@@ -58,7 +56,7 @@ class FSWatchEventHandler(FileSystemEventHandler):
         if event.is_directory:
             return
 
-        print('INOTIFY:', event.event_type, event.src_path, event.is_directory)
+        print("INOTIFY:", event.event_type, event.src_path, event.is_directory)
 
 
 @dataclass
@@ -76,7 +74,7 @@ class FSStorageRepository(PametInMemoryRepository):
 
         self._path = Path(path)
         if not self._path.exists() or not self._path.is_dir():
-            raise Exception('Invalid repository path')
+            raise Exception("Invalid repository path")
 
         self.queue_save_on_change = queue_save_on_change
         self._page_ids = []
@@ -101,7 +99,7 @@ class FSStorageRepository(PametInMemoryRepository):
         return self._path
 
     def page_folder(self, page_id: str) -> Path:
-        return self.path / 'p' / page_id
+        return self.path / "p" / page_id
 
     # def start_watching(self):
     #     self._fs_observer = Observer()
@@ -117,14 +115,12 @@ class FSStorageRepository(PametInMemoryRepository):
         # Load all pages in the cache
         for page_path in self.page_paths():
             try:
-                entities = self.get_entities_from_json(
-                    page_path)  #@IgnoreException
+                entities = self.get_entities_from_json(page_path)  # @IgnoreException
                 if not entities:
                     continue
                 page, notes, arrows = entities
             except Exception as e:
-                log.error(
-                    f'Exception raised while loading page {page_path}: {e}')
+                log.error(f"Exception raised while loading page {page_path}: {e}")
                 continue
 
             # Check if the page is saved under the right name
@@ -132,8 +128,10 @@ class FSStorageRepository(PametInMemoryRepository):
             if page_path != inferred_path:  # If not - fix it by re-saving
                 page_path.unlink()
                 self.create_page_on_disk(page, notes, arrows)
-                log.error(f'Bad page name. Deleted {page_path} and saved the '
-                          f'page {page.name} anew.')
+                log.error(
+                    f"Bad page name. Deleted {page_path} and saved the "
+                    f"page {page.name} anew."
+                )
 
             # Check for dupicates
             page_duplicates = list(self.find(gid=page.gid()))
@@ -143,17 +141,21 @@ class FSStorageRepository(PametInMemoryRepository):
                 if dup_path.stat().st_mtime <= page_path.stat().st_mtime:
                     # If the page that's older is loaded
                     InMemoryRepository.remove_one(self, page_duplicate)
-                    backup_path = dup_path.with_suffix('.backup')
+                    backup_path = dup_path.with_suffix(".backup")
                     dup_path.rename(backup_path)
-                    log.error(f'Found duplicate page "{page_duplicate.name} '
-                              f'in the repo. Backed it up as {backup_path}')
+                    log.error(
+                        f'Found duplicate page "{page_duplicate.name} '
+                        f"in the repo. Backed it up as {backup_path}"
+                    )
                 else:
                     # If the page, currently processed in the upper loop
                     # is older
-                    backup_path = page_path.with_suffix('.backup')
+                    backup_path = page_path.with_suffix(".backup")
                     dup_path.rename(backup_path)
-                    log.error(f'Found duplicate page "{page_duplicate.name} '
-                              f'in the repo. Backed it up as {backup_path}')
+                    log.error(
+                        f'Found duplicate page "{page_duplicate.name} '
+                        f"in the repo. Backed it up as {backup_path}"
+                    )
                     break
 
             # Add the entities to the in-memory cache
@@ -163,37 +165,37 @@ class FSStorageRepository(PametInMemoryRepository):
                     try:
                         InMemoryRepository.insert_one(self, note)
                     except Exception:
-                        log.error(f'Duplicate note. Skipping {note}')
+                        log.error(f"Duplicate note. Skipping {note}")
                         continue
                 for arrow in arrows:
                     try:
                         InMemoryRepository.insert_one(self, arrow)
                     except Exception:
-                        log.error(f'Duplicate arrow. Skipping {arrow}')
+                        log.error(f"Duplicate arrow. Skipping {arrow}")
                         continue
             except Exception:
-                log.error(f'Duplicate page. Skipping {page}')
+                log.error(f"Duplicate page. Skipping {page}")
                 continue
 
             # Save the path corresponding to the id in order to handle renames
             self.page_paths_by_id[page.id] = self.path_for_page(page)
 
     def path_for_page(self, page) -> Path:
-        slug = slugify(page.name, separator='_', max_length=100)
-        name = f'{slug}-{page.id}{V4_FILE_EXT}'
+        slug = slugify(page.name, separator="_", max_length=100)
+        name = f"{slug}-{page.id}{V4_FILE_EXT}"
         return self.path / name
 
     def id_from_page_path(self, path: Path) -> str:
         # Remove the file ext .pam4.json and get the file name
-        page_id = path.with_suffix('').stem
+        page_id = path.with_suffix("").stem
 
-        slug, page_id = page_id.split('-')
+        slug, page_id = page_id.split("-")
         return page_id
 
     @classmethod
     def open(cls, path, **kwargs):
         if not os.path.exists(path) or not os.path.isdir(path):
-            raise Exception('Bad path. Cannot create repository for', path)
+            raise Exception("Bad path. Cannot create repository for", path)
 
         return cls(path, **kwargs)
 
@@ -201,8 +203,7 @@ class FSStorageRepository(PametInMemoryRepository):
     def new(cls, path, **kwargs):
         if os.path.exists(path):
             if os.listdir(path):
-                raise Exception(
-                    f'Cannot create repository in non-empty folder {path}')
+                raise Exception(f"Cannot create repository in non-empty folder {path}")
 
         os.makedirs(path, exist_ok=True)
         return cls(path, **kwargs)
@@ -216,7 +217,7 @@ class FSStorageRepository(PametInMemoryRepository):
         elif isinstance(entity, PageChild):
             page = self.page(entity.page_id)
             if not page:
-                raise Exception(f'Invalid parent for {entity}')
+                raise Exception(f"Invalid parent for {entity}")
             self.upserted_pages.add(page)
 
         InMemoryRepository.insert_one(self, entity)
@@ -250,7 +251,7 @@ class FSStorageRepository(PametInMemoryRepository):
         elif isinstance(entity, PageChild):
             page = self.page(entity.page_id)
             if not page:
-                raise Exception(f'Invalid parent for {entity}')
+                raise Exception(f"Invalid parent for {entity}")
             self.upserted_pages.add(page)
         return change
 
@@ -281,17 +282,15 @@ class FSStorageRepository(PametInMemoryRepository):
 
     def write_to_disk(self):
         if self.upserted_pages.intersection(self.removed_pages):
-            raise Exception('A page is both marked for upsert and removal.')
+            raise Exception("A page is both marked for upsert and removal.")
 
         for page in self.upserted_pages:
             page = pamet.page(page.id)
 
             if page.id in self.page_paths_by_id:
-                self.update_page_on_disk(page, pamet.notes(page),
-                                         pamet.arrows(page))
+                self.update_page_on_disk(page, pamet.notes(page), pamet.arrows(page))
             else:
-                self.create_page_on_disk(page, pamet.notes(page),
-                                         pamet.arrows(page))
+                self.create_page_on_disk(page, pamet.notes(page), pamet.arrows(page))
 
         for page in self.removed_pages:
             self.delete_page_on_disk(page)
@@ -307,9 +306,9 @@ class FSStorageRepository(PametInMemoryRepository):
     def get_entities_from_json(self, json_file_path):
         try:
             with open(json_file_path) as pf:
-                page_state = json.load(pf)  #@IgnoreException
+                page_state = json.load(pf)  # @IgnoreException
         except Exception as e:
-            log.error('Exception %s while loading page' % e, json_file_path)
+            log.error("Exception %s while loading page" % e, json_file_path)
             return None
 
         # # TODO REMOVE
@@ -318,12 +317,12 @@ class FSStorageRepository(PametInMemoryRepository):
         #     page_state['notes'] = page_state.pop('note_states', [])
         # if 'arrow_states' in page_state:
         #     page_state['arrows'] = page_state.pop('arrow_states', [])
-        if 'type_name' not in page_state:
-            page_state['type_name'] = Page.__name__
+        if "type_name" not in page_state:
+            page_state["type_name"] = Page.__name__
 
         # Detach the children
-        note_states = page_state.pop('notes', [])
-        arrow_states = page_state.pop('arrows', [])
+        note_states = page_state.pop("notes", [])
+        arrow_states = page_state.pop("arrows", [])
 
         # Create the page
         page = load_from_dict(page_state)
@@ -346,30 +345,30 @@ class FSStorageRepository(PametInMemoryRepository):
             # if ns['type_name'] == 'AnchorNote':
             #     ns['type_name'] = 'TextNote'
 
-            id = ns['id']
+            id = ns["id"]
             if isinstance(id, str):
-                assert 'page_id' in ns
-                ns['id'] = (ns.pop('page_id'), id)
+                assert "page_id" in ns
+                ns["id"] = (ns.pop("page_id"), id)
 
-            if 'script_args_str' in ns:
-                command_args = ns.pop('script_args_str')
-                if 'content' not in ns:
-                    ns['content'] = {}
-                ns['content']['command_args'] = command_args
+            if "script_args_str" in ns:
+                command_args = ns.pop("script_args_str")
+                if "content" not in ns:
+                    ns["content"] = {}
+                ns["content"]["command_args"] = command_args
 
-            content = ns.get('content', None)
+            content = ns.get("content", None)
             if content:
 
-                if 'script' in content:
-                    script_path = content.pop('script')
-                    content['script_path'] = script_path
+                if "script" in content:
+                    script_path = content.pop("script")
+                    content["script_path"] = script_path
 
-            if 'color' in ns:
-                for prop in ['color', 'background_color']:
+            if "color" in ns:
+                for prop in ["color", "background_color"]:
                     prop_val = ns.pop(prop)
-                    if 'style' not in ns:
-                        ns['style'] = {}
-                    ns['style'][prop] = prop_val
+                    if "style" not in ns:
+                        ns["style"] = {}
+                    ns["style"][prop] = prop_val
 
             # /ad-hoc fixes
 
@@ -379,13 +378,13 @@ class FSStorageRepository(PametInMemoryRepository):
         arrows = []
         for arrow_state in arrow_states:
             # REMOVE vvv
-            id = arrow_state['id']
+            id = arrow_state["id"]
             if isinstance(id, str):
-                assert 'page_id' in arrow_state
-                arrow_state['id'] = (arrow_state.pop('page_id'), id)
+                assert "page_id" in arrow_state
+                arrow_state["id"] = (arrow_state.pop("page_id"), id)
 
-            if 'type_name' not in arrow_state:
-                arrow_state['type_name'] = Arrow.__name__
+            if "type_name" not in arrow_state:
+                arrow_state["type_name"] = Arrow.__name__
             # arrow_state.pop('background_color', None)
             # if 'mid_point_coords' not in arrow_state:
             #     arrow_state['mid_point_coords'] = arrow_state.pop('
@@ -401,8 +400,10 @@ class FSStorageRepository(PametInMemoryRepository):
             try:
                 arrow: Arrow = load_from_dict(arrow_state)
             except Exception as e:
-                log.error(f'Exception {e} raised while parsing arrow '
-                          f'{arrow_state} from file {json_file_path}')
+                log.error(
+                    f"Exception {e} raised while parsing arrow "
+                    f"{arrow_state} from file {json_file_path}"
+                )
                 continue
 
             arrows.append(arrow)
@@ -412,8 +413,8 @@ class FSStorageRepository(PametInMemoryRepository):
     @staticmethod
     def serialize_page(page: Page, notes: List[Note], arrows: List[Arrow]):
         page_state = dump_to_dict(page)
-        page_state['notes'] = [dump_to_dict(n) for n in notes]
-        page_state['arrows'] = [dump_to_dict(a) for a in arrows]
+        page_state["notes"] = [dump_to_dict(n) for n in notes]
+        page_state["arrows"] = [dump_to_dict(a) for a in arrows]
 
         try:
             json_str = json.dumps(page_state, ensure_ascii=False, indent=4)
@@ -422,38 +423,36 @@ class FSStorageRepository(PametInMemoryRepository):
 
         return json_str
 
-    def create_page_on_disk(self, page: Page, notes: List[Note],
-                            arrows: List[Arrow]):
+    def create_page_on_disk(self, page: Page, notes: List[Note], arrows: List[Arrow]):
         path = self.path_for_page(page)
         try:
             if path.exists():
-                log.error('Cannot create page. File already exists %s' % path)
+                log.error("Cannot create page. File already exists %s" % path)
                 return
 
             page_json_str = self.serialize_page(page, notes, arrows)
             if not page_json_str:
                 return
 
-            with open(path, 'w') as pf:
+            with open(path, "w") as pf:
                 pf.write(page_json_str)
 
             self.page_paths_by_id[page.id] = path
         except Exception as e:
-            log.error('Exception while writing page at %s: %s' % (path, e))
+            log.error("Exception while writing page at %s: %s" % (path, e))
 
         return path
 
-    def update_page_on_disk(self, page: Page, notes: List[Note],
-                            arrows: List[Arrow]):
+    def update_page_on_disk(self, page: Page, notes: List[Note], arrows: List[Arrow]):
         saved_path = self.page_paths_by_id[page.id]
         path = self.path_for_page(page)
 
         # If the paths differ - the page has been renamed and the file should
         # be moved
         if saved_path != path and saved_path.exists():
-            log.debug(f'Page renamed, moving file {saved_path} to {path}.')
+            log.debug(f"Page renamed, moving file {saved_path} to {path}.")
             if path.exists():
-                raise Exception('This should have been handlet at init time')
+                raise Exception("This should have been handlet at init time")
             saved_path.rename(path)
             self.page_paths_by_id[page.id] = path
 
@@ -461,7 +460,7 @@ class FSStorageRepository(PametInMemoryRepository):
         if not page_json_str:
             return
 
-        with open(path, 'w') as pf:
+        with open(path, "w") as pf:
             pf.write(page_json_str)
 
     def delete_page_on_disk(self, page):
@@ -471,7 +470,7 @@ class FSStorageRepository(PametInMemoryRepository):
             os.remove(path)
 
         else:
-            log.error('Cannot delete missing page: %s' % path)
+            log.error("Cannot delete missing page: %s" % path)
 
     def is_v4_page(self, file_path: str | Path):
         file_path = Path(file_path)
@@ -485,9 +484,9 @@ class FSStorageRepository(PametInMemoryRepository):
         name, ext = os.path.splitext(fname)
         version = 0
 
-        if ext == 'json':
+        if ext == "json":
             version = 3
-        elif ext == 'misl':
+        elif ext == "misl":
             version = 1
 
         return version
@@ -498,15 +497,17 @@ class FSStorageRepository(PametInMemoryRepository):
 
         # If there's a big save lag log a warining
         if time.time() - t0 > 0.03:
-            log.warning('The save time was above 30ms. Maybe it\'s time to '
-                        'implement the async IO')
+            log.warning(
+                "The save time was above 30ms. Maybe it's time to "
+                "implement the async IO"
+            )
 
     def default_page(self):
         repo_settings = get_repo_settings(self.path)
-        default_page = self.page(repo_settings.home_page)
+        default_page = self.page(repo_settings.get("default_page_id"))
         return default_page
 
     def set_default_page(self, new_page: Page):
         repo_settings = get_repo_settings(self.path)
-        repo_settings.home_page = new_page.id
-        desktop_app.save_repo_settings(repo_settings)
+        repo_settings["default_page_id"] = new_page.id
+        save_repo_settings(self.path, repo_settings)

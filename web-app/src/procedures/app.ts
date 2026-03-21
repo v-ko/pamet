@@ -17,77 +17,60 @@ const log = getLogger('AppProcedures');
 
 let projectSwitchInFlight: Promise<void> | null = null;
 
+async function doSwitchToProject(projectId: string | null): Promise<void> {
+    log.info('Switching to project', projectId);
+    const appState = pamet.appViewState;
+    appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
+
+    try {
+        const currentProjectId = appState.currentProjectId;
+
+        // Case 1: Detach (no target project)
+        if (projectId === null) {
+            if (currentProjectId) {
+                await pamet.detachFromProject(currentProjectId);
+            }
+            appActions.reflectCurrentProjectState(appState, null);
+            return;
+        }
+
+        // Case 2: Same project — just ensure properties are loaded
+        if (projectId === currentProjectId) {
+            const projectData = appState.currentProjectState
+                ?? await pamet.loadProjectProperties(projectId);
+            if (projectData) {
+                appActions.reflectCurrentProjectState(appState, projectData);
+                projectActions.goToDefaultPage(appState);
+            }
+            return;
+        }
+
+        // Case 3: Different project
+        if (currentProjectId) {
+            await pamet.detachFromProject(currentProjectId);
+        }
+
+        if (!appState.trackedProject(projectId)) {
+            appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
+            return;
+        }
+
+        await pamet.attachProjectAsCurrent(projectId);
+        const projectData = await pamet.loadProjectProperties(projectId);
+        appActions.reflectCurrentProjectState(appState, projectData ?? null);
+        projectActions.goToDefaultPage(appState);
+    } finally {
+        appActions.updateSystemDialogState(appState, null);
+    }
+    log.info('Project switch finished. App state:', appState);
+}
+
 export async function switchToProject(projectId: string | null): Promise<void> {
-    // A procedure to switch the storage backend to a new project. This
-    //  requires swapping out the frontend domain store and reporting the
-    // status of the backend availability to UI
-
-    // Load the project storage manager in the storage service
-    // Swap out the frontend domain store (+ initial state) and connect it
-    // to the latter (for auto-save, etc.)
-
     if (projectSwitchInFlight) {
         log.error('Project switch already in progress');
         return projectSwitchInFlight;
     }
-    projectSwitchInFlight = (async () => {
-        log.info('Switching to project', projectId);
-
-        const appState = pamet.appViewState;
-        appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
-        // await new Promise(resolve => setTimeout(resolve, 50)); // Simulate delay
-
-        let currentProjectId = pamet.appViewState.currentProjectId;
-        let idsMatch = currentProjectId === projectId;
-
-        // Setup the logic as flags
-
-        // If there's an FDS setup, and it's not the same as the one we're switching
-        // to - detach it
-        let shouldDetach = !!currentProjectId && !idsMatch;
-
-        // Check if the project for the id actually exists
-        let projectData = projectId ? pamet.project(projectId) : undefined;
-        let projectFound = !!projectData;
-
-        // If there's a project id, and the project exists, and it's not the same
-        // as the one we're switching to - attach it
-        let shouldAttachNew = projectFound && !idsMatch;
-
-        try {
-            // Unload the current project if there is one
-            // and if it's not the same as the one we're switching to
-            if (shouldDetach) {
-                await pamet.detachFromProject(currentProjectId!);
-            }
-
-            if (shouldAttachNew) {
-                await pamet.attachProjectAsCurrent(projectData!.id);
-            }
-
-            // Reflect the new project state in the app state
-            // If we've attached a new project we update the view state
-            // If the project is the same - again we update the view state for good measure
-            if (shouldAttachNew || (idsMatch && projectData)) {
-                appActions.reflectCurrentProjectState(appState, projectData!);
-                projectActions.goToDefaultPage(pamet.appViewState);
-                return;
-                // If the request is to detach the FDS - reflect that
-            } else if (projectId === null) {
-                appActions.reflectCurrentProjectState(appState, null);
-
-                // If a request is made to load a project but it's not found, set error
-            } else if (projectId !== null && !projectFound) {
-                appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
-            }
-
-            // The state is updated - URL will sync via router reaction
-        } finally {
-            appActions.updateSystemDialogState(appState, null);
-        }
-        log.info('Project switch finished. App state:', pamet.appViewState);
-    })();
-
+    projectSwitchInFlight = doSwitchToProject(projectId);
     try {
         await projectSwitchInFlight;
     } finally {
@@ -103,14 +86,14 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
     log.info("Starting delete procedure for project", project);
 
     // Get projects, return error if the project is missing
-    let projects = pamet.projects();
+    let projects = pamet.trackedProjects();
     if (!projects.find(p => p.id === project.id)) {
         throw new Error(`Project with ID ${project.id} not found`);
     }
 
     // Ask here, so that there's no chance another tab creates the default
     // project first, creating a conflict
-    if (pamet.projects().length === 1) {
+    if (pamet.trackedProjects().length === 1) {
         alert('You\'re deleting the last project. A new one will be created.')
     }
 
@@ -130,7 +113,8 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
     try {
         // Remove from config which will signal the other tabs to unload the project
-        pamet.config.removeProject(project.id);
+        pamet.removeTrackedProject(project.id);
+        pamet.appMiscProperties.removeRecentProject(project.id);
 
         await pamet.storageService.deleteProject(
             project.id,
@@ -189,7 +173,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
     let projectId = route.projectId;
     if (projectId === undefined) {
         // go to default project
-        let projects = pamet.projects();
+        let projects = pamet.trackedProjects();
         if (projects.length === 0) {
             log.info('No projects found. Creating a default one');
             let newProject = await createDefaultProject();
@@ -202,7 +186,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
 
     await switchToProject(projectId); // view state updated here
 
-    let projectData = pamet.project(projectId);
+    let projectData = pamet.appViewState.currentProjectState;
 
     // If undefined switching will have set the 404 message
     if (!projectData) {
@@ -223,18 +207,18 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
         let goToPageId: string | undefined = undefined;
 
         // Check for default page in the project
-        if (projectData.defaultPageId) {
+        const defaultPageId = projectData.defaultPageId;
+        if (defaultPageId) {
             // Check that the page is present
-            let page = pamet.findOne({ id: projectData.defaultPageId });
+            let page = pamet.findOne({ id: defaultPageId });
             if (!page) { // If the default page is set, but missing
-                log.error('Default page not found in the repo for id', projectData.defaultPageId);
+                log.error('Default page not found in the repo for id', defaultPageId);
                 log.info('Removing default page id from the project')
-                // Set defaultPageId to null in the project
-                projectData.defaultPageId = undefined;
-                projectActions.updateProject(projectData);
+                const { defaultPageId: _removedDefaultPageId, ...projectWithoutDefaultPage } = projectData;
+                await pamet.saveProjectProperties(projectWithoutDefaultPage);
             } else {
-                log.info('Switching to default page', projectData.defaultPageId);
-                goToPageId = projectData.defaultPageId;
+                log.info('Switching to default page', defaultPageId);
+                goToPageId = defaultPageId;
             }
         }
 
@@ -273,8 +257,7 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
 
 export async function updateAppStateFromConfig(appState: WebAppState) {
     // Device
-    let device = pamet.config.getDeviceData();
-    let deviceId = device ? device.id : null;
+    let deviceId = pamet.appMiscProperties.getDeviceId() ?? null;
 
     // User - For now UserData has no id/name, so we use LOCAL_USER_ID
     // Later when cloud auth is implemented, this will set the actual user ID
@@ -291,6 +274,11 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
     // TODO: When cloud auth is implemented, add: else { appState.userId = user.id; }
 
     appActions.updateIdentity(appState, deviceId, userId);
+    appActions.updateProjectReferences(
+        appState,
+        pamet.config.getProjects(),
+        pamet.appMiscProperties.getRecentProjects(),
+    );
 
     // Settings - not yet implemented
 
@@ -298,9 +286,8 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
     if (appState.currentProjectId) {
         // If the current project has been deleted, reload the page so that
         // the router goes to the default project
-        let projects = pamet.projects();
-        let currentProjectNewState = projects.find(p => p.id === appState.currentProjectId);
-        if (currentProjectNewState === undefined) {
+        const currentTrackedProject = pamet.appViewState.trackedProject(appState.currentProjectId);
+        if (currentTrackedProject === undefined) {
             log.info('Project deleted in other tab.');
             alert('The project you were working on has been deleted in another tab. Reloading the page.');
             window.location.reload();
@@ -308,8 +295,9 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
             // Else update the current project data in the app state
             // * This should be implemented as a mobx reaction at some point to avoid
             // redundant updates
+            const currentProjectNewState = await pamet.loadProjectProperties(appState.currentProjectId);
             log.info('AT updateAppStateFromConfig. Current project present. Reflecting new state', currentProjectNewState);
-            appActions.reflectCurrentProjectState(appState, currentProjectNewState);
+            appActions.reflectCurrentProjectState(appState, currentProjectNewState ?? null);
         }
     }
 }
@@ -357,8 +345,21 @@ export async function importDesktopDataForTesting() {
 
 export async function createProject(newProject: ProjectData): Promise<void> {
     log.info('Creating project', newProject.id);
-    await pamet.storageService.createProject(newProject.id, pamet.projectStorageConfig(newProject.id));
-    pamet.config.addProject(newProject);
+    const projectUri = await pamet.storageService.createProject(
+        newProject.id,
+        pamet.projectStorageConfig(newProject.id),
+        newProject,
+    );
+    pamet.upsertTrackedProject({
+        id: newProject.id,
+        title: newProject.title,
+        uri: projectUri,
+    });
+    pamet.appMiscProperties.setMostRecentProject({
+        id: newProject.id,
+        title: newProject.title,
+        uri: projectUri,
+    });
     log.info('Project created and added to config', newProject.id);
 }
 

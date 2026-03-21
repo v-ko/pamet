@@ -12,11 +12,56 @@ import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
 import { CardNote } from "@/model/CardNote";
 import { MISSING_PAGE_TITLE } from "@/core/constants";
+import { ImageItem } from "fusion/model/ImageItem";
 
 const log = getLogger("ProjectActions");
 
 
 class ProjectActions {
+  private _oldestPageId(pages: Page[]): string | null {
+    if (pages.length === 0) {
+      return null;
+    }
+    const sorted = [...pages].sort((a, b) => {
+      const ta = Date.parse(a.created);
+      const tb = Date.parse(b.created);
+      const va = Number.isFinite(ta) ? ta : Number.POSITIVE_INFINITY;
+      const vb = Number.isFinite(tb) ? tb : Number.POSITIVE_INFINITY;
+      if (va !== vb) {
+        return va - vb;
+      }
+      return a.id.localeCompare(b.id);
+    });
+    return sorted[0].id;
+  }
+
+  private _reassignmentTargetPageIdForImageItem(
+    imageItem: ImageItem,
+    deletingPageId: string,
+    remainingPagesById: Map<string, Page>,
+    defaultPageId: string | null,
+  ): string | null {
+    // Prefer the first surviving page that references this file item.
+    for (const note of pamet.notes()) {
+      if (note.parentId === deletingPageId) {
+        continue;
+      }
+      if (!remainingPagesById.has(note.parentId)) {
+        continue;
+      }
+      if (note.content.image_id === imageItem.id) {
+        return note.parentId;
+      }
+    }
+
+    // If orphaned, move to project default page when available.
+    if (defaultPageId && remainingPagesById.has(defaultPageId)) {
+      return defaultPageId;
+    }
+
+    // Last fallback: oldest surviving page.
+    return this._oldestPageId(Array.from(remainingPagesById.values()));
+  }
 
   @action
   updateProject(projectData: ProjectData) {
@@ -112,6 +157,39 @@ class ProjectActions {
 
   @action
   deletePageAndUpdateReferences(page: Page) {
+    // Reassign page-scoped file items before removing the page.
+    const remainingPages = Array.from(pamet.pages()).filter(p => p.id !== page.id);
+    const remainingPagesById = new Map(remainingPages.map(p => [p.id, p]));
+    const defaultPageId = pamet.appViewState.currentProjectState?.defaultPageId || null;
+    const imageItemsOnPage = Array.from(
+      pamet.find({ parentId: page.id, type: ImageItem })
+    ) as ImageItem[];
+
+    for (const imageItem of imageItemsOnPage) {
+      const targetPageId = this._reassignmentTargetPageIdForImageItem(
+        imageItem,
+        page.id,
+        remainingPagesById,
+        defaultPageId,
+      );
+
+      if (!targetPageId) {
+        log.warning(
+          `No surviving page found for ImageItem ${imageItem.id} while deleting page ${page.id}; item will be deleted with the page.`,
+        );
+        continue;
+      }
+      if (targetPageId === imageItem.parentId) {
+        continue;
+      }
+
+      const reassigned = new ImageItem({
+        ...imageItem.data(),
+        parent_id: targetPageId,
+      });
+      pamet.updateOne(reassigned);
+    }
+
     // Delete the page and its contents
     pamet.removePageWithChildren(page);
 

@@ -165,8 +165,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       setUncommitedImage(null);
     }
     // If it's a previously saved image — we just clear the reference from the note.
-    // The FileItem entity is NOT deleted — it's project-level and may be referenced
-    // by other notes. Orphan cleanup is a TODO.
+    // The FileItem entity is NOT deleted — it may be referenced by other notes/pages.
 
     // Clear the image from the note data state
     updateNoteData({ content: { ...noteData.current.content, image_id: undefined } });

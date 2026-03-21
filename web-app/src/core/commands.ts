@@ -218,18 +218,21 @@ class PametCommands {
     pageZoomIn() {
         let pageVS = getCurrentPageViewState();
         pageActions.updateViewport(pageVS, pageVS.viewportCenter, pageVS.viewportHeight / 1.1);
+        pamet.syncRouterFromAppState();
     }
 
     @command('Page: Zoom out')
     pageZoomOut() {
         let pageVS = getCurrentPageViewState();
         pageActions.updateViewport(pageVS, pageVS.viewportCenter, pageVS.viewportHeight * 1.1);
+        pamet.syncRouterFromAppState();
     }
 
     @command('Page: Reset zoom')
     pageZoomReset() {
         let pageVS = getCurrentPageViewState();
         pageActions.updateViewport(pageVS, pageVS.viewportCenter, DEFAULT_VIEW_HEIGHT);
+        pamet.syncRouterFromAppState();
     }
 
     @command('Select all')
@@ -387,7 +390,7 @@ class PametCommands {
     @command('Toggle last page')
     toggleLastPage() {
         log.info('Toggling last page');
-        pamet.router.toggleLastPage();
+        pamet.toggleLastPage();
     }
 
     @command('Refresh page')

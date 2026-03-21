@@ -322,6 +322,7 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             let page = projectActions.createNewPage(state, name)
             log.info(`Setting current page to ${name}`);
             appActions.setCurrentPage(state, page.id);
+            pamet.syncRouterFromAppState();
 
             // Open settings view | IMPLEMENT LATER
           }}

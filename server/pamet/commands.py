@@ -8,6 +8,7 @@ from fusion.libs.command import command
 from pamet import desktop_app
 from pamet.actions import tab as tab_actions
 from pamet.actions import window as window_actions
+from pamet.desktop_app.config import repo_settings_path
 from pamet.desktop_app.screen_snippet import grab_screen_snippet as _grab_screen_snippet
 from pamet.desktop_app.util import current_tab, current_window
 
@@ -55,7 +56,7 @@ def open_user_settings_json():
 
 @command(title="Open repo settings (JSON)")
 def open_repo_settings_json():
-    settings_path = desktop_app.repo_settings_path(pamet.sync_repo().path)
+    settings_path = repo_settings_path(pamet.sync_repo().path)
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
 
 

@@ -1,26 +1,27 @@
 from __future__ import annotations
 
-import json
 from copy import copy
 from pathlib import Path
+from typing import Any, cast
 
 from fusion.logging import get_logger
 from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import (
-    DEFAULT_DATA_FOLDER_PATH,
-    RepoSettings,
-    UserDesktopSettings,
+    APP_DATA_DIR,
+    CONFIG_DIR,
+    PROJECTS_DIR,
+    SettingsAdapter,
+    UserDesktopSettingsData,
+    user_settings_path,
 )
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
+from pamet.services.backup import FSStorageBackupService
 from pamet.services.media_store import MediaStore
 from pamet.services.script_runner import ScriptRunner
 from PySide6.QtGui import QColor
 
 log = get_logger(__name__)
-
-SETTINGS_JSON = "settings.json"
-PROJECTS_JSON = "projects.json"
 
 icons = PametQtWidgetsCachedIcons()
 
@@ -33,97 +34,44 @@ _backup_service = None
 _default_note_font = None
 script_runner = ScriptRunner()
 
-_app_data_folder_path = DEFAULT_DATA_FOLDER_PATH
-_config_path = DEFAULT_DATA_FOLDER_PATH / SETTINGS_JSON
+_user_settings_adapter = SettingsAdapter(
+    user_settings_path(),
+)
 
 
-def set_user_settings_path(config_path: Path):
-    global _config_path
-    global _app_data_folder_path
-    _app_data_folder_path = config_path.parent
-    _config_path = config_path
+def get_user_settings() -> UserDesktopSettingsData:
+    return cast(UserDesktopSettingsData, _user_settings_adapter.get())
 
 
-def user_settings_path() -> Path:
-    return _config_path
+def save_user_settings(updated_config: UserDesktopSettingsData | dict[str, Any]):
+    _user_settings_adapter.write(cast(dict[str, Any], updated_config))
 
 
-def desktop_config_dir() -> Path:
-    return _app_data_folder_path
+def upsert_tracked_project(project_id: str, uri: str, user_id: str, title: str):
+    settings = get_user_settings()
+    if settings["id"] != user_id:
+        raise ValueError(
+            f"Cannot upsert tracked project for user '{user_id}' without initialized matching user settings"
+        )
 
+    projects = list(settings["projects"])
+    project_data: dict[str, str] = {
+        "id": project_id,
+        "uri": uri,
+        "title": title,
+    }
 
-def repo_settings_path(repo_path: Path) -> Path:
-    return repo_path / ".pamet" / SETTINGS_JSON
+    replaced = False
+    for index, existing_project in enumerate(projects):
+        if existing_project.get("id") == project_id:
+            projects[index] = project_data
+            replaced = True
+            break
 
+    if not replaced:
+        projects.append(project_data)
 
-def projects_index_path() -> Path:
-    return desktop_config_dir() / PROJECTS_JSON
-
-
-# Config handling
-def get_user_settings() -> UserDesktopSettings:
-    settings_path = user_settings_path()
-    if not settings_path.exists():
-        settings = UserDesktopSettings()
-        if not settings.recent_projects:
-            settings.repository_path = str(desktop_config_dir() / "repo")
-        save_user_settings(settings)
-        return settings
-
-    with open(settings_path) as settings_file:
-        config_dict = json.load(settings_file)
-        settings = UserDesktopSettings.load(config_dict)
-        if not settings.recent_projects:
-            settings.repository_path = str(desktop_config_dir() / "repo")
-            save_user_settings(settings)
-        return settings
-
-
-def save_user_settings(updated_config: UserDesktopSettings):
-    config_str = json.dumps(updated_config.asdict(), indent=4, ensure_ascii=False)
-    config_path = user_settings_path()
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(config_str)
-
-
-def get_projects_index() -> dict[str, dict]:
-    index_path = projects_index_path()
-    if not index_path.exists():
-        return {}
-
-    with open(index_path) as index_file:
-        index = json.load(index_file)
-    if not isinstance(index, dict):
-        raise TypeError("projects.json root must be an object")
-    return index
-
-
-def get_local_projects() -> dict[str, dict]:
-    return get_projects_index()
-
-
-def get_repo_settings(repo_path: Path) -> RepoSettings:
-    config_path = repo_settings_path(repo_path)
-    if not config_path.exists():
-        settings = RepoSettings(repo_path=repo_path)
-        save_repo_settings(settings)
-        return settings
-
-    with open(config_path) as config_file:
-        config_dict = json.load(config_file)
-        dict_on_load = copy(config_dict)
-        settings_id = config_dict.pop("id")
-        settings = RepoSettings(id=settings_id, repo_path=repo_path)
-        settings.replace_silent(**config_dict)
-        settings._dict_on_load = dict_on_load
-        return settings
-
-
-def save_repo_settings(repo_settings: RepoSettings):
-    config_str = json.dumps(repo_settings.asdict(), indent=4, ensure_ascii=False)
-    config_path = repo_settings_path(repo_settings.repo_path)
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(config_str)
+    save_user_settings({**settings, "projects": projects})
 
 
 def default_note_font():
@@ -145,6 +93,8 @@ def set_app(new_app):
 
 
 def media_store() -> MediaStore:
+    if _media_store is None:
+        raise ValueError("Media store not initialized")
     return _media_store
 
 
@@ -154,6 +104,8 @@ def set_media_store(new_media_store):
 
 
 def backup_service() -> FSStorageBackupService:
+    if _backup_service is None:
+        raise ValueError("Backup service not initialized")
     return _backup_service
 
 

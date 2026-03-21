@@ -1,48 +1,74 @@
-import { UserData } from "@/model/config/User";
-import { PametKeyValueStorageService } from "@/services/config/Config";
+import { UserData } from "@/model/User";
+import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
 import { DummyConfigAdapter } from "@/services/config/DummyAdapter";
 
-// prep for mocking localStorage
 
-
-describe('PametConfig', () => {
-    let config: PametKeyValueStorageService;
+describe('Config', () => {
     let adapter: DummyConfigAdapter;
 
     beforeEach(() => {
         adapter = new DummyConfigAdapter();
-        config = new PametKeyValueStorageService(adapter);
     });
 
     afterEach(() => {
         adapter.clear();
     });
 
-    test('clear', () => {
-        adapter.set('user', { name: 'John Doe' });
-        adapter.set('device', { id: '123' });
+    test('settings use only userSettings key', () => {
+        const config = new PametSettingsService(adapter);
+        const userData: UserData = { id: '123', name: 'John Doe' };
 
-        config.clear();
-
-        expect(adapter.get('user')).toBeUndefined();
-        expect(adapter.get('device')).toBeUndefined();
-    });
-
-    test('userData', () => {
-        let userData: UserData = { id: '123', name: 'John Doe' }
         config.setUserData(userData);
 
-        expect(config.getUserData()).toEqual(userData);
-        expect(adapter.get('user')).toEqual(userData);
+        expect(adapter.get('userSettings')).toEqual(userData);
     });
 
-    test('setUpdateHandler', () => {
-        let handler = jest.fn();
-        config.setUpdateHandler(handler);
-        config.setDeviceData({ id: '123', name: 'WebApp' });
+    test('settings clear removes only settings keys', () => {
+        const settings = new PametSettingsService(adapter);
+        const misc = new MiscPropertiesService(adapter);
 
-        // Expect the handler to fire
+        settings.setUserData({ id: '123' });
+        misc.setRecentProjects([{ id: 'p1', title: 'Project 1', uri: 'indexeddb:///p1' }]);
+        misc.setDeviceId('device-1');
+
+        settings.clear();
+
+        expect(adapter.get('userSettings')).toBeUndefined();
+        expect(adapter.get('recentProjects')).toEqual([{ id: 'p1', title: 'Project 1', uri: 'indexeddb:///p1' }]);
+        expect(adapter.get('deviceId')).toBe('device-1');
+    });
+
+    test('setUpdateHandler fires on local updates', () => {
+        const config = new PametSettingsService(adapter);
+        const handler = jest.fn();
+
+        config.setUpdateHandler(handler);
+        config.setUserData({ id: '123' });
+
         expect(handler).toHaveBeenCalled();
     });
 
+    test('tracked projects live under userSettings', () => {
+        const config = new PametSettingsService(adapter);
+
+        config.setUserData({ id: '123', name: 'John Doe' });
+        config.upsertProject({ id: 'p1', title: 'Project 1', uri: 'indexeddb:///p1' });
+
+        expect(config.getProjects()).toEqual([{ id: 'p1', title: 'Project 1', uri: 'indexeddb:///p1' }]);
+        expect(adapter.get('userSettings')).toEqual({
+            id: '123',
+            name: 'John Doe',
+            projects: [{ id: 'p1', title: 'Project 1', uri: 'indexeddb:///p1' }],
+        });
+    });
+
+
+    test('device id lives in misc properties', () => {
+        const misc = new MiscPropertiesService(adapter);
+
+        misc.setDeviceId('device-1');
+
+        expect(misc.getDeviceId()).toBe('device-1');
+        expect(adapter.get('deviceId')).toBe('device-1');
+    });
 });

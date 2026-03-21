@@ -26,8 +26,8 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
     const clipboard = appState.clipboard;
     const pageId = state.page().id;
 
-    // Split clipboard content by type (ImageItems on clipboard are ignored —
-    // FileItems are project-level and already in the store; notes just keep their image_id)
+    // Split clipboard content by type (ImageItems on clipboard are ignored on
+    // same-project paste; notes keep their existing image_id references)
     const clipboardNotes: Note[] = [];
     const clipboardArrows: Arrow[] = [];
     for (const e of clipboard) {
@@ -119,7 +119,7 @@ export async function pasteInternal(
         return;
     }
 
-    // Prepare transformed notes/arrows (FileItems are shared — notes keep their image_id)
+    // Prepare transformed notes/arrows (same-project references are shared)
     const { notesToInsert, arrowsToInsert } = preparePasteTransform(appState, state, relativeTo);
 
     // Cross-project paste: if clipboard came from a different project,
@@ -165,7 +165,7 @@ export async function pasteInternal(
                                 sourceProjectId, sourceImageItem.id, sourceImageItem.contentHash
                             );
                             const newImageItem = await pamet.addFileToStore(
-                                blob, sourceImageItem.path, '',
+                                blob, sourceImageItem.path, state.page().id,
                                 { width: sourceImageItem.width, height: sourceImageItem.height, size: blob.size, mimeType: blob.type }
                             );
                             imageIdRemap.set(oldImageId, newImageItem.id);
@@ -235,7 +235,12 @@ export async function pasteInternal(
         if (!currentProjectId) {
             throw new Error('No current project set when pasting image');
         }
-        const imageItem = await pamet.addFileToStore(finalImageBlob, imagePath, '', { width, height, size: finalImageBlob.size, mimeType: finalImageBlob.type });
+        const imageItem = await pamet.addFileToStore(
+            finalImageBlob,
+            imagePath,
+            pageId,
+            { width, height, size: finalImageBlob.size, mimeType: finalImageBlob.type },
+        );
         note.content.image_id = imageItem.id;
 
         // Configure note position and size

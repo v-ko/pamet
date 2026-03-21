@@ -6,13 +6,11 @@ from time import sleep
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pamet.services.media_backend import MediaStorageBackendService
 from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
 from pamet.services.rest_api.routes.desktop import (
     configure_router,
     get_media_router,
     get_router,
-    set_media_backend,
 )
 from uvicorn import Config, Server
 
@@ -49,7 +47,7 @@ class DesktopServer:
         self.media_store_path = Path(media_store_path)
         self.commands = commands or {}
         if config_dir is None:
-            config_dir = pamet.desktop_app.desktop_config_dir()
+            config_dir = pamet.desktop_app.CONFIG_DIR
         self.config_dir = Path(config_dir)
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
 
@@ -57,7 +55,6 @@ class DesktopServer:
         if web_app_static_build_path:
             self.web_app_static_build_path = Path(web_app_static_build_path)
         self.web_app_debug_server_host = web_app_debug_server_host
-        self._media_routes_registered = False
 
         self.thread = None
         self._port = port or DEFAULT_PORT
@@ -87,21 +84,6 @@ class DesktopServer:
         self.app.include_router(get_router())
         self.app.include_router(get_media_router())
 
-        # Media routes are registered once the backend service is available.
-        try:
-            media_backend = pamet.media_backend_service()
-            self.register_media_routes(media_backend)
-        except Exception:
-            # Expected during startup before desktop main sets the service.
-            pass
-
-    def register_media_routes(self, media_backend: MediaStorageBackendService):
-        if self._media_routes_registered:
-            return
-        set_media_backend(media_backend)
-        self._media_routes_registered = True
-        log.info("MediaStorageBackendService routes registered")
-
     @property
     def port(self):
         return self._port
@@ -123,22 +105,22 @@ class DesktopServer:
         lock_file.parent.mkdir(parents=True, exist_ok=True)
         lock_file.write_text(str(port))
 
-    def another_instance_is_running(self):
+    def get_running_instance_port(self):
         port = self.get_port_from_lock_file()
 
         if port is None:
-            return False
+            return None
 
         # Check with a request (it's just a sanity check)
         try:
             reply = requests.get(f"{LOCALHOST}:{port}/version")  # @IgnoreException
             if not reply.ok:
-                return False
+                return None
             if "data" in reply.json():
-                return True
+                return port
         except requests.ConnectionError:
-            return False
-        return True
+            return None
+        return port
 
     def start(self):
         log.info("Starting local server")

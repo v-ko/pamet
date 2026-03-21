@@ -1,6 +1,8 @@
 from __future__ import annotations
 from importlib import resources
 import importlib.metadata
+
+from pamet.services.desktop_storage_service import DesktopStorageService
 # from pathlib import Path
 
 # from pamet import desktop_app
@@ -47,7 +49,7 @@ _broken_entities = {}  # the entity as key, and exception as value
 
 _sync_repo: PametRepository = None  # Should be set via the setter method
 _media_backend_service = None  # Media storage backend service (desktop)
-_project_folder_manager = None  # Handles project filesystem and migrations
+_desktop_storage_service = None  # Desktop project session service
 
 # _persistence_manager = PersistenceManager()
 _undo_service = None
@@ -137,18 +139,17 @@ def set_media_backend_service(service):
     _media_backend_service = service
 
 
-def project_folder_manager():
-    """Return the project folder manager. Raises if not set."""
-    if _project_folder_manager is None:
+def desktop_storage_service() -> DesktopStorageService:
+    if _desktop_storage_service is None:
         raise Exception(
-            'ProjectFolderManager not set. Instantiate it in desktop main and set via set_project_folder_manager().'  # noqa: E501
+            "Desktop storage service not set. Instantiate it in desktop main and set via set_desktop_storage_service()."
         )
-    return _project_folder_manager
+    return _desktop_storage_service
 
 
-def set_project_folder_manager(manager):
-    global _project_folder_manager
-    _project_folder_manager = manager
+def set_desktop_storage_service(service):
+    global _desktop_storage_service
+    _desktop_storage_service = service
 
 
 def sync_repo():
@@ -201,9 +202,6 @@ def set_async_repo(repo: Repository):
     # Here the persistence manager should be connected to the entityTLA channel
 
 
-# def load_repo_from_user_config():
-#     user_config = desktop_app.get_user_settings()
-#     repo_path = Path(user_config.repository_path)
 #     # Init the repo
 #     if repo_path.exists():
 #         fs_repo = FSStorageRepository.open(repo_path,

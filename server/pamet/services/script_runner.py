@@ -14,6 +14,8 @@ Python is not installed on your system. Install it and try again.
 It's best to do so with your package manager/ app store.
 '''
 dependency_missing_text = 'Dependency missing'
+RUN_IN_TERMINAL_PREFIX_POSIX = "gnome-terminal -- "
+RUN_IN_TERMINAL_PREFIX_WINDOWS = "powershell -noexit "
 
 
 def google_url(search_text: str):
@@ -72,7 +74,6 @@ class ScriptRunner:
                 return
             command = f'bash {command}'
 
-        config = desktop_app.get_user_settings()
         if note.run_in_terminal:
             if os.name == 'posix':
                 if not shutil.which('bash'):
@@ -80,8 +81,8 @@ class ScriptRunner:
                     return
                 escaped = command.replace('"', '\\"')
                 command = f'bash -c "{escaped}; bash"'
-                command = f'{config.run_in_terminal_prefix_posix}{command}'
+                command = f'{RUN_IN_TERMINAL_PREFIX_POSIX}{command}'
             elif os.name == 'nt':
-                command = f'{config.run_in_terminal_prefix_windows}{command}'
+                command = f'{RUN_IN_TERMINAL_PREFIX_WINDOWS}{command}'
 
         subprocess.run(command, shell=True)

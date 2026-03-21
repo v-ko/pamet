@@ -290,4 +290,7 @@ export function color_role_to_hex_color(color_role: string): HexColorData {
         return '#ff0000';
     }
 }
+export function buildDeviceBranchName(userId: string, deviceId: string): string {
+    return `${userId}__${deviceId}`;
+}
 

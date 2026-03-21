@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import hmac
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,8 +7,10 @@ from typing import Callable
 
 from fastapi import (
     APIRouter,
+    Body,
     Depends,
     File,
+    Form,
     HTTPException,
     Query,
     Request,
@@ -16,14 +19,10 @@ from fastapi import (
 )
 from fastapi.responses import FileResponse
 from fusion.libs.entity import dump_to_dict
-from pamet.services.media_backend import MediaStorageBackendService
+from pamet.services.desktop_storage_service import ProjectNotLoadedError
 from pamet.services.rest_api.util import envelope
 
 import pamet
-from fusion import get_logger
-from pamet import desktop_app
-
-log = get_logger(__name__)
 
 
 @dataclass
@@ -32,7 +31,6 @@ class _DesktopRouteContext:
     media_store_path: Path
     web_app_static_build_path: Path | None
     desktop_access_token: str | None
-    media_backend: MediaStorageBackendService | None = None
 
 
 _ctx: _DesktopRouteContext | None = None
@@ -68,10 +66,6 @@ def get_media_router() -> APIRouter:
     return media_router
 
 
-def set_media_backend(media_backend: MediaStorageBackendService):
-    _require_ctx().media_backend = media_backend
-
-
 def _require_ctx() -> _DesktopRouteContext:
     if _ctx is None:
         raise RuntimeError("Desktop API router is not configured")
@@ -88,13 +82,22 @@ def _extract_bearer_token(auth_header: str | None) -> str | None:
     return token or None
 
 
+def _is_valid_desktop_token(token: str | None) -> bool:
+    expected_token = _require_ctx().desktop_access_token
+    if expected_token is None:
+        return True
+    if not token:
+        return False
+    return hmac.compare_digest(token, expected_token)
+
+
 def require_desktop_auth(request: Request):
     if _ctx is None:
         raise RuntimeError("Desktop API router is not configured")
     expected_token = _ctx.desktop_access_token
     if expected_token:
         provided = _extract_bearer_token(request.headers.get("Authorization"))
-        if not provided or not hmac.compare_digest(provided, expected_token):
+        if not _is_valid_desktop_token(provided):
             raise HTTPException(
                 status_code=401,
                 detail="Unauthorized",
@@ -108,28 +111,22 @@ def _set_no_cache_headers(response: Response):
     response.headers["Expires"] = "0"
 
 
-def _desktop_repo_state(branch_name: str) -> dict:
-    if not branch_name:
-        branch_name = "main"
+def _project_runtime(project_id: str):
+    if not project_id:
+        raise HTTPException(status_code=400, detail="projectId is required")
     try:
-        pfm = pamet.project_folder_manager()
-    except Exception as e:
-        log.warning(f"ProjectFolderManager unavailable for desktop storage state: {e}")
-        return {
-            "commitGraph": {
-                "branches": [{"name": branch_name, "headCommitId": None}],
-                "commits": [],
-            },
-            "commits": [],
-        }
-    return pfm.get_head_state_as_mock_commit(branch_name=branch_name)
-
-
-def _require_media_backend() -> MediaStorageBackendService:
-    media_backend = _require_ctx().media_backend
-    if media_backend is None:
-        raise HTTPException(status_code=503, detail="Media backend unavailable")
-    return media_backend
+        storage_service = pamet.desktop_storage_service()
+        return storage_service.project_folder_manager(project_id)
+    except ProjectNotLoadedError as exc:
+        raise HTTPException(
+            status_code=412,
+            detail=f"Desktop project session is not loaded for '{project_id}'",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to access desktop project runtime for '{project_id}'",
+        ) from exc
 
 
 @router.post("/commands/{command_name}/")
@@ -144,19 +141,81 @@ def version():
     return envelope(pamet.__version__)
 
 
-@router.get(
-    "/desktop/local-projects",
+@router.post(
+    "/desktop/storage/project/{project_id}/load",
     dependencies=[Depends(require_desktop_auth)],
 )
-def get_local_projects(response: Response):
-    settings = pamet.get_user_settings()
-    local_projects_by_path = desktop_app.get_local_projects()
-    local_projects = [
-        local_projects_by_path[str(Path(path))]
-        for path in settings.recent_projects
-    ]
+def load_project(project_id: str, payload: dict | None = Body(default=None)):
+    if not project_id:
+        raise HTTPException(status_code=400, detail="projectId is required")
+    storage_service = pamet.desktop_storage_service()
+    try:
+        if not isinstance(payload, dict):
+            raise ValueError("project load payload must be an object")
+        project_uri = payload.get("uri")
+        if not isinstance(project_uri, str):
+            raise ValueError("project uri must be a string")
+        storage_service.load_project(project_id, project_uri=project_uri)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return envelope({"ok": True})
+
+
+@router.post(
+    "/desktop/storage/project/{project_id}/unload",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def unload_project(project_id: str):
+    if not project_id:
+        raise HTTPException(status_code=400, detail="projectId is required")
+    storage_service = pamet.desktop_storage_service()
+    storage_service.unload_project(project_id)
+    return envelope({"ok": True})
+
+
+@router.get(
+    "/desktop/settings/user",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def get_desktop_user_settings(response: Response):
     _set_no_cache_headers(response)
-    return local_projects
+    return envelope(pamet.desktop_app.get_user_settings())
+
+
+@router.put(
+    "/desktop/settings/user",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def set_desktop_user_settings(payload: dict | None = Body(default=None)):
+    if not isinstance(payload, dict):
+        raise HTTPException(
+            status_code=400, detail="user settings payload must be an object"
+        )
+    pamet.desktop_app.save_user_settings(payload)
+    return envelope({"ok": True})
+
+
+@router.get(
+    "/desktop/storage/project/{project_id}/properties",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def get_project_properties(project_id: str, response: Response):
+    if not project_id:
+        raise HTTPException(status_code=400, detail="projectId is required")
+    _set_no_cache_headers(response)
+    return envelope(_project_runtime(project_id).get_project_properties())
+
+
+@router.put(
+    "/desktop/storage/project/{project_id}/properties",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def set_project_properties(project_id: str, payload: dict):
+    if not project_id:
+        raise HTTPException(status_code=400, detail="projectId is required")
+    runtime = _project_runtime(project_id)
+    runtime.set_project_properties(payload)
+    return envelope(runtime.get_project_properties())
 
 
 @router.get("/")
@@ -175,6 +234,17 @@ def serve_static(path: str):
         raise HTTPException(status_code=404, detail="No static app configured")
     static_path = static_root / "static" / path
     return FileResponse(static_path)
+
+
+@router.get("/{user_id}/{project_id}")
+def serve_project_index(user_id: str, project_id: str):
+    _ = user_id
+    _ = project_id
+    static_root = _require_ctx().web_app_static_build_path
+    if static_root is None:
+        raise HTTPException(status_code=404, detail="No static app configured")
+    index_path = static_root / "index.html"
+    return FileResponse(index_path)
 
 
 @router.get("/pages")
@@ -201,10 +271,13 @@ def get_children(page_id: str, response: Response):
     dependencies=[Depends(require_desktop_auth)],
 )
 def get_commit_graph(project_id: str, response: Response, branch: str = "main"):
-    del project_id
-    state = _desktop_repo_state(branch_name=branch)
+    runtime = _project_runtime(project_id)
+    try:
+        commit_graph = runtime.get_commit_graph(branch_name=branch)
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
     _set_no_cache_headers(response)
-    return state["commitGraph"]
+    return commit_graph
 
 
 @router.get(
@@ -217,12 +290,47 @@ def get_commits(
     ids: list[str] = Query(default=[]),
     branch: str = "main",
 ):
-    del project_id
-    state = _desktop_repo_state(branch_name=branch)
-    commits_by_id = {c["id"]: c for c in state["commits"]}
-    commits = [commits_by_id[cid] for cid in ids if cid in commits_by_id]
+    runtime = _project_runtime(project_id)
+    try:
+        commits = runtime.get_commits(ids=ids, branch_name=branch)
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
     _set_no_cache_headers(response)
     return commits
+
+
+@router.post(
+    "/desktop/storage/project/{project_id}/repo-update",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def apply_repo_update(project_id: str, payload: dict):
+    runtime = _project_runtime(project_id)
+    try:
+        runtime.apply_repo_update(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    return envelope({"ok": True})
+
+
+@router.get(
+    "/desktop/storage/project/{project_id}/fs-sync/pending-delta",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def get_pending_delta(
+    project_id: str,
+    response: Response,
+    timeout_ms: int = Query(default=0, alias="timeoutMs"),
+):
+    _ = timeout_ms
+    runtime = _project_runtime(project_id)
+    try:
+        pending_delta = runtime.get_pending_delta()
+    except NotImplementedError as exc:
+        raise HTTPException(status_code=501, detail=str(exc)) from exc
+    _set_no_cache_headers(response)
+    return envelope({"pendingDelta": pending_delta})
 
 
 @router.get(
@@ -248,10 +356,19 @@ def get_media(page_id: str, path: str):
     "/item/{media_id}/{content_hash}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def upload_media(media_id: str, content_hash: str, file: UploadFile = File(...)):
-    media_backend = _require_media_backend()
+async def upload_media(
+    media_id: str,
+    content_hash: str,
+    project_id: str = Query(..., alias="projectId"),
+    path: str = Form(...),
+    file: UploadFile = File(...),
+):
+    media_backend = _project_runtime(project_id).blob_storage_adapter
     data = await file.read()
-    media_backend.save_bytes(media_id, content_hash, data, file.content_type)
+    try:
+        media_backend.save_bytes(media_id, content_hash, path, data, file.content_type)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"data": {"ok": True}}
 
 
@@ -259,8 +376,12 @@ async def upload_media(media_id: str, content_hash: str, file: UploadFile = File
     "/item/{media_id}/{content_hash}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def get_media_item(media_id: str, content_hash: str):
-    media_backend = _require_media_backend()
+async def get_media_item(
+    media_id: str,
+    content_hash: str,
+    project_id: str = Query(..., alias="projectId"),
+):
+    media_backend = _project_runtime(project_id).blob_storage_adapter
     path = media_backend.find_item_path(media_id, content_hash)
     if path is None:
         raise HTTPException(status_code=404, detail="Media not found")
@@ -271,8 +392,12 @@ async def get_media_item(media_id: str, content_hash: str):
     "/item/{media_id}/{content_hash}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def delete_media(media_id: str, content_hash: str):
-    media_backend = _require_media_backend()
+async def delete_media(
+    media_id: str,
+    content_hash: str,
+    project_id: str = Query(..., alias="projectId"),
+):
+    media_backend = _project_runtime(project_id).blob_storage_adapter
     moved = media_backend.move_to_trash(media_id, content_hash)
     if moved:
         return {"data": {"ok": True}}
@@ -283,8 +408,12 @@ async def delete_media(media_id: str, content_hash: str):
     "/item/{media_id}/{content_hash}/restore",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def restore_media(media_id: str, content_hash: str):
-    media_backend = _require_media_backend()
+async def restore_media(
+    media_id: str,
+    content_hash: str,
+    project_id: str = Query(..., alias="projectId"),
+):
+    media_backend = _project_runtime(project_id).blob_storage_adapter
     restored = media_backend.restore_from_trash(media_id, content_hash)
     if restored:
         return {"data": {"ok": True}}
@@ -295,7 +424,7 @@ async def restore_media(media_id: str, content_hash: str):
     "/trash/clean",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def clean_trash():
-    media_backend = _require_media_backend()
+async def clean_trash(project_id: str = Query(..., alias="projectId")):
+    media_backend = _project_runtime(project_id).blob_storage_adapter
     removed = media_backend.clean_trash()
     return {"data": {"removed": removed}}

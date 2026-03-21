@@ -195,7 +195,7 @@ def draw_text_lines(painter: QPainter, text_layout: List[Tuple[str, QRectF]],
 
 def copy_script_templates(overwrite: bool = False):
     user_settings = pamet.desktop_app.get_user_settings()
-    templates_folder: Path = Path(user_settings.script_templates_folder)
+    templates_folder = Path(user_settings["script_templates_folder"])
     templates_folder.mkdir(parents=True, exist_ok=True)
     source_folder = resource_dir('script_templates')
 

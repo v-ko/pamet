@@ -1,4 +1,9 @@
-export type SettingsFieldValue = string | number | object;
+export type SettingsFieldValue =
+    | string
+    | number
+    | boolean
+    | null
+    | object;
 
 export abstract class BaseConfigAdapter {
     abstract getJSON(key: string): any;

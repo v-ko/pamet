@@ -3,8 +3,6 @@ from importlib import resources
 from fusion.extensions_loader import ExtensionsLoader
 from fusion.logging import get_logger
 from fusion.platform.qt_widgets import configure_for_qt as fusion_config_qt
-from pamet.desktop_app.config import UserDesktopSettings
-from pamet.desktop_app.util import copy_script_templates
 from pamet.util import resource_path
 from PySide6.QtGui import QFont, QFontDatabase
 
@@ -16,15 +14,10 @@ log = get_logger(__name__)
 def configure_for_qt(app):
     global _media_store, _default_note_font
 
-    log.info(f"Using data folder: {desktop_app.desktop_config_dir()}")
+    log.info(f"Using config folder: {desktop_app.CONFIG_DIR}")
+    log.info(f"Using app data folder: {desktop_app.APP_DATA_DIR}")
     desktop_app.set_app(app)
     fusion_config_qt(app)
-
-    config: UserDesktopSettings = desktop_app.get_user_settings()
-    if config.changes_present():
-        desktop_app.save_user_settings(config)
-
-    copy_script_templates()
 
     desktop_app.icons.load_all()
 

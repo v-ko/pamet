@@ -58,8 +58,6 @@ const baseUrl = desktopApiBaseUrl;
 
 const configService = new DesktopPametConfigService({
     adapter: new LocalStorageConfigAdapter(),
-    baseUrl: baseUrl,
-    auth: desktopAuth,
 });
 pamet.setConfigService(configService)
 
@@ -88,7 +86,7 @@ function desktopStorageConfigFactory(projectId: string): ProjectStorageConfig {
                 baseUrl: baseUrl,
                 auth: desktopAuth,
             }
-        }
+        },
     }
 }
 
@@ -129,8 +127,6 @@ async function initializeDesktopApp() {
         }
         config.setUserData(userData);
     }
-
-    await configService.refreshLocalProjectsFromDesktop();
 
     await updateAppStateFromConfig(pamet.appViewState).catch((e) => {
         log.error('[setConfig] Error updating app state from config', e);

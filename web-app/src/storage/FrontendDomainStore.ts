@@ -34,7 +34,6 @@ export class FrontendDomainStore extends PametStore {
 
     private _uncommittedChanges: Change[] = [];
     // private _expectedDeltas: DeltaData[] = []; // Sent to the repo service to create commits with
-    private _expectedChanges: Change[] = [];
     private _expectedDelta: Delta = new Delta({})
 
     constructor() {

@@ -1,25 +1,28 @@
 import { WebAppState } from "@/containers/app/WebAppState";
 import { getLogger } from 'fusion/logging';
 import { Change } from "fusion/model/Change";
-import { PAMET_INMEMORY_STORE_CONFIG, PametSearchFilter, PametStore } from "@/storage/PametStore";
+import { PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { ImageItem } from "fusion/model/ImageItem";
 import { FileItemMetadata } from "fusion/model/FileItem";
 import { FrontendDomainStore } from "@/storage/FrontendDomainStore";
-import { BasePametKeyValueService } from "@/services/config/Config";
+import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
 import { StorageService } from "fusion/storage/management/StorageService";
-import { FileStoreAdapterNames, ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
-import { RepoUpdateData, StorageAdapterNames } from "fusion/storage/repository/Repository";
+import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
+import { RepoUpdateData } from "fusion/storage/repository/Repository";
 import { RoutingService } from "@/services/routing/RoutingService";
 import { projectActions } from "@/actions/project";
 import { registerRootActionCompletedHook } from "fusion/registries/Action";
-import { ProjectData } from "@/model/config/Project";
+import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
-import { updateAppStateFromConfig } from "@/procedures/app";
+import { updateAppStateFromConfig, doSwitchToProject } from "@/procedures/app";
+import { appActions } from "@/actions/app";
+import { pageActions } from "@/actions/page";
+import { Point2D } from "fusion/primitives/Point2D";
 import { RenderProfiler } from "@/core/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { SearchService } from "@/services/SearchService";
@@ -39,40 +42,23 @@ export interface StorageStatusIconSet {
     failedIconUrl: string;
 }
 
+export type ProjectStorageConfigFactory = (
+    projectId: string,
+    userId: string,
+    deviceId: string,
+) => ProjectStorageConfig;
+
 
 
 // Service related
-export function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
-    let device = pamet.config.getDeviceData();
-    if (!device) {
-        throw Error('Device not set');
-    }
-    return {
-        deviceBranchName: device.id,
-        storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        onDeviceStorageAdapter: {
-            name: 'IndexedDB' as StorageAdapterNames,
-            args: {
-                projectId: projectId,
-                localBranchName: device.id,
-            }
-        },
-        onDeviceFileStore: {
-            name: 'CacheAPI' as FileStoreAdapterNames,
-            args: {
-                projectId: projectId
-            }
-        }
-    }
-}
-
 export class PametFacade extends PametStore {
     getEntityId() {
         throw new Error("Method not implemented.");
     }
     private _frontendDomainStore: FrontendDomainStore | null = null;
     private _appViewState: WebAppState | null = null;
-    private _config: BasePametKeyValueService | null = null;
+    private _config: PametSettingsService | null = null;
+    private _appMiscProperties: MiscPropertiesService | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService | null = null;
@@ -80,7 +66,7 @@ export class PametFacade extends PametStore {
     searchService: SearchService = new SearchService();
     animationService: AnimationService = new AnimationService();
     context: any = {};
-    _projectStorageConfigFactory: ((projectId: string) => ProjectStorageConfig) | null = null
+    _projectStorageConfigFactory: ProjectStorageConfigFactory | null = null
     _entityProblemCounts: Map<string, number> = new Map();
     private _storageStatusIconSet: StorageStatusIconSet = {
         healthyIconUrl: folderWarningIconUrl,
@@ -142,19 +128,27 @@ export class PametFacade extends PametStore {
         });
     }
 
-    get projectStorageConfigFactory(): (projectId: string) => ProjectStorageConfig {
+    get projectStorageConfigFactory(): ProjectStorageConfigFactory {
         if (this._projectStorageConfigFactory === null) {
             throw Error('Project storage config factory not set');
         }
         return this._projectStorageConfigFactory;
     }
 
-    setProjectStorageConfigFactory(factory: (projectId: string) => ProjectStorageConfig) {
+    setProjectStorageConfigFactory(factory: ProjectStorageConfigFactory) {
         this._projectStorageConfigFactory = factory;
     }
 
     projectStorageConfig(projectId: string): ProjectStorageConfig {
-        return this.projectStorageConfigFactory(projectId);
+        const deviceId = this.appMiscProperties.getDeviceId();
+        if (!deviceId) {
+            throw Error('Device ID not set');
+        }
+        const userId = this.appViewState.userId;
+        if (!userId) {
+            throw Error('User ID not set in app state');
+        }
+        return this.projectStorageConfigFactory(projectId, userId, deviceId);
     }
 
     get frontendDomainStore(): FrontendDomainStore {
@@ -241,10 +235,63 @@ export class PametFacade extends PametStore {
         this._appViewState = state;
     }
 
+    // --- Router coordination --------------------------------------------------
+
+    initRouter() {
+        this.router.setUpdateHandler((route) => {
+            this.handleRouteFromBrowser(route).catch((e) => {
+                log.error('[Router.updateHandler] Error handling browser route change', e);
+            });
+        });
+        this.router.init();
+    }
+
+    private async handleRouteFromBrowser(route: import('@/services/routing/route').PametRoute) {
+        const appState = this.appViewState;
+
+        // Project switch if needed (async)
+        const targetProjectId = route.projectId ?? null;
+        if (appState.currentProjectId !== targetProjectId) {
+            await doSwitchToProject(targetProjectId);
+        }
+
+        // Page (sync)
+        const targetPageId = route.pageId ?? null;
+        if (targetPageId && appState.currentPageId !== targetPageId) {
+            appActions.setCurrentPage(appState, targetPageId);
+        }
+
+        // Viewport (sync)
+        if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+            const [x, y] = route.viewportCenter;
+            pageActions.updateViewport(
+                appState.currentPageViewState,
+                new Point2D([x, y]),
+                route.viewportEyeHeight,
+            );
+        }
+    }
+
+    syncRouterFromAppState() {
+        const route = this.appViewState.toRoute();
+        this.router.navigateToRoute(route);
+    }
+
+    flushRouterFromAppState() {
+        const route = this.appViewState.toRoute();
+        this.router.flushPendingNavigation(route);
+    }
+
+    toggleLastPage() {
+        const appState = this.appViewState;
+        this.router.toggleLastPage(appState.currentProjectId, appState.currentPageId);
+    }
+
     async attachProjectAsCurrent(projectId: string) {
         // Reset undo histories when switching projects
         this.undoService.clearAll();
         const frontendDomainStore = new FrontendDomainStore();
+        const trackedProject = this.appViewState.trackedProject(projectId);
 
         // Load the new project and connect it to the Frontend domain store
         let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
@@ -253,7 +300,11 @@ export class PametFacade extends PametStore {
         }
         try {
             await pamet.storageService.loadProject(
-                projectId, pamet.projectStorageConfig(projectId), repoUpdateHandler)
+                projectId,
+                pamet.projectStorageConfig(projectId),
+                repoUpdateHandler,
+                trackedProject?.uri,
+            )
 
         } catch (e) {
             log.error('Error loading project', e);
@@ -276,7 +327,7 @@ export class PametFacade extends PametStore {
         log.info('Detaching FDS for project', projectId);
         this.undoService.clearAll();
         this.searchService.clear();
-        let currentProject: ProjectData;
+        let currentProject: PametProjectData;
         try {
             currentProject = this.appViewState.getCurrentProject();
         } catch (e) {
@@ -299,29 +350,107 @@ export class PametFacade extends PametStore {
     }
 
     // Model related
-    get config(): BasePametKeyValueService {
+    get config(): PametSettingsService {
         if (!this._config) {
             throw Error('Config not set');
         }
         return this._config;
     }
 
-    setConfigService(config: BasePametKeyValueService) {
+    setConfigService(config: PametSettingsService) {
         this._config = config;
         config.setUpdateHandler(() => {
             log.info('Config updated');
-            updateAppStateFromConfig(this.appViewState).catch((e) => {
-                log.error('[Config.updateHandler] Error updating app state from config', e);
-            });
+            updateAppStateFromConfig(this.appViewState)
+                .catch((e) => {
+                    log.error('[Config.updateHandler] Error updating app state from config', e);
+                });
         });
     }
 
-    projects(): ProjectData[] {
-        return this.config.getLocalProjects();
+    get appMiscProperties(): MiscPropertiesService {
+        if (!this._appMiscProperties) {
+            throw Error('App misc properties not set');
+        }
+        return this._appMiscProperties;
     }
 
-    project(projectId: string): ProjectData | undefined {
-        return this.config.projectData(projectId);
+    setAppMiscProperties(miscProperties: MiscPropertiesService) {
+        this._appMiscProperties = miscProperties;
+        miscProperties.setUpdateHandler(() => {
+            log.info('App misc properties updated');
+            updateAppStateFromConfig(this.appViewState)
+                .catch((e) => {
+                    log.error('[MiscPropertiesService.updateHandler] Error updating app state from config', e);
+                });
+        });
+    }
+
+    trackedProjects(): ProjectReference[] {
+        return this.appViewState.trackedProjects;
+    }
+
+    async loadProjectProperties(projectId: string): Promise<PametProjectData | undefined> {
+        const trackedProject = this.appViewState.trackedProject(projectId);
+        if (!trackedProject) {
+            return undefined;
+        }
+        const projectProperties = await this.storageService.getProjectProperties(
+            trackedProject.id,
+            this.projectStorageConfig(trackedProject.id),
+        );
+        if (projectProperties) {
+            return projectProperties as PametProjectData;
+        }
+        const recentProject = this.recentProject(trackedProject.id);
+        return {
+            id: trackedProject.id,
+            title: trackedProject.title || recentProject?.title || trackedProject.id,
+            description: '',
+            created: '',
+        };
+    }
+
+    upsertTrackedProject(trackedProject: ProjectReference) {
+        this.config.upsertProject(trackedProject);
+    }
+
+    removeTrackedProject(projectId: string) {
+        this.config.removeProject(projectId);
+    }
+
+    async saveProjectProperties(projectData: PametProjectData): Promise<void> {
+        await this.storageService.setProjectProperties(
+            projectData.id,
+            this.projectStorageConfig(projectData.id),
+            projectData,
+        );
+        const trackedProject = this.appViewState.trackedProject(projectData.id);
+        if (trackedProject) {
+            this.upsertTrackedProject({
+                ...trackedProject,
+                title: projectData.title,
+            });
+        }
+        const recentProject = this.recentProject(projectData.id);
+        if (recentProject) {
+            this.appMiscProperties.updateRecentProject({
+                id: projectData.id,
+                title: projectData.title,
+                uri: recentProject.uri,
+            });
+        }
+        if (this.appViewState.currentProjectId === projectData.id) {
+            this.appViewState.currentProjectState = projectData;
+        }
+    }
+
+    recentProjects(): ProjectReference[] {
+        return this.appViewState.recentProjects;
+    }
+
+    recentProject(projectId: string): ProjectReference | undefined {
+        return this.recentProjects().find((project) => project.id === projectId);
     }
 
     insertOne(entity: Entity<EntityData>): Change {
@@ -440,8 +569,9 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    // Current page removed: switch to project default/first page and let router reaction sync the URL
+                    // Current page removed: switch to project default/first page
                     projectActions.goToDefaultPage(appState);
+                    pamet.syncRouterFromAppState();
                     return;
                 }
             }
@@ -476,8 +606,7 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                 currentPageVS.fileUrlsByItemId.delete(imageItem.id);
             } else {
                 // On create/update: always register the URL so notes on the
-                // current page can reference it (ImageItems are root-level
-                // entities, not children of pages).
+                // current page can reference it (references may cross pages).
                 currentPageVS.addUrlForFileItem(imageItem);
             }
         }

@@ -29,6 +29,7 @@ const createPageNavigationAction = (page: any) => () => {
     log.info(`Navigating to page ${page.name}`);
     closeCommandPalette();
     appActions.setCurrentPage(pamet.appViewState, page.id);
+    pamet.syncRouterFromAppState();
 };
 
 // Helper function to create project switch action
@@ -182,7 +183,7 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
 export const ProjectPalette: React.FC<{ state: ProjectPaletteState }> = observer(({ state }) => {
     const updateItems = (text: string): PaletteItemAttributes[] => {
         const appState = pamet.appViewState;
-        const projects = pamet.projects();
+        const projects = appState.recentProjects;
         let projectCommands: PaletteItemAttributes[] = [];
         for (let project of projects) {
             if (project.id === appState.currentProjectId) {

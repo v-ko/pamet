@@ -3,9 +3,21 @@ from pathlib import Path
 
 from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtWebEngineCore import QWebEngineScript
+from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QMainWindow, QSplitter
+
+
+class PametWebEnginePage(QWebEnginePage):
+    """Custom page that forwards all JS console messages (including info) to stdout."""
+
+    def javaScriptConsoleMessage(self, level, message, line, source_id):
+        tag = {
+            QWebEnginePage.JavaScriptConsoleMessageLevel.InfoMessageLevel: "js:info",
+            QWebEnginePage.JavaScriptConsoleMessageLevel.WarningMessageLevel: "js:warn",
+            QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel: "js:error",
+        }.get(level, "js")
+        print(f"{tag}: {message}")
 
 
 class WebShellWindow(QMainWindow):
@@ -14,6 +26,7 @@ class WebShellWindow(QMainWindow):
         self,
         endpoint: str,
         desktop_api_base_url: str,
+        webengine_profile_root: Path,
         show_dev_tools: bool = True,
         parent=None,
     ):
@@ -26,6 +39,12 @@ class WebShellWindow(QMainWindow):
 
         # Create the main web view
         self.web_view = QWebEngineView()
+        profile_root = Path(webengine_profile_root)
+        profile_root.mkdir(parents=True, exist_ok=True)
+        self.web_profile = QWebEngineProfile("pamet-desktop", self)
+        self.web_profile.setPersistentStoragePath(str(profile_root / "storage"))
+        # self.web_profile.setCachePath(str(profile_root / "cache"))
+        self.web_view.setPage(PametWebEnginePage(self.web_profile, self.web_view))
 
         # Store the show_dev_tools flag for layout decisions
         self.show_dev_tools = show_dev_tools

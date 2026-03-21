@@ -4,16 +4,23 @@ V4 to V5 migration for Pamet pages (.pam4.json -> .pam5.json).
 Handles: composite ID flattening, color role conversion, note type unification,
 image metadata restructuring, internal URL rewrite, arrow endpoint restructuring.
 
+After page conversion, a second pass creates ImageItem entity dicts for notes
+that reference images (content.image) and rewrites them to use content.image_id.
+The ImageItem dicts are written to project.pamet.json.
+
 The element migration logic mirrors the TypeScript tmpDynamicMigration in
 web-app/src/storage/DesktopImporter.ts.
 """
 
 import copy
+import hashlib
 import json
+import mimetypes
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Tuple
 
 from fusion.logging import get_logger
+from fusion.util import get_new_id
 from pamet.storage.migrations.utils import backup_file
 
 from ..file_system.color_roles import legacy_normalized_rgba_to_role
@@ -33,6 +40,11 @@ NOTE_LEGACY_TYPES = {
     "CardNote",
     "OtherPageListNote",
 }
+
+# SHA-256 truncation length for content hashes (matches TS/constants.py)
+_CONTENT_HASH_HEX_LEN = 32
+
+PROJECT_CONFIG_FILENAME = "project.pamet.json"
 
 
 def is_v4_page_file(path: Path) -> bool:
@@ -203,6 +215,181 @@ def convert_v4_to_v5_element(
     return element_data
 
 
+# ---------------------------------------------------------------------------
+# Image → ImageItem migration helpers (no model dependency — plain dicts)
+# ---------------------------------------------------------------------------
+
+
+def _resolve_image_url(image_url: str, repo_path: Path) -> Optional[Path]:
+    """Resolve a V5 content.image.url to an absolute file path.
+
+    Handles any ``project:/...`` URL by treating the part after ``project:/``
+    as a path relative to *repo_path*.
+
+    Returns the absolute path or None for unrecognised/skipped URLs
+    (e.g. http(s)).
+    """
+    if image_url.startswith("project:/"):
+        rel = image_url[len("project:/") :]
+        return repo_path / rel
+
+    # http(s) or unknown — skip
+    return None
+
+
+def _compute_content_hash(file_path: Path) -> str:
+    """SHA-256 of file contents, truncated to _CONTENT_HASH_HEX_LEN hex chars."""
+    h = hashlib.sha256(file_path.read_bytes()).hexdigest()
+    return h[:_CONTENT_HASH_HEX_LEN]
+
+
+def _get_image_dimensions(file_path: Path) -> Tuple[int, int]:
+    """Return (width, height) using Pillow.  Falls back to (0, 0)."""
+    try:
+        from PIL import Image
+
+        with Image.open(file_path) as img:
+            return img.size  # (width, height)
+    except Exception as exc:
+        log.warning(f"Could not read image dimensions from {file_path}: {exc}")
+        return 0, 0
+
+
+def _guess_mime(file_path: Path) -> str:
+    mime, _ = mimetypes.guess_type(str(file_path))
+    return mime or "application/octet-stream"
+
+
+def _build_image_item_dict(
+    *,
+    file_path: Path,
+    rel_path: str,
+    project_id: str,
+    width: int,
+    height: int,
+) -> Dict[str, Any]:
+    """Build a plain dict matching the ImageItem entity schema."""
+    content_hash = _compute_content_hash(file_path)
+    size = file_path.stat().st_size
+    mime = _guess_mime(file_path)
+
+    return {
+        "id": get_new_id(),
+        "parent_id": project_id,
+        "type_name": "ImageItem",
+        "path": rel_path,
+        "content": {"hash": content_hash},
+        "metadata": {
+            "width": int(width),
+            "height": int(height),
+            "size": size,
+            "mimeType": mime,
+        },
+    }
+
+
+def migrate_image_notes(
+    repo_path: Path,
+    v5_page_paths: List[Path],
+    project_id: str = "",
+) -> List[Dict[str, Any]]:
+    """Second pass over V5 pages: create ImageItem dicts and rewrite notes.
+
+    For each note with ``content.image``:
+    - Resolve the URL to a file on disk.
+    - If the file exists: compute hash, get dimensions, build an ImageItem dict,
+      replace ``content.image`` with ``content.image_id``.
+    - If external: copy the file into ``<repo>/images/``.
+    - If not found: set ``content.text`` to an error message, log warning.
+
+    Returns a list of ImageItem plain dicts (for writing to project.pamet.json).
+    """
+    repo_path = Path(repo_path)
+    image_items: List[Dict[str, Any]] = []
+
+    for v5_path in v5_page_paths:
+        try:
+            with open(v5_path, "r", encoding="utf-8") as f:
+                page_data = json.load(f)
+        except Exception as exc:
+            log.error(f"migrate_image_notes: failed to read {v5_path}: {exc}")
+            continue
+
+        modified = False
+
+        for note in page_data.get("notes", []):
+            content = note.get("content")
+            if not content or not isinstance(content.get("image"), dict):
+                continue
+
+            image_info = content["image"]
+            image_url = image_info.get("url", "")
+            v4_width = image_info.get("width", 0)
+            v4_height = image_info.get("height", 0)
+
+            # Skip external web URLs
+            if image_url.startswith("http://") or image_url.startswith("https://"):
+                log.info(
+                    f"  note {note['id']}: external web URL, "
+                    f"keeping content.image as-is: {image_url}"
+                )
+                continue
+
+            file_path = _resolve_image_url(image_url, repo_path)
+
+            if file_path is None:
+                log.warning(
+                    f"  note {note['id']}: unrecognised image URL scheme: {image_url}"
+                )
+                continue
+
+            if not file_path.exists():
+                log.warning(
+                    f"  note {note['id']}: image file not found: {file_path} "
+                    f"(url: {image_url})"
+                )
+                content.pop("image", None)
+                error_text = f"[Image not found at migration time: {image_url}]"
+                if content.get("text"):
+                    content["text"] += "\n" + error_text
+                else:
+                    content["text"] = error_text
+                modified = True
+                continue
+
+            rel_path = str(file_path.relative_to(repo_path))
+
+            # Get real dimensions (prefer Pillow, fall back to V4 metadata)
+            pil_w, pil_h = _get_image_dimensions(file_path)
+            width = pil_w if pil_w > 0 else int(v4_width)
+            height = pil_h if pil_h > 0 else int(v4_height)
+
+            item_dict = _build_image_item_dict(
+                file_path=file_path,
+                rel_path=rel_path,
+                project_id=project_id,
+                width=width,
+                height=height,
+            )
+            image_items.append(item_dict)
+
+            # Rewrite the note
+            content.pop("image", None)
+            content["image_id"] = item_dict["id"]
+            modified = True
+
+            log.info(
+                f"  note {note['id']}: created ImageItem {item_dict['id']} "
+                f"-> {rel_path}"
+            )
+
+        if modified:
+            with open(v5_path, "w", encoding="utf-8") as f:
+                json.dump(page_data, f, indent=2, ensure_ascii=False)
+
+    return image_items
+
+
 def convert_v4_to_v5_page_dict(page_data: Dict[str, Any]) -> Dict[str, Any]:
     """Convert a v4 page dict to v5. Deep-copies to avoid mutating the input."""
     result = copy.deepcopy(page_data)
@@ -280,4 +467,29 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
             continue
 
     log.info(f"migrate_v4_to_v5: done, {len(converted)}/{len(v4_pages)} converted")
+
+    # Second pass: create ImageItem dicts from notes with content.image
+    if converted:
+        image_items = migrate_image_notes(repo_path, converted)
+        if image_items:
+            project_config_path = repo_path / PROJECT_CONFIG_FILENAME
+            # Load existing config or start fresh
+            if project_config_path.exists():
+                with open(project_config_path, "r", encoding="utf-8") as f:
+                    project_config = json.load(f)
+            else:
+                project_config = {}
+
+            existing = project_config.get("image_items", [])
+            existing.extend(image_items)
+            project_config["image_items"] = existing
+
+            with open(project_config_path, "w", encoding="utf-8") as f:
+                json.dump(project_config, f, indent=2, ensure_ascii=False)
+
+            log.info(
+                f"migrate_v4_to_v5: wrote {len(image_items)} ImageItem(s) "
+                f"to {project_config_path.name}"
+            )
+
     return converted

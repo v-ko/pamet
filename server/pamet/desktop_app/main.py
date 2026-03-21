@@ -1,36 +1,30 @@
-import os
+import json
+import subprocess
+import sys
 from pathlib import Path
 
 import click
-
-# from fusion import actions_log_channel
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
+
+# from fusion import actions_log_channel
 from pamet.desktop_app.app import DesktopApp
+from pamet.desktop_app.config import get_repo_settings, repo_settings_path
 from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.screen_snippet import grab_screen_snippet
 from pamet.desktop_app.web_shell import WebShellWindow
-from pamet.model.page import Page
-from pamet.services.backup import (
-    AnotherServiceAlreadyRunningException,
-    FSStorageBackupService,
-)
-from pamet.services.media_backend import MediaStorageBackendService
+from pamet.services.desktop_storage_service import DesktopStorageService
 from pamet.services.media_store import MediaStore
-from pamet.services.project_folder_manager import ProjectFolderManager
 from pamet.services.rest_api.desktop import DesktopServer
-from pamet.services.rest_api.routes import desktop as desktop_routes_module
-from pamet.services.search.fuzzy import FuzzySearchService
 from pamet.services.undo import UndoService
-from pamet.storage import FSStorageRepository
-from PySide6.QtWidgets import QMessageBox
 
 import fusion
 import pamet
 from pamet import channels as pamet_channels
-from pamet import desktop_app, set_semantic_search_service
+from pamet import desktop_app
 
 log = fusion.get_logger(__name__)
+LOCAL_USER_ID = "local"
 
 
 def raise_a_window():
@@ -54,46 +48,100 @@ local_server_commands = {
 @click.command()
 @click.argument("path", type=click.Path(exists=True), required=False)
 @click.option("--command", type=click.Choice(local_server_commands.keys()))
-@click.option("--config-path", type=click.Path())
 @click.option(
     "--use-frontend-server",
     type=str,
     help="Connect to frontend dev server at specified host (e.g. http://localhost:3000)",
 )
-def main(path: str, command: str, config_path: str, use_frontend_server: str):
-    if config_path:
-        desktop_app.set_user_settings_path(Path(config_path))
+def main(path: str, command: str, use_frontend_server: str):
+    # Temporary fixture setup for migration testing. Rebuild the prepared fixture
+    # on startup, then restore legacy user settings from it into isolated app-data.
+    prepared_repo_dir = (
+        Path(__file__).resolve().parents[2] / "tests" / "mock_v4_project"
+    )
+    prepare_script_path = prepared_repo_dir / "prepare.py"
 
-    # Load configs and repo path
-    user_config = desktop_app.get_user_settings()
+    prepared_fixture_path = prepared_repo_dir / "prepared_test_time"
+    prepared_repo_path = prepared_fixture_path / "repo"
+    expected_config_dir = prepared_fixture_path / "config"
+    expected_app_data_dir = prepared_fixture_path / "app_data"
 
-    if path:
-        repo_path = Path(path)
-    else:
-        if user_config.recent_projects:
-            repo_path = Path(user_config.repository_path)
+    if desktop_app.CONFIG_DIR != expected_config_dir:
+        raise Exception(f"Running non-mock config: {desktop_app.CONFIG_DIR}")
+    if desktop_app.APP_DATA_DIR != expected_app_data_dir:
+        raise Exception(f"Running non-mock app data: {desktop_app.APP_DATA_DIR}")
+    if path and Path(path) != prepared_repo_path:
+        raise Exception(f"Running non-mock repo: {path}")
+
+    log.info("Preparing mock repo and settings via %s", prepare_script_path)
+    subprocess.run(
+        [sys.executable, str(prepare_script_path)],
+        cwd=prepared_repo_dir,
+        check=True,
+    )
+    # END OF TMP MIGRATION TESTING LOGIC
+
+    # Setup initial user settings if not present
+    if not desktop_app.user_settings_path().exists():
+        desktop_app.save_user_settings(
+            {
+                "id": LOCAL_USER_ID,
+                "name": "Local User",
+                "projects": [],
+            }
+        )
+
+    # If v4 settings exist - extract repo path for project startup
+    legacy_settings_path = desktop_app.APP_DATA_DIR / "settings.json"
+    if not path and legacy_settings_path.exists():
+        log.info("Reading legacy settings from %s", legacy_settings_path)
+        try:
+            legacy_settings = json.loads(legacy_settings_path.read_text())
+        except Exception as e:
+            log.error("Failed to read legacy settings: %s", e)
+            legacy_settings = {}
+
+        legacy_repo_path = legacy_settings.get("repository_path")
+        if not legacy_repo_path:
+            log.warning("No repository_path in legacy settings. Starting without repo.")
+        elif not Path(legacy_repo_path).exists():
+            log.error(
+                "Legacy repository_path %s does not exist. Ignoring.", legacy_repo_path
+            )
         else:
-            repo_path = desktop_app.desktop_config_dir() / "repo"
-    log.info("Using repository: %s" % repo_path)
+            path = str(legacy_repo_path)
 
-    repo_path_str = str(repo_path)
-    user_config.repository_path = repo_path_str
+    # If the path is set (regardless if legacy or cli) - we need to add it to the tracked projects
+    # so that the frontend can load it
+    initial_project_id: str | None = None
+    repo_path: Path | None = Path(path) if path else None
+    media_store_path = desktop_app.APP_DATA_DIR / "media"
 
-    repo_settings = desktop_app.get_repo_settings(repo_path)
+    if repo_path is not None:
+        log.info("Start up repository: %s" % repo_path)
+
+        if not repo_settings_path(repo_path).exists():
+            log.info(f"No repo settings found in {repo_path} — creating settings.")
+            desktop_app.upsert_tracked_project(
+                project_id="notebook",
+                uri=repo_path.resolve().as_uri(),
+                user_id=LOCAL_USER_ID,
+                title="Notebook",
+            )
 
     # Check if another instance is running and/or start the local server
     # When using frontend server, we might not need to check for other instances
     local_server = DesktopServer(
         commands=local_server_commands,
-        media_store_path=repo_settings.media_store_path,
-        config_dir=desktop_app.desktop_config_dir(),
+        media_store_path=media_store_path,
+        config_dir=desktop_app.CONFIG_DIR,
     )
 
     if (
         not use_frontend_server
     ):  # Only check for other instances when using local server
-        if local_server.another_instance_is_running():
-            port = local_server.get_port_from_lock_file()
+        port = local_server.get_running_instance_port()
+        if port:
             if command:
                 DesktopServer.send_command(port, command)
             else:
@@ -108,50 +156,10 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
 
     configure_for_qt(app)
 
-    # If there's changes after the load it means that some default is not saved
-    # to disk or some other irregularity has been handled by the config class
-    if user_config.changes_present:
-        desktop_app.save_user_settings(user_config)
+    desktop_storage_service = DesktopStorageService()
+    pamet.set_desktop_storage_service(desktop_storage_service)
 
-    # Temporary restore logic for testing migrations
-    mock_repo_path = "/sync/projects/misli/mock_repo"
-    mock_repo_backup_path = "/sync/projects/misli/mock_repo_backup"
-    if str(repo_path) == mock_repo_path:
-        import shutil
-
-        if os.path.exists(mock_repo_backup_path):
-            log.info(f"Restoring mock repo from backup for migration testing")
-            if os.path.exists(mock_repo_path):
-                shutil.rmtree(mock_repo_path)
-            shutil.copytree(mock_repo_backup_path, mock_repo_path)
-            log.info(f"Mock repo restored from {mock_repo_backup_path}")
-
-    # Init the repo (run migrations via ProjectFolderManager)
-    pfm = ProjectFolderManager(repo_path)
-    pamet.set_project_folder_manager(pfm)
-
-    if os.path.exists(repo_path):
-        # index_folder detects legacy files and runs migrations if needed
-        pfm.index_folder()
-
-        # Create the main repo instance (now loads V5 files post-migration)
-        fs_repo = FSStorageRepository.open(repo_path, queue_save_on_change=True)
-        fs_repo.load_all_pages()
-    else:
-        fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
-
-    # Initialize media backend service and register globally (after PFM is set)
-    media_backend = MediaStorageBackendService(
-        repo_settings.media_store_path, project_manager=pfm
-    )
-    pamet.set_media_backend_service(media_backend)
-    local_server.register_media_routes(media_backend)
-
-    if repo_settings.changes_present():
-        desktop_app.save_repo_settings(repo_settings)
-
-    pamet.set_sync_repo(fs_repo)
-    desktop_app.set_media_store(MediaStore(repo_settings.media_store_path))
+    desktop_app.set_media_store(MediaStore(media_store_path))
 
     pamet.set_undo_service(UndoService(pamet_channels.entity_change_sets_per_TLA))
 
@@ -166,32 +174,26 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
         endpoint_url = desktop_api_base_url
         print(f"Using local server at {endpoint_url}")
 
+    if initial_project_id is None:
+        initial_project_url = endpoint_url.rstrip("/")
+    else:
+        initial_project_url = (
+            f"{endpoint_url.rstrip('/')}/{LOCAL_USER_ID}/{initial_project_id}"
+        )
+
     # # Debug
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
     # Create WebShellWindow - show dev tools when using frontend server
     web_shell = WebShellWindow(
-        endpoint=endpoint_url,
+        endpoint=initial_project_url,
         desktop_api_base_url=desktop_api_base_url,
+        webengine_profile_root=desktop_app.user_settings_path().parent
+        / "webengine-profile",
         show_dev_tools=bool(use_frontend_server),
     )
     web_shell.showMaximized()
-
-    # Start watching the project folder for changes
-    try:
-        pamet.project_folder_manager().start_watching()
-        app.aboutToQuit.connect(lambda: pamet.project_folder_manager().stop_watching())
-    except Exception as e:
-        log.error(f"Failed to start project folder watcher: {e}")
-
-    # search_service = FuzzySearchService(
-    #     pamet_channels.entity_change_sets_per_TLA)
-    # search_service.load_all_content()
-    # pamet.set_search_service(search_service)
-
-    # other_page_list_service = OtherPagesListUpdateService()
-    # other_page_list_service.start()
 
     # Setup exception reporting for failed actions
     if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
@@ -203,50 +205,6 @@ def main(path: str, command: str, config_path: str, use_frontend_server: str):
             app.present_exception(exception=action_call.error, title=title)
 
         # actions_log_channel.subscribe(show_exception_for_failed_action)
-
-    if repo_settings.backups_enabled:
-        backup_service = FSStorageBackupService(
-            backup_folder=repo_settings.backup_folder,
-            repository=fs_repo,
-            changeset_channel=pamet_channels.entity_change_sets_per_TLA,
-            record_all_changes=repo_settings.record_all_changes,
-        )
-
-        service_started = False
-        try:
-            backup_service.start()
-            service_started = True
-        except AnotherServiceAlreadyRunningException:
-            log.info(
-                "Backup service not started. " "Probably another instance is running"
-            )
-            reply = QMessageBox.question(
-                web_shell,
-                "Backup service conflict",
-                "A backup service lock is present. If you're sure there's "
-                "no other instances running on the same repo - "
-                "press Yes to override.",
-            )
-            if reply == QMessageBox.StandardButton.Yes:
-                backup_service.service_lock_path().unlink()
-                backup_service.start()
-                service_started = True
-
-        if service_started:
-            app.aboutToQuit.connect(backup_service.stop)
-            pamet.desktop_app.set_backup_service(backup_service)
-
-    # # Experimental semantic search
-    # if repo_settings.semantic_search_enabled:
-    #     from pamet.services.search.semantic import SemanticSearchService
-    #     semantic_search_service = SemanticSearchService(
-    #         data_folder=repo_path / '__semantic_index__',
-    #         change_set_channel=pamet_channels.entity_change_sets_per_TLA)
-
-    #     print('Loading semantic search index...')
-    #     semantic_search_service.load_all_content()
-    #     print('Semantic search index loaded')
-    #     set_semantic_search_service(semantic_search_service)
 
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")

@@ -325,8 +325,8 @@ class PageActions {
       throw new Error('No project loaded');
     }
 
-    // FileItems are NOT removed when an image is replaced on a note — they are
-    // project-level entities that may be referenced by other notes.
+    // FileItems are NOT removed when an image is replaced on a note — they may
+    // be referenced by other notes/pages.
 
     // Save the note
     if (editWS.creatingNote) {
@@ -460,8 +460,8 @@ class PageActions {
       pamet.removeArrow(arrow);
     }
 
-    // FileItems are NOT removed when notes are deleted — they are project-level
-    // entities that may be referenced by other notes. Orphan cleanup is a TODO.
+    // FileItems are NOT removed when notes are deleted — they may be referenced
+    // by other notes. Orphan cleanup is handled at page-delete boundaries.
     this.clearSelection(state);
   }
 
@@ -570,8 +570,7 @@ class PageActions {
     for (let note of notes) {
       pamet.removeNote(note);
     }
-    // FileItems are NOT removed on cut — they are project-level entities.
-    // The clipboard holds references for paste; the FileItem stays in the store.
+    // FileItems are NOT removed on cut; the clipboard keeps references for paste.
 
     // Clear selection after cut
     this.clearSelection(state);

@@ -1,7 +1,6 @@
 import { makeObservable, observable } from "mobx";
 import { PageViewState } from "@/components/page/PageViewState";
-import { pamet } from "@/core/facade";
-import { ProjectData } from "@/model/config/Project";
+import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Point2D } from "fusion/primitives/Point2D";
 import { PametRoute } from "@/services/routing/route";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
@@ -45,7 +44,9 @@ export class WebAppState {
   userId: string;
 
   currentProjectId: string | null = null;
-  currentProjectState: ProjectData | null = null;
+  currentProjectState: PametProjectData | null = null;
+  trackedProjects: ProjectReference[] = [];
+  recentProjects: ProjectReference[] = [];
   projectError: ProjectError = ProjectError.NoError;
 
   currentPageId: string | null = null;
@@ -76,6 +77,8 @@ export class WebAppState {
       userId: observable,
       currentProjectId: observable,
       currentProjectState: observable,
+      trackedProjects: observable,
+      recentProjects: observable,
       currentPageViewState: observable,
       storageState: observable,
       pageError: observable,
@@ -90,15 +93,15 @@ export class WebAppState {
     });
   }
 
-  getCurrentProject(): ProjectData {
-    if (!this.currentProjectId) {
-      throw new Error("No current project id set.");
+  getCurrentProject(): PametProjectData {
+    if (!this.currentProjectState) {
+      throw new Error("No current project state set.");
     }
-    let projectData = pamet.project(this.currentProjectId);
-    if (!projectData) {
-      throw new Error("ProjectData missing.");
-    }
-    return projectData;
+    return this.currentProjectState;
+  }
+
+  trackedProject(projectId: string): ProjectReference | undefined {
+    return this.trackedProjects.find((project) => project.id === projectId);
   }
 
   pageViewState(pageId: string): PageViewState {

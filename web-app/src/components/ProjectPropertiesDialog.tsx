@@ -9,7 +9,7 @@ import "@/components/dialogs/Dialog.css";
 let log = getLogger("ProjectPropertiesDialog");
 
 interface ProjectPropertiesDialogProps {
-  project: ProjectData;
+  project: PametProjectData;
   onClose: () => void;
 }
 
@@ -17,18 +17,19 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState(project.title);
   const [titleError, setTitleError] = useState<string | null>(null);
+  const trackedProjects = pamet.appViewState.trackedProjects;
 
   function validateTitle(value: string): string | null {
     if (!value.trim()) {
       return 'Title is required';
     }
-    if (pamet.projects().some(p => p.title === value && p.id !== project.id)) {
+    if (trackedProjects.some((p) => p.title === value && p.id !== project.id)) {
       return 'A project with this title already exists';
     }
     return null;
   }
 
-  function onDelete(project: ProjectData) {
+  function onDelete(project: PametProjectData) {
     // Confirmation dialog
     const confirmed = window.confirm('Are you sure you want to delete this project from local storage?');
     if (!confirmed) return;
@@ -81,7 +82,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           };
 
           try {
-            projectActions.updateProject(updatedProject);
+            await pamet.saveProjectProperties(updatedProject);
             // No need to call onClose, the dialog will close automatically
           } catch (error) {
             setTitleError((error as Error).message);
@@ -131,7 +132,6 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
         </div>
       </form>
 
-      
     </dialog>
   );
 }

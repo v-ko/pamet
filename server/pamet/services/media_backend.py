@@ -1,78 +1,117 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Optional, Dict, Tuple
 import hashlib
 import time
 
-from pamet.services.constants import CONTENT_HASH_HEX_LEN, DEFAULT_TRASH_RETENTION_S, ALLOWED_MEDIA_EXTENSIONS
-from pamet.services.media_utils import ext_from_mime, parse_trash_stem, build_trash_filename
+from pamet.services.constants import CONTENT_HASH_HEX_LEN, DEFAULT_TRASH_RETENTION_S
+from pamet.services.media_utils import parse_trash_stem, build_trash_filename
 from peewee import Model, TextField, IntegerField, SqliteDatabase
 
 # No FastAPI dependencies here; this is a pure service
 
 
+class MediaCachePW(Model):
+    path = TextField(unique=True)
+    mtime = IntegerField()
+    hash = TextField()
+
+
+class MediaItemPW(Model):
+    media_id = TextField(unique=True)
+    rel_path = TextField()
+    content_hash = TextField()
+    trashed = IntegerField(default=0)
+    updated_at = IntegerField(default=0)
+
+
 @dataclass
-class MediaStorageBackendService:
+class BlobStorageAdapter:
     """
-    Simple media backend for the desktop app.
+    Desktop media backend that stores files directly in the project folder.
 
-    Stores blobs on disk under a stable id#hash filename. Routing is provided
-    via an external APIRouter created by create_media_router().
+    Files are addressed by ``FileItem.path`` (relative to the project root),
+    while lookup metadata is persisted in ``<repo>/pamet.db``.
     """
-    media_root: Path
-    project_manager: object | None = None  # ProjectFolderManager (for future use)
+    repo_root: Path
+    project_manager: object | None = None  # ProjectFolderManager runtime owner
 
-    # Folder names
-    ITEMS_DIR: str = "__items__"
-    # Trash now lives under repo/.pamet/media-backup
     TRASH_DIR: str = "media-backup"
 
     def __post_init__(self):
-        self.media_root = Path(self.media_root)
-        (self.media_root / self.ITEMS_DIR).mkdir(parents=True, exist_ok=True)
-
-        # Database under .pamet/media.db
-        # Infer repo root from media_root parent
-        self.repo_root = self.media_root.parent
+        self.repo_root = Path(self.repo_root)
         self.pamet_dir = self.repo_root / '.pamet'
         self.pamet_dir.mkdir(parents=True, exist_ok=True)
         self.trash_dir = self.pamet_dir / self.TRASH_DIR
         self.trash_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize Peewee database for media cache
-        self._db = SqliteDatabase(str(self.pamet_dir / 'media.db'))
-        self._init_db()
+        # Shared project-level DB for media metadata/cache.
+        self._db = SqliteDatabase(str(self.repo_root / 'pamet.db'))
+        with self._db.bind_ctx([MediaCachePW, MediaItemPW]):
+            self._db.create_tables([MediaCachePW, MediaItemPW], safe=True)
 
         # Runtime indices for trashed items: (id, hash) -> list[(expiry_ts, path)]
         self._trash_index: Dict[Tuple[str, str], list[Tuple[int, Path]]] = {}
         self._scan_trash_folder()
 
-    def _item_path(self, media_id: str, content_hash: str, ext: str = "") -> Path:
-        filename = f"{media_id}#{content_hash}{ext}"
-        return self.media_root / self.ITEMS_DIR / filename
+    def _resolve_relative_path(self, relative_path: str) -> Path:
+        if not relative_path:
+            raise ValueError("Media path is required")
 
-    def _trash_path(self, media_id: str, content_hash: str, ext: str = "") -> Path:
-        filename = f"{media_id}#{content_hash}{ext}"
-        return self.trash_dir / filename
+        raw = relative_path.strip()
+        if not raw:
+            raise ValueError("Media path is required")
 
-    # ----- DB helpers -----
-    def _init_db(self):
-        class BaseModel(Model):
-            class Meta:
-                database = self._db
+        posix_path = PurePosixPath(raw)
+        if posix_path.is_absolute():
+            raise ValueError(f"Invalid media path: {relative_path}")
 
-        class MediaCache(BaseModel):
-            path = TextField(unique=True)
-            mtime = IntegerField()
-            hash = TextField()
+        if ".." in posix_path.parts:
+            raise ValueError(f"Invalid media path: {relative_path}")
 
-        # Bind models to instance for later access
-        self.MediaCache = MediaCache
+        rel = Path(*posix_path.parts)
+        return self.repo_root / rel
 
-        with self._db.bind_ctx([MediaCache]):
-            self._db.create_tables([MediaCache])
+    def _relative_path_for_disk_path(self, path: Path) -> str:
+        return str(path.relative_to(self.repo_root)).replace("\\", "/")
+
+    def _upsert_media_item(
+        self, media_id: str, rel_path: str, content_hash: str, trashed: int = 0
+    ) -> None:
+        now = int(time.time())
+        with self._db.bind_ctx([MediaItemPW]):
+            with self._db.atomic():
+                rec = MediaItemPW.get_or_none(MediaItemPW.media_id == media_id)
+                if rec is None:
+                    MediaItemPW.create(
+                        media_id=media_id,
+                        rel_path=rel_path,
+                        content_hash=content_hash,
+                        trashed=trashed,
+                        updated_at=now,
+                    )
+                else:
+                    rec.rel_path = rel_path
+                    rec.content_hash = content_hash
+                    rec.trashed = trashed
+                    rec.updated_at = now
+                    rec.save()
+
+    def _media_item_row(self, media_id: str):
+        with self._db.bind_ctx([MediaItemPW]):
+            return MediaItemPW.get_or_none(MediaItemPW.media_id == media_id)
+
+    def _resolve_disk_path_for_media_id(self, media_id: str) -> Path | None:
+        item = self._media_item_row(media_id)
+        if item is None:
+            return None
+
+        try:
+            return self._resolve_relative_path(str(item.rel_path))
+        except ValueError:
+            return None
 
     def compute_and_cache_hash(self, path: Path) -> str:
         data = path.read_bytes()
@@ -80,24 +119,38 @@ class MediaStorageBackendService:
         short = full[:CONTENT_HASH_HEX_LEN]
         mtime = int(path.stat().st_mtime)
         # Upsert behavior: try fetch; if present -> update; else create
-        with self._db.atomic():
-            rec = self.MediaCache.get_or_none(self.MediaCache.path == str(path))
-            if rec is None:
-                self.MediaCache.create(path=str(path), mtime=mtime, hash=short)
-            else:
-                rec.mtime = mtime
-                rec.hash = short
-                rec.save()
+        with self._db.bind_ctx([MediaCachePW]):
+            with self._db.atomic():
+                rec = MediaCachePW.get_or_none(MediaCachePW.path == str(path))
+                if rec is None:
+                    MediaCachePW.create(path=str(path), mtime=mtime, hash=short)
+                else:
+                    rec.mtime = mtime
+                    rec.hash = short
+                    rec.save()
         return short
+
+    def _store_known_hash(self, path: Path, content_hash: str) -> None:
+        mtime = int(path.stat().st_mtime)
+        with self._db.bind_ctx([MediaCachePW]):
+            with self._db.atomic():
+                rec = MediaCachePW.get_or_none(MediaCachePW.path == str(path))
+                if rec is None:
+                    MediaCachePW.create(path=str(path), mtime=mtime, hash=content_hash)
+                else:
+                    rec.mtime = mtime
+                    rec.hash = content_hash
+                    rec.save()
 
     def get_cached_hash(self, path: Path) -> Optional[str]:
         mtime = int(path.stat().st_mtime)
-        rec = self.MediaCache.get_or_none(self.MediaCache.path == str(path))
-        if rec is None:
-            return None
-        if int(rec.mtime) != mtime:
-            return None
-        return str(rec.hash)
+        with self._db.bind_ctx([MediaCachePW]):
+            rec = MediaCachePW.get_or_none(MediaCachePW.path == str(path))
+            if rec is None:
+                return None
+            if int(rec.mtime) != mtime:
+                return None
+            return str(rec.hash)
 
     # ----- Trash helpers -----
     def _scan_trash_folder(self):
@@ -116,42 +169,96 @@ class MediaStorageBackendService:
             self._trash_index[key].sort(key=lambda t: t[0])
 
     # --- High-level operations used by the API layer ---
-    def save_bytes(self, media_id: str, content_hash: str, data: bytes, mime_type: Optional[str]) -> None:
-        """Persist a media blob under id+hash, guessing extension from mime."""
-        ext = ext_from_mime(mime_type)
-        dest = self._item_path(media_id, content_hash, ext)
+    def _move_existing_path_to_trash(
+        self,
+        src: Path,
+        media_id: str,
+        content_hash: str,
+        retention_s: int | None = None,
+    ) -> bool:
+        if not src.exists():
+            return False
+
+        expiry = int(time.time()) + int(retention_s or DEFAULT_TRASH_RETENTION_S)
+        dst = self.trash_dir / build_trash_filename(media_id, content_hash, expiry, src.suffix)
+        src.rename(dst)
+        key = (media_id, content_hash)
+        self._trash_index.setdefault(key, []).append((expiry, dst))
+        self._trash_index[key].sort(key=lambda t: t[0])
+        return True
+
+    def save_bytes(
+        self,
+        media_id: str,
+        content_hash: str,
+        relative_path: str,
+        data: bytes,
+        mime_type: Optional[str],
+    ) -> None:
+        """Persist a media blob at the project-relative FileItem path."""
+        del mime_type
+        dest = self._resolve_relative_path(relative_path)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+
+        if dest.exists():
+            current_hash = self.get_cached_hash(dest)
+            if current_hash is None:
+                current_hash = self.compute_and_cache_hash(dest)
+            if current_hash != content_hash:
+                self._move_existing_path_to_trash(dest, media_id, current_hash)
+
         dest.write_bytes(data)
+        self._store_known_hash(dest, content_hash)
+        self._upsert_media_item(
+            media_id,
+            self._relative_path_for_disk_path(dest),
+            content_hash,
+            trashed=0,
+        )
 
     def find_item_path(self, media_id: str, content_hash: str) -> Path | None:
-        """Return an existing path for an item if present, trying known extensions."""
-        # Try empty ext first, then all allowed extensions
-        candidates = [self._item_path(media_id, content_hash)]
-        candidates += [self._item_path(media_id, content_hash, ext) for ext in ALLOWED_MEDIA_EXTENSIONS]
-        for p in candidates:
-            if p.exists():
-                return p
-        return None
+        """Resolve the active file path for an item, validating its current hash."""
+        item = self._media_item_row(media_id)
+        if item is None or int(item.trashed) == 1:
+            return None
+        if str(item.content_hash) != content_hash:
+            return None
+
+        path = self._resolve_disk_path_for_media_id(media_id)
+        if path is None or not path.exists():
+            return None
+
+        cached_hash = self.get_cached_hash(path)
+        current_hash = cached_hash if cached_hash is not None else self.compute_and_cache_hash(path)
+        if current_hash != content_hash:
+            return None
+        return path
 
     def move_to_trash(self, media_id: str, content_hash: str, retention_s: int | None = None) -> bool:
-        """Move an existing item to trash backup folder with expiry in name.
-
-        Name format: id-hash-expiry_unix_time_seconds.ext
-        Returns True if moved.
-        """
-        for ext in [""] + sorted(ALLOWED_MEDIA_EXTENSIONS):
-            src = self._item_path(media_id, content_hash, ext)
-            if src.exists():
-                expiry = int(time.time()) + int(retention_s or DEFAULT_TRASH_RETENTION_S)
-                dst = self.trash_dir / build_trash_filename(media_id, content_hash, expiry, src.suffix)
-                src.rename(dst)
-                key = (media_id, content_hash)
-                self._trash_index.setdefault(key, []).append((expiry, dst))
-                self._trash_index[key].sort(key=lambda t: t[0])
-                return True
-        return False
+        """Move the current file version to the trash backup folder."""
+        src = self.find_item_path(media_id, content_hash)
+        if src is None:
+            return False
+        moved = self._move_existing_path_to_trash(src, media_id, content_hash, retention_s)
+        if moved:
+            item = self._media_item_row(media_id)
+            if item is not None:
+                self._upsert_media_item(
+                    media_id,
+                    str(item.rel_path),
+                    str(item.content_hash),
+                    trashed=1,
+                )
+        return moved
 
     def restore_from_trash(self, media_id: str, content_hash: str) -> bool:
-        """Restore an item from trash to items. Returns True if restored."""
+        """Restore an item from trash to its active path. Returns True if restored."""
+        item = self._media_item_row(media_id)
+        if item is None:
+            return False
+        if str(item.content_hash) != content_hash:
+            return False
+
         key = (media_id, content_hash)
         candidates = self._trash_index.get(key, [])
         if not candidates:
@@ -161,11 +268,18 @@ class MediaStorageBackendService:
             if not candidates:
                 return False
         # Pick first (earliest expiry)
-        expiry, src = candidates.pop(0)
-        dst = self._item_path(media_id, content_hash, src.suffix)
+        _expiry, src = candidates.pop(0)
+        dst = self._resolve_disk_path_for_media_id(media_id)
+        if dst is None:
+            return False
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if dst.exists():
+            return False
         if not src.exists():
             return False
         src.rename(dst)
+        self._store_known_hash(dst, content_hash)
+        self._upsert_media_item(media_id, str(item.rel_path), content_hash, trashed=0)
         return True
 
     def clean_trash(self) -> int:
@@ -175,15 +289,7 @@ class MediaStorageBackendService:
         for entry in list(self.trash_dir.iterdir()):
             if not entry.is_file():
                 continue
-            stem = entry.stem
-            expiry = 0
-            if '-' in stem:
-                parts = stem.split('-')
-                if len(parts) >= 3:
-                    try:
-                        expiry = int(parts[2])
-                    except Exception:
-                        expiry = 0
+            _, _, expiry = parse_trash_stem(entry.stem)
             if expiry and expiry < now:
                 try:
                     entry.unlink()

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { pamet } from '@/core/facade';
 import { timestamp, currentTime } from 'fusion/util/base';
 import { createProject, switchToProject } from "@/procedures/app";
-import { ProjectData } from '@/model/config/Project';
+import { ProjectData } from '@/model/Project';
 import "@/components/dialogs/Dialog.css";
 
 interface CreateProjectDialogProps {
@@ -18,13 +18,14 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
   const [id, setId] = useState('');
   const [description, setDescription] = useState('');
   const [idError, setIdError] = useState<string | null>(null);
+  const trackedProjects = pamet.appViewState.trackedProjects;
 
   function validateId(value: string): string | null {
     if (!value) return null;
     if (!projectIdRegex.test(value)) {
       return 'Project ID can only contain lowercase letters, numbers, dashes and underscores';
     }
-    if (pamet.projects().some(p => p.id === value)) {
+    if (trackedProjects.some(p => p.id === value)) {
       return 'This ID is already taken';
     }
     return null;
@@ -38,7 +39,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
 
     let uniqueId = baseId;
     let i = 1;
-    while (pamet.projects().some(p => p.id === uniqueId)) {
+    while (trackedProjects.some(p => p.id === uniqueId)) {
       i++;
       uniqueId = `${baseId}-${i}`;
     }
@@ -48,7 +49,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
   function generateDefaultTitle(): string {
     let title = 'Project 1';
     let i = 1;
-    while (pamet.projects().some(p => p.title === title)) {
+    while (trackedProjects.some(p => p.title === title)) {
       i++;
       title = `Project ${i}`;
     }

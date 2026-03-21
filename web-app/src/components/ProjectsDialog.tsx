@@ -13,7 +13,7 @@ interface ProjectsDialogProps {
 
 export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const projects = pamet.projects();
+  const projects = pamet.appViewState.trackedProjects;
 
   useEffect(() => {
     const dialog = dialogRef.current;

@@ -2,24 +2,27 @@ from __future__ import annotations
 
 # from hashlib import md5
 from collections import defaultdict
+import json
 from pathlib import Path
 
 from fusion.logging import get_logger
 from fusion.util import get_new_id
-from slugify import slugify
-
-from .v4_to_v5 import is_v4_page_file, migrate_v4_to_v5
+from .v4_to_v5 import (
+    CANVAS_FILE_EXT,
+    is_v4_page_file,
+    migrate_v4_to_v5,
+)
 
 log = get_logger(__name__)
 
-# Map from source version to detection function.
-# Only V4→V5 is automatic; V2→V3 and V3→V4 are manual.
+# Map from legacy format to detection function.
+# V2→V3 and V3→V4 remain manual.
 LEGACY_CHECK_MAP = {
     4: is_v4_page_file,
 }
 
 V4_FILE_EXT = ".pam4.json"
-V5_FILE_EXT = ".pam5.json"
+V5_FILE_EXT = CANVAS_FILE_EXT
 
 _cache = {}
 _paths_cache = {}
@@ -44,6 +47,9 @@ SYSTEM_CALL_NOTE_PREFIX = "define_system_call_note:"
 # Default color roles for v4 to v5 migration
 DEFAULT_TEXT_COLOR_ROLE = "onPrimary"
 DEFAULT_BACKGROUND_COLOR_ROLE = "primary"
+
+LEGACY_REPO_SETTINGS_FILE = "settings.json"
+REPO_PROPERTIES_FILE = "properties.json"
 
 
 """old_color_to_role now imported from color_roles (legacy_normalized_rgba_to_role)."""
@@ -81,8 +87,7 @@ def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):
 
 def path_for_page(page, repo_path: Path) -> Path:
     """Standalone function to calculate the file path for a page"""
-    slug = slugify(page.name, separator="_", max_length=100)
-    filename = f"{slug}-{page.id}{V5_FILE_EXT}"
+    filename = f"{page.id}{V5_FILE_EXT}"
     return repo_path / filename
 
 
@@ -120,26 +125,24 @@ class MigrationManager:
 
         NOTE: V2→V3 and V3→V4 migrations are NOT included here due to safety
         concerns — those should be performed manually using their standalone
-        modules. This method only handles V4→V5 automatically.
+        modules. This method handles V4→current canvas format only.
         """
-        converted = migrate_v4_to_v5(self.repo_path)
-        if converted:
-            log.info(f"V4→V5 migration converted {len(converted)} page(s)")
-        return converted
+        converted_v4 = migrate_v4_to_v5(self.repo_path)
+        if converted_v4:
+            log.info(f"V4→Canvas migration converted {len(converted_v4)} page(s)")
+        return converted_v4
 
-    # def checksum_imported_page_notes(self, fs_repo, page: Page):
-    #     """
-    #     This method should be called by FSStorageRepository after migrations are complete.
-    #     It requires an active repo instance to work.
-    #     """
-    #     note_count_in_repo = len(
-    #         [nt for nt in fs_repo.find(parent_gid=page.gid()) if isinstance(nt, Note)]
-    #     )
 
-    #     if page.name in self.v2_note_checksum_by_page_name:
-    #         v2_note_count = self.v2_note_checksum_by_page_name[page.name]
-    #         assert note_count_in_repo == v2_note_count
-
-    #     if page.name in self.v3_note_checksum_by_page_name:
-    #         v3_note_count = self.v3_note_checksum_by_page_name[page.name]
-    #         assert note_count_in_repo == v3_note_count
+def get_project_id_from_repo_settings(repo_path: Path) -> str | None:
+    repo_path = Path(repo_path)
+    pamet_dir = repo_path / ".pamet"
+    for file_name in (REPO_PROPERTIES_FILE, LEGACY_REPO_SETTINGS_FILE):
+        settings_path = pamet_dir / file_name
+        if not settings_path.exists():
+            continue
+        with settings_path.open() as settings_file:
+            settings_data = json.load(settings_file)
+        project_id = settings_data.get("id")
+        if isinstance(project_id, str) and project_id.strip():
+            return project_id
+    return None
