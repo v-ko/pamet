@@ -11,6 +11,10 @@ build/
 
 # Testing
 coverage/
+# Test time v4 repo
+server/tests/mock_v4_project/prepared_test_time
+# Original project with absolute paths etc. (the anonymized is in template/)
+server/tests/mock_v4_project/original
 
 # Misc
 .DS_Store

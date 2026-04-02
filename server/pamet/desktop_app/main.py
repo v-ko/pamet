@@ -6,25 +6,23 @@ from pathlib import Path
 import click
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
+from slugify import slugify
+
+import fusion
+import pamet
+from pamet import desktop_app
 
 # from fusion import actions_log_channel
+from pamet.constants import DEFAULT_PROJECT_ID, DEFAULT_PROJECT_TITLE, LOCAL_USER_ID
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import get_repo_settings, repo_settings_path
+from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, repo_settings_path
 from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.screen_snippet import grab_screen_snippet
 from pamet.desktop_app.web_shell import WebShellWindow
 from pamet.services.desktop_storage_service import DesktopStorageService
-from pamet.services.media_store import MediaStore
 from pamet.services.rest_api.desktop import DesktopServer
-from pamet.services.undo import UndoService
-
-import fusion
-import pamet
-from pamet import channels as pamet_channels
-from pamet import desktop_app
 
 log = fusion.get_logger(__name__)
-LOCAL_USER_ID = "local"
 
 
 def raise_a_window():
@@ -46,14 +44,20 @@ local_server_commands = {
 
 
 @click.command()
-@click.argument("path", type=click.Path(exists=True), required=False)
+@click.argument(
+    "project_path",
+    type=click.Path(
+        exists=True, dir_okay=True, file_okay=False, readable=True, path_type=Path
+    ),
+    required=False,
+)
 @click.option("--command", type=click.Choice(local_server_commands.keys()))
 @click.option(
     "--use-frontend-server",
     type=str,
     help="Connect to frontend dev server at specified host (e.g. http://localhost:3000)",
 )
-def main(path: str, command: str, use_frontend_server: str):
+def main(project_path: Path | None, command: str, use_frontend_server: str):
     # Temporary fixture setup for migration testing. Rebuild the prepared fixture
     # on startup, then restore legacy user settings from it into isolated app-data.
     prepared_repo_dir = (
@@ -66,12 +70,12 @@ def main(path: str, command: str, use_frontend_server: str):
     expected_config_dir = prepared_fixture_path / "config"
     expected_app_data_dir = prepared_fixture_path / "app_data"
 
-    if desktop_app.CONFIG_DIR != expected_config_dir:
-        raise Exception(f"Running non-mock config: {desktop_app.CONFIG_DIR}")
-    if desktop_app.APP_DATA_DIR != expected_app_data_dir:
-        raise Exception(f"Running non-mock app data: {desktop_app.APP_DATA_DIR}")
-    if path and Path(path) != prepared_repo_path:
-        raise Exception(f"Running non-mock repo: {path}")
+    if CONFIG_DIR != expected_config_dir:
+        raise Exception(f"Running non-mock config: {CONFIG_DIR}")
+    if APP_DATA_DIR != expected_app_data_dir:
+        raise Exception(f"Running non-mock app data: {APP_DATA_DIR}")
+    if project_path and Path(project_path) != prepared_repo_path:
+        raise Exception(f"Running non-mock repo: {project_path}")
 
     log.info("Preparing mock repo and settings via %s", prepare_script_path)
     subprocess.run(
@@ -83,6 +87,9 @@ def main(path: str, command: str, use_frontend_server: str):
 
     # Setup initial user settings if not present
     if not desktop_app.user_settings_path().exists():
+        log.info(
+            f"No user settings found - creating default settings at {desktop_app.user_settings_path()}"
+        )
         desktop_app.save_user_settings(
             {
                 "id": LOCAL_USER_ID,
@@ -91,9 +98,13 @@ def main(path: str, command: str, use_frontend_server: str):
             }
         )
 
+    # Setup project if legacy present or path is passed via cli argument
+    project_id: str | None = None
+    project_title: str | None = None
+
     # If v4 settings exist - extract repo path for project startup
-    legacy_settings_path = desktop_app.APP_DATA_DIR / "settings.json"
-    if not path and legacy_settings_path.exists():
+    legacy_settings_path = APP_DATA_DIR / "settings.json"
+    if not project_path and legacy_settings_path.exists():
         log.info("Reading legacy settings from %s", legacy_settings_path)
         try:
             legacy_settings = json.loads(legacy_settings_path.read_text())
@@ -109,32 +120,47 @@ def main(path: str, command: str, use_frontend_server: str):
                 "Legacy repository_path %s does not exist. Ignoring.", legacy_repo_path
             )
         else:
-            path = str(legacy_repo_path)
+            project_path = Path(legacy_repo_path)
+            # It was the default project so set the default name/id
+            project_id = DEFAULT_PROJECT_ID
+            project_title = DEFAULT_PROJECT_TITLE
+
+    elif project_path is not None:
+        # If project is already tracked - use the existing title/id
+        settings = desktop_app.get_user_settings()
+        tracked_projects = settings.get("projects", [])
+        for tracked_project in tracked_projects:
+            if tracked_project.get("uri") == project_path.resolve().as_uri():
+                project_id = tracked_project.get("id")
+                project_title = tracked_project.get("title")
+                break
+
+        # If not tracked - set default id and title based on folder name
+        if not project_title:
+            project_title = project_path.stem
+
+        if not project_id:
+            project_id = slugify(project_title)
 
     # If the path is set (regardless if legacy or cli) - we need to add it to the tracked projects
     # so that the frontend can load it
-    initial_project_id: str | None = None
-    repo_path: Path | None = Path(path) if path else None
-    media_store_path = desktop_app.APP_DATA_DIR / "media"
+    if project_path and project_title and project_id:
+        log.info("Start up repository: %s" % project_path)
 
-    if repo_path is not None:
-        log.info("Start up repository: %s" % repo_path)
+        if not repo_settings_path(project_path).exists():
+            log.info(f"No repo settings found in {project_path} — creating settings.")
 
-        if not repo_settings_path(repo_path).exists():
-            log.info(f"No repo settings found in {repo_path} — creating settings.")
-            desktop_app.upsert_tracked_project(
-                project_id="notebook",
-                uri=repo_path.resolve().as_uri(),
-                user_id=LOCAL_USER_ID,
-                title="Notebook",
-            )
+        desktop_app.upsert_tracked_project(
+            project_id=project_id,
+            title=project_title,
+            uri=project_path.resolve().as_uri(),
+        )
 
     # Check if another instance is running and/or start the local server
     # When using frontend server, we might not need to check for other instances
     local_server = DesktopServer(
         commands=local_server_commands,
-        media_store_path=media_store_path,
-        config_dir=desktop_app.CONFIG_DIR,
+        config_dir=CONFIG_DIR,
     )
 
     if (
@@ -159,10 +185,6 @@ def main(path: str, command: str, use_frontend_server: str):
     desktop_storage_service = DesktopStorageService()
     pamet.set_desktop_storage_service(desktop_storage_service)
 
-    desktop_app.set_media_store(MediaStore(media_store_path))
-
-    pamet.set_undo_service(UndoService(pamet_channels.entity_change_sets_per_TLA))
-
     # Determine the endpoint URL based on frontend server option
     desktop_api_base_url = f"http://localhost:{local_server.port}"
     if use_frontend_server:
@@ -174,12 +196,10 @@ def main(path: str, command: str, use_frontend_server: str):
         endpoint_url = desktop_api_base_url
         print(f"Using local server at {endpoint_url}")
 
-    if initial_project_id is None:
+    if project_id is None:
         initial_project_url = endpoint_url.rstrip("/")
     else:
-        initial_project_url = (
-            f"{endpoint_url.rstrip('/')}/{LOCAL_USER_ID}/{initial_project_id}"
-        )
+        initial_project_url = f"{endpoint_url.rstrip('/')}/{LOCAL_USER_ID}/{project_id}"
 
     # # Debug
     # misli_channels.state_changes_per_TLA_by_id.subscribe(

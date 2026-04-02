@@ -15,7 +15,7 @@ def anonymize_repo():
 
     # Walk through all files in the anonymized repo and replace absolute paths
     for file_path in anonymized_repo_path.rglob("*"):
-        if file_path.is_file() and file_path.suffix in {".json"}:
+        if file_path.is_file() and file_path.suffix in {".json", ".jsonl"}:
             with file_path.open("r", encoding="utf-8") as f:
                 content = f.read()
             # Replace absolute paths with {template_root}
@@ -33,7 +33,7 @@ def prepare_mock_repo():
     shutil.copytree(template_repo_path, prepared_repo_path)
 
     for file_path in prepared_repo_path.rglob("*"):
-        if file_path.is_file() and file_path.suffix in {".json"}:
+        if file_path.is_file() and file_path.suffix in {".json", ".jsonl"}:
             with file_path.open("r", encoding="utf-8") as f:
                 content = f.read()
             # Replace {template_root} with the actual path

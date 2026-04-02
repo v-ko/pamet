@@ -7,7 +7,7 @@ import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import { Point2D } from "fusion/primitives/Point2D";
 import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";
-import type { ProjectData } from "@/model/config/Project";
+import type { PametProjectData } from "@/model/Project";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
 import { CardNote } from "@/model/CardNote";
@@ -64,12 +64,10 @@ class ProjectActions {
   }
 
   @action
-  updateProject(projectData: ProjectData) {
-    // Update in the config
-    pamet.config.updateProjectData(projectData);
-
-    // The config change handler is set to the updateAppStateFromConfig action
-    // which will update the app state accordingly
+  updateProject(projectData: PametProjectData) {
+    void pamet.saveProjectProperties(projectData).catch((error) => {
+      log.error("Failed to save project properties", error);
+    });
   }
 
   @action({ issuer: 'service' })
@@ -96,10 +94,11 @@ class ProjectActions {
     pamet.insertNote(note)
 
     // Set page as default for the project
-
     let projectData = appState.getCurrentProject();
-    projectData.defaultPageId = page.id
-    this.updateProject(projectData)
+    this.updateProject({
+      ...projectData,
+      default_page_id: page.id,
+    });
   }
 
   @action
@@ -160,7 +159,8 @@ class ProjectActions {
     // Reassign page-scoped file items before removing the page.
     const remainingPages = Array.from(pamet.pages()).filter(p => p.id !== page.id);
     const remainingPagesById = new Map(remainingPages.map(p => [p.id, p]));
-    const defaultPageId = pamet.appViewState.currentProjectState?.defaultPageId || null;
+    const currentProject = pamet.appViewState.currentProjectState;
+    const defaultPageId = currentProject?.default_page_id ?? null;
     const imageItemsOnPage = Array.from(
       pamet.find({ parentId: page.id, type: ImageItem })
     ) as ImageItem[];
@@ -193,6 +193,13 @@ class ProjectActions {
     // Delete the page and its contents
     pamet.removePageWithChildren(page);
 
+    if (currentProject?.default_page_id === page.id) {
+      this.updateProject({
+        ...currentProject,
+        default_page_id: undefined,
+      });
+    }
+
     // Update link notes pointing to this page: set text to MISSING_PAGE_TITLE
     for (const n of pamet.notes()) {
       if (n instanceof CardNote && n.hasInternalPageLink) {
@@ -211,7 +218,7 @@ class ProjectActions {
   @action
   goToDefaultPage(appState: WebAppState) {
     const projectData = appState.getCurrentProject();
-    const defaultPageId = projectData.defaultPageId;
+    const defaultPageId = projectData.default_page_id;
 
     if (defaultPageId) {
       appActions.setCurrentPage(appState, defaultPageId);

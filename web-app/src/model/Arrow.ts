@@ -54,8 +54,8 @@ export const StringToArrowAnchorType: { [key: string]: ArrowAnchorOnNoteType } =
 // }
 export interface EndPointProps {
     position: PointData | null;
-    noteAnchorId: string | null;
-    noteAnchorType: string;
+    note_anchor_id: string | null;
+    note_anchor_type: string;
 }
 
 export interface ArrowStyle {
@@ -81,11 +81,11 @@ export interface SerializedArrow extends ArrowData {
 @entityType('Arrow')
 export class Arrow extends PametElement<ArrowData> {
     get headNoteId(): string | null {
-        return this._data.head.noteAnchorId;
+        return this._data.head.note_anchor_id;
     }
 
     get tailNoteId(): string | null {
-        return this._data.tail.noteAnchorId;
+        return this._data.tail.note_anchor_id;
     }
 
     get colorRole(): string {
@@ -150,18 +150,18 @@ export class Arrow extends PametElement<ArrowData> {
     }
 
     get tailAnchorType(): ArrowAnchorOnNoteType {
-        return StringToArrowAnchorType[this._data.tail.noteAnchorType];
+        return StringToArrowAnchorType[this._data.tail.note_anchor_type];
     }
 
     set tailAnchorType(new_type: ArrowAnchorOnNoteType) {
-        this._data.tail.noteAnchorType = ArrowAnchorTypeToString[new_type];
+        this._data.tail.note_anchor_type = ArrowAnchorTypeToString[new_type];
     }
 
     get headAnchorType(): ArrowAnchorOnNoteType {
-        return StringToArrowAnchorType[this._data.head.noteAnchorType];
+        return StringToArrowAnchorType[this._data.head.note_anchor_type];
     }
     set headAnchorType(new_type: ArrowAnchorOnNoteType) {
-        this._data.head.noteAnchorType = ArrowAnchorTypeToString[new_type];
+        this._data.head.note_anchor_type = ArrowAnchorTypeToString[new_type];
     }
 
     get tailAnchoredOnNote(): boolean {
@@ -196,7 +196,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
 
         this.tailPoint = fixed_pos;
-        this._data.tail.noteAnchorId = anchorNote ? anchorNote.id : null;
+        this._data.tail.note_anchor_id = anchorNote ? anchorNote.id : null;
         this.tailAnchorType = anchor_type;
     }
     setHead(fixed_pos: Point2D | null, anchorNote: Note | null, anchor_type: ArrowAnchorOnNoteType) {
@@ -209,7 +209,7 @@ export class Arrow extends PametElement<ArrowData> {
         }
 
         this.headPoint = fixed_pos;
-        this._data.head.noteAnchorId = anchorNote ? anchorNote.id : null;
+        this._data.head.note_anchor_id = anchorNote ? anchorNote.id : null;
         this.headAnchorType = anchor_type;
     }
 }

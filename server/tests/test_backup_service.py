@@ -1,19 +1,18 @@
-from datetime import datetime, timedelta
-
 import json
-from pathlib import Path
 import time
+from datetime import datetime, timedelta
+from pathlib import Path
 from typing import List
 
 from fusion.libs.entity.change import Change
+from fusion.util import current_time, fake_time
 
 import pamet
-from fusion.util import fake_time, current_time
+from pamet.model.card_note import CardNote
 from pamet.model.page import Page
-from pamet.model.text_note import TextNote
 from pamet.services.backup import FSStorageBackupService
 from pamet.storage.file_system.repository import FSStorageRepository
-from pamet.storage.pamet_in_memory_repo import PametInMemoryRepository
+from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 
 # Debug
 PROCESS_INTERVAL = 5
@@ -24,25 +23,22 @@ PERMANENT_BACKUP_AGE = 30
 
 def test_change_processing(tmp_path):
     backup_service = FSStorageBackupService(
-        backup_folder=tmp_path, repository=PametInMemoryRepository())
+        backup_folder=tmp_path, repository=PametInMemoryStore()
+    )
 
-    page = Page(name='test')
-    change = Change.CREATE(page)
+    page = Page(name="test")
+    change = Change.create(page)
     backup_service.handle_change_set([change])
     backup_service.process_changes()
 
     # Assert result
     jsonl_data = backup_service.tmp_changeset_path(page.id).read_text()
-    json_lines = jsonl_data.split('\n')
-    assert json_lines[0] == json.dumps(change.as_safe_delta_dict(),
-                                       ensure_ascii=False)
+    json_lines = jsonl_data.split("\n")
+    assert json_lines[0] == json.dumps(list(change.data), ensure_ascii=False)
 
 
-def change_and_backup(backup_service,
-                      page,
-                      time,
-                      note_text: str = 'Test note'):
-    note = TextNote.in_page(page)
+def change_and_backup(backup_service, page, time, note_text: str = "Test note"):
+    note = CardNote.in_page(page)
     note.text = note_text
     with fake_time(time=time):
         change = pamet.insert_note(note, page)
@@ -56,21 +52,21 @@ def change_and_backup(backup_service,
 
 def changes_are_identical(changeset1, changeset2):
     changeset1 = sorted(changeset1, key=lambda change: change.id)
-    changeset1 = [change.as_safe_delta_dict() for change in changeset1]
+    changeset1 = [list(change.data) for change in changeset1]
 
     changeset2 = sorted(changeset2, key=lambda change: change.id)
-    changeset2 = [change.as_safe_delta_dict() for change in changeset2]
+    changeset2 = [list(change.data) for change in changeset2]
     return changeset1 == changeset2
 
 
 def test_backup(tmp_path):
-    in_mem_repo = PametInMemoryRepository()
-    backup_service = FSStorageBackupService(backup_folder=tmp_path,
-                                            repository=in_mem_repo,
-                                            record_all_changes=True)
+    in_mem_repo = PametInMemoryStore()
+    backup_service = FSStorageBackupService(
+        backup_folder=tmp_path, repository=in_mem_repo, record_all_changes=True
+    )
     pamet.set_sync_repo(in_mem_repo)
 
-    page = Page(name='test')
+    page = Page(name="test")
     change1 = pamet.insert_page(page)
     page_json1 = FSStorageRepository.serialize_page(page, [], [])
 
@@ -82,8 +78,8 @@ def test_backup(tmp_path):
     assert len(backups) == 1
     assert page_json1 == backups[0].read_text()
 
-    note = TextNote.in_page(page)
-    note.text = 'Test note'
+    note = CardNote.in_page(page)
+    note.text = "Test note"
 
     change2 = pamet.insert_note(note, page)
     page_json2 = FSStorageRepository.serialize_page(page, [note], [])
@@ -106,10 +102,10 @@ def test_backup(tmp_path):
 
 
 def test_pruning(tmp_path):
-    in_mem_repo = PametInMemoryRepository()
-    backup_service = FSStorageBackupService(backup_folder=tmp_path,
-                                            repository=in_mem_repo,
-                                            record_all_changes=True)
+    in_mem_repo = PametInMemoryStore()
+    backup_service = FSStorageBackupService(
+        backup_folder=tmp_path, repository=in_mem_repo, record_all_changes=True
+    )
 
     pamet.set_sync_repo(in_mem_repo)
 
@@ -118,15 +114,12 @@ def test_pruning(tmp_path):
     change_obj_files = {}  # Change lists, by path
 
     # Craete the initial backup
-    page = Page(name='test')
-    page2 = Page(name='test2')  # To test page_id filtering for .get_changes()
+    page = Page(name="test")
+    page2 = Page(name="test2")  # To test page_id filtering for .get_changes()
 
-    initial_backup_time = datetime(year=2099,
-                                   month=7,
-                                   day=30,
-                                   hour=23,
-                                   minute=1,
-                                   second=0).astimezone()
+    initial_backup_time = datetime(
+        year=2099, month=7, day=30, hour=23, minute=1, second=0
+    ).astimezone()
     with fake_time(initial_backup_time):
         page1_change = pamet.insert_page(page)
         page2_change = pamet.insert_page(page2)
@@ -134,99 +127,85 @@ def test_pruning(tmp_path):
         backup_service.process_changes()
         backup_service.backup_changed_pages()
 
-    for_keeping.append(
-        backup_service.recent_backup_path(page.id, initial_backup_time))
+    for_keeping.append(backup_service.recent_backup_path(page.id, initial_backup_time))
 
     # Do x2 backups per period (last day, month, year). The older for each
     # Current time when pruning will be 2100.6.30 23:01:00
 
     # Last year, same week
     # This one should be deleted
-    weekly_deleted_time = datetime.fromisocalendar(year=2100, week=10,
-                                                   day=1).astimezone()
-    for_removal.append(
-        backup_service.recent_backup_path(page.id, weekly_deleted_time))
-    change = change_and_backup(backup_service, page, weekly_deleted_time,
-                               'Last year, same week, to be deleted')
+    weekly_deleted_time = datetime.fromisocalendar(
+        year=2100, week=10, day=1
+    ).astimezone()
+    for_removal.append(backup_service.recent_backup_path(page.id, weekly_deleted_time))
+    change = change_and_backup(
+        backup_service, page, weekly_deleted_time, "Last year, same week, to be deleted"
+    )
     changes = [change]
 
     # This one should be kept, and the changes up to this point
     # should be merged
-    weekly_kept_time = datetime.fromisocalendar(year=2100, week=10,
-                                                day=2).astimezone()
-    change = change_and_backup(backup_service, page, weekly_kept_time,
-                               'Last year, same week, to be kept')
-    for_keeping.append(
-        backup_service.recent_backup_path(page.id, weekly_kept_time))
+    weekly_kept_time = datetime.fromisocalendar(year=2100, week=10, day=2).astimezone()
+    change = change_and_backup(
+        backup_service, page, weekly_kept_time, "Last year, same week, to be kept"
+    )
+    for_keeping.append(backup_service.recent_backup_path(page.id, weekly_kept_time))
     changes.append(change)
     change_obj_files[weekly_kept_time] = changes
 
     # Last month, same day
     # This one should be deleted
-    daily_deleted_time = datetime(year=2100,
-                                  month=6,
-                                  day=15,
-                                  hour=2,
-                                  minute=1,
-                                  second=0).astimezone()
-    change = change_and_backup(backup_service, page, daily_deleted_time,
-                               'Last month, same day, to be deleted')
-    for_removal.append(
-        backup_service.recent_backup_path(page.id, daily_deleted_time))
+    daily_deleted_time = datetime(
+        year=2100, month=6, day=15, hour=2, minute=1, second=0
+    ).astimezone()
+    change = change_and_backup(
+        backup_service, page, daily_deleted_time, "Last month, same day, to be deleted"
+    )
+    for_removal.append(backup_service.recent_backup_path(page.id, daily_deleted_time))
     changes = [change]
 
     # This one should be kept, and the changes up to this point
     # should be merged
-    daily_kept_time = datetime(year=2100,
-                               month=6,
-                               day=15,
-                               hour=14,
-                               minute=1,
-                               second=0).astimezone()
-    for_keeping.append(
-        backup_service.recent_backup_path(page.id, daily_kept_time))
-    change = change_and_backup(backup_service, page, daily_kept_time,
-                               'Last month, same day, to be kept')
+    daily_kept_time = datetime(
+        year=2100, month=6, day=15, hour=14, minute=1, second=0
+    ).astimezone()
+    for_keeping.append(backup_service.recent_backup_path(page.id, daily_kept_time))
+    change = change_and_backup(
+        backup_service, page, daily_kept_time, "Last month, same day, to be kept"
+    )
     changes.append(change)
     change_obj_files[daily_kept_time] = changes
 
     # Last day, same hour
     # This one should be deleted
-    hourly_deleted_time = datetime(year=2100,
-                                   month=6,
-                                   day=30,
-                                   hour=15,
-                                   minute=1,
-                                   second=0).astimezone()
-    for_removal.append(
-        backup_service.recent_backup_path(page.id, hourly_deleted_time))
-    change = change_and_backup(backup_service, page, hourly_deleted_time,
-                               'Last day, same hour, to be deleted')
+    hourly_deleted_time = datetime(
+        year=2100, month=6, day=30, hour=15, minute=1, second=0
+    ).astimezone()
+    for_removal.append(backup_service.recent_backup_path(page.id, hourly_deleted_time))
+    change = change_and_backup(
+        backup_service, page, hourly_deleted_time, "Last day, same hour, to be deleted"
+    )
     changes = [change]
 
     # This one should be kept
-    hourly_kept_time = datetime(year=2100,
-                                month=6,
-                                day=30,
-                                hour=15,
-                                minute=20,
-                                second=0).astimezone()
-    for_keeping.append(
-        backup_service.recent_backup_path(page.id, hourly_kept_time))
-    change = change_and_backup(backup_service, page, hourly_kept_time,
-                               'Last day, same hour, to be kept')
+    hourly_kept_time = datetime(
+        year=2100, month=6, day=30, hour=15, minute=20, second=0
+    ).astimezone()
+    for_keeping.append(backup_service.recent_backup_path(page.id, hourly_kept_time))
+    change = change_and_backup(
+        backup_service, page, hourly_kept_time, "Last day, same hour, to be kept"
+    )
     changes.append(change)
     change_obj_files[hourly_kept_time] = changes
 
     # Do pruning
     with fake_time(
-            datetime(year=2100, month=6, day=30, hour=23, minute=1,
-                     second=0).astimezone()):
+        datetime(year=2100, month=6, day=30, hour=23, minute=1, second=0).astimezone()
+    ):
         backup_service.prune_page_backups(page.id)
 
     # Assert file counts and changes-file contents
-    assert len(for_keeping) == len(
-        backup_service.recent_backups_for_page(page.id))
+    assert len(for_keeping) == len(backup_service.recent_backups_for_page(page.id))
 
     for backup_path in for_keeping:
         assert backup_path.exists()
@@ -252,22 +231,23 @@ def test_pruning(tmp_path):
     after_time = weekly_deleted_time
     before_time = hourly_deleted_time
 
-    subset = list(
-        filter(lambda c: after_time <= c.time < before_time, all_changes))
-    retrieved = backup_service.get_changes(after_time=after_time,
-                                           before_time=before_time)
+    subset = list(filter(lambda c: after_time <= c.time < before_time, all_changes))
+    retrieved = backup_service.get_changes(
+        after_time=after_time, before_time=before_time
+    )
     assert changes_are_identical(subset, retrieved)
 
 
 def test_permanent_storage(tmp_path):
-    in_mem_repo = PametInMemoryRepository()
-    backup_service = FSStorageBackupService(backup_folder=tmp_path,
-                                            repository=in_mem_repo)
+    in_mem_repo = PametInMemoryStore()
+    backup_service = FSStorageBackupService(
+        backup_folder=tmp_path, repository=in_mem_repo
+    )
 
     pamet.set_sync_repo(in_mem_repo)
 
     # Craete the initial backup
-    page = Page(name='test')
+    page = Page(name="test")
     change = pamet.insert_page(page)
 
     initial_backup_time = datetime(year=2000, month=7, day=30).astimezone()
@@ -279,8 +259,7 @@ def test_permanent_storage(tmp_path):
     backup_service.move_to_permanent_where_appropriate(page.id)
 
     assert not backup_service.recent_backups_for_page(page.id)
-    assert backup_service.permanent_backup_path(page.id,
-                                                initial_backup_time).exists()
+    assert backup_service.permanent_backup_path(page.id, initial_backup_time).exists()
 
 
 def test_sheduler_and_worker(tmp_path):
@@ -288,20 +267,22 @@ def test_sheduler_and_worker(tmp_path):
     # Just do a single backup and check it along with the backup/prune
     # timesetamps
 
-    in_mem_repo = PametInMemoryRepository()
+    in_mem_repo = PametInMemoryStore()
     pamet.set_sync_repo(in_mem_repo)
 
-    backup_service = FSStorageBackupService(backup_folder=tmp_path,
-                                            repository=in_mem_repo,
-                                            process_interval=0.5,
-                                            backup_interval=1,
-                                            prune_interval=1.5)
+    backup_service = FSStorageBackupService(
+        backup_folder=tmp_path,
+        repository=in_mem_repo,
+        process_interval=0.5,
+        backup_interval=1,
+        prune_interval=1.5,
+    )
     # Start the service
     backup_service.start()
     # time_started = time.time()
 
     # Enter a change
-    page = Page(name='test')
+    page = Page(name="test")
     change = pamet.insert_page(page)
     backup_service.handle_change_set([change])
 

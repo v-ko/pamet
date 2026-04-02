@@ -6,16 +6,12 @@ from time import sleep
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
-from pamet.services.rest_api.routes.desktop import (
-    configure_router,
-    get_media_router,
-    get_router,
-)
 from uvicorn import Config, Server
 
 import pamet
 from fusion import get_logger
+from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
+from pamet.services.rest_api.routes.desktop import desktop_router, media_router
 
 log = get_logger(__name__)
 
@@ -36,7 +32,6 @@ class DesktopServer:
 
     def __init__(
         self,
-        media_store_path: Path | str,
         port: int = None,
         commands: dict = None,
         config_dir: Path | str = None,
@@ -44,7 +39,6 @@ class DesktopServer:
         web_app_debug_server_host: str = None,
     ):
         threading.Thread.__init__(self)
-        self.media_store_path = Path(media_store_path)
         self.commands = commands or {}
         if config_dir is None:
             config_dir = pamet.desktop_app.CONFIG_DIR
@@ -75,14 +69,12 @@ class DesktopServer:
                 "the same time"
             )
 
-        configure_router(
-            commands=self.commands,
-            media_store_path=self.media_store_path,
-            web_app_static_build_path=self.web_app_static_build_path,
-            desktop_access_token=self.desktop_access_token,
-        )
-        self.app.include_router(get_router())
-        self.app.include_router(get_media_router())
+        self.app.state.commands = self.commands
+        self.app.state.web_app_static_build_path = self.web_app_static_build_path
+        self.app.state.desktop_access_token = self.desktop_access_token
+
+        self.app.include_router(desktop_router)
+        self.app.include_router(media_router)
 
     @property
     def port(self):

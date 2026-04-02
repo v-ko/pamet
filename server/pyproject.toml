@@ -37,5 +37,8 @@ classifiers = [
 
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
 [tool.setuptools.packages.find]
 exclude = ["web_app*"]

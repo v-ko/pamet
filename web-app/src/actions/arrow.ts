@@ -57,13 +57,13 @@ class ArrowActions {
                 parent_id: state.page().id,
                 tail: {
                     position: tail_coords,
-                    noteAnchorId: tail_note_id,
-                    noteAnchorType: ArrowAnchorTypeToString[anchorUnderMouse],
+                    note_anchor_id: tail_note_id,
+                    note_anchor_type: ArrowAnchorTypeToString[anchorUnderMouse],
                 },
                 head: {
                     position: null,
-                    noteAnchorId: null,
-                    noteAnchorType: ArrowAnchorTypeToString[ArrowAnchorOnNoteType.none],
+                    note_anchor_id: null,
+                    note_anchor_type: ArrowAnchorTypeToString[ArrowAnchorOnNoteType.none],
                 },
                 mid_points: [],
                 style: {

@@ -54,18 +54,6 @@ def open_user_settings_json():
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
 
 
-@command(title="Open repo settings (JSON)")
-def open_repo_settings_json():
-    settings_path = repo_settings_path(pamet.sync_repo().path)
-    QDesktopServices.openUrl(QUrl.fromLocalFile(str(settings_path)))
-
-
-@command(title="Open repository folder")
-def open_repository_folder():
-    repo = pamet.sync_repo()
-    QDesktopServices.openUrl(QUrl.fromLocalFile(str(repo.path)))
-
-
 @command(title="Grab screen snippet")
 def grab_screen_snippet():
     _grab_screen_snippet()

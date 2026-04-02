@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import type { ProjectData } from '@/model/config/Project';
-import { projectActions } from "@/actions/project";
+import type { PametProjectData } from '@/model/Project';
 import { pamet } from "@/core/facade";
 import { deleteProjectAndSwitch } from '@/procedures/app';
 import { getLogger } from 'fusion/logging';
@@ -19,6 +18,9 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
   const [titleError, setTitleError] = useState<string | null>(null);
   const trackedProjects = pamet.appViewState.trackedProjects;
 
+  const trackedProject = trackedProjects.find(p => p.id === project.id);
+  const isFileBacked = trackedProject?.uri?.startsWith('file:///');
+
   function validateTitle(value: string): string | null {
     if (!value.trim()) {
       return 'Title is required';
@@ -30,8 +32,10 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
   }
 
   function onDelete(project: PametProjectData) {
-    // Confirmation dialog
-    const confirmed = window.confirm('Are you sure you want to delete this project from local storage?');
+    const confirmMessage = isFileBacked
+      ? 'Are you sure you want to disconnect this project? The project folder will be kept on disk.'
+      : 'Are you sure you want to delete this project? All data will be permanently removed.';
+    const confirmed = window.confirm(confirmMessage);
     if (!confirmed) return;
 
     onClose();
@@ -68,12 +72,9 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
       </button>
 
       <form
-        method="dialog"
         className="form-vertical"
-        onSubmit={(e) => {
-          // Note: when the form method is "dialog", the submit event fires, but
-          // the default action is to close the dialog, not to submit the form.
-          // So we can just do our thing here and not call e.preventDefault()
+        onSubmit={async (e) => {
+          e.preventDefault();
           if (titleError) return;
 
           const updatedProject = {
@@ -83,7 +84,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
 
           try {
             await pamet.saveProjectProperties(updatedProject);
-            // No need to call onClose, the dialog will close automatically
+            dialogRef.current?.close();
           } catch (error) {
             setTitleError((error as Error).message);
           }
@@ -120,7 +121,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
             onClick={() => onDelete(project)}
             className="btn btn-danger"
           >
-            Delete Project
+            {isFileBacked ? 'Disconnect Project' : 'Delete Project'}
           </button>
           <button
             type="submit"

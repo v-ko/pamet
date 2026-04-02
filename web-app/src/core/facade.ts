@@ -22,6 +22,7 @@ import { Delta } from "fusion/model/Delta";
 import { updateAppStateFromConfig, doSwitchToProject } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { pageActions } from "@/actions/page";
+import { PageViewState } from "@/components/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { RenderProfiler } from "@/core/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
@@ -113,7 +114,7 @@ export class PametFacade extends PametStore {
             // Better do the registration here, so that we don't have to worry
             // about unregistering when swapping out the FDS
             if (!this._frontendDomainStore) {
-                log.warning('No frontend domain store set');
+                // log.warning('No frontend domain store set'); // If FDS was used - it would raise exception
                 return;
             }
             this.frontendDomainStore.saveUncommitedChanges()
@@ -194,7 +195,7 @@ export class PametFacade extends PametStore {
 
     // UI related
     setKeybindings(keybindings: Keybinding[]) {
-        log.info('Setting keybindings', keybindings);
+        log.info('Setting keybindings');
         if (!this.keybindingService) {
             this.keybindingService = new KeybindingService();
         }
@@ -275,6 +276,11 @@ export class PametFacade extends PametStore {
     syncRouterFromAppState() {
         const route = this.appViewState.toRoute();
         this.router.navigateToRoute(route);
+    }
+
+    pushNewViewportPosition(state: PageViewState, viewportCenter: Point2D, viewportHeight: number) {
+        pageActions.updateViewport(state, viewportCenter, viewportHeight);
+        this.syncRouterFromAppState();
     }
 
     flushRouterFromAppState() {
@@ -397,7 +403,6 @@ export class PametFacade extends PametStore {
         }
         const projectProperties = await this.storageService.getProjectProperties(
             trackedProject.id,
-            this.projectStorageConfig(trackedProject.id),
         );
         if (projectProperties) {
             return projectProperties as PametProjectData;
@@ -422,7 +427,6 @@ export class PametFacade extends PametStore {
     async saveProjectProperties(projectData: PametProjectData): Promise<void> {
         await this.storageService.setProjectProperties(
             projectData.id,
-            this.projectStorageConfig(projectData.id),
             projectData,
         );
         const trackedProject = this.appViewState.trackedProject(projectData.id);

@@ -1,21 +1,19 @@
 from dataclasses import field
 from datetime import datetime
-from fusion import Entity, entity_type
-from pamet.util.url import Url
+
 from fusion.util import current_time, timestamp
+
+from fusion import Entity, entity_type
 
 
 @entity_type
 class Page(Entity):
-    name: str = ''
+    name: str = ""
     created: str = field(default_factory=lambda: timestamp(current_time()))
     modified: str = field(default_factory=lambda: timestamp(current_time()))
 
     def __repr__(self):
-        return f'<Page gid={self.gid()} name={self.name}>'
-
-    def url(self):
-        return Url(f'pamet:///p/{self.id}')
+        return f"<Page id={self.id} name={self.name}>"
 
     @property
     def datetime_created(self) -> datetime:

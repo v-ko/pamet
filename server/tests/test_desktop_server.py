@@ -1,12 +1,12 @@
 from time import sleep
-from pamet.services.local_server import LocalServer
+
+from pamet.services.rest_api.desktop import DesktopServer
 
 
-def test_local_server(tmp_path):
-
+def test_desktop_server(tmp_path):
     # Start the server
-    server1 = LocalServer(config_dir=tmp_path)
-    server2 = LocalServer(config_dir=tmp_path)
+    server1 = DesktopServer(config_dir=tmp_path)
+    server2 = DesktopServer(config_dir=tmp_path)
     server1.start()
     sleep(0.1)
     # Check that it's running

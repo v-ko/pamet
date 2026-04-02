@@ -8,7 +8,7 @@ import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/components/page/PageViewState";
-import type { ProjectData } from "@/model/config/Project";
+import type { PametProjectData, ProjectReference } from "@/model/Project";
 import { Entity } from "fusion/model/Entity";
 import { StorageServiceRuntimeState } from "fusion/storage/management/StorageService";
 
@@ -46,7 +46,7 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    reflectCurrentProjectState(state: WebAppState, projectData: ProjectData | null, projectError: ProjectError = ProjectError.NoError) {
+    reflectCurrentProjectState(state: WebAppState, projectData: PametProjectData | null, projectError: ProjectError = ProjectError.NoError) {
         // This is used only for setting the state. The actual project
         // switching is done in the switchToProject procedure
         log.info('Setting projectId in view state', projectData ? projectData.id : null);
@@ -54,6 +54,16 @@ class AppActions {
         state.currentProjectState = projectData;
         state.projectError = projectError;
         state.currentPageId = null;
+    }
+
+    @action({ issuer: 'service' })
+    updateProjectReferences(
+        state: WebAppState,
+        trackedProjects: ProjectReference[],
+        recentProjects: ProjectReference[],
+    ) {
+        state.trackedProjects = trackedProjects;
+        state.recentProjects = recentProjects;
     }
 
     @action({ issuer: 'service' })

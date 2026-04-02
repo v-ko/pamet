@@ -97,19 +97,19 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get tailAnchorNoteViewState(): NoteViewState | null {
-        if (!this._elementData.tail.noteAnchorId) {
+        if (!this._elementData.tail.note_anchor_id) {
             console.log('no tail anchor')
             return null;
         }
-        return this.pageViewState.getViewStateForElement(this._elementData.tail.noteAnchorId ) as NoteViewState | null;
+        return this.pageViewState.getViewStateForElement(this._elementData.tail.note_anchor_id ) as NoteViewState | null;
     }
 
     get headAnchorNoteViewState() : NoteViewState | null {
-        if (!this._elementData.head.noteAnchorId) {
+        if (!this._elementData.head.note_anchor_id) {
             console.log('no head anchor')
             return null;
         }
-        return this.pageViewState.getViewStateForElement(this._elementData.head.noteAnchorId) as NoteViewState | null;
+        return this.pageViewState.getViewStateForElement(this._elementData.head.note_anchor_id) as NoteViewState | null;
     }
     updateFromArrow(arrow: Arrow) {
         // this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);

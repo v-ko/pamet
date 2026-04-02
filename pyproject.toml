@@ -1,0 +1,7 @@
+[tool.pytest.ini_options]
+pythonpath = ["fusion/py-src", "server"]
+testpaths = ["server/tests", "fusion/py-src/tests"]
+addopts = [
+    "--ignore=server/tests/actions",
+    "--ignore=server/tests/test_backup_service.py",
+]

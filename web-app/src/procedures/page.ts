@@ -95,11 +95,11 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
       // Remap anchors to new note ids (if remapped)
       if (arrow.headNoteId) {
         const newHeadId = noteIdMap.get(arrow.headNoteId) || arrow.headNoteId;
-        (arrow as any)._data.head.noteAnchorId = newHeadId;
+        (arrow as any)._data.head.note_anchor_id = newHeadId;
       }
       if (arrow.tailNoteId) {
         const newTailId = noteIdMap.get(arrow.tailNoteId) || arrow.tailNoteId;
-        (arrow as any)._data.tail.noteAnchorId = newTailId;
+        (arrow as any)._data.tail.note_anchor_id = newTailId;
       }
 
       arrowsToInsert.push(arrow);
@@ -166,7 +166,7 @@ export async function pasteInternal(
                             );
                             const newImageItem = await pamet.addFileToStore(
                                 blob, sourceImageItem.path, state.page().id,
-                                { width: sourceImageItem.width, height: sourceImageItem.height, size: blob.size, mimeType: blob.type }
+                                { width: sourceImageItem.width, height: sourceImageItem.height, size: blob.size, mime_type: blob.type }
                             );
                             imageIdRemap.set(oldImageId, newImageItem.id);
                             note.content.image_id = newImageItem.id;
@@ -239,7 +239,7 @@ export async function pasteInternal(
             finalImageBlob,
             imagePath,
             pageId,
-            { width, height, size: finalImageBlob.size, mimeType: finalImageBlob.type },
+            { width, height, size: finalImageBlob.size, mime_type: finalImageBlob.type },
         );
         note.content.image_id = imageItem.id;
 

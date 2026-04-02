@@ -77,9 +77,9 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
   }, []);
 
   async function handleCreate(e: FormEvent) {
+    e.preventDefault();
     const error = validateId(id);
     if (error) {
-      e.preventDefault();
       setIdError(error);
       return;
     }
@@ -93,7 +93,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
 
     await createProject(newProject);
     await switchToProject(newProject.id);
-    // No need to call onClose, the dialog will close automatically
+    dialogRef.current?.close();
   }
 
   return (
@@ -109,7 +109,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
     >
       <div className="dialog-content">
         <h3 className="dialog-title">Create Project</h3>
-        <form method="dialog" onSubmit={handleCreate} className="form-vertical">
+        <form onSubmit={handleCreate} className="form-vertical">
           <div className="field">
             <input
               ref={titleInputRef}

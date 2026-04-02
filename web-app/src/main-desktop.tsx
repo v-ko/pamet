@@ -4,25 +4,27 @@ import "@/index.css";
 import serviceWorkerUrl from "@/service-worker?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
-import { pamet } from "@/core/facade";
+import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
 import { updateAppFromRouteOrAutoassist, updateAppStateFromConfig } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
-import { DesktopPametConfigService } from "@/services/config/Config";
+import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
 import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
+import { RestDesktopConfigAdapter } from "@/services/config/RestDesktopConfigAdapter";
 
 import WebApp from "@/containers/app/App";
 import folderCheckIconUrl from "@/resources/icons/folder-check-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
-import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
-import { FileStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
-import { StorageAdapterNames } from 'fusion/storage/repository/Repository';
+import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
+import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
+import { DomainStoreAdapterNames } from 'fusion/storage/domain-store-adapter/DomainStoreAdapter';
 import { StorageService } from "fusion/storage/management/StorageService";
 import { registerEntityClasses } from "@/core/entityRegistrationHack";
 import { LOCAL_USER_ID } from "@/core/constants";
+import { buildDeviceBranchName } from "./util";
 
 const log = getLogger("main-desktop.tsx");
 setupWebWorkerLoggingChannel();
@@ -56,27 +58,23 @@ if (!desktopApiBaseUrl) {
 }
 const baseUrl = desktopApiBaseUrl;
 
-const configService = new DesktopPametConfigService({
-    adapter: new LocalStorageConfigAdapter(),
-});
+const desktopConfigAdapter = new RestDesktopConfigAdapter(baseUrl, desktopAuth);
+const configService = new PametSettingsService(desktopConfigAdapter);
+const appMiscProperties = new MiscPropertiesService(new LocalStorageConfigAdapter());
 pamet.setConfigService(configService)
+pamet.setAppMiscProperties(appMiscProperties)
 
-// Desktop storage configuration factory (RestApi for both storage and media)
-function desktopStorageConfigFactory(projectId: string): ProjectStorageConfig {
-    let device = pamet.config.getDeviceData();
-    if (!device) {
-        throw Error('Device not set');
-    }
+// Desktop storage configuration factory (IndexedDB for VCS, RestApi for media/filesystem bridge)
+const desktopStorageConfigFactory: ProjectStorageConfigFactory = (projectId, userId, deviceId) => {
+    const branchName = buildDeviceBranchName(userId, deviceId);
     return {
-        deviceBranchName: device.id,
-        storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        onDeviceStorageAdapter: {
-            name: 'RestApi' as StorageAdapterNames,
+        projectId: projectId,
+        deviceBranchName: branchName,
+        onDeviceVcsAdapter: {
+            name: 'IndexedDB' as VcsAdapterNames,
             args: {
                 projectId: projectId,
-                localBranchName: device.id,
-                baseUrl: baseUrl,
-                auth: desktopAuth,
+                localBranchName: branchName,
             }
         },
         onDeviceFileStore: {
@@ -87,8 +85,16 @@ function desktopStorageConfigFactory(projectId: string): ProjectStorageConfig {
                 auth: desktopAuth,
             }
         },
-    }
-}
+        domainStore: {
+            name: 'RestApi' as DomainStoreAdapterNames,
+            args: {
+                projectId: projectId,
+                baseUrl: baseUrl,
+                auth: desktopAuth,
+            }
+        },
+    };
+};
 
 pamet.setProjectStorageConfigFactory(desktopStorageConfigFactory);
 pamet.setStorageStatusIconSet({
@@ -96,23 +102,17 @@ pamet.setStorageStatusIconSet({
     failedIconUrl: folderCloseIconUrl,
 });
 
-// Initialize the desktop app
+// Initialize the desktop app (async: storage, config, routing)
 async function initializeDesktopApp() {
-    let appState = new WebAppState({ userId: LOCAL_USER_ID })
-    pamet.setAppViewState(appState)
+    await desktopConfigAdapter.initialize();
 
     // Setup the user and device configs. For now the simplest possible setup:
     // Generate device if none. Generate anonymous user and default project and page if none
     let config = pamet.config
-
-    // Check if the device is set - if missing - generate metadata
-    let deviceData = config.getDeviceData();
-    if (!deviceData) {
-        deviceData = {
-            id: "device-" + crypto.randomUUID(),
-            name: "DesktopApp",
-        }
-        config.setDeviceData(deviceData);
+    let deviceId = pamet.appMiscProperties.getDeviceId();
+    if (!deviceId) {
+        deviceId = "device-" + crypto.randomUUID();
+        pamet.appMiscProperties.setDeviceId(deviceId);
     }
 
     // Check for user. If none - create with default 'local' user
@@ -127,10 +127,6 @@ async function initializeDesktopApp() {
         }
         config.setUserData(userData);
     }
-
-    await updateAppStateFromConfig(pamet.appViewState).catch((e) => {
-        log.error('[setConfig] Error updating app state from config', e);
-    });
 
     pamet.setKeybindings(DEFAULT_KEYBINDINGS);
 
@@ -164,17 +160,22 @@ async function initializeDesktopApp() {
         log.error("Failed to initialize storage service", e);
     }
 
-    // Initialize router after config and initial URL → State hydration
-    pamet.router.init(pamet.appViewState);
+    await updateAppStateFromConfig(pamet.appViewState).catch((e) => {
+        log.error('[setConfig] Error updating app state from config', e);
+    });
+
+    pamet.initRouter();
 
     // Handle the route
     try {
-        await updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
+        await updateAppFromRouteOrAutoassist()
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
     }
 }
 
+let appState = new WebAppState({ userId: LOCAL_USER_ID })
+pamet.setAppViewState(appState)
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);
 });

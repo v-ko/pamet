@@ -24,11 +24,9 @@ def _path_from_env_or_standard(
 CONFIG_DIR = _path_from_env_or_standard(
     "PAMET_CONFIG_DIR", QStandardPaths.StandardLocation.AppConfigLocation
 )
-CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 APP_DATA_DIR = _path_from_env_or_standard(
     "PAMET_APP_DATA_DIR", QStandardPaths.StandardLocation.AppLocalDataLocation
 )
-APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 PROJECTS_DIR = APP_DATA_DIR / "projects"
 USER_SETTINGS_DIR = CONFIG_DIR / "user"
 REPO_PROPERTIES_JSON = "properties.json"
@@ -50,7 +48,6 @@ class RepoSettingsData(TypedDict):
     backup_folder: str
     record_all_changes: bool
     semantic_search_enabled: bool
-    media_store_path: str
 
 
 REPO_SETTINGS_DEFAULTS: RepoSettingsData = {
@@ -62,7 +59,6 @@ REPO_SETTINGS_DEFAULTS: RepoSettingsData = {
     "backup_folder": ".pamet/backups",
     "record_all_changes": False,
     "semantic_search_enabled": False,
-    "media_store_path": ".pamet/media",
 }
 
 
@@ -95,8 +91,7 @@ class SettingsAdapter:
 
     def write(self, data: dict[str, Any]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("w", encoding="utf-8") as file_obj:
-            json.dump(deepcopy(data), file_obj, indent=4)
+        self.path.write_text(json.dumps(deepcopy(data), indent=4))
 
 
 def user_settings_path() -> Path:

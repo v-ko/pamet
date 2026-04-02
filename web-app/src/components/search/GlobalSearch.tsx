@@ -115,6 +115,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = observer(({ state }) =>
         // Navigate to the page containing the note first
         if (result.pageId !== pamet.appViewState.currentPageId) {
             appActions.setCurrentPage(pamet.appViewState, result.pageId);
+            pamet.syncRouterFromAppState();
         }
 
         // Get the note and navigate to its position
@@ -134,7 +135,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = observer(({ state }) =>
                     const currentHeight = currentPageVS.viewportHeight;
 
                     // Update viewport to center on the note (this is the main state change)
-                    pageActions.updateViewport(currentPageVS, noteCenter, currentHeight);
+                    pamet.pushNewViewportPosition(currentPageVS, noteCenter, currentHeight);
 
                     // Add smooth animation overlay using the animation service
                     // This will smoothly transition FROM the old state TO the new state

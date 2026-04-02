@@ -1,6 +1,6 @@
 import { getLogger } from "fusion/logging";
 import { pamet } from "@/core/facade";
-import { ProjectData } from "@/model/config/Project";
+import { PametProjectData, ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/route";
 import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
@@ -8,6 +8,7 @@ import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
 import { createId, currentTime, timestamp } from "fusion/util/base";
 import { DesktopImporter } from "@/storage/DesktopImporter";
+
 import { pageActions } from "@/actions/page";
 import { Point2D } from "fusion/primitives/Point2D";
 import { LOCAL_USER_ID } from "@/core/constants";
@@ -17,7 +18,7 @@ const log = getLogger('AppProcedures');
 
 let projectSwitchInFlight: Promise<void> | null = null;
 
-async function doSwitchToProject(projectId: string | null): Promise<void> {
+export async function doSwitchToProject(projectId: string | null): Promise<void> {
     log.info('Switching to project', projectId);
     const appState = pamet.appViewState;
     appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
@@ -73,6 +74,7 @@ export async function switchToProject(projectId: string | null): Promise<void> {
     projectSwitchInFlight = doSwitchToProject(projectId);
     try {
         await projectSwitchInFlight;
+        pamet.syncRouterFromAppState();
     } finally {
         projectSwitchInFlight = null;
     }
@@ -80,10 +82,10 @@ export async function switchToProject(projectId: string | null): Promise<void> {
 
 
 export async function deleteProjectAndSwitch(project: ProjectData) {
-    // call the async local data erase, then remove the project from the config
-    // then if deleting the currently open project
+    // Remove the project from the config and storage, then
+    // if removing the currently open project -
     // switch to another project (if none present - create a default one)
-    log.info("Starting delete procedure for project", project);
+    log.info("Starting remove procedure for project", project);
 
     // Get projects, return error if the project is missing
     let projects = pamet.trackedProjects();
@@ -97,17 +99,17 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         alert('You\'re deleting the last project. A new one will be created.')
     }
 
-    // If the project to be deleted is the currently open one
-    // we detach
+    // If the project to be deleted is the currently open one - detach first
+    // so that the FDS stops pushing commits before storage is torn down
     if (pamet.appViewState.currentProjectId === project.id) {
-        log.info("Detaching FDS");
+        log.info("Detaching from current project before removal");
         await switchToProject(null);
     }
 
-    // Do the requested delete from the local config and storage backend
-    log.info("Removing project from config and indexeddb", project);
+    // Do the requested removal from config and storage
+    log.info("Removing project from config and storage", project);
     appActions.updateSystemDialogState(pamet.appViewState, {
-        title: 'Deleting project...',
+        title: 'Removing project...',
         taskProgress: -1,
     });
 
@@ -116,67 +118,37 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         pamet.removeTrackedProject(project.id);
         pamet.appMiscProperties.removeRecentProject(project.id);
 
-        await pamet.storageService.deleteProject(
-            project.id,
-            pamet.projectStorageConfig(project.id)
-        )
+        // Erase local caches; each adapter erases only what it owns
+        await pamet.storageService.removeProject(project.id, pamet.projectStorageConfig(project.id));
 
         // If the current project is null (i.e. we've deleted the current project)
-        // Use the auto-assist to switch to the first project in the list
-        // and create default page if needed, etc
+        // use the auto-assist to switch to the first project in the list
+        // and create default page if needed, etc.
         if (pamet.appViewState.currentProjectId === null) {
             await updateAppFromRouteOrAutoassist(new PametRoute());
         }
 
-        log.info("Project deletion procedure completed");
+        log.info("Project removal procedure completed");
     } finally {
         appActions.updateSystemDialogState(pamet.appViewState, null);
     }
 }
 
 
-export async function updateAppFromRoute(route: PametRoute): Promise<void> {
-    // Reflects the route in the app state without any URL mutations
-    log.info('updateAppFromRoute for route', route);
-
+export async function updateAppFromRouteOrAutoassist(route?: PametRoute): Promise<void> {
+    if (!route) {
+        route = pamet.router.currentRoute();
+    }
+    log.info('updateAppFromRouteOrAutoassist for route', route.toString());
     const appState = pamet.appViewState;
 
-    // 1) Project
-    const targetProjectId = route.projectId ?? null;
-    if (appState.currentProjectId !== targetProjectId) {
-        await switchToProject(targetProjectId);
-    }
-
-    // 2) Page
-    const targetPageId = route.pageId ?? null;
-    if (appState.currentPageId !== targetPageId) {
-        if (targetPageId) {
-            appActions.setCurrentPage(appState, targetPageId);
-        } else {
-            // Leave current page as-is when clearing pageId via pure reflect
-            // If needed, higher-level auto-assist decides defaults
-        }
-    }
-
-    // 3) Viewport (view_at) for current page, if provided
-    if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
-        const [x, y] = route.viewportCenter;
-        pageActions.updateViewport(appState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
-    }
-}
-
-export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise<void> {
-    // "Reaches" the route by executing the necessary app configuration
-    log.info('updateAppFromRouteOrAutoassist for route', route);
-
-    // If no project id - go to default project (or create one)
+    // 1. Resolve project (from route or first/new default)
     let projectId = route.projectId;
     if (projectId === undefined) {
-        // go to default project
-        let projects = pamet.trackedProjects();
+        const projects = pamet.trackedProjects();
         if (projects.length === 0) {
             log.info('No projects found. Creating a default one');
-            let newProject = await createDefaultProject();
+            const newProject = await createDefaultProject();
             projectId = newProject.id;
         } else {
             log.info('Switching to the first project');
@@ -184,75 +156,58 @@ export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise
         }
     }
 
-    await switchToProject(projectId); // view state updated here
+    await switchToProject(projectId);
 
-    let projectData = pamet.appViewState.currentProjectState;
-
-    // If undefined switching will have set the 404 message
+    const projectData = appState.currentProjectState;
     if (!projectData) {
-        return;
+        return; // 404 already set by switchToProject
     }
 
-    // If there's a page id - apply it
-    let pageId = route.pageId;
+    // 2. Resolve page (from route or find/create default)
+    let pageId = route.pageId ?? await resolveDefaultPageId(projectData);
+
+    // 3. Apply page and viewport
     if (pageId !== undefined) {
-        appActions.setCurrentPage(pamet.appViewState, pageId);
-        // Apply viewport (eye_at) if provided
-        if (pamet.appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+        appActions.setCurrentPage(appState, pageId);
+        if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
             const [x, y] = route.viewportCenter;
-            pageActions.updateViewport(pamet.appViewState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
+            pageActions.updateViewport(appState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
         }
-    } else {  // If there's no page id
-        // Goto first/default page
-        let goToPageId: string | undefined = undefined;
-
-        // Check for default page in the project
-        const defaultPageId = projectData.defaultPageId;
-        if (defaultPageId) {
-            // Check that the page is present
-            let page = pamet.findOne({ id: defaultPageId });
-            if (!page) { // If the default page is set, but missing
-                log.error('Default page not found in the repo for id', defaultPageId);
-                log.info('Removing default page id from the project')
-                const { defaultPageId: _removedDefaultPageId, ...projectWithoutDefaultPage } = projectData;
-                await pamet.saveProjectProperties(projectWithoutDefaultPage);
-            } else {
-                log.info('Switching to default page', defaultPageId);
-                goToPageId = defaultPageId;
-            }
-        }
-
-        // If no default page is set
-        if (!goToPageId) {
-            let firstPage = pamet.findOne({ type: Page });
-            if (firstPage) {
-                log.info('Switching to the first page', firstPage.id);
-                goToPageId = firstPage.id;
-            } else {  // If no pages present
-                // Create a default page
-                log.info('No pages found in the project. Creating a default page');
-                // TODO: Move that logic to somewhere else
-                projectActions.createDefaultPage(pamet.appViewState);
-                let newPage = pamet.findOne({ type: Page });
-                if (!newPage) {
-                    throw Error('Default page not created');
-                }
-                log.info('Switching to the newly created default page', newPage);
-                goToPageId = newPage.id;
-            }
-        }
-
-        if (goToPageId !== undefined) {
-            appActions.setCurrentPage(pamet.appViewState, goToPageId);
-            // Apply viewport (eye_at) if provided
-            if (pamet.appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
-                const [x, y] = route.viewportCenter;
-                pageActions.updateViewport(pamet.appViewState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
-            }
-        } else {
-            log.error('Could not find/create a page to go to.');
-        }
+    } else {
+        log.error('Could not find/create a page to go to.');
     }
+
+    pamet.syncRouterFromAppState();
+}
+
+async function resolveDefaultPageId(projectData: PametProjectData): Promise<string | undefined> {
+    const defaultPageId = projectData.default_page_id;
+    if (defaultPageId) {
+        const page = pamet.findOne({ id: defaultPageId });
+        if (page) {
+            log.info('Switching to default page', defaultPageId);
+            return defaultPageId;
+        }
+        log.error('Default page not found in the repo for id', defaultPageId);
+        log.info('Removing default page id from the project');
+        const { default_page_id: _removed, ...restProject } = projectData;
+        await pamet.saveProjectProperties(restProject as PametProjectData);
+    }
+
+    const firstPage = pamet.findOne({ type: Page });
+    if (firstPage) {
+        log.info('Switching to the first page', firstPage.id);
+        return firstPage.id;
+    }
+
+    log.info('No pages found in the project. Creating a default page');
+    projectActions.createDefaultPage(pamet.appViewState);
+    const newPage = pamet.findOne({ type: Page });
+    if (!newPage) {
+        throw Error('Default page not created');
+    }
+    log.info('Switching to the newly created default page', newPage);
+    return newPage.id;
 }
 
 export async function updateAppStateFromConfig(appState: WebAppState) {

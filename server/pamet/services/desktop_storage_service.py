@@ -20,7 +20,6 @@ class DesktopStorageService:
     def __init__(self):
         self._project_folder_managers: dict[str, ProjectFolderManager] = {}
         self._lock = threading.RLock()
-        self._vcs_lock = threading.RLock()
 
     def _path_from_file_uri(self, project_uri: str) -> Path:
         parsed_uri = urlparse(project_uri)
@@ -57,7 +56,6 @@ class DesktopStorageService:
             pfm = ProjectFolderManager(
                 project_id=project_id,
                 repo_root=repo_root,
-                vcs_lock=self._vcs_lock,
             )
             pfm.load()
             self._project_folder_managers[project_id] = pfm

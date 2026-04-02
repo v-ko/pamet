@@ -8,11 +8,6 @@ export interface ProjectReference {
     uri: string;
 }
 
-export interface PametProjectProperties {
-    defaultPageId?: string;
-    [key: string]: unknown;
-}
-
 export interface PametProjectData extends ProjectData {
-    properties?: PametProjectProperties;
+    default_page_id?: string;
 }

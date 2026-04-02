@@ -165,8 +165,8 @@ export class DesktopImporter extends BaseApiClient {
 
                 elementData.tail = {
                     position: elementData.tail_coords ? [elementData.tail_coords[0], elementData.tail_coords[1]] : null,
-                    noteAnchorId: elementData.tail_note_id || null,
-                    noteAnchorType: elementData.tail_anchor ? elementData.tail_anchor.toLowerCase() : 'none'
+                    note_anchor_id: elementData.tail_note_id || null,
+                    note_anchor_type: elementData.tail_anchor ? elementData.tail_anchor.toLowerCase() : 'none'
                 };
                 delete elementData.tail_coords;
                 delete elementData.tail_note_id;
@@ -174,8 +174,8 @@ export class DesktopImporter extends BaseApiClient {
 
                 elementData.head = {
                     position: elementData.head_coords ? [elementData.head_coords[0], elementData.head_coords[1]] : null,
-                    noteAnchorId: elementData.head_note_id || null,
-                    noteAnchorType: elementData.head_anchor ? elementData.head_anchor.toLowerCase() : 'none'
+                    note_anchor_id: elementData.head_note_id || null,
+                    note_anchor_type: elementData.head_anchor ? elementData.head_anchor.toLowerCase() : 'none'
                 };
                 delete elementData.head_coords;
                 delete elementData.head_note_id;
@@ -311,7 +311,7 @@ export class DesktopImporter extends BaseApiClient {
                     blob,
                     fsPath,
                     parentId,
-                    { width, height, size: blob.size, mimeType: blob.type },
+                    { width, height, size: blob.size, mime_type: blob.type },
                 );
             } catch (e) {
                 log.error(`Failed to import image for note ${imageData.id} from path ${fsPath}`, e);

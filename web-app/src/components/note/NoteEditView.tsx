@@ -198,7 +198,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       blob,
       path,
       state.targetNote.parentId,
-      { width, height, size: blob.size, mimeType: blob.type }
+      { width, height, size: blob.size, mime_type: blob.type }
     );
 
     const newImageItem = await Promise.race([addFilePromise, timeoutPromise]) as ImageItemData;

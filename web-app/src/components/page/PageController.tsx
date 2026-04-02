@@ -412,6 +412,7 @@ export class PageController {
         }
         if (targetPage !== undefined) {
           appActions.setCurrentPage(pamet.appViewState, targetPage.id);
+          pamet.syncRouterFromAppState();
           return;
         }
       }
@@ -463,11 +464,11 @@ export class PageController {
         mouse_pos_unproj.subtract(this.pageVS.viewportCenter).multiply(
           1 - new_height / this.pageVS.viewportHeight));
 
-      pageActions.updateViewport(this.pageVS, new_center, new_height);
+      pamet.pushNewViewportPosition(this.pageVS, new_center, new_height);
     } else if (this.navDeviceAutoSwitcher.device === NavigationDevice.TOUCHPAD) {
       let delta = new Point2D([event.deltaX, event.deltaY]);
       let newViewportCenter = this.pageVS.viewportCenter.add(delta.divide(this.pageVS.viewport.heightScaleFactor()));
-      pageActions.updateViewport(this.pageVS, newViewportCenter, this.pageVS.viewportHeight);
+      pamet.pushNewViewportPosition(this.pageVS, newViewportCenter, this.pageVS.viewportHeight);
     }
   };
 

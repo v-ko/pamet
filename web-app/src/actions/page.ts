@@ -1,6 +1,7 @@
 import * as util from "@/util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/components/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
+import { pamet } from "@/core/facade";
 
 import { action } from "fusion/registries/Action";
 
@@ -8,7 +9,6 @@ import { getLogger } from "fusion/logging";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
 import { AGU, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, MIN_NOTE_HEIGHT } from "@/core/constants";
-import { pamet } from "@/core/facade";
 import { Note } from "@/model/Note";
 import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import { NoteViewState } from "@/components/note/NoteViewState";
@@ -153,6 +153,7 @@ class PageActions {
   @action
   endDragNavigation(state: PageViewState) {
     state.setMode(PageMode.None);
+    pamet.flushRouterFromAppState();
   }
 
   @action

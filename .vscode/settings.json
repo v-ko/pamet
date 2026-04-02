@@ -1,7 +1,4 @@
 {
-    "typescript.tsdk": "node_modules/typescript/lib",
-    "typescript.enablePromptUseWorkspaceTsdk": true,
-    "typescript.preferences.importModuleSpecifier": "non-relative",
     "python.defaultInterpreterPath": "../dev_venv/bin/python",
     "python.analysis.extraPaths": [
         "./server",
@@ -10,12 +7,12 @@
     "python.analysis.exclude": [
         "**/build/**",
         "**/dist/**",
-        "**/*.egg-info/**"
+        "**/*.egg-info/**",
+        "**/node_modules/**",
+        "**/__pycache__/**",
+        ".*"
     ],
     "python.analysis.autoSearchPaths": true,
-    "python.testing.pytestArgs": [
-        "./server/tests"
-    ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
     "python.testing.pytestPath": "../dev_venv/bin/pytest"

@@ -4,25 +4,25 @@ import "@/index.css";
 import serviceWorkerUrl from "@/service-worker?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
-import { pamet } from "@/core/facade";
+import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
 import { updateAppFromRouteOrAutoassist, updateAppStateFromConfig } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
-import { PametKeyValueStorageService } from "@/services/config/Config";
+import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
 import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
 
 import WebApp from "@/containers/app/App";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
-import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
-import { FileStoreAdapterNames, ProjectStorageConfig } from 'fusion/storage/management/ProjectStorageManager';
-import { StorageAdapterNames } from 'fusion/storage/repository/Repository';
+import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
+import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
 import { StorageService } from "fusion/storage/management/StorageService";
 import { LOCAL_USER_ID } from "@/core/constants";
 import { registerEntityClasses } from "@/core/entityRegistrationHack";
+import { buildDeviceBranchName } from "./util";
 
 const log = getLogger("main-web.tsx");
 setupWebWorkerLoggingChannel();
@@ -34,23 +34,22 @@ registerEntityClasses();
 log.info("Running in web mode");
 
 // Configure storage adapters
-const configService = new PametKeyValueStorageService(new LocalStorageConfigAdapter())
+const configService = new PametSettingsService(new LocalStorageConfigAdapter());
+const appMiscProperties = new MiscPropertiesService(new LocalStorageConfigAdapter());
 pamet.setConfigService(configService)
+pamet.setAppMiscProperties(appMiscProperties)
 
 // Web storage configuration factory (IndexedDB + CacheAPI)
-function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
-    let device = pamet.config.getDeviceData();
-    if (!device) {
-        throw Error('Device not set');
-    }
+const webStorageConfigFactory: ProjectStorageConfigFactory = (projectId, userId, deviceId) => {
+    const branchName = buildDeviceBranchName(userId, deviceId);
     return {
-        deviceBranchName: device.id,
-        storeIndexConfigs: PAMET_INMEMORY_STORE_CONFIG,
-        onDeviceStorageAdapter: {
-            name: 'IndexedDB' as StorageAdapterNames,
+        projectId: projectId,
+        deviceBranchName: branchName,
+        onDeviceVcsAdapter: {
+            name: 'IndexedDB' as VcsAdapterNames,
             args: {
                 projectId: projectId,
-                localBranchName: device.id,
+                localBranchName: branchName,
             }
         },
         onDeviceFileStore: {
@@ -59,8 +58,8 @@ function webStorageConfigFactory(projectId: string): ProjectStorageConfig {
                 projectId: projectId
             }
         }
-    }
-}
+    };
+};
 
 pamet.setProjectStorageConfigFactory(webStorageConfigFactory);
 pamet.setStorageStatusIconSet({
@@ -68,23 +67,29 @@ pamet.setStorageStatusIconSet({
     failedIconUrl: folderCloseIconUrl,
 });
 
-// Initialize the web app
+// Create app state and render synchronously so the UI appears immediately
+let appState = new WebAppState({ userId: LOCAL_USER_ID })
+pamet.setAppViewState(appState)
+
+const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
+root.render(
+    <React.StrictMode>
+        <WebApp state={pamet.appViewState} />
+    </React.StrictMode>
+);
+
+// Initialize the web app (async: storage, config, routing)
 async function initializeWebApp() {
-    let appState = new WebAppState({ userId: LOCAL_USER_ID })
-    pamet.setAppViewState(appState)
 
     // Setup the user and device configs. For now the simplest possible setup:
     // Generate device if none. Generate anonymous user and default project and page if none
     let config = pamet.config
 
     // Check if the device is set - if missing - generate metadata
-    let deviceData = config.getDeviceData();
-    if (!deviceData) {
-        deviceData = {
-            id: "device-" + crypto.randomUUID(),
-            name: "WebApp",
-        }
-        config.setDeviceData(deviceData);
+    let deviceId = pamet.appMiscProperties.getDeviceId();
+    if (!deviceId) {
+        deviceId = "device-" + crypto.randomUUID();
+        pamet.appMiscProperties.setDeviceId(deviceId);
     }
 
     // User data is optional - no need to create default user
@@ -96,10 +101,6 @@ async function initializeWebApp() {
     //     }
     //     config.setUserData(userData);
     // }
-
-    updateAppStateFromConfig(pamet.appViewState).catch((e) => {
-        log.error('[setConfig] Error updating app state from config', e);
-    });
 
     pamet.setKeybindings(DEFAULT_KEYBINDINGS);
 
@@ -137,12 +138,15 @@ async function initializeWebApp() {
         log.error("Failed to initialize storage service", e);
     }
 
-    // Initialize router after config and initial URL → State hydration
-    pamet.router.init(pamet.appViewState);
+    await updateAppStateFromConfig(pamet.appViewState).catch((e) => {
+        log.error('[setConfig] Error updating app state from config', e);
+    });
+
+    pamet.initRouter();
 
     // Handle the route
     try {
-        await updateAppFromRouteOrAutoassist(pamet.router.currentRoute())
+        await updateAppFromRouteOrAutoassist()
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
     }
@@ -151,11 +155,3 @@ async function initializeWebApp() {
 initializeWebApp().catch((e) => {
     log.error("Error in initializeWebApp", e);
 });
-
-// Render the app
-const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
-root.render(
-    <React.StrictMode>
-        <WebApp state={pamet.appViewState} />
-    </React.StrictMode>
-);
