@@ -1,4 +1,5 @@
 import json
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -58,6 +59,8 @@ local_server_commands = {
     help="Connect to frontend dev server at specified host (e.g. http://localhost:3000)",
 )
 def main(project_path: Path | None, command: str, use_frontend_server: str):
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+
     # Temporary fixture setup for migration testing. Rebuild the prepared fixture
     # on startup, then restore legacy user settings from it into isolated app-data.
     prepared_repo_dir = (
