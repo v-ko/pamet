@@ -4,9 +4,7 @@ import { BaseConfigAdapter } from "@/services/config/BaseConfigAdapter";
 
 const log = getLogger("RestDesktopConfigAdapter");
 
-type DesktopSettingsPayload = {
-    data?: Record<string, unknown> | undefined;
-};
+type DesktopSettingsPayload = Record<string, unknown> | undefined;
 
 export class RestDesktopConfigAdapter extends BaseConfigAdapter {
     private _baseUrl: string;
@@ -24,14 +22,15 @@ export class RestDesktopConfigAdapter extends BaseConfigAdapter {
         const response = await fetch(this._url("/desktop/settings/user"), {
             method: "GET",
             headers: this._headers(),
+            cache: "no-store",
         });
         if (!response.ok) {
             throw new Error(`Failed to load desktop user settings (${response.status} ${response.statusText})`);
         }
         const payload = await response.json() as DesktopSettingsPayload;
         this._cache.clear();
-        if (payload.data !== undefined) {
-            this._cache.set("userSettings", JSON.stringify(payload.data));
+        if (payload !== undefined) {
+            this._cache.set("userSettings", JSON.stringify(payload));
         }
     }
 

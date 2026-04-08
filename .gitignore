@@ -22,10 +22,8 @@ server/tests/mock_v4_project/original
 
 # Editor directories and files
 .idea
-# .vscode/*
-#!.vscode/settings.json
-#!.vscode/extensions.json
-#!.vscode/launch.json
+.vscode/*
+!.vscode/launch.json
 *.swp
 *.swo
 

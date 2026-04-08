@@ -5,9 +5,22 @@ from pathlib import Path
 
 from fusion.logging import get_logger
 
-from .v4_to_v5 import CANVAS_FILE_EXT, is_v4_page_file, migrate_v4_to_v5
+from .v2_to_v3 import V2_BACKUP_FOLDER_NAME
+from .v3_to_v4 import V3_BACKUP_FOLDER_NAME
+from .v4_to_v5 import (
+    CANVAS_FILE_EXT,
+    V4_BACKUP_FOLDER_NAME,
+    is_v4_page_file,
+    migrate_v4_to_v5,
+)
 
 log = get_logger(__name__)
+
+MIGRATION_BACKUP_DIR_NAMES = {
+    V2_BACKUP_FOLDER_NAME,
+    V3_BACKUP_FOLDER_NAME,
+    V4_BACKUP_FOLDER_NAME,
+}
 
 # Map from legacy format to detection function.
 # V2→V3 and V3→V4 remain manual.

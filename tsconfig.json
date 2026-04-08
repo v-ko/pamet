@@ -13,17 +13,18 @@
     "experimentalDecorators": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
     "noEmit": true,
     "paths": {
-      "fusion/*": ["./fusion/js-src/src/*"],
+      // For tandem development of the fusion lib (sibling repo).
+      // (should?) Falls back to the npm package if the local path doesn't exist.
+      "fusion/*": ["../fusion/js-src/src/*"],
       "@/*": ["./web-app/src/*"]
     },
     "types": ["node", "vite/client"]
   },
   "include": [
-    "fusion/js-src/src/**/*.ts",
-    "fusion/js-src/src/**/*.tsx",
+    "../fusion/js-src/src/**/*.ts",
+    "../fusion/js-src/src/**/*.tsx",
     "web-app/src/**/*.ts",
     "web-app/src/**/*.tsx",
     "vite.config.ts"

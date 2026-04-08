@@ -1,5 +1,5 @@
 import { Entity, EntityData, entityType } from "fusion/model/Entity"
-import { timestamp } from 'fusion/util/base.js';
+import { timestamp } from 'fusion/util/base';
 import { PametRoute } from "@/services/routing/route";
 
 export interface TourSegment {

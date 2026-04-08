@@ -44,9 +44,9 @@ export class PametRoute {
         if (subProjectParts[0] == 'page') {
             const pageId = subProjectParts[1];
             this.pageId = pageId;
-        } else if (subProjectParts[0] == 'media' && subProjectParts[1] == 'item') {
-            // File item route  like /media/item/{fileItemId}#{fileItemContentHash}
-            const fileItemId = subProjectParts[2];
+        } else if (subProjectParts[0] == 'files') {
+            // File item route  like /files/{fileItemId}#{fileItemContentHash}
+            const fileItemId = subProjectParts[1];
             this.fileItemId = fileItemId;
             // Later we can add /media/path/MEDIA_PATH#hash for more readable urls
         }
@@ -74,11 +74,11 @@ export class PametRoute {
         const path = url_.pathname;
 
         if (url_.protocol === PROJECT_PROTOCOL) {
-            route._parseSubProjectParts(path.split('/').slice(1)); // Remove leading slash
+            route._parseSubProjectParts(path.split('/').slice(1).map(decodeURIComponent));
         } else if (path) {  // Should be a network protocol htpp/https
 
             // The user is the first segment if specfied
-            const pathParts = path.split('/');  // pathname starts with leading /,
+            const pathParts = path.split('/').map(decodeURIComponent);  // pathname starts with leading /,
 
             if (pathParts[1].length > 0) {
                 route.userId = pathParts[1];
@@ -108,10 +108,10 @@ export class PametRoute {
         // Parse the hash
         const hash = url_.hash;
         if (hash.startsWith('#note=')) {
-            route.focusedNoteId = hash.substring(6); // remove the '#note='
-        } else if (route.fileItemId && hash.length === 33) {
+            route.focusedNoteId = decodeURIComponent(hash.substring(6));
+        } else if (route.fileItemId && hash.length >= 2) {
             // If file item id is set, the hash should be the content hash
-            route.fileItemContentHash = hash.substring(1); // remove the '#'
+            route.fileItemContentHash = decodeURIComponent(hash.substring(1));
         }
 
         return route;
@@ -135,8 +135,8 @@ export class PametRoute {
             if (!this.userId) {
                 throw new Error(`Project id set without user id. Got userId: ${this.userId}, projectId: ${this.projectId}`);
             }
-            path += `${this.userId}/`;
-            path += `${this.projectId}`;
+            path += `${encodeURIComponent(this.userId)}/`;
+            path += `${encodeURIComponent(this.projectId)}`;
         }
 
         let projectScopedPath = toProjectScopedRelativeReference(this);
@@ -174,16 +174,16 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
     let path = '/';
 
     if (route.pageId && route.pageId.length === 8) {
-        path += `page/${route.pageId}`;
+        path += `page/${encodeURIComponent(route.pageId)}`;
     } else if (route.fileItemId) {
         // For file items, projectId is required for routing context
         // (even though the actual file store keys don't include it)
         if (!route.projectId) {
             throw new Error(`File item routes require projectId. Got projectId: ${route.projectId}`);
         }
-        path += `media/item/${route.fileItemId}`;
+        path += `files/${encodeURIComponent(route.fileItemId)}`;
         if (route.fileItemContentHash) {
-            path += `#${route.fileItemContentHash}`;
+            path += `#${encodeURIComponent(route.fileItemContentHash)}`;
         }
         return path; // Return early for file items, no search params or note hash
     }

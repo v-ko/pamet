@@ -38,27 +38,24 @@ class UserDesktopSettingsData(TypedDict):
     projects: list[dict[str, Any]]
 
 
-class RepoSettingsData(TypedDict):
-    id: str
-    title: str
-    description: str
-    created: str
-    default_page_id: NotRequired[str | None]
-    backups_enabled: bool
-    backup_folder: str
-    record_all_changes: bool
-    semantic_search_enabled: bool
-
+# glob pattern → enabled (same notation as VS Code "files.exclude")
+RepoSettingsData = TypedDict(
+    "RepoSettingsData",
+    {
+        "id": str,
+        "title": str,
+        "description": str,
+        "created": str,
+        "default_page_id": NotRequired[str | None],
+        "files.exclude": NotRequired[dict[str, bool]],
+    },
+)
 
 REPO_SETTINGS_DEFAULTS: RepoSettingsData = {
     "id": "",
     "title": "",
     "description": "",
     "created": "",
-    "backups_enabled": True,
-    "backup_folder": ".pamet/backups",
-    "record_all_changes": False,
-    "semantic_search_enabled": False,
 }
 
 

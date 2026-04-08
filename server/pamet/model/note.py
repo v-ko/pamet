@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from dataclasses import field
 from datetime import datetime
-from typing import List, TypedDict, cast
+from typing import TypedDict, cast
 
+import attrs
+from fusion import entity_type, get_logger
 from fusion.util import Point2D, Rectangle, current_time, timestamp
 
-from fusion import entity_type, get_logger
 from pamet.constants import (
     DEFAULT_BG_COLOR_ROLE,
     DEFAULT_COLOR_ROLE,
@@ -39,14 +39,14 @@ class NoteMetadata(TypedDict, total=False):
 
 @entity_type
 class Note(PageChild):
-    geometry: list = field(
-        default_factory=lambda: [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT]
+    geometry: list = attrs.Factory(
+        lambda: [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT]
     )
-    style: NoteStyle = field(default_factory=lambda: cast(NoteStyle, {}))
-    content: NoteContent = field(default_factory=lambda: cast(NoteContent, {}))
-    metadata: NoteMetadata = field(default_factory=lambda: cast(NoteMetadata, {}))
-    created: str = field(default_factory=lambda: timestamp((current_time())))
-    modified: str = field(default_factory=lambda: timestamp((current_time())))
+    style: NoteStyle = attrs.Factory(lambda: cast(NoteStyle, {}))
+    content: NoteContent = attrs.Factory(lambda: cast(NoteContent, {}))
+    metadata: NoteMetadata = attrs.Factory(lambda: cast(NoteMetadata, {}))
+    created: str = attrs.Factory(lambda: timestamp(current_time()))
+    modified: str = attrs.Factory(lambda: timestamp(current_time()))
 
     def __repr__(self):
         return f"<{type(self).__name__} id={self.id}>"

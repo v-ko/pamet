@@ -17,6 +17,8 @@ from .utils import backup_file, new_id_for_legacy_note
 
 log = get_logger(__name__)
 
+V2_BACKUP_FOLDER_NAME = "__migration_backup_v2_to_v3__"
+
 # Module-level state tracking for migration
 note_checksum_by_page_name: dict[str, int] = {}
 notes_by_page_name: dict[str, set[int]] = defaultdict(set)
@@ -233,7 +235,7 @@ def migrate_v2_to_v3(repo_path: Path) -> list[Path]:
     global note_checksum_by_page_name, notes_by_page_name
 
     repo_path = Path(repo_path)
-    backup_folder = repo_path / "__migration_backup_v2_to_v3__"
+    backup_folder = repo_path / V2_BACKUP_FOLDER_NAME
 
     # Reset migration state
     note_checksum_by_page_name.clear()

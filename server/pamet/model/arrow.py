@@ -1,7 +1,7 @@
-from dataclasses import field
 from enum import Enum
 from typing import List, TypedDict
 
+import attrs
 from fusion.libs.entity import entity_type
 from fusion.logging import get_logger
 from fusion.util.point2d import Point2D
@@ -65,10 +65,10 @@ class Arrow(PageChild):
     Matches TS ArrowData structure (snake_case wire format).
     """
 
-    tail: EndPointProps = field(default_factory=lambda: _DEFAULT_ENDPOINT.copy())
-    head: EndPointProps = field(default_factory=lambda: _DEFAULT_ENDPOINT.copy())
-    mid_points: List[list] = field(default_factory=list)
-    style: ArrowStyle = field(default_factory=lambda: _DEFAULT_ARROW_STYLE.copy())
+    tail: EndPointProps = attrs.Factory(lambda: _DEFAULT_ENDPOINT.copy())
+    head: EndPointProps = attrs.Factory(lambda: _DEFAULT_ENDPOINT.copy())
+    mid_points: List[list] = attrs.Factory(list)
+    style: ArrowStyle = attrs.Factory(lambda: _DEFAULT_ARROW_STYLE.copy())
 
     # --- Tail convenience properties ---
     @property

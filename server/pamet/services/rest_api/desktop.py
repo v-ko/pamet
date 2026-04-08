@@ -6,12 +6,12 @@ from time import sleep
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fusion import get_logger
 from uvicorn import Config, Server
 
 import pamet
-from fusion import get_logger
 from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
-from pamet.services.rest_api.routes.desktop import desktop_router, media_router
+from pamet.services.rest_api.routes.desktop import desktop_router
 
 log = get_logger(__name__)
 
@@ -74,7 +74,6 @@ class DesktopServer:
         self.app.state.desktop_access_token = self.desktop_access_token
 
         self.app.include_router(desktop_router)
-        self.app.include_router(media_router)
 
     @property
     def port(self):

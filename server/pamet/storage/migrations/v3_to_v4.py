@@ -15,6 +15,8 @@ from fusion.logging import get_logger
 from fusion.util import current_time, get_new_id, timestamp
 from fusion.util.point2d import Point2D
 from fusion.util.rectangle import Rectangle
+from slugify import slugify
+
 from pamet.constants import (
     MAX_NOTE_HEIGHT,
     MAX_NOTE_WIDTH,
@@ -22,11 +24,12 @@ from pamet.constants import (
     MIN_NOTE_WIDTH,
 )
 from pamet.util import snap_to_grid
-from slugify import slugify
 
 from .utils import backup_file, new_id_for_legacy_note
 
 log = get_logger(__name__)
+
+V3_BACKUP_FOLDER_NAME = "__migration_backup_v3_to_v4__"
 
 # Constants
 TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
@@ -502,7 +505,7 @@ def migrate_v3_to_v4(repo_path: Path) -> list[Path]:
     global v3_note_checksum_by_page_name
 
     repo_path = Path(repo_path)
-    backup_folder = repo_path / "__migration_backup_v3_to_v4__"
+    backup_folder = repo_path / V3_BACKUP_FOLDER_NAME
 
     # Reset migration state
     v3_note_checksum_by_page_name.clear()

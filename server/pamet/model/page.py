@@ -1,16 +1,15 @@
-from dataclasses import field
 from datetime import datetime
 
-from fusion.util import current_time, timestamp
-
+import attrs
 from fusion import Entity, entity_type
+from fusion.util import current_time, timestamp
 
 
 @entity_type
 class Page(Entity):
     name: str = ""
-    created: str = field(default_factory=lambda: timestamp(current_time()))
-    modified: str = field(default_factory=lambda: timestamp(current_time()))
+    created: str = attrs.Factory(lambda: timestamp(current_time()))
+    modified: str = attrs.Factory(lambda: timestamp(current_time()))
 
     def __repr__(self):
         return f"<Page id={self.id} name={self.name}>"

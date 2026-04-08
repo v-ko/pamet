@@ -1,26 +1,40 @@
 from __future__ import annotations
 
 import hmac
-from pathlib import Path
+import re
+from pathlib import Path, PurePosixPath
+from urllib.parse import unquote, urlparse
+from urllib.request import url2pathname
 
-from fastapi import (APIRouter, Body, Depends, File, Form, HTTPException,
-                     Query, Request, Response, UploadFile)
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import FileResponse
+from fusion.libs.entity import dump_to_dict
 from fusion.logging import get_logger
 
 import pamet
+from pamet.desktop_app import get_user_settings, save_user_settings
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
-from pamet.services.rest_api.util import envelope
+from pamet.storage.service_utils import ProjectTooLargeError
 
 log = get_logger(__name__)
 
 desktop_router = APIRouter()
-media_router = APIRouter(prefix="/media")
 
 
 # ---------------------------------------------------------------------------
 # Auth
 # ---------------------------------------------------------------------------
+
 
 def _extract_bearer_token(auth_header: str | None) -> str | None:
     if not auth_header:
@@ -48,15 +62,21 @@ def require_desktop_auth(request: Request):
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _set_no_cache_headers(response: Response):
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+_VALID_ID_RE = re.compile(r"^[a-z0-9-]+$")
+
+
+def _validate_id(value: str, name: str = "id") -> str:
+    """Validate that a path-parameter ID contains only safe characters."""
+    if not value or not _VALID_ID_RE.match(value):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid {name}: must match [a-z0-9-]+",
+        )
+    return value
 
 
 def _project_runtime(project_id: str):
-    if not project_id:
-        raise HTTPException(status_code=400, detail="projectId is required")
+    _validate_id(project_id, "project_id")
     try:
         storage_service = pamet.desktop_storage_service()
         return storage_service.project_folder_manager(project_id)
@@ -76,6 +96,7 @@ def _project_runtime(project_id: str):
 # Commands
 # ---------------------------------------------------------------------------
 
+
 @desktop_router.post("/commands/{command_name}/")
 def run_command(command_name: str, request: Request):
     commands: dict = getattr(request.app.state, "commands", {})
@@ -87,13 +108,13 @@ def run_command(command_name: str, request: Request):
 # Project lifecycle
 # ---------------------------------------------------------------------------
 
+
 @desktop_router.put(
     "/desktop/projects/{project_id}/bridge",
     dependencies=[Depends(require_desktop_auth)],
 )
 def load_project(project_id: str, payload: dict | None = Body(default=None)):
-    if not project_id:
-        raise HTTPException(status_code=400, detail="projectId is required")
+    _validate_id(project_id, "project_id")
     storage_service = pamet.desktop_storage_service()
     try:
         if not isinstance(payload, dict):
@@ -101,13 +122,31 @@ def load_project(project_id: str, payload: dict | None = Body(default=None)):
                 f"project load payload must be an object, got: {payload!r}"
             )
         project_uri = payload.get("uri")
-        if not isinstance(project_uri, str):
-            raise ValueError(f"project uri must be a string, got: {project_uri!r}")
-        storage_service.load_project(project_id, project_uri=project_uri)
+        if not isinstance(project_uri, str) or not project_uri.strip():
+            raise ValueError(
+                f"project uri must be a non-empty string, got: {project_uri!r}"
+            )
+
+        parsed = urlparse(project_uri.strip())
+        if parsed.scheme != "file":
+            raise ValueError("Desktop project URI must use the file scheme")
+        if parsed.netloc:
+            raise ValueError("Desktop project file URI must not use a remote host")
+
+        repo_root = Path(url2pathname(unquote(parsed.path)))
+        if not repo_root.is_absolute():
+            raise ValueError(
+                "Desktop project file URI must resolve to an absolute path"
+            )
+
+        storage_service.load_project(project_id, repo_root=repo_root)
     except ValueError as exc:
         log.error("Bridge load_project failed: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return envelope({"ok": True})
+    except ProjectTooLargeError as exc:
+        log.error("Bridge load_project failed (too large): %s", exc)
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"ok": True}
 
 
 @desktop_router.delete(
@@ -115,20 +154,18 @@ def load_project(project_id: str, payload: dict | None = Body(default=None)):
     dependencies=[Depends(require_desktop_auth)],
 )
 def unload_project(project_id: str):
-    if not project_id:
-        raise HTTPException(status_code=400, detail="projectId is required")
+    _validate_id(project_id, "project_id")
     storage_service = pamet.desktop_storage_service()
     storage_service.unload_project(project_id)
-    return envelope({"ok": True})
+    return {"ok": True}
 
 
 @desktop_router.get(
     "/desktop/settings/user",
     dependencies=[Depends(require_desktop_auth)],
 )
-def get_desktop_user_settings(response: Response):
-    _set_no_cache_headers(response)
-    return envelope(pamet.desktop_app.get_user_settings())
+def get_desktop_user_settings():
+    return get_user_settings()
 
 
 @desktop_router.put(
@@ -140,19 +177,16 @@ def set_desktop_user_settings(payload: dict | None = Body(default=None)):
         raise HTTPException(
             status_code=400, detail="user settings payload must be an object"
         )
-    pamet.desktop_app.save_user_settings(payload)
-    return envelope({"ok": True})
+    save_user_settings(payload)
+    return {"ok": True}
 
 
 @desktop_router.get(
     "/desktop/projects/{project_id}/properties",
     dependencies=[Depends(require_desktop_auth)],
 )
-def get_project_properties(project_id: str, response: Response):
-    if not project_id:
-        raise HTTPException(status_code=400, detail="projectId is required")
-    _set_no_cache_headers(response)
-    return envelope(_project_runtime(project_id).get_project_properties())
+def get_project_properties(project_id: str):
+    return _project_runtime(project_id).get_project_properties()
 
 
 @desktop_router.put(
@@ -160,11 +194,10 @@ def get_project_properties(project_id: str, response: Response):
     dependencies=[Depends(require_desktop_auth)],
 )
 def set_project_properties(project_id: str, payload: dict):
-    if not project_id:
-        raise HTTPException(status_code=400, detail="projectId is required")
+    _validate_id(project_id, "project_id")
     runtime = _project_runtime(project_id)
     runtime.set_project_properties(payload)
-    return envelope(runtime.get_project_properties())
+    return runtime.get_project_properties()
 
 
 @desktop_router.get("/")
@@ -204,7 +237,6 @@ def serve_project_index(user_id: str, project_id: str, request: Request):
 )
 def get_pending_delta(
     project_id: str,
-    response: Response,
     timeout_ms: int = Query(default=0),
 ):
     runtime = _project_runtime(project_id)
@@ -212,22 +244,19 @@ def get_pending_delta(
         pending_delta = runtime.get_pending_delta(timeout_ms)
     except NotImplementedError as exc:
         raise HTTPException(status_code=501, detail=str(exc)) from exc
-    _set_no_cache_headers(response)
-    return envelope({"pendingDelta": pending_delta})
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"pendingDelta": pending_delta}
 
 
 @desktop_router.get(
     "/desktop/projects/{project_id}/entities",
     dependencies=[Depends(require_desktop_auth)],
 )
-def find_entities(project_id: str, response: Response):
+def find_entities(project_id: str):
     runtime = _project_runtime(project_id)
-    try:
-        entities = runtime.find_entities()
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
-    _set_no_cache_headers(response)
-    return envelope({"entities": entities})
+    entities = [dump_to_dict(e) for e in runtime.store.find()]
+    return {"entities": entities}
 
 
 @desktop_router.post(
@@ -241,84 +270,66 @@ def apply_changes(project_id: str, payload: dict = Body(...)):
         raise HTTPException(
             status_code=400, detail="'delta' must be a non-empty object"
         )
-    snapshot_hash = payload.get("snapshotHash")
-    runtime.apply_delta(delta_data, snapshot_hash=snapshot_hash)
-    return envelope({"ok": True})
+    runtime.apply_delta(delta_data)
+    return {"ok": True}
 
 
-@media_router.post(
-    "/item/{media_id}/{content_hash}",
+@desktop_router.post(
+    "/desktop/projects/{project_id}/files/{file_item_id}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def upload_media(
-    media_id: str,
-    content_hash: str,
-    project_id: str = Query(...),
+async def upload_file(
+    project_id: str,
+    file_item_id: str,
+    content_hash: str = Form(...),
     path: str = Form(...),
     file: UploadFile = File(...),
 ):
-    media_backend = _project_runtime(project_id).blob_storage_adapter
+    _validate_id(file_item_id, "file_item_id")
+    _validate_id(content_hash, "content_hash")
+    raw = path.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="File path is required")
+    rel = PurePosixPath(raw)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise HTTPException(status_code=400, detail=f"Invalid file path: {path}")
+
+    pfm = _project_runtime(project_id)
     data = await file.read()
     try:
-        media_backend.save_bytes(media_id, content_hash, path, data, file.content_type)
-    except ValueError as exc:
+        pfm.file_storage.add(rel, data)
+    except (ValueError, FileExistsError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"data": {"ok": True}}
+    return {"ok": True}
 
 
-@media_router.get(
-    "/item/{media_id}/{content_hash}",
+@desktop_router.get(
+    "/desktop/projects/{project_id}/files/{file_item_id}/content",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def get_media_item(
-    media_id: str,
-    content_hash: str,
-    project_id: str = Query(...),
+async def get_file_item_content(
+    project_id: str,
+    file_item_id: str,
 ):
-    media_backend = _project_runtime(project_id).blob_storage_adapter
-    path = media_backend.find_item_path(media_id, content_hash)
+    _validate_id(file_item_id, "file_item_id")
+    pfm = _project_runtime(project_id)
+    path = pfm.file_storage.find_path(file_item_id)
     if path is None:
-        raise HTTPException(status_code=404, detail="Media not found")
+        raise HTTPException(status_code=404, detail="File item not found")
     return FileResponse(path)
 
 
-@media_router.delete(
-    "/item/{media_id}/{content_hash}",
+@desktop_router.delete(
+    "/desktop/projects/{project_id}/files/{file_item_id}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def delete_media(
-    media_id: str,
-    content_hash: str,
-    project_id: str = Query(...),
+async def delete_file_item(
+    project_id: str,
+    file_item_id: str,
 ):
-    media_backend = _project_runtime(project_id).blob_storage_adapter
-    moved = media_backend.move_to_trash(media_id, content_hash)
-    if moved:
-        return {"data": {"ok": True}}
-    return {"data": {"ok": False, "reason": "not_found"}}
-
-
-@media_router.post(
-    "/item/{media_id}/{content_hash}/restore",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def restore_media(
-    media_id: str,
-    content_hash: str,
-    project_id: str = Query(...),
-):
-    media_backend = _project_runtime(project_id).blob_storage_adapter
-    restored = media_backend.restore_from_trash(media_id, content_hash)
-    if restored:
-        return {"data": {"ok": True}}
-    return {"data": {"ok": False, "reason": "not_in_trash"}}
-
-
-@media_router.post(
-    "/trash/clean",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def clean_trash(project_id: str = Query(...)):
-    media_backend = _project_runtime(project_id).blob_storage_adapter
-    removed = media_backend.clean_trash()
-    return {"data": {"removed": removed}}
+    _validate_id(file_item_id, "file_item_id")
+    pfm = _project_runtime(project_id)
+    deleted = pfm.file_storage.remove(file_item_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="File item not found")
+    return {"ok": True}

@@ -347,6 +347,7 @@ export class DesktopImporter extends BaseApiClient {
         const options: RequestInit = {
             method: 'GET',
             signal: controller.signal,
+            cache: 'no-store',
         };
 
         let response: Response;

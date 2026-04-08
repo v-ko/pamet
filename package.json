@@ -59,7 +59,7 @@
         "preset": "ts-jest/presets/default-esm",
         "testEnvironment": "node",
         "testMatch": [
-          "<rootDir>/fusion/js-src/src/**/*.test.ts"
+          "<rootDir>/../fusion/js-src/src/**/*.test.ts"
         ],
         "extensionsToTreatAsEsm": [
           ".ts"
@@ -73,7 +73,7 @@
           ]
         },
         "moduleNameMapper": {
-          "^fusion/(.*)$": "<rootDir>/fusion/js-src/src/$1"
+          "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1"
         }
       },
       {
@@ -100,7 +100,7 @@
         },
         "moduleNameMapper": {
           "\\.(css|less|scss|sass)$": "identity-obj-proxy",
-          "^fusion/(.*)$": "<rootDir>/fusion/js-src/src/$1",
+          "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1",
           "^@/(.*)$": "<rootDir>/web-app/src/$1"
         }
       }

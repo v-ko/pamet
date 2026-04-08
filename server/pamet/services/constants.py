@@ -18,9 +18,16 @@ MIME_TO_EXT = {
 # Normalized to lowercase with leading dot
 ALLOWED_MEDIA_EXTENSIONS = set(MIME_TO_EXT.values()) | {".jpeg", ".tif"}
 
-# Default trash retention in seconds (7 days)
-DEFAULT_TRASH_RETENTION_S = 7 * 24 * 60 * 60
-
 # Length of hex digest to use for content hashes
 # 32 hex chars = 128 bits (first half of SHA-256)
 CONTENT_HASH_HEX_LEN = 32
+
+# Maximum number of filesystem entries (dirs + files) to visit when walking
+# a project folder.  Prevents runaway traversal if the user accidentally opens
+# a huge directory (home folder, ML dataset, etc.).
+MAX_WALK_ENTRIES = 50_000
+
+# TODO: estimate this better
+# Maximum size (in bytes) of a single .canvas file we're willing to parse.
+# Anything larger is likely corrupt or not a real canvas file.
+MAX_CANVAS_FILE_BYTES = 50 * 1024 * 1024  # 50 MB

@@ -32,9 +32,9 @@ def test_in_memory_repo():
     for entity in entities:
         repo.insert_one(entity)
 
-    # Test note immutability
+    # Test that entity id is frozen
     with pytest.raises(Exception):
-        note1b_for_update.text = "test"
+        note1b_for_update.id = "new_id"
 
     note1b_for_update = note1b_for_update.copy()
     note1b_for_update.text = "test"

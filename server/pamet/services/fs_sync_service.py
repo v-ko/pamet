@@ -1,16 +1,21 @@
 from __future__ import annotations
 
-import json
-import os
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Set
+from typing import TYPE_CHECKING, Any, Set
 
+from fusion.libs.entity.change import Change
+from fusion.libs.entity.delta import Delta
 from fusion.logging import get_logger
 from PySide6.QtCore import QFileSystemWatcher, QTimer
 
-from pamet.storage.migrations.manager import MigrationManager
+from pamet.model.page import Page
 from pamet.storage.migrations.v4_to_v5 import CANVAS_FILE_EXT
+from pamet.storage.service_utils import (
+    CanvasParseError,
+    ForeignCanvasFile,
+    read_canvas_file,
+)
 
 log = get_logger(__name__)
 
@@ -23,38 +28,24 @@ if TYPE_CHECKING:
     from pamet.services.project_sync.project_folder_manager import ProjectFolderManager
 
 
-_IGNORED_DIRS = {
-    ".pamet",
-    "__migration_backup_v2_to_v3__",
-    "__migration_backup_v3_to_v4__",
-    "__migration_backup_v4_to_v5__",
-}
-
-
-class CanvasParseError(Exception):
-    """Raised when a .canvas file cannot be parsed."""
-
-
-_FILE_ITEM_TYPE_NAMES = {"FileItem", "ImageItem"}
-
-
 class FileSystemSyncService:
     """
-    Project-folder filesystem service.
+    Filesystem change-detection service.
 
-    Responsibilities:
-    - run project-folder migrations when requested by the ProjectFolderManager
-    - watch filesystem changes under the project root
-    - own bootstrap-integrity / FS-delta helpers
+    Watches the project folder via QFileSystemWatcher, debounces events, diffs
+    changed .canvas files against the PFM entity store using delta arithmetic,
+    and accumulates deltas for the web app to poll.
+
+    All file I/O (reading/writing .canvas files, migrations, media) lives in
+    ProjectFolderManager — this service is purely reactive.
     """
 
     def __init__(self, project_folder_manager: "ProjectFolderManager"):
         self.project_folder_manager = project_folder_manager
         self._watcher: QFileSystemWatcher | None = None
-        self.migration_manager = MigrationManager(self.repo_root)
-        self._pending_delta: dict[str, Any] = {}
+        self._pending_delta = Delta()
         self._pending_delta_event = threading.Event()
-        self._write_lock = threading.Lock()  # Held during writes to suppress watcher
+        self._delta_consumer_lock = threading.Lock()
 
         # Debounce: accumulate changed paths, process after timer fires
         self._debounce_timer = QTimer()
@@ -68,136 +59,85 @@ class FileSystemSyncService:
     def repo_root(self) -> Path:
         return self.project_folder_manager.repo_root
 
-    def _iter_canvas_page_paths(self) -> Iterable[Path]:
-        for dirpath, dirnames, filenames in os.walk(self.repo_root):
-            dirnames[:] = [
-                dirname for dirname in dirnames if dirname not in _IGNORED_DIRS
-            ]
-            for fname in filenames:
-                if fname.endswith(CANVAS_FILE_EXT):
-                    yield Path(dirpath) / fname
-
-    def read_all_entities(self) -> dict[str, dict[str, Any]]:
-        """Read all .canvas files and return a flat entity_id → entity_dict map."""
-        entities: dict[str, dict[str, Any]] = {}
-        for canvas_path in self._iter_canvas_page_paths():
-            try:
-                with open(canvas_path, encoding="utf-8") as f:
-                    page_data = json.load(f)
-            except Exception as exc:
-                raise CanvasParseError(
-                    f"Failed to read canvas file {canvas_path}"
-                ) from exc
-
-            page_id = page_data.get("id")
-            if not page_id:
-                raise CanvasParseError(f"Canvas file {canvas_path} has no 'id' field")
-
-            # Extract child arrays before storing the page entity
-            notes = page_data.pop("notes", [])
-            arrows = page_data.pop("arrows", [])
-            file_items = page_data.pop("file_items", [])
-
-            entities[page_id] = page_data
-
-            for note in notes:
-                note_id = note.get("id")
-                if note_id:
-                    entities[note_id] = note
-            for arrow in arrows:
-                arrow_id = arrow.get("id")
-                if arrow_id:
-                    entities[arrow_id] = arrow
-            for file_item in file_items:
-                fi_id = file_item.get("id")
-                if fi_id:
-                    entities[fi_id] = file_item
-
-        log.info("Read %d entities from %s", len(entities), self.repo_root)
-        return entities
-
-    def compute_bootstrap_delta(self) -> dict[str, Any]:
-        """Return the full filesystem state as a DeltaData of CREATE entries."""
-        entities = self.read_all_entities()
-        delta: dict[str, Any] = {}
-        for entity_id, entity_dict in entities.items():
-            # CREATE change: [entity_id, {}, full_entity_state]
-            delta[entity_id] = [entity_id, {}, entity_dict]
-        return delta
-
-    def write_page_canvas_file(
-        self,
-        page_id: str,
-        page_dict: dict[str, Any],
-        notes: list[dict[str, Any]],
-        arrows: list[dict[str, Any]],
-        file_items: list[dict[str, Any]] | None = None,
-    ) -> Path:
-        """Assemble and write a .canvas file for the given page."""
-        file_data = dict(page_dict)
-        file_data["notes"] = notes
-        file_data["arrows"] = arrows
-        if file_items:
-            file_data["file_items"] = file_items
-        canvas_path = self.repo_root / f"{page_id}{CANVAS_FILE_EXT}"
-        with self._write_lock:
-            with open(canvas_path, "w", encoding="utf-8") as f:
-                json.dump(file_data, f, ensure_ascii=False, indent=4)
-        return canvas_path
-
-    def delete_page_canvas_file(self, page_id: str) -> None:
-        """Delete the .canvas file for the given page, if it exists."""
-        canvas_path = self.repo_root / f"{page_id}{CANVAS_FILE_EXT}"
-        with self._write_lock:
-            if canvas_path.exists():
-                canvas_path.unlink()
-
     def get_pending_delta(self, timeout_ms: int = 0) -> dict[str, Any] | None:
-        """Return accumulated FS-change delta and clear it.
+        """Return accumulated FS-change delta as wire-format dict and clear it.
 
         If *timeout_ms* > 0 and no delta is available yet, block up to that
         long waiting for filesystem changes before returning.
+
+        Only one consumer may poll at a time.
         """
-        if not self._pending_delta and timeout_ms > 0:
-            self._pending_delta_event.wait(timeout=timeout_ms / 1000)
-        if not self._pending_delta:
-            return None
-        delta = self._pending_delta
-        self._pending_delta = {}
-        self._pending_delta_event.clear()
-        return delta
+        if not self._delta_consumer_lock.acquire(blocking=False):
+            raise RuntimeError("Another consumer is already polling for deltas")
+        try:
+            if self._pending_delta.is_empty() and timeout_ms > 0:
+                self._pending_delta_event.wait(timeout=timeout_ms / 1000)
+            if self._pending_delta.is_empty():
+                return None
+            delta = self._pending_delta
+            self._pending_delta = Delta()
+            self._pending_delta_event.clear()
+            return delta.asdict()
+        finally:
+            self._delta_consumer_lock.release()
 
-    def _collect_dirs_recursive(self) -> list[str]:
-        paths: list[str] = [str(self.repo_root)]
-        for dirpath, dirnames, _filenames in os.walk(self.repo_root):
-            dirnames[:] = [
-                dirname for dirname in dirnames if dirname not in _IGNORED_DIRS
-            ]
-            paths.extend(str(Path(dirpath) / dirname) for dirname in dirnames)
-        return paths
+    def _watch_new_subdirs(self, changed_dir: str) -> None:
+        """Add watches for new subdirectories under *changed_dir*.
 
-    def _ensure_subdirs_watched(self) -> None:
+        Scoped walk: only the subtree rooted at the changed directory is
+        visited, keeping cost proportional to the change.
+        """
         if self._watcher is None:
             return
-        current: Set[str] = set(self._watcher.directories())
-        needed = set(self._collect_dirs_recursive())
-        new_dirs = list(needed - current)
-        if new_dirs:
-            self._watcher.addPaths(new_dirs)
+        pfm = self.project_folder_manager
+        changed_path = Path(changed_dir)
+        if not changed_path.is_dir():
+            return
+        watched: Set[str] = set(self._watcher.directories())
+        new_dirs = [
+            str(p)
+            for p in pfm._walk_project(changed_path)
+            if p.is_dir() and str(p) not in watched
+        ]
+        if not new_dirs:
+            return
+        failed = self._watcher.addPaths(new_dirs)
+        if failed:
+            pfm.failed_watch_count += len(failed)
+            log.warning(
+                "[FileSystemSyncService] Failed to watch %d/%d new dirs "
+                "(total failures: %d). Possible inotify limit reached.",
+                len(failed),
+                len(new_dirs),
+                pfm.failed_watch_count,
+            )
 
     def start_watching(self) -> None:
         if self._watcher is not None:
             return
         self._watcher = QFileSystemWatcher()
-        dirs = self._collect_dirs_recursive()
+        pfm = self.project_folder_manager
+        dirs = [str(self.repo_root)] + [
+            str(p) for p in pfm._walk_project() if p.is_dir()
+        ]
         if dirs:
-            self._watcher.addPaths(dirs)
+            failed = self._watcher.addPaths(dirs)
+            if failed:
+                self.project_folder_manager.failed_watch_count += len(failed)
+                log.warning(
+                    "[FileSystemSyncService] Failed to watch %d/%d dirs "
+                    "on startup (possible inotify limit).",
+                    len(failed),
+                    len(dirs),
+                )
         self._watcher.directoryChanged.connect(self._on_directory_changed)  # type: ignore
         self._watcher.fileChanged.connect(self._on_file_changed)  # type: ignore
         log.info(
-            "[FileSystemSyncService] Watching %s directories under %s",
+            "[FileSystemSyncService] Watching %s directories under %s"
+            " (failed watches: %d)",
             len(self._watcher.directories()),
             self.repo_root,
+            self.project_folder_manager.failed_watch_count,
         )
 
     def stop_watching(self) -> None:
@@ -214,21 +154,23 @@ class FileSystemSyncService:
             self._watcher = None
 
     def _on_directory_changed(self, path: str) -> None:
-        self._ensure_subdirs_watched()
-        if self._write_lock.locked():
-            return
+        self._watch_new_subdirs(path)
         self._pending_dir_changes.add(path)
         self._debounce_timer.start()
 
     def _on_file_changed(self, path: str) -> None:
-        if self._write_lock.locked():
-            return
         if not path.endswith(CANVAS_FILE_EXT):
             return
         self._pending_file_changes.add(path)
         self._debounce_timer.start()
 
     def _process_debounced_events(self) -> None:
+        # Skip if we triggered the changes ourselves
+        if self.project_folder_manager.write_lock.locked():
+            self._pending_dir_changes.clear()
+            self._pending_file_changes.clear()
+            return
+
         dir_changes = self._pending_dir_changes
         file_changes = self._pending_file_changes
         self._pending_dir_changes = set()
@@ -245,131 +187,84 @@ class FileSystemSyncService:
             log.info("[FileSystemSyncService] Processing file change: %s", path)
             self._diff_canvas_file(Path(path))
 
-        if self._pending_delta:
+        if not self._pending_delta.is_empty():
             self._pending_delta_event.set()
 
     def _diff_canvas_file(self, canvas_path: Path) -> None:
-        """Read a changed .canvas file and diff against the in-memory entity store."""
-        entity_store = self.project_folder_manager._entity_store
+        """Read a changed .canvas file and diff against the store using delta arithmetic.
+
+        Builds CREATE-snapshot deltas for both disk and mem, then:
+            diff = mem_snapshot.reversed().merge_with_priority(disk_snapshot)
+        Applies the resulting diff to the store and accumulates it for polling.
+        """
+        store = self.project_folder_manager.store
 
         if not canvas_path.exists():
             # File deleted — handled by _scan_for_new_and_deleted_pages
             return
 
         try:
-            with open(canvas_path, encoding="utf-8") as f:
-                page_data = json.load(f)
-        except Exception as exc:
-            raise CanvasParseError(
-                f"Failed to read changed canvas file {canvas_path}"
-            ) from exc
+            disk_entities = read_canvas_file(canvas_path)
+        except ForeignCanvasFile:
+            return
+        except CanvasParseError:
+            log.warning("Failed to parse canvas file: %s", canvas_path)
+            self.project_folder_manager.failed_canvas_paths.add(str(canvas_path))
+            return
+        self.project_folder_manager.failed_canvas_paths.discard(str(canvas_path))
 
-        page_id = page_data.get("id")
-        if not page_id:
-            raise CanvasParseError(
-                f"Changed canvas file {canvas_path} has no 'id' field"
-            )
+        page_id = canvas_path.stem
+
+        # Build disk snapshot delta (all CREATEs)
+        disk_delta = Delta.from_changes(
+            [Change.create(entity) for entity in disk_entities.values()]
+        )
+
+        # Build mem snapshot delta for this page's entities (all CREATEs)
+        mem_entities = list(store.find(parent_id=page_id))
+        page_entity = store.find_one(id=page_id)
+        if page_entity is not None:
+            mem_entities.append(page_entity)
+        mem_delta = Delta.from_changes(
+            [Change.create(entity) for entity in mem_entities]
+        )
+
+        # Diff via delta arithmetic: reverse mem + merge disk
+        diff = mem_delta.reversed()
+        diff.merge_with_priority(disk_delta)
+
+        if diff.is_empty():
             return
 
-        notes = page_data.pop("notes", [])
-        arrows = page_data.pop("arrows", [])
-        file_items = page_data.pop("file_items", [])
+        # Apply diff to the store
+        applied = store.apply_delta(diff)
 
-        # Build new entity set from the file
-        new_entities: dict[str, dict[str, Any]] = {page_id: page_data}
-        for note in notes:
-            nid = note.get("id")
-            if nid:
-                new_entities[nid] = note
-        for arrow in arrows:
-            aid = arrow.get("id")
-            if aid:
-                new_entities[aid] = arrow
-        for fi in file_items:
-            fi_id = fi.get("id")
-            if fi_id:
-                new_entities[fi_id] = fi
-
-        # Collect all current entity ids belonging to this page
-        old_page_entity_ids: set[str] = set()
-        if page_id in entity_store:
-            old_page_entity_ids.add(page_id)
-        for eid, entity in entity_store.items():
-            if entity.get("parent_id") == page_id:
-                old_page_entity_ids.add(eid)
-
-        new_ids = set(new_entities.keys())
-
-        # Created entities
-        for eid in new_ids - old_page_entity_ids:
-            self._pending_delta[eid] = [eid, {}, new_entities[eid]]
-            entity_store[eid] = new_entities[eid]
-
-        # Deleted entities
-        for eid in old_page_entity_ids - new_ids:
-            old_entity = entity_store.pop(eid, {})
-            self._pending_delta[eid] = [eid, old_entity, {}]
-
-        # Updated entities
-        for eid in new_ids & old_page_entity_ids:
-            old_entity = entity_store.get(eid, {})
-            new_entity = new_entities[eid]
-            if old_entity != new_entity:
-                # Compute forward/reverse components (only changed fields)
-                forward: dict[str, Any] = {}
-                reverse: dict[str, Any] = {}
-                all_keys = set(old_entity.keys()) | set(new_entity.keys())
-                for key in all_keys:
-                    old_val = old_entity.get(key)
-                    new_val = new_entity.get(key)
-                    if old_val != new_val:
-                        forward[key] = new_val
-                        reverse[key] = old_val
-                if forward:
-                    self._pending_delta[eid] = [eid, reverse, forward]
-                    entity_store[eid] = new_entity
+        # Accumulate for web app polling
+        self._pending_delta.merge_with_priority(applied)
 
     def _scan_for_new_and_deleted_pages(self) -> None:
-        """Detect new or deleted .canvas files by comparing filesystem with entity store."""
-        entity_store = self.project_folder_manager._entity_store
+        """Full-project scan for new/deleted canvas files.
 
-        # Collect page ids currently on disk
+        Directory events are rare and debounced, so a full walk is acceptable.
+        This correctly handles renames, moves, and nested dir creation.
+        """
+        store = self.project_folder_manager.store
+
         disk_page_ids: set[str] = set()
         canvas_paths: dict[str, Path] = {}
-        for canvas_path in self._iter_canvas_page_paths():
-            # Extract page id from filename: {page_id}.canvas
+        for canvas_path in self.project_folder_manager._iter_canvas_page_paths():
             page_id = canvas_path.stem
             disk_page_ids.add(page_id)
             canvas_paths[page_id] = canvas_path
 
-        # Collect page ids in entity store
-        store_page_ids: set[str] = {
-            eid
-            for eid, entity in entity_store.items()
-            if entity.get("type_name") == "Page"
-        }
+        store_page_ids: set[str] = {entity.id for entity in store.find(type=Page)}
 
-        # New pages on disk
         for page_id in disk_page_ids - store_page_ids:
             self._diff_canvas_file(canvas_paths[page_id])
 
-        # Deleted pages (on disk but no longer present)
         for page_id in store_page_ids - disk_page_ids:
-            # Remove page and all its children
-            children_to_remove = [
-                eid
-                for eid, entity in entity_store.items()
-                if entity.get("parent_id") == page_id
-            ]
-            for eid in children_to_remove:
-                old_entity = entity_store.pop(eid, {})
-                self._pending_delta[eid] = [eid, old_entity, {}]
-            old_page = entity_store.pop(page_id, {})
-            self._pending_delta[page_id] = [page_id, old_page, {}]
-
-    def index_folder(self) -> int:
-        count = 0
-        for _ in self._iter_canvas_page_paths():
-            count += 1
-        log.info("Indexed %s canvas page file(s) in %s", count, self.repo_root)
-        return count
+            for child in store.find(parent_id=page_id):
+                self._pending_delta.add_change(store.remove_one(child))
+            page_entity = store.find_one(id=page_id)
+            if page_entity is not None:
+                self._pending_delta.add_change(store.remove_one(page_entity))

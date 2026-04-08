@@ -37,8 +37,20 @@ classifiers = [
 
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "isort", "pre-commit"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+combine_as_imports = true
 
 [tool.setuptools.packages.find]
 exclude = ["web_app*"]
