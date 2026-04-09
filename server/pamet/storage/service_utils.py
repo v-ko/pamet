@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from fusion.libs.entity import Entity, load_from_dict
 
 from pamet.services.constants import MAX_CANVAS_FILE_BYTES
+from pamet.storage.canvas_html import read_canvas_file as _read_canvas_html
 
 
 class ForeignCanvasFile(Exception):
@@ -34,8 +34,7 @@ def read_canvas_file(canvas_path: Path) -> dict[str, Entity]:
                 f"Canvas file {canvas_path} is {file_size} bytes, "
                 f"exceeds limit of {MAX_CANVAS_FILE_BYTES}"
             )
-        with open(canvas_path, encoding="utf-8") as f:
-            page_data = json.load(f)
+        page_data = _read_canvas_html(canvas_path)
     except (CanvasParseError, ForeignCanvasFile):
         raise
     except Exception as exc:

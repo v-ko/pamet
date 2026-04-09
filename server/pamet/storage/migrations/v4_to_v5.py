@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from fusion.logging import get_logger
 from fusion.util import get_new_id
 
+from pamet.storage.canvas_html import read_canvas_file, write_canvas_file
 from pamet.storage.migrations.utils import backup_file
 
 from ..file_system.color_roles import legacy_normalized_rgba_to_role
@@ -310,67 +311,37 @@ def _build_image_item_dict(
     }
 
 
-def migrate_image_notes(
-    repo_path: Path,
-    v5_page_paths: List[Path],
-):
-    """Second pass over canvas pages: create page-scoped ImageItem dicts and rewrite notes.
-
-    For each note with ``content.image``:
-    - Resolve the URL to a file on disk.
-    - If the file exists: compute hash, get dimensions, build an ImageItem dict,
-      replace ``content.image`` with ``content.image_id``.
-    - If external: copy the file into ``<repo>/images/``.
-    - If not found: set ``content.text`` to an error message, log warning.
-
-    Persist the generated ImageItem dicts directly in the page payload.
-    """
-    repo_path = Path(repo_path)
-
-    for v5_path in v5_page_paths:
-        try:
-            _migrate_image_notes_for_page(v5_path, repo_path)
-        except Exception as exc:
-            log.error(f"migrate_image_notes: failed processing {v5_path}: {exc}")
-
-
-def _migrate_image_notes_for_page(v5_path: Path, repo_path: Path):
-    try:
-        with open(v5_path, "r", encoding="utf-8") as f:
-            page_data = json.load(f)
-    except Exception as exc:
-        log.error(f"migrate_image_notes: failed to read {v5_path}: {exc}")
-        return
-
-    modified = False
+def _migrate_images_in_page(page_data: Dict[str, Any], repo_path: Path) -> None:
+    """Resolve image notes in *page_data* in-place: create ImageItems, rewrite notes."""
     page_id = page_data.get("id")
     if not page_id:
-        log.error(f"migrate_image_notes: page missing id in {v5_path}")
         return
     note_states = page_data.setdefault("notes", [])
     file_items_states = page_data.setdefault("file_items", [])
-    existing_image_item_ids = {
+    existing_ids = {
         fi.get("id")
         for fi in file_items_states
         if isinstance(fi, dict) and fi.get("type_name") == "ImageItem"
     }
+    # Dedup: reuse the same ImageItem when multiple notes reference the same source file
+    image_item_by_source: Dict[Path, Dict[str, Any]] = {}
 
     for note in list(note_states):
         content = note.get("content")
         if not content or not isinstance(content.get("image"), dict):
             continue
-
-        original_url = content.get("image", {}).get("_original_url") or content.get(
-            "image", {}
-        ).get("url", "?")
+        original_url = content["image"].get("_original_url") or content["image"].get(
+            "url", "?"
+        )
         try:
-            modified |= _migrate_single_image_note(
+            _migrate_single_image_note(
                 note,
                 content,
                 repo_path,
                 page_id,
                 file_items_states,
-                existing_image_item_ids,
+                existing_ids,
+                image_item_by_source,
             )
         except Exception as exc:
             log.error(
@@ -383,11 +354,6 @@ def _migrate_image_notes_for_page(v5_path: Path, repo_path: Path):
                 content["text"] += "\n" + error_text
             else:
                 content["text"] = error_text
-            modified = True
-
-    if modified:
-        with open(v5_path, "w", encoding="utf-8") as f:
-            json.dump(page_data, f, indent=2, ensure_ascii=False)
 
 
 def _migrate_single_image_note(
@@ -397,7 +363,8 @@ def _migrate_single_image_note(
     page_id: str,
     file_items_states: List,
     existing_image_item_ids: set,
-) -> bool:
+    image_item_by_source: Dict[Path, Dict[str, Any]],
+) -> None:
     image_info = content["image"]
     original_url = image_info.pop("_original_url", None) or image_info.get("url", "")
     v4_width = image_info.get("width", 0)
@@ -409,7 +376,7 @@ def _migrate_single_image_note(
             f"  note {note['id']}: external web URL, "
             f"keeping content.image as-is: {original_url}"
         )
-        return False
+        return
 
     file_path = _resolve_original_image_url(original_url, repo_path)
 
@@ -417,7 +384,7 @@ def _migrate_single_image_note(
         log.warning(
             f"  note {note['id']}: unrecognised image URL scheme: {original_url}"
         )
-        return False
+        return
 
     if not file_path.exists():
         log.warning(
@@ -430,7 +397,18 @@ def _migrate_single_image_note(
             content["text"] += "\n" + error_text
         else:
             content["text"] = error_text
-        return True
+        return
+
+    # Reuse existing ImageItem if the same source file was already processed
+    if file_path in image_item_by_source:
+        item_dict = image_item_by_source[file_path]
+        content.pop("image", None)
+        content["image_id"] = item_dict["id"]
+        log.info(
+            f"  note {note['id']}: reusing ImageItem {item_dict['id']} "
+            f"(from: {original_url})"
+        )
+        return
 
     # Copy all images into <repo>/images/
     images_dir = repo_path / "images"
@@ -462,10 +440,11 @@ def _migrate_single_image_note(
     )
     if item_dict["id"] in existing_image_item_ids:
         log.warning(f"  note {note['id']}: duplicate ImageItem id generated, skipping")
-        return False
+        return
 
     file_items_states.append(item_dict)
     existing_image_item_ids.add(item_dict["id"])
+    image_item_by_source[file_path] = item_dict
 
     # Rewrite the note
     content.pop("image", None)
@@ -475,7 +454,6 @@ def _migrate_single_image_note(
         f"  note {note['id']}: created ImageItem {item_dict['id']} "
         f"-> {rel_path} (from: {original_url})"
     )
-    return True
 
 
 def _collect_canvas_page_paths(repo_path: Path) -> List[Path]:
@@ -576,8 +554,7 @@ def migrate_legacy_project_config(
 
     for canvas_path in canvas_page_paths:
         try:
-            with open(canvas_path, "r", encoding="utf-8") as f:
-                page_data = json.load(f)
+            page_data = read_canvas_file(canvas_path)
         except Exception as exc:
             log.error(f"migrate_v4_to_v5: failed to read {canvas_path}: {exc}")
             continue
@@ -625,8 +602,7 @@ def migrate_legacy_project_config(
         attached_count += 1
 
     for canvas_path, page_data in page_data_by_path.items():
-        with open(canvas_path, "w", encoding="utf-8") as f:
-            json.dump(page_data, f, indent=2, ensure_ascii=False)
+        write_canvas_file(canvas_path, page_data)
 
     backup_file(project_config_path, backup_folder)
     project_config_path.unlink()
@@ -697,8 +673,7 @@ def convert_v4_page_file(v4_file_path: Path, v5_file_path: Path) -> Path:
     with open(v4_file_path, "r", encoding="utf-8") as f:
         data = json.load(f)
     data = convert_v4_to_v5_page_dict(data)
-    with open(v5_file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    write_canvas_file(v5_file_path, data)
     return v5_file_path
 
 
@@ -732,9 +707,9 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
 
                 v5_path = v4_path.parent / (page_id + CANVAS_FILE_EXT)
                 v5_data = convert_v4_to_v5_page_dict(page_data)
+                _migrate_images_in_page(v5_data, repo_path)
 
-                with open(v5_path, "w", encoding="utf-8") as f:
-                    json.dump(v5_data, f, indent=2, ensure_ascii=False)
+                write_canvas_file(v5_path, v5_data)
 
                 backup_file(v4_path, v4_backup_folder)
                 v4_path.unlink()
@@ -746,9 +721,6 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
                 continue
 
         log.info(f"migrate_v4_to_v5: done, {len(converted)}/{len(v4_pages)} converted")
-
-    if converted:
-        migrate_image_notes(repo_path, converted)
 
     canvas_page_paths = _collect_canvas_page_paths(repo_path)
     if canvas_page_paths:

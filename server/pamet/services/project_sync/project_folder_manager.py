@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import threading
 from fnmatch import fnmatch
 from pathlib import Path
@@ -16,6 +15,7 @@ from pamet.model.arrow import Arrow
 from pamet.model.file_item import FileItem
 from pamet.services.constants import MAX_WALK_ENTRIES
 from pamet.services.fs_sync_service import FileSystemSyncService
+from pamet.storage.canvas_html import write_canvas_file
 from pamet.storage.file_storage_adapter import FileStorageAdapter
 from pamet.storage.migrations.manager import (
     MIGRATION_BACKUP_DIR_NAMES,
@@ -211,8 +211,7 @@ class ProjectFolderManager:
             file_data["file_items"] = file_items
         canvas_path = self.repo_root / f"{page_id}{CANVAS_FILE_EXT}"
         with self.write_lock:
-            with open(canvas_path, "w", encoding="utf-8") as f:
-                json.dump(file_data, f, ensure_ascii=False, indent=4)
+            write_canvas_file(canvas_path, file_data)
         return canvas_path
 
     def delete_page_canvas_file(self, page_id: str) -> None:
