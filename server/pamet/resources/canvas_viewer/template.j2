@@ -2,19 +2,20 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <meta name="pamet-schema-version" content="<!-- PAMET_SCHEMA_VERSION -->">
+    <meta name="pamet-schema-version" content="{{ schema_version }}">
     <title>Pamet Canvas</title>
+    <style>{{ style }}</style>
 </head>
 <body>
 
 <noscript>Enable JavaScript to view this canvas.</noscript>
 
 <script type="application/json" id="pamet-data">
-<!-- PAMET_DATA -->
+{{ data }}
 </script>
 
 <script>
-<!-- PAMET_SCRIPT -->
+{{ script }}
 </script>
 
 </body>
