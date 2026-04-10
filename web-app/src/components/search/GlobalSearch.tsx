@@ -6,6 +6,7 @@ import { pamet } from '@/core/facade';
 import { appActions } from '@/actions/app';
 import { pageActions } from '@/actions/page';
 import { Point2D } from 'fusion/primitives/Point2D';
+import { PametRoute } from '@/services/routing/route';
 import { PageAnimation } from '@/components/page/render-utils';
 import { SEARCH_RESULT_ANIMATION_TIME } from '@/core/constants';
 
@@ -114,8 +115,11 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = observer(({ state }) =>
 
         // Navigate to the page containing the note first
         if (result.pageId !== pamet.appViewState.currentPageId) {
-            appActions.setCurrentPage(pamet.appViewState, result.pageId);
-            pamet.syncRouterFromAppState();
+            pamet.navigateTo(new PametRoute({
+                userId: pamet.appViewState.userId,
+                projectId: pamet.appViewState.currentProjectId ?? undefined,
+                pageId: result.pageId,
+            })).catch((e) => console.error('Error navigating to search result', e));
         }
 
         // Get the note and navigate to its position

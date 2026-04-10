@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { pamet } from '@/core/facade';
 import { timestamp, currentTime } from 'fusion/util/base';
-import { createProject, switchToProject } from "@/procedures/app";
+import { createProject, navigateToProject } from "@/procedures/app";
 import { ProjectData } from '@/model/Project';
 import "@/components/dialogs/Dialog.css";
 
@@ -92,7 +92,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
     };
 
     await createProject(newProject);
-    await switchToProject(newProject.id);
+    await navigateToProject(newProject.id);
     dialogRef.current?.close();
   }
 

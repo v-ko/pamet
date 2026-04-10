@@ -23,7 +23,8 @@ import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { DebugDialog } from "@/components/DebugDialog";
-import { importDesktopDataForTesting, updateAppFromRouteOrAutoassist } from "@/procedures/app";
+import { importDesktopDataForTesting, resolvePageId } from "@/procedures/app";
+import { PametRoute } from "@/services/routing/route";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
 import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
@@ -321,8 +322,11 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             log.info(`Creating new page: ${name}`);
             let page = projectActions.createNewPage(state, name)
             log.info(`Setting current page to ${name}`);
-            appActions.setCurrentPage(state, page.id);
-            pamet.syncRouterFromAppState();
+            pamet.navigateTo(new PametRoute({
+              userId: state.userId,
+              projectId: state.currentProjectId ?? undefined,
+              pageId: page.id,
+            })).catch((e) => log.error('Error navigating to new page', e));
 
             // Open settings view | IMPLEMENT LATER
           }}
@@ -338,11 +342,17 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
             if (confirmPageDeletion(page.name)) {
               projectActions.deletePageAndUpdateReferences(page);
               appActions.closeAppDialog(state);
-              let route = pamet.router.currentRoute();
-              route.pageId = undefined
-              updateAppFromRouteOrAutoassist(route).catch((err) => {
-                log.error("Error updating app from route after page deletion", err);
-              });
+              // Auto-create if last page was deleted, then navigate
+              let pageId = state.currentProjectState ? resolvePageId(state.currentProjectState) : null;
+              if (!pageId && state.currentProjectState) {
+                projectActions.createDefaultPage(state);
+                pageId = resolvePageId(state.currentProjectState!);
+              }
+              pamet.navigateTo(new PametRoute({
+                userId: state.userId,
+                projectId: state.currentProjectId ?? undefined,
+                pageId: pageId ?? undefined,
+              })).catch((e) => log.error('Error navigating after page deletion', e));
             }
           }}
         />

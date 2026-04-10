@@ -7,7 +7,7 @@ import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
-import { updateAppFromRouteOrAutoassist, updateAppStateFromConfig } from "@/procedures/app";
+import { ensureProjectAndNavigate, updateAppStateFromConfig } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
 import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
@@ -146,7 +146,7 @@ async function initializeWebApp() {
 
     // Handle the route
     try {
-        await updateAppFromRouteOrAutoassist()
+        await ensureProjectAndNavigate()
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
     }

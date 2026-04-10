@@ -14,6 +14,7 @@ import { Rectangle } from "fusion/primitives/Rectangle";
 import { parseClipboardContents } from "@/util";
 import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
 import { DEFAULT_VIEW_HEIGHT } from "@/core/constants";
+import { PametRoute } from "@/services/routing/route";
 
 let log = getLogger('PametCommands');
 
@@ -162,8 +163,21 @@ class PametCommands {
     createNewPage() {
         let appState = pamet.appViewState;
 
-        // If no current page - some weird state where the default isnt auto-created - just create default
-        projectActions.createDefaultPage(appState);
+        if (!appState.currentPageViewState) {
+            // If last page - create default
+            if (Array(pamet.pages()).length === 0) {
+                let page = projectActions.createDefaultPage(appState);
+                appActions.setCurrentPage(appState, page.id);
+            } else {
+                // It's a very niche case
+                alert('Switching to the project root. You can create a new page then.');
+                pamet.navigateTo(new PametRoute({
+                    userId: pamet.appViewState.userId,
+                    projectId: pamet.appViewState.currentProjectId ?? undefined,
+                })).catch((e) => console.error('Error navigating to project root', e));
+                return;
+            }
+        }
 
         // Determine forward link location - either under mouse or
         // in the center of the viewport

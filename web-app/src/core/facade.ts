@@ -13,14 +13,13 @@ import { StorageService } from "fusion/storage/management/StorageService";
 import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/repository/Repository";
 import { RoutingService } from "@/services/routing/RoutingService";
-import { projectActions } from "@/actions/project";
 import { registerRootActionCompletedHook } from "fusion/registries/Action";
 import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
-import { updateAppStateFromConfig, doSwitchToProject } from "@/procedures/app";
-import { appActions } from "@/actions/app";
+import { updateAppStateFromConfig, applyRoute, resolvePageId } from "@/procedures/app";
+import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/components/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
@@ -240,37 +239,17 @@ export class PametFacade extends PametStore {
 
     initRouter() {
         this.router.setUpdateHandler((route) => {
-            this.handleRouteFromBrowser(route).catch((e) => {
+            applyRoute(route).catch((e) => {
                 log.error('[Router.updateHandler] Error handling browser route change', e);
             });
         });
         this.router.init();
     }
 
-    private async handleRouteFromBrowser(route: import('@/services/routing/route').PametRoute) {
-        const appState = this.appViewState;
-
-        // Project switch if needed (async)
-        const targetProjectId = route.projectId ?? null;
-        if (appState.currentProjectId !== targetProjectId) {
-            await doSwitchToProject(targetProjectId);
-        }
-
-        // Page (sync)
-        const targetPageId = route.pageId ?? null;
-        if (targetPageId && appState.currentPageId !== targetPageId) {
-            appActions.setCurrentPage(appState, targetPageId);
-        }
-
-        // Viewport (sync)
-        if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
-            const [x, y] = route.viewportCenter;
-            pageActions.updateViewport(
-                appState.currentPageViewState,
-                new Point2D([x, y]),
-                route.viewportEyeHeight,
-            );
-        }
+    /** Push route to URL and derive appState from it. The single entry point for navigation. */
+    async navigateTo(route: PametRoute) {
+        this.router.navigateToRoute(route);
+        await applyRoute(route);
     }
 
     syncRouterFromAppState() {
@@ -573,9 +552,17 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    // Current page removed: switch to project default/first page
-                    projectActions.goToDefaultPage(appState);
-                    pamet.syncRouterFromAppState();
+                    // Current page removed: show next available page (no auto-creation for external deletes)
+                    const nextPageId = appState.currentProjectState
+                        ? resolvePageId(appState.currentProjectState) : null;
+                    const fallbackRoute = new PametRoute({
+                        userId: appState.userId,
+                        projectId: projectId,
+                        pageId: nextPageId ?? undefined,
+                    });
+                    pamet.navigateTo(fallbackRoute).catch((e) => {
+                        log.error('Error navigating after page deletion in delta reducer', e);
+                    });
                     return;
                 }
             }

@@ -11,8 +11,8 @@ import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_VIEW_HEIGHT } from '@/core/
 import { pamet } from '@/core/facade';
 import { commands } from '@/core/commands';
 import { CardNote } from '@/model/CardNote';
-import { Page } from '@/model/Page';
 import { Viewport } from '@/components/page/Viewport';
+import { PametRoute } from '@/services/routing/route';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { reaction } from 'mobx';
 import { getLogger } from 'fusion/logging';
@@ -407,8 +407,11 @@ export class PageController {
       if (note instanceof CardNote && note.content.page_ref) {
         let targetPage = pamet.page(note.content.page_ref.id);
         if (targetPage !== undefined) {
-          appActions.setCurrentPage(pamet.appViewState, targetPage.id);
-          pamet.syncRouterFromAppState();
+          pamet.navigateTo(new PametRoute({
+            userId: pamet.appViewState.userId,
+            projectId: pamet.appViewState.currentProjectId ?? undefined,
+            pageId: targetPage.id,
+          })).catch((e) => console.error('Error navigating to linked page', e));
           return;
         }
       }

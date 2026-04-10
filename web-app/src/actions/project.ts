@@ -9,7 +9,6 @@ import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";
 import type { PametProjectData } from "@/model/Project";
 import { getLogger } from "fusion/logging";
-import { appActions } from "@/actions/app";
 import { CardNote } from "@/model/CardNote";
 import { CANVAS_EXT } from "@/core/constants";
 import {
@@ -30,7 +29,7 @@ class ProjectActions {
   }
 
   @action({ issuer: 'service' })
-  createDefaultPage(appState: WebAppState) {
+  createDefaultPage(appState: WebAppState): Page {
     // Create the page
     const currentTimestamp = timestamp(currentTime())
     let pageData: PageData = {
@@ -58,6 +57,8 @@ class ProjectActions {
       ...projectData,
       default_page_id: page.id,
     });
+
+    return page;
   }
 
   @action
@@ -140,24 +141,6 @@ class ProjectActions {
     // Apply link-deletion markers
     for (const u of linkUpdates) {
       pamet.updateNote(u.updated);
-    }
-  }
-
-  @action
-  goToDefaultPage(appState: WebAppState) {
-    const projectData = appState.getCurrentProject();
-    const defaultPageId = projectData.default_page_id;
-
-    if (defaultPageId) {
-      appActions.setCurrentPage(appState, defaultPageId);
-    } else {
-      let firstPage = pamet.pages().next().value;
-      if (firstPage) {
-        appActions.setCurrentPage(appState, firstPage.id);
-      } else {
-        appState.currentPageId = null;
-        appState.currentPageViewState = null;
-      }
     }
   }
 }
