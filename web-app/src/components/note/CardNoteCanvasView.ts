@@ -6,6 +6,7 @@ import { textRect } from "@/components/note/util";
 import { DEFAULT_FONT_STRING } from "@/core/constants";
 import { Point2D } from "fusion/primitives/Point2D";
 import { color_role_to_hex_color } from "@/util";
+import { pamet } from "@/core/facade";
 
 const DECORATION_EDGE = 10;
 
@@ -36,13 +37,10 @@ export class CardNoteCanvasView extends NoteCanvasView {
             this.drawBorder(context, BorderType.Solid);
         }
 
-        let internalLinkRoute = note.internalLinkRoute();
-        if (internalLinkRoute) {
-            if (internalLinkRoute.pageId) { // This is a bit of a hack
-                this.drawBorder(context, BorderType.Solid)
-            } else {
-                this.drawBorder(context, BorderType.Dashed)
-            }
+        if (note.content.page_ref) {
+            // Solid if the linked page exists, dashed if it's missing
+            let targetPage = pamet.page(note.content.page_ref.id);
+            this.drawBorder(context, targetPage ? BorderType.Solid : BorderType.Dashed)
         } else if (note.hasExternalLink) {
             this.drawBorder(context);
             // Fill a triangle in the upper right corner of the note

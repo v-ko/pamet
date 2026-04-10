@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Set
+from typing import TYPE_CHECKING, Any, Set, cast
 
 from fusion.libs.entity.change import Change
 from fusion.libs.entity.delta import Delta
@@ -181,7 +181,7 @@ class FileSystemSyncService:
                 "[FileSystemSyncService] Processing %d directory changes",
                 len(dir_changes),
             )
-            self._scan_for_new_and_deleted_pages()
+            self._scan_changed_directories(dir_changes)
 
         for path in file_changes:
             log.info("[FileSystemSyncService] Processing file change: %s", path)
@@ -200,11 +200,11 @@ class FileSystemSyncService:
         store = self.project_folder_manager.store
 
         if not canvas_path.exists():
-            # File deleted — handled by _scan_for_new_and_deleted_pages
+            # File deleted — handled by _scan_changed_directories
             return
 
         try:
-            disk_entities = read_canvas_file(canvas_path)
+            disk_entities = read_canvas_file(canvas_path, self.repo_root)
         except ForeignCanvasFile:
             return
         except CanvasParseError:
@@ -213,7 +213,15 @@ class FileSystemSyncService:
             return
         self.project_folder_manager.failed_canvas_paths.discard(str(canvas_path))
 
-        page_id = canvas_path.stem
+        # Extract page_id from the parsed entities (filename is no longer the id)
+        page_id = None
+        for entity in disk_entities.values():
+            if isinstance(entity, Page):
+                page_id = entity.id
+                break
+        if page_id is None:
+            log.warning("No Page entity found in canvas file: %s", canvas_path)
+            return
 
         # Build disk snapshot delta (all CREATEs)
         disk_delta = Delta.from_changes(
@@ -242,29 +250,69 @@ class FileSystemSyncService:
         # Accumulate for web app polling
         self._pending_delta.merge_with_priority(applied)
 
-    def _scan_for_new_and_deleted_pages(self) -> None:
-        """Full-project scan for new/deleted canvas files.
+    def _scan_changed_directories(self, changed_dirs: set[str]) -> None:
+        """Scoped scan of changed directories for new/deleted/moved canvas files.
 
-        Directory events are rare and debounced, so a full walk is acceptable.
-        This correctly handles renames, moves, and nested dir creation.
+        For each changed directory: list .canvas files, parse to get page ids,
+        compare against store pages in those folders.  Cross-directory moves
+        are correlated across the debounced batch of changed dirs.
         """
         store = self.project_folder_manager.store
+        repo_root = self.repo_root
 
-        disk_page_ids: set[str] = set()
-        canvas_paths: dict[str, Path] = {}
-        for canvas_path in self.project_folder_manager._iter_canvas_page_paths():
-            page_id = canvas_path.stem
-            disk_page_ids.add(page_id)
-            canvas_paths[page_id] = canvas_path
+        # 1. Scan changed dirs for .canvas files and parse page ids
+        disk_pages: dict[str, Path] = {}  # {page_id: canvas_path}
+        changed_folders: set[str] = set()
+        for dir_str in changed_dirs:
+            dir_path = Path(dir_str)
+            if not dir_path.is_dir():
+                continue
+            rel_folder = dir_path.relative_to(repo_root).as_posix()
+            if rel_folder == ".":
+                rel_folder = ""
+            changed_folders.add(rel_folder)
+            try:
+                entries = sorted(dir_path.iterdir(), key=lambda p: p.name)
+            except OSError:
+                continue
+            for entry in entries:
+                if entry.is_file() and entry.suffix == CANVAS_FILE_EXT:
+                    try:
+                        entities = read_canvas_file(entry, repo_root)
+                    except (ForeignCanvasFile, CanvasParseError):
+                        continue
+                    for entity in entities.values():
+                        if isinstance(entity, Page):
+                            disk_pages[entity.id] = entry
+                            break
 
-        store_page_ids: set[str] = {entity.id for entity in store.find(type=Page)}
+        # 2. Get store pages whose folder matches any changed directory
+        store_pages_in_dirs: dict[str, Page] = {}
+        for page_entity in cast(list[Page], list(store.find(type=Page))):
+            if page_entity.folder in changed_folders:
+                store_pages_in_dirs[page_entity.id] = page_entity
 
-        for page_id in disk_page_ids - store_page_ids:
-            self._diff_canvas_file(canvas_paths[page_id])
+        # 3. New or moved pages (on disk but not in store for these dirs)
+        for page_id, canvas_path in disk_pages.items():
+            if page_id not in store_pages_in_dirs:
+                # Could be new, or moved from a different dir
+                existing = store.find_one(id=page_id)
+                if existing is not None:
+                    # Moved from another folder — diff will update the path
+                    pass
+                self._diff_canvas_file(canvas_path)
+            else:
+                # Check if path changed (rename within same dir)
+                new_path = canvas_path.relative_to(repo_root).as_posix()
+                if store_pages_in_dirs[page_id].path != new_path:
+                    self._diff_canvas_file(canvas_path)
 
-        for page_id in store_page_ids - disk_page_ids:
+        # 4. Deleted pages (in store for these dirs but not on disk)
+        for page_id, page_entity in store_pages_in_dirs.items():
+            if page_id in disk_pages:
+                continue
+
+            # Page is gone from its known folder — remove it
             for child in store.find(parent_id=page_id):
                 self._pending_delta.add_change(store.remove_one(child))
-            page_entity = store.find_one(id=page_id)
-            if page_entity is not None:
-                self._pending_delta.add_change(store.remove_one(page_entity))
+            self._pending_delta.add_change(store.remove_one(page_entity))

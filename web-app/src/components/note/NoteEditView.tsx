@@ -51,22 +51,24 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   // Initial toggle button positions
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
     return (state.targetNote.content.text !== undefined ||
-      state.targetNote.content.url !== undefined);
+      state.targetNote.content.url !== undefined ||
+      state.targetNote.content.page_ref !== undefined);
   });
   const [imageButtonToggled, setImageButtonToggled] = useState(() => {
-    return state.targetNote.content.image_id !== undefined;
+    return state.targetNote.content.image !== undefined;
   });
   const [linkButtonToggled, setLinkButtonToggled] = useState(() => {
-    return state.targetNote.content.url !== undefined;
+    return state.targetNote.content.url !== undefined ||
+      state.targetNote.content.page_ref !== undefined;
   });
 
   const [internalLinkIsSet, setInternalLinkIsSet] = useState(() => {
-    return state.targetNote.content.url?.startsWith('project://') || false;
+    return !!state.targetNote.content.page_ref;
   });
 
   const updateNoteData = (newData: Partial<SerializedNote>) => {
     noteData.current = { ...noteData.current, ...newData };
-    setInternalLinkIsSet(!!newData.content?.url?.startsWith('project://'));
+    setInternalLinkIsSet(!!noteData.current.content?.page_ref);
     setForceUpdate(x => x + 1);
   };
 
@@ -148,8 +150,8 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   }, []);
 
   const removeNoteImage = async () => {
-    const currentImageId = noteData.current.content.image_id;
-    if (!currentImageId) {
+    const currentImage = noteData.current.content.image;
+    if (!currentImage) {
       throw new Error("removeOriginalImage called when there is no image.");
     }
 
@@ -168,7 +170,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     // The FileItem entity is NOT deleted — it may be referenced by other notes/pages.
 
     // Clear the image from the note data state
-    updateNoteData({ content: { ...noteData.current.content, image_id: undefined } });
+    updateNoteData({ content: { ...noteData.current.content, image: undefined } });
   };
 
   const setNoteImage = async (blob: Blob, path: string) => {
@@ -177,7 +179,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-    if (noteData.current.content.image_id) {
+    if (noteData.current.content.image) {
       throw new Error("setNoteImage called when there is already an image.");
     }
 
@@ -207,7 +209,12 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     clearTimeout(timeoutHandle!);
 
     setUncommitedImage(newImageItem);
-    updateNoteData({ content: { ...noteData.current.content, image_id: newImageItem.id } });
+    updateNoteData({ content: { ...noteData.current.content, image: {
+      id: newImageItem.id,
+      path: newImageItem.path,
+      width: newImageItem.metadata.width,
+      height: newImageItem.metadata.height,
+    } } });
   };
 
   const bakeNoteAndSave = () => {
@@ -216,8 +223,9 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
     // Determine the definitive note type based on content
     const hasText = textButtonToggled && data.content.text && data.content.text?.trim().length > 0;
-    const hasImage = imageButtonToggled && !!data.content.image_id?.trim();
-    const hasLink = linkButtonToggled && !!data.content.url?.trim();
+    const hasImage = imageButtonToggled && !!data.content.image;
+    const hasExternalLink = linkButtonToggled && !!data.content.url?.trim() && !data.content.page_ref;
+    const hasInternalLink = !!data.content.page_ref;
 
     // Clean the content object based on the definitive type
     const finalContent: NoteContent = {};
@@ -227,14 +235,23 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       finalContent.text = undefined;
     }
     if (hasImage) {
-      finalContent.image_id = data.content.image_id;
+      finalContent.image = data.content.image;
     } else {
-      finalContent.image_id = undefined;
+      finalContent.image = undefined;
     }
-    if (hasLink) {
+    if (hasExternalLink) {
       finalContent.url = data.content.url;
     } else {
       finalContent.url = undefined;
+    }
+    if (hasInternalLink) {
+      finalContent.page_ref = data.content.page_ref;
+      // Ensure text is set for internal links (display name)
+      if (!finalContent.text) {
+        finalContent.text = data.content.text;
+      }
+    } else {
+      finalContent.page_ref = undefined;
     }
     data.content = finalContent;
 
@@ -323,7 +340,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     const files = event.dataTransfer.files;
     if (files && files.length > 0 && files[0].type.startsWith('image/')) {
       const imageFile = files[0];
-      if (noteData.current.content.image_id) {
+      if (noteData.current.content.image) {
         await removeNoteImage();
       }
       const path = `images/pasted_image-${Date.now()}.${imageFile.name.split('.').pop()}`;

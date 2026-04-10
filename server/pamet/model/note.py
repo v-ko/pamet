@@ -22,10 +22,23 @@ from pamet.model.page_child import PageChild
 log = get_logger(__name__)
 
 
+class ImageReference(TypedDict, total=False):
+    id: str
+    path: str
+    width: int
+    height: int
+
+
+class PageReference(TypedDict, total=False):
+    id: str
+    path: str
+
+
 class NoteContent(TypedDict, total=False):
     text: str
     url: str
-    image_id: str
+    page_ref: PageReference
+    image: ImageReference
 
 
 class NoteStyle(TypedDict, total=False):

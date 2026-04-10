@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from "@/core/facade";
-import { Page } from "@/model/Page";
 import { getLogger } from 'fusion/logging';
 import "@/components/dialogs/Dialog.css";
 
@@ -20,10 +19,13 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     const dialog = dialogRef.current;
     if (!dialog) return;
 
-    // Generate default name
+    // Generate default name (new pages are created in root)
+    const existingNames = new Set(
+      Array.from(pamet.pages()).filter(p => p.folder === '').map(p => p.name)
+    );
     let newName = 'New Page';
     let i = 1;
-    while (pamet.findOne({ type: Page, name: newName })) {
+    while (existingNames.has(newName)) {
       newName = `New Page ${i++}`;
     }
     setPageName(newName);
@@ -34,10 +36,11 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     }
   }, []);
 
-  // Check if name is already taken
+  // Check if name is already taken in root folder
   const isNameTaken = useMemo(() => {
     const trimmed = pageName.trim();
-    return trimmed ? !!pamet.findOne({ type: Page, name: trimmed }) : false;
+    if (!trimmed) return false;
+    return Array.from(pamet.pages()).some(p => p.folder === '' && p.name === trimmed);
   }, [pageName]);
 
   function handleCreate(e: FormEvent) {

@@ -112,15 +112,15 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
         let note = this.noteViewState.note();
         let noteRect = note.rect();
-        if (!note.content.image_id) {
+        if (!note.content.image) {
             // Display error text instead
             let textLayout = calculateTextLayout('Image not set', textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
             return;
         }
 
-        const mediaItem = pamet.imageItem(note.content.image_id);
-        if (!mediaItem) {
+        const imageItem = pamet.imageItem(note.content.image.id);
+        if (!imageItem) {
             let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
             return;
@@ -132,7 +132,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             log.error('Cannot draw image: userId or projectId is undefined');
             return;
         }
-        let fileRoute = fileItemRoute(mediaItem, userId, projectId);
+        let fileRoute = fileItemRoute(imageItem, userId, projectId);
 
         let image = this.renderer.getImage(fileRoute.toRelativeReference());
         let errorText: string | undefined = undefined;

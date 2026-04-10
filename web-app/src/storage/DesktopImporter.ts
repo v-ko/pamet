@@ -5,9 +5,9 @@ import { SerializedEntityData, loadFromDict } from "fusion/model/Entity";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
 import { old_color_to_role } from "fusion/primitives/Color";
 import { pamet } from "@/core/facade";
-import { PametRoute } from "@/services/routing/route";
 import { ImageItem } from "fusion/model/ImageItem";
 import { extractImageDimensions } from "fusion/util/media";
+import { stemFromPath } from "@/model/Page";
 
 let log = getLogger('ApiClient');
 
@@ -57,8 +57,16 @@ export class DesktopImporter extends BaseApiClient {
                     throw new Error('Content is missing')
                 } else if (elementData.content.url) {
                     let url: string = elementData.content.url
-                    if (url.startsWith('pamet:/p')) {
-                        elementData.content.url = url.replace('pamet:/p', 'project:/page')
+                    if (url.startsWith('pamet:/p/')) {
+                        // Extract page id from pamet:/p/<page_id>/...
+                        const parts = url.replace('pamet:/p/', '').split('/')
+                        if (parts[0]) {
+                            elementData.content.page_ref = {
+                                id: parts[0],
+                                path: parts[0] + '.canvas',
+                            }
+                        }
+                        delete elementData.content.url
                     }
                 }
                 elementData.type_name = 'CardNote'
@@ -243,28 +251,21 @@ export class DesktopImporter extends BaseApiClient {
         // Create a map of pageId to pageData for fixing internal links
         const pageIdToName: Record<string, string> = {};
         for (const pageData of rawPagesData) {
-            pageIdToName[pageData.id] = pageData.name;
-            log.info(`Page ${pageData.id} (${pageData.name}) added to pageIdToName map`);
+            const name = pageData.path ? stemFromPath(pageData.path) : (pageData.name ?? '');
+            pageIdToName[pageData.id] = name;
+            log.info(`Page ${pageData.id} (${name}) added to pageIdToName map`);
         }
 
         // Fix internal links to include the page name as .text
         for (const entityData of allMigratedEntities) {
-            if (entityData?.content?.url?.startsWith('project:/page/')) {
-                let pageId: string | undefined;
-                // Extract pageId from the URL
-                const urlParts = entityData.content.url.split('/');
-                if (urlParts.length < 3) {
-                    log.error(`Invalid internal link URL: ${entityData.content.url}`);
-                    continue;
-                }
-                pageId = urlParts[2]; // e.g. 'p/12345' -> '12345'
+            if (entityData?.content?.page_ref) {
+                const pageId = entityData.content.page_ref.id;
                 if (pageId && pageIdToName[pageId]) {
                     entityData.content.text = pageIdToName[pageId];
-                    entityData.content.url = new PametRoute({ pageId: pageId }).toProjectScopedURI();
                 } else {
-                    log.warning(`Internal link note ${entityData.id} points to unknown page from url ${entityData.content.url} parts: ${JSON.stringify(entityData.content.url.split('/'))}`);
-                    entityData.content.text = '(missing page)';
-                    entityData.content.url = '';
+                    log.warning(`Internal link note ${entityData.id} points to unknown page_ref.id ${pageId}`);
+                    entityData.content.text = '(deleted)';
+                    delete entityData.content.page_ref;
                 }
             }
         }

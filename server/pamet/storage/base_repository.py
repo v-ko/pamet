@@ -30,7 +30,7 @@ class PametStore(Store):
         if not old_page:
             raise Exception("Can not update missing page.")
 
-        if page_.name != old_page.name:
+        if page_.path != old_page.path:
             page_.datetime_modified = current_time()
 
         return self.update_one(page_)

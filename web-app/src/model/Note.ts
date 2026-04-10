@@ -4,10 +4,23 @@ import { PametElement, PametElementData } from "@/model/Element";
 import { textRect } from "@/components/note/util";
 import { entityType } from "fusion/model/Entity";
 
+export interface ImageReference {
+    id: string;
+    path: string;
+    width: number;
+    height: number;
+}
+
+export interface PageReference {
+    id: string;
+    path: string;
+}
+
 export interface NoteContent {
     text?: string;
     url?: string;
-    image_id?: string;
+    page_ref?: PageReference;
+    image?: ImageReference;
 }
 export interface NoteStyle {
     color_role: string;

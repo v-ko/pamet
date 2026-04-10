@@ -2,9 +2,6 @@ import { textRect } from "@/components/note/util";
 import { entityType, getEntityId } from "fusion/model/Entity";
 import { Rectangle, RectangleData } from "fusion/primitives/Rectangle";
 import { Note, NoteData } from "@/model/Note";
-import { pamet } from "@/core/facade";
-import { ImageItem } from "fusion/model/ImageItem";
-import { PametRoute } from "@/services/routing/route";
 import { Page } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
 import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
@@ -49,7 +46,7 @@ export class CardNote extends Note {
             parent_id: parentId,
             content: {
                 text: targetPage.name,
-                url: new PametRoute({ pageId: targetPage.id }).toProjectScopedURI(),
+                page_ref: { id: targetPage.id, path: targetPage.path },
             },
             geometry: [0, 0, 200, 100],
             style: {
@@ -66,7 +63,7 @@ export class CardNote extends Note {
     layout(): CardNoteLayout {
         let noteRect = this.rect();
         let hasText = this.content.text;
-        let hasImage = this.content.image_id;
+        let hasImage = this.content.image;
 
         let textArea: Rectangle | undefined;
         let imageArea: Rectangle | undefined;
@@ -77,9 +74,8 @@ export class CardNote extends Note {
             imageArea = noteRect;
         } else if (hasText && hasImage) {
             let imageAspectRatio = 1;
-            const mediaItem = pamet.findOne({ id: this.content.image_id }) as ImageItem;
-            if (mediaItem && mediaItem.width > 0 && mediaItem.height > 0) {
-                imageAspectRatio = mediaItem.width / mediaItem.height;
+            if (hasImage.width > 0 && hasImage.height > 0) {
+                imageAspectRatio = hasImage.width / hasImage.height;
             }
 
             let noteSize = noteRect.size();
@@ -127,20 +123,10 @@ export class CardNote extends Note {
         return textRect(textArea)
     }
 
-    internalLinkRoute(): PametRoute | undefined {
-        let url = this.content.url
-        if (url === undefined) {
-            return undefined
-        }
-        let route = PametRoute.fromUrl(url)
-        if (route.isInternal && route.pageId !== undefined) {
-            return route
-        }
-    }
     get hasInternalPageLink(): boolean {  // If refactoring change the index configs for Pamet
-        return this.internalLinkRoute() !== undefined
+        return this.content.page_ref !== undefined
     }
     get hasExternalLink(): boolean | undefined {  // If refactoring change the index configs for Pamet
-        return !!(this.content.url && !this.hasInternalPageLink)
+        return !!this.content.url
     }
 }

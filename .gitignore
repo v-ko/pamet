@@ -8,6 +8,8 @@ dist/
 dist-desktop/
 build/
 *.tsbuildinfo
+server/pamet/resources/canvas_viewer/viewer.js
+server/pamet/resources/canvas_viewer/viewer.css
 
 # Testing
 coverage/
@@ -57,5 +59,3 @@ venv/
 # Temporary files
 *.tmp
 *.temp
-
-#

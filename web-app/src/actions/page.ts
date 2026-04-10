@@ -18,6 +18,7 @@ import { Page } from "@/model/Page";
 import { ImageItem } from "fusion/model/ImageItem";
 import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
+import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { FileItem } from "fusion/model/FileItem";
@@ -73,9 +74,8 @@ class PageActions {
     // Represented page ids on current page
     const represented = new Set<string>();
     for (const note of pamet.notes({ parentId: pageId })) {
-      if (note instanceof CardNote && note.hasInternalPageLink) {
-        const pid = note.internalLinkRoute()?.pageId;
-        if (pid) represented.add(pid);
+      if (note instanceof CardNote && note.content.page_ref) {
+        represented.add(note.content.page_ref.id);
       }
     }
 
@@ -507,15 +507,11 @@ class PageActions {
     pamet.updatePage(newPageState);
 
     if (oldName !== undefined && oldName !== newName) {
-      for (const n of pamet.notes()) {
-        if (n instanceof CardNote && n.hasInternalPageLink) {
-          const pid = n.internalLinkRoute()?.pageId;
-          if (pid === newPageState.id) {
-            // Update displayed text to match page name
-            const updated = new CardNote({ ...n.data(), content: { ...n.content, text: newName } });
-            pamet.updateNote(updated);
-          }
-        }
+      const updates = linkUpdatesForPageRename(
+        pamet.frontendDomainStore, newPageState.id, newName, newPageState.path
+      );
+      for (const u of updates) {
+        pamet.updateNote(u.updated);
       }
     }
   }
@@ -649,12 +645,12 @@ class PageActions {
 
     // Include associated file items for image notes (1-1 with notes; no dedup required)
     for (const note of selectedNotes) {
-      if (note instanceof CardNote && note.content.image_id) {
-        const imageItem = pamet.imageItem(note.content.image_id);
+      if (note instanceof CardNote && note.content.image) {
+        const imageItem = pamet.imageItem(note.content.image.id);
         if (imageItem) {
           clipboardEntities.push(imageItem);
         } else {
-          log.warning(`Image item ${note.content.image_id} not found for note ${note.id}`);
+          log.warning(`Image item ${note.content.image.id} not found for note ${note.id}`);
         }
       }
     }

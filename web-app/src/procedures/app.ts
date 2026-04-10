@@ -101,7 +101,8 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
     // If the project to be deleted is the currently open one - detach first
     // so that the FDS stops pushing commits before storage is torn down
-    if (pamet.appViewState.currentProjectId === project.id) {
+    let deletingCurrentProject = pamet.appViewState.currentProjectId === project.id;
+    if (deletingCurrentProject) {
         log.info("Detaching from current project before removal");
         await switchToProject(null);
     }
@@ -124,7 +125,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         // If the current project is null (i.e. we've deleted the current project)
         // use the auto-assist to switch to the first project in the list
         // and create default page if needed, etc.
-        if (pamet.appViewState.currentProjectId === null) {
+        if (deletingCurrentProject) {
             await updateAppFromRouteOrAutoassist(new PametRoute());
         }
 
@@ -142,7 +143,7 @@ export async function updateAppFromRouteOrAutoassist(route?: PametRoute): Promis
     log.info('updateAppFromRouteOrAutoassist for route', route.toString());
     const appState = pamet.appViewState;
 
-    // 1. Resolve project (from route or first/new default)
+    // 1.
     let projectId = route.projectId;
     if (projectId === undefined) {
         const projects = pamet.trackedProjects();

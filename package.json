@@ -12,6 +12,7 @@
     "build:desktop": "tsc && BUILD_MODE=desktop vite build",
     "preview": "vite preview",
     "preview:desktop": "BUILD_MODE=desktop vite preview",
+    "build:viewer": "vite build --config web-app/src/canvas-viewer/vite.config.viewer.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "jest"
   },

@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@/index.css";
-import serviceWorkerUrl from "@/service-worker?url"
+import serviceWorkerUrl from "@/service-worker-desktop?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";

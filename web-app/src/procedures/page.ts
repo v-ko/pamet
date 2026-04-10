@@ -27,7 +27,7 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
     const pageId = state.page().id;
 
     // Split clipboard content by type (ImageItems on clipboard are ignored on
-    // same-project paste; notes keep their existing image_id references)
+    // same-project paste; notes keep their existing image references)
     const clipboardNotes: Note[] = [];
     const clipboardArrows: Arrow[] = [];
     for (const e of clipboard) {
@@ -48,7 +48,7 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
     const pasteOffset = util.snapVectorToGrid(relativeTo);
 
     // Notes: assign ids/parent, position.
-    // image_id references are preserved — the pasted note points to the same FileItem.
+    // image references are preserved — the pasted note points to the same FileItem.
     const notesToInsert: Note[] = [];
     for (const src of clipboardNotes) {
       const targetId = nextFreeIdOrSame(src.id);
@@ -123,7 +123,7 @@ export async function pasteInternal(
     const { notesToInsert, arrowsToInsert } = preparePasteTransform(appState, state, relativeTo);
 
     // Cross-project paste: if clipboard came from a different project,
-    // copy blobs into the current project and remap image_ids on pasted notes.
+    // copy blobs into the current project and remap image refs on pasted notes.
     const currentProjectId = appState.currentProjectId;
     const sourceProjectId = appState.clipboardProjectId;
     const newImageItems: ImageItem[] = [];
@@ -147,12 +147,12 @@ export async function pasteInternal(
                 // Temporarily load the source project for file access
                 await pamet.storageService.loadProject(sourceProjectId, sourceConfig);
 
-                const imageIdRemap = new Map<string, string>(); // old image_id -> new image_id
+                const imageIdRemap = new Map<string, string>(); // old image id -> new image id
                 for (const note of notesToInsert) {
-                    if (note instanceof CardNote && note.content.image_id) {
-                        const oldImageId = note.content.image_id;
+                    if (note instanceof CardNote && note.content.image) {
+                        const oldImageId = note.content.image.id;
                         if (imageIdRemap.has(oldImageId)) {
-                            note.content.image_id = imageIdRemap.get(oldImageId)!;
+                            note.content.image = { ...note.content.image, id: imageIdRemap.get(oldImageId)! };
                             continue;
                         }
                         const sourceImageItem = clipboardImageItems.get(oldImageId);
@@ -169,7 +169,12 @@ export async function pasteInternal(
                                 { width: sourceImageItem.width, height: sourceImageItem.height, size: blob.size, mime_type: blob.type }
                             );
                             imageIdRemap.set(oldImageId, newImageItem.id);
-                            note.content.image_id = newImageItem.id;
+                            note.content.image = {
+                                id: newImageItem.id,
+                                path: newImageItem.path,
+                                width: newImageItem.width,
+                                height: newImageItem.height,
+                            };
                             newImageItems.push(newImageItem);
                             log.info(`Cross-project paste: remapped image ${oldImageId} -> ${newImageItem.id}`);
                         } catch (err) {
@@ -241,7 +246,12 @@ export async function pasteInternal(
             pageId,
             { width, height, size: finalImageBlob.size, mime_type: finalImageBlob.type },
         );
-        note.content.image_id = imageItem.id;
+        note.content.image = {
+            id: imageItem.id,
+            path: imageItem.path,
+            width: imageItem.width,
+            height: imageItem.height,
+        };
 
         // Configure note position and size
         let rect = note.rect();
@@ -401,10 +411,10 @@ export async function cutInternal(
 
     // 2) Collect associated image items for clipboard reference (for display/re-reference on paste)
     for (const note of selectedNotes) {
-        if (note instanceof CardNote && note.content.image_id) {
-            const imageItem = pamet.imageItem(note.content.image_id);
+        if (note instanceof CardNote && note.content.image) {
+            const imageItem = pamet.imageItem(note.content.image.id);
             if (!imageItem) {
-                log.warning(`Cut: image item ${note.content.image_id} not found for note ${note.id}`);
+                log.warning(`Cut: image item ${note.content.image.id} not found for note ${note.id}`);
                 continue;
             }
             clipboardEntities.push(imageItem); // Keep metadata on clipboard for reference

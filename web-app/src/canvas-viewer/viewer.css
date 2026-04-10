@@ -1,0 +1,132 @@
+/* Pamet canvas viewer — standalone CSS for .canvas files */
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: #f0f0f0;
+    font-family: sans-serif;
+}
+
+#pamet-canvas {
+    position: relative;
+    /* width/height set by JS based on note bounding box */
+}
+
+/* ── Notes ─────────────────────────────────────────── */
+
+.note {
+    position: absolute;
+    overflow: hidden;
+    display: flex;
+    font-size: 18px;
+    line-height: 20px;
+}
+
+.note-body {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Horizontal layout: image left, text right */
+.note-body.layout-horizontal {
+    flex-direction: row;
+}
+
+/* ── Text area ─────────────────────────────────────── */
+
+.note-text {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px;
+    overflow: hidden;
+    min-height: 0;
+    min-width: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    text-align: center;
+    text-overflow: ellipsis;
+}
+
+/* ── Image area ────────────────────────────────────── */
+
+.note-image-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    min-height: 0;
+    min-width: 0;
+}
+
+/* In horizontal layout, image gets a fixed proportion */
+.layout-horizontal .note-image-area {
+    flex: none;
+    /* width set by JS */
+}
+
+/* In vertical layout, image takes 80% of height */
+.layout-vertical .note-image-area {
+    flex: none;
+    /* height set by JS */
+}
+
+.note-image-area img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* ── Link decorations ──────────────────────────────── */
+
+.note.has-border {
+    border: 0.5px solid currentColor;
+}
+
+.note.has-border-dashed {
+    border: 0.5px dashed currentColor;
+}
+
+/* External link triangle (top-right corner) */
+.note.external-link::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 10px 10px 0;
+    border-color: transparent currentColor transparent transparent;
+}
+
+/* Make linked notes appear clickable */
+a.note-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    position: absolute;
+}
+
+/* ── SVG arrow layer ───────────────────────────────── */
+
+#arrows-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    overflow: visible;
+}

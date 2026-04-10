@@ -404,12 +404,8 @@ export class PageController {
         return;
       }
       // For an internal link - follow it
-      if (note instanceof CardNote && note.hasInternalPageLink) {
-        let targetPage: Page | undefined;
-        let targetPageId = note.internalLinkRoute()?.pageId;
-        if (targetPageId !== undefined) {
-          targetPage = pamet.page(targetPageId);
-        }
+      if (note instanceof CardNote && note.content.page_ref) {
+        let targetPage = pamet.page(note.content.page_ref.id);
         if (targetPage !== undefined) {
           appActions.setCurrentPage(pamet.appViewState, targetPage.id);
           pamet.syncRouterFromAppState();

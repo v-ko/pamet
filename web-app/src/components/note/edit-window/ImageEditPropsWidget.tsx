@@ -81,7 +81,7 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
                 fileName = `${name}.${newExtension}`;
             }
 
-            if (noteData.content.image_id) {
+            if (noteData.content.image) {
                 setStatusMessage('Removing old image...');
                 await removeNoteImage();
             }
@@ -243,16 +243,16 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
 
     let imageUrl = '';
     let mediaItem: ImageItem | undefined;
-    if (noteData.content.image_id) {
+    if (noteData.content.image) {
         if (uncommitedMediaItem) {  // If it's added in this session
             mediaItem = new ImageItem(uncommitedMediaItem);
 
         } else {  // If it's been in the note before it's open for editing
-            let retrievedMediaItem = pamet.imageItem(noteData.content.image_id);
+            let retrievedMediaItem = pamet.imageItem(noteData.content.image.id);
             if (retrievedMediaItem) {
                 mediaItem = retrievedMediaItem;
             } else {
-                log.error('ImageEditPropsWidget: Could not find media item with ID:', noteData.content.image_id);
+                log.error('ImageEditPropsWidget: Could not find media item with ID:', noteData.content.image.id);
             }
         }
 

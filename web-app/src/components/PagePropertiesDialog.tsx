@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from '@/core/facade';
 import "@/components/dialogs/Dialog.css";
 import { Page } from '@/model/Page';
+import { CANVAS_EXT } from '@/core/constants';
 
 interface PagePropertiesDialogProps {
   page: Page;
@@ -24,11 +25,12 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
     }
   }, []);
 
-  // Check if name is already taken by a different page
+  // Check if name is already taken by a different page in the same folder
   const isNameTaken = useMemo(() => {
     const trimmed = pageName.trim();
     if (!trimmed || trimmed === page.name) return false;
-    return !!pamet.findOne({ type: Page, name: trimmed });
+    const folder = page.folder;
+    return Array.from(pamet.pages()).some(p => p.id !== page.id && p.folder === folder && p.name === trimmed);
   }, [pageName, page.name]);
 
   function handleSave(e: FormEvent) {
@@ -38,7 +40,10 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
       return;
     }
     const updatedPage = page;
-    updatedPage.name = trimmed;
+    // Update path: replace the stem (name), keep folder and extension
+    const folder = updatedPage.folder;
+    const newPath = (folder ? folder + '/' : '') + trimmed + CANVAS_EXT;
+    updatedPage.path = newPath;
     onSave(updatedPage);
     // Allow default submit to close the dialog (method="dialog")
   }

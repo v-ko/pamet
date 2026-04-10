@@ -13,6 +13,7 @@ from fusion.logging import get_logger
 from pamet.desktop_app.config import get_repo_settings, save_repo_settings
 from pamet.model.arrow import Arrow
 from pamet.model.file_item import FileItem
+from pamet.model.page import Page
 from pamet.services.constants import MAX_WALK_ENTRIES
 from pamet.services.fs_sync_service import FileSystemSyncService
 from pamet.storage.canvas_html import write_canvas_file
@@ -110,7 +111,7 @@ class ProjectFolderManager:
         file_items: list[FileItem] = []
         for canvas_path in self._iter_canvas_page_paths():
             try:
-                entities = read_canvas_file(canvas_path)
+                entities = read_canvas_file(canvas_path, self.repo_root)
             except ForeignCanvasFile:
                 continue
             except CanvasParseError:
@@ -197,26 +198,32 @@ class ProjectFolderManager:
 
     def write_page_canvas_file(
         self,
-        page_id: str,
+        page_path: str,
         page_dict: dict[str, Any],
         notes: list[dict[str, Any]],
         arrows: list[dict[str, Any]],
         file_items: list[dict[str, Any]] | None = None,
     ) -> Path:
-        """Assemble and write a .canvas file for the given page."""
+        """Assemble and write a .canvas file for the given page.
+
+        *page_path* is the project-relative path (e.g. ``notes/my-page.canvas``).
+        The ``path`` key is stripped from the serialized data (inferred on read).
+        """
         file_data = dict(page_dict)
+        file_data.pop("path", None)
         file_data["notes"] = notes
         file_data["arrows"] = arrows
         if file_items:
             file_data["file_items"] = file_items
-        canvas_path = self.repo_root / f"{page_id}{CANVAS_FILE_EXT}"
+        canvas_path = self.repo_root / page_path
         with self.write_lock:
+            canvas_path.parent.mkdir(parents=True, exist_ok=True)
             write_canvas_file(canvas_path, file_data)
         return canvas_path
 
-    def delete_page_canvas_file(self, page_id: str) -> None:
-        """Delete the .canvas file for the given page, if it exists."""
-        canvas_path = self.repo_root / f"{page_id}{CANVAS_FILE_EXT}"
+    def delete_page_canvas_file(self, page_path: str) -> None:
+        """Delete the .canvas file at the given project-relative *page_path*."""
+        canvas_path = self.repo_root / page_path
         with self.write_lock:
             if canvas_path.exists():
                 canvas_path.unlink()
@@ -228,40 +235,65 @@ class ProjectFolderManager:
         delta = Delta.from_data(delta_data)
         applied = self.store.apply_delta(delta)
 
-        # Determine affected page IDs from the applied changes
-        affected_page_ids: set[str] = set()
-        deleted_page_ids: set[str] = set()
-        change_count = 0
+        pages_to_write: set[str] = set()
+        deleted_page_paths: dict[str, str] = {}
+        old_canvas_paths: list[str] = []
 
         for change in applied.changes():
-            change_count += 1
-            component = change.forward_component or change.reverse_component
-            type_name = component.get("type_name", "")
-            if type_name == "Page":
-                page_id = change.entity_id
-            else:
-                page_id = component.get("parent_id")
-            if page_id is None:
-                continue
-            if change.is_delete() and type_name == "Page":
-                deleted_page_ids.add(change.entity_id)
-            else:
-                affected_page_ids.add(page_id)
+            if change.is_delete():
+                # Entity is gone from the store; use reverse_component
+                # (full old state from Change.delete → dump_to_dict).
+                rev = change.reverse_component
+                if rev.get("type_name") == "Page":
+                    deleted_page_paths[change.entity_id] = rev.get("path", "")
+                else:
+                    parent_id = rev.get("parent_id", "")
+                    if parent_id:
+                        pages_to_write.add(parent_id)
 
-        # Write affected pages to disk (exclude deleted ones)
-        affected_page_ids -= deleted_page_ids
-        for page_id in affected_page_ids:
+            elif change.is_create():
+                entity = self.store.find_one(id=change.entity_id)
+                if entity is None:
+                    continue
+                if isinstance(entity, Page):
+                    pages_to_write.add(entity.id)
+                elif entity.parent_id:
+                    pages_to_write.add(entity.parent_id)
+
+            elif change.is_update():
+                entity = self.store.find_one(id=change.entity_id)
+                if entity is None:
+                    continue
+                if isinstance(entity, Page):
+                    pages_to_write.add(entity.id)
+                    # Path rename: schedule old canvas file for deletion
+                    old_path = change.reverse_component.get("path")
+                    if old_path:
+                        old_canvas_paths.append(old_path)
+                elif entity.parent_id:
+                    pages_to_write.add(entity.parent_id)
+                    # Reparented child: also rewrite old parent page
+                    old_parent_id = change.reverse_component.get("parent_id")
+                    if old_parent_id:
+                        pages_to_write.add(old_parent_id)
+
+        pages_to_write -= set(deleted_page_paths)
+
+        for page_id in pages_to_write:
             self._write_page_to_disk(page_id)
 
-        # Delete removed pages from disk
-        for page_id in deleted_page_ids:
-            self.delete_page_canvas_file(page_id)
+        for old_path in old_canvas_paths:
+            self.delete_page_canvas_file(old_path)
+
+        for path in deleted_page_paths.values():
+            if path:
+                self.delete_page_canvas_file(path)
 
         log.info(
-            "Applied delta: %d changes, %d pages written, %d pages deleted",
-            change_count,
-            len(affected_page_ids),
-            len(deleted_page_ids),
+            "Applied delta: %d changes, %d pages written, %d deleted",
+            sum(1 for _ in applied.changes()),
+            len(pages_to_write),
+            len(deleted_page_paths),
         )
 
     def _write_page_to_disk(self, page_id: str) -> None:
@@ -272,6 +304,7 @@ class ProjectFolderManager:
             return
 
         page_dict = dump_to_dict(page_entity)
+        page_path = page_dict.get("path", "")
 
         notes: list[dict[str, Any]] = []
         arrows: list[dict[str, Any]] = []
@@ -286,7 +319,7 @@ class ProjectFolderManager:
             else:
                 notes.append(child_dict)
 
-        self.write_page_canvas_file(page_id, page_dict, notes, arrows, file_items)
+        self.write_page_canvas_file(page_path, page_dict, notes, arrows, file_items)
 
     def get_project_properties(self) -> dict[str, Any]:
         return cast(dict[str, Any], get_repo_settings(self.repo_root))

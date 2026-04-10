@@ -108,8 +108,8 @@ export class PageViewState {
         for (let note of notes) {
             this.addViewStateForElement(note);
 
-            if (note.content.image_id) {
-                let imageItem = pamet.imageItem(note.content.image_id);
+            if (note.content.image) {
+                let imageItem = pamet.imageItem(note.content.image.id);
                 if (!imageItem) {
                     log.error('Image item not found for note', note.id);
                     continue;

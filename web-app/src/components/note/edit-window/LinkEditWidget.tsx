@@ -4,7 +4,6 @@ import { SerializedNote } from "@/model/Note";
 import { PametTabIndex } from "@/core/constants";
 import { Page } from '@/model/Page';
 import { pamet } from '@/core/facade';
-import { PametRoute } from '@/services/routing/route';
 import './LinkEditWidget.css';
 
 interface SuggestionListProps {
@@ -49,72 +48,57 @@ export const LinkEditWidget: React.FC<LinkEditWidgetProps> = ({ noteData, update
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync local state from note data; render pill + empty input for internal links
+  // Sync local state from note data: show pill for internal page link
   useEffect(() => {
-    const link = noteData.content.url || '';
-    if (link.startsWith('project://')) {
-      const route = PametRoute.fromUrl(link);
-      if (route.pageId) {
-        const page = pamet.page(route.pageId);
-        if (page) {
-          setSelectedInternalLink(page);
-          setInputValue(''); // keep the text area empty while pill shows the link
-          return;
-        }
+    const pageRef = noteData.content.page_ref;
+    if (pageRef) {
+      const page = pamet.page(pageRef.id);
+      if (page) {
+        setSelectedInternalLink(page);
+        setInputValue('');
+        return;
       }
     }
     setSelectedInternalLink(null);
-    setInputValue(link);
-  }, [noteData.content.url]);
+    setInputValue(noteData.content.url || '');
+  }, [noteData.content.page_ref, noteData.content.url]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInputValue(value);
-    updateNoteData({ content: { ...noteData.content, url: value } });
 
-    if (value.startsWith('project://')) {
-      const route = PametRoute.fromUrl(value);
-      if (route.pageId) {
-        const page = pamet.page(route.pageId);
-        setSelectedInternalLink(page ?? null);
-      } else {
-        setSelectedInternalLink(null);
-      }
-      setSuggestions([]);
+    // If there's an internal link set, input is for search only (don't touch url)
+    if (!selectedInternalLink) {
+      updateNoteData({ content: { ...noteData.content, url: value } });
+    }
+
+    // Offer page suggestions when typing (but not when it looks like a URL)
+    if (value && !value.includes('://')) {
+      const pages = Array.from(pamet.pages());
+      const filtered = pages
+        .filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
+        .slice(0, 10);
+      setSuggestions(filtered);
+      setHighlightedIndex(filtered.length ? 0 : -1);
     } else {
-      setSelectedInternalLink(null);
-      if (value) {
-        const pages = Array.from(pamet.pages());
-        const filtered = pages
-          .filter(p => p.name.toLowerCase().includes(value.toLowerCase()))
-          .slice(0, 10);
-        setSuggestions(filtered);
-        setHighlightedIndex(filtered.length ? 0 : -1);
-      } else {
-        setSuggestions([]);
-        setHighlightedIndex(-1);
-      }
+      setSuggestions([]);
+      setHighlightedIndex(-1);
     }
   };
 
   const handleSelectPage = (page: Page) => {
-    const route = new PametRoute();
-    route.pageId = page.id;
-    const uri = route.toProjectScopedURI();
-    updateNoteData({ content: { ...noteData.content, url: uri, text: page.name } });
+    updateNoteData({ content: { ...noteData.content, page_ref: { id: page.id, path: page.path }, text: page.name, url: undefined } });
     setSelectedInternalLink(page);
-    setInputValue(''); // keep empty text; pill represents the link
+    setInputValue('');
     setSuggestions([]);
     setHighlightedIndex(-1);
-    // keep focus for continued typing after the pill
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
   const handleRemoveInternalLink = () => {
-    // Also clear the text property
-    updateNoteData({ content: { ...noteData.content, url: '', text: '' } });
+    updateNoteData({ content: { ...noteData.content, page_ref: undefined, text: '' } });
     setSelectedInternalLink(null);
     setInputValue('');
     requestAnimationFrame(() => inputRef.current?.focus());

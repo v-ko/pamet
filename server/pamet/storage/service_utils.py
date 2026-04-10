@@ -20,8 +20,11 @@ class ProjectTooLargeError(Exception):
     """Raised when a project folder exceeds the walk budget."""
 
 
-def read_canvas_file(canvas_path: Path) -> dict[str, Entity]:
+def read_canvas_file(canvas_path: Path, repo_root: Path) -> dict[str, Entity]:
     """Parse a .canvas file and return a flat {entity_id → Entity} map.
+
+    The Page entity's ``path`` is inferred from the file's location relative
+    to *repo_root* (any serialized ``path`` or legacy ``name`` is ignored).
 
     Raises ForeignCanvasFile if the file doesn't look like a pamet canvas
     (missing or wrong schema indicators — e.g. from Obsidian).
@@ -59,6 +62,11 @@ def read_canvas_file(canvas_path: Path) -> dict[str, Entity]:
     notes = page_data.pop("notes", [])
     arrows = page_data.pop("arrows", [])
     file_items = page_data.pop("file_items", [])
+
+    # Infer path from file location, strip any serialized path/name
+    page_data.pop("path", None)
+    page_data.pop("name", None)
+    page_data["path"] = canvas_path.relative_to(repo_root).as_posix()
 
     entities: dict[str, Entity] = {}
 

@@ -1,13 +1,13 @@
 from fusion.libs.entity import entity_type
 
-from pamet.model.note import Note
+from pamet.model.note import ImageReference, Note, PageReference
 
 
 @entity_type
 class CardNote(Note):
     """Unified note type matching TS CardNote.
 
-    Content keys: text, url, image_id
+    Content keys: text, url, page_ref, image
     Metadata keys: is_project_index_header
     Style keys: color_role, background_color_role
     """
@@ -35,12 +35,24 @@ class CardNote(Note):
 
     # --- Image ---
     @property
-    def image_id(self) -> str | None:
-        return self.content.get("image_id")
+    def image(self) -> ImageReference | None:
+        return self.content.get("image")
 
-    @image_id.setter
-    def image_id(self, item_id: str | None):
-        if item_id is None:
-            self.content.pop("image_id", None)
+    @image.setter
+    def image(self, ref: ImageReference | None):
+        if ref is None:
+            self.content.pop("image", None)
         else:
-            self.content["image_id"] = item_id
+            self.content["image"] = ref
+
+    # --- Page ref (internal link to another page) ---
+    @property
+    def page_ref(self) -> PageReference | None:
+        return self.content.get("page_ref")
+
+    @page_ref.setter
+    def page_ref(self, ref: PageReference | None):
+        if ref is None:
+            self.content.pop("page_ref", None)
+        else:
+            self.content["page_ref"] = ref

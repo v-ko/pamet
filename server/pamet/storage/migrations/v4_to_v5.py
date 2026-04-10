@@ -69,11 +69,17 @@ def _color_to_role(rgba_list) -> str:
 
 
 def convert_v4_to_v5_element(
-    element_data: Dict[str, Any], page_id: str
+    element_data: Dict[str, Any],
+    page_id: str,
+    page_id_to_path: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Convert a single V4 element dict to V5 format.
 
     Handles notes (all legacy types -> CardNote) and arrows.
+
+    *page_id_to_path*, when provided, maps V4 page IDs to their V5
+    project-relative ``.canvas`` paths so that ``page_ref.path`` is set
+    correctly for internal links.
     """
     if not isinstance(element_data, dict):
         return element_data
@@ -132,10 +138,23 @@ def convert_v4_to_v5_element(
             style["color_role"] = "onSurface"
             style["background_color_role"] = "surfaceDim"
 
-        # Internal link URL rewrite
+        # Internal link URL → page_ref migration
         url = content.get("url")
         if isinstance(url, str) and url.startswith("pamet:/p"):
-            content["url"] = url.replace("pamet:/p", "project:/page")
+            # Extract page id from pamet:/p/<page_id> or pamet:/p/<page_id>/...
+            parts = url.replace("pamet:/p/", "").split("/")
+            if parts and parts[0]:
+                target_id = parts[0]
+                target_path = (
+                    page_id_to_path.get(target_id, target_id + CANVAS_FILE_EXT)
+                    if page_id_to_path
+                    else target_id + CANVAS_FILE_EXT
+                )
+                content["page_ref"] = {
+                    "id": target_id,
+                    "path": target_path,
+                }
+            content.pop("url", None)
 
         # Image metadata migration
         image_size = metadata.pop("image_size", None)
@@ -403,7 +422,12 @@ def _migrate_single_image_note(
     if file_path in image_item_by_source:
         item_dict = image_item_by_source[file_path]
         content.pop("image", None)
-        content["image_id"] = item_dict["id"]
+        content["image"] = {
+            "id": item_dict["id"],
+            "path": item_dict["path"],
+            "width": item_dict["metadata"]["width"],
+            "height": item_dict["metadata"]["height"],
+        }
         log.info(
             f"  note {note['id']}: reusing ImageItem {item_dict['id']} "
             f"(from: {original_url})"
@@ -448,7 +472,12 @@ def _migrate_single_image_note(
 
     # Rewrite the note
     content.pop("image", None)
-    content["image_id"] = item_dict["id"]
+    content["image"] = {
+        "id": item_dict["id"],
+        "path": rel_path,
+        "width": width,
+        "height": height,
+    }
 
     log.info(
         f"  note {note['id']}: created ImageItem {item_dict['id']} "
@@ -570,9 +599,11 @@ def migrate_legacy_project_config(
                 continue
             content = note_state.get("content")
             if isinstance(content, dict):
-                image_id = content.get("image_id")
-                if isinstance(image_id, str) and image_id:
-                    note_page_by_image_id[image_id] = page_id
+                image_ref = content.get("image")
+                if isinstance(image_ref, dict):
+                    image_id = image_ref.get("id")
+                    if isinstance(image_id, str) and image_id:
+                        note_page_by_image_id[image_id] = page_id
 
     attached_count = 0
     for image_item in image_items:
@@ -614,7 +645,10 @@ def migrate_legacy_project_config(
     return True
 
 
-def convert_v4_to_v5_page_dict(page_data: Dict[str, Any]) -> Dict[str, Any]:
+def convert_v4_to_v5_page_dict(
+    page_data: Dict[str, Any],
+    page_id_to_path: Optional[Dict[str, str]] = None,
+) -> Dict[str, Any]:
     """Convert a v4 page dict to current canvas schema."""
     result = copy.deepcopy(page_data)
 
@@ -624,7 +658,8 @@ def convert_v4_to_v5_page_dict(page_data: Dict[str, Any]) -> Dict[str, Any]:
 
     if "children" in result:
         migrated_children = [
-            convert_v4_to_v5_element(ch, page_id) for ch in result["children"]
+            convert_v4_to_v5_element(ch, page_id, page_id_to_path)
+            for ch in result["children"]
         ]
         result["notes"] = [
             child
@@ -646,7 +681,8 @@ def convert_v4_to_v5_page_dict(page_data: Dict[str, Any]) -> Dict[str, Any]:
         result.pop("children", None)
     else:
         all_notes = [
-            convert_v4_to_v5_element(n, page_id) for n in result.get("notes", [])
+            convert_v4_to_v5_element(n, page_id, page_id_to_path)
+            for n in result.get("notes", [])
         ]
         result["notes"] = [
             n
@@ -660,7 +696,8 @@ def convert_v4_to_v5_page_dict(page_data: Dict[str, Any]) -> Dict[str, Any]:
             if isinstance(n, dict) and n.get("type_name") in ("FileItem", "ImageItem")
         ]
         result["arrows"] = [
-            convert_v4_to_v5_element(a, page_id) for a in result.get("arrows", [])
+            convert_v4_to_v5_element(a, page_id, page_id_to_path)
+            for a in result.get("arrows", [])
         ]
 
     result.setdefault("type_name", "Page")
@@ -699,14 +736,38 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
     if v4_pages:
         log.info(f"migrate_v4_to_v5: converting {len(v4_pages)} page(s) in {repo_path}")
 
+        # First pass: build page_id → v5 path map so internal links get
+        # correct page_ref.path values (using the page name, not the id).
+        page_id_to_path: Dict[str, str] = {}
+        used_names: Dict[str, int] = {}  # collision counter
+        v4_page_datas: list[tuple[Path, Dict[str, Any]]] = []
         for v4_path in v4_pages:
             try:
                 with open(v4_path, "r", encoding="utf-8") as f:
                     page_data = json.load(f)
+            except Exception as e:
+                log.error(f"  FAILED to read {v4_path.name}: {e}")
+                continue
+            page_id = page_data.get("id")
+            if not page_id:
+                log.error(f"  SKIPPING {v4_path.name}: missing page id")
+                continue
+            page_name = page_data.get("name", page_id)
+            # Handle name collisions by appending the page id
+            if page_name in used_names:
+                page_name = f"{page_name} ({page_id})"
+            used_names[page_name] = 1
+            v5_rel_path = page_name + CANVAS_FILE_EXT
+            page_id_to_path[page_id] = v5_rel_path
+            v4_page_datas.append((v4_path, page_data))
+
+        # Second pass: convert and write
+        for v4_path, page_data in v4_page_datas:
+            try:
                 page_id = page_data["id"]
 
-                v5_path = v4_path.parent / (page_id + CANVAS_FILE_EXT)
-                v5_data = convert_v4_to_v5_page_dict(page_data)
+                v5_path = v4_path.parent / page_id_to_path[page_id]
+                v5_data = convert_v4_to_v5_page_dict(page_data, page_id_to_path)
                 _migrate_images_in_page(v5_data, repo_path)
 
                 write_canvas_file(v5_path, v5_data)

@@ -2,13 +2,21 @@ import { Entity, EntityData, entityType } from "fusion/model/Entity"
 import { timestamp } from 'fusion/util/base';
 import { PametRoute } from "@/services/routing/route";
 
+/** Extract the filename stem (name without extension) from a POSIX path. */
+export function stemFromPath(path: string): string {
+  const lastSlash = path.lastIndexOf('/');
+  const filename = lastSlash !== -1 ? path.substring(lastSlash + 1) : path;
+  const dotIndex = filename.lastIndexOf('.');
+  return dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
+}
+
 export interface TourSegment {
   link: string;
   html: string;
 }
 
 export interface PageData extends EntityData {
-  name: string;
+  path: string;
   created: string;
   modified: string;
   // tour_segments: TourSegment[];
@@ -18,7 +26,7 @@ export interface PageData extends EntityData {
 @entityType('Page')
 export class Page extends Entity<PageData> {
   toString(): string {
-    return `<Page id=${this.id} name=${this.name}>`;
+    return `<Page id=${this.id} path=${this.path}>`;
   }
 
   get parentId(): string {
@@ -49,11 +57,22 @@ export class Page extends Entity<PageData> {
   }
 
   //  Data access properties
-  get name(): string {
-    return this._data.name;
+  get path(): string {
+    return this._data.path;
   }
-  set name(newName: string) {
-    this._data.name = newName;
+  set path(newPath: string) {
+    this._data.path = newPath;
+  }
+  /** Derived: filename stem without extension */
+  get name(): string {
+    if (!this.path) return '';
+    return stemFromPath(this.path);
+  }
+  /** Derived: parent directory (empty string for root) */
+  get folder(): string {
+    if (!this.path) return '';
+    const lastSlash = this.path.lastIndexOf('/');
+    return lastSlash !== -1 ? this.path.substring(0, lastSlash) : '';
   }
   get created(): string {
     return this._data.created;

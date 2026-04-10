@@ -144,8 +144,8 @@ export const IMAGE_CONVERSION_PRESET_PNG: ImageConversionPreset = {
     // It's effectively lossless but without control over compression level.
 };
 
+// Page files
+export const CANVAS_EXT = '.canvas';
+
 // Animation related
 export const SEARCH_RESULT_ANIMATION_TIME = 200 // ms
-
-// Standard texts
-export const MISSING_PAGE_TITLE = '(missing)';
