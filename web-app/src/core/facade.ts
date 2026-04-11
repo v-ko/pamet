@@ -7,7 +7,9 @@ import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { ImageItem } from "fusion/model/ImageItem";
 import { FileItemMetadata } from "fusion/model/FileItem";
-import { FrontendDomainStore } from "@/storage/FrontendDomainStore";
+import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
+import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
+import { OptimisticProjectSyncService } from "@/storage/OptimisticProjectSyncService";
 import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
 import { StorageService } from "fusion/storage/management/StorageService";
 import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
@@ -55,7 +57,8 @@ export class PametFacade extends PametStore {
     getEntityId() {
         throw new Error("Method not implemented.");
     }
-    private _frontendDomainStore: FrontendDomainStore | null = null;
+    _frontendDomainStore: InMemoryStore | null = null;
+    private _projectSyncService: OptimisticProjectSyncService | null = null;
     private _appViewState: WebAppState | null = null;
     private _config: PametSettingsService | null = null;
     private _appMiscProperties: MiscPropertiesService | null = null;
@@ -85,7 +88,7 @@ export class PametFacade extends PametStore {
 
         // Register rootAction hook to record user-originated deltas for Undo before saving
         registerRootActionCompletedHook((rootAction) => {
-            if (!this._frontendDomainStore) {
+            if (!this._projectSyncService) {
                 return;
             }
             if (!rootAction || rootAction.issuer !== 'user') {
@@ -95,7 +98,7 @@ export class PametFacade extends PametStore {
             if (rootAction.name === UNDO_ACTION_NAME || rootAction.name === REDO_ACTION_NAME) {
                 return;
             }
-            const uncommitted = this.frontendDomainStore.uncommittedChanges;
+            const uncommitted = this._projectSyncService.uncommittedChanges;
             if (!uncommitted || uncommitted.length === 0) {
                 return;
             }
@@ -110,13 +113,10 @@ export class PametFacade extends PametStore {
 
         // Register rootAction hook to auto-commit / save
         registerRootActionCompletedHook(() => {
-            // Better do the registration here, so that we don't have to worry
-            // about unregistering when swapping out the FDS
-            if (!this._frontendDomainStore) {
-                // log.warning('No frontend domain store set'); // If FDS was used - it would raise exception
+            if (!this._projectSyncService) {
                 return;
             }
-            this.frontendDomainStore.saveUncommitedChanges()
+            this._projectSyncService.saveUncommittedChanges();
         });
 
         // Register logger to root actions hooks
@@ -151,19 +151,18 @@ export class PametFacade extends PametStore {
         return this.projectStorageConfigFactory(projectId, userId, deviceId);
     }
 
-    get frontendDomainStore(): FrontendDomainStore {
+    get frontendDomainStore(): InMemoryStore {
         if (!this._frontendDomainStore) {
             throw Error('Frontend domain store not set');
         }
         return this._frontendDomainStore;
     }
 
-    removeFrontendDomainStore() {
-        this._frontendDomainStore = null;
-    }
-
-    setFrontendDomainStore(store: FrontendDomainStore) {
-        this._frontendDomainStore = store;
+    get projectSyncService(): OptimisticProjectSyncService {
+        if (!this._projectSyncService) {
+            throw Error('Project sync service not set');
+        }
+        return this._projectSyncService;
     }
 
     get storageService() {
@@ -275,32 +274,47 @@ export class PametFacade extends PametStore {
     async attachProjectAsCurrent(projectId: string) {
         // Reset undo histories when switching projects
         this.undoService.clearAll();
-        const frontendDomainStore = new FrontendDomainStore();
+
+        // Create the plain store and wire the view model reducer + change tracking to onChanges
+        const store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
+        store.onChanges = (delta) => {
+            entityDeltaToViewModelReducer(this.appViewState, delta);
+            for (const change of delta.changes()) {
+                syncService.trackChange(change);
+            }
+        };
+
+        // Create the sync service (optimistic commit + reconciliation)
+        const storageConfig = pamet.projectStorageConfig(projectId);
+        const syncService = new OptimisticProjectSyncService(
+            store, pamet.storageService, projectId, storageConfig.deviceBranchName
+        );
+
         const trackedProject = this.appViewState.trackedProject(projectId);
 
-        // Load the new project and connect it to the Frontend domain store
+        // Load the project in the StorageService, connecting the sync service
+        // as the repo-update handler
         let repoUpdateHandler = (repoUpdate: RepoUpdateData) => {
-            // This handler will be called whenever the repo is updated
-            frontendDomainStore.receiveRepoUpdate(repoUpdate)
-        }
+            syncService.receiveRepoUpdate(repoUpdate);
+        };
         try {
             await pamet.storageService.loadProject(
                 projectId,
-                pamet.projectStorageConfig(projectId),
+                storageConfig,
                 repoUpdateHandler,
                 trackedProject?.uri,
-            )
-
+            );
         } catch (e) {
             log.error('Error loading project', e);
             throw e;
         }
 
-        pamet._frontendDomainStore = frontendDomainStore
+        // Install the store and sync service
+        this._frontendDomainStore = store;
+        this._projectSyncService = syncService;
 
-        // Initialize the FDS from the storage service
-        const storageConfig = pamet.projectStorageConfig(projectId);
-        await pamet.frontendDomainStore.initialize(projectId, storageConfig.deviceBranchName);
+        // Hydrate from the storage service
+        await syncService.initialize();
 
         // Initialize search indices with all notes and pages
         const allNotes = Array.from(this.notes());
@@ -309,7 +323,7 @@ export class PametFacade extends PametStore {
     }
 
     async detachFromProject(projectId: string) {
-        log.info('Detaching FDS for project', projectId);
+        log.info('Detaching from project', projectId);
         this.undoService.clearAll();
         this.searchService.clear();
         let currentProject: PametProjectData;
@@ -321,6 +335,7 @@ export class PametFacade extends PametStore {
         }
 
         this._frontendDomainStore = null;
+        this._projectSyncService = null;
         await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
                 log.error('Error unloading project', e);
@@ -480,7 +495,8 @@ export class PametFacade extends PametStore {
     }
 
     applyDelta(delta: Delta, skipIrrationalOperations: boolean = false): Delta {
-        return this.frontendDomainStore.applyDelta(delta, skipIrrationalOperations); // The viewModel reducer is aplied when the CRUD calls are made for each change in the delta
+        // onChange fires once for the whole batch via applyDelta
+        return this.frontendDomainStore.applyDelta(delta, skipIrrationalOperations);
     }
 }
 

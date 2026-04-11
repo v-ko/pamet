@@ -23,7 +23,7 @@ import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { DebugDialog } from "@/components/DebugDialog";
-import { importDesktopDataForTesting, resolvePageId } from "@/procedures/app";
+import { resolvePageId } from "@/procedures/app";
 import { PametRoute } from "@/services/routing/route";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
 import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";

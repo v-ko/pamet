@@ -6,7 +6,7 @@ import serviceWorkerUrl from "@/service-worker?url"
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
-import { DEFAULT_KEYBINDINGS } from "@/core/keybindings";
+import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate, updateAppStateFromConfig } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
