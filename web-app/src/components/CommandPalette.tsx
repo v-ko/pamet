@@ -3,10 +3,12 @@ import { observer } from 'mobx-react-lite';
 import "@/components/CommandPalette.css";
 import { pamet } from "@/core/facade";
 import { appActions } from "@/actions/app";
-import { switchToProject } from "@/procedures/app";
+import { navigateToProject } from "@/procedures/app";
 import { getLogger } from 'fusion/logging';
 import { getCommands } from 'fusion/registries/Command';
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
+
+import { PametRoute } from "@/services/routing/route";
 
 let log = getLogger('CommandPalette');
 
@@ -14,6 +16,7 @@ let log = getLogger('CommandPalette');
 interface PaletteItemAttributes {
   id: string;
   title: string;
+  subtitle?: string;
   action: () => void;
 }
 
@@ -28,14 +31,17 @@ const closeCommandPalette = () => {
 const createPageNavigationAction = (page: any) => () => {
     log.info(`Navigating to page ${page.name}`);
     closeCommandPalette();
-    appActions.setCurrentPage(pamet.appViewState, page.id);
-    pamet.syncRouterFromAppState();
+    pamet.navigateTo(new PametRoute({
+        userId: pamet.appViewState.userId,
+        projectId: pamet.appViewState.currentProjectId ?? undefined,
+        pageId: page.id,
+    })).catch((e) => console.error('Error navigating to page', e));
 };
 
 // Helper function to create project switch action
 const createProjectSwitchAction = (project: any) => () => {
     closeCommandPalette();
-    switchToProject(project.id).catch((error) => {
+    navigateToProject(project.id).catch((error) => {
         console.error(`Error switching to project ${project.title}:`, error);
     });
 };
@@ -55,6 +61,7 @@ const getPagesForPalette = (searchText: string, currentPageId: string): PaletteI
                 pageCommands.push({
                     id: page.id,
                     title: page.name,
+                    subtitle: page.folder || undefined,
                     action: createPageNavigationAction(page)
                 });
             }
@@ -67,6 +74,7 @@ const getPagesForPalette = (searchText: string, currentPageId: string): PaletteI
             pageCommands.push({
                 id: page.id,
                 title: page.name,
+                subtitle: page.folder || undefined,
                 action: createPageNavigationAction(page)
             });
         }
@@ -144,7 +152,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({initialInput, upd
                }}
                 onMouseEnter={() => setSelectedIndex(index)}
             >
-              {command.title}
+              <span>{command.title}</span>
+              {command.subtitle && <span className="palette-subtitle">{command.subtitle}</span>}
             </li>
           ))}
         </ul>

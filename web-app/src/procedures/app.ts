@@ -9,7 +9,6 @@ import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
 import { createId, currentTime, timestamp } from "fusion/util/base";
-import { DesktopImporter } from "@/storage/DesktopImporter";
 
 import { LOCAL_USER_ID } from "@/core/constants";
 
@@ -296,49 +295,6 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
             log.info('AT updateAppStateFromConfig. Current project present. Reflecting new state', currentProjectNewState);
             appActions.reflectCurrentProjectState(appState, currentProjectNewState ?? null);
         }
-    }
-}
-
-export async function importDesktopDataForTesting() {
-    log.info('Starting import of desktop data for testing...');
-    const appState = pamet.appViewState;
-
-    appActions.updateSystemDialogState(appState, {title: 'Starting import...'});
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-
-    try {
-        // 1. Create a new project for the imported data
-        appActions.updateSystemDialogState(appState, {title: 'Creating new project...'});
-
-        const newProject: ProjectData = {
-            id: `desktop-import-${createId()}`,
-            title: 'Desktop Import',
-            description: 'Imported from desktop server',
-            created: timestamp(currentTime()),
-        };
-        await createProject(newProject);
-
-        // 2. Switch to the new project
-        appActions.updateSystemDialogState(appState, {title: 'Switching to new project...'});
-        await switchProject(newProject.id);
-
-        // 3. Fetch data from desktop server and import it
-        const desktopImporter = new DesktopImporter("http://localhost", 11352);
-        await desktopImporter.importAllInProject((progress: number, message: string) => {
-            appActions.updateSystemDialogState(appState, {title: message, taskProgress: progress});
-        });
-
-        log.info(`Imported entities into project ${newProject.id}`);
-
-    } catch (e) {
-        log.error('Failed to import desktop data', e);
-        alert('Failed to import desktop data. See console for details.');
-    } finally {
-        // 6. Close the dialog
-        appActions.updateSystemDialogState(appState, null);
-    }
-    if (appState.currentProjectId) {
-        await navigateToProject(appState.currentProjectId);
     }
 }
 

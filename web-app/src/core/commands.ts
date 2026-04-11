@@ -165,7 +165,7 @@ class PametCommands {
 
         if (!appState.currentPageViewState) {
             // If last page - create default
-            if (Array(pamet.pages()).length === 0) {
+            if (Array.from(pamet.pages()).length === 0) {
                 let page = projectActions.createDefaultPage(appState);
                 appActions.setCurrentPage(appState, page.id);
             } else {

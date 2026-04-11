@@ -34,6 +34,18 @@
     padding: 0.1em 0.5em;
     font-size: 0.9em;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.palette-subtitle {
+    margin-left: auto;
+    color: #888;
+    font-size: 0.85em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .command-list li:not(:last-child) {
