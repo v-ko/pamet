@@ -146,6 +146,7 @@ export const IMAGE_CONVERSION_PRESET_PNG: ImageConversionPreset = {
 
 // Page files
 export const CANVAS_EXT = '.canvas';
+export const DEFAULT_NEW_PAGE_PREFIX = 'New page';
 
 // Animation related
 export const SEARCH_RESULT_ANIMATION_TIME = 200 // ms

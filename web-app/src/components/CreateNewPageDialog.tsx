@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from "@/core/facade";
 import { getLogger } from 'fusion/logging';
+import { DEFAULT_NEW_PAGE_PREFIX } from '@/core/constants';
 import "@/components/dialogs/Dialog.css";
 
 let log = getLogger('CreatePageDialog');
@@ -23,10 +24,10 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     const existingNames = new Set(
       Array.from(pamet.pages()).filter(p => p.folder === '').map(p => p.name)
     );
-    let newName = 'New Page';
+    let newName = DEFAULT_NEW_PAGE_PREFIX;
     let i = 1;
     while (existingNames.has(newName)) {
-      newName = `New Page ${i++}`;
+      newName = `${DEFAULT_NEW_PAGE_PREFIX} ${i++}`;
     }
     setPageName(newName);
 
@@ -48,7 +49,7 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     if (!isNameTaken && trimmed) {
       log.info(`Creating new page: ${trimmed}`);
       onCreate(trimmed);
-      // No need to call onClose, the dialog will close automatically
+      onClose();
     }
   }
 
