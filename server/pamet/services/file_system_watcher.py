@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import threading
+import asyncio
+from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Set, cast
 
@@ -28,13 +29,13 @@ if TYPE_CHECKING:
     from pamet.services.project_sync.project_folder_manager import ProjectFolderManager
 
 
-class FileSystemSyncService:
+class FileSystemWatcher:
     """
     Filesystem change-detection service.
 
     Watches the project folder via QFileSystemWatcher, debounces events, diffs
     changed .canvas files against the PFM entity store using delta arithmetic,
-    and accumulates deltas for the web app to poll.
+    and pushes deltas to subscribers.
 
     All file I/O (reading/writing .canvas files, migrations, media) lives in
     ProjectFolderManager — this service is purely reactive.
@@ -44,8 +45,10 @@ class FileSystemSyncService:
         self.project_folder_manager = project_folder_manager
         self._watcher: QFileSystemWatcher | None = None
         self._pending_delta = Delta()
-        self._pending_delta_event = threading.Event()
-        self._delta_consumer_lock = threading.Lock()
+
+        # Single subscriber queue (fed from Qt thread via call_soon_threadsafe)
+        self._queue: asyncio.Queue | None = None
+        self._loop: asyncio.AbstractEventLoop | None = None
 
         # Debounce: accumulate changed paths, process after timer fires
         self._debounce_timer = QTimer()
@@ -59,27 +62,31 @@ class FileSystemSyncService:
     def repo_root(self) -> Path:
         return self.project_folder_manager.repo_root
 
-    def get_pending_delta(self, timeout_ms: int = 0) -> dict[str, Any] | None:
-        """Return accumulated FS-change delta as wire-format dict and clear it.
+    async def deltas_stream(self) -> AsyncGenerator[dict[str, Any]]:
+        """Async generator yielding delta dicts as filesystem changes are detected.
 
-        If *timeout_ms* > 0 and no delta is available yet, block up to that
-        long waiting for filesystem changes before returning.
-
-        Only one consumer may poll at a time.
+        Only one subscriber at a time is supported.
+        Flushes any accumulated pending delta first, then streams new
+        deltas as they are detected by the filesystem watcher.
         """
-        if not self._delta_consumer_lock.acquire(blocking=False):
-            raise RuntimeError("Another consumer is already polling for deltas")
+        if self._queue is not None:
+            raise RuntimeError("Already subscribed — only one subscriber supported")
+
+        self._loop = asyncio.get_running_loop()
+        self._queue = asyncio.Queue()
         try:
-            if self._pending_delta.is_empty() and timeout_ms > 0:
-                self._pending_delta_event.wait(timeout=timeout_ms / 1000)
-            if self._pending_delta.is_empty():
-                return None
-            delta = self._pending_delta
-            self._pending_delta = Delta()
-            self._pending_delta_event.clear()
-            return delta.asdict()
+            # Flush any accumulated pending delta
+            if not self._pending_delta.is_empty():
+                delta_dict = self._pending_delta.asdict()
+                self._pending_delta = Delta()
+                yield delta_dict
+
+            while True:
+                delta_dict = await self._queue.get()
+                yield delta_dict
         finally:
-            self._delta_consumer_lock.release()
+            self._queue = None
+            self._loop = None
 
     def _watch_new_subdirs(self, changed_dir: str) -> None:
         """Add watches for new subdirectories under *changed_dir*.
@@ -105,7 +112,7 @@ class FileSystemSyncService:
         if failed:
             pfm.failed_watch_count += len(failed)
             log.warning(
-                "[FileSystemSyncService] Failed to watch %d/%d new dirs "
+                "[FileSystemWatcher] Failed to watch %d/%d new dirs "
                 "(total failures: %d). Possible inotify limit reached.",
                 len(failed),
                 len(new_dirs),
@@ -125,7 +132,7 @@ class FileSystemSyncService:
             if failed:
                 self.project_folder_manager.failed_watch_count += len(failed)
                 log.warning(
-                    "[FileSystemSyncService] Failed to watch %d/%d dirs "
+                    "[FileSystemWatcher] Failed to watch %d/%d dirs "
                     "on startup (possible inotify limit).",
                     len(failed),
                     len(dirs),
@@ -133,7 +140,7 @@ class FileSystemSyncService:
         self._watcher.directoryChanged.connect(self._on_directory_changed)  # type: ignore
         self._watcher.fileChanged.connect(self._on_file_changed)  # type: ignore
         log.info(
-            "[FileSystemSyncService] Watching %s directories under %s"
+            "[FileSystemWatcher] Watching %s directories under %s"
             " (failed watches: %d)",
             len(self._watcher.directories()),
             self.repo_root,
@@ -178,17 +185,20 @@ class FileSystemSyncService:
 
         if dir_changes:
             log.info(
-                "[FileSystemSyncService] Processing %d directory changes",
+                "[FileSystemWatcher] Processing %d directory changes",
                 len(dir_changes),
             )
             self._scan_changed_directories(dir_changes)
 
         for path in file_changes:
-            log.info("[FileSystemSyncService] Processing file change: %s", path)
+            log.info("[FileSystemWatcher] Processing file change: %s", path)
             self._diff_canvas_file(Path(path))
 
         if not self._pending_delta.is_empty():
-            self._pending_delta_event.set()
+            if self._queue is not None and self._loop is not None:
+                delta_dict = self._pending_delta.asdict()
+                self._pending_delta = Delta()
+                self._loop.call_soon_threadsafe(self._queue.put_nowait, delta_dict)
 
     def _diff_canvas_file(self, canvas_path: Path) -> None:
         """Read a changed .canvas file and diff against the store using delta arithmetic.

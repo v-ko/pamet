@@ -23,9 +23,7 @@ class ProjectActions {
 
   @action
   updateProject(projectData: PametProjectData) {
-    void pamet.saveProjectProperties(projectData).catch((error) => {
-      log.error("Failed to save project properties", error);
-    });
+    pamet.saveProjectProperties(projectData);
   }
 
   @action({ issuer: 'service' })

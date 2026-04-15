@@ -22,6 +22,13 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
   const [mobxStateSize, setMobxStateSize] = useState<number | null>(null);
   const [debugPaintOperations, setDebugPaintOperations] = useState(pamet.debugPaintOperations);
 
+    let configDataJson: string;
+    try {
+        configDataJson = JSON.stringify(pamet.getUserData(), null, 2);
+    } catch {
+        configDataJson = '(config store not ready)';
+    }
+
     const handleDebugPaintOperationsChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = event.target.checked;
         pamet.debugPaintOperations = newValue;
@@ -155,7 +162,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       {/* print config collapsible*/}
       <details>
         <summary>Config</summary>
-        <pre>{JSON.stringify(pamet.config.data(), null, 2)}</pre>
+        <pre>{configDataJson}</pre>
       </details>
 
       {/* Commit stats button and display */}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hmac
+import json
 import re
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlparse
@@ -13,16 +14,15 @@ from fastapi import (
     File,
     Form,
     HTTPException,
-    Query,
     Request,
     UploadFile,
 )
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fusion.libs.entity import dump_to_dict
 from fusion.logging import get_logger
+from fusion.storage.store_sync_service import STALE
 
 import pamet
-from pamet.desktop_app import get_user_settings, save_user_settings
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
 from pamet.storage.service_utils import ProjectTooLargeError
 
@@ -97,6 +97,17 @@ def _project_runtime(project_id: str):
 # ---------------------------------------------------------------------------
 
 
+@desktop_router.get("/version")
+def get_version():
+    return {"data": pamet.__version__}
+
+
+@desktop_router.get("/status")
+def get_status():
+    dss = pamet.desktop_storage_service()
+    return dss.status
+
+
 @desktop_router.post("/commands/{command_name}/")
 def run_command(command_name: str, request: Request):
     commands: dict = getattr(request.app.state, "commands", {})
@@ -161,43 +172,55 @@ def unload_project(project_id: str):
 
 
 @desktop_router.get(
-    "/desktop/settings/user",
+    "/config/store",
     dependencies=[Depends(require_desktop_auth)],
 )
-def get_desktop_user_settings():
-    return get_user_settings()
+def get_config_store():
+    dss = pamet.desktop_storage_service()
+    return dss.config_sync_service.full_state()
 
 
-@desktop_router.put(
-    "/desktop/settings/user",
+@desktop_router.post(
+    "/config/store/changes",
     dependencies=[Depends(require_desktop_auth)],
 )
-def set_desktop_user_settings(payload: dict | None = Body(default=None)):
-    if not isinstance(payload, dict):
+async def post_config_changes(payload: dict = Body(...)):
+    changes = payload.get("changes")
+    if not isinstance(changes, list):
         raise HTTPException(
-            status_code=400, detail="user settings payload must be an object"
+            status_code=400,
+            detail="'changes' must be a list",
         )
-    save_user_settings(payload)
-    return {"ok": True}
+    dss = pamet.desktop_storage_service()
+    return await dss.config_sync_service.apply_changes(changes)
 
 
 @desktop_router.get(
-    "/desktop/projects/{project_id}/properties",
+    "/config/store/changes/stream",
     dependencies=[Depends(require_desktop_auth)],
 )
-def get_project_properties(project_id: str):
-    return _project_runtime(project_id).get_project_properties()
+async def config_changes_stream(request: Request):
+    dss = pamet.desktop_storage_service()
+    try:
+        after = int(request.headers.get("last-event-id", "0"))
+    except (ValueError, TypeError):
+        after = 0
 
+    async def _sse_generator():
+        async for item in dss.config_sync_service.subscribe(after):
+            if item is STALE:
+                yield f"event: stale\nid: {dss.config_sync_service.seq}\ndata: {{}}\n\n"
+                return
+            assert isinstance(item, tuple)
+            seq, changes = item
+            data = json.dumps({"changes": changes})
+            yield f"id: {seq}\ndata: {data}\n\n"
 
-@desktop_router.put(
-    "/desktop/projects/{project_id}/properties",
-    dependencies=[Depends(require_desktop_auth)],
-)
-def set_project_properties(project_id: str, payload: dict):
-    _validate_id(project_id, "project_id")
-    runtime = _project_runtime(project_id)
-    runtime.set_project_properties(payload)
-    return runtime.get_project_properties()
+    return StreamingResponse(
+        _sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @desktop_router.get("/")
@@ -232,21 +255,21 @@ def serve_project_index(user_id: str, project_id: str, request: Request):
 
 
 @desktop_router.get(
-    "/desktop/projects/{project_id}/changes/pending",
+    "/desktop/projects/{project_id}/changes/stream",
     dependencies=[Depends(require_desktop_auth)],
 )
-def get_pending_delta(
-    project_id: str,
-    timeout_ms: int = Query(default=0),
-):
+async def project_changes_stream(project_id: str):
     runtime = _project_runtime(project_id)
-    try:
-        pending_delta = runtime.get_pending_delta(timeout_ms)
-    except NotImplementedError as exc:
-        raise HTTPException(status_code=501, detail=str(exc)) from exc
-    except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {"pendingDelta": pending_delta}
+
+    async def _sse_generator():
+        async for delta_dict in runtime.fs_watcher.deltas_stream():
+            yield f"data: {json.dumps(delta_dict)}\n\n"
+
+    return StreamingResponse(
+        _sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @desktop_router.get(

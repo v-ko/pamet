@@ -10,7 +10,9 @@ import { FileItemMetadata } from "fusion/model/FileItem";
 import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { OptimisticProjectSyncService } from "@/storage/OptimisticProjectSyncService";
-import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
+import { UserSettings } from "@/model/config/UserSettings";
+import { MiscProperties } from "@/model/config/MiscProperties";
+import { ProjectProperties } from "@/model/config/ProjectProperties";
 import { StorageService } from "fusion/storage/management/StorageService";
 import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/repository/Repository";
@@ -20,6 +22,7 @@ import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
+import { StoreSyncClient } from "fusion/storage/sync/StoreSyncClient";
 import { updateAppStateFromConfig, applyRoute, resolvePageId } from "@/procedures/app";
 import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
@@ -57,11 +60,14 @@ export class PametFacade extends PametStore {
     getEntityId() {
         throw new Error("Method not implemented.");
     }
+    clear(): void {
+        this.frontendDomainStore.clear();
+    }
+
     _frontendDomainStore: InMemoryStore | null = null;
     private _projectSyncService: OptimisticProjectSyncService | null = null;
     private _appViewState: WebAppState | null = null;
-    private _config: PametSettingsService | null = null;
-    private _appMiscProperties: MiscPropertiesService | null = null;
+    private _appConfigStore: InMemoryStore | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
     keybindingService: KeybindingService | null = null;
@@ -82,7 +88,7 @@ export class PametFacade extends PametStore {
     undoService: UndoService;
 
     constructor() {
-        super()
+        super();
         // Initialize UndoService
         this.undoService = new UndoService(this);
 
@@ -98,17 +104,16 @@ export class PametFacade extends PametStore {
             if (rootAction.name === UNDO_ACTION_NAME || rootAction.name === REDO_ACTION_NAME) {
                 return;
             }
-            const uncommitted = this._projectSyncService.uncommittedChanges;
-            if (!uncommitted || uncommitted.length === 0) {
+            const uncommittedDelta = this._projectSyncService.uncommittedDelta;
+            if (!uncommittedDelta || uncommittedDelta.isEmpty()) {
                 return;
             }
-            const delta = Delta.fromChanges(uncommitted);
             const currentPageId = this.appViewState.currentPageId;
             if (!currentPageId) {
                 log.error('No current page id set, skipping delta record');
                 return;
             }
-            this.undoService.recordChangeSet(delta, rootAction.name, currentPageId);
+            this.undoService.recordChangeSet(uncommittedDelta, rootAction.name, currentPageId);
         });
 
         // Register rootAction hook to auto-commit / save
@@ -140,7 +145,7 @@ export class PametFacade extends PametStore {
     }
 
     projectStorageConfig(projectId: string): ProjectStorageConfig {
-        const deviceId = this.appMiscProperties.getDeviceId();
+        const deviceId = this.getDeviceId();
         if (!deviceId) {
             throw Error('Device ID not set');
         }
@@ -277,11 +282,9 @@ export class PametFacade extends PametStore {
 
         // Create the plain store and wire the view model reducer + change tracking to onChanges
         const store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
-        store.onChanges = (delta) => {
+        store.onChanges = (delta, origin) => {
             entityDeltaToViewModelReducer(this.appViewState, delta);
-            for (const change of delta.changes()) {
-                syncService.trackChange(change);
-            }
+            syncService.trackDelta(delta, origin);
         };
 
         // Create the sync service (optimistic commit + reconciliation)
@@ -349,41 +352,146 @@ export class PametFacade extends PametStore {
         this._entityProblemCounts.set(entityId, (this._entityProblemCounts.get(entityId) || 0) + 1);
     }
 
-    // Model related
-    get config(): PametSettingsService {
-        if (!this._config) {
-            throw Error('Config not set');
+    // Config store related
+    get appConfigStore(): InMemoryStore {
+        if (!this._appConfigStore) {
+            throw Error('Config store not set');
         }
-        return this._config;
+        return this._appConfigStore;
     }
 
-    setConfigService(config: PametSettingsService) {
-        this._config = config;
-        config.setUpdateHandler(() => {
-            log.info('Config updated');
+    async setupConfigStore(syncService: StoreSyncClient) {
+        const store = new InMemoryStore();
+        syncService.setStore(store);
+        await syncService.initialize();
+
+        store.onChanges = (delta, origin) => {
             updateAppStateFromConfig(this.appViewState)
                 .catch((e) => {
-                    log.error('[Config.updateHandler] Error updating app state from config', e);
+                    log.error('[ConfigStore.onChanges] Error updating app state from config', e);
                 });
-        });
+            if (origin !== 'remote') {
+                syncService.pushDelta(delta);
+            }
+        };
+
+        this._appConfigStore = store;
     }
 
-    get appMiscProperties(): MiscPropertiesService {
-        if (!this._appMiscProperties) {
-            throw Error('App misc properties not set');
+    // UserSettings accessors
+    getUserData(): { id?: string; name?: string; projects?: ProjectReference[] } | undefined {
+        const entity = this.appConfigStore.findOne({ id: UserSettings.SINGLETON_ID });
+        if (!entity) return undefined;
+        const us = entity as UserSettings;
+        return { id: us.userId, name: us.userName, projects: us.projects };
+    }
+
+    setUserData(userData: { id?: string; name?: string; projects?: ProjectReference[] }): void {
+        const existing = this.appConfigStore.findOne({ id: UserSettings.SINGLETON_ID });
+        if (existing) {
+            const us = existing as UserSettings;
+            us.userId = userData.id;
+            us.userName = userData.name;
+            us.projects = userData.projects ?? [];
+            this.appConfigStore.updateOne(us);
+        } else {
+            const us = new UserSettings({
+                id: UserSettings.SINGLETON_ID,
+                parent_id: '',
+                userId: userData.id,
+                userName: userData.name,
+                projects: userData.projects ?? [],
+            });
+            this.appConfigStore.insertOne(us);
         }
-        return this._appMiscProperties;
     }
 
-    setAppMiscProperties(miscProperties: MiscPropertiesService) {
-        this._appMiscProperties = miscProperties;
-        miscProperties.setUpdateHandler(() => {
-            log.info('App misc properties updated');
-            updateAppStateFromConfig(this.appViewState)
-                .catch((e) => {
-                    log.error('[MiscPropertiesService.updateHandler] Error updating app state from config', e);
-                });
-        });
+    getTrackedProjectsFromConfig(): ProjectReference[] {
+        const userData = this.getUserData();
+        return userData?.projects ?? [];
+    }
+
+    upsertTrackedProject(trackedProject: ProjectReference) {
+        const projects = this.getTrackedProjectsFromConfig();
+        const index = projects.findIndex((p) => p.id === trackedProject.id);
+        if (index === -1) {
+            this.setUserData({ ...this.getUserData(), projects: [...projects, trackedProject] });
+        } else {
+            const next = [...projects];
+            next[index] = trackedProject;
+            this.setUserData({ ...this.getUserData(), projects: next });
+        }
+    }
+
+    removeTrackedProject(projectId: string) {
+        const projects = this.getTrackedProjectsFromConfig();
+        this.setUserData({ ...this.getUserData(), projects: projects.filter((p) => p.id !== projectId) });
+    }
+
+    // MiscProperties accessors
+    getDeviceId(): string | undefined {
+        const entity = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        if (!entity) return undefined;
+        const mp = entity as MiscProperties;
+        return mp.deviceId;
+    }
+
+    setDeviceId(deviceId: string): void {
+        const existing = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        if (existing) {
+            const mp = existing as MiscProperties;
+            mp.deviceId = deviceId;
+            this.appConfigStore.updateOne(mp);
+        } else {
+            const mp = new MiscProperties({
+                id: MiscProperties.SINGLETON_ID,
+                parent_id: '',
+                deviceId: deviceId,
+                recentProjects: [],
+            });
+            this.appConfigStore.insertOne(mp);
+        }
+    }
+
+    getRecentProjects(): ProjectReference[] {
+        const entity = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        if (!entity) return [];
+        return (entity as MiscProperties).recentProjects;
+    }
+
+    setRecentProjects(projects: ProjectReference[]): void {
+        const existing = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        if (existing) {
+            const mp = existing as MiscProperties;
+            mp.recentProjects = projects;
+            this.appConfigStore.updateOne(mp);
+        } else {
+            const mp = new MiscProperties({
+                id: MiscProperties.SINGLETON_ID,
+                parent_id: '',
+                recentProjects: projects,
+            });
+            this.appConfigStore.insertOne(mp);
+        }
+    }
+
+    setMostRecentProject(project: ProjectReference): void {
+        const projects = this.getRecentProjects().filter((p) => p.id !== project.id);
+        this.setRecentProjects([project, ...projects]);
+    }
+
+    removeRecentProject(projectId: string): void {
+        const projects = this.getRecentProjects();
+        this.setRecentProjects(projects.filter((p) => p.id !== projectId));
+    }
+
+    updateRecentProject(projectData: ProjectReference): void {
+        const projects = this.getRecentProjects();
+        const index = projects.findIndex((p) => p.id === projectData.id);
+        if (index === -1) return;
+        const next = [...projects];
+        next[index] = projectData;
+        this.setRecentProjects(next);
     }
 
     trackedProjects(): ProjectReference[] {
@@ -395,11 +503,16 @@ export class PametFacade extends PametStore {
         if (!trackedProject) {
             return undefined;
         }
-        const projectProperties = await this.storageService.getProjectProperties(
-            trackedProject.id,
-        );
-        if (projectProperties) {
-            return projectProperties as PametProjectData;
+        const propsEntity = this.appConfigStore.findOne({ id: ProjectProperties.idForProject(projectId) });
+        if (propsEntity) {
+            const pp = propsEntity as ProjectProperties;
+            return {
+                id: pp.projectId,
+                title: pp.title,
+                description: pp.description,
+                created: pp.created,
+                default_page_id: pp.defaultPageId,
+            };
         }
         const recentProject = this.recentProject(trackedProject.id);
         return {
@@ -410,19 +523,27 @@ export class PametFacade extends PametStore {
         };
     }
 
-    upsertTrackedProject(trackedProject: ProjectReference) {
-        this.config.upsertProject(trackedProject);
-    }
-
-    removeTrackedProject(projectId: string) {
-        this.config.removeProject(projectId);
-    }
-
-    async saveProjectProperties(projectData: PametProjectData): Promise<void> {
-        await this.storageService.setProjectProperties(
-            projectData.id,
-            projectData,
-        );
+    saveProjectProperties(projectData: PametProjectData): void {
+        const entityId = ProjectProperties.idForProject(projectData.id);
+        const existing = this.appConfigStore.findOne({ id: entityId });
+        if (existing) {
+            const pp = existing as ProjectProperties;
+            pp.title = projectData.title;
+            pp.description = projectData.description;
+            pp.defaultPageId = projectData.default_page_id;
+            this.appConfigStore.updateOne(pp);
+        } else {
+            const pp = new ProjectProperties({
+                id: entityId,
+                parent_id: '',
+                projectId: projectData.id,
+                title: projectData.title,
+                description: projectData.description,
+                created: projectData.created,
+                default_page_id: projectData.default_page_id,
+            });
+            this.appConfigStore.insertOne(pp);
+        }
         const trackedProject = this.appViewState.trackedProject(projectData.id);
         if (trackedProject) {
             this.upsertTrackedProject({
@@ -432,7 +553,7 @@ export class PametFacade extends PametStore {
         }
         const recentProject = this.recentProject(projectData.id);
         if (recentProject) {
-            this.appMiscProperties.updateRecentProject({
+            this.updateRecentProject({
                 id: projectData.id,
                 title: projectData.title,
                 uri: recentProject.uri,
@@ -494,9 +615,9 @@ export class PametFacade extends PametStore {
         await this.storageService.removeFile(currentProjectId, imageItem.id, imageItem.contentHash);
     }
 
-    applyDelta(delta: Delta, skipIrrationalOperations: boolean = false): Delta {
+    applyDelta(delta: Delta, origin?: string, skipIrrationalOperations: boolean = false): Delta {
         // onChange fires once for the whole batch via applyDelta
-        return this.frontendDomainStore.applyDelta(delta, skipIrrationalOperations);
+        return this.frontendDomainStore.applyDelta(delta, origin, skipIrrationalOperations);
     }
 }
 

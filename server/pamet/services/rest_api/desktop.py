@@ -1,7 +1,7 @@
 import threading
+from contextlib import asynccontextmanager
 from pathlib import Path
 from random import randint
-from time import sleep
 
 import requests
 from fastapi import FastAPI
@@ -18,6 +18,9 @@ log = get_logger(__name__)
 SECRET_REPLY = {"result": "svoi"}
 DEFAULT_PORT = 11352
 LOCALHOST = "http://localhost"
+
+# Maximum time (seconds) to wait for uvicorn to start accepting connections.
+_SERVER_STARTUP_TIMEOUT = 10
 
 
 def port_is_taken(port: int):
@@ -52,8 +55,14 @@ class DesktopServer:
 
         self.thread = None
         self._port = port or DEFAULT_PORT
+        self._ready_event = threading.Event()
 
-        self.app = FastAPI()
+        @asynccontextmanager
+        async def _lifespan(app: FastAPI):
+            self._ready_event.set()
+            yield
+
+        self.app = FastAPI(lifespan=_lifespan)
         self.app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -135,8 +144,15 @@ class DesktopServer:
         self.server = Server(config=config)
 
         # Start the server in a thread
+        self._ready_event.clear()
         self.thread = threading.Thread(target=self.server.run)
         self.thread.start()
+
+        # Block until FastAPI's lifespan startup hook fires (server is ready)
+        if not self._ready_event.wait(timeout=_SERVER_STARTUP_TIMEOUT):
+            raise RuntimeError(
+                f"Server did not become ready within {_SERVER_STARTUP_TIMEOUT}s"
+            )
 
     def stop(self):
         self.server.should_exit = True

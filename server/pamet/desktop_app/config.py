@@ -127,12 +127,3 @@ def create_repo_settings(
     settings["title"] = title or Path(repo_path).name
     adapter.write(cast(dict[str, Any], settings))
     return settings
-
-
-def save_repo_settings(
-    repo_path: Path, repo_settings: RepoSettingsData | dict[str, Any]
-):
-    SettingsAdapter(
-        repo_settings_path(repo_path),
-        defaults=REPO_SETTINGS_DEFAULTS,
-    ).write(cast(dict[str, Any], repo_settings))

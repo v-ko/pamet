@@ -3,19 +3,19 @@ from __future__ import annotations
 import threading
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Iterator, cast
+from typing import Any, Iterator
 
 from fusion.libs.entity import dump_to_dict
 from fusion.libs.entity.change import Change
 from fusion.libs.entity.delta import Delta
 from fusion.logging import get_logger
 
-from pamet.desktop_app.config import get_repo_settings, save_repo_settings
+from pamet.desktop_app.config import get_repo_settings
 from pamet.model.arrow import Arrow
 from pamet.model.file_item import FileItem
 from pamet.model.page import Page
 from pamet.services.constants import MAX_WALK_ENTRIES
-from pamet.services.fs_sync_service import FileSystemSyncService
+from pamet.services.file_system_watcher import FileSystemWatcher
 from pamet.storage.canvas_html import write_canvas_file
 from pamet.storage.file_storage_adapter import FileStorageAdapter
 from pamet.storage.migrations.manager import (
@@ -67,7 +67,7 @@ class ProjectFolderManager:
     Owns an in-memory entity store (PametInMemoryStore) and all filesystem
     I/O for .canvas files.  File blob storage is delegated to
     ``FileStorageAdapter`` (``self.file_storage``).  The
-    ``FileSystemSyncService`` handles change detection.
+    ``FileSystemWatcher`` handles change detection.
     """
 
     def __init__(self, project_id: str, repo_root: Path):
@@ -85,7 +85,7 @@ class ProjectFolderManager:
             pat for pat, enabled in settings.get("files.exclude", {}).items() if enabled
         ]
 
-        self.fs_sync_service = FileSystemSyncService(self)
+        self.fs_watcher = FileSystemWatcher(self)
         self.file_storage = FileStorageAdapter(self.repo_root, self.store)
 
     # -- Lifecycle -------------------------------------------------------------
@@ -99,7 +99,7 @@ class ProjectFolderManager:
             self.project_id,
             self.repo_root,
         )
-        self.fs_sync_service.start_watching()
+        self.fs_watcher.start_watching()
 
     def _load_all_entities(self) -> list[FileItem]:
         """Read all .canvas files and populate the store.
@@ -126,7 +126,7 @@ class ProjectFolderManager:
         return file_items
 
     def unload(self) -> None:
-        self.fs_sync_service.stop_watching()
+        self.fs_watcher.stop_watching()
         self.file_storage.close()
         self.store.clear()
 
@@ -320,19 +320,3 @@ class ProjectFolderManager:
                 notes.append(child_dict)
 
         self.write_page_canvas_file(page_path, page_dict, notes, arrows, file_items)
-
-    def get_project_properties(self) -> dict[str, Any]:
-        return cast(dict[str, Any], get_repo_settings(self.repo_root))
-
-    def set_project_properties(self, project_properties: dict[str, Any]) -> None:
-        repo_settings = cast(dict[str, Any], get_repo_settings(self.repo_root))
-        incoming_id = project_properties.get("id")
-        if incoming_id is not None and incoming_id != self.project_id:
-            raise ValueError(
-                f"Project id mismatch: expected '{self.project_id}', got '{incoming_id}'"
-            )
-        repo_settings.update(project_properties)
-        save_repo_settings(self.repo_root, repo_settings)
-
-    def get_pending_delta(self, timeout_ms: int = 0) -> dict[str, Any] | None:
-        return self.fs_sync_service.get_pending_delta(timeout_ms)

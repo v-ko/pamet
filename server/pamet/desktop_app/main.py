@@ -5,21 +5,28 @@ import sys
 from pathlib import Path
 
 import click
+import fusion
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
 from slugify import slugify
 
-import fusion
 import pamet
 from pamet import desktop_app
 
 # from fusion import actions_log_channel
 from pamet.constants import DEFAULT_PROJECT_ID, DEFAULT_PROJECT_TITLE, LOCAL_USER_ID
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, repo_settings_path
+from pamet.desktop_app.config import (
+    APP_DATA_DIR,
+    CONFIG_DIR,
+    USER_SETTINGS_DIR,
+    repo_settings_path,
+)
 from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.screen_snippet import grab_screen_snippet
 from pamet.desktop_app.web_shell import WebShellWindow
+from pamet.model.config import UserSettings
+from pamet.services.config_file_manager import load_user_settings, save_user_settings
 from pamet.services.desktop_storage_service import DesktopStorageService
 from pamet.services.rest_api.desktop import DesktopServer
 
@@ -89,17 +96,16 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     # END OF TMP MIGRATION TESTING LOGIC
 
     # Setup initial user settings if not present
-    if not desktop_app.user_settings_path().exists():
-        log.info(
-            f"No user settings found - creating default settings at {desktop_app.user_settings_path()}"
+    settings = load_user_settings()
+    if settings is None:
+        log.info("No user settings found — creating defaults")
+        settings = UserSettings(
+            id="user-settings",
+            userId=LOCAL_USER_ID,
+            userName="Local User",
+            projects=[],
         )
-        desktop_app.save_user_settings(
-            {
-                "id": LOCAL_USER_ID,
-                "name": "Local User",
-                "projects": [],
-            }
-        )
+        save_user_settings(settings)
 
     # Setup project if legacy present or path is passed via cli argument
     project_id: str | None = None
@@ -130,9 +136,7 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
 
     elif project_path is not None:
         # If project is already tracked - use the existing title/id
-        settings = desktop_app.get_user_settings()
-        tracked_projects = settings.get("projects", [])
-        for tracked_project in tracked_projects:
+        for tracked_project in settings.projects or []:
             if tracked_project.get("uri") == project_path.resolve().as_uri():
                 project_id = tracked_project.get("id")
                 project_title = tracked_project.get("title")
@@ -153,11 +157,23 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
         if not repo_settings_path(project_path).exists():
             log.info(f"No repo settings found in {project_path} — creating settings.")
 
-        desktop_app.upsert_tracked_project(
-            project_id=project_id,
-            title=project_title,
-            uri=project_path.resolve().as_uri(),
-        )
+        # Upsert tracked project in user settings
+        project_data = {
+            "id": project_id,
+            "uri": project_path.resolve().as_uri(),
+            "title": project_title,
+        }
+        projects = list(settings.projects or [])
+        replaced = False
+        for i, p in enumerate(projects):
+            if p.get("id") == project_id:
+                projects[i] = project_data
+                replaced = True
+                break
+        if not replaced:
+            projects.append(project_data)
+        settings.projects = projects
+        save_user_settings(settings)
 
     # Check if another instance is running and/or start the local server
     # When using frontend server, we might not need to check for other instances
@@ -212,8 +228,7 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     web_shell = WebShellWindow(
         endpoint=initial_project_url,
         desktop_api_base_url=desktop_api_base_url,
-        webengine_profile_root=desktop_app.user_settings_path().parent
-        / "webengine-profile",
+        webengine_profile_root=USER_SETTINGS_DIR / "webengine-profile",
         show_dev_tools=bool(use_frontend_server),
     )
     web_shell.showMaximized()

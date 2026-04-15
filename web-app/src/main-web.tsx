@@ -10,8 +10,7 @@ import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate, updateAppStateFromConfig } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
-import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
-import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
+import { LocalStorageConfigSync } from "@/services/config/LocalStorageConfigSync";
 
 import WebApp from "@/containers/app/App";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
@@ -32,12 +31,6 @@ registerEntityClasses();
 (window as any).pamet = pamet; // For debugging convenience
 
 log.info("Running in web mode");
-
-// Configure storage adapters
-const configService = new PametSettingsService(new LocalStorageConfigAdapter());
-const appMiscProperties = new MiscPropertiesService(new LocalStorageConfigAdapter());
-pamet.setConfigService(configService)
-pamet.setAppMiscProperties(appMiscProperties)
 
 // Web storage configuration factory (IndexedDB + CacheAPI)
 const webStorageConfigFactory: ProjectStorageConfigFactory = (projectId, userId, deviceId) => {
@@ -81,26 +74,15 @@ root.render(
 // Initialize the web app (async: storage, config, routing)
 async function initializeWebApp() {
 
-    // Setup the user and device configs. For now the simplest possible setup:
-    // Generate device if none. Generate anonymous user and default project and page if none
-    let config = pamet.config
+    // Setup config store with localStorage sync
+    await pamet.setupConfigStore(new LocalStorageConfigSync());
 
-    // Check if the device is set - if missing - generate metadata
-    let deviceId = pamet.appMiscProperties.getDeviceId();
+    // Generate device if none
+    let deviceId = pamet.getDeviceId();
     if (!deviceId) {
         deviceId = "device-" + crypto.randomUUID();
-        pamet.appMiscProperties.setDeviceId(deviceId);
+        pamet.setDeviceId(deviceId);
     }
-
-    // User data is optional - no need to create default user
-    // User will be set when cloud auth is implemented
-    // For now, ensure we have at least an empty user data object with projects array
-    // if (!config.getUserData()) {
-    //     let userData = {
-    //         projects: []
-    //     }
-    //     config.setUserData(userData);
-    // }
 
     pamet.setKeybindings(DEFAULT_KEYBINDINGS);
 

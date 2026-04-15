@@ -272,15 +272,6 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           {'</>'}
         </div>
         <VerticalSeparator />
-        <div
-          title='Desktop import (dbg)'
-          style={{ cursor: 'pointer' }}
-          onClick={() => importDesktopDataForTesting()}
-        >
-          {/* Use a unicode symbol for import */}
-          &#x21E9;
-        </div>
-        <VerticalSeparator />
         <img src={helpCircleIconUrl} alt="Help"
           style={{ cursor: 'pointer' }}
           onClick={() => { commands.showHelp(); }}

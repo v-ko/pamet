@@ -1,6 +1,5 @@
 import { getLogger } from "fusion/logging";
 import { Store } from "fusion/storage/domain-store/BaseStore";
-import { Change } from "fusion/model/Change";
 import { Delta } from "fusion/model/Delta";
 import { CommitGraph } from "fusion/storage/version-control/CommitGraph";
 import { Commit } from "fusion/storage/version-control/Commit";
@@ -32,9 +31,8 @@ export class OptimisticProjectSyncService {
 
     private _localCommitGraph: CommitGraph;
     private _currentBranch: string;
-    private _uncommittedChanges: Change[] = [];
+    private _uncommittedDelta: Delta = new Delta({});
     private _expectedDelta: Delta = new Delta({});
-    private _applyingRemote: boolean = false;
 
     constructor(store: Store, storageService: StorageService, projectId: string, currentBranch: string) {
         this._store = store;
@@ -44,8 +42,8 @@ export class OptimisticProjectSyncService {
         this._localCommitGraph = new CommitGraph();
     }
 
-    get uncommittedChanges(): Change[] {
-        return this._uncommittedChanges;
+    get uncommittedDelta(): Delta {
+        return this._uncommittedDelta;
     }
 
     /**
@@ -72,12 +70,7 @@ export class OptimisticProjectSyncService {
 
         const syncDelta = computeRepoSyncDelta(emptyLocalGraph, remoteGraph, upsertedCommits, this._currentBranch);
         if (syncDelta) {
-            this._applyingRemote = true;
-            try {
-                this._store.applyDelta(syncDelta);
-            } finally {
-                this._applyingRemote = false;
-            }
+            this._store.applyDelta(syncDelta, 'remote');
         }
 
         this._localCommitGraph = remoteGraph;
@@ -86,15 +79,15 @@ export class OptimisticProjectSyncService {
     }
 
     /**
-     * Record a change for later commit. Ignored when the OPSS itself
-     * is applying remote/hydration changes.
+     * Record a delta for later commit. Skips remote-origin deltas.
+     * Designed to be called directly from store.onChanges.
      */
-    trackChange(change: Change) {
-        if (this._applyingRemote) {
+    trackDelta(delta: Delta, origin?: string) {
+        if (origin === 'remote') {
             return;
         }
-        if (!change.isEmpty()) {
-            this._uncommittedChanges.push(change);
+        if (!delta.isEmpty()) {
+            this._uncommittedDelta.mergeWithPriority(delta);
         }
     }
 
@@ -103,14 +96,14 @@ export class OptimisticProjectSyncService {
      * To be called from the root-action-completed hook.
      */
     saveUncommittedChanges() {
-        if (this._uncommittedChanges.length === 0) {
+        if (this._uncommittedDelta.isEmpty()) {
             return;
         }
 
-        log.info('Flushing uncommitted changes. Count:', this._uncommittedChanges.length);
+        log.info('Flushing uncommitted delta');
 
-        let delta = Delta.fromChanges(this._uncommittedChanges);
-        this._uncommittedChanges = [];
+        let delta = this._uncommittedDelta;
+        this._uncommittedDelta = new Delta({});
         this._expectedDelta.mergeWithPriority(delta);
 
         this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
@@ -168,12 +161,7 @@ export class OptimisticProjectSyncService {
             reversedExpectedDelta.mergeWithPriority(repoSyncDelta);
             let finalDelta = reversedExpectedDelta;
 
-            this._applyingRemote = true;
-            try {
-                this._store.applyDelta(finalDelta);
-            } finally {
-                this._applyingRemote = false;
-            }
+            this._store.applyDelta(finalDelta, 'remote');
 
             this._localCommitGraph = remoteGraph;
             log.info('Successfully applied repo update');

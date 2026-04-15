@@ -10,9 +10,7 @@ import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate, updateAppStateFromConfig } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
-import { MiscPropertiesService, PametSettingsService } from "@/services/config/Config";
-import { LocalStorageConfigAdapter } from "@/services/config/LocalStorageConfigAdapter";
-import { RestDesktopConfigAdapter } from "@/services/config/RestDesktopConfigAdapter";
+import { RestStoreSyncClient } from "fusion/storage/sync/RestStoreSyncClient";
 
 import WebApp from "@/containers/app/App";
 import folderCheckIconUrl from "@/resources/icons/folder-check-line.svg";
@@ -58,12 +56,6 @@ if (!desktopApiBaseUrl) {
 }
 const baseUrl = desktopApiBaseUrl;
 
-const desktopConfigAdapter = new RestDesktopConfigAdapter(baseUrl, desktopAuth);
-const configService = new PametSettingsService(desktopConfigAdapter);
-const appMiscProperties = new MiscPropertiesService(new LocalStorageConfigAdapter());
-pamet.setConfigService(configService)
-pamet.setAppMiscProperties(appMiscProperties)
-
 // Desktop storage configuration factory (IndexedDB for VCS, RestApi for media/filesystem bridge)
 const desktopStorageConfigFactory: ProjectStorageConfigFactory = (projectId, userId, deviceId) => {
     const branchName = buildDeviceBranchName(userId, deviceId);
@@ -104,28 +96,26 @@ pamet.setStorageStatusIconSet({
 
 // Initialize the desktop app (async: storage, config, routing)
 async function initializeDesktopApp() {
-    await desktopConfigAdapter.initialize();
+    // Setup config store with REST sync to desktop server + localStorage for misc
+    const configSync = new RestStoreSyncClient({
+        endpoint: `${baseUrl}/config/store`,
+        headers: () => ({ 'Authorization': `Bearer ${desktopAccessToken}` }),
+    });
+    await pamet.setupConfigStore(configSync);
 
-    // Setup the user and device configs. For now the simplest possible setup:
-    // Generate device if none. Generate anonymous user and default project and page if none
-    let config = pamet.config
-    let deviceId = pamet.appMiscProperties.getDeviceId();
+    // Generate device if none
+    let deviceId = pamet.getDeviceId();
     if (!deviceId) {
         deviceId = "device-" + crypto.randomUUID();
-        pamet.appMiscProperties.setDeviceId(deviceId);
+        pamet.setDeviceId(deviceId);
     }
 
     // Check for user. If none - create with default 'local' user
-    // Default user is 'local' for initial provisioning. When setting up storage
-    // with a real user account, the project should be moved explicitly from 'local'
-    // to the actual user. This allows the app to work immediately without requiring
-    // user registration, while still supporting proper user-scoped storage later.
-    if (!config.getUserData()) {
-        let userData = {
+    if (!pamet.getUserData()) {
+        pamet.setUserData({
             id: LOCAL_USER_ID,
             name: "Local User",
-        }
-        config.setUserData(userData);
+        });
     }
 
     pamet.setKeybindings(DEFAULT_KEYBINDINGS);

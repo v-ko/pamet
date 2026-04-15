@@ -232,7 +232,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
     try {
         // Remove from config which will signal the other tabs to unload the project
         pamet.removeTrackedProject(project.id);
-        pamet.appMiscProperties.removeRecentProject(project.id);
+        pamet.removeRecentProject(project.id);
 
         // Erase local caches; each adapter erases only what it owns
         await pamet.storageService.removeProject(project.id, pamet.projectStorageConfig(project.id));
@@ -253,11 +253,11 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
 export async function updateAppStateFromConfig(appState: WebAppState) {
     // Device
-    let deviceId = pamet.appMiscProperties.getDeviceId() ?? null;
+    let deviceId = pamet.getDeviceId() ?? null;
 
     // User - For now UserData has no id/name, so we use LOCAL_USER_ID
     // Later when cloud auth is implemented, this will set the actual user ID
-    let user = pamet.config.getUserData();
+    let user = pamet.getUserData();
     let userId: string;
     if (!user) {
         userId = LOCAL_USER_ID;
@@ -272,8 +272,8 @@ export async function updateAppStateFromConfig(appState: WebAppState) {
     appActions.updateIdentity(appState, deviceId, userId);
     appActions.updateProjectReferences(
         appState,
-        pamet.config.getProjects(),
-        pamet.appMiscProperties.getRecentProjects(),
+        pamet.getTrackedProjectsFromConfig(),
+        pamet.getRecentProjects(),
     );
 
     // Settings - not yet implemented
@@ -303,14 +303,14 @@ export async function createProject(newProject: ProjectData): Promise<void> {
     const projectUri = await pamet.storageService.createProject(
         newProject.id,
         pamet.projectStorageConfig(newProject.id),
-        newProject,
     );
+    pamet.saveProjectProperties(newProject);
     pamet.upsertTrackedProject({
         id: newProject.id,
         title: newProject.title,
         uri: projectUri,
     });
-    pamet.appMiscProperties.setMostRecentProject({
+    pamet.setMostRecentProject({
         id: newProject.id,
         title: newProject.title,
         uri: projectUri,

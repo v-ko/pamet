@@ -18,17 +18,15 @@ const log = getLogger('DesktopStorageAddon');
  *
  * Handles:
  * - Bridge lifecycle (PUT/DELETE to backend)
- * - FS-change polling (fetches /changes/pending)
- * - Reference enrichment before committing polled deltas
+ * - FS-change streaming via SSE (fetches /changes/stream)
+ * - Reference enrichment before committing streamed deltas
  */
 export class DesktopStorageAddon implements StorageAddon {
     private _psm: ProjectStorageManager;
-    private _polling = false;
     private _baseUrl: string;
     private _projectId: string;
     private _headers: HeadersInit;
-
-    private static readonly POLL_TIMEOUT_MS = 30_000;
+    private _abortController: AbortController | null = null;
 
     constructor(psm: ProjectStorageManager) {
         this._psm = psm;
@@ -64,25 +62,17 @@ export class DesktopStorageAddon implements StorageAddon {
     }
 
     async onProjectLoaded(): Promise<void> {
-        // Check for unexpected pending FS changes from before load
-        const pendingDelta = await this._fetchPendingDelta(0);
-        if (pendingDelta && Object.keys(pendingDelta).length > 0) {
-            log.warning('Unexpected pending FS changes on project load — committing them');
-            const enriched = this._updateReferences(pendingDelta);
-            const ss = this._psm.parentStorageService;
-            if (ss) {
-                await ss.commit(this._psm.config.projectId, enriched, 'pending fs changes on load');
-            }
-        }
-
-        log.info('DesktopStorageAddon: project loaded, starting poll loop');
-        this._polling = true;
-        void this._pollLoop();
+        log.info('DesktopStorageAddon: project loaded, starting SSE stream');
+        this._abortController = new AbortController();
+        void this._connectStream();
     }
 
     async onProjectUnloading(): Promise<void> {
-        log.info('DesktopStorageAddon: stopping poll loop');
-        this._polling = false;
+        log.info('DesktopStorageAddon: stopping SSE stream');
+        if (this._abortController) {
+            this._abortController.abort();
+            this._abortController = null;
+        }
 
         // Tear down bridge
         const response = await fetch(this._projectUrl('/bridge'), {
@@ -96,47 +86,74 @@ export class DesktopStorageAddon implements StorageAddon {
         }
     }
 
-    // -- FS-change polling ------------------------------------------------
+    // -- FS-change SSE stream ----------------------------------------------
 
-    private async _fetchPendingDelta(timeoutMs: number): Promise<DeltaData | null> {
-        const url = new URL(this._projectUrl('/changes/pending'));
-        url.searchParams.set('timeout_ms', String(timeoutMs));
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: this._headers,
-            cache: 'no-store',
-        });
-        if (!response.ok) {
-            throw new Error(`Failed to fetch pending delta (${response.status} ${response.statusText})`);
-        }
-        const payload = await response.json() as { pendingDelta?: DeltaData | null };
-        return payload.pendingDelta ?? null;
-    }
-
-    private async _pollLoop(): Promise<void> {
-        while (this._polling) {
+    private async _connectStream(): Promise<void> {
+        while (this._abortController && !this._abortController.signal.aborted) {
             try {
-                const delta = await this._fetchPendingDelta(
-                    DesktopStorageAddon.POLL_TIMEOUT_MS
-                );
-                if (!this._polling) break;
-
-                if (delta && Object.keys(delta).length > 0) {
-                    const enriched = this._updateReferences(delta);
-                    const ss = this._psm.parentStorageService;
-                    if (!ss) break;
-                    await ss.commit(
-                        this._psm.config.projectId,
-                        enriched,
-                        'external filesystem change',
-                    );
-                }
+                await this._streamOnce();
             } catch (e) {
-                if (!this._polling) break;
-                log.error('Poll loop error', e);
+                if (!this._abortController || this._abortController.signal.aborted) break;
+                log.error('DesktopStorageAddon: stream error', e);
                 await new Promise(resolve => setTimeout(resolve, 2000));
             }
         }
+    }
+
+    private async _streamOnce(): Promise<void> {
+        const response = await fetch(this._projectUrl('/changes/stream'), {
+            method: 'GET',
+            headers: this._headers,
+            cache: 'no-store',
+            signal: this._abortController!.signal,
+        });
+
+        if (!response.ok) {
+            throw new Error(`SSE connect failed (${response.status} ${response.statusText})`);
+        }
+
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        try {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop()!;
+
+                for (const part of parts) {
+                    if (!part.trim()) continue;
+                    const data = this._parseSSEData(part);
+                    if (!data) continue;
+
+                    const deltaData = JSON.parse(data) as DeltaData;
+                    if (deltaData && Object.keys(deltaData).length > 0) {
+                        const enriched = this._updateReferences(deltaData);
+                        const ss = this._psm.parentStorageService;
+                        if (!ss) return;
+                        await ss.commit(
+                            this._psm.config.projectId,
+                            enriched,
+                            'external filesystem change',
+                        );
+                    }
+                }
+            }
+        } finally {
+            reader.releaseLock();
+        }
+    }
+
+    private _parseSSEData(raw: string): string | null {
+        let data = '';
+        for (const line of raw.split('\n')) {
+            if (line.startsWith('data: ')) data += line.slice(6);
+        }
+        return data || null;
     }
 
     /**

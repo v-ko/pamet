@@ -83,7 +83,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           };
 
           try {
-            await pamet.saveProjectProperties(updatedProject);
+            pamet.saveProjectProperties(updatedProject);
             dialogRef.current?.close();
           } catch (error) {
             setTitleError((error as Error).message);

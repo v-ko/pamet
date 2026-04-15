@@ -11,8 +11,6 @@ __version__ = importlib.metadata.version(__package__)
 from fusion.extensions_loader import ExtensionsLoader
 from fusion.logging import get_logger
 
-from pamet.desktop_app import get_user_settings
-
 log = get_logger(__name__)
 
 pamet_root = Path(str(resources.files("pamet")))
