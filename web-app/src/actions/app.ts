@@ -131,13 +131,6 @@ class AppActions {
     }
 
     @action
-    importEntitiesAction(entities: Entity<any>[]) {
-        for (const entity of entities) {
-            pamet.insertOne(entity);
-        }
-    }
-
-    @action
     openPageAndCommandPalette(appState: WebAppState, initialInput: string) {
         appState.commandPaletteState = new PageAndCommandPaletteState(initialInput);
     }

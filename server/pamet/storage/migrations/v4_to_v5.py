@@ -496,7 +496,7 @@ def _collect_canvas_page_paths(repo_path: Path) -> List[Path]:
 
 
 def _migrate_repo_settings_keys(properties_path: Path) -> None:
-    """Rename legacy keys in a properties.json file (e.g. home_page -> default_page_id)."""
+    """Rename legacy keys in a properties.json file (v4 home_page -> home_page_id)."""
     try:
         with open(properties_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -504,14 +504,8 @@ def _migrate_repo_settings_keys(properties_path: Path) -> None:
         return
     if not isinstance(data, dict):
         return
-    changed = False
     if "home_page" in data:
-        if "default_page_id" not in data:
-            data["default_page_id"] = data.pop("home_page")
-        else:
-            del data["home_page"]
-        changed = True
-    if changed:
+        data["home_page_id"] = data.pop("home_page")
         with open(properties_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
@@ -522,7 +516,7 @@ def migrate_repo_properties_file(repo_path: Path, backup_folder: Path) -> bool:
     properties_path = pamet_dir / REPO_PROPERTIES_FILENAME
 
     if not legacy_path.exists():
-        # Even if already migrated, rename home_page → default_page_id if needed
+        # Even if already migrated, rename v4 home_page → home_page_id if needed
         if properties_path.exists():
             _migrate_repo_settings_keys(properties_path)
         return False

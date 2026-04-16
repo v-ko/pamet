@@ -23,7 +23,7 @@ import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { DebugDialog } from "@/components/DebugDialog";
-import { resolvePageId } from "@/procedures/app";
+import { resolveStartupPageId } from "@/procedures/app";
 import { PametRoute } from "@/services/routing/route";
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
 import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
@@ -334,10 +334,11 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
               projectActions.deletePageAndUpdateReferences(page);
               appActions.closeAppDialog(state);
               // Auto-create if last page was deleted, then navigate
-              let pageId = state.currentProjectState ? resolvePageId(state.currentProjectState) : null;
+              let pageId = state.currentProjectState ? resolveStartupPageId(state.currentProjectState) : null;
               if (!pageId && state.currentProjectState) {
-                projectActions.createDefaultPage(state);
-                pageId = resolvePageId(state.currentProjectState!);
+                let page = projectActions.createNewPageWithHelpNote();
+                projectActions.setHomePage(state, page.id);
+                pageId = resolveStartupPageId(state.currentProjectState!);
               }
               pamet.navigateTo(new PametRoute({
                 userId: state.userId,

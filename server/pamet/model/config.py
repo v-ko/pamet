@@ -27,7 +27,8 @@ class ProjectProperties(Entity):
     title: str = ""
     description: str = ""
     created: str = ""
-    default_page_id: str | None = None
+    home_page_id: str | None = None
+    backups_enabled: bool = True
 
     @staticmethod
     def id_for_project(project_id: str) -> str:

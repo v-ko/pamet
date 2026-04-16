@@ -7,8 +7,6 @@ import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
 import { Point2D } from "fusion/primitives/Point2D";
 import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";
-import type { PametProjectData } from "@/model/Project";
-import { getLogger } from "fusion/logging";
 import { CardNote } from "@/model/CardNote";
 import { CANVAS_EXT } from "@/core/constants";
 import {
@@ -16,19 +14,11 @@ import {
     imageReassignmentUpdatesForPageDelete,
 } from '@/model/correctness';
 
-const log = getLogger("ProjectActions");
-
 
 class ProjectActions {
 
-  @action
-  updateProject(projectData: PametProjectData) {
-    pamet.saveProjectProperties(projectData);
-  }
-
   @action({ issuer: 'service' })
-  createDefaultPage(appState: WebAppState): Page {
-    // Create the page
+  createNewPageWithHelpNote(): Page {
     const currentTimestamp = timestamp(currentTime())
     let pageData: PageData = {
       path: 'Home Page' + CANVAS_EXT,
@@ -49,14 +39,16 @@ class ProjectActions {
     note.setRect(noteRect)
     pamet.insertNote(note)
 
-    // Set page as default for the project
-    let projectData = appState.getCurrentProject();
-    this.updateProject({
-      ...projectData,
-      default_page_id: page.id,
-    });
-
     return page;
+  }
+
+  @action
+  setHomePage(appState: WebAppState, pageId: string) {
+    let projectData = appState.getCurrentProject();
+    pamet.saveProjectProperties({
+      ...projectData,
+      home_page_id: pageId,
+    });
   }
 
   @action
@@ -68,7 +60,7 @@ class ProjectActions {
   @action
   createNewPage(appState: WebAppState, name: string): Page {
     if (!appState.currentPageViewState) {
-      throw Error('No current page. Cannot create a new page via createNewPage. Use createDefaultPage instead.')
+      throw Error('No current page. Cannot create a new page via createNewPage. Use createNewPageWithHelpNote instead.')
     }
     let forwardLinkLocation = snapVectorToGrid(appState.focusPointOnDialogOpen);
 
@@ -129,10 +121,10 @@ class ProjectActions {
     pamet.removePageWithChildren(page);
 
     const currentProject = pamet.appViewState.currentProjectState;
-    if (currentProject?.default_page_id === page.id) {
-      this.updateProject({
+    if (currentProject?.home_page_id === page.id) {
+      pamet.saveProjectProperties({
         ...currentProject,
-        default_page_id: undefined,
+        home_page_id: undefined,
       });
     }
 

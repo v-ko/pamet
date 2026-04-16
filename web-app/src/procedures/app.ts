@@ -18,11 +18,11 @@ const log = getLogger('AppProcedures');
 // --- Pure helpers (no side effects) ---
 
 /** Resolve the best page to show. Returns pageId or null. Never creates anything. */
-export function resolvePageId(projectData: PametProjectData): string | null {
-    const defaultPageId = projectData.default_page_id;
-    if (defaultPageId) {
-        const page = pamet.findOne({ id: defaultPageId });
-        if (page) return defaultPageId;
+export function resolveStartupPageId(projectData: PametProjectData): string | null {
+    const homePageId = projectData.home_page_id;
+    if (homePageId) {
+        const page = pamet.findOne({ id: homePageId });
+        if (page) return homePageId;
     }
     const firstPage = pamet.findOne({ type: Page });
     return firstPage ? firstPage.id : null;
@@ -104,7 +104,7 @@ export async function applyRoute(route: PametRoute) {
 
     // Page — use route's pageId, or resolve from project data
     const pageId = route.pageId
-        ?? (appState.currentProjectState ? resolvePageId(appState.currentProjectState) : null);
+        ?? (appState.currentProjectState ? resolveStartupPageId(appState.currentProjectState) : null);
     if (pageId !== appState.currentPageId) {
         appActions.setCurrentPage(appState, pageId);
     }
@@ -133,7 +133,7 @@ export async function navigateToProject(projectId: string): Promise<void> {
 
     if (!appState.currentProjectState) return;
 
-    const pageId = resolvePageId(appState.currentProjectState);
+    const pageId = resolveStartupPageId(appState.currentProjectState);
     const route = new PametRoute({
         userId: appState.userId,
         projectId,
@@ -174,11 +174,12 @@ export async function ensureProjectAndNavigate(): Promise<void> {
     if (!appState.currentProjectState) return;
 
     // 3. Resolve page (from route or default), create if needed
-    let pageId = route.pageId ?? resolvePageId(appState.currentProjectState);
+    let pageId = route.pageId ?? resolveStartupPageId(appState.currentProjectState);
     if (!pageId) {
-        log.info('No pages found in project. Creating a default page');
-        projectActions.createDefaultPage(appState);
-        pageId = resolvePageId(appState.currentProjectState);
+        log.info('No pages found in project. Creating a home page');
+        let page = projectActions.createNewPageWithHelpNote();
+        projectActions.setHomePage(appState, page.id);
+        pageId = resolveStartupPageId(appState.currentProjectState);
     }
 
     // 4. Build route and navigate
@@ -239,7 +240,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 
         // If the current project is null (i.e. we've deleted the current project)
         // use the auto-assist to switch to the first project in the list
-        // and create default page if needed, etc.
+        // and create home page if needed, etc.
         if (deletingCurrentProject) {
             await ensureProjectAndNavigate();
         }

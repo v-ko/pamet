@@ -46,7 +46,7 @@ RepoSettingsData = TypedDict(
         "title": str,
         "description": str,
         "created": str,
-        "default_page_id": NotRequired[str | None],
+        "home_page_id": NotRequired[str | None],
         "files.exclude": NotRequired[dict[str, bool]],
     },
 )

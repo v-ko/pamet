@@ -19,7 +19,7 @@ class PametStore(Store):
     """
 
     def __init__(self) -> None:
-        self.default_page_id = None
+        self.home_page_id = None
 
     # -------------Pages CRUD-------------
     def insert_page(self, page_: Page) -> Change:
@@ -91,8 +91,10 @@ class PametStore(Store):
         return self.find_one(id=arrow_id, type=Arrow)
 
     # Other
-    def default_page(self):
-        return self.page(self.default_page_id)
+    def home_page(self) -> Page | None:
+        if not self.home_page_id:
+            return None
+        return self.page(self.home_page_id)
 
-    def set_default_page(self, new_page: Page):
-        self.default_page_id = new_page.id
+    def set_home_page(self, new_page: Page):
+        self.home_page_id = new_page.id

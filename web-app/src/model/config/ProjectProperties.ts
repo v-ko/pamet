@@ -5,7 +5,7 @@ export interface ProjectPropertiesData extends EntityData {
     title: string;
     description: string;
     created: string;
-    default_page_id?: string;
+    home_page_id?: string;
 }
 
 @entityType('ProjectProperties')
@@ -24,6 +24,6 @@ export class ProjectProperties extends Entity<ProjectPropertiesData> {
 
     get created(): string { return this._data.created; }
 
-    get defaultPageId(): string | undefined { return this._data.default_page_id; }
-    set defaultPageId(value: string | undefined) { this._data.default_page_id = value; }
+    get homePageId(): string | undefined { return this._data.home_page_id; }
+    set homePageId(value: string | undefined) { this._data.home_page_id = value; }
 }

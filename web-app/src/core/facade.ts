@@ -23,7 +23,7 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { StoreSyncClient } from "fusion/storage/sync/StoreSyncClient";
-import { updateAppStateFromConfig, applyRoute, resolvePageId } from "@/procedures/app";
+import { updateAppStateFromConfig, applyRoute, resolveStartupPageId } from "@/procedures/app";
 import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/components/page/PageViewState";
@@ -511,7 +511,7 @@ export class PametFacade extends PametStore {
                 title: pp.title,
                 description: pp.description,
                 created: pp.created,
-                default_page_id: pp.defaultPageId,
+                home_page_id: pp.homePageId,
             };
         }
         const recentProject = this.recentProject(trackedProject.id);
@@ -530,7 +530,7 @@ export class PametFacade extends PametStore {
             const pp = existing as ProjectProperties;
             pp.title = projectData.title;
             pp.description = projectData.description;
-            pp.defaultPageId = projectData.default_page_id;
+            pp.homePageId = projectData.home_page_id;
             this.appConfigStore.updateOne(pp);
         } else {
             const pp = new ProjectProperties({
@@ -540,7 +540,7 @@ export class PametFacade extends PametStore {
                 title: projectData.title,
                 description: projectData.description,
                 created: projectData.created,
-                default_page_id: projectData.default_page_id,
+                home_page_id: projectData.home_page_id,
             });
             this.appConfigStore.insertOne(pp);
         }
@@ -691,7 +691,7 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                     }
                     // Current page removed: show next available page (no auto-creation for external deletes)
                     const nextPageId = appState.currentProjectState
-                        ? resolvePageId(appState.currentProjectState) : null;
+                        ? resolveStartupPageId(appState.currentProjectState) : null;
                     const fallbackRoute = new PametRoute({
                         userId: appState.userId,
                         projectId: projectId,
