@@ -10,7 +10,11 @@ from fusion.libs.entity.change import Change
 from fusion.libs.entity.delta import Delta
 from fusion.logging import get_logger
 
-from pamet.desktop_app.config import get_repo_settings
+from pamet.desktop_app.config import (
+    create_repo_settings,
+    get_repo_settings,
+    repo_settings_path,
+)
 from pamet.model.arrow import Arrow
 from pamet.model.file_item import FileItem
 from pamet.model.page import Page
@@ -100,6 +104,14 @@ class ProjectFolderManager:
 
     def load(self) -> None:
         self.migration_manager.do_all_migrations()
+
+        if not repo_settings_path(self.repo_root).exists():
+            create_repo_settings(
+                self.repo_root,
+                repo_id=self.project_id,
+                title=self.repo_root.name,
+            )
+
         file_items = self._load_all_entities()
         self.file_storage.rebuild_index(file_items)
         log.info(

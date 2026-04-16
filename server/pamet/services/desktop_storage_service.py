@@ -8,7 +8,6 @@ from fusion.logging import get_logger
 from fusion.storage.in_memory_store import InMemoryStore
 from fusion.storage.store_sync_service import StoreSyncService
 
-from pamet.desktop_app.config import create_repo_settings, repo_settings_path
 from pamet.model.config import ProjectProperties
 from pamet.services.config_file_manager import ConfigFileManager, DSSStatus
 from pamet.services.project_sync.project_folder_manager import ProjectFolderManager
@@ -104,13 +103,6 @@ class DesktopStorageService:
                 return
             if not repo_root.is_absolute():
                 raise ValueError("repo_root must be an absolute path")
-
-            if not repo_settings_path(repo_root).exists():
-                create_repo_settings(
-                    repo_root,
-                    repo_id=project_id,
-                    title=repo_root.name,
-                )
 
             pfm = ProjectFolderManager(
                 project_id=project_id,
