@@ -245,7 +245,9 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
     try {
         // Remove from config which will signal the other tabs to unload the project
         pamet.removeTrackedProject(project.id);
-        pamet.removeRecentProject(project.id);
+        if (pamet.recentProjects().some(p => p.id === project.id)) {
+            pamet.removeRecentProject(project.id);
+        }
 
         // Erase local caches; each adapter erases only what it owns
         await pamet.storageService.removeProject(project.id, pamet.projectStorageConfig(project.id));
