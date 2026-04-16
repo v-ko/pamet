@@ -23,7 +23,7 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { StoreSyncClient } from "fusion/storage/sync/StoreSyncClient";
-import { updateAppStateFromConfig, applyRoute, resolveStartupPageId } from "@/procedures/app";
+import { updateAppStateFromConfig, applyRoute } from "@/procedures/app";
 import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/components/page/PageViewState";
@@ -694,9 +694,8 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
                     if (projectId === null) {
                         throw Error('No project set');
                     }
-                    // Current page removed: show next available page (no auto-creation for external deletes)
-                    const nextPageId = appState.currentProjectState
-                        ? resolveStartupPageId(appState.currentProjectState) : null;
+                    // Current page removed externally: navigate to home page (no auto-creation)
+                    const nextPageId = appState.currentProjectState?.home_page_id ?? null;
                     const fallbackRoute = new PametRoute({
                         userId: appState.userId,
                         projectId: projectId,

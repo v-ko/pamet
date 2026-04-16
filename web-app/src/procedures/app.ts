@@ -1,32 +1,17 @@
 import { getLogger } from "fusion/logging";
 import { pamet } from "@/core/facade";
-import { PametProjectData, ProjectData } from "@/model/Project";
+import { ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
 import { pageActions } from "@/actions/page";
 import { PametRoute } from "@/services/routing/route";
 import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "@/actions/project";
-import { Page } from "@/model/Page";
-import { createId, currentTime, timestamp } from "fusion/util/base";
+import { currentTime, timestamp } from "fusion/util/base";
 
 import { LOCAL_USER_ID } from "@/core/constants";
 
 const log = getLogger('AppProcedures');
-
-
-// --- Pure helpers (no side effects) ---
-
-/** Resolve the best page to show. Returns pageId or null. Never creates anything. */
-export function resolveStartupPageId(projectData: PametProjectData): string | null {
-    const homePageId = projectData.home_page_id;
-    if (homePageId) {
-        const page = pamet.findOne({ id: homePageId });
-        if (page) return homePageId;
-    }
-    const firstPage = pamet.findOne({ type: Page });
-    return firstPage ? firstPage.id : null;
-}
 
 
 // --- Project attach/detach ---
@@ -102,9 +87,9 @@ export async function applyRoute(route: PametRoute) {
         await switchProject(targetProjectId);
     }
 
-    // Page — use route's pageId, or resolve from project data
+    // Page — use route's pageId, or fall back to home page
     const pageId = route.pageId
-        ?? (appState.currentProjectState ? resolveStartupPageId(appState.currentProjectState) : null);
+        ?? (appState.currentProjectState?.home_page_id ?? null);
     if (pageId !== appState.currentPageId) {
         appActions.setCurrentPage(appState, pageId);
     }
@@ -133,7 +118,7 @@ export async function navigateToProject(projectId: string): Promise<void> {
 
     if (!appState.currentProjectState) return;
 
-    const pageId = resolveStartupPageId(appState.currentProjectState);
+    const pageId = appState.currentProjectState.home_page_id;
     const route = new PametRoute({
         userId: appState.userId,
         projectId,
@@ -173,13 +158,13 @@ export async function ensureProjectAndNavigate(): Promise<void> {
     await switchProject(projectId);
     if (!appState.currentProjectState) return;
 
-    // 3. Resolve page (from route or default), create if needed
-    let pageId = route.pageId ?? resolveStartupPageId(appState.currentProjectState);
+    // 3. Resolve page (from route or home page), create if needed
+    let pageId = route.pageId ?? appState.currentProjectState.home_page_id;
     if (!pageId) {
         log.info('No pages found in project. Creating a home page');
         let page = projectActions.createNewPageWithHelpNote();
         projectActions.setHomePage(appState, page.id);
-        pageId = resolveStartupPageId(appState.currentProjectState);
+        pageId = page.id;
     }
 
     // 4. Build route and navigate
