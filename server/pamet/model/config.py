@@ -23,7 +23,7 @@ class MiscProperties(Entity):
 
 @entity_type
 class ProjectProperties(Entity):
-    projectId: str = ""
+    project_id: str = ""
     title: str = ""
     description: str = ""
     created: str = ""

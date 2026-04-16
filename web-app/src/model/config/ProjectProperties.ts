@@ -1,7 +1,7 @@
 import { Entity, EntityData, entityType } from "fusion/model/Entity"
 
 export interface ProjectPropertiesData extends EntityData {
-    projectId: string;
+    project_id: string;
     title: string;
     description: string;
     created: string;
@@ -15,7 +15,7 @@ export class ProjectProperties extends Entity<ProjectPropertiesData> {
         return `project-props-${projectId}`;
     }
 
-    get projectId(): string { return this._data.projectId; }
+    get projectId(): string { return this._data.project_id; }
 
     get title(): string { return this._data.title; }
     set title(value: string) { this._data.title = value; }

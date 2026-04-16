@@ -22,8 +22,8 @@ import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
-import { StoreSyncClient } from "fusion/storage/sync/StoreSyncClient";
-import { switchProject, ensureProjectAndNavigate, applyRoute } from "@/procedures/app";
+import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
+import { applyRoute } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
@@ -580,7 +580,7 @@ export class PametFacade extends PametStore {
             const pp = new ProjectProperties({
                 id: entityId,
                 parent_id: '',
-                projectId: projectData.id,
+                project_id: projectData.id,
                 title: projectData.title,
                 description: projectData.description,
                 created: projectData.created,

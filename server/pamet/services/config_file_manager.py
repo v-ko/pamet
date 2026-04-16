@@ -135,9 +135,9 @@ class ConfigFileManager:
         # load_from_dict can deserialise it as a ProjectProperties entity.
         data.setdefault("type_name", "ProjectProperties")
         data.setdefault("parent_id", "")
-        # Raw files store the project id as "id"; map to projectId
-        if "projectId" not in data:
-            data["projectId"] = data.get("id", project_id)
+        # Always use the canonical project_id (the one DSS knows about),
+        # not whatever "id" the on-disk V4 file might contain.
+        data["project_id"] = project_id
         data["id"] = entity_id
         entity = load_from_dict(data)
         if store.find_one(id=entity.id):
