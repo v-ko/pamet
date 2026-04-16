@@ -7,7 +7,7 @@ import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
-import { ensureProjectAndNavigate, updateAppStateFromConfig } from "@/procedures/app";
+import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
 import { RestStoreSyncClient } from "fusion/storage/sync/RestStoreSyncClient";
@@ -150,9 +150,14 @@ async function initializeDesktopApp() {
         log.error("Failed to initialize storage service", e);
     }
 
-    await updateAppStateFromConfig(pamet.appViewState).catch((e) => {
-        log.error('[setConfig] Error updating app state from config', e);
-    });
+    // Populate app state from config store
+    appState.deviceId = pamet.getDeviceId() ?? null;
+    const userData = pamet.getUserData();
+    if (userData?.id) {
+        appState.userId = userData.id;
+    }
+    appState.trackedProjects = pamet.getTrackedProjectsFromConfig();
+    appState.recentProjects = pamet.getRecentProjects();
 
     pamet.initRouter();
 

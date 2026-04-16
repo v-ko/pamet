@@ -7,9 +7,8 @@ import { PametRoute } from "@/services/routing/route";
 import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "@/actions/project";
+import { Page } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
-
-import { LOCAL_USER_ID } from "@/core/constants";
 
 const log = getLogger('AppProcedures');
 
@@ -44,7 +43,7 @@ export function switchProject(projectId: string | null): Promise<void> {
             // Case 2: Same project — just ensure properties are loaded
             if (projectId === currentProjectId) {
                 const projectData = appState.currentProjectState
-                    ?? await pamet.loadProjectProperties(projectId);
+                    ?? pamet.loadProjectProperties(projectId);
                 if (projectData) {
                     appActions.reflectCurrentProjectState(appState, projectData);
                 }
@@ -62,7 +61,7 @@ export function switchProject(projectId: string | null): Promise<void> {
             }
 
             await pamet.attachProjectAsCurrent(projectId);
-            const projectData = await pamet.loadProjectProperties(projectId);
+            const projectData = pamet.loadProjectProperties(projectId);
             appActions.reflectCurrentProjectState(appState, projectData ?? null);
         } finally {
             appActions.updateSystemDialogState(appState, null);
@@ -107,6 +106,34 @@ export async function applyRoute(route: PametRoute) {
 
 
 // --- Navigation procedures ---
+
+/** Delete a page, create home if last, then navigate. */
+export async function deletePageAndNavigate(appState: WebAppState, page: Page): Promise<void> {
+    projectActions.deletePageAndUpdateReferences(page);
+    appActions.closeAppDialog(appState);
+
+    let pageId = appState.currentProjectState?.home_page_id ?? null;
+    if (!pageId && appState.currentProjectState) {
+        let newPage = projectActions.createNewPageWithHelpNote();
+        projectActions.setHomePage(appState, newPage.id);
+        pageId = newPage.id;
+    }
+    await pamet.navigateTo(new PametRoute({
+        userId: appState.userId,
+        projectId: appState.currentProjectId ?? undefined,
+        pageId: pageId ?? undefined,
+    }));
+}
+
+/** Create a new page (with links) and navigate to it. */
+export async function createPageAndNavigate(appState: WebAppState, name: string): Promise<void> {
+    let page = projectActions.createNewPage(appState, name);
+    await pamet.navigateTo(new PametRoute({
+        userId: appState.userId,
+        projectId: appState.currentProjectId ?? undefined,
+        pageId: page.id,
+    }));
+}
 
 /** Navigate to a project, resolving the best page. No auto-creation. */
 export async function navigateToProject(projectId: string): Promise<void> {
@@ -161,7 +188,7 @@ export async function ensureProjectAndNavigate(): Promise<void> {
     // 3. Resolve page (from route or home page), create if needed
     let pageId = route.pageId ?? appState.currentProjectState.home_page_id;
     if (!pageId) {
-        log.info('No pages found in project. Creating a home page');
+        log.info('No home page set. Creating a home page');
         let page = projectActions.createNewPageWithHelpNote();
         projectActions.setHomePage(appState, page.id);
         pageId = page.id;
@@ -236,53 +263,6 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
     }
 }
 
-
-export async function updateAppStateFromConfig(appState: WebAppState) {
-    // Device
-    let deviceId = pamet.getDeviceId() ?? null;
-
-    // User - For now UserData has no id/name, so we use LOCAL_USER_ID
-    // Later when cloud auth is implemented, this will set the actual user ID
-    let user = pamet.getUserData();
-    let userId: string;
-    if (!user) {
-        userId = LOCAL_USER_ID;
-    } else {
-        if (!user.id){
-            throw new Error('User data is missing id field');
-        }
-        userId = user.id!;
-    }
-    // TODO: When cloud auth is implemented, add: else { appState.userId = user.id; }
-
-    appActions.updateIdentity(appState, deviceId, userId);
-    appActions.updateProjectReferences(
-        appState,
-        pamet.getTrackedProjectsFromConfig(),
-        pamet.getRecentProjects(),
-    );
-
-    // Settings - not yet implemented
-
-    // Projects
-    if (appState.currentProjectId) {
-        // If the current project has been deleted, reload the page so that
-        // the router goes to the default project
-        const currentTrackedProject = pamet.appViewState.trackedProject(appState.currentProjectId);
-        if (currentTrackedProject === undefined) {
-            log.info('Project deleted in other tab.');
-            alert('The project you were working on has been deleted in another tab. Reloading the page.');
-            window.location.reload();
-        } else {
-            // Else update the current project data in the app state
-            // * This should be implemented as a mobx reaction at some point to avoid
-            // redundant updates
-            const currentProjectNewState = await pamet.loadProjectProperties(appState.currentProjectId);
-            log.info('AT updateAppStateFromConfig. Current project present. Reflecting new state', currentProjectNewState);
-            appActions.reflectCurrentProjectState(appState, currentProjectNewState ?? null);
-        }
-    }
-}
 
 export async function createProject(newProject: ProjectData): Promise<void> {
     log.info('Creating project', newProject.id);

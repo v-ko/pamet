@@ -7,7 +7,7 @@ import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
-import { ensureProjectAndNavigate, updateAppStateFromConfig } from "@/procedures/app";
+import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
 import { LocalStorageConfigSync } from "@/services/config/LocalStorageConfigSync";
@@ -120,9 +120,10 @@ async function initializeWebApp() {
         log.error("Failed to initialize storage service", e);
     }
 
-    await updateAppStateFromConfig(pamet.appViewState).catch((e) => {
-        log.error('[setConfig] Error updating app state from config', e);
-    });
+    // Populate app state from config store
+    appState.deviceId = pamet.getDeviceId() ?? null;
+    appState.trackedProjects = pamet.getTrackedProjectsFromConfig();
+    appState.recentProjects = pamet.getRecentProjects();
 
     pamet.initRouter();
 

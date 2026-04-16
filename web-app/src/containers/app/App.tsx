@@ -12,19 +12,20 @@ import Panel from "@/components/Panel";
 import shareIconUrl from "@/resources/icons/share-2.svg";
 import accountCircleIconUrl from "@/resources/icons/account-circle.svg";
 import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
-import { commands, confirmPageDeletion } from "@/core/commands";
+import { confirmPageDeletion } from "@/core/commands";
+import { commands } from "@/core/commands";
 import { pageActions } from "@/actions/page";
 import NoteEditView from "@/components/note/NoteEditView";
-import { projectActions } from "@/actions/project";
 import { CreatePageDialog } from "@/components/CreateNewPageDialog";
 import { appActions } from "@/actions/app";
+import { deletePageAndNavigate, createPageAndNavigate } from "@/procedures/app";
 import { PagePropertiesDialog } from "@/components/PagePropertiesDialog";
 import { ProjectPropertiesDialog } from "@/components/ProjectPropertiesDialog";
 import { ProjectsDialog } from "@/components/ProjectsDialog";
 import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { DebugDialog } from "@/components/DebugDialog";
 
-import { PametRoute } from "@/services/routing/route";
+
 import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
 import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
@@ -311,15 +312,8 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onClose={() => appActions.closeAppDialog(state)}
           onCreate={(name: string) => {
             log.info(`Creating new page: ${name}`);
-            let page = projectActions.createNewPage(state, name)
-            log.info(`Setting current page to ${name}`);
-            pamet.navigateTo(new PametRoute({
-              userId: state.userId,
-              projectId: state.currentProjectId ?? undefined,
-              pageId: page.id,
-            })).catch((e) => log.error('Error navigating to new page', e));
-
-            // Open settings view | IMPLEMENT LATER
+            createPageAndNavigate(state, name)
+              .catch((e) => log.error('Error creating/navigating to new page', e));
           }}
         />
       )}
@@ -331,20 +325,8 @@ const WebApp = observer(({ state }: { state: WebAppState }) => {
           onSave={(page) => pageActions.updatePageProperties(page)}
           onDelete={(page) => {
             if (confirmPageDeletion(page.name)) {
-              projectActions.deletePageAndUpdateReferences(page);
-              appActions.closeAppDialog(state);
-              // Navigate to home page, or create one if last page was deleted
-              let pageId = state.currentProjectState?.home_page_id ?? null;
-              if (!pageId && state.currentProjectState) {
-                let page = projectActions.createNewPageWithHelpNote();
-                projectActions.setHomePage(state, page.id);
-                pageId = page.id;
-              }
-              pamet.navigateTo(new PametRoute({
-                userId: state.userId,
-                projectId: state.currentProjectId ?? undefined,
-                pageId: pageId ?? undefined,
-              })).catch((e) => log.error('Error navigating after page deletion', e));
+              deletePageAndNavigate(state, page)
+                .catch((e) => log.error('Error deleting/navigating after page deletion', e));
             }
           }}
         />

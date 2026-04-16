@@ -23,7 +23,8 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { StoreSyncClient } from "fusion/storage/sync/StoreSyncClient";
-import { updateAppStateFromConfig, applyRoute } from "@/procedures/app";
+import { switchProject, ensureProjectAndNavigate, applyRoute } from "@/procedures/app";
+import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/components/page/PageViewState";
@@ -366,16 +367,54 @@ export class PametFacade extends PametStore {
         await syncService.initialize();
 
         store.onChanges = (delta, origin) => {
-            updateAppStateFromConfig(this.appViewState)
-                .catch((e) => {
-                    log.error('[ConfigStore.onChanges] Error updating app state from config', e);
-                });
             if (origin !== 'remote') {
                 syncService.pushDelta(delta);
             }
+            this._reduceConfigDelta(delta);
         };
 
         this._appConfigStore = store;
+    }
+
+    /**
+     * Reduce a config store delta into app view state updates.
+     * Routes by entity ID to update only the affected slice.
+     */
+    private _reduceConfigDelta(delta: Delta) {
+        const state = this.appViewState;
+        for (const entityId of delta.entityIds()) {
+            if (entityId === MiscProperties.SINGLETON_ID) {
+                appActions.applyMiscConfig(
+                    state,
+                    this.getDeviceId() ?? null,
+                    this.getRecentProjects(),
+                );
+
+            } else if (entityId === UserSettings.SINGLETON_ID) {
+                const userData = this.getUserData();
+                appActions.applyUserConfig(
+                    state,
+                    userData?.id ?? state.userId,
+                    this.getTrackedProjectsFromConfig(),
+                );
+
+            } else if (entityId.startsWith('project-props-')) {
+                // Only care about the current project's properties
+                const currentId = state.currentProjectId;
+                if (currentId && entityId === ProjectProperties.idForProject(currentId)) {
+                    if (!state.trackedProject(currentId)) {
+                        // Current project was untracked (deleted in another tab)
+                        log.info('Current project removed externally, switching away');
+                        switchProject(null)
+                            .then(() => ensureProjectAndNavigate())
+                            .catch(e => log.error('Failed to switch after project removal', e));
+                    } else {
+                        const props = this.loadProjectProperties(currentId);
+                        appActions.reflectCurrentProjectState(state, props ?? null);
+                    }
+                }
+            }
+        }
     }
 
     // UserSettings accessors
@@ -498,7 +537,7 @@ export class PametFacade extends PametStore {
         return this.appViewState.trackedProjects;
     }
 
-    async loadProjectProperties(projectId: string): Promise<PametProjectData | undefined> {
+    loadProjectProperties(projectId: string): PametProjectData | undefined {
         const trackedProject = this.appViewState.trackedProject(projectId);
         if (!trackedProject) {
             return undefined;

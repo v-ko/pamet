@@ -57,12 +57,14 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    updateProjectReferences(
-        state: WebAppState,
-        trackedProjects: ProjectReference[],
-        recentProjects: ProjectReference[],
-    ) {
+    applyUserConfig(state: WebAppState, userId: string, trackedProjects: ProjectReference[]) {
+        state.userId = userId;
         state.trackedProjects = trackedProjects;
+    }
+
+    @action({ issuer: 'service' })
+    applyMiscConfig(state: WebAppState, deviceId: string | null, recentProjects: ProjectReference[]) {
+        state.deviceId = deviceId;
         state.recentProjects = recentProjects;
     }
 
@@ -169,12 +171,6 @@ class AppActions {
     @action
     closeGlobalSearch(appState: WebAppState) {
         appState.globalSearchViewState = null;
-    }
-
-    @action({ issuer: 'service' })
-    updateIdentity(appState: WebAppState, deviceId: string | null, userId: string) {
-        appState.deviceId = deviceId;
-        appState.userId = userId;
     }
 }
 
