@@ -361,14 +361,16 @@ export class PametFacade extends PametStore {
         return this._appConfigStore;
     }
 
-    async setupConfigStore(syncService: StoreSyncClient) {
+    async setupConfigStore(syncService: StoreSyncService) {
         const store = new InMemoryStore();
         syncService.setStore(store);
         await syncService.initialize();
 
         store.onChanges = (delta, origin) => {
             if (origin !== 'remote') {
-                syncService.pushDelta(delta);
+                syncService.pushDelta(delta).catch((e) => {
+                    log.error('Error pushing config delta to sync service', e);
+                });
             }
             this._reduceConfigDelta(delta);
         };

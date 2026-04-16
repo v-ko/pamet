@@ -3,7 +3,7 @@ import { Delta } from "fusion/model/Delta";
 import { Change, ChangeType } from "fusion/model/Change";
 import { Entity, EntityData, SerializedEntityData, dumpToDict, loadFromDict } from "fusion/model/Entity";
 import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
-import { StoreSyncClient } from "fusion/storage/sync/StoreSyncClient";
+import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
 
 // Import config entity types to ensure they're registered in the entity library
 import "@/model/config/UserSettings";
@@ -14,7 +14,7 @@ const log = getLogger('LocalStorageConfigSync');
 
 const CONFIG_KEY_PREFIX = 'pamet-config:';
 
-export class LocalStorageConfigSync implements StoreSyncClient {
+export class LocalStorageConfigSync implements StoreSyncService {
     private _store: InMemoryStore | null = null;
     private _storageListener: ((event: StorageEvent) => void) | null = null;
 

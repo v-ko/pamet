@@ -10,7 +10,7 @@ import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
-import { RestStoreSyncClient } from "fusion/storage/sync/RestStoreSyncClient";
+import { WebSocketSyncService } from "fusion/storage/sync/WebSocketSyncService";
 
 import WebApp from "@/containers/app/App";
 import folderCheckIconUrl from "@/resources/icons/folder-check-line.svg";
@@ -96,10 +96,11 @@ pamet.setStorageStatusIconSet({
 
 // Initialize the desktop app (async: storage, config, routing)
 async function initializeDesktopApp() {
-    // Setup config store with REST sync to desktop server + localStorage for misc
-    const configSync = new RestStoreSyncClient({
-        endpoint: `${baseUrl}/config/store`,
-        headers: () => ({ 'Authorization': `Bearer ${desktopAccessToken}` }),
+    // Setup config store with WebSocket sync to desktop server
+    const wsUrl = baseUrl.replace(/^http/, 'ws') + '/config/store/ws?token=' + encodeURIComponent(desktopAccessToken!);
+    const configSync = new WebSocketSyncService({
+        role: 'receiver',
+        url: wsUrl,
     });
     await pamet.setupConfigStore(configSync);
 

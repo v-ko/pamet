@@ -21,6 +21,7 @@ dependencies = [
     'fastapi',
     'python-multipart',
     'uvicorn',
+    'websockets',
     'sqlitedict',
     'requests',
     'markdown',

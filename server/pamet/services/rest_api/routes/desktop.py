@@ -20,7 +20,7 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from fusion.libs.entity import dump_to_dict
 from fusion.logging import get_logger
-from fusion.storage.store_sync_service import STALE
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 import pamet
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
@@ -97,7 +97,7 @@ def _project_runtime(project_id: str):
 # ---------------------------------------------------------------------------
 
 
-@desktop_router.get("/version", dependencies=[Depends(require_desktop_auth)])
+@desktop_router.get("/version")
 def get_version():
     return {"data": pamet.__version__}
 
@@ -184,56 +184,38 @@ def unload_project(project_id: str):
     return {"ok": True}
 
 
-@desktop_router.get(
-    "/config/store",
-    dependencies=[Depends(require_desktop_auth)],
-)
-def get_config_store():
+@desktop_router.websocket("/config/store/ws")
+async def config_store_ws(ws: WebSocket):
+    """WebSocket endpoint for bidirectional config store sync.
+
+    Auth: bearer token passed as ?token= query param (WebSocket
+    doesn't support custom headers during the handshake).
+    """
+    # --- Auth ---
+    expected_token = getattr(ws.app.state, "desktop_access_token", None)
+    if expected_token:
+        provided = ws.query_params.get("token")
+        if not provided or not hmac.compare_digest(provided, expected_token):
+            await ws.close(code=4401, reason="Unauthorized")
+            return
+
+    await ws.accept()
+
     dss = pamet.desktop_storage_service()
-    return dss.config_sync_service.full_state()
+    sync = dss.config_sync_service
 
+    async def send(msg: dict) -> None:
+        await ws.send_json(msg)
 
-@desktop_router.post(
-    "/config/store/changes",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def post_config_changes(payload: dict = Body(...)):
-    changes = payload.get("changes")
-    if not isinstance(changes, list):
-        raise HTTPException(
-            status_code=400,
-            detail="'changes' must be a list",
-        )
-    dss = pamet.desktop_storage_service()
-    return await dss.config_sync_service.apply_changes(changes)
+    async def receive() -> dict:
+        return await ws.receive_json()
 
-
-@desktop_router.get(
-    "/config/store/changes/stream",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def config_changes_stream(request: Request):
-    dss = pamet.desktop_storage_service()
     try:
-        after = int(request.headers.get("last-event-id", "0"))
-    except (ValueError, TypeError):
-        after = 0
-
-    async def _sse_generator():
-        async for item in dss.config_sync_service.subscribe(after):
-            if item is STALE:
-                yield f"event: stale\nid: {dss.config_sync_service.seq}\ndata: {{}}\n\n"
-                return
-            assert isinstance(item, tuple)
-            seq, changes = item
-            data = json.dumps({"changes": changes})
-            yield f"id: {seq}\ndata: {data}\n\n"
-
-    return StreamingResponse(
-        _sse_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+        await sync.run(send, receive)
+    except WebSocketDisconnect:
+        log.info("Config store WS client disconnected")
+    except Exception as exc:
+        log.error("Config store WS error: %s", exc)
 
 
 @desktop_router.get("/")
