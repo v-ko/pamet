@@ -140,28 +140,6 @@
         {
             "id": [
                 "17203d2c",
-                "98d5f75f"
-            ],
-            "geometry": [
-                -180,
-                -290,
-                210,
-                70
-            ],
-            "style": {},
-            "content": {
-                "text": "",
-                "url": "pamet:/p/cf2cf58c"
-            },
-            "metadata": {},
-            "created": "2026-04-16T10:51:35+03:00",
-            "modified": "2026-04-16T10:51:35+03:00",
-            "tags": [],
-            "type_name": "TextNote"
-        },
-        {
-            "id": [
-                "17203d2c",
                 "d72687f2"
             ],
             "geometry": [

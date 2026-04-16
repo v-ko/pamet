@@ -2,7 +2,7 @@
     "id": "482fd438",
     "backups_enabled": true,
     "backup_folder": "{template_root}/repo/.pamet/backups",
-    "home_page": null,
+    "home_page": "17203d2c",
     "record_all_changes": false,
     "semantic_search_enabled": false,
     "media_store_path": "{template_root}/repo/.pamet/media"

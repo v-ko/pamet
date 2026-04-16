@@ -1,10 +1,10 @@
 {
     "id": "77b8b2b3",
-    "repository_path": "/sync/projects/misli/pamet/server/tests/mock_v4_project/prepared_test_time/repo",
-    "scripts_folder": "/sync/projects/misli/pamet/server/tests/mock_v4_project/prepared_test_time/scripts",
-    "script_templates_folder": "/sync/projects/misli/pamet/server/tests/mock_v4_project/prepared_test_time/script_templates",
+    "repository_path": "{template_root}/repo",
+    "scripts_folder": "{template_root}/scripts",
+    "script_templates_folder": "{template_root}/script_templates",
     "accepted_script_risks": false,
     "run_in_terminal_prefix_posix": "gnome-terminal -- ",
     "run_in_terminal_prefix_windows": "powershell -noexit ",
-    "static_export_folder": "/sync/projects/misli/pamet/server/tests/mock_v4_project/prepared_test_time/static_export"
+    "static_export_folder": "{template_root}/static_export"
 }
