@@ -405,9 +405,8 @@ export class PametFacade extends PametStore {
                     if (!state.trackedProject(currentId)) {
                         // Current project was untracked (deleted in another tab)
                         log.info('Current project removed externally, switching away');
-                        switchProject(null)
-                            .then(() => ensureProjectAndNavigate())
-                            .catch(e => log.error('Failed to switch after project removal', e));
+                        alert('The project you were working on has been deleted (in another tab?). Reloading the page.');
+                        window.location.reload();
                     } else {
                         const props = this.loadProjectProperties(currentId);
                         appActions.reflectCurrentProjectState(state, props ?? null);
@@ -784,9 +783,9 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
     }
 
     // Update search indices (separated logic for potential future refactoring)
-    try{
-    updateSearchIndicesFromDelta(pamet.searchService, delta, pamet);
-    } catch(e) {
+    try {
+        updateSearchIndicesFromDelta(pamet.searchService, delta, pamet);
+    } catch (e) {
         log.error('Error while updating search index from delta', e, delta)
     }
 }
