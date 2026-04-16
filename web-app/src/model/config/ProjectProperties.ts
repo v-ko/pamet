@@ -6,6 +6,7 @@ export interface ProjectPropertiesData extends EntityData {
     description: string;
     created: string;
     home_page_id?: string;
+    backups_enabled?: boolean;
 }
 
 @entityType('ProjectProperties')
@@ -26,4 +27,7 @@ export class ProjectProperties extends Entity<ProjectPropertiesData> {
 
     get homePageId(): string | undefined { return this._data.home_page_id; }
     set homePageId(value: string | undefined) { this._data.home_page_id = value; }
+
+    get backupsEnabled(): boolean { return this._data.backups_enabled ?? true; }
+    set backupsEnabled(value: boolean) { this._data.backups_enabled = value; }
 }

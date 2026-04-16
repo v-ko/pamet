@@ -708,6 +708,49 @@ def convert_v4_page_file(v4_file_path: Path, v5_file_path: Path) -> Path:
     return v5_file_path
 
 
+def migrate_backups_layout(repo_path: Path) -> None:
+    """Fix v4 backup folder layout: flatten backups/backups/, fix ++ timestamps,
+    and move timestamp files into the backups dir."""
+    pamet_dir = repo_path / ".pamet"
+    backups_dir = pamet_dir / "backups"
+    nested_dir = backups_dir / "backups"
+
+    # Flatten backups/backups/ → backups/
+    if nested_dir.is_dir():
+        for child in nested_dir.iterdir():
+            dest = backups_dir / child.name
+            if child.is_dir() and dest.is_dir():
+                # Merge contents
+                for item in child.iterdir():
+                    shutil.move(str(item), str(dest / item.name))
+                child.rmdir()
+            else:
+                shutil.move(str(child), str(dest))
+        if nested_dir.exists() and not any(nested_dir.iterdir()):
+            nested_dir.rmdir()
+        log.info("migrate_backups_layout: flattened backups/backups/")
+
+    if not backups_dir.is_dir():
+        return
+
+    # Move timestamp files from .pamet/ into .pamet/backups/
+    for ts_file in ("last_backup_timestamp.txt", "last_prune_timestamp.txt"):
+        old = pamet_dir / ts_file
+        if old.is_file():
+            shutil.move(str(old), str(backups_dir / ts_file))
+
+    # Fix ++ timestamps in backup filenames (e.g. "++0200" → "+0200")
+    renamed = 0
+    for path in backups_dir.rglob("backup_*"):
+        if "++" not in path.name:
+            continue
+        new_name = path.name.replace("++", "+")
+        path.rename(path.with_name(new_name))
+        renamed += 1
+    if renamed:
+        log.info(f"migrate_backups_layout: fixed {renamed} backup filename(s)")
+
+
 def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
     """Convert all .pam4.json files in repo_path to .canvas.
 
@@ -780,5 +823,7 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
     canvas_page_paths = _collect_canvas_page_paths(repo_path)
     if canvas_page_paths:
         migrate_legacy_project_config(repo_path, canvas_page_paths, v4_backup_folder)
+
+    migrate_backups_layout(repo_path)
 
     return converted

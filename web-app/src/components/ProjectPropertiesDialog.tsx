@@ -15,6 +15,7 @@ interface ProjectPropertiesDialogProps {
 export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState(project.title);
+  const [backupsEnabled, setBackupsEnabled] = useState(project.backups_enabled ?? true);
   const [titleError, setTitleError] = useState<string | null>(null);
   const trackedProjects = pamet.appViewState.trackedProjects;
 
@@ -79,7 +80,8 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
 
           const updatedProject = {
             ...project,
-            title: title.trim()
+            title: title.trim(),
+            backups_enabled: backupsEnabled,
           };
 
           try {
@@ -114,6 +116,16 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           title="Project ID cannot be changed"
           className="dialog-input"
         />
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          title="When enabled, page snapshots are periodically saved to the .pamet/backups/ folder.">
+          <input
+            type="checkbox"
+            checked={backupsEnabled}
+            onChange={e => setBackupsEnabled(e.target.checked)}
+          />
+          Backups enabled
+        </label>
 
         <div className="dialog-actions row-between">
           <button

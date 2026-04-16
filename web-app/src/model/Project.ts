@@ -10,5 +10,6 @@ export interface ProjectReference {
 
 export interface PametProjectData extends ProjectData {
     home_page_id?: string;
+    backups_enabled?: boolean;
     'files.exclude'?: Record<string, boolean>;
 }

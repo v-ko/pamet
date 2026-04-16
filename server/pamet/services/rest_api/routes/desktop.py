@@ -97,22 +97,35 @@ def _project_runtime(project_id: str):
 # ---------------------------------------------------------------------------
 
 
-@desktop_router.get("/version")
+@desktop_router.get("/version", dependencies=[Depends(require_desktop_auth)])
 def get_version():
     return {"data": pamet.__version__}
 
 
-@desktop_router.get("/status")
+@desktop_router.get("/status", dependencies=[Depends(require_desktop_auth)])
 def get_status():
     dss = pamet.desktop_storage_service()
     return dss.status
 
 
-@desktop_router.post("/commands/{command_name}/")
-def run_command(command_name: str, request: Request):
+@desktop_router.post(
+    "/commands/{command_name}/",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def run_command(
+    command_name: str, request: Request, payload: dict | None = Body(default=None)
+):
     commands: dict = getattr(request.app.state, "commands", {})
-    if command_name in commands:
-        commands[command_name]()
+    if command_name not in commands:
+        raise HTTPException(status_code=404, detail=f"Unknown command: {command_name}")
+    try:
+        if payload:
+            commands[command_name](**payload)
+        else:
+            commands[command_name]()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"ok": True}
 
 
 # ---------------------------------------------------------------------------

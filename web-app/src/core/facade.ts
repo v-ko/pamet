@@ -512,6 +512,7 @@ export class PametFacade extends PametStore {
                 description: pp.description,
                 created: pp.created,
                 home_page_id: pp.homePageId,
+                backups_enabled: pp.backupsEnabled,
             };
         }
         const recentProject = this.recentProject(trackedProject.id);
@@ -531,6 +532,9 @@ export class PametFacade extends PametStore {
             pp.title = projectData.title;
             pp.description = projectData.description;
             pp.homePageId = projectData.home_page_id;
+            if (projectData.backups_enabled !== undefined) {
+                pp.backupsEnabled = projectData.backups_enabled;
+            }
             this.appConfigStore.updateOne(pp);
         } else {
             const pp = new ProjectProperties({
@@ -541,6 +545,7 @@ export class PametFacade extends PametStore {
                 description: projectData.description,
                 created: projectData.created,
                 home_page_id: projectData.home_page_id,
+                backups_enabled: projectData.backups_enabled,
             });
             this.appConfigStore.insertOne(pp);
         }

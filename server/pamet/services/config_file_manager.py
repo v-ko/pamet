@@ -31,10 +31,19 @@ class ServiceErrors(TypedDict, total=False):
     io: str  # e.g. "Permission denied: /path/to/file"
 
 
+class BackupServiceStatus(TypedDict):
+    """Per-project backup service status."""
+
+    present: bool
+    backups_enabled: bool
+    backup_folder: str  # Absolute path to the backups/ directory
+
+
 class DSSStatus(TypedDict):
     """Status object for DesktopStorageService, exposed via /status endpoint."""
 
     errors: dict[str, ServiceErrors]  # service_name → {error_type → message}
+    backup_service: dict[str, BackupServiceStatus]  # project_id → status
 
 
 class ConfigFileManager:

@@ -8,6 +8,8 @@ import click
 import fusion
 from fusion.libs.action.action_call import ActionCall, ActionRunStates
 from fusion.logging import LOGGING_LEVEL, LoggingLevels
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from slugify import slugify
 
 import pamet
@@ -45,9 +47,18 @@ def raise_a_window():
         windows[0].raise_()
 
 
+def open_backups_folder(project_id: str):
+    dss = pamet.desktop_storage_service()
+    pfm = dss.project_folder_manager(project_id)
+    backup_folder = pfm.backup_service.backup_folder
+    backup_folder.mkdir(parents=True, exist_ok=True)
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(backup_folder)))
+
+
 local_server_commands = {
     "grab_screen_snippet": grab_screen_snippet,
     "raise_window": raise_a_window,
+    "open_backups_folder": open_backups_folder,
 }
 
 

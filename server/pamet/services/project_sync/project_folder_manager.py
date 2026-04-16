@@ -14,6 +14,7 @@ from pamet.desktop_app.config import get_repo_settings
 from pamet.model.arrow import Arrow
 from pamet.model.file_item import FileItem
 from pamet.model.page import Page
+from pamet.services.backup import BackupService
 from pamet.services.constants import MAX_WALK_ENTRIES
 from pamet.services.file_system_watcher import FileSystemWatcher
 from pamet.storage.canvas_html import write_canvas_file
@@ -88,6 +89,13 @@ class ProjectFolderManager:
         self.fs_watcher = FileSystemWatcher(self)
         self.file_storage = FileStorageAdapter(self.repo_root, self.store)
 
+        # Backup service — always present (for querying), scheduling
+        # controlled by backups_enabled property
+        self.backup_service = BackupService(
+            backup_folder=self.repo_root / ".pamet" / "backups",
+            store=self.store,
+        )
+
     # -- Lifecycle -------------------------------------------------------------
 
     def load(self) -> None:
@@ -126,6 +134,7 @@ class ProjectFolderManager:
         return file_items
 
     def unload(self) -> None:
+        self.backup_service.stop()
         self.fs_watcher.stop_watching()
         self.file_storage.close()
         self.store.clear()
@@ -295,6 +304,10 @@ class ProjectFolderManager:
             len(pages_to_write),
             len(deleted_page_paths),
         )
+
+        # Signal the backup service about written pages
+        if pages_to_write:
+            self.backup_service.mark_pages_changed(pages_to_write)
 
     def _write_page_to_disk(self, page_id: str) -> None:
         """Assemble a page's data from the store and write it as a .canvas file."""
