@@ -18,12 +18,7 @@ from pamet import desktop_app
 # from fusion import actions_log_channel
 from pamet.constants import DEFAULT_PROJECT_ID, DEFAULT_PROJECT_TITLE, LOCAL_USER_ID
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import (
-    APP_DATA_DIR,
-    CONFIG_DIR,
-    USER_SETTINGS_DIR,
-    repo_settings_path,
-)
+from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, USER_SETTINGS_DIR
 from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.screen_snippet import grab_screen_snippet
 from pamet.desktop_app.web_shell import WebShellWindow
@@ -31,6 +26,7 @@ from pamet.model.config import UserSettings
 from pamet.services.config_file_manager import load_user_settings, save_user_settings
 from pamet.services.desktop_storage_service import DesktopStorageService
 from pamet.services.rest_api.desktop import DesktopServer
+from pamet.storage.migrations.v4_to_v5 import migrate_v4_user_settings
 
 log = fusion.get_logger(__name__)
 
@@ -106,8 +102,25 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     )
     # END OF TMP MIGRATION TESTING LOGIC
 
-    # Setup initial user settings if not present
+    # Migrate legacy v4 user settings if present
+    legacy_settings_data = None
+    legacy_settings_path = APP_DATA_DIR / "settings.json"
+    try:
+        legacy_settings_data = migrate_v4_user_settings(APP_DATA_DIR)
+    except Exception as e:
+        log.error("Failed to migrate legacy user settings: %s", e)
+
     settings = load_user_settings()
+
+    if legacy_settings_data is not None:
+        if settings is not None:
+            log.warning(
+                "Legacy v4 user settings found but current settings already exist "
+                "— ignoring legacy values"
+            )
+        legacy_settings_path.unlink()
+        log.info("Deleted legacy user settings file %s", legacy_settings_path)
+
     if settings is None:
         log.info("No user settings found — creating defaults")
         settings = UserSettings(
@@ -122,26 +135,19 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     project_id: str | None = None
     project_title: str | None = None
 
-    # If v4 settings exist - extract repo path for project startup
-    legacy_settings_path = APP_DATA_DIR / "settings.json"
-    if not project_path and legacy_settings_path.exists():
-        log.info("Reading legacy settings from %s", legacy_settings_path)
-        try:
-            legacy_settings = json.loads(legacy_settings_path.read_text())
-        except Exception as e:
-            log.error("Failed to read legacy settings: %s", e)
-            legacy_settings = {}
-
-        legacy_repo_path = legacy_settings.get("repository_path")
-        if not legacy_repo_path:
-            log.warning("No repository_path in legacy settings. Starting without repo.")
-        elif not Path(legacy_repo_path).exists():
+    # If v4 settings had a repo path - use it for project startup
+    if (
+        not project_path
+        and legacy_settings_data
+        and legacy_settings_data.get("repository_path")
+    ):
+        legacy_repo_path = legacy_settings_data["repository_path"]
+        if not Path(legacy_repo_path).exists():
             log.error(
                 "Legacy repository_path %s does not exist. Ignoring.", legacy_repo_path
             )
         else:
             project_path = Path(legacy_repo_path)
-            # It was the default project so set the default name/id
             project_id = DEFAULT_PROJECT_ID
             project_title = DEFAULT_PROJECT_TITLE
 
@@ -164,9 +170,6 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     # so that the frontend can load it
     if project_path and project_title and project_id:
         log.info("Start up repository: %s" % project_path)
-
-        if not repo_settings_path(project_path).exists():
-            log.info(f"No repo settings found in {project_path} — creating settings.")
 
         # Upsert tracked project in user settings
         project_data = {
