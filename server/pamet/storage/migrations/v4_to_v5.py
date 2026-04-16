@@ -6,11 +6,12 @@ image metadata restructuring, internal URL rewrite, arrow endpoint restructuring
 repo properties rename (`.pamet/settings.json` -> `.pamet/properties.json`).
 
 Image notes are migrated to page-scoped `ImageItem` entities embedded in the
-page payload, and legacy `project.pamet.json` sidecar data is folded into the
-page payloads as well.
+page payload.
 
 The element migration logic mirrors the TypeScript tmpDynamicMigration in
 web-app/src/storage/DesktopImporter.ts.
+
+Also has logic for migrating user settings and the backup folder
 """
 
 import copy
@@ -24,7 +25,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from fusion.logging import get_logger
 from fusion.util import get_new_id
 
-from pamet.storage.canvas_html import read_canvas_file, write_canvas_file
+from pamet.storage.canvas_html import write_canvas_file
 from pamet.storage.migrations.utils import backup_file
 
 from ..file_system.color_roles import legacy_normalized_rgba_to_role
@@ -49,10 +50,47 @@ NOTE_LEGACY_TYPES = {
 # SHA-256 truncation length for content hashes (matches TS/constants.py)
 _CONTENT_HASH_HEX_LEN = 32
 
-LEGACY_PROJECT_CONFIG_FILENAME = "project.pamet.json"
 REPO_PROPERTIES_FILENAME = "properties.json"
 LEGACY_REPO_SETTINGS_FILENAME = "settings.json"
 V4_BACKUP_FOLDER_NAME = "__migration_backup_v4_to_v5__"
+
+
+def migrate_v4_user_settings(app_data_dir: Path) -> Optional[Dict[str, Any]]:
+    """Read and return legacy V4 user settings from app_data_dir/settings.json.
+
+    Returns a dict with the following keys (or None if no legacy file exists):
+    - repository_path
+    - accepted_script_risks
+    - run_in_terminal_prefix_posix
+    - run_in_terminal_prefix_windows
+    """
+    legacy_path = app_data_dir / "settings.json"
+    if not legacy_path.exists():
+        return None
+
+    try:
+        data = json.loads(legacy_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise ValueError(
+            f"Failed to parse legacy user settings {legacy_path}: {exc}"
+        ) from exc
+
+    if not isinstance(data, dict):
+        raise ValueError(
+            f"Expected dict in legacy user settings {legacy_path}, "
+            f"got {type(data).__name__}"
+        )
+
+    return {
+        "repository_path": data.get("repository_path"),
+        "accepted_script_risks": data.get("accepted_script_risks", False),
+        "run_in_terminal_prefix_posix": data.get(
+            "run_in_terminal_prefix_posix", "gnome-terminal -- "
+        ),
+        "run_in_terminal_prefix_windows": data.get(
+            "run_in_terminal_prefix_windows", "powershell -noexit "
+        ),
+    }
 
 
 def is_v4_page_file(path: Path) -> bool:
@@ -72,6 +110,7 @@ def convert_v4_to_v5_element(
     element_data: Dict[str, Any],
     page_id: str,
     page_id_to_path: Optional[Dict[str, str]] = None,
+    page_id_to_name: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Convert a single V4 element dict to V5 format.
 
@@ -80,9 +119,16 @@ def convert_v4_to_v5_element(
     *page_id_to_path*, when provided, maps V4 page IDs to their V5
     project-relative ``.canvas`` paths so that ``page_ref.path`` is set
     correctly for internal links.
+
+    *page_id_to_name*, when provided, maps V4 page IDs to their page
+    names so that ``content.text`` is set to the target page name for
+    internal link notes (matching the TS behaviour).
     """
     if not isinstance(element_data, dict):
-        return element_data
+        raise TypeError(
+            f"Expected dict for element in page {page_id}, "
+            f"got {type(element_data).__name__}: {element_data!r}"
+        )
 
     original_type = element_data.get("type_name")
 
@@ -154,6 +200,12 @@ def convert_v4_to_v5_element(
                     "id": target_id,
                     "path": target_path,
                 }
+                # Set link text to target page name (matches TS behaviour).
+                # If the target page is missing, mark it as deleted.
+                if page_id_to_name and target_id in page_id_to_name:
+                    content["text"] = page_id_to_name[target_id]
+                else:
+                    content["text"] = f"(deleted {target_id})"
             content.pop("url", None)
 
         # Image metadata migration
@@ -279,22 +331,27 @@ def _resolve_original_image_url(original_url: str, repo_path: Path) -> Optional[
     return None
 
 
+_MAX_IMAGE_FILE_SIZE = 100 * 1024 * 1024  # 100 MB
+
+
 def _compute_content_hash(file_path: Path) -> str:
     """SHA-256 of file contents, truncated to _CONTENT_HASH_HEX_LEN hex chars."""
+    size = file_path.stat().st_size
+    if size > _MAX_IMAGE_FILE_SIZE:
+        raise ValueError(
+            f"Image file too large ({size} bytes, max {_MAX_IMAGE_FILE_SIZE}): "
+            f"{file_path}"
+        )
     h = hashlib.sha256(file_path.read_bytes()).hexdigest()
     return h[:_CONTENT_HASH_HEX_LEN]
 
 
 def _get_image_dimensions(file_path: Path) -> Tuple[int, int]:
-    """Return (width, height) using Pillow.  Falls back to (0, 0)."""
-    try:
-        from PIL import Image
+    """Return (width, height) using Pillow."""
+    from PIL import Image
 
-        with Image.open(file_path) as img:
-            return img.size  # (width, height)
-    except Exception as exc:
-        log.warning(f"Could not read image dimensions from {file_path}: {exc}")
-        return 0, 0
+    with Image.open(file_path) as img:
+        return img.size  # (width, height)
 
 
 def _guess_mime(file_path: Path) -> str:
@@ -331,7 +388,7 @@ def _build_image_item_dict(
 
 
 def _migrate_images_in_page(page_data: Dict[str, Any], repo_path: Path) -> None:
-    """Resolve image notes in *page_data* in-place: create ImageItems, rewrite notes."""
+    """Should be separate to dedupe image references"""
     page_id = page_data.get("id")
     if not page_id:
         return
@@ -434,26 +491,50 @@ def _migrate_single_image_note(
         )
         return
 
-    # Copy all images into <repo>/images/
-    images_dir = repo_path / "images"
-    images_dir.mkdir(parents=True, exist_ok=True)
-    dest = images_dir / file_path.name
-    # Avoid name collisions
-    if dest.exists() and dest.read_bytes() != file_path.read_bytes():
-        stem = file_path.stem
-        suffix = file_path.suffix
-        counter = 1
-        while dest.exists():
-            dest = images_dir / f"{stem}_{counter}{suffix}"
-            counter += 1
-    if not dest.exists():
-        shutil.copy2(file_path, dest)
-    rel_path = str(dest.relative_to(repo_path))
+    # Images under the old internal store (.pamet/) or outside the repo
+    # are moved/copied into <repo>/images/.  Everything else already lives
+    # in a user-facing project folder and stays in place.
+    try:
+        rel = file_path.relative_to(repo_path)
+        needs_move = rel.parts and rel.parts[0] == ".pamet"
+    except ValueError:
+        needs_move = True  # outside repo
 
-    # Get real dimensions (prefer Pillow, fall back to V4 metadata)
-    pil_w, pil_h = _get_image_dimensions(file_path)
-    width = pil_w if pil_w > 0 else int(v4_width)
-    height = pil_h if pil_h > 0 else int(v4_height)
+    if needs_move:
+        images_dir = repo_path / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        dest = images_dir / file_path.name
+        # Avoid name collisions
+        if dest.exists():
+            dest_size = dest.stat().st_size
+            src_size = file_path.stat().st_size
+            if dest_size != src_size or (
+                src_size <= _MAX_IMAGE_FILE_SIZE
+                and dest.read_bytes() != file_path.read_bytes()
+            ):
+                stem = file_path.stem
+                suffix = file_path.suffix
+                counter = 1
+                while dest.exists():
+                    dest = images_dir / f"{stem}_{counter}{suffix}"
+                    counter += 1
+        if not dest.exists():
+            shutil.copy2(file_path, dest)
+        rel_path = str(dest.relative_to(repo_path))
+    else:
+        dest = file_path
+        rel_path = str(rel)
+
+    # Get real dimensions (Pillow, with V4 metadata fallback)
+    try:
+        width, height = _get_image_dimensions(file_path)
+    except Exception as exc:
+        log.warning(
+            f"  note {note['id']}: Pillow failed for {file_path}: {exc}, "
+            f"falling back to V4 metadata"
+        )
+        width = int(v4_width)
+        height = int(v4_height)
 
     item_dict = _build_image_item_dict(
         file_path=dest,
@@ -485,25 +566,17 @@ def _migrate_single_image_note(
     )
 
 
-def _collect_canvas_page_paths(repo_path: Path) -> List[Path]:
-    return sorted(
-        [
-            path
-            for path in repo_path.iterdir()
-            if path.is_file() and path.name.endswith(CANVAS_FILE_EXT)
-        ]
-    )
-
-
 def _migrate_repo_settings_keys(properties_path: Path) -> None:
     """Rename legacy keys in a properties.json file (v4 home_page -> home_page_id)."""
     try:
         with open(properties_path, "r", encoding="utf-8") as f:
             data = json.load(f)
-    except Exception:
-        return
+    except Exception as exc:
+        raise ValueError(f"Failed to parse {properties_path}: {exc}") from exc
     if not isinstance(data, dict):
-        return
+        raise ValueError(
+            f"Expected dict in {properties_path}, got {type(data).__name__}"
+        )
     if "home_page" in data:
         data["home_page_id"] = data.pop("home_page")
         with open(properties_path, "w", encoding="utf-8") as f:
@@ -522,9 +595,9 @@ def migrate_repo_properties_file(repo_path: Path, backup_folder: Path) -> bool:
         return False
 
     if properties_path.exists():
+        _migrate_repo_settings_keys(properties_path)
         backup_file(legacy_path, backup_folder)
         legacy_path.unlink()
-        _migrate_repo_settings_keys(properties_path)
         log.info(
             "migrate_v4_to_v5: removed legacy repo settings %s because %s already exists",
             legacy_path.name,
@@ -544,104 +617,10 @@ def migrate_repo_properties_file(repo_path: Path, backup_folder: Path) -> bool:
     return True
 
 
-def migrate_legacy_project_config(
-    repo_path: Path, canvas_page_paths: List[Path], backup_folder: Path
-) -> bool:
-    project_config_path = repo_path / LEGACY_PROJECT_CONFIG_FILENAME
-    if not project_config_path.exists():
-        return False
-
-    try:
-        with open(project_config_path, "r", encoding="utf-8") as f:
-            project_config = json.load(f)
-    except Exception as exc:
-        log.error(f"migrate_v4_to_v5: failed to read {project_config_path.name}: {exc}")
-        return False
-
-    image_items = project_config.get("image_items", [])
-    if not isinstance(image_items, list):
-        image_items = []
-
-    if not image_items:
-        backup_file(project_config_path, backup_folder)
-        project_config_path.unlink()
-        log.info(
-            "migrate_v4_to_v5: removed empty legacy project config %s",
-            project_config_path.name,
-        )
-        return True
-
-    note_page_by_image_id: dict[str, str] = {}
-    page_data_by_path: dict[Path, dict[str, Any]] = {}
-    page_path_by_id: dict[str, Path] = {}
-
-    for canvas_path in canvas_page_paths:
-        try:
-            page_data = read_canvas_file(canvas_path)
-        except Exception as exc:
-            log.error(f"migrate_v4_to_v5: failed to read {canvas_path}: {exc}")
-            continue
-        page_id = page_data.get("id")
-        if not page_id:
-            continue
-        page_data_by_path[canvas_path] = page_data
-        page_path_by_id[page_id] = canvas_path
-        for note_state in page_data.get("notes", []):
-            if not isinstance(note_state, dict):
-                continue
-            if note_state.get("type_name") == "ImageItem":
-                continue
-            content = note_state.get("content")
-            if isinstance(content, dict):
-                image_ref = content.get("image")
-                if isinstance(image_ref, dict):
-                    image_id = image_ref.get("id")
-                    if isinstance(image_id, str) and image_id:
-                        note_page_by_image_id[image_id] = page_id
-
-    attached_count = 0
-    for image_item in image_items:
-        if not isinstance(image_item, dict):
-            continue
-        image_id = image_item.get("id")
-        if not isinstance(image_id, str) or not image_id:
-            continue
-        page_id = note_page_by_image_id.get(image_id)
-        if not page_id:
-            log.warning(
-                f"migrate_v4_to_v5: legacy ImageItem {image_id} has no referencing note; skipping"
-            )
-            continue
-        canvas_path = page_path_by_id.get(page_id)
-        if canvas_path is None:
-            continue
-        page_data = page_data_by_path[canvas_path]
-        file_items_list = page_data.setdefault("file_items", [])
-        if any(
-            isinstance(fi, dict) and fi.get("id") == image_id for fi in file_items_list
-        ):
-            continue
-        migrated_item = copy.deepcopy(image_item)
-        migrated_item["parent_id"] = page_id
-        file_items_list.append(migrated_item)
-        attached_count += 1
-
-    for canvas_path, page_data in page_data_by_path.items():
-        write_canvas_file(canvas_path, page_data)
-
-    backup_file(project_config_path, backup_folder)
-    project_config_path.unlink()
-    log.info(
-        "migrate_v4_to_v5: folded %s legacy ImageItem(s) from %s into page payloads",
-        attached_count,
-        project_config_path.name,
-    )
-    return True
-
-
 def convert_v4_to_v5_page_dict(
     page_data: Dict[str, Any],
     page_id_to_path: Optional[Dict[str, str]] = None,
+    page_id_to_name: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """Convert a v4 page dict to current canvas schema."""
     result = copy.deepcopy(page_data)
@@ -652,60 +631,42 @@ def convert_v4_to_v5_page_dict(
 
     if "children" in result:
         migrated_children = [
-            convert_v4_to_v5_element(ch, page_id, page_id_to_path)
+            convert_v4_to_v5_element(ch, page_id, page_id_to_path, page_id_to_name)
             for ch in result["children"]
         ]
         result["notes"] = [
             child
             for child in migrated_children
-            if not isinstance(child, dict)
-            or child.get("type_name") not in ("Arrow", "FileItem", "ImageItem")
+            if child.get("type_name") not in ("Arrow", "FileItem", "ImageItem")
         ]
         result["arrows"] = [
-            child
-            for child in migrated_children
-            if isinstance(child, dict) and child.get("type_name") == "Arrow"
+            child for child in migrated_children if child.get("type_name") == "Arrow"
         ]
         result["file_items"] = [
             child
             for child in migrated_children
-            if isinstance(child, dict)
-            and child.get("type_name") in ("FileItem", "ImageItem")
+            if child.get("type_name") in ("FileItem", "ImageItem")
         ]
         result.pop("children", None)
     else:
         all_notes = [
-            convert_v4_to_v5_element(n, page_id, page_id_to_path)
+            convert_v4_to_v5_element(n, page_id, page_id_to_path, page_id_to_name)
             for n in result.get("notes", [])
         ]
         result["notes"] = [
-            n
-            for n in all_notes
-            if not isinstance(n, dict)
-            or n.get("type_name") not in ("FileItem", "ImageItem")
+            n for n in all_notes if n.get("type_name") not in ("FileItem", "ImageItem")
         ]
         result["file_items"] = [
-            n
-            for n in all_notes
-            if isinstance(n, dict) and n.get("type_name") in ("FileItem", "ImageItem")
+            n for n in all_notes if n.get("type_name") in ("FileItem", "ImageItem")
         ]
         result["arrows"] = [
-            convert_v4_to_v5_element(a, page_id, page_id_to_path)
+            convert_v4_to_v5_element(a, page_id, page_id_to_path, page_id_to_name)
             for a in result.get("arrows", [])
         ]
 
     result.setdefault("type_name", "Page")
     result["schema_version"] = PAGE_SCHEMA_VERSION
     return result
-
-
-def convert_v4_page_file(v4_file_path: Path, v5_file_path: Path) -> Path:
-    """Convert a single .pam4.json file to .canvas."""
-    with open(v4_file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    data = convert_v4_to_v5_page_dict(data)
-    write_canvas_file(v5_file_path, data)
-    return v5_file_path
 
 
 def migrate_backups_layout(repo_path: Path) -> None:
@@ -767,7 +728,10 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
     v4_pages = [
         f for f in repo_path.iterdir() if f.is_file() and f.name.endswith(V4_FILE_EXT)
     ]
-    migrate_repo_properties_file(repo_path, v4_backup_folder)
+    try:
+        migrate_repo_properties_file(repo_path, v4_backup_folder)
+    except Exception as e:
+        log.error(f"migrate_v4_to_v5: repo properties migration failed: {e}")
 
     converted = []
     if v4_pages:
@@ -776,6 +740,7 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
         # First pass: build page_id → v5 path map so internal links get
         # correct page_ref.path values (using the page name, not the id).
         page_id_to_path: Dict[str, str] = {}
+        page_id_to_name: Dict[str, str] = {}
         used_names: Dict[str, int] = {}  # collision counter
         v4_page_datas: list[tuple[Path, Dict[str, Any]]] = []
         for v4_path in v4_pages:
@@ -796,6 +761,7 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
             used_names[page_name] = 1
             v5_rel_path = page_name + CANVAS_FILE_EXT
             page_id_to_path[page_id] = v5_rel_path
+            page_id_to_name[page_id] = page_data.get("name", page_id)
             v4_page_datas.append((v4_path, page_data))
 
         # Second pass: convert and write
@@ -804,7 +770,9 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
                 page_id = page_data["id"]
 
                 v5_path = v4_path.parent / page_id_to_path[page_id]
-                v5_data = convert_v4_to_v5_page_dict(page_data, page_id_to_path)
+                v5_data = convert_v4_to_v5_page_dict(
+                    page_data, page_id_to_path, page_id_to_name
+                )
                 _migrate_images_in_page(v5_data, repo_path)
 
                 write_canvas_file(v5_path, v5_data)
@@ -819,10 +787,6 @@ def migrate_v4_to_v5(repo_path: Path) -> List[Path]:
                 continue
 
         log.info(f"migrate_v4_to_v5: done, {len(converted)}/{len(v4_pages)} converted")
-
-    canvas_page_paths = _collect_canvas_page_paths(repo_path)
-    if canvas_page_paths:
-        migrate_legacy_project_config(repo_path, canvas_page_paths, v4_backup_folder)
 
     migrate_backups_layout(repo_path)
 
