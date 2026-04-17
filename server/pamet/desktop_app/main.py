@@ -1,4 +1,3 @@
-import json
 import signal
 import subprocess
 import sys
@@ -6,16 +5,11 @@ from pathlib import Path
 
 import click
 import fusion
-from fusion.libs.action.action_call import ActionCall, ActionRunStates
-from fusion.logging import LOGGING_LEVEL, LoggingLevels
 from PySide6.QtCore import QUrl
 from PySide6.QtGui import QDesktopServices
 from slugify import slugify
 
 import pamet
-from pamet import desktop_app
-
-# from fusion import actions_log_channel
 from pamet.constants import DEFAULT_PROJECT_ID, DEFAULT_PROJECT_TITLE, LOCAL_USER_ID
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, USER_SETTINGS_DIR
@@ -246,17 +240,6 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
         show_dev_tools=bool(use_frontend_server),
     )
     web_shell.showMaximized()
-
-    # Setup exception reporting for failed actions
-    if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
-
-        def show_exception_for_failed_action(action_call: ActionCall):
-            if action_call.run_state != ActionRunStates.FAILED:
-                return
-            title = f'Exception raised during action "{action_call.name}"'
-            app.present_exception(exception=action_call.error, title=title)
-
-        # actions_log_channel.subscribe(show_exception_for_failed_action)
 
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")
