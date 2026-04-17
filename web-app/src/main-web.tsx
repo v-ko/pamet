@@ -5,7 +5,7 @@ import serviceWorkerUrl from "@/service-worker?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
-import { WebAppState } from "@/containers/app/WebAppState";
+import { AppViewState } from "@/containers/app/AppViewState";
 import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
@@ -60,9 +60,9 @@ pamet.setStorageStatusIconSet({
     failedIconUrl: folderCloseIconUrl,
 });
 
-// Create app state and render synchronously so the UI appears immediately
-let appState = new WebAppState({ userId: LOCAL_USER_ID })
-pamet.setAppViewState(appState)
+// Create app view state and render synchronously so the UI appears immediately
+let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
+pamet.setAppViewState(appViewState)
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
@@ -105,7 +105,7 @@ async function initializeWebApp() {
     // Init storage service
     let storageService = new StorageService();
     storageService.setStateChangeHandler((nextState) => {
-        appActions.setStorageServiceState(appState, nextState);
+        appActions.setStorageServiceState(appViewState, nextState);
     });
     pamet.setStorageService(storageService);
     try {
@@ -120,10 +120,10 @@ async function initializeWebApp() {
         log.error("Failed to initialize storage service", e);
     }
 
-    // Populate app state from config store
-    appState.deviceId = pamet.getDeviceId() ?? null;
-    appState.trackedProjects = pamet.getTrackedProjectsFromConfig();
-    appState.recentProjects = pamet.getRecentProjects();
+    // Populate app view state from config store
+    appViewState.deviceId = pamet.getDeviceId() ?? null;
+    appViewState.trackedProjects = pamet.getTrackedProjectsFromConfig();
+    appViewState.recentProjects = pamet.getRecentProjects();
 
     pamet.initRouter();
 

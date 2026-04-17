@@ -26,7 +26,7 @@ import { CreateProjectDialog } from "@/components/CreateProjectDialog";
 import { DebugDialog } from "@/components/DebugDialog";
 
 
-import { WebAppState, ProjectError, PageError, AppDialogMode } from "@/containers/app/WebAppState";
+import { AppViewState, ProjectError, PageError, AppDialogMode } from "@/containers/app/AppViewState";
 import { MediaProcessingDialog } from "@/components/system-modal-dialog/LoadingDialog";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { PageAndCommandPalette, ProjectPalette } from "@/components/CommandPalette";
@@ -45,7 +45,7 @@ const VerticalSeparator = styled.div`
   background: rgba(0,0,0,0.2);
 `
 
-const WebApp = observer(({ state }: { state: WebAppState }) => {
+const WebApp = observer(({ state }: { state: AppViewState }) => {
   let errorMessages: string[] = []
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);

@@ -5,7 +5,7 @@ import serviceWorkerUrl from "@/service-worker-desktop?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
-import { WebAppState } from "@/containers/app/WebAppState";
+import { AppViewState } from "@/containers/app/AppViewState";
 import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
@@ -140,7 +140,7 @@ async function initializeDesktopApp() {
     // Init storage service
     let storageService = new StorageService();
     storageService.setStateChangeHandler((nextState) => {
-        appActions.setStorageServiceState(appState, nextState);
+        appActions.setStorageServiceState(appViewState, nextState);
     });
     pamet.setStorageService(storageService);
     try {
@@ -151,14 +151,14 @@ async function initializeDesktopApp() {
         log.error("Failed to initialize storage service", e);
     }
 
-    // Populate app state from config store
-    appState.deviceId = pamet.getDeviceId() ?? null;
+    // Populate app view state from config store
+    appViewState.deviceId = pamet.getDeviceId() ?? null;
     const userData = pamet.getUserData();
     if (userData?.id) {
-        appState.userId = userData.id;
+        appViewState.userId = userData.id;
     }
-    appState.trackedProjects = pamet.getTrackedProjectsFromConfig();
-    appState.recentProjects = pamet.getRecentProjects();
+    appViewState.trackedProjects = pamet.getTrackedProjectsFromConfig();
+    appViewState.recentProjects = pamet.getRecentProjects();
 
     pamet.initRouter();
 
@@ -170,8 +170,8 @@ async function initializeDesktopApp() {
     }
 }
 
-let appState = new WebAppState({ userId: LOCAL_USER_ID })
-pamet.setAppViewState(appState)
+let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
+pamet.setAppViewState(appViewState)
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);
 });

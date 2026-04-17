@@ -1,5 +1,5 @@
 import { action } from "fusion/registries/Action";
-import { AppDialogMode, WebAppState } from "@/containers/app/WebAppState";
+import { AppDialogMode, AppViewState } from "@/containers/app/AppViewState";
 import { pamet } from "@/core/facade";
 import { Page, PageData } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
@@ -43,8 +43,8 @@ class ProjectActions {
   }
 
   @action
-  setHomePage(appState: WebAppState, pageId: string) {
-    let projectData = appState.getCurrentProject();
+  setHomePage(appViewState: AppViewState, pageId: string) {
+    let projectData = appViewState.getCurrentProject();
     pamet.saveProjectProperties({
       ...projectData,
       home_page_id: pageId,
@@ -52,17 +52,17 @@ class ProjectActions {
   }
 
   @action
-  openPageCreationDialog(appState: WebAppState, forwardLinkLocation: Point2D) {
-    appState.dialogMode = AppDialogMode.CreateNewPage;
-    appState.focusPointOnDialogOpen = forwardLinkLocation;
+  openPageCreationDialog(appViewState: AppViewState, forwardLinkLocation: Point2D) {
+    appViewState.dialogMode = AppDialogMode.CreateNewPage;
+    appViewState.focusPointOnDialogOpen = forwardLinkLocation;
   }
 
   @action
-  createNewPage(appState: WebAppState, name: string): Page {
-    if (!appState.currentPageViewState) {
+  createNewPage(appViewState: AppViewState, name: string): Page {
+    if (!appViewState.currentPageViewState) {
       throw Error('No current page. Cannot create a new page via createNewPage. Use createNewPageWithHelpNote instead.')
     }
-    let forwardLinkLocation = snapVectorToGrid(appState.focusPointOnDialogOpen);
+    let forwardLinkLocation = snapVectorToGrid(appViewState.focusPointOnDialogOpen);
 
     let currentTimestamp = timestamp(currentTime());
     let newPage = new Page({
@@ -75,7 +75,7 @@ class ProjectActions {
     pamet.insertPage(newPage)
 
     // Create a forward link note on the given location in the current page
-    let currentPage = appState.currentPageViewState.page()
+    let currentPage = appViewState.currentPageViewState.page()
     let forwardLink = CardNote.createInternalLinkNote(newPage, currentPage.id)
     // Autosize and set at location
     let minimalSize = minimalNonelidedSize(forwardLink);
@@ -100,7 +100,7 @@ class ProjectActions {
   }
 
   @action
-  openPageProperties(state: WebAppState) {
+  openPageProperties(state: AppViewState) {
     state.dialogMode = AppDialogMode.PageProperties;
   }
 

@@ -39,7 +39,7 @@ export interface PametStorageState {
 }
 
 
-export class WebAppState {
+export class AppViewState {
   deviceId: string | null = null;
   userId: string;
 

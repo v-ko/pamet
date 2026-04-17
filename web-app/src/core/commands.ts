@@ -23,8 +23,8 @@ export function confirmPageDeletion(pageName: string): boolean {
 }
 
 function getCurrentPageViewState(): PageViewState {
-    let appState = pamet.appViewState;
-    let pageVS = appState.currentPageViewState;
+    let appViewState = pamet.appViewState;
+    let pageVS = appViewState.currentPageViewState;
     if (pageVS === null) {
         throw Error('No current page view state');
     }
@@ -162,14 +162,14 @@ class PametCommands {
 
     @command('Create new page')
     createNewPage() {
-        let appState = pamet.appViewState;
+        let appViewState = pamet.appViewState;
 
-        if (!appState.currentPageViewState) {
+        if (!appViewState.currentPageViewState) {
             // If last page - create default
             if (Array.from(pamet.pages()).length === 0) {
                 let page = projectActions.createNewPageWithHelpNote();
-                projectActions.setHomePage(appState, page.id);
-                appActions.setCurrentPage(appState, page.id);
+                projectActions.setHomePage(appViewState, page.id);
+                appActions.setCurrentPage(appViewState, page.id);
             } else {
                 // It's a very niche case
                 alert('Switching to the project root. You can create a new page then.');
@@ -185,7 +185,7 @@ class PametCommands {
         // in the center of the viewport
         // Get the real mouse pos on canvas (if it's over the viewport)
         let pageVS = getCurrentPageViewState();
-        let mousePos = appState.mouseState.positionOnPress;
+        let mousePos = appViewState.mouseState.positionOnPress;
         let forwardLinkLocation: Point2D;
         if (mousePos === null) {
             forwardLinkLocation = pageVS.viewport.realCenter();
@@ -193,7 +193,7 @@ class PametCommands {
             forwardLinkLocation = pageVS.viewport.unprojectPoint(mousePos);
         }
 
-        projectActions.openPageCreationDialog(appState, forwardLinkLocation);
+        projectActions.openPageCreationDialog(appViewState, forwardLinkLocation);
     }
 
     @command('Edit note')
@@ -264,7 +264,7 @@ class PametCommands {
 
     @command('Copy selected elements')
     copySelectedElements() {
-        const appState = pamet.appViewState;
+        const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();
 
         // Collect selected notes
@@ -276,14 +276,14 @@ class PametCommands {
         }
 
         // Compute relativeTo via shared helper
-        const relativeTo = computeSelectionAnchor(selectedNotes, appState.mouseState.positionOnPress, pageVS);
+        const relativeTo = computeSelectionAnchor(selectedNotes, appViewState.mouseState.positionOnPress, pageVS);
 
-        pageActions.copySelectedElements(appState, pageVS, relativeTo);
+        pageActions.copySelectedElements(appViewState, pageVS, relativeTo);
     }
 
     @command('Cut')
     cutSelectedElements() {
-        const appState = pamet.appViewState;
+        const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();
 
         // Collect selected notes for anchor calculation
@@ -295,9 +295,9 @@ class PametCommands {
         }
 
         // Compute relativeTo via shared helper
-        const relativeTo = computeSelectionAnchor(selectedNotes, appState.mouseState.position, pageVS);
+        const relativeTo = computeSelectionAnchor(selectedNotes, appViewState.mouseState.position, pageVS);
 
-        cutInternalProcedure(appState, pageVS, relativeTo).catch((error) => {
+        cutInternalProcedure(appViewState, pageVS, relativeTo).catch((error) => {
             log.error('Error in internal cut procedure:', error);
         });
     }
@@ -334,17 +334,17 @@ class PametCommands {
 
     @command('Paste')
     paste() {
-        const appState = pamet.appViewState;
+        const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();
 
         // Compute relative anchor for internal clipboard paste:
         // use mouse position if available, else viewport center.
-        const mousePos = appState.mouseState.position;
+        const mousePos = appViewState.mouseState.position;
         const relativeTo: Point2D = mousePos === null
             ? pageVS.viewport.realCenter()
             : pageVS.viewport.unprojectPoint(mousePos);
 
-        pasteInternalProcedure(appState, pageVS, relativeTo).catch((error) => {
+        pasteInternalProcedure(appViewState, pageVS, relativeTo).catch((error) => {
             log.error('Error in internal paste procedure:', error);
         });
     }

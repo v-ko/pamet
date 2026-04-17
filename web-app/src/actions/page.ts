@@ -21,7 +21,7 @@ import { CardNote } from "@/model/CardNote";
 import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { PametRoute } from "@/services/routing/route";
-import { WebAppState } from "@/containers/app/WebAppState";
+import { AppViewState } from "@/containers/app/AppViewState";
 import { FileItem } from "fusion/model/FileItem";
 
 
@@ -154,7 +154,7 @@ class PageActions {
   @action
   endDragNavigation(state: PageViewState) {
     state.setMode(PageMode.None);
-    pamet.flushRouterFromAppState();
+    pamet.flushRouterFromAppViewState();
   }
 
   @action
@@ -532,7 +532,7 @@ class PageActions {
 
   @action({ issuer: 'user' })
   pasteInternalAddElements(
-    appState: WebAppState,
+    appViewState: AppViewState,
     state: PageViewState,
     notes: Note[],
     arrows: Arrow[],
@@ -555,7 +555,7 @@ class PageActions {
 
   @action({ issuer: 'user' })
   cutRemoveElements(
-    appState: WebAppState,
+    appViewState: AppViewState,
     state: PageViewState,
     notes: Note[],
     arrows: Arrow[]
@@ -586,7 +586,7 @@ class PageActions {
   }
 
   @action
-  copySelectedElements(appState: WebAppState, state: PageViewState, relativeTo: Point2D) {
+  copySelectedElements(appViewState: AppViewState, state: PageViewState, relativeTo: Point2D) {
     // Gather selected notes
     const selectedNotes: Note[] = [];
     const selectedNoteIds = new Set<string>();
@@ -601,8 +601,8 @@ class PageActions {
 
     if (selectedNotes.length === 0) {
       log.warning('copySelectedElements called with no selected notes');
-      appState.clipboard = [];
-      appState.clipboardProjectId = null;
+      appViewState.clipboard = [];
+      appViewState.clipboardProjectId = null;
       return;
     }
 
@@ -656,8 +656,8 @@ class PageActions {
       }
     }
 
-    appState.clipboard = clipboardEntities;
-    appState.clipboardProjectId = appState.currentProjectId;
+    appViewState.clipboard = clipboardEntities;
+    appViewState.clipboardProjectId = appViewState.currentProjectId;
     log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
   }
 

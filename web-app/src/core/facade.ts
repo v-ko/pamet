@@ -1,4 +1,4 @@
-import { WebAppState } from "@/containers/app/WebAppState";
+import { AppViewState } from "@/containers/app/AppViewState";
 import { getLogger } from 'fusion/logging';
 import { Change } from "fusion/model/Change";
 import { PametSearchFilter, PametStore } from "@/storage/PametStore";
@@ -67,7 +67,7 @@ export class PametFacade extends PametStore {
 
     _frontendDomainStore: InMemoryStore | null = null;
     private _projectSyncService: OptimisticProjectSyncService | null = null;
-    private _appViewState: WebAppState | null = null;
+    private _appViewState: AppViewState | null = null;
     private _appConfigStore: InMemoryStore | null = null;
     private _storageService: StorageService | null = null;
     router: RoutingService = new RoutingService();
@@ -152,7 +152,7 @@ export class PametFacade extends PametStore {
         }
         const userId = this.appViewState.userId;
         if (!userId) {
-            throw Error('User ID not set in app state');
+            throw Error('User ID not set in app view state');
         }
         return this.projectStorageConfigFactory(projectId, userId, deviceId);
     }
@@ -224,14 +224,14 @@ export class PametFacade extends PametStore {
         this.context[key] = value;
     }
 
-    get appViewState(): WebAppState {
+    get appViewState(): AppViewState {
         if (!this._appViewState) {
-            throw Error('WebAppState not set');
+            throw Error('AppViewState not set');
         }
         return this._appViewState;
     }
 
-    setAppViewState(state: WebAppState) {
+    setAppViewState(state: AppViewState) {
         if (this._appViewState) {
             // Set appViewState only once to avoid bad reference retention
             // e.g. in the config update handler subscription
@@ -251,30 +251,30 @@ export class PametFacade extends PametStore {
         this.router.init();
     }
 
-    /** Push route to URL and derive appState from it. The single entry point for navigation. */
+    /** Push route to URL and derive appViewState from it. The single entry point for navigation. */
     async navigateTo(route: PametRoute) {
         this.router.navigateToRoute(route);
         await applyRoute(route);
     }
 
-    syncRouterFromAppState() {
+    syncRouterFromAppViewState() {
         const route = this.appViewState.toRoute();
         this.router.navigateToRoute(route);
     }
 
     pushNewViewportPosition(state: PageViewState, viewportCenter: Point2D, viewportHeight: number) {
         pageActions.updateViewport(state, viewportCenter, viewportHeight);
-        this.syncRouterFromAppState();
+        this.syncRouterFromAppViewState();
     }
 
-    flushRouterFromAppState() {
+    flushRouterFromAppViewState() {
         const route = this.appViewState.toRoute();
         this.router.flushPendingNavigation(route);
     }
 
     toggleLastPage() {
-        const appState = this.appViewState;
-        this.router.toggleLastPage(appState.currentProjectId, appState.currentPageId);
+        const appViewState = this.appViewState;
+        this.router.toggleLastPage(appViewState.currentProjectId, appViewState.currentPageId);
     }
 
     async attachProjectAsCurrent(projectId: string) {
@@ -706,7 +706,7 @@ export function updateSearchIndicesFromDelta(searchService: SearchService, delta
 }
 
 
-export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delta) {
+export function entityDeltaToViewModelReducer(appViewState: AppViewState, delta: Delta) {
     /**
      * A reducer-like function to map entity changes to ViewStates
      * Will be used synchrously from the facade entity CRUD methods (inside actions)
@@ -717,7 +717,7 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
      */
     // console.log('Applying delta to view states', delta)
 
-    let currentPageVS = appState.currentPageViewState
+    let currentPageVS = appViewState.currentPageViewState
     if (currentPageVS === null) {
         log.error('No current page view state set, skipping delta', delta);
         return;
@@ -730,14 +730,14 @@ export function entityDeltaToViewModelReducer(appState: WebAppState, delta: Delt
             if (change.isDelete()) {
                 // If current page gets removed - go to the project page
                 if (currentPageId === change.entityId) {
-                    let projectId = appState.currentProjectId;
+                    let projectId = appViewState.currentProjectId;
                     if (projectId === null) {
                         throw Error('No project set');
                     }
                     // Current page removed externally: navigate to home page (no auto-creation)
-                    const nextPageId = appState.currentProjectState?.home_page_id ?? null;
+                    const nextPageId = appViewState.currentProjectState?.home_page_id ?? null;
                     const fallbackRoute = new PametRoute({
-                        userId: appState.userId,
+                        userId: appViewState.userId,
                         projectId: projectId,
                         pageId: nextPageId ?? undefined,
                     });

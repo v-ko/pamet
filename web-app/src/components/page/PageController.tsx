@@ -6,7 +6,7 @@ import { DirectRenderer } from '@/components/page/DirectRenderer';
 import { ElementViewState } from '@/components/page/ElementViewState';
 import { NavigationDeviceAutoSwitcher, NavigationDevice } from '@/components/page/NavigationDeviceAutoSwitcher';
 import { PageViewState, PageMode } from '@/components/page/PageViewState';
-import { MouseState } from '@/containers/app/WebAppState';
+import { MouseState } from '@/containers/app/AppViewState';
 import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_VIEW_HEIGHT, ZOOM_SPEED, TOUCHPAD_PINCH_ZOOM_SPEED } from '@/core/constants';
 import { pamet } from '@/core/facade';
 import { commands } from '@/core/commands';

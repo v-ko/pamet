@@ -191,11 +191,11 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
 
 export const ProjectPalette: React.FC<{ state: ProjectPaletteState }> = observer(({ state }) => {
     const updateItems = (text: string): PaletteItemAttributes[] => {
-        const appState = pamet.appViewState;
-        const projects = appState.recentProjects;
+        const appViewState = pamet.appViewState;
+        const projects = appViewState.recentProjects;
         let projectCommands: PaletteItemAttributes[] = [];
         for (let project of projects) {
-            if (project.id === appState.currentProjectId) {
+            if (project.id === appViewState.currentProjectId) {
                 continue; // Skip the current project
             }
             if (!project.title.toLowerCase().includes(text.toLowerCase())) {

@@ -10,7 +10,7 @@ import paper from 'paper';
 import "@/components/page/PageView.css";
 
 import { createNoteWithImageFromBlob } from '@/procedures/page';
-import { MouseState } from '@/containers/app/WebAppState';
+import { MouseState } from '@/containers/app/AppViewState';
 import { NoteVirtualComponent } from '../note/NoteVirtualComponent';
 import { PageController } from '@/components/page/PageController';
 import Menu, { MenuItem } from '@/components/menu/Menu';

@@ -1,6 +1,6 @@
-import { AppDialogMode, PageError, ProjectError, WebAppState } from "@/containers/app/WebAppState";
+import { AppDialogMode, PageError, ProjectError, AppViewState } from "@/containers/app/AppViewState";
 import { LoadingDialogState } from "@/components/system-modal-dialog/state";
-import type { MouseState } from "@/containers/app/WebAppState";
+import type { MouseState } from "@/containers/app/AppViewState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
 import { LocalSearchViewState } from "@/components/search/LocalSearchViewState";
 import { GlobalSearchViewState } from "@/components/search/GlobalSearchViewState";
@@ -9,14 +9,13 @@ import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/components/page/PageViewState";
 import type { PametProjectData, ProjectReference } from "@/model/Project";
-import { Entity } from "fusion/model/Entity";
 import { StorageServiceRuntimeState } from "fusion/storage/management/StorageService";
 
-let log = getLogger("WebAppActions");
+let log = getLogger("AppActions");
 
 class AppActions {
     @action
-    setCurrentPage(state: WebAppState, pageId: string | null) {
+    setCurrentPage(state: AppViewState, pageId: string | null) {
         log.info(`Setting current page to ${pageId}`);
 
         let page = pageId ? pamet.page(pageId) : null;
@@ -41,12 +40,12 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    setStorageServiceState(state: WebAppState, storageServiceState: StorageServiceRuntimeState) {
+    setStorageServiceState(state: AppViewState, storageServiceState: StorageServiceRuntimeState) {
         state.storageState.service = storageServiceState;
     }
 
     @action({ issuer: 'service' })
-    reflectCurrentProjectState(state: WebAppState, projectData: PametProjectData | null, projectError: ProjectError = ProjectError.NoError) {
+    reflectCurrentProjectState(state: AppViewState, projectData: PametProjectData | null, projectError: ProjectError = ProjectError.NoError) {
         // This is used only for setting the state. The actual project
         // switching is done in the switchToProject procedure
         log.info('Setting projectId in view state', projectData ? projectData.id : null);
@@ -57,120 +56,120 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    applyUserConfig(state: WebAppState, userId: string, trackedProjects: ProjectReference[]) {
+    applyUserConfig(state: AppViewState, userId: string, trackedProjects: ProjectReference[]) {
         state.userId = userId;
         state.trackedProjects = trackedProjects;
     }
 
     @action({ issuer: 'service' })
-    applyMiscConfig(state: WebAppState, deviceId: string | null, recentProjects: ProjectReference[]) {
+    applyMiscConfig(state: AppViewState, deviceId: string | null, recentProjects: ProjectReference[]) {
         state.deviceId = deviceId;
         state.recentProjects = recentProjects;
     }
 
     @action({ issuer: 'service' })
-    updateMouseState(state: WebAppState, mouseStateProps: Partial<MouseState>) {
+    updateMouseState(state: AppViewState, mouseStateProps: Partial<MouseState>) {
         // Update the mouse state with the given properties
         Object.assign(state.mouseState, mouseStateProps);
     }
 
     @action
-    closeAppDialog(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.Closed;
+    closeAppDialog(appViewState: AppViewState) {
+        appViewState.dialogMode = AppDialogMode.Closed;
     }
 
     @action
-    openPageProperties(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.PageProperties;
+    openPageProperties(appViewState: AppViewState) {
+        appViewState.dialogMode = AppDialogMode.PageProperties;
     }
 
     @action
-    openProjectPropertiesDialog(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.ProjectProperties;
+    openProjectPropertiesDialog(appViewState: AppViewState) {
+        appViewState.dialogMode = AppDialogMode.ProjectProperties;
     }
 
     @action
-    openProjectsDialog(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.ProjectsDialog;
+    openProjectsDialog(appViewState: AppViewState) {
+        appViewState.dialogMode = AppDialogMode.ProjectsDialog;
     }
 
     @action
-    openCreateProjectDialog(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.CreateNewProject;
+    openCreateProjectDialog(appViewState: AppViewState) {
+        appViewState.dialogMode = AppDialogMode.CreateNewProject;
     }
 
     @action
-    openStorageStatusDialog(appState: WebAppState) {
-        appState.dialogMode = AppDialogMode.StorageStatus;
+    openStorageStatusDialog(appViewState: AppViewState) {
+        appViewState.dialogMode = AppDialogMode.StorageStatus;
     }
 
     @action
-    updateSystemDialogState(appState: WebAppState, props: Partial<LoadingDialogState> | LoadingDialogState | null) {
-        if (appState.loadingDialogState === null) {  // Open dialog
+    updateSystemDialogState(appViewState: AppViewState, props: Partial<LoadingDialogState> | LoadingDialogState | null) {
+        if (appViewState.loadingDialogState === null) {  // Open dialog
             if (props === null) {
                 throw new Error("Cannot open loading dialog without props");
             }
-            appState.loadingDialogState = new LoadingDialogState(props.title || '', props.taskDescription || '', props.taskProgress || -1, props.showAfterUnixTime || 0);
+            appViewState.loadingDialogState = new LoadingDialogState(props.title || '', props.taskDescription || '', props.taskProgress || -1, props.showAfterUnixTime || 0);
         } else {
             // Update dialog state
             if (props === null) {
-                appState.loadingDialogState = null; // Close dialog
+                appViewState.loadingDialogState = null; // Close dialog
             } else {
                 if (props.title !== undefined) {
-                    appState.loadingDialogState.title = props.title;
+                    appViewState.loadingDialogState.title = props.title;
                 }
                 if (props.taskDescription !== undefined) {
-                    appState.loadingDialogState.taskDescription = props.taskDescription;
+                    appViewState.loadingDialogState.taskDescription = props.taskDescription;
                 }
                 if (props.taskProgress !== undefined) {
-                    appState.loadingDialogState.taskProgress = props.taskProgress;
+                    appViewState.loadingDialogState.taskProgress = props.taskProgress;
                 }
                 if (props.showAfterUnixTime !== undefined) {
-                    appState.loadingDialogState.showAfterUnixTime = props.showAfterUnixTime;
+                    appViewState.loadingDialogState.showAfterUnixTime = props.showAfterUnixTime;
                 }
             }
         }
     }
 
     @action
-    openPageAndCommandPalette(appState: WebAppState, initialInput: string) {
-        appState.commandPaletteState = new PageAndCommandPaletteState(initialInput);
+    openPageAndCommandPalette(appViewState: AppViewState, initialInput: string) {
+        appViewState.commandPaletteState = new PageAndCommandPaletteState(initialInput);
     }
 
     @action
-    openProjectPalette(appState: WebAppState) {
-        appState.commandPaletteState = new ProjectPaletteState('');
+    openProjectPalette(appViewState: AppViewState) {
+        appViewState.commandPaletteState = new ProjectPaletteState('');
     }
 
     @action
-    closeCommandPalette(appState: WebAppState) {
-        appState.commandPaletteState = null;
+    closeCommandPalette(appViewState: AppViewState) {
+        appViewState.commandPaletteState = null;
     }
 
     @action
-    openLocalSearch(appState: WebAppState, initialQuery: string = '') {
-        appState.localSearchViewState = new LocalSearchViewState(initialQuery);
+    openLocalSearch(appViewState: AppViewState, initialQuery: string = '') {
+        appViewState.localSearchViewState = new LocalSearchViewState(initialQuery);
     }
 
     @action
-    closeLocalSearch(appState: WebAppState) {
-        appState.localSearchViewState = null;
+    closeLocalSearch(appViewState: AppViewState) {
+        appViewState.localSearchViewState = null;
     }
 
     @action
-    openGlobalSearch(appState: WebAppState, initialQuery: string = '') {
-        if (appState.globalSearchViewState) {
+    openGlobalSearch(appViewState: AppViewState, initialQuery: string = '') {
+        if (appViewState.globalSearchViewState) {
             // If already open, increment focus counter to trigger re-focus
-            appState.globalSearchViewState.incrementFocusCounter();
+            appViewState.globalSearchViewState.incrementFocusCounter();
         } else {
             // Create new instance if not open
-            appState.globalSearchViewState = new GlobalSearchViewState(initialQuery);
+            appViewState.globalSearchViewState = new GlobalSearchViewState(initialQuery);
         }
     }
 
     @action
-    closeGlobalSearch(appState: WebAppState) {
-        appState.globalSearchViewState = null;
+    closeGlobalSearch(appViewState: AppViewState) {
+        appViewState.globalSearchViewState = null;
     }
 }
 

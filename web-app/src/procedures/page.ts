@@ -17,13 +17,13 @@ import { ImageItem } from "fusion/model/ImageItem";
 import { NoteViewState } from "@/components/note/NoteViewState";
 import { ArrowViewState } from "@/components/arrow/ArrowViewState";
 import { dumpToDict, getEntityId, loadFromDict } from "fusion/model/Entity";
-import { WebAppState } from "@/containers/app/WebAppState";
+import { AppViewState } from "@/containers/app/AppViewState";
 import { PageViewState } from "@/components/page/PageViewState";
 
 const log = getLogger('PageProcedures');
 
-function preparePasteTransform(appState: WebAppState, state: PageViewState, relativeTo: Point2D) {
-    const clipboard = appState.clipboard;
+function preparePasteTransform(appViewState: AppViewState, state: PageViewState, relativeTo: Point2D) {
+    const clipboard = appViewState.clipboard;
     const pageId = state.page().id;
 
     // Split clipboard content by type (ImageItems on clipboard are ignored on
@@ -109,23 +109,23 @@ function preparePasteTransform(appState: WebAppState, state: PageViewState, rela
   }
 
 export async function pasteInternal(
-    appState: WebAppState,
+    appViewState: AppViewState,
     state: PageViewState,
     relativeTo: Point2D
 ): Promise<void> {
-    const clipboard = appState.clipboard;
+    const clipboard = appViewState.clipboard;
     if (!clipboard || clipboard.length === 0) {
         log.info('pasteInternal called with empty clipboard');
         return;
     }
 
     // Prepare transformed notes/arrows (same-project references are shared)
-    const { notesToInsert, arrowsToInsert } = preparePasteTransform(appState, state, relativeTo);
+    const { notesToInsert, arrowsToInsert } = preparePasteTransform(appViewState, state, relativeTo);
 
     // Cross-project paste: if clipboard came from a different project,
     // copy blobs into the current project and remap image refs on pasted notes.
-    const currentProjectId = appState.currentProjectId;
-    const sourceProjectId = appState.clipboardProjectId;
+    const currentProjectId = appViewState.currentProjectId;
+    const sourceProjectId = appViewState.clipboardProjectId;
     const newImageItems: ImageItem[] = [];
     if (currentProjectId && sourceProjectId && sourceProjectId !== currentProjectId) {
         // Collect ImageItems from clipboard for lookup
@@ -138,7 +138,7 @@ export async function pasteInternal(
 
         if (clipboardImageItems.size > 0) {
             // Show loading dialog for cross-project file copy
-            appActions.updateSystemDialogState(appState, {
+            appActions.updateSystemDialogState(appViewState, {
                 title: 'Copying files from source project...',
             });
 
@@ -187,13 +187,13 @@ export async function pasteInternal(
                 await pamet.storageService.unloadProject(sourceProjectId).catch(
                     (e) => log.error('Error unloading source project after paste', e)
                 );
-                appActions.updateSystemDialogState(appState, null);
+                appActions.updateSystemDialogState(appViewState, null);
             }
         }
     }
 
     // Insert via action to update FDS and View state in one place
-    pageActions.pasteInternalAddElements(appState, state, notesToInsert, arrowsToInsert, newImageItems);
+    pageActions.pasteInternalAddElements(appViewState, state, notesToInsert, arrowsToInsert, newImageItems);
 }
 
 /**
@@ -337,7 +337,7 @@ export async function pasteSpecial(
 
 
 export async function cutInternal(
-    appState: WebAppState,
+    appViewState: AppViewState,
     state: PageViewState,
     relativeTo: Point2D
 ): Promise<void> {
@@ -354,8 +354,8 @@ export async function cutInternal(
 
     if (selectedNotes.length === 0 && selectedArrowsDirect.length === 0) {
         log.warning('cutInternal called with no selected elements');
-        appState.clipboard = [];
-        appState.clipboardProjectId = null;
+        appViewState.clipboard = [];
+        appViewState.clipboardProjectId = null;
         return;
     }
 
@@ -422,8 +422,8 @@ export async function cutInternal(
     }
 
     // Place payload on internal clipboard
-    appState.clipboard = clipboardEntities;
-    appState.clipboardProjectId = appState.currentProjectId;
+    appViewState.clipboard = clipboardEntities;
+    appViewState.clipboardProjectId = appViewState.currentProjectId;
 
     // 3) Compute elements to remove from the document
     // Notes: exactly the selected notes
@@ -445,5 +445,5 @@ export async function cutInternal(
     }
 
     // 4) Apply removals — only notes and arrows. FileItems are project-level and kept intact.
-    pageActions.cutRemoveElements(appState as any, state, notesForRemoval, arrowsForRemoval);
+    pageActions.cutRemoveElements(appViewState as any, state, notesForRemoval, arrowsForRemoval);
 }

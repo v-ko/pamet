@@ -4,7 +4,7 @@ import { ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
 import { pageActions } from "@/actions/page";
 import { PametRoute } from "@/services/routing/route";
-import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
+import { ProjectError, AppViewState } from "@/containers/app/AppViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
@@ -25,27 +25,27 @@ export function switchProject(projectId: string | null): Promise<void> {
 
     const doSwitch = async () => {
         log.info('Switching to project', projectId);
-        const appState = pamet.appViewState;
-        appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
+        const appViewState = pamet.appViewState;
+        appActions.updateSystemDialogState(appViewState, {title: 'Switching project...'});
 
         try {
-            const currentProjectId = appState.currentProjectId;
+            const currentProjectId = appViewState.currentProjectId;
 
             // Case 1: Detach (no target project)
             if (projectId === null) {
                 if (currentProjectId) {
                     await pamet.detachFromProject(currentProjectId);
                 }
-                appActions.reflectCurrentProjectState(appState, null);
+                appActions.reflectCurrentProjectState(appViewState, null);
                 return;
             }
 
             // Case 2: Same project — just ensure properties are loaded
             if (projectId === currentProjectId) {
-                const projectData = appState.currentProjectState
+                const projectData = appViewState.currentProjectState
                     ?? pamet.loadProjectProperties(projectId);
                 if (projectData) {
-                    appActions.reflectCurrentProjectState(appState, projectData);
+                    appActions.reflectCurrentProjectState(appViewState, projectData);
                 }
                 return;
             }
@@ -55,18 +55,18 @@ export function switchProject(projectId: string | null): Promise<void> {
                 await pamet.detachFromProject(currentProjectId);
             }
 
-            if (!appState.trackedProject(projectId)) {
-                appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
+            if (!appViewState.trackedProject(projectId)) {
+                appActions.reflectCurrentProjectState(appViewState, null, ProjectError.NotFound);
                 return;
             }
 
             await pamet.attachProjectAsCurrent(projectId);
             const projectData = pamet.loadProjectProperties(projectId);
-            appActions.reflectCurrentProjectState(appState, projectData ?? null);
+            appActions.reflectCurrentProjectState(appViewState, projectData ?? null);
         } finally {
-            appActions.updateSystemDialogState(appState, null);
+            appActions.updateSystemDialogState(appViewState, null);
         }
-        log.info('Project switch finished. App state:', appState);
+        log.info('Project switch finished. App view state:', appViewState);
     };
 
     projectSwitchInFlight = doSwitch().finally(() => { projectSwitchInFlight = null; });
@@ -76,28 +76,28 @@ export function switchProject(projectId: string | null): Promise<void> {
 
 // --- Route application ---
 
-/** Apply a route to app state: switch project if needed, set page, update viewport. */
+/** Apply a route to app view state: switch project if needed, set page, update viewport. */
 export async function applyRoute(route: PametRoute) {
-    const appState = pamet.appViewState;
+    const appViewState = pamet.appViewState;
 
     // Project switch if needed (async)
     const targetProjectId = route.projectId ?? null;
-    if (appState.currentProjectId !== targetProjectId) {
+    if (appViewState.currentProjectId !== targetProjectId) {
         await switchProject(targetProjectId);
     }
 
     // Page — use route's pageId, or fall back to home page
     const pageId = route.pageId
-        ?? (appState.currentProjectState?.home_page_id ?? null);
-    if (pageId !== appState.currentPageId) {
-        appActions.setCurrentPage(appState, pageId);
+        ?? (appViewState.currentProjectState?.home_page_id ?? null);
+    if (pageId !== appViewState.currentPageId) {
+        appActions.setCurrentPage(appViewState, pageId);
     }
 
     // Viewport
-    if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+    if (appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
         const [x, y] = route.viewportCenter;
         pageActions.updateViewport(
-            appState.currentPageViewState,
+            appViewState.currentPageViewState,
             new Point2D([x, y]),
             route.viewportEyeHeight,
         );
@@ -108,46 +108,46 @@ export async function applyRoute(route: PametRoute) {
 // --- Navigation procedures ---
 
 /** Delete a page, create home if last, then navigate. */
-export async function deletePageAndNavigate(appState: WebAppState, page: Page): Promise<void> {
+export async function deletePageAndNavigate(appViewState: AppViewState, page: Page): Promise<void> {
     projectActions.deletePageAndUpdateReferences(page);
-    appActions.closeAppDialog(appState);
+    appActions.closeAppDialog(appViewState);
 
-    let pageId = appState.currentProjectState?.home_page_id ?? null;
-    if (!pageId && appState.currentProjectState) {
+    let pageId = appViewState.currentProjectState?.home_page_id ?? null;
+    if (!pageId && appViewState.currentProjectState) {
         let newPage = projectActions.createNewPageWithHelpNote();
-        projectActions.setHomePage(appState, newPage.id);
+        projectActions.setHomePage(appViewState, newPage.id);
         pageId = newPage.id;
     }
     await pamet.navigateTo(new PametRoute({
-        userId: appState.userId,
-        projectId: appState.currentProjectId ?? undefined,
+        userId: appViewState.userId,
+        projectId: appViewState.currentProjectId ?? undefined,
         pageId: pageId ?? undefined,
     }));
 }
 
 /** Create a new page (with links) and navigate to it. */
-export async function createPageAndNavigate(appState: WebAppState, name: string): Promise<void> {
-    let page = projectActions.createNewPage(appState, name);
+export async function createPageAndNavigate(appViewState: AppViewState, name: string): Promise<void> {
+    let page = projectActions.createNewPage(appViewState, name);
     await pamet.navigateTo(new PametRoute({
-        userId: appState.userId,
-        projectId: appState.currentProjectId ?? undefined,
+        userId: appViewState.userId,
+        projectId: appViewState.currentProjectId ?? undefined,
         pageId: page.id,
     }));
 }
 
 /** Navigate to a project, resolving the best page. No auto-creation. */
 export async function navigateToProject(projectId: string): Promise<void> {
-    const appState = pamet.appViewState;
+    const appViewState = pamet.appViewState;
 
-    if (appState.currentProjectId !== projectId) {
+    if (appViewState.currentProjectId !== projectId) {
         await switchProject(projectId);
     }
 
-    if (!appState.currentProjectState) return;
+    if (!appViewState.currentProjectState) return;
 
-    const pageId = appState.currentProjectState.home_page_id;
+    const pageId = appViewState.currentProjectState.home_page_id;
     const route = new PametRoute({
-        userId: appState.userId,
+        userId: appViewState.userId,
         projectId,
         pageId: pageId ?? undefined,
     });
@@ -160,13 +160,13 @@ export async function navigateToProject(projectId: string): Promise<void> {
  */
 export async function ensureProjectAndNavigate(): Promise<void> {
     const route = pamet.router.currentRoute();
-    const appState = pamet.appViewState;
+    const appViewState = pamet.appViewState;
 
     // 1. Resolve project
     let projectId = route.projectId;
 
     // Validate that the route's project is tracked, fall through if not
-    if (projectId && !appState.trackedProject(projectId)) {
+    if (projectId && !appViewState.trackedProject(projectId)) {
         projectId = undefined;
     }
 
@@ -183,20 +183,20 @@ export async function ensureProjectAndNavigate(): Promise<void> {
 
     // 2. Attach project
     await switchProject(projectId);
-    if (!appState.currentProjectState) return;
+    if (!appViewState.currentProjectState) return;
 
     // 3. Resolve page (from route or home page), create if needed
-    let pageId = route.pageId ?? appState.currentProjectState.home_page_id;
+    let pageId = route.pageId ?? appViewState.currentProjectState.home_page_id;
     if (!pageId) {
         log.info('No home page set. Creating a home page');
         let page = projectActions.createNewPageWithHelpNote();
-        projectActions.setHomePage(appState, page.id);
+        projectActions.setHomePage(appViewState, page.id);
         pageId = page.id;
     }
 
     // 4. Build route and navigate
     const finalRoute = new PametRoute({
-        userId: appState.userId,
+        userId: appViewState.userId,
         projectId,
         pageId: pageId ?? undefined,
     });

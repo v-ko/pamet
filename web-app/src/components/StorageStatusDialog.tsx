@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "@/components/dialogs/Dialog.css";
-import { WebAppState } from "@/containers/app/WebAppState";
+import { AppViewState } from "@/containers/app/AppViewState";
 import { getLogger } from "fusion/logging";
 
 const log = getLogger("StorageStatusDialog");
@@ -17,7 +17,7 @@ interface DSSStatus {
 }
 
 interface StorageStatusDialogProps {
-  state: WebAppState;
+  state: AppViewState;
   onClose: () => void;
 }
 
