@@ -24,6 +24,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from fusion.logging import get_logger
 from fusion.util import get_new_id
+from slugify import slugify
 
 from pamet.storage.canvas_html import write_canvas_file
 from pamet.storage.migrations.utils import backup_file
@@ -566,8 +567,8 @@ def _migrate_single_image_note(
     )
 
 
-def _migrate_repo_settings_keys(properties_path: Path) -> None:
-    """Rename legacy keys in a properties.json file (v4 home_page -> home_page_id)."""
+def _migrate_repo_settings_keys(properties_path: Path, repo_path: Path) -> None:
+    """Rename legacy keys and populate title/project_id from the repo folder name."""
     try:
         with open(properties_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -577,8 +578,19 @@ def _migrate_repo_settings_keys(properties_path: Path) -> None:
         raise ValueError(
             f"Expected dict in {properties_path}, got {type(data).__name__}"
         )
+    changed = False
     if "home_page" in data:
         data["home_page_id"] = data.pop("home_page")
+        changed = True
+    # Populate title from the repo folder name if missing or empty
+    if not data.get("title"):
+        data["title"] = repo_path.name
+        changed = True
+    # Populate project_id from slugified folder name if missing or empty
+    if not data.get("project_id"):
+        data["project_id"] = slugify(repo_path.name)
+        changed = True
+    if changed:
         with open(properties_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)
 
@@ -591,11 +603,11 @@ def migrate_repo_properties_file(repo_path: Path, backup_folder: Path) -> bool:
     if not legacy_path.exists():
         # Even if already migrated, rename v4 home_page → home_page_id if needed
         if properties_path.exists():
-            _migrate_repo_settings_keys(properties_path)
+            _migrate_repo_settings_keys(properties_path, repo_path)
         return False
 
     if properties_path.exists():
-        _migrate_repo_settings_keys(properties_path)
+        _migrate_repo_settings_keys(properties_path, repo_path)
         backup_file(legacy_path, backup_folder)
         legacy_path.unlink()
         log.info(
@@ -608,7 +620,7 @@ def migrate_repo_properties_file(repo_path: Path, backup_folder: Path) -> bool:
     pamet_dir.mkdir(parents=True, exist_ok=True)
     backup_file(legacy_path, backup_folder)
     legacy_path.rename(properties_path)
-    _migrate_repo_settings_keys(properties_path)
+    _migrate_repo_settings_keys(properties_path, repo_path)
     log.info(
         "migrate_v4_to_v5: migrated repo properties %s -> %s",
         legacy_path.name,
