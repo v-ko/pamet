@@ -20,6 +20,7 @@ import { NoteEditViewState } from "@/components/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
+import { PametRoute } from "@/services/routing/route";
 import { WebAppState } from "@/containers/app/WebAppState";
 import { FileItem } from "fusion/model/FileItem";
 
@@ -658,6 +659,36 @@ class PageActions {
     appState.clipboard = clipboardEntities;
     appState.clipboardProjectId = appState.currentProjectId;
     log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
+  }
+
+  /**
+   * Open the link target of a note in a new browser tab.
+   * Returns the URL that was opened, or null if the note has no link.
+   */
+  openNoteLinkInNewTab(noteVS: NoteViewState, userId: string, projectId: string | undefined): string | null {
+    let note = noteVS.note();
+    if (note instanceof CardNote && note.content.page_ref) {
+      let targetPage = pamet.page(note.content.page_ref.id);
+      if (targetPage !== undefined) {
+        let route = new PametRoute({
+          userId,
+          projectId,
+          pageId: targetPage.id,
+        });
+        let url = route.toRelativeReference();
+        window.open(url, '_blank');
+        return url;
+      }
+    }
+    if (note instanceof CardNote && note.hasExternalLink) {
+      let url = note.content.url;
+      if (!url?.startsWith('http://') && !url?.startsWith('https://')) {
+        url = '//' + url;
+      }
+      window.open(url!, '_blank');
+      return url!;
+    }
+    return null;
   }
 
 }

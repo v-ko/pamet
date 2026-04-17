@@ -7,7 +7,7 @@ import { ElementViewState } from '@/components/page/ElementViewState';
 import { NavigationDeviceAutoSwitcher, NavigationDevice } from '@/components/page/NavigationDeviceAutoSwitcher';
 import { PageViewState, PageMode } from '@/components/page/PageViewState';
 import { MouseState } from '@/containers/app/WebAppState';
-import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_VIEW_HEIGHT } from '@/core/constants';
+import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_VIEW_HEIGHT, ZOOM_SPEED, TOUCHPAD_PINCH_ZOOM_SPEED } from '@/core/constants';
 import { pamet } from '@/core/facade';
 import { commands } from '@/core/commands';
 import { CardNote } from '@/model/CardNote';
@@ -237,6 +237,15 @@ export class PageController {
         this.setContextMenu?.({ x: event.clientX, y: event.clientY, items });
       }
     }
+    if (event.button === 1) { // Middle click - open link in new tab
+      if (noteVS_underMouse !== null) {
+        pageActions.openNoteLinkInNewTab(
+          noteVS_underMouse,
+          pamet.appViewState.userId,
+          pamet.appViewState.currentProjectId ?? undefined,
+        );
+      }
+    }
     // Clear press position after handling mouse up to avoid stale deltas
     appActions.updateMouseState(pamet.appViewState, {
       positionOnPress: null,
@@ -448,7 +457,16 @@ export class PageController {
     event.preventDefault();
     this.navDeviceAutoSwitcher.registerScrollEvent(new Point2D([event.deltaX, event.deltaY]));
 
-    let new_height = this.pageVS.viewportHeight * Math.exp((event.deltaY / 120) * 0.1);
+    // Normalize deltaY: mouse wheel gives ~120 per tick, touchpad pinch gives small pixel values with ctrlKey
+    let zoomDelta: number;
+    if (event.ctrlKey) {
+      // Pinch-to-zoom on touchpad (browser synthesizes ctrl+wheel with small deltas)
+      zoomDelta = event.deltaY * ZOOM_SPEED * TOUCHPAD_PINCH_ZOOM_SPEED;
+    } else {
+      zoomDelta = (event.deltaY / 120) * ZOOM_SPEED;
+    }
+
+    let new_height = this.pageVS.viewportHeight * Math.exp(zoomDelta);
     new_height = Math.max(
       MIN_HEIGHT_SCALE,
       Math.min(new_height, MAX_HEIGHT_SCALE));
@@ -458,7 +476,8 @@ export class PageController {
     // console.log(mouse_pos)
     let mouse_pos_unproj = this.pageVS.viewport.unprojectPoint(mousePos);
 
-    if (this.navDeviceAutoSwitcher.device === NavigationDevice.MOUSE) {
+    if (this.navDeviceAutoSwitcher.device === NavigationDevice.MOUSE || event.ctrlKey) {
+      // Mouse wheel zoom, or touchpad pinch-to-zoom (ctrl+wheel)
       let new_center = this.pageVS.viewportCenter.add(
         mouse_pos_unproj.subtract(this.pageVS.viewportCenter).multiply(
           1 - new_height / this.pageVS.viewportHeight));
