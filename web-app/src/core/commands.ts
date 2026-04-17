@@ -74,7 +74,8 @@ class PametCommands {
 
         // Get the real mouse pos on canvas (if it's over the viewport)
         let pageVS = getCurrentPageViewState();
-        let mousePos = pamet.appViewState.mouseState.positionOnPress;
+        let mousePos = pamet.appViewState.mouseState.position
+            ?? pamet.appViewState.mouseState.positionOnPress;
         let creationPos: Point2D;
 
         if (mousePos === null) {
