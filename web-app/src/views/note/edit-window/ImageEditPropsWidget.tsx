@@ -11,7 +11,7 @@ import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/util/b
 import { determineConversionPreset, ImageVerdict, shouldCompressImage } from "@/core/policies";
 import { convertImage, extractImageDimensions } from 'fusion/util/media';
 import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from "@/core/constants";
-import { fileItemRoute } from "@/services/routing/route";
+import { fileItemRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('ImageEditPropsWidget');
 

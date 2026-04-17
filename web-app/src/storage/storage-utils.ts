@@ -1,5 +1,5 @@
 import { FileRequest, FileRequestParser, StorageServiceActual } from "fusion/storage/management/StorageService";
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 import { getLogger } from "fusion/logging";
 
 let log = getLogger('storage-utils');

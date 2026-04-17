@@ -3,7 +3,7 @@ import { pamet } from "@/core/facade";
 import { ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
 import { pageActions } from "@/actions/page";
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 import { ProjectError, AppViewState } from "@/views/AppViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { projectActions } from "@/actions/project";

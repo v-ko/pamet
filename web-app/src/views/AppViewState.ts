@@ -2,7 +2,7 @@ import { makeObservable, observable } from "mobx";
 import { PageViewState } from "@/views/page/PageViewState";
 import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Point2D } from "fusion/primitives/Point2D";
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 import { LoadingDialogState } from "@/views/system-modal-dialog/state";
 import { CommandPaletteState } from "@/views/CommandPaletteState";
 import { LocalSearchViewState } from "@/views/search/LocalSearchViewState";

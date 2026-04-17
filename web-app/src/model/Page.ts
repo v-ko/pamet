@@ -1,6 +1,6 @@
 import { Entity, EntityData, entityType } from "fusion/model/Entity"
 import { timestamp } from 'fusion/util/base';
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 
 /** Extract the filename stem (name without extension) from a POSIX path. */
 export function stemFromPath(path: string): string {

@@ -14,7 +14,7 @@ import { ElementViewState as CanvasElementViewState } from "@/views/page/Element
 import { Size } from 'fusion/primitives/Size';
 import { Change } from 'fusion/model/Change';
 import { NoteEditViewState } from "@/views/note/NoteEditViewState";
-import { fileItemRoute } from '@/services/routing/route';
+import { fileItemRoute } from '@/services/routing/PametRoute';
 import { ImageItem } from 'fusion/model/ImageItem';
 import { createId } from 'fusion/util/base';
 

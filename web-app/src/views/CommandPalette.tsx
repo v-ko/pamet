@@ -8,7 +8,7 @@ import { getLogger } from 'fusion/logging';
 import { getCommands } from 'fusion/registries/Command';
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
 
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('CommandPalette');
 

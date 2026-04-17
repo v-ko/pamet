@@ -14,7 +14,7 @@ import { Rectangle } from "fusion/primitives/Rectangle";
 import { parseClipboardContents } from "@/util";
 import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
 import { DEFAULT_VIEW_HEIGHT } from "@/core/constants";
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('PametCommands');
 

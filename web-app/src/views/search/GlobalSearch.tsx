@@ -6,7 +6,7 @@ import { pamet } from '@/core/facade';
 import { appActions } from '@/actions/app';
 import { pageActions } from '@/actions/page';
 import { Point2D } from 'fusion/primitives/Point2D';
-import { PametRoute } from '@/services/routing/route';
+import { PametRoute } from '@/services/routing/PametRoute';
 import { PageAnimation } from '@/views/page/render-utils';
 import { SEARCH_RESULT_ANIMATION_TIME } from '@/core/constants';
 

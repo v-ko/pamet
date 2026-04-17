@@ -1,5 +1,5 @@
 import { getLogger } from "fusion/logging";
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 
 const log = getLogger('RoutingService');
 
@@ -12,7 +12,7 @@ interface LastPageSnapshot {
 
 export type RouteUpdateHandler = (route: PametRoute) => void;
 
-export class RoutingService {
+export class Router {
     private popstateHandler: ((e: PopStateEvent) => void) | null = null;
     private _updateHandler: RouteUpdateHandler | null = null;
 

@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react';
 import { pamet } from '@/core/facade';
 import { appActions } from '@/actions/app';
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 import { getLogger } from 'fusion/logging';
 import "@/views/dialogs/Dialog.css";
 

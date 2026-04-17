@@ -20,7 +20,7 @@ import { NoteEditViewState } from "@/views/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
-import { PametRoute } from "@/services/routing/route";
+import { PametRoute } from "@/services/routing/PametRoute";
 import { AppViewState } from "@/views/AppViewState";
 import { FileItem } from "fusion/model/FileItem";
 

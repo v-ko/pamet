@@ -12,7 +12,7 @@ import { pamet } from '@/core/facade';
 import { commands } from '@/core/commands';
 import { CardNote } from '@/model/CardNote';
 import { Viewport } from '@/views/page/Viewport';
-import { PametRoute } from '@/services/routing/route';
+import { PametRoute } from '@/services/routing/PametRoute';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { reaction } from 'mobx';
 import { getLogger } from 'fusion/logging';

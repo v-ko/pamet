@@ -10,7 +10,7 @@ import { DEFAULT_FONT_STRING } from "@/core/constants";
 import { textRect, imageGeometryToFitAre } from "@/views/note/util";
 import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
-import { fileItemRoute } from "@/services/routing/route";
+import { fileItemRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('NoteCanvasView');
 
