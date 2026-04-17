@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-_RESOURCES_DIR = Path(__file__).resolve().parent.parent / "resources" / "canvas_viewer"
+_RESOURCES_DIR = Path(__file__).resolve().parent.parent / "resources" / "mini_viewer"
 _template_cache: str | None = None
 _viewer_js_cache: str | None = None
 _viewer_css_cache: str | None = None
