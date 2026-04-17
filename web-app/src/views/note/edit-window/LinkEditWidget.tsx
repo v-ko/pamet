@@ -1,9 +1,9 @@
 // LinkEditWidget.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { SerializedNote } from "@/model/Note";
-import { PametTabIndex } from "@/core/constants";
+import { PametTabIndex } from "@/app/constants";
 import { Page } from '@/model/Page';
-import { pamet } from '@/core/facade';
+import { pamet } from '@/app/facade';
 import './LinkEditWidget.css';
 
 interface SuggestionListProps {

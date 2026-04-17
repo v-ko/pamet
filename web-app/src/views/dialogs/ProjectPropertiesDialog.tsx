@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { PametProjectData } from '@/model/Project';
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { deleteProjectAndSwitch } from '@/procedures/app';
 import { getLogger } from 'fusion/logging';
 import "@/views/dialogs/Dialog.css";

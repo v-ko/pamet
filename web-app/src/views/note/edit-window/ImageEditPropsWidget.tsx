@@ -2,15 +2,15 @@
 import React, { useRef, useState } from 'react';
 import { SerializedNote } from "@/model/Note";
 import "@/views/note/edit-window/ImageEditPropsWidget.css";
-import { MAX_MEDIA_NAME_LENGTH, PametTabIndex } from "@/core/constants";
-import { pamet } from "@/core/facade";
+import { MAX_MEDIA_NAME_LENGTH, PametTabIndex } from "@/app/constants";
+import { pamet } from "@/app/facade";
 import { ImageItem, ImageItemData } from 'fusion/model/ImageItem';
 import { getLogger } from 'fusion/logging';
-import { parseClipboardContents } from "@/util";
+import { parseClipboardContents } from "@/app/util";
 import { mapMimeTypeToFileExtension, toUriFriendlyFileName } from "fusion/util/base";
-import { determineConversionPreset, ImageVerdict, shouldCompressImage } from "@/core/policies";
+import { determineConversionPreset, ImageVerdict, shouldCompressImage } from "@/app/policies";
 import { convertImage, extractImageDimensions } from 'fusion/util/media';
-import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from "@/core/constants";
+import { MAX_IMAGE_DIMENSION_FOR_COMPRESSION, MAX_FILE_UPLOAD_SIZE_BYTES } from "@/app/constants";
 import { fileItemRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('ImageEditPropsWidget');

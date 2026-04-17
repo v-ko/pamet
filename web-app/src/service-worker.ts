@@ -3,7 +3,7 @@ import { parsePametFileUrl } from "@/storage/storage-utils";
 import { setupServiceWorker } from 'fusion/storage/management/service-worker-utils';
 
 import { getLogger } from 'fusion/logging';
-import { registerEntityClasses } from "@/core/entityRegistrationHack";
+import { registerEntityClasses } from "@/app/entityRegistrationHack";
 
 getLogger('service-worker');
 // let test=1

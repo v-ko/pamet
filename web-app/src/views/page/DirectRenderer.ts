@@ -3,15 +3,15 @@ import { Viewport } from "@/views/page/Viewport";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/core/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
 import { getLogger } from "fusion/logging";
-import { color_role_to_hex_color, drawCrossingDiagonals } from "@/util";
+import { color_role_to_hex_color, drawCrossingDiagonals } from "@/app/util";
 
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { ElementView, getElementView } from "@/views/elementViewLibrary";
 import { ArrowCanvasView } from "@/views/arrow/ArrowCanvasView";
 import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { getPageNavigationState, PageAnimation } from "@/views/page/render-utils";
 
 let log = getLogger('DirectRenderer');

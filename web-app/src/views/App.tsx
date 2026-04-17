@@ -12,8 +12,8 @@ import Panel from "@/views/Panel";
 import shareIconUrl from "@/resources/icons/share-2.svg";
 import accountCircleIconUrl from "@/resources/icons/account-circle.svg";
 import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
-import { confirmPageDeletion } from "@/core/commands";
-import { commands } from "@/core/commands";
+import { confirmPageDeletion } from "@/app/commands";
+import { commands } from "@/app/commands";
 import { pageActions } from "@/actions/page";
 import NoteEditView from "@/views/note/NoteEditView";
 import { CreatePageDialog } from "@/views/dialogs/CreateNewPageDialog";
@@ -32,7 +32,7 @@ import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/Command
 import { PageAndCommandPalette, ProjectPalette } from "@/views/CommandPalette";
 import { LocalSearch } from "@/views/search/LocalSearch";
 import { GlobalSearch } from "@/views/search/GlobalSearch";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import Menu, { MenuItem } from "@/views/menu/Menu";
 import { StorageStatusDialog } from "@/views/dialogs/StorageStatusDialog";
 

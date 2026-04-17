@@ -1,13 +1,13 @@
 import { Point2D } from "fusion/primitives/Point2D";
 import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
-import * as util from "@/util";
-import { pamet } from "@/core/facade";
+import * as util from "@/app/util";
+import { pamet } from "@/app/facade";
 import { pageActions } from "@/actions/page";
 import { appActions } from "@/actions/app";
 import { generateFilenameTimestamp } from "fusion/util/base";
 import { getLogger } from "fusion/logging";
-import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "@/core/constants";
-import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "@/core/policies";
+import { AGU, MAX_IMAGE_DIMENSION_FOR_COMPRESSION } from "@/app/constants";
+import { ImageVerdict, determineConversionPreset, shouldCompressImage } from "@/app/policies";
 import { convertImage, extractImageDimensions } from "fusion/util/media";
 import { mapMimeTypeToFileExtension } from "fusion/util/base";
 import { CardNote } from "@/model/CardNote";

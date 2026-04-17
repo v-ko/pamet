@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import "@/views/CommandPalette.css";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { appActions } from "@/actions/app";
 import { navigateToProject } from "@/procedures/app";
 import { getLogger } from 'fusion/logging';

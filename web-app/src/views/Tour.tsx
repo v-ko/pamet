@@ -15,7 +15,7 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import styled from 'styled-components';
 import { TourSegment } from "@/model/Page";
-import { parsePametUrl } from "@/util";
+import { parsePametUrl } from "@/app/util";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/views/page/PageViewState";
 

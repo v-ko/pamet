@@ -4,9 +4,9 @@ import "@/index.css";
 import serviceWorkerUrl from "@/service-worker-desktop?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
-import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
+import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
 import { AppViewState } from "@/views/AppViewState";
-import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
+import { DEFAULT_KEYBINDINGS } from "@/app/default-keybindings";
 import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
@@ -20,9 +20,9 @@ import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageM
 import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
 import { DomainStoreAdapterNames } from 'fusion/storage/domain-store-adapter/DomainStoreAdapter';
 import { StorageService } from "fusion/storage/management/StorageService";
-import { registerEntityClasses } from "@/core/entityRegistrationHack";
-import { LOCAL_USER_ID } from "@/core/constants";
-import { buildDeviceBranchName } from "./util";
+import { registerEntityClasses } from "@/app/entityRegistrationHack";
+import { LOCAL_USER_ID } from "@/app/constants";
+import { buildDeviceBranchName } from "./app/util";
 
 const log = getLogger("main-desktop.tsx");
 setupWebWorkerLoggingChannel();

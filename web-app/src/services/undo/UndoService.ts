@@ -1,6 +1,6 @@
 import { Delta } from "fusion/model/Delta";
 import { getLogger } from "fusion/logging";
-import { PametFacade } from "@/core/facade";
+import { PametFacade } from "@/app/facade";
 
 const log = getLogger("UndoService");
 

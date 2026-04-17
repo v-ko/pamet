@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { Entity } from 'fusion/model/Entity';
 import { restartServiceWorker } from '@/procedures/app';
 

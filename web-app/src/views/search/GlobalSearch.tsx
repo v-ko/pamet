@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import './GlobalSearch.css';
 import { GlobalSearchViewState } from './GlobalSearchViewState';
-import { pamet } from '@/core/facade';
+import { pamet } from '@/app/facade';
 import { appActions } from '@/actions/app';
 import { pageActions } from '@/actions/page';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { PametRoute } from '@/services/routing/PametRoute';
 import { PageAnimation } from '@/views/page/render-utils';
-import { SEARCH_RESULT_ANIMATION_TIME } from '@/core/constants';
+import { SEARCH_RESULT_ANIMATION_TIME } from '@/app/constants';
 
 interface SearchResultItem {
     id: string;

@@ -1,4 +1,4 @@
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { BaseAnimation, EasingFunction } from "@/services/AnimationService";
 import { Point2D } from "fusion/primitives/Point2D";
 import { AUTO_NAVIGATE_TRANSITION_DURATION } from "@/actions/page";

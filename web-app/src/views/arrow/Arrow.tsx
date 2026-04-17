@@ -1,7 +1,7 @@
 
 import { FC, useMemo } from 'react';
 import { ArrowViewState, BezierCurve } from "@/views/arrow/ArrowViewState";
-import { color_role_to_hex_color } from "@/util";
+import { color_role_to_hex_color } from "@/app/util";
 
 export interface ArrowProps {
     arrowViewState: ArrowViewState;

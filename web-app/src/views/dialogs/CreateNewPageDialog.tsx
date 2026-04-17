@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { getLogger } from 'fusion/logging';
-import { DEFAULT_NEW_PAGE_PREFIX } from '@/core/constants';
+import { DEFAULT_NEW_PAGE_PREFIX } from '@/app/constants';
 import "@/views/dialogs/Dialog.css";
 
 let log = getLogger('CreatePageDialog');

@@ -4,11 +4,11 @@ import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { Arrow, ArrowAnchorOnNoteType, ArrowAnchorTypeToString } from "@/model/Arrow";
 import { Point2D, PointData } from "fusion/primitives/Point2D";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { DEFAULT_ARROW_THICKNESS } from "@/core/constants";
-import { pamet } from "@/core/facade";
+import { DEFAULT_ARROW_THICKNESS } from "@/app/constants";
+import { pamet } from "@/app/facade";
 import { getEntityId } from "fusion/model/Entity";
 import { getLogger } from "fusion/logging";
-import { snapVectorToGrid } from "@/util";
+import { snapVectorToGrid } from "@/app/util";
 import { Note } from "@/model/Note";
 
 let log = getLogger('ArrowActions.ts');

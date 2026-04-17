@@ -4,7 +4,7 @@ import {
     IMAGE_CONVERSION_PRESET_JPG,
     IMAGE_CONVERSION_PRESET_PNG,
     MAX_IMAGE_DIMENSION_FOR_COMPRESSION
-} from "@/core/constants";
+} from "@/app/constants";
 import { ImageConversionPreset } from "fusion/util/media";
 
 interface ImageInfo {

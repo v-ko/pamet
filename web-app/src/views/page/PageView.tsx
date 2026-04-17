@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 
-import { PametTabIndex } from "@/core/constants";
+import { PametTabIndex } from "@/app/constants";
 import { Point2D } from 'fusion/primitives/Point2D';
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { getLogger } from 'fusion/logging';

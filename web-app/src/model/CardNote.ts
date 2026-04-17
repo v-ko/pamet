@@ -4,7 +4,7 @@ import { Rectangle, RectangleData } from "fusion/primitives/Rectangle";
 import { Note, NoteData } from "@/model/Note";
 import { Page } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
-import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/core/constants";
+import { DEFAULT_BACKGROUND_COLOR_ROLE, DEFAULT_NOTE_HEIGHT, DEFAULT_NOTE_WIDTH, DEFAULT_TEXT_COLOR_ROLE } from "@/app/constants";
 
 const MIN_AR_DELTA_FOR_HORIZONTAL_ALIGN = 0.5
 const IMAGE_PORTION_FOR_HORIZONTAL_ALIGN = 0.8

@@ -4,9 +4,9 @@ import "@/index.css";
 import serviceWorkerUrl from "@/service-worker?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
-import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
+import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
 import { AppViewState } from "@/views/AppViewState";
-import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
+import { DEFAULT_KEYBINDINGS } from "@/app/default-keybindings";
 import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
@@ -19,9 +19,9 @@ import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
 import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
 import { StorageService } from "fusion/storage/management/StorageService";
-import { LOCAL_USER_ID } from "@/core/constants";
-import { registerEntityClasses } from "@/core/entityRegistrationHack";
-import { buildDeviceBranchName } from "./util";
+import { LOCAL_USER_ID } from "@/app/constants";
+import { registerEntityClasses } from "@/app/entityRegistrationHack";
+import { buildDeviceBranchName } from "./app/util";
 
 const log = getLogger("main-web.tsx");
 setupWebWorkerLoggingChannel();

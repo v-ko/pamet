@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { pamet } from '@/core/facade';
+import { pamet } from '@/app/facade';
 import { appActions } from '@/actions/app';
 import { PametRoute } from "@/services/routing/PametRoute";
 import { getLogger } from 'fusion/logging';

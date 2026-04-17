@@ -1,10 +1,10 @@
 import { computed, makeObservable, observable, reaction, toJS } from "mobx";
 import { Note, SerializedNote } from "@/model/Note";
-import { TextLayout } from "@/util";
+import { TextLayout } from "@/app/util";
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
 import { getLogger } from "fusion/logging";
 import { ElementViewState } from "@/views/page/ElementViewState";
-import { DEFAULT_FONT_STRING } from "@/core/constants";
+import { DEFAULT_FONT_STRING } from "@/app/constants";
 import { loadFromDict } from "fusion/model/Entity";
 import { Change } from "fusion/model/Change";
 import { PageViewState } from "@/views/page/PageViewState";

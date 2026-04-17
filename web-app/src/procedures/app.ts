@@ -1,5 +1,5 @@
 import { getLogger } from "fusion/logging";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
 import { pageActions } from "@/actions/page";

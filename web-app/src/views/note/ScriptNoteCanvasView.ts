@@ -5,8 +5,8 @@ import { calculateTextLayout } from "@/views/note/note-dependent-utils";
 import { Point2D } from "fusion/primitives/Point2D";
 import { NoteCanvasView } from "@/views/note/NoteCanvasView";
 import { textRect } from "@/views/note/util";
-import { DEFAULT_FONT_STRING } from "@/core/constants";
-import { color_role_to_hex_color } from "@/util";
+import { DEFAULT_FONT_STRING } from "@/app/constants";
+import { color_role_to_hex_color } from "@/app/util";
 
 const TRIANGLE_BASE = 10;
 const TRIANGLE_SPACING = 3;

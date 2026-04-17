@@ -1,12 +1,12 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
-import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_VIEW_HEIGHT, RESIZE_CIRCLE_RADIUS } from "@/core/constants";
+import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_VIEW_HEIGHT, RESIZE_CIRCLE_RADIUS } from "@/app/constants";
 import { Point2D } from 'fusion/primitives/Point2D';
 import { Page, PageData } from "@/model/Page";
 import { Viewport } from "@/views/page/Viewport";
 import { Rectangle, RectangleData } from 'fusion/primitives/Rectangle';
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { ArrowViewState } from "@/views/arrow/ArrowViewState";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { getLogger } from 'fusion/logging';
 import { Note } from "@/model/Note";
 import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";

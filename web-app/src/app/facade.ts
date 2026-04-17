@@ -29,7 +29,7 @@ import { PametRoute } from "@/services/routing/PametRoute";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/views/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
-import { RenderProfiler } from "@/core/RenderProfiler";
+import { RenderProfiler } from "@/app/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { SearchService } from "@/services/SearchService";
 import { AnimationService } from "@/services/AnimationService";

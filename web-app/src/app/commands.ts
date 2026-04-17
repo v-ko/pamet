@@ -1,5 +1,5 @@
 import { pageActions } from "@/actions/page";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { command } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
@@ -11,9 +11,9 @@ import { NoteViewState } from "@/views/note/NoteViewState";
 import { PageViewState } from "@/views/page/PageViewState";
 import { buildHashTree } from "fusion/storage/version-control/HashTree";
 import { Rectangle } from "fusion/primitives/Rectangle";
-import { parseClipboardContents } from "@/util";
+import { parseClipboardContents } from "@/app/util";
 import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
-import { DEFAULT_VIEW_HEIGHT } from "@/core/constants";
+import { DEFAULT_VIEW_HEIGHT } from "@/app/constants";
 import { PametRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('PametCommands');

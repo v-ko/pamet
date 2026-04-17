@@ -3,10 +3,10 @@ import { CardNote } from "@/model/CardNote";
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
 import { BorderType, NoteCanvasView } from "@/views/note/NoteCanvasView";
 import { textRect } from "@/views/note/util";
-import { DEFAULT_FONT_STRING } from "@/core/constants";
+import { DEFAULT_FONT_STRING } from "@/app/constants";
 import { Point2D } from "fusion/primitives/Point2D";
-import { color_role_to_hex_color } from "@/util";
-import { pamet } from "@/core/facade";
+import { color_role_to_hex_color } from "@/app/util";
+import { pamet } from "@/app/facade";
 
 const DECORATION_EDGE = 10;
 

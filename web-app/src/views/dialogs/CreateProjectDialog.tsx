@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
-import { pamet } from '@/core/facade';
+import { pamet } from '@/app/facade';
 import { timestamp, currentTime } from 'fusion/util/base';
 import { createProject, navigateToProject } from "@/procedures/app";
 import { ProjectData } from '@/model/Project';

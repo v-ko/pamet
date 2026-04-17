@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
-import { pamet } from '@/core/facade';
+import { pamet } from '@/app/facade';
 import "@/views/dialogs/Dialog.css";
 import { Page } from '@/model/Page';
-import { CANVAS_EXT } from '@/core/constants';
+import { CANVAS_EXT } from '@/app/constants';
 
 interface PagePropertiesDialogProps {
   page: Page;

@@ -4,7 +4,7 @@ import type { MouseState } from "@/views/AppViewState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
 import { LocalSearchViewState } from "@/views/search/LocalSearchViewState";
 import { GlobalSearchViewState } from "@/views/search/GlobalSearchViewState";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/views/page/PageViewState";

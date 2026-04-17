@@ -1,6 +1,6 @@
 import { getCommand } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 
 const log = getLogger('KeybindingService');
 

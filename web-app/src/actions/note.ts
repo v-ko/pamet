@@ -3,9 +3,9 @@ import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { Size } from "fusion/primitives/Size";
-import { snapVectorToGrid } from "@/util";
-import { pamet } from "@/core/facade";
-import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "@/core/constants";
+import { snapVectorToGrid } from "@/app/util";
+import { pamet } from "@/app/facade";
+import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "@/app/constants";
 import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 
 class NoteActions {

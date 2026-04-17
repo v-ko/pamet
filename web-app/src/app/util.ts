@@ -1,5 +1,5 @@
 import { ElementViewState } from "@/views/page/ElementViewState";
-import { ALIGNMENT_GRID_UNIT, COLOR_ROLE_MAP } from "@/core/constants";
+import { ALIGNMENT_GRID_UNIT, COLOR_ROLE_MAP } from "@/app/constants";
 import { getLogger } from "fusion/logging";
 import { Point2D, Vector2D } from "fusion/primitives/Point2D";
 import { Rectangle } from "fusion/primitives/Rectangle";

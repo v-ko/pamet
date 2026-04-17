@@ -4,12 +4,12 @@ import { NoteViewState } from "@/views/note/NoteViewState";
 import { getLogger } from 'fusion/logging';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { Rectangle } from 'fusion/primitives/Rectangle';
-import { approximateMidpointOfBezierCurve } from "@/util";
+import { approximateMidpointOfBezierCurve } from "@/app/util";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import paper from 'paper';
-import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/core/constants";
+import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/app/constants";
 import { Change } from 'fusion/model/Change';
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { PageViewState } from "@/views/page/PageViewState";
 import { dumpToDict, loadFromDict } from "fusion/model/Entity";
 

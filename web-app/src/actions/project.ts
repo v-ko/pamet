@@ -1,14 +1,14 @@
 import { action } from "fusion/registries/Action";
 import { AppDialogMode, AppViewState } from "@/views/AppViewState";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 import { Page, PageData } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
 import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
 import { Point2D } from "fusion/primitives/Point2D";
 import { getEntityId } from "fusion/model/Entity";
-import { snapVectorToGrid } from "@/util";
+import { snapVectorToGrid } from "@/app/util";
 import { CardNote } from "@/model/CardNote";
-import { CANVAS_EXT } from "@/core/constants";
+import { CANVAS_EXT } from "@/app/constants";
 import {
     linkUpdatesForPageDelete,
     imageReassignmentUpdatesForPageDelete,
