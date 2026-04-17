@@ -72,6 +72,11 @@ export class FocusManager {
   }
 
   private reevaluateVisibilityContexts() {
+    // Clear stale lastFocusedElement if it's no longer in the DOM
+    if (this.lastFocusedElement && !this.lastFocusedElement.isConnected) {
+      this.lastFocusedElement = null;
+    }
+
     for (const registration of this.visibilityRegistrations.values()) {
       const el = document.querySelector(registration.selector) as HTMLElement | null;
       const isVisible = el ? el.offsetParent !== null : false;
@@ -152,7 +157,9 @@ export class FocusManager {
     if (!relatedTarget) {
       // When the element with focus is removed (e.g. the command palette is closed),
       // we need to correct focus to a sensible element.
-      this.correctFocus();
+      // Deferred to next frame so React can finish unmounting removed elements,
+      // preventing correctFocus from picking stale/half-removed DOM nodes.
+      requestAnimationFrame(() => this.correctFocus());
       return;
     }
 
@@ -180,7 +187,7 @@ export class FocusManager {
 
     // Strategy 1: Go back to what you were doing.
     // We check what was the last thing you clicked on.
-    if (this.lastFocusedElement) {
+    if (this.lastFocusedElement && this.lastFocusedElement.isConnected) {
       // Find the main component area (e.g., the note editor or the page view) that contains the last element.
       // We pick the most specific one (e.g., note editor wins over the page view if it's inside it).
       const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
