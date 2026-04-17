@@ -2,14 +2,22 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
-from PySide6.QtCore import QEvent, QPoint, Qt, QUrl
-from PySide6.QtGui import QKeySequence, QMouseEvent, QPalette, QShortcut
+from PySide6.QtCore import QEvent, Qt, QUrl
+from PySide6.QtGui import (
+    QCursor,
+    QKeyEvent,
+    QKeySequence,
+    QMouseEvent,
+    QPalette,
+    QShortcut,
+)
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (
     QHBoxLayout,
-    QMainWindow,
     QPushButton,
+    QSizePolicy,
+    QSpacerItem,
     QSplitter,
     QStackedWidget,
     QTabBar,
@@ -20,6 +28,8 @@ from PySide6.QtWidgets import (
 from pamet.desktop_app.web_shell_actions import close_tab
 from pamet.desktop_app.web_shell_view_state import TabState, WebShellViewState
 from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
+
+_RESIZE_GRIP = 5  # px – edge/corner resize zone for frameless window
 
 
 class PametWebEnginePage(QWebEnginePage):
@@ -43,7 +53,7 @@ class PametWebEnginePage(QWebEnginePage):
         return super().createWindow(window_type)
 
 
-class WebShellWindow(QMainWindow):
+class WebShellWindow(QWidget):
 
     def __init__(
         self,
@@ -55,6 +65,8 @@ class WebShellWindow(QMainWindow):
     ):
         super().__init__(parent=parent)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_Hover, True)
+        self.setMouseTracking(True)
 
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
         self.desktop_api_base_url = desktop_api_base_url
@@ -71,10 +83,10 @@ class WebShellWindow(QMainWindow):
         self.state = WebShellViewState(parent=self)
 
         # --- Build UI ---
-        central = QWidget()
-        self.setCentralWidget(central)
-        root_layout = QVBoxLayout(central)
-        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout = QVBoxLayout(self)
+        root_layout.setContentsMargins(
+            _RESIZE_GRIP, _RESIZE_GRIP, _RESIZE_GRIP, _RESIZE_GRIP
+        )
         root_layout.setSpacing(0)
 
         # Top bar: back, toggle, forward, tab bar, window buttons
@@ -113,6 +125,9 @@ class WebShellWindow(QMainWindow):
         top_bar.addWidget(self.toggle_button)
         top_bar.addWidget(self.forward_button)
         top_bar.addWidget(self.tab_bar, 1)
+        top_bar.addItem(
+            QSpacerItem(40, 0, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
+        )
         top_bar.addWidget(self.minimize_button)
         top_bar.addWidget(self.maximize_button)
         top_bar.addWidget(self.close_button)
@@ -227,13 +242,24 @@ class WebShellWindow(QMainWindow):
         widget.deleteLater()
 
     def eventFilter(self, obj, event):
-        """Middle-click on a tab to close it."""
-        if obj is self.tab_bar and event.type() == QEvent.Type.MouseButtonRelease:
-            if event.button() == Qt.MouseButton.MiddleButton:
-                index = self.tab_bar.tabAt(event.pos())
-                if index >= 0:
-                    self._on_tab_close_requested(index)
-                    return True
+        """Middle-click close and left-drag/double-click on empty tab-bar area."""
+        if obj is self.tab_bar:
+            if event.type() == QEvent.Type.MouseButtonRelease:
+                if event.button() == Qt.MouseButton.MiddleButton:
+                    index = self.tab_bar.tabAt(event.pos())
+                    if index >= 0:
+                        self._on_tab_close_requested(index)
+                        return True
+            if event.type() == QEvent.Type.MouseButtonPress:
+                if event.button() == Qt.MouseButton.LeftButton:
+                    if self.tab_bar.tabAt(event.pos()) < 0:
+                        self.windowHandle().startSystemMove()
+                        return True
+            if event.type() == QEvent.Type.MouseButtonDblClick:
+                if event.button() == Qt.MouseButton.LeftButton:
+                    if self.tab_bar.tabAt(event.pos()) < 0:
+                        self._toggle_maximize()
+                        return True
         return super().eventFilter(obj, event)
 
     # ------------------------------------------------------------------
@@ -304,9 +330,20 @@ class WebShellWindow(QMainWindow):
     # ------------------------------------------------------------------
 
     def _toggle_shell(self):
-        raise NotImplementedError(
-            "Desktop-to-web-shell command channel not yet implemented"
-        )
+        wv = self._current_web_view()
+        if wv:
+            press = QKeyEvent(
+                QEvent.Type.KeyPress,
+                Qt.Key.Key_Backspace,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            release = QKeyEvent(
+                QEvent.Type.KeyRelease,
+                Qt.Key.Key_Backspace,
+                Qt.KeyboardModifier.NoModifier,
+            )
+            wv.focusProxy().event(press)
+            wv.focusProxy().event(release)
 
     # ------------------------------------------------------------------
     # Dev tools toggle
@@ -380,15 +417,15 @@ class WebShellWindow(QMainWindow):
         fg = pal.color(QPalette.ColorRole.WindowText).name()
         border = pal.color(QPalette.ColorRole.Mid).name()
         bg = pal.color(QPalette.ColorRole.Window).name()
+        hover = pal.color(QPalette.ColorRole.Midlight).name()
 
         btn_style = (
             f"QPushButton {{ border: none; font-size: 14px; padding: 0; color: {fg}; }}"
+            f" QPushButton:hover {{ background: {hover}; }}"
         )
         self.minimize_button.setStyleSheet(btn_style)
         self.maximize_button.setStyleSheet(btn_style)
-        self.close_button.setStyleSheet(
-            btn_style + " QPushButton:hover { background: #e81123; color: white; }"
-        )
+        self.close_button.setStyleSheet(btn_style)
 
         self.title_bar.setStyleSheet(f"""
             _TitleBarWidget {{
@@ -397,10 +434,70 @@ class WebShellWindow(QMainWindow):
             }}
         """)
 
+        self.setStyleSheet(f"WebShellWindow {{ border: 1px solid {border}; }}")
+
     def changeEvent(self, event):
         if event.type() == QEvent.Type.PaletteChange:
             self._apply_title_bar_style()
+        elif event.type() == QEvent.Type.WindowStateChange:
+            m = 0 if self.isMaximized() else _RESIZE_GRIP
+            self.layout().setContentsMargins(m, m, m, m)
         super().changeEvent(event)
+
+    # ------------------------------------------------------------------
+    # Frameless resize handling
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _edges_at(pos, size):
+        edges = Qt.Edge(0)
+        if pos.x() < _RESIZE_GRIP:
+            edges |= Qt.Edge.LeftEdge
+        if pos.x() >= size.width() - _RESIZE_GRIP:
+            edges |= Qt.Edge.RightEdge
+        if pos.y() < _RESIZE_GRIP:
+            edges |= Qt.Edge.TopEdge
+        if pos.y() >= size.height() - _RESIZE_GRIP:
+            edges |= Qt.Edge.BottomEdge
+        return edges
+
+    def _update_edge_cursor(self):
+        if self.isMaximized():
+            self.unsetCursor()
+            return
+        local = self.mapFromGlobal(QCursor.pos())
+        edges = self._edges_at(local, self.size())
+        e = edges.value
+        if not e:
+            self.unsetCursor()
+            return
+        L, R = Qt.Edge.LeftEdge.value, Qt.Edge.RightEdge.value
+        T, B = Qt.Edge.TopEdge.value, Qt.Edge.BottomEdge.value
+        if e == (L | T) or e == (R | B):
+            self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+        elif e == (R | T) or e == (L | B):
+            self.setCursor(Qt.CursorShape.SizeBDiagCursor)
+        elif e & (L | R):
+            self.setCursor(Qt.CursorShape.SizeHorCursor)
+        else:
+            self.setCursor(Qt.CursorShape.SizeVerCursor)
+
+    def event(self, ev):
+        t = ev.type()
+        if t in (QEvent.Type.HoverMove, QEvent.Type.MouseMove):
+            self._update_edge_cursor()
+        elif t == QEvent.Type.Leave:
+            self.unsetCursor()
+        return super().event(ev)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        if event.button() == Qt.MouseButton.LeftButton and not self.isMaximized():
+            edges = self._edges_at(event.position().toPoint(), self.size())
+            if edges:
+                self.windowHandle().startSystemResize(edges)
+                event.accept()
+                return
+        super().mousePressEvent(event)
 
     # ------------------------------------------------------------------
     # Resize (dev tools layout)
@@ -421,26 +518,14 @@ class WebShellWindow(QMainWindow):
 class _TitleBarWidget(QWidget):
     """Draggable title-bar area that lets the user move the frameless window."""
 
-    def __init__(self, window: QMainWindow, parent=None):
+    def __init__(self, window: "WebShellWindow", parent=None):
         super().__init__(parent or window)
         self._window = window
-        self._drag_pos: QPoint | None = None
 
     def mousePressEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_pos = (
-                event.globalPosition().toPoint()
-                - self._window.frameGeometry().topLeft()
-            )
+            self._window.windowHandle().startSystemMove()
             event.accept()
-
-    def mouseMoveEvent(self, event: QMouseEvent):
-        if self._drag_pos is not None and event.buttons() & Qt.MouseButton.LeftButton:
-            self._window.move(event.globalPosition().toPoint() - self._drag_pos)
-            event.accept()
-
-    def mouseReleaseEvent(self, event: QMouseEvent):
-        self._drag_pos = None
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         if event.button() == Qt.MouseButton.LeftButton:
