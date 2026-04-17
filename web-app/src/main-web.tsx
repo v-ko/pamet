@@ -5,14 +5,14 @@ import serviceWorkerUrl from "@/service-worker?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/core/facade";
-import { AppViewState } from "@/containers/app/AppViewState";
+import { AppViewState } from "@/views/AppViewState";
 import { DEFAULT_KEYBINDINGS } from "@/core/default-keybindings";
 import { ensureProjectAndNavigate } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 
 import { LocalStorageConfigSync } from "@/services/config/LocalStorageConfigSync";
 
-import WebApp from "@/containers/app/App";
+import WebApp from "@/views/App";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 

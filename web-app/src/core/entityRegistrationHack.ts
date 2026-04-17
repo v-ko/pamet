@@ -7,8 +7,8 @@ import { ScriptNote } from "@/model/ScriptNote";
 import { Page } from "@/model/Page";
 import { Arrow } from "@/model/Arrow";
 import { ImageItem } from 'fusion/model/ImageItem';
-import { ScriptNoteCanvasView } from '@/components/note/ScriptNoteCanvasView';
-import { CardNoteCanvasView } from '@/components/note/CardNoteCanvasView';
+import { ScriptNoteCanvasView } from '@/views/note/ScriptNoteCanvasView';
+import { CardNoteCanvasView } from '@/views/note/CardNoteCanvasView';
 
 const log = getLogger('entityRegistration');
 

@@ -1,12 +1,12 @@
 import { action } from "fusion/registries/Action";
-import { PageMode, PageViewState } from "@/components/page/PageViewState";
-import { NoteViewState } from "@/components/note/NoteViewState";
+import { PageMode, PageViewState } from "@/views/page/PageViewState";
+import { NoteViewState } from "@/views/note/NoteViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { Size } from "fusion/primitives/Size";
 import { snapVectorToGrid } from "@/util";
 import { pamet } from "@/core/facade";
 import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "@/core/constants";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 
 class NoteActions {
     @action

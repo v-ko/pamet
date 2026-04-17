@@ -1,0 +1,408 @@
+import "@/views/App.css";
+import "@/views/PanelLayer.css";
+import { useEffect, useState } from "react";
+import { observer } from "mobx-react-lite";
+
+import { PageView } from "@/views/page/PageView";
+
+import { getLogger } from "fusion/logging";
+import { styled } from "styled-components";
+import Panel from "@/views/Panel";
+
+import shareIconUrl from "@/resources/icons/share-2.svg";
+import accountCircleIconUrl from "@/resources/icons/account-circle.svg";
+import helpCircleIconUrl from "@/resources/icons/help-circle.svg";
+import { confirmPageDeletion } from "@/core/commands";
+import { commands } from "@/core/commands";
+import { pageActions } from "@/actions/page";
+import NoteEditView from "@/views/note/NoteEditView";
+import { CreatePageDialog } from "@/views/CreateNewPageDialog";
+import { appActions } from "@/actions/app";
+import { deletePageAndNavigate, createPageAndNavigate } from "@/procedures/app";
+import { PagePropertiesDialog } from "@/views/PagePropertiesDialog";
+import { ProjectPropertiesDialog } from "@/views/ProjectPropertiesDialog";
+import { ProjectsDialog } from "@/views/ProjectsDialog";
+import { CreateProjectDialog } from "@/views/CreateProjectDialog";
+import { DebugDialog } from "@/views/DebugDialog";
+
+
+import { AppViewState, ProjectError, PageError, AppDialogMode } from "@/views/AppViewState";
+import { MediaProcessingDialog } from "@/views/system-modal-dialog/LoadingDialog";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
+import { PageAndCommandPalette, ProjectPalette } from "@/views/CommandPalette";
+import { LocalSearch } from "@/views/search/LocalSearch";
+import { GlobalSearch } from "@/views/search/GlobalSearch";
+import { pamet } from "@/core/facade";
+import Menu, { MenuItem } from "@/views/menu/Menu";
+import { StorageStatusDialog } from "@/views/StorageStatusDialog";
+
+let log = getLogger("App");
+
+// Vertical line component
+const VerticalSeparator = styled.div`
+  width: 1px;
+  height: 1em;
+  background: rgba(0,0,0,0.2);
+`
+
+const WebApp = observer(({ state }: { state: AppViewState }) => {
+  let errorMessages: string[] = []
+  const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
+  const [showLoadingDialog, setShowLoadingDialog] = useState(false);
+  const [mainMenuPos, setMainMenuPos] = useState<{x:number,y:number} | null>(null);
+
+  // Change the title when the current page changes
+  useEffect(() => {
+    if (state.currentPageViewState) {
+      document.title = state.currentPageViewState.page().name;
+    } else {
+      document.title = "Pamet";
+    }
+  }, [state.currentPageViewState]);
+
+  useEffect(() => {
+    // Set delayed system modal dialog visibility to avoid
+    // Brief pop-up on short tasks
+    const dialogState = state.loadingDialogState;
+    if (!dialogState) {
+      setShowLoadingDialog(false);
+      return;
+    }
+
+    if (dialogState.showAfterUnixTime === null) {
+      setShowLoadingDialog(true);
+      return;
+    }
+
+    const now = Date.now();
+    const delay = dialogState.showAfterUnixTime - now;
+
+    if (delay <= 0) {
+      setShowLoadingDialog(true);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowLoadingDialog(true);
+    }, delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [state.loadingDialogState]);
+
+  // Check for resurce availability, and prep error messages if needed
+  let shouldDisplayPage = true
+
+  if (!state.deviceId) {
+    errorMessages.push('DeviceData missing. This is a pretty critical error.')
+  }
+  if (state.currentPageViewState === null) {
+    shouldDisplayPage = false
+  }
+
+  if (state.projectError === ProjectError.NotFound) {
+    errorMessages.push("Project not found")
+    shouldDisplayPage = false
+  } else {
+    if (state.pageError === PageError.NotFound) {
+      errorMessages.push("Page not found")
+      shouldDisplayPage = false
+    }
+
+    if (state.currentPageViewState === null && state.pageError === PageError.NoError) {
+      errorMessages.push("Page not set")
+    }
+
+  }
+
+  const currentPageVS = state.currentPageViewState
+  const storageConnectionPhase = state.storageState.service.connectionPhase;
+  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase);
+
+  const storageStatusTitle = (() => {
+    switch (storageConnectionPhase) {
+      case 'ready':
+        return 'Storage connected';
+      case 'connecting':
+      case 'registering':
+      case 'waiting-for-controller':
+        return 'Storage connecting';
+      case 'disconnected':
+        return 'Storage disconnected';
+      case 'fatal':
+        return 'Storage error';
+      case 'main-thread-ready':
+        return 'Storage running in main thread';
+      default:
+        return 'Storage status';
+    }
+  })();
+
+  const getShortcut = (commandName: string): string | undefined => {
+    return pamet.keybindingService?.getShortcutForCommand(commandName) || undefined;
+  };
+
+  const mainMenuItems: MenuItem[] = [
+    {
+      label: 'Project',
+      submenu: [
+        { label: 'Open Projects…', onClick: () => appActions.openProjectsDialog(state) },
+        { label: 'Project Properties…', onClick: () => appActions.openProjectPropertiesDialog(state) },
+        { type: 'separator', label: '' },
+        { label: 'Create New Project…', onClick: () => appActions.openCreateProjectDialog(state) },
+      ]
+    },
+    {
+      label: 'Page',
+      submenu: [
+        { label: 'New Page…', onClick: () => commands.createNewPage(), shortcut: getShortcut(commands.createNewPage.name) },
+        { label: 'Page Properties…', onClick: () => appActions.openPageProperties(state), shortcut: getShortcut(commands.openPageProperties.name) },
+        { type: 'separator', label: '' },
+        { label: 'Delete Page', onClick: () => commands.deleteCurrentPage() },
+      ]
+    },
+    {
+      label: 'Search',
+      submenu: [
+        { label: 'Local Search', onClick: () => appActions.openLocalSearch(state), shortcut: getShortcut(commands.openLocalSearch.name) },
+        { label: 'Global Search', onClick: () => appActions.openGlobalSearch(state), shortcut: getShortcut(commands.openGlobalSearch.name) },
+        { label: 'Command Palette', onClick: () => commands.openCommandPalette(), shortcut: getShortcut(commands.openCommandPalette.name) },
+      ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        { label: 'Zoom In', onClick: () => commands.pageZoomIn(), shortcut: getShortcut(commands.pageZoomIn.name) },
+        { label: 'Zoom Out', onClick: () => commands.pageZoomOut(), shortcut: getShortcut(commands.pageZoomOut.name) },
+        { label: 'Reset Zoom', onClick: () => commands.pageZoomReset(), shortcut: getShortcut(commands.pageZoomReset.name) },
+      ]
+    }
+  ];
+
+  // Context menu handled within PageView directly.
+
+
+  return (
+    <div className="app">
+      {/* a div for the app messages to be displayed in the center of the screen */}
+      {/* use only inline css */}
+      <div style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        textAlign: 'center',
+        color: 'red',
+        fontWeight: 'bold',
+        fontSize: '1.5em',
+      }}>
+
+        {/* Display messages */}
+        {errorMessages.map((message, index) => (
+          <div key={index}>{message}</div>
+        ))}
+      </div>
+
+
+      {/* If page data - display the page */}
+      {shouldDisplayPage && (
+        <div style={{ width: '100%', height: '100%' }}>
+          <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />
+        </div>
+      )}
+
+      {/* Panel Layer - Grid layout for panels and sidebars */}
+      <div className="panel-layer">
+        {/* Main panel - logo, project name, save state, help button */}
+        <Panel align='top-left'>
+
+        <div
+          style={{
+            fontSize: '1.1em',
+            fontWeight: 400,
+            cursor: 'pointer',
+          }}
+          onClick={() => appActions.openProjectsDialog(state)}
+          title="Go to projects"
+        >PAMET</div>
+        <VerticalSeparator />
+
+        <div
+          className="project-name"
+          style={{
+            cursor: 'pointer'
+          }}
+          onClick={() => appActions.openProjectPropertiesDialog(state)}
+          title="Project properties"
+        >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
+        <img
+          src={storageStatusIconUrl}
+          alt="Storage status"
+          title={storageStatusTitle}
+          style={{ cursor: 'pointer' }}
+          onClick={() => appActions.openStorageStatusDialog(state)}
+        />
+        <VerticalSeparator />
+        <img src={shareIconUrl} alt="Share" />
+        <VerticalSeparator />
+        <div
+          title='Main menu'
+          style={{
+            fontSize: '1.2em',
+            textAlign: 'center',
+            cursor: 'pointer',
+          }}
+          onClick={(e) => {
+            const target = e.currentTarget as HTMLElement;
+            const panel = target.closest('.panel') as HTMLElement | null;
+            const r = (panel ?? target).getBoundingClientRect();
+            setMainMenuPos({ x: r.right, y: r.bottom + 6 });
+          }}
+        >
+          ☰
+        </div>
+
+      </Panel>
+
+      <Panel align='top-right'>
+        <div
+          title='Debug info'
+          onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
+        >
+          {'</>'}
+        </div>
+        <VerticalSeparator />
+        <img src={helpCircleIconUrl} alt="Help"
+          style={{ cursor: 'pointer' }}
+          onClick={() => { commands.showHelp(); }}
+        />
+        <VerticalSeparator />
+        <div
+          onClick={() => appActions.openPageProperties(state)}
+          style={{ cursor: 'pointer' }}
+          title="Page properties"
+        >{currentPageVS ? currentPageVS.page().name : '(no page open)'}</div>
+        <VerticalSeparator />
+        <img src={accountCircleIconUrl} alt="Login/Sign up" />
+      </Panel>
+
+        {/* Global search sidebar */}
+        {state.globalSearchViewState &&
+          <GlobalSearch state={state.globalSearchViewState} />}
+      </div>
+
+      {/* Edit window (if open) */}
+      {currentPageVS && currentPageVS.noteEditWindowState &&
+        // Edit-window related.
+        // The mouse event handling is tricky, since it's nicer to use the title-bar
+        // onDown/Up/.. signals (we can't make the whole component transparent to
+        // pointer events, since it has a lot of functionality). So we catch the
+        // mouseDown and mouseUp events on the title-bar handle and trigger the
+        // edit-window-drag events accodingly. Also we update the mouse state, because
+        // we need to properly handle enter/leave events (and offscreen mouse release)
+
+
+        <NoteEditView
+          state={currentPageVS.noteEditWindowState}
+        />}
+
+      {state.dialogMode === AppDialogMode.CreateNewPage && (
+        <CreatePageDialog
+          onClose={() => appActions.closeAppDialog(state)}
+          onCreate={(name: string) => {
+            log.info(`Creating new page: ${name}`);
+            createPageAndNavigate(state, name)
+              .catch((e) => log.error('Error creating/navigating to new page', e));
+          }}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.PageProperties && state.currentPageViewState && (
+        <PagePropertiesDialog
+          page={state.currentPageViewState.page()}
+          onClose={() => appActions.closeAppDialog(state)}
+          onSave={(page) => pageActions.updatePageProperties(page)}
+          onDelete={(page) => {
+            if (confirmPageDeletion(page.name)) {
+              deletePageAndNavigate(state, page)
+                .catch((e) => log.error('Error deleting/navigating after page deletion', e));
+            }
+          }}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.ProjectProperties && state.currentProjectState && (
+        <ProjectPropertiesDialog
+          project={state.currentProjectState}
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.ProjectsDialog && (
+        <ProjectsDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.CreateNewProject && (
+        <CreateProjectDialog
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {state.dialogMode === AppDialogMode.StorageStatus && (
+        <StorageStatusDialog
+          state={state}
+          onClose={() => appActions.closeAppDialog(state)}
+        />
+      )}
+
+      {/* Debug Dialog */}
+      <DebugDialog
+        isOpen={debugInfoModalOpen}
+        onClose={() => setDebugInfoModalOpen(false)}
+      />
+
+      {showLoadingDialog && state.loadingDialogState && (
+        <MediaProcessingDialog state={state.loadingDialogState} />
+      )}
+      {state.commandPaletteState instanceof PageAndCommandPaletteState &&
+        <PageAndCommandPalette state={state.commandPaletteState} />}
+      {state.commandPaletteState instanceof ProjectPaletteState &&
+        <ProjectPalette state={state.commandPaletteState} />}
+      {state.localSearchViewState &&
+        <LocalSearch state={state.localSearchViewState} />}
+
+      {(mainMenuPos) && (
+        <div
+          // Overlay: close menus on outside click and swallow interactions beneath
+          onMouseDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setMainMenuPos(null);
+          }}
+          onMouseMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+        />
+      )}
+
+      {mainMenuPos && (
+        <Menu
+          items={mainMenuItems}
+          x={mainMenuPos.x}
+          y={mainMenuPos.y}
+          variant='main'
+          alignX='right'
+          onDismiss={() => setMainMenuPos(null)}
+        />
+      )}
+
+      {/* Context menu is rendered within PageView */}
+    </div>
+  );
+});
+
+export default WebApp;

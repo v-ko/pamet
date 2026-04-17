@@ -1,4 +1,4 @@
-import { textRect } from "@/components/note/util";
+import { textRect } from "@/views/note/util";
 import { entityType, getEntityId } from "fusion/model/Entity";
 import { Rectangle, RectangleData } from "fusion/primitives/Rectangle";
 import { Note, NoteData } from "@/model/Note";

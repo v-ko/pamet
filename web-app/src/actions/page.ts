@@ -1,5 +1,5 @@
 import * as util from "@/util";
-import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/components/page/PageViewState";
+import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/views/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { pamet } from "@/core/facade";
 
@@ -10,18 +10,18 @@ import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
 import { AGU, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, MIN_NOTE_HEIGHT } from "@/core/constants";
 import { Note } from "@/model/Note";
-import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
-import { NoteViewState } from "@/components/note/NoteViewState";
+import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
+import { NoteViewState } from "@/views/note/NoteViewState";
 import { Arrow } from "@/model/Arrow";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { Page } from "@/model/Page";
 import { ImageItem } from "fusion/model/ImageItem";
-import { NoteEditViewState } from "@/components/note/NoteEditViewState";
+import { NoteEditViewState } from "@/views/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { PametRoute } from "@/services/routing/route";
-import { AppViewState } from "@/containers/app/AppViewState";
+import { AppViewState } from "@/views/AppViewState";
 import { FileItem } from "fusion/model/FileItem";
 
 

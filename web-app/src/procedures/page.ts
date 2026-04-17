@@ -1,5 +1,5 @@
 import { Point2D } from "fusion/primitives/Point2D";
-import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
+import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
 import * as util from "@/util";
 import { pamet } from "@/core/facade";
 import { pageActions } from "@/actions/page";
@@ -14,11 +14,11 @@ import { CardNote } from "@/model/CardNote";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { ImageItem } from "fusion/model/ImageItem";
-import { NoteViewState } from "@/components/note/NoteViewState";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { NoteViewState } from "@/views/note/NoteViewState";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { dumpToDict, getEntityId, loadFromDict } from "fusion/model/Entity";
-import { AppViewState } from "@/containers/app/AppViewState";
-import { PageViewState } from "@/components/page/PageViewState";
+import { AppViewState } from "@/views/AppViewState";
+import { PageViewState } from "@/views/page/PageViewState";
 
 const log = getLogger('PageProcedures');
 

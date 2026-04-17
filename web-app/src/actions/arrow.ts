@@ -1,9 +1,9 @@
 import { action } from "fusion/registries/Action";
-import { PageMode, PageViewState } from "@/components/page/PageViewState";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { PageMode, PageViewState } from "@/views/page/PageViewState";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { Arrow, ArrowAnchorOnNoteType, ArrowAnchorTypeToString } from "@/model/Arrow";
 import { Point2D, PointData } from "fusion/primitives/Point2D";
-import { NoteViewState } from "@/components/note/NoteViewState";
+import { NoteViewState } from "@/views/note/NoteViewState";
 import { DEFAULT_ARROW_THICKNESS } from "@/core/constants";
 import { pamet } from "@/core/facade";
 import { getEntityId } from "fusion/model/Entity";

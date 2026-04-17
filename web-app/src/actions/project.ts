@@ -1,9 +1,9 @@
 import { action } from "fusion/registries/Action";
-import { AppDialogMode, AppViewState } from "@/containers/app/AppViewState";
+import { AppDialogMode, AppViewState } from "@/views/AppViewState";
 import { pamet } from "@/core/facade";
 import { Page, PageData } from "@/model/Page";
 import { currentTime, timestamp } from "fusion/util/base";
-import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
+import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
 import { Point2D } from "fusion/primitives/Point2D";
 import { getEntityId } from "fusion/model/Entity";
 import { snapVectorToGrid } from "@/util";

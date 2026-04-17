@@ -1,13 +1,13 @@
-import { AppDialogMode, PageError, ProjectError, AppViewState } from "@/containers/app/AppViewState";
-import { LoadingDialogState } from "@/components/system-modal-dialog/state";
-import type { MouseState } from "@/containers/app/AppViewState";
-import { PageAndCommandPaletteState, ProjectPaletteState } from "@/components/CommandPaletteState";
-import { LocalSearchViewState } from "@/components/search/LocalSearchViewState";
-import { GlobalSearchViewState } from "@/components/search/GlobalSearchViewState";
+import { AppDialogMode, PageError, ProjectError, AppViewState } from "@/views/AppViewState";
+import { LoadingDialogState } from "@/views/system-modal-dialog/state";
+import type { MouseState } from "@/views/AppViewState";
+import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
+import { LocalSearchViewState } from "@/views/search/LocalSearchViewState";
+import { GlobalSearchViewState } from "@/views/search/GlobalSearchViewState";
 import { pamet } from "@/core/facade";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
-import { PageViewState } from "@/components/page/PageViewState";
+import { PageViewState } from "@/views/page/PageViewState";
 import type { PametProjectData, ProjectReference } from "@/model/Project";
 import { StorageServiceRuntimeState } from "fusion/storage/management/StorageService";
 

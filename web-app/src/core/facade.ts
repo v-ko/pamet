@@ -1,4 +1,4 @@
-import { AppViewState } from "@/containers/app/AppViewState";
+import { AppViewState } from "@/views/AppViewState";
 import { getLogger } from 'fusion/logging';
 import { Change } from "fusion/model/Change";
 import { PametSearchFilter, PametStore } from "@/storage/PametStore";
@@ -27,7 +27,7 @@ import { applyRoute } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/route";
 import { pageActions } from "@/actions/page";
-import { PageViewState } from "@/components/page/PageViewState";
+import { PageViewState } from "@/views/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { RenderProfiler } from "@/core/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
