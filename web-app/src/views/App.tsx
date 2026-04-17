@@ -16,14 +16,14 @@ import { confirmPageDeletion } from "@/core/commands";
 import { commands } from "@/core/commands";
 import { pageActions } from "@/actions/page";
 import NoteEditView from "@/views/note/NoteEditView";
-import { CreatePageDialog } from "@/views/CreateNewPageDialog";
+import { CreatePageDialog } from "@/views/dialogs/CreateNewPageDialog";
 import { appActions } from "@/actions/app";
 import { deletePageAndNavigate, createPageAndNavigate } from "@/procedures/app";
-import { PagePropertiesDialog } from "@/views/PagePropertiesDialog";
-import { ProjectPropertiesDialog } from "@/views/ProjectPropertiesDialog";
-import { ProjectsDialog } from "@/views/ProjectsDialog";
-import { CreateProjectDialog } from "@/views/CreateProjectDialog";
-import { DebugDialog } from "@/views/DebugDialog";
+import { PagePropertiesDialog } from "@/views/dialogs/PagePropertiesDialog";
+import { ProjectPropertiesDialog } from "@/views/dialogs/ProjectPropertiesDialog";
+import { ProjectsDialog } from "@/views/dialogs/ProjectsDialog";
+import { CreateProjectDialog } from "@/views/dialogs/CreateProjectDialog";
+import { DebugDialog } from "@/views/dialogs/DebugDialog";
 
 
 import { AppViewState, ProjectError, PageError, AppDialogMode } from "@/views/AppViewState";
@@ -34,7 +34,7 @@ import { LocalSearch } from "@/views/search/LocalSearch";
 import { GlobalSearch } from "@/views/search/GlobalSearch";
 import { pamet } from "@/core/facade";
 import Menu, { MenuItem } from "@/views/menu/Menu";
-import { StorageStatusDialog } from "@/views/StorageStatusDialog";
+import { StorageStatusDialog } from "@/views/dialogs/StorageStatusDialog";
 
 let log = getLogger("App");
 

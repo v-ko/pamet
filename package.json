@@ -84,9 +84,6 @@
         "testMatch": [
           "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
         ],
-        "setupFilesAfterEnv": [
-          "<rootDir>/web-app/src/setupTests.ts"
-        ],
         "extensionsToTreatAsEsm": [
           ".ts",
           ".tsx"
