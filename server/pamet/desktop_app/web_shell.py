@@ -5,6 +5,7 @@ from uuid import uuid4
 from PySide6.QtCore import QEvent, Qt, QUrl
 from PySide6.QtGui import (
     QCursor,
+    QDesktopServices,
     QKeyEvent,
     QKeySequence,
     QMouseEvent,
@@ -35,6 +36,15 @@ _RESIZE_GRIP = 5  # px – edge/corner resize zone for frameless window
 class PametWebEnginePage(QWebEnginePage):
     """Custom page that forwards all JS console messages (including info) to stdout."""
 
+    def __init__(self, profile, parent=None, internal_hosts: set[str] | None = None):
+        super().__init__(profile, parent)
+        self._internal_hosts: set[str] = internal_hosts or set()
+
+    def _is_internal_url(self, url: QUrl) -> bool:
+        """Return True if *url* points to one of the known internal hosts."""
+        host = url.host()
+        return host in self._internal_hosts
+
     def javaScriptConsoleMessage(self, level, message, line, source_id):
         tag = {
             QWebEnginePage.JavaScriptConsoleMessageLevel.InfoMessageLevel: "js:info",
@@ -42,6 +52,23 @@ class PametWebEnginePage(QWebEnginePage):
             QWebEnginePage.JavaScriptConsoleMessageLevel.ErrorMessageLevel: "js:error",
         }.get(level, "js")
         print(f"{tag}: {message}")
+
+    def acceptNavigationRequest(
+        self, url: QUrl | str, nav_type, is_main_frame: bool
+    ) -> bool:
+        """Block external navigations and open them in the system browser."""
+        if isinstance(url, str):
+            url = QUrl(url)
+        if not is_main_frame:
+            return True
+        if url.scheme() in ("data", "blob", "javascript", "about"):
+            return True
+        if self._is_internal_url(url):
+            return True
+        # External URL – open in default browser and reject the navigation
+        print(f"Opening external URL in system browser: {url.toString()}")
+        QDesktopServices.openUrl(url)
+        return False
 
     def createWindow(self, window_type):
         """Handle middle-click / ctrl+click link opens as new tabs."""
@@ -72,6 +99,14 @@ class WebShellWindow(QWidget):
         self.desktop_api_base_url = desktop_api_base_url
         self.show_dev_tools = show_dev_tools
         self._endpoint_base = endpoint  # Used to build URLs for new tabs
+
+        # Collect all hosts that should be treated as internal
+        self._internal_hosts: set[str] = set()
+        for url_str in (endpoint, desktop_api_base_url):
+            if url_str:
+                host = QUrl(url_str).host()
+                if host:
+                    self._internal_hosts.add(host)
 
         # Web engine profile (shared across all tabs)
         profile_root = Path(webengine_profile_root)
@@ -198,6 +233,7 @@ class WebShellWindow(QWidget):
         page = PametWebEnginePage(
             self.web_profile,
             web_view,
+            internal_hosts=self._internal_hosts,
         )
         web_view.setPage(page)
         self._inject_desktop_config(web_view)
