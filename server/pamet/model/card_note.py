@@ -1,4 +1,4 @@
-from fusion.libs.entity import entity_type
+from fusion.libs.model import entity_type
 
 from pamet.model.note import ImageReference, Note, PageReference
 

@@ -1,9 +1,8 @@
+import fusion
 import pytest
-from fusion.libs import channel as channel_lib
-from fusion.libs import entity as entity_lib
+from fusion.libs import channel as channel_lib, model as entity_lib
 from PySide6.QtCore import Qt
 
-import fusion
 import pamet
 from pamet.actions import window as window_actions
 from pamet.desktop_app.app import DesktopApp

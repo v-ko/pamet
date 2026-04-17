@@ -3,8 +3,8 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
-from fusion.libs.entity.delta import Delta
 from fusion.logging import get_logger
+from fusion.storage.delta import Delta
 from fusion.storage.in_memory_store import InMemoryStore
 from fusion.storage.ws_sync_service import WebSocketSyncService
 

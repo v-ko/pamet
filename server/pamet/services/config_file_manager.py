@@ -12,9 +12,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypedDict
 
-from fusion.libs.entity import dump_to_dict, load_from_dict
-from fusion.libs.entity.delta import Delta
+from fusion.libs.model import dump_to_dict, load_from_dict
 from fusion.logging import get_logger
+from fusion.storage.delta import Delta
 from fusion.storage.in_memory_store import InMemoryStore
 
 from pamet.desktop_app.config import CONFIG_DIR, USER_SETTINGS_DIR

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fusion.libs.entity import Entity, entity_type, get_entity_id
+from fusion.libs.model import Entity, entity_type, get_entity_id
 
 
 @entity_type

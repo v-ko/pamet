@@ -5,9 +5,9 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Set, cast
 
-from fusion.libs.entity.change import Change
-from fusion.libs.entity.delta import Delta
 from fusion.logging import get_logger
+from fusion.storage.change import Change
+from fusion.storage.delta import Delta
 from PySide6.QtCore import QFileSystemWatcher, QTimer
 
 from pamet.model.page import Page

@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List, TypedDict
 
 import attrs
-from fusion.libs.entity import entity_type
+from fusion.libs.model import entity_type
 from fusion.logging import get_logger
 from fusion.util.point2d import Point2D
 

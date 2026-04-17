@@ -24,7 +24,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from fusion.libs.entity import dump_to_dict
+from fusion.libs.model import dump_to_dict
 from fusion.logging import get_logger
 from fusion.util import current_time, timestamp
 

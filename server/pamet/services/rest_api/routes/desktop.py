@@ -18,7 +18,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse, StreamingResponse
-from fusion.libs.entity import dump_to_dict
+from fusion.libs.model import dump_to_dict
 from fusion.logging import get_logger
 from starlette.websockets import WebSocket, WebSocketDisconnect
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TypedDict, cast
 
 import attrs
-from fusion.libs.entity import entity_type
+from fusion.libs.model import entity_type
 
 from pamet.model.page_child import PageChild
 

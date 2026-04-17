@@ -5,10 +5,10 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Iterator
 
-from fusion.libs.entity import dump_to_dict
-from fusion.libs.entity.change import Change
-from fusion.libs.entity.delta import Delta
+from fusion.libs.model import dump_to_dict
 from fusion.logging import get_logger
+from fusion.storage.change import Change
+from fusion.storage.delta import Delta
 
 from pamet.desktop_app.config import (
     create_repo_settings,

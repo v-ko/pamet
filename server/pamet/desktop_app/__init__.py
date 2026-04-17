@@ -4,9 +4,7 @@ from copy import copy
 from typing import Any, cast
 
 from fusion.logging import get_logger
-from PySide6.QtGui import QColor
 
-from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import (
     SettingsAdapter,
@@ -18,8 +16,6 @@ from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
 log = get_logger(__name__)
 
 icons = PametQtWidgetsCachedIcons()
-
-selection_overlay_qcolor = QColor(*SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
 
 _app = None
 _default_note_font = None
@@ -72,6 +68,8 @@ def set_default_note_font(new_default_note_font):
 
 
 def get_app() -> DesktopApp:
+    if _app is None:
+        raise Exception("App not set")
     return _app
 
 
