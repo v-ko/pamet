@@ -77,13 +77,15 @@ export class PametFacade extends PametStore {
     animationService: AnimationService = new AnimationService();
     context: any = {};
     _projectStorageConfigFactory: ProjectStorageConfigFactory | null = null
-    _entityProblemCounts: Map<string, number> = new Map();
+    _entityProblemCounts: Map<string, { count: number, firstError?: unknown }> = new Map();
     private _storageStatusIconSet: StorageStatusIconSet = {
         healthyIconUrl: folderWarningIconUrl,
         failedIconUrl: folderCloseIconUrl,
     };
     debug = true;
     debugPaintOperations = false;
+    lastRenderError: Error | null = null;
+    renderErrorCount: number = 0;
     renderProfiler = new RenderProfiler();
 
     undoService: UndoService;
@@ -347,15 +349,22 @@ export class PametFacade extends PametStore {
         )
 
         this._entityProblemCounts.clear();
+        this.lastRenderError = null;
+        this.renderErrorCount = 0;
         if (this._appViewState) {
-            this._appViewState.entityProblemCount = 0;
+            this._appViewState.devErrors = false;
         }
     }
 
-    reportEntityProblem(entityId: string) {
-        this._entityProblemCounts.set(entityId, (this._entityProblemCounts.get(entityId) || 0) + 1);
+    reportEntityProblem(entityId: string, error?: unknown) {
+        let entry = this._entityProblemCounts.get(entityId);
+        if (!entry) {
+            entry = { count: 0, firstError: error };
+            this._entityProblemCounts.set(entityId, entry);
+        }
+        entry.count++;
         if (this._appViewState) {
-            this._appViewState.entityProblemCount = this._entityProblemCounts.size;
+            this._appViewState.devErrors = true;
         }
     }
 

@@ -6,7 +6,6 @@ import { Point2D } from 'fusion/primitives/Point2D';
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { getLogger } from 'fusion/logging';
 import React from 'react';
-import paper from 'paper';
 import "@/views/page/PageView.css";
 
 import { createNoteWithImageFromBlob } from '@/procedures/page';
@@ -27,7 +26,6 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
 
   const superContainerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const paperCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Controller instance tied to current PageViewState
   type CtxMenuState = { x: number, y: number, items: MenuItem[] } | null;
@@ -60,34 +58,6 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
       controller.unbindEvents();
     }
   }, [controller]);
-
-  // Connect the canvas element to paper.js exactly once per canvas mount
-  useEffect(() => {
-    const paperCanvas = paperCanvasRef.current;
-    if (!paperCanvas) {
-      log.error("[useEffect] paperCanvas is null");
-      return;
-    }
-
-    // If paper is already set up for this canvas, skip re-initialization
-    const currentView: any = (paper as any).view;
-    if (currentView && currentView.element === paperCanvas) {
-      return;
-    }
-
-    paper.setup(paperCanvas);
-    paper.view.autoUpdate = false;
-
-    // Cleanup on unmount to avoid accumulating listeners/state in paper.js
-    return () => {
-      try {
-        (paper.project as any)?.clear?.();
-        (paper.view as any)?.remove?.();
-      } catch (e) {
-        log.error("[useEffect] error cleaning up paper", e);
-      }
-    };
-  }, [paperCanvasRef]);
 
 
 
@@ -212,21 +182,6 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
           zIndex: 1001,
         }}
         ref={canvasRef}
-      />
-
-      {/* Dummy canvas for paperjs */}
-      <canvas
-        id="paperjs-canvas"
-        style={{
-          position: 'fixed',
-          left: `0vw`,
-          top: `0vh`,
-          width: `100vw`,
-          height: `100vh`,
-          pointerEvents: 'none',
-          zIndex: 1000,
-        }}
-        ref={paperCanvasRef}
       />
 
     </main>

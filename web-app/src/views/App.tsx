@@ -272,7 +272,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
           style={{ position: 'relative' }}
         >
           {'</>'}
-          {state.entityProblemCount > 0 && (
+          {state.devErrors && (
             <div style={{
               position: 'absolute',
               top: -2,

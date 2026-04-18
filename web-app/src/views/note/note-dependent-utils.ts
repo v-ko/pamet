@@ -5,39 +5,40 @@ import { TextLayout, EMPTY_TOKEN, truncateText } from "@/app/util";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
 
-// Init the canvas - conditionally initialize DOM-dependent globals
+// Lazy-initialized offscreen canvas singleton for text measurement and path hit-testing.
+// No DOM element is created — works in both window and service worker contexts.
 
-export let canvas: HTMLCanvasElement | null = null;
-export let canvasContext: CanvasRenderingContext2D | null = null;
 export let ELLIPSIS = '...';
-export let ellipsisWidth = 0;
-export let spaceWidth = 0;
 
-function initializeCanvas(): void {
-    // Only initialize if we have access to document (not in service worker)
-    if (typeof document !== 'undefined' && (!canvas || !canvasContext)) {
-        canvas = document.createElement('canvas');
-        canvasContext = canvas.getContext('2d')!;
-        if (!canvas || !canvasContext) {
-            throw new Error('Failed to get canvas context');
+let _canvasContext: OffscreenCanvasRenderingContext2D | null = null;
+let _initialized = false;
+
+/** Returns the shared offscreen canvas context, reset to pristine state. */
+export function getCanvasContext(): OffscreenCanvasRenderingContext2D {
+    if (!_canvasContext) {
+        _canvasContext = new OffscreenCanvas(1, 1).getContext('2d')!;
+        if (!_canvasContext) {
+            throw new Error('Failed to get OffscreenCanvas 2D context');
         }
+        _canvasContext.save(); // snapshot pristine state
+        _initialized = true;
+    } else if (_initialized) {
+        _canvasContext.restore(); // revert previous caller's mutations
+        _canvasContext.save();    // re-snapshot pristine for next caller
     }
+    return _canvasContext;
 }
 
 export function calculateTextLayout(text: string, textRect: Rectangle, font: string): TextLayout {
     // font: css font string
-    initializeCanvas();
 
-    // If we're in a service worker context, return a minimal layout
-    if (!canvas || !canvasContext) {
-        throw new Error('Canvas context is not available.');
-    }
+    let canvasContext = getCanvasContext();
 
     // Set the font
     canvasContext.font = font;
 
-    ellipsisWidth = canvasContext.measureText(ELLIPSIS).width;
-    spaceWidth = canvasContext.measureText(' ').width;
+    let ellipsisWidth = canvasContext.measureText(ELLIPSIS).width;
+    let spaceWidth = canvasContext.measureText(' ').width;
 
     // Get the needed parameters
     let lineSpacing = 20;

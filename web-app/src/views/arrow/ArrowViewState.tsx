@@ -1,13 +1,13 @@
 import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData, SerializedArrow } from "@/model/Arrow";
-import { computed, makeObservable, observable, reaction, toJS } from 'mobx';
+import { computed, makeObservable, observable, toJS } from 'mobx';
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { getLogger } from 'fusion/logging';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { Rectangle } from 'fusion/primitives/Rectangle';
-import { approximateMidpointOfBezierCurve } from "@/app/util";
+import { approximateMidpointOfBezierCurve, bezierIntersectsRect, bezierPoint } from "@/app/util";
 import { ElementViewState } from "@/views/page/ElementViewState";
-import paper from 'paper';
-import { ARROW_CONTROL_POINT_RADIUS, POTENTIAL_CONTROL_POINT_RADIUS } from "@/app/constants";
+import { getCanvasContext } from "@/views/note/note-dependent-utils";
+import { ARROW_CONTROL_POINT_RADIUS, ARROW_INCLINATION_MEASURE_AT, POTENTIAL_CONTROL_POINT_RADIUS } from "@/app/constants";
 import { Change } from 'fusion/model/Change';
 import { pamet } from "@/app/facade";
 import { PageViewState } from "@/views/page/PageViewState";
@@ -30,29 +30,26 @@ function specialSigmoid(x: number): number {
     return 1 / (1 + Math.exp(-x / (CP_BASE_DISTANCE / 2) + 5));
 }
 
+
 export class ArrowViewState extends ElementViewState {
     _elementData!: SerializedArrow; // Set in the constructor
     pathCalculationPrecision: number = 1;
-    _paperPath: paper.Path | null = null;
 
     constructor(arrow: Arrow, pageViewState: PageViewState) {
         super(arrow, pageViewState);
 
         makeObservable(this, {
-            _elementData: observable,
-            bezierCurveParams: computed,
-            bezierCurveArrayMidpoints: computed,
-            paperPath: computed,
-        });
-
-        reaction(() => this._elementData, (newData) => {
-            log.info('ArrowViewState reaction triggered', newData);
-            this._paperPath = null; // Reset the paper path to recalculate it
+            _elementData: observable.shallow,
+            bezierCurveParams: computed({ keepAlive: true }),
+            bezierCurveArrayMidpoints: computed({ keepAlive: true }),
+            path2d: computed({ keepAlive: true }),
+            headAnglePoint: computed({ keepAlive: true }),
         });
     }
 
     get _arrow(): Arrow {
-        // log.info('new arrow calculated from data', this._elementData);
+        // toJS() deep-copies and unwraps MobX proxies, so the returned Arrow
+        // is fully independent — callers can mutate it freely.
         let arrowData = toJS(this._elementData) as ArrowData;
         return new Arrow(arrowData);
     }
@@ -112,12 +109,8 @@ export class ArrowViewState extends ElementViewState {
         return this.pageViewState.getViewStateForElement(this._elementData.head.note_anchor_id) as NoteViewState | null;
     }
     updateFromArrow(arrow: Arrow) {
-        // this.arrow().setTail(new Point2D([0, 0]), null, ArrowAnchorOnNoteType.none);
-        let change = this.arrow().changeFrom(arrow);
-        if(!change.isUpdate()) {  // may be empty
-            // log.error('[updateFromArrow] Was expecting an update, but change is', change.data);
-            return;
-        }
+        let current = loadFromDict(this._elementData) as Arrow;
+        let change = current.changeFrom(arrow);
         this.updateFromChange(change);
     }
 
@@ -399,12 +392,9 @@ export class ArrowViewState extends ElementViewState {
     }
 
     get bezierCurveArrayMidpoints(): Point2D[] {
-        let curves = this.bezierCurveParams;
         let midPoints: Point2D[] = [];
-
         let precision = 1;
-
-        for (let curve of curves) {
+        for (let curve of this.bezierCurveParams) {
             let midPoint = approximateMidpointOfBezierCurve(curve[0], curve[1], curve[2], curve[3], precision);
             midPoints.push(midPoint);
         }
@@ -477,34 +467,105 @@ export class ArrowViewState extends ElementViewState {
     }
 
 
-    get paperPath(): paper.Path {
-        if (this._paperPath !== null) {
-            this._paperPath.remove();
+    get path2d(): Path2D {
+        let path = new Path2D();
+        for (let curve of this.bezierCurveParams) {
+            path.moveTo(curve[0].x, curve[0].y);
+            path.bezierCurveTo(
+                curve[1].x, curve[1].y,
+                curve[2].x, curve[2].y,
+                curve[3].x, curve[3].y
+            );
         }
-        this._paperPath = new paper.Path();
-        let curves = this.bezierCurveParams;
-        for (let curve of curves) {
-            this._paperPath.moveTo(curve[0]);
-            this._paperPath.cubicCurveTo(curve[1], curve[2], curve[3]);
-        }
-        return this._paperPath;
+        return path;
     }
 
     intersectsCircle(center: Point2D, radius: number): boolean {
-        let path = this.paperPath;
-        let circlePath = new paper.Path.Circle(center, radius);
-        let intersects = path.intersects(circlePath);
-        circlePath.remove();
-        return intersects;
+        // Use the isPointInStroke trick: a circle of radius r intersects a stroke
+        // of width w iff the circle center lies on a stroke of width (w + 2*r).
+        let ctx = getCanvasContext();
+        ctx.lineWidth = this.arrow().thickness + 2 * radius;
+        return ctx.isPointInStroke(this.path2d, center.x, center.y);
     }
 
     intersectsRect(rect: Rectangle): boolean {
-        let path = this.paperPath;
-        let pRect = new paper.Rectangle(rect.topLeft(), rect.bottomRight());
-        let pItem = new paper.Path.Rectangle(pRect);
-        let intersects = path.intersects(pItem) || path.isInside(pRect);
-        pItem.remove();
-        return intersects;
+        // Fast path: if all bezier control points are inside the rect,
+        // the entire path is inside (convex hull property of bezier curves)
+        if (this._isInsideRect(rect)) return true;
+
+        // Check if any bezier segment crosses a rect edge analytically
+        for (let [P0, P1, P2, P3] of this.bezierCurveParams) {
+            if (bezierIntersectsRect(P0, P1, P2, P3, rect)) return true;
+        }
+        return false;
+    }
+
+    /** Exact containment check using the convex hull property:
+     *  a cubic bezier is always within the convex hull of its control points. */
+    _isInsideRect(rect: Rectangle): boolean {
+        for (let [P0, P1, P2, P3] of this.bezierCurveParams) {
+            if (!rect.contains(P0) || !rect.contains(P1) ||
+                !rect.contains(P2) || !rect.contains(P3)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** Cached point near the end of the last curve, used for arrow head direction.
+     *  Uses direct bezier evaluation at a t offset instead of expensive arc-length search. */
+    get headAnglePoint(): Point2D {
+        let curves = this.bezierCurveParams;
+        let [P0, P1, P2, P3] = curves[curves.length - 1];
+        // Estimate t offset from the end based on ARROW_HAND_LENGTH / 2
+        // relative to the control polygon length (rough arc-length proxy)
+        let polyLength = P0.distanceTo(P1) + P1.distanceTo(P2) + P2.distanceTo(P3);
+        if (polyLength < 1e-6) polyLength = 1;
+        let tOffset = Math.min(0.5, ARROW_INCLINATION_MEASURE_AT / polyLength);
+        return bezierPoint(1 - tOffset, P0, P1, P2, P3);
+    }
+
+    /** Find a point on the last bezier curve at a given arc-length offset
+     *  before the end. Uses binary search on the t parameter — same approach
+     *  as approximateMidpointOfBezierCurve in util.ts. */
+    pointAtArcLengthFromEnd(offsetFromEnd: number): Point2D {
+        let curves = this.bezierCurveParams;
+        let [P0, P1, P2, P3] = curves[curves.length - 1];
+
+        // Number of integration steps — proportional to the control polygon length
+        let polyLength = P0.distanceTo(P1) + P1.distanceTo(P2) + P2.distanceTo(P3);
+        const N = Math.max(64, Math.ceil(polyLength));
+
+        // Compute total arc length of the last curve by summing chord lengths
+        let totalLength = 0;
+        let prev = P0;
+        for (let i = 1; i <= N; i++) {
+            let pt = bezierPoint(i / N, P0, P1, P2, P3);
+            totalLength += prev.distanceTo(pt);
+            prev = pt;
+        }
+        let targetLength = Math.max(0, totalLength - offsetFromEnd);
+
+        // Binary search for the t where cumulative arc length ≈ targetLength
+        let lo = 0, hi = 1;
+        for (let iter = 0; iter < 20; iter++) {
+            let mid = (lo + hi) / 2;
+
+            // Compute arc length from 0 to mid
+            let len = 0;
+            let p = P0;
+            let steps = Math.max(1, Math.ceil(mid * N));
+            for (let i = 1; i <= steps; i++) {
+                let pt = bezierPoint((mid * i) / steps, P0, P1, P2, P3);
+                len += p.distanceTo(pt);
+                p = pt;
+            }
+
+            if (len < targetLength) lo = mid;
+            else hi = mid;
+        }
+
+        return bezierPoint((lo + hi) / 2, P0, P1, P2, P3);
     }
 }
 

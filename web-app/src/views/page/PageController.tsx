@@ -60,26 +60,26 @@ export class PageController {
   public setupResizeObserver(canvas: HTMLCanvasElement) {
     const container = this.superContainerRef.current;
     if (!container) {
-        throw new Error('superContainerRef is null');
+      throw new Error('superContainerRef is null');
     }
 
     const compute = () => {
-        let boundingRect = container.getBoundingClientRect();
+      let boundingRect = container.getBoundingClientRect();
 
-        // Adjust for device pixel ratio
-        let dpr = window.devicePixelRatio || 1;
-        canvas.width = boundingRect.width * dpr;
-        canvas.height = boundingRect.height * dpr;
+      // Adjust for device pixel ratio
+      let dpr = window.devicePixelRatio || 1;
+      canvas.width = boundingRect.width * dpr;
+      canvas.height = boundingRect.height * dpr;
 
-        // Update viewport geometry
-        pageActions.updateGeometry(
-            this.pageVS,
-            [boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height]
-        );
+      // Update viewport geometry
+      pageActions.updateGeometry(
+        this.pageVS,
+        [boundingRect.left, boundingRect.top, boundingRect.width, boundingRect.height]
+      );
     };
 
     this.resizeObserver = new ResizeObserver(() => {
-        compute();
+      compute();
     });
 
     // Initialize immediately so canvas and viewport are correct before first resize callback
@@ -150,7 +150,6 @@ export class PageController {
       // no-op here; drag navigation will start on move while pressed
     }
     log.info('[handleMouseDown] Mouse down: ', mousePos.x, mousePos.y);
-
   };
 
   handleMouseUp = (event: MouseEvent) => {
@@ -198,7 +197,7 @@ export class PageController {
             let selectionMap = new Map([[elementUnderMouse, true]]);
             pageActions.updateSelection(this.pageVS, selectionMap);
 
-            if(pamet.debug) {
+            if (pamet.debug) {
               log.info('Selected element on mouse up:', elementUnderMouse.element().data());
             }
           }
@@ -265,7 +264,7 @@ export class PageController {
       } else {
         items.push({ label: 'New Note', onClick: () => commands.createNewNote(), shortcut: getShortcut(commands.createNewNote.name) });
       }
-    } catch {}
+    } catch { }
 
     items.push({ label: 'Create Arrow', onClick: () => commands.createArrow(), shortcut: getShortcut(commands.createArrow.name) });
 
@@ -282,7 +281,7 @@ export class PageController {
           items.push({ label: 'Delete Control Point', onClick: () => arrowActions.deleteControlPoint(editableArrowVS, cpIndex), shortcut: 'Double-click' });
         }
       }
-    } catch {}
+    } catch { }
 
     items.push({ type: 'separator', label: '' });
     const hasSelection = this.pageVS.selectedElementsVS.size > 0;

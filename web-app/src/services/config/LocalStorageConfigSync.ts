@@ -89,7 +89,7 @@ export class LocalStorageConfigSync implements StoreSyncService {
         window.addEventListener('storage', this._storageListener);
     }
 
-    pushDelta(delta: Delta): void {
+    async pushDelta(delta: Delta): Promise<void> {
         for (const change of delta.changes()) {
             const type = change.type();
             if (type === ChangeType.DELETE) {

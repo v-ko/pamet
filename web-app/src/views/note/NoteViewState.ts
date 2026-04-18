@@ -1,4 +1,4 @@
-import { computed, makeObservable, observable, reaction, toJS } from "mobx";
+import { computed, makeObservable, observable, toJS } from "mobx";
 import { Note, SerializedNote } from "@/model/Note";
 import { TextLayout } from "@/app/util";
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
@@ -19,7 +19,7 @@ export class NoteViewState extends ElementViewState {
         super(note, pageViewState);
 
         makeObservable(this, {
-            _elementData: observable,
+            _elementData: observable.shallow,
             textLayoutData: computed
         });
     }
@@ -51,8 +51,8 @@ export class NoteViewState extends ElementViewState {
     }
 
     updateFromNote(note: Note) {
-        // Needed since the note type can be changed at runtime from the user
-        let change = this.note().changeFrom(note)
+        let current = loadFromDict(this._elementData) as Note;
+        let change = current.changeFrom(note);
         this.updateFromChange(change);
     }
     get textLayoutData(): TextLayout {

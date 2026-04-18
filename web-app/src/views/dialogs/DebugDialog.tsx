@@ -11,6 +11,7 @@ interface DebugDialogProps {
 interface ProblematicEntityInfo {
   id: string;
   count: number;
+  firstError?: string;
   entity: Entity<any>;
 }
 
@@ -41,10 +42,13 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
         const problematicEntitiesMap = pamet._entityProblemCounts;
         const entitiesInfo: ProblematicEntityInfo[] = [];
 
-        for (const [entityId, count] of problematicEntitiesMap.entries()) {
+        for (const [entityId, entry] of problematicEntitiesMap.entries()) {
             const entity = pamet.findOne({ id: entityId });
             if (entity) {
-                entitiesInfo.push({ id: entityId, count, entity: entity });
+                const firstError = entry.firstError
+                    ? (entry.firstError instanceof Error ? entry.firstError.stack || entry.firstError.message : String(entry.firstError))
+                    : undefined;
+                entitiesInfo.push({ id: entityId, count: entry.count, firstError, entity });
             }
         }
         setProblematicEntities(entitiesInfo);
@@ -240,6 +244,27 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
             </label>
         </div>
 
+      {/* Last render error */}
+      {(() => {
+        const err = pamet.lastRenderError;
+        const count = pamet.renderErrorCount;
+        return err ? (
+          <details open style={{ marginBottom: '10px' }}>
+            <summary style={{ color: 'red', fontWeight: 'bold' }}>Render Errors ({count})</summary>
+            <pre style={{
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-all',
+              background: '#ffe0e0',
+              padding: '5px',
+              border: '1px solid #c00',
+              marginTop: '5px'
+            }}>
+              {err.stack || err.message}
+            </pre>
+          </details>
+        ) : null;
+      })()}
+
       {/* Problematic entities display */}
       <details open={problematicEntities.length > 0}>
         <summary>
@@ -258,6 +283,18 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
                 <summary>
                   ID: {info.id}, Type: {info.entity.constructor.name}, Errors: {info.count}
                 </summary>
+                {info.firstError && (
+                  <pre style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-all',
+                    background: '#ffe0e0',
+                    padding: '5px',
+                    border: '1px solid #c00',
+                    marginBottom: '5px'
+                  }}>
+                    {info.firstError}
+                  </pre>
+                )}
                 <pre style={{
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-all',

@@ -150,7 +150,7 @@ export class DirectRenderer {
             view.render(context);
         } catch (e) {
             log.error('Error rendering element', element, e);
-            pamet.reportEntityProblem(elementVS.element().id);
+            pamet.reportEntityProblem(elementVS.element().id, e);
         } finally {
             context.restore();
         }
@@ -280,7 +280,16 @@ export class DirectRenderer {
         }
         this.reqeustAnimationFrameRet = requestAnimationFrame(() => {
             this.reqeustAnimationFrameRet = null;
-            this._render(this._pageVS);
+            try {
+                this._render(this._pageVS);
+            } catch (e) {
+                log.error('Uncaught error in render:', e);
+                pamet.lastRenderError = e instanceof Error ? e : new Error(String(e));
+                pamet.renderErrorCount++;
+                if (pamet.appViewState) {
+                    pamet.appViewState.devErrors = true;
+                }
+            }
         });
     }
 
@@ -453,7 +462,7 @@ export class DirectRenderer {
                     view.render(ctx);
                 } catch (e) {
                     log.error('Error rendering new arrow', e);
-                    pamet.reportEntityProblem(newArrowVS.element().id);
+                    pamet.reportEntityProblem(newArrowVS.element().id, e);
                 } finally {
                     ctx.restore();
                 }
@@ -650,8 +659,7 @@ export class DirectRenderer {
                 let view = new ArrowCanvasView(this, arrowVS);
                 view.render(ctx);
             } catch (e) {
-                pamet.reportEntityProblem(arrowVS.element().id);
-                log.error('Error rendering arrow', arrowVS, e);
+                pamet.reportEntityProblem(arrowVS.element().id, e);
             }
         }
 
@@ -696,8 +704,7 @@ export class DirectRenderer {
                 ctx.save();
                 arrowView.renderSelectionOverlay(ctx);
             } catch (e) {
-                pamet.reportEntityProblem(childVS.element().id);
-                log.error('Error rendering arrow selection overlay', e);
+                pamet.reportEntityProblem(childVS.element().id, e);
             } finally {
                 ctx.restore();
             }
