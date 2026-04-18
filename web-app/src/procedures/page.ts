@@ -307,7 +307,7 @@ export async function pasteSpecial(
 
             if (item.type === 'text') {
                 let note = CardNote.createNew({pageId: pageId});
-                note.content.text = item.text;
+                note.content.text = item.text?.trim();
 
                 let rect = note.rect();
                 rect.setTopLeft(pasteAt);

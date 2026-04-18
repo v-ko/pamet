@@ -230,7 +230,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
     // Clean the content object based on the definitive type
     const finalContent: NoteContent = {};
     if (hasText) {
-      finalContent.text = data.content.text;
+      finalContent.text = data.content.text?.trim();
     } else {
       finalContent.text = undefined;
     }
