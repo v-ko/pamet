@@ -15,21 +15,19 @@ from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, USER_SETTINGS_DIR
 from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.screen_snippet import grab_screen_snippet
-from pamet.desktop_app.web_shell import WebShellWindow
 from pamet.model.config import UserSettings
 from pamet.services.config_file_manager import load_user_settings, save_user_settings
 from pamet.services.desktop_storage_service import DesktopStorageService
 from pamet.services.rest_api.desktop import DesktopServer
 from pamet.storage.migrations.v4_to_v5 import migrate_v4_user_settings
+from pamet.views.app_window.app_window import AppWindow
 
 log = fusion.get_logger(__name__)
 
 
 def raise_a_window():
     windows = [
-        w
-        for w in DesktopApp.instance().topLevelWidgets()
-        if isinstance(w, WebShellWindow)
+        w for w in DesktopApp.instance().topLevelWidgets() if isinstance(w, AppWindow)
     ]
     if windows:
         windows[0].show()
@@ -232,14 +230,14 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     # misli_channels.state_changes_per_TLA_by_id.subscribe(
     #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
 
-    # Create WebShellWindow - show dev tools when using frontend server
-    web_shell = WebShellWindow(
+    # Create the app window - show dev tools when using frontend server
+    app_window = AppWindow(
         endpoint=initial_project_url,
         desktop_api_base_url=desktop_api_base_url,
         webengine_profile_root=USER_SETTINGS_DIR / "webengine-profile",
         show_dev_tools=bool(use_frontend_server),
     )
-    web_shell.showMaximized()
+    app_window.showMaximized()
 
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")

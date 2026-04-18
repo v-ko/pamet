@@ -16,8 +16,8 @@ class TabState:
     url: str = ""
 
 
-class WebShellViewState(QObject):
-    """Qt-backed view state for the WebShell window (flux-style)."""
+class AppWindowViewState(QObject):
+    """Qt-backed view state for the app window (flux-style)."""
 
     title_changed = Signal(str)
     tabs_changed = Signal()

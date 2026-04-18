@@ -657,9 +657,13 @@ export class PageController {
     this._renderer?.dispose();
     this._renderer = undefined;
 
+    // Window-level listeners must be removed regardless of element state
+    window.removeEventListener('keydown', this.handleClipboardPreviewKeyDown);
+    window.removeEventListener('keyup', this.handleClipboardPreviewKeyUp);
+
     const el = this.superContainerRef.current;
     if (!el) {
-      // If the element is gone, the events are also gone
+      // If the element is gone, its element-scoped events are also gone
       return;
     }
 
@@ -677,9 +681,5 @@ export class PageController {
     el.removeEventListener('touchstart', this.handleTouchStart);
     el.removeEventListener('touchmove', this.handleTouchMove);
     el.removeEventListener('touchend', this.handleTouchEnd);
-
-    // Clipboard preview
-    window.removeEventListener('keydown', this.handleClipboardPreviewKeyDown);
-    window.removeEventListener('keyup', this.handleClipboardPreviewKeyUp);
   }
 }

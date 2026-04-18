@@ -1,10 +1,10 @@
 from fusion.libs.action import action
 
-from pamet.desktop_app.web_shell_view_state import WebShellViewState
+from pamet.views.app_window.app_window_view_state import AppWindowViewState
 
 
 @action("window.close_tab")
-def close_tab(state: WebShellViewState, index: int) -> None:
+def close_tab(state: AppWindowViewState, index: int) -> None:
     """Close the tab at *index*. If it's the last tab the caller should
     close the window (signalled via the state having zero tabs)."""
     if index < 0 or index >= len(state.tabs):
