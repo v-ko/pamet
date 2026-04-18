@@ -119,6 +119,40 @@ export enum PametTabIndex {
     NoteEditViewText = 21,
     NoteEditViewSave = 22,
     NoteEditViewCancel = 23,
+
+    // Page Properties Dialog tab indices
+    PagePropertiesDialog_NameInput = 30,
+    PagePropertiesDialog_Delete = 31,
+    PagePropertiesDialog_Save = 32,
+
+    // Create Page Dialog tab indices
+    CreatePageDialog_NameInput = 40,
+    CreatePageDialog_Create = 41,
+
+    // Create Project Dialog tab indices
+    CreateProjectDialog_TitleInput = 50,
+    CreateProjectDialog_IdInput = 51,
+    CreateProjectDialog_DescriptionInput = 52,
+    CreateProjectDialog_Create = 53,
+
+    // Project Properties Dialog tab indices
+    ProjectPropertiesDialog_TitleInput = 60,
+    ProjectPropertiesDialog_BackupsCheckbox = 61,
+    ProjectPropertiesDialog_Delete = 62,
+    ProjectPropertiesDialog_Save = 63,
+
+    // Projects Dialog tab indices
+    ProjectsDialog_CreateButton = 70,
+
+    // Storage Status Dialog tab indices
+    StorageStatusDialog_OpenBackupsFolder = 80,
+
+    // Debug Dialog tab indices
+    DebugDialog_FetchCommitStats = 90,
+    DebugDialog_FetchFdsState = 91,
+    DebugDialog_CalcMobxSize = 92,
+    DebugDialog_RestartServiceWorker = 93,
+    DebugDialog_DebugPaintCheckbox = 94,
 }
 
 // Media related

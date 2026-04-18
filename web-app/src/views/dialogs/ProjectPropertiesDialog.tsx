@@ -3,6 +3,7 @@ import type { PametProjectData } from '@/model/Project';
 import { pamet } from "@/app/facade";
 import { deleteProjectAndSwitch } from '@/procedures/app';
 import { getLogger } from 'fusion/logging';
+import { PametTabIndex } from '@/app/constants';
 import "@/views/dialogs/Dialog.css";
 
 let log = getLogger("ProjectPropertiesDialog");
@@ -67,13 +68,6 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
       className="app-dialog"
     >
       <h3 className="dialog-title">Project Properties</h3>
-      <button
-        type="button"
-        className="icon-button dialog-close"
-        onClick={() => dialogRef.current?.close()}
-      >
-        ×
-      </button>
 
       <form
         className="form-vertical"
@@ -106,6 +100,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
             }}
             placeholder="Project Title"
             className="dialog-input"
+            tabIndex={PametTabIndex.ProjectPropertiesDialog_TitleInput}
           />
           {titleError && (
             <small className="dialog-error">{titleError}</small>
@@ -126,6 +121,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
             type="checkbox"
             checked={backupsEnabled}
             onChange={e => setBackupsEnabled(e.target.checked)}
+            tabIndex={PametTabIndex.ProjectPropertiesDialog_BackupsCheckbox}
           />
           Backups enabled
         </label>
@@ -135,6 +131,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
             type="button"
             onClick={() => onDelete(project)}
             className="btn btn-danger"
+            tabIndex={PametTabIndex.ProjectPropertiesDialog_Delete}
           >
             {isFileBacked ? 'Disconnect Project' : 'Delete Project'}
           </button>
@@ -142,11 +139,20 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
             type="submit"
             disabled={!title.trim() || titleError !== null}
             className="btn btn-primary"
+            tabIndex={PametTabIndex.ProjectPropertiesDialog_Save}
           >
             Save
           </button>
         </div>
       </form>
+      <button
+        type="button"
+        className="icon-button dialog-close"
+        onClick={() => dialogRef.current?.close()}
+        tabIndex={-1}
+      >
+        ×
+      </button>
 
     </dialog>
   );

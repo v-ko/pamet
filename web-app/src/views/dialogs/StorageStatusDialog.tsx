@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "@/views/dialogs/Dialog.css";
 import { AppViewState } from "@/views/AppViewState";
+import { PametTabIndex } from '@/app/constants';
 import { getLogger } from "fusion/logging";
 
 const log = getLogger("StorageStatusDialog");
@@ -107,13 +108,6 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
       <div className="dialog-content" style={{ fontSize: '0.9em', color: 'var(--color-text-muted, #666)' }}>
         <div className="row-between">
           <h3 className="dialog-title" style={{ color: 'var(--color-text)' }}>Storage Status</h3>
-          <button
-            type="button"
-            className="icon-button dialog-close"
-            onClick={() => dialogRef.current?.close()}
-          >
-            x
-          </button>
         </div>
 
         {backupStatus && (
@@ -134,6 +128,7 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
                 onClick={openBackupsFolder}
                 title="Open the backups folder in your file manager."
                 style={{ whiteSpace: 'nowrap' }}
+                tabIndex={PametTabIndex.StorageStatusDialog_OpenBackupsFolder}
               >
                 Open Backups Folder
               </button>
@@ -204,6 +199,14 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
             Failed to fetch backend status: {dssError}
           </div>
         )}
+        <button
+          type="button"
+          className="icon-button dialog-close"
+          onClick={() => dialogRef.current?.close()}
+          tabIndex={-1}
+        >
+          x
+        </button>
       </div>
     </dialog>
   );

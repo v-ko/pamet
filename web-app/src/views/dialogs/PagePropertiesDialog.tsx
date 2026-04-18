@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from '@/app/facade';
 import "@/views/dialogs/Dialog.css";
 import { Page } from '@/model/Page';
-import { CANVAS_EXT } from '@/app/constants';
+import { CANVAS_EXT, PametTabIndex } from '@/app/constants';
 
 interface PagePropertiesDialogProps {
   page: Page;
@@ -69,13 +69,6 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
     >
       <div className="dialog-content">
         <h3 className="dialog-title">Page Properties</h3>
-        <button
-          type="button"
-          className="icon-button dialog-close"
-          onClick={() => dialogRef.current?.close()}
-        >
-          ×
-        </button>
         <form method="dialog" onSubmit={handleSave} className="form-vertical">
           <input
             autoFocus
@@ -84,17 +77,26 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
             onChange={e => setPageName(e.target.value)}
             placeholder="Page name"
             className="dialog-input"
+            tabIndex={PametTabIndex.PagePropertiesDialog_NameInput}
           />
           {isNameTaken && <div className="dialog-error">This name is already taken.</div>}
           <div className="dialog-actions row-between">
-            <button className="btn btn-danger" type="button" onClick={handleDelete}>
+            <button className="btn btn-danger" type="button" onClick={handleDelete} tabIndex={PametTabIndex.PagePropertiesDialog_Delete}>
               Delete Page
             </button>
-            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()}>
+            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()} tabIndex={PametTabIndex.PagePropertiesDialog_Save}>
               Save
             </button>
           </div>
         </form>
+        <button
+          type="button"
+          className="icon-button dialog-close"
+          onClick={() => dialogRef.current?.close()}
+          tabIndex={-1}
+        >
+          ×
+        </button>
       </div>
     </dialog>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from "@/app/facade";
 import { getLogger } from 'fusion/logging';
-import { DEFAULT_NEW_PAGE_PREFIX } from '@/app/constants';
+import { DEFAULT_NEW_PAGE_PREFIX, PametTabIndex } from '@/app/constants';
 import "@/views/dialogs/Dialog.css";
 
 let log = getLogger('CreatePageDialog');
@@ -77,10 +77,11 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
             onChange={e => setPageName(e.target.value)}
             placeholder="Page name"
             className="dialog-input"
+            tabIndex={PametTabIndex.CreatePageDialog_NameInput}
           />
           {isNameTaken && <div className="dialog-error">This name is already taken.</div>}
           <div className="dialog-actions">
-            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()}>
+            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()} tabIndex={PametTabIndex.CreatePageDialog_Create}>
               Create
             </button>
           </div>

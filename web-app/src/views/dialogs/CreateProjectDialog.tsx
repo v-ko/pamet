@@ -3,6 +3,7 @@ import { pamet } from '@/app/facade';
 import { timestamp, currentTime } from 'fusion/util/base';
 import { createProject, navigateToProject } from "@/procedures/app";
 import { ProjectData } from '@/model/Project';
+import { PametTabIndex } from '@/app/constants';
 import "@/views/dialogs/Dialog.css";
 
 interface CreateProjectDialogProps {
@@ -129,6 +130,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
                 }
               }}
               className="dialog-input"
+              tabIndex={PametTabIndex.CreateProjectDialog_TitleInput}
             />
           </div>
 
@@ -142,6 +144,7 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
                 setIdError(validateId(newId));
               }}
               className="dialog-input"
+              tabIndex={PametTabIndex.CreateProjectDialog_IdInput}
             />
             {idError ? (
               <small className="dialog-error">{idError}</small>
@@ -156,11 +159,12 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
               value={description}
               onChange={e => setDescription(e.target.value)}
               className="dialog-textarea"
+              tabIndex={PametTabIndex.CreateProjectDialog_DescriptionInput}
             />
           </div>
 
           <div className="dialog-actions" style={{ justifyContent: 'flex-end' }}>
-            <button className="btn btn-primary" type="submit" disabled={!id.trim() || !title.trim() || idError !== null}>
+            <button className="btn btn-primary" type="submit" disabled={!id.trim() || !title.trim() || idError !== null} tabIndex={PametTabIndex.CreateProjectDialog_Create}>
               Create
             </button>
           </div>

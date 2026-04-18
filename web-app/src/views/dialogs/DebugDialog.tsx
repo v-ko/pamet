@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { pamet } from "@/app/facade";
 import { Entity } from 'fusion/model/Entity';
+import { PametTabIndex } from '@/app/constants';
 import { restartServiceWorker } from '@/procedures/app';
 
 interface DebugDialogProps {
@@ -161,6 +162,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
           fontSize: '20px',
           cursor: 'pointer',
         }}
+        tabIndex={-1}
       >
         ×
       </button>
@@ -173,7 +175,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       </details>
 
       {/* Commit stats button and display */}
-      <button onClick={fetchCommitStats}>
+      <button onClick={fetchCommitStats} tabIndex={PametTabIndex.DebugDialog_FetchCommitStats}>
         Fetch Commit Statistics
       </button>
 
@@ -207,7 +209,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       )}
 
       {/* FDS state button and display */}
-      <button onClick={fetchFdsState}>
+      <button onClick={fetchFdsState} tabIndex={PametTabIndex.DebugDialog_FetchFdsState}>
         Fetch FDS State
       </button>
 
@@ -225,14 +227,14 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       )}
 
       {/* Button to calculate MobX state size */}
-        <button onClick={calculateMobxStateSize}>
+        <button onClick={calculateMobxStateSize} tabIndex={PametTabIndex.DebugDialog_CalcMobxSize}>
             Calculate MobX State Size
         </button>
         {mobxStateSize !== null && (
             <p>MobX State Size: {(mobxStateSize / 1024).toFixed(2)} KB</p>
         )}
 
-      <button onClick={a_restartServiceWorker}>
+      <button onClick={a_restartServiceWorker} tabIndex={PametTabIndex.DebugDialog_RestartServiceWorker}>
         Restart Service Worker
       </button>
 
@@ -242,6 +244,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
                     type="checkbox"
                     checked={debugPaintOperations}
                     onChange={handleDebugPaintOperationsChange}
+                    tabIndex={PametTabIndex.DebugDialog_DebugPaintCheckbox}
                 />
                 Debug Paint Operations
             </label>
