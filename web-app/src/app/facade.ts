@@ -23,7 +23,7 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
-import { applyRoute } from "@/procedures/app";
+import { switchProject } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { pageActions } from "@/actions/page";
@@ -246,32 +246,71 @@ export class PametFacade extends PametStore {
 
     initRouter() {
         this.router.setUpdateHandler((route) => {
-            applyRoute(route).catch((e) => {
-                log.error('[Router.updateHandler] Error handling browser route change', e);
-            });
+            this.handlePopstateRoute(route);
         });
         this.router.init();
     }
 
-    /** Push route to URL and derive appViewState from it. The single entry point for navigation. */
-    async navigateTo(route: PametRoute) {
-        this.router.navigateToRoute(route);
-        await applyRoute(route);
+    /**
+     * The single entry point for navigation.
+     * Switches project if needed, resolves default page, updates URL, then applies state.
+     */
+    async navigateTo(route: PametRoute, { replace = false }: { replace?: boolean } = {}) {
+        const appViewState = this.appViewState;
+
+        // Project switch if needed (async)
+        const targetProjectId = route.projectId ?? null;
+        if (appViewState.currentProjectId !== targetProjectId) {
+            await switchProject(targetProjectId);
+        }
+
+        // Resolve default page if not specified
+        const pageId = route.pageId
+            ?? (appViewState.currentProjectState?.home_page_id ?? null);
+        if (!route.pageId && pageId) {
+            route = new PametRoute({
+                userId: route.userId,
+                projectId: route.projectId,
+                pageId: pageId,
+                viewportCenter: route.viewportCenter,
+                viewportEyeHeight: route.viewportEyeHeight,
+            });
+            replace = true;  // Redirect to default page should not create a history entry
+        }
+
+        // Update URL
+        if (replace) {
+            this.router.replaceRoute(route);
+        } else {
+            this.router.pushRoute(route);
+        }
+
+        // Apply state
+        if (pageId !== appViewState.currentPageId) {
+            appActions.setCurrentPage(appViewState, pageId);
+        }
+        if (appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
+            const [x, y] = route.viewportCenter;
+            pageActions.updateViewport(
+                appViewState.currentPageViewState,
+                new Point2D([x, y]),
+                route.viewportEyeHeight,
+            );
+        }
     }
 
-    syncRouterFromAppViewState() {
-        const route = this.appViewState.toRoute();
-        this.router.navigateToRoute(route);
+    /** Handle a route from popstate (back/forward/toggleLastPage).
+     *  The browser has already updated the URL, so we only apply state (replace, not push). */
+    private handlePopstateRoute(route: PametRoute) {
+        this.navigateTo(route, { replace: true }).catch((e) => {
+            log.error('[Router.updateHandler] Error handling browser route change', e);
+        });
     }
 
-    pushNewViewportPosition(state: PageViewState, viewportCenter: Point2D, viewportHeight: number) {
+    updateViewportUrl(state: PageViewState, viewportCenter: Point2D, viewportHeight: number) {
         pageActions.updateViewport(state, viewportCenter, viewportHeight);
-        this.syncRouterFromAppViewState();
-    }
-
-    flushRouterFromAppViewState() {
         const route = this.appViewState.toRoute();
-        this.router.flushPendingNavigation(route);
+        this.router.replaceRoute(route, { debounce: true });
     }
 
     toggleLastPage() {

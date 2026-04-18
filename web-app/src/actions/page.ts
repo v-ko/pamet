@@ -159,7 +159,8 @@ class PageActions {
   @action
   endDragNavigation(state: PageViewState) {
     state.setMode(PageMode.None);
-    pamet.flushRouterFromAppViewState();
+    const route = pamet.appViewState.toRoute();
+    pamet.router.replaceRoute(route);
   }
 
   @action

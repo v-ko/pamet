@@ -233,19 +233,19 @@ class PametCommands {
     @command('Page: Zoom in')
     pageZoomIn() {
         let pageVS = getCurrentPageViewState();
-        pamet.pushNewViewportPosition(pageVS, pageVS.viewportCenter, pageVS.viewportHeight / 1.1);
+        pamet.updateViewportUrl(pageVS, pageVS.viewportCenter, pageVS.viewportHeight / 1.1);
     }
 
     @command('Page: Zoom out')
     pageZoomOut() {
         let pageVS = getCurrentPageViewState();
-        pamet.pushNewViewportPosition(pageVS, pageVS.viewportCenter, pageVS.viewportHeight * 1.1);
+        pamet.updateViewportUrl(pageVS, pageVS.viewportCenter, pageVS.viewportHeight * 1.1);
     }
 
     @command('Page: Reset zoom')
     pageZoomReset() {
         let pageVS = getCurrentPageViewState();
-        pamet.pushNewViewportPosition(pageVS, pageVS.viewportCenter, DEFAULT_VIEW_HEIGHT);
+        pamet.updateViewportUrl(pageVS, pageVS.viewportCenter, DEFAULT_VIEW_HEIGHT);
     }
 
     @command('Select all')
