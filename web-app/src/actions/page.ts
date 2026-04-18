@@ -37,6 +37,11 @@ class PageActions {
     state.viewportGeometry = geometry;
   }
 
+  @action
+  updateResizeCircleOutline(state: PageViewState, noteVS: NoteViewState | null) {
+    state.hoveredResizeNoteVS = noteVS;
+  }
+
   @action({ issuer: 'user' })
   createProjectLinksIndex(state: PageViewState) {
     const pageId = state.page().id;

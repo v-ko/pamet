@@ -110,7 +110,9 @@ export class PageController {
       position: null,
       buttonsOnLeave: event.buttons,
     });
-    this.pageVS.hoveredResizeNoteVS = null;
+    if (this.pageVS.hoveredResizeNoteVS !== null) {
+      pageActions.updateResizeCircleOutline(this.pageVS, null);
+    }
   };
 
   handleMouseEnter = (event: MouseEvent) => {
@@ -387,7 +389,7 @@ export class PageController {
         let realMousePos = this.pageVS.viewport.unprojectPoint(mousePos);
         let hoveredNoteVS = this.pageVS.resizeCircleAt(realMousePos);
         if (hoveredNoteVS !== this.pageVS.hoveredResizeNoteVS) {
-          this.pageVS.hoveredResizeNoteVS = hoveredNoteVS;
+          pageActions.updateResizeCircleOutline(this.pageVS, hoveredNoteVS);
         }
       }
     } else if (this.pageVS.mode === PageMode.DragNavigation) {
