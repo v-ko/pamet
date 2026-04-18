@@ -691,6 +691,11 @@ class PageActions {
     return null;
   }
 
+  @action
+  setClipboardPreview(state: PageViewState, show: boolean) {
+    state.showClipboardPreview = show;
+  }
+
 }
 
 export const pageActions = new PageActions();

@@ -242,6 +242,46 @@ export class FocusManager {
     }
   }
 
+  private getVisibleFocusableElements(): HTMLElement[] {
+    const elements: HTMLElement[] = [];
+    for (const reg of this.focusRegistrations.values()) {
+      const container = document.querySelector(reg.selector) as HTMLElement | null;
+      if (!container || container.offsetParent === null) continue;
+      for (const el of container.querySelectorAll<HTMLElement>('[tabindex]:not([tabindex="-1"])')) {
+        if (el.offsetParent !== null) {
+          elements.push(el);
+        }
+      }
+    }
+    return elements;
+  }
+
+  /**
+   * Returns true when the currently focused element has the highest tabIndex
+   * among all visible focusable elements in registered areas
+   * (i.e. Tab would have nowhere to go).
+   */
+  atLastTabIndex(): boolean {
+    const focused = document.activeElement as HTMLElement | null;
+    if (!focused || focused.tabIndex < 0) return true;
+    const maxTabIndex = this.getVisibleFocusableElements()
+      .reduce((max, el) => Math.max(max, el.tabIndex), -1);
+    return focused.tabIndex >= maxTabIndex;
+  }
+
+  /**
+   * Returns true when the currently focused element has the lowest tabIndex
+   * among all visible focusable elements in registered areas
+   * (i.e. Shift+Tab would have nowhere to go).
+   */
+  atFirstTabIndex(): boolean {
+    const focused = document.activeElement as HTMLElement | null;
+    if (!focused || focused.tabIndex < 0) return true;
+    const minTabIndex = this.getVisibleFocusableElements()
+      .reduce((min, el) => Math.min(min, el.tabIndex), Infinity);
+    return focused.tabIndex <= minTabIndex;
+  }
+
   destroy(): void {
     document.removeEventListener('focusin', this.focusInListener);
     document.removeEventListener('focusout', this.focusOutListener);

@@ -98,6 +98,9 @@ export class PageViewState {
     // Debugging. It's for the RenderProfiler stuff. It might be unneded even for that (since state is mutable)
     renderId: number = 0; // Incremented on every render to force re-rendering
 
+    // Clipboard paste preview (shown while Ctrl is held)
+    showClipboardPreview: boolean = false;
+
     constructor(page: Page, notes: Note[], arrows: Arrow[]) {
         this._pageData = page.data();
 
@@ -142,6 +145,8 @@ export class PageViewState {
             autoNavAnimation: observable,
 
             noteEditWindowState: observable,
+
+            showClipboardPreview: observable,
 
             viewport: computed
         });
@@ -255,6 +260,9 @@ export class PageViewState {
 
     clearMode() {
         log.info('Clearing page mode')
+
+        // Clipboard preview
+        this.showClipboardPreview = false;
 
         // Drag select related
         this.mousePositionOnDragSelectionStart = null;

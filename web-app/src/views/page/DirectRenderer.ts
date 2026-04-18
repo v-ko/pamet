@@ -5,12 +5,13 @@ import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
 import { getLogger } from "fusion/logging";
-import { color_role_to_hex_color, drawCrossingDiagonals } from "@/app/util";
+import { color_role_to_hex_color, drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { ElementView, getElementView } from "@/views/elementViewLibrary";
 import { ArrowCanvasView } from "@/views/arrow/ArrowCanvasView";
 import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
+import { Note } from "@/model/Note";
 import { pamet } from "@/app/facade";
 import { getPageNavigationState, PageAnimation } from "@/views/page/render-utils";
 
@@ -532,6 +533,36 @@ export class DirectRenderer {
                 ctx.stroke();
                 ctx.closePath();
             }
+        }
+
+        // Draw clipboard paste preview outlines (when Ctrl is held)
+        if (pageVS.showClipboardPreview) {
+            const clipboard = pamet.appViewState.clipboard;
+            const mousePos = pamet.appViewState.mouseState.position;
+            const relativeTo = mousePos
+                ? pageVS.viewport.unprojectPoint(mousePos)
+                : pageVS.viewport.realCenter();
+            const pasteOffset = snapVectorToGrid(relativeTo);
+            const NOTE_BORDER_WIDTH = 0.5;
+
+            ctx.save();
+            ctx.globalAlpha = 0.6;
+            for (const entity of clipboard) {
+                if (entity instanceof Note) {
+                    const rect = entity.rect();
+                    const x = pasteOffset.x + rect.x;
+                    const y = pasteOffset.y + rect.y;
+                    ctx.strokeStyle = color_role_to_hex_color(entity.style.color_role);
+                    ctx.lineWidth = NOTE_BORDER_WIDTH;
+                    ctx.strokeRect(
+                        x + NOTE_BORDER_WIDTH / 2,
+                        y + NOTE_BORDER_WIDTH / 2,
+                        rect.width - NOTE_BORDER_WIDTH,
+                        rect.height - NOTE_BORDER_WIDTH
+                    );
+                }
+            }
+            ctx.restore();
         }
 
         ctx.restore()

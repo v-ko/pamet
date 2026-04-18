@@ -40,6 +40,10 @@ export class PageController {
   private setContextMenu?: (state: { x: number, y: number, items: MenuItem[] } | null) => void;
   private onRequestContextMenu?: (x: number, y: number) => void;
 
+  // Clipboard preview handlers (bound in constructor for stable references)
+  private handleClipboardPreviewKeyDown: (e: KeyboardEvent) => void;
+  private handleClipboardPreviewKeyUp: (e: KeyboardEvent) => void;
+
   public get renderer(): DirectRenderer | undefined {
     return this._renderer;
   }
@@ -55,6 +59,17 @@ export class PageController {
     this.superContainerRef = superContainerRef;
     this.setContextMenu = setContextMenu;
 
+    this.handleClipboardPreviewKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control' && !this.pageVS.showClipboardPreview
+          && pamet.appViewState.clipboard.length > 0) {
+        pageActions.setClipboardPreview(this.pageVS, true);
+      }
+    };
+    this.handleClipboardPreviewKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control' && this.pageVS.showClipboardPreview) {
+        pageActions.setClipboardPreview(this.pageVS, false);
+      }
+    };
   }
 
   public setupResizeObserver(canvas: HTMLCanvasElement) {
@@ -577,7 +592,8 @@ export class PageController {
       PageMode.ArrowControlPointDrag,
       PageMode.MoveElements,
       PageMode.NoteResize,
-      PageMode.CreateArrow].includes(this.pageVS.mode)) {
+      PageMode.CreateArrow].includes(this.pageVS.mode)
+        || this.pageVS.showClipboardPreview) {
         mousePosIfRelevant = this.mouseState.position;
       } else {
         mousePosIfRelevant = null;
@@ -597,6 +613,7 @@ export class PageController {
         notes: notes,
         arrows: arrows,
         mousePosIfRelevant: mousePosIfRelevant,
+        showClipboardPreview: this.pageVS.showClipboardPreview,
       };
     },
       () => {
@@ -622,6 +639,10 @@ export class PageController {
     el.addEventListener('touchstart', this.handleTouchStart, { passive: true });
     el.addEventListener('touchmove', this.handleTouchMove, { passive: true });
     el.addEventListener('touchend', this.handleTouchEnd);
+
+    // Clipboard preview (Ctrl held)
+    window.addEventListener('keydown', this.handleClipboardPreviewKeyDown);
+    window.addEventListener('keyup', this.handleClipboardPreviewKeyUp);
   }
 
   unbindEvents() {
@@ -656,5 +677,9 @@ export class PageController {
     el.removeEventListener('touchstart', this.handleTouchStart);
     el.removeEventListener('touchmove', this.handleTouchMove);
     el.removeEventListener('touchend', this.handleTouchEnd);
+
+    // Clipboard preview
+    window.removeEventListener('keydown', this.handleClipboardPreviewKeyDown);
+    window.removeEventListener('keyup', this.handleClipboardPreviewKeyUp);
   }
 }

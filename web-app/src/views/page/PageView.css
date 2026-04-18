@@ -7,6 +7,7 @@
     overflow: hidden;
     touch-action: none;
     min-width: 30px;
-    user-select: none;
+    outline: none;
     /* To prevent text selection during drag */
+    user-select: none;
 }

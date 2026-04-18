@@ -428,6 +428,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
         <button
           className="close-button"
           onClick={cancelEditing}
+          tabIndex={-1}
         >×</button>
         <div className="title-text">
           {state.creatingNote ? 'Create note' : 'Edit note'}
