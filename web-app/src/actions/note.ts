@@ -91,7 +91,7 @@ class NoteActions {
         let realMousePos = state.viewport.unprojectPoint(mousePosOnScreen)
         let realDelta = realMousePos.subtract(state.realMousePosOnElementMoveStart)
 
-        let movedNoteIds = [];
+        let movedNoteIds = new Set<string>();
         for (let noteVS of state.movedNoteVSs) {
             let viewStateNote = noteVS.note();
             let initialNote = pamet.note(viewStateNote.id);
@@ -99,7 +99,7 @@ class NoteActions {
                 throw new Error('Entity for moved note not found');
             }
 
-            movedNoteIds.push(initialNote.id);
+            movedNoteIds.add(initialNote.id);
 
             let rect = initialNote.rect();
             rect.setTopLeft(snapVectorToGrid(rect.topLeft().add(realDelta)));
@@ -126,14 +126,14 @@ class NoteActions {
                     initialArrow.tailPoint!.add(realDelta));
                 tailMoved = true;
             } else {
-                tailMoved = movedNoteIds.includes(initialArrow.tailNoteId!);
+                tailMoved = movedNoteIds.has(initialArrow.tailNoteId!);
             }
             if (viewStateArrow.headPoint) {
                 viewStateArrow.headPoint = snapVectorToGrid(
                     initialArrow.headPoint!.add(realDelta));
                 headMoved = true;
             } else {
-                headMoved = movedNoteIds.includes(initialArrow.headNoteId!);
+                headMoved = movedNoteIds.has(initialArrow.headNoteId!);
             }
 
             // If both head and tail are anchored to notes which move - move midpoints
