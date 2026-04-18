@@ -269,8 +269,20 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
         <div
           title='Debug info'
           onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
+          style={{ position: 'relative' }}
         >
           {'</>'}
+          {state.entityProblemCount > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: -2,
+              right: -4,
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              backgroundColor: 'red',
+            }} />
+          )}
         </div>
         <VerticalSeparator />
         <img src={helpCircleIconUrl} alt="Help"

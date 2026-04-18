@@ -347,10 +347,16 @@ export class PametFacade extends PametStore {
         )
 
         this._entityProblemCounts.clear();
+        if (this._appViewState) {
+            this._appViewState.entityProblemCount = 0;
+        }
     }
 
     reportEntityProblem(entityId: string) {
         this._entityProblemCounts.set(entityId, (this._entityProblemCounts.get(entityId) || 0) + 1);
+        if (this._appViewState) {
+            this._appViewState.entityProblemCount = this._entityProblemCounts.size;
+        }
     }
 
     // Config store related

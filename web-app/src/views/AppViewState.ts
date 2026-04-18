@@ -70,6 +70,8 @@ export class AppViewState {
   // The project ID the clipboard entities originate from (for cross-project paste)
   clipboardProjectId: string | null = null;
 
+  entityProblemCount: number = 0;
+
   constructor(options: { userId: string }) {
     this.userId = options.userId;
     makeObservable(this, {
@@ -90,6 +92,7 @@ export class AppViewState {
       globalSearchViewState: observable,
       clipboard: observable,
       clipboardProjectId: observable,
+      entityProblemCount: observable,
     });
   }
 
