@@ -3,7 +3,7 @@ import { Viewport } from "@/views/page/Viewport";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
+import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
@@ -425,8 +425,20 @@ export class DirectRenderer {
             this._drawSelectionOverlay(ctx, childVS);
         }
 
-        // Draw anchor suggestions (when creating an arrow) and new arrow
+        // Draw resize circle outline on hover (when idle)
         const mousePos = pamet.appViewState.mouseState.position;
+        if (pageVS.hoveredResizeNoteVS) {
+            let note = pageVS.hoveredResizeNoteVS.note();
+            let bottomRight = note.rect().bottomRight();
+            ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(bottomRight.x, bottomRight.y, RESIZE_CIRCLE_RADIUS, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        // Draw anchor suggestions (when creating an arrow) and new arrow
         if (pageVS.mode === PageMode.CreateArrow && mousePos) {
             // Draw anchor suggestions
             let realMousePos = pageVS.viewport.unprojectPoint(mousePos);

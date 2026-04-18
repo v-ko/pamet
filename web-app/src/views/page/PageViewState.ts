@@ -92,6 +92,9 @@ export class PageViewState {
     // Editing
     draggedControlPointIndex: number | null = null;
 
+    // Resize hover
+    hoveredResizeNoteVS: NoteViewState | null = null;
+
     // File items
     fileUrlsByItemId: ObservableMap<string, string> = observable.map();
 
@@ -147,6 +150,8 @@ export class PageViewState {
             noteEditWindowState: observable,
 
             showClipboardPreview: observable,
+
+            hoveredResizeNoteVS: observable,
 
             viewport: computed
         });

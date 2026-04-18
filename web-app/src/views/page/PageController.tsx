@@ -110,6 +110,7 @@ export class PageController {
       position: null,
       buttonsOnLeave: event.buttons,
     });
+    this.pageVS.hoveredResizeNoteVS = null;
   };
 
   handleMouseEnter = (event: MouseEvent) => {
@@ -381,6 +382,13 @@ export class PageController {
           pageActions.startDragSelection(this.pageVS, pressPos);
           pageActions.updateDragSelection(this.pageVS, mousePos);
         }
+      } else {
+        // No button pressed - update resize circle hover
+        let realMousePos = this.pageVS.viewport.unprojectPoint(mousePos);
+        let hoveredNoteVS = this.pageVS.resizeCircleAt(realMousePos);
+        if (hoveredNoteVS !== this.pageVS.hoveredResizeNoteVS) {
+          this.pageVS.hoveredResizeNoteVS = hoveredNoteVS;
+        }
       }
     } else if (this.pageVS.mode === PageMode.DragNavigation) {
       pageActions.dragNavigationMove(this.pageVS, delta);
@@ -614,6 +622,7 @@ export class PageController {
         arrows: arrows,
         mousePosIfRelevant: mousePosIfRelevant,
         showClipboardPreview: this.pageVS.showClipboardPreview,
+        hoveredResizeNoteVS: this.pageVS.hoveredResizeNoteVS,
       };
     },
       () => {
