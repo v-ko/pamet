@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import '@/views/menu/Menu.css';
 
 export type MenuItem = {
@@ -54,23 +54,42 @@ export function Menu({ items, x, y, onDismiss, variant = 'main', alignX = 'left'
     };
   }, [onDismiss]);
 
-  // Keep menu within viewport bounds
-  const style = useMemo(() => {
-    if (embedded) {
-      const base: React.CSSProperties = { left: '0px', top: '0px' };
-      if (alignX === 'right') base.transform = 'translateX(-100%)';
-      return base;
+  // Keep menu within viewport bounds, accounting for actual rendered size
+  const [adjustedPos, setAdjustedPos] = useState<{ left: number; top: number }>({ left: x, top: y });
+
+  useLayoutEffect(() => {
+    if (embedded) return;
+    const el = rootRef.current;
+    if (!el) {
+      setAdjustedPos({ left: x, top: y });
+      return;
     }
-    const maxX = window.innerWidth - 8; // padding from edge
-    const maxY = window.innerHeight - 8;
-    const clampedX = Math.max(8, Math.min(x, maxX));
-    const clampedY = Math.max(8, Math.min(y, maxY));
-    const base: React.CSSProperties = { left: clampedX + 'px', top: clampedY + 'px' };
-    if (alignX === 'right') {
-      base.transform = 'translateX(-100%)';
+    const pad = 8;
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    let adjX = x;
+    let adjY = y;
+
+    // If menu overflows right edge, shift left
+    if (adjX + rect.width > vw - pad) {
+      adjX = vw - rect.width - pad;
     }
-    return base;
-  }, [x, y, alignX, embedded]);
+    // If menu overflows bottom edge, shift up
+    if (adjY + rect.height > vh - pad) {
+      adjY = vh - rect.height - pad;
+    }
+    // Ensure it doesn't go off the left/top edges
+    adjX = Math.max(pad, adjX);
+    adjY = Math.max(pad, adjY);
+
+    setAdjustedPos({ left: adjX, top: adjY });
+  }, [x, y, embedded, items]);
+
+  const style: React.CSSProperties = embedded
+    ? { left: '0px', top: '0px', ...(alignX === 'right' ? { transform: 'translateX(-100%)' } : {}) }
+    : { left: adjustedPos.left + 'px', top: adjustedPos.top + 'px', ...(alignX === 'right' ? { transform: 'translateX(-100%)' } : {}) };
 
   return (
     <div ref={rootRef} className={`MenuRoot ${variant}`} style={style}>
