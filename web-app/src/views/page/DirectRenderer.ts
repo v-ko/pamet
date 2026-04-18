@@ -3,7 +3,7 @@ import { Viewport } from "@/views/page/Viewport";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
+import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
@@ -729,9 +729,16 @@ export class DirectRenderer {
         if (childVS instanceof NoteViewState) {
             let note = childVS.note();
             let rect = note.rect();
-            // Render the note selection overlay
-            ctx.fillStyle = selectionColor;
-            ctx.fillRect(...rect.data());
+            // Render the note selection overlay as a border
+            let selectionBorderWidth = AGU;
+            ctx.strokeStyle = selectionColor;
+            ctx.lineWidth = selectionBorderWidth;
+            ctx.strokeRect(
+                rect.x + selectionBorderWidth / 2,
+                rect.y + selectionBorderWidth / 2,
+                rect.width - selectionBorderWidth,
+                rect.height - selectionBorderWidth
+            );
             // Draw the resize circles
             ctx.fillStyle = color_role_to_hex_color(note.style.background_color_role);
             let bottomRight = rect.bottomRight();
