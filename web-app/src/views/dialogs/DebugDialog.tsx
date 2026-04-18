@@ -132,6 +132,8 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
     }
   };
 
+  const mouseDownOnBackdrop = useRef(false);
+
   return (
     <dialog
       ref={dialogRef}
@@ -141,8 +143,9 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
         height: '70vh',
       }}
       onCancel={onClose}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === dialogRef.current; }}
       onClick={(e) => {
-        if (e.target === dialogRef.current) {
+        if (e.target === dialogRef.current && mouseDownOnBackdrop.current) {
           onClose();
         }
       }}

@@ -53,12 +53,15 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
       // The dialog will close automatically because of the form method="dialog"
   }
 
+  const mouseDownOnBackdrop = useRef(false);
+
   return (
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === dialogRef.current; }}
       onClick={(e) => {
-        if (e.target === dialogRef.current) { // Close on outside click
+        if (e.target === dialogRef.current && mouseDownOnBackdrop.current) {
             onClose();
         }
       }}

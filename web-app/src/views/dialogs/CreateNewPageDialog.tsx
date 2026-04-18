@@ -53,12 +53,15 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     }
   }
 
+  const mouseDownOnBackdrop = useRef(false);
+
   return (
     <dialog
       ref={dialogRef}
       onCancel={onClose}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === dialogRef.current; }}
       onClick={(e) => {
-        if (e.target === dialogRef.current) { // Close on outside click
+        if (e.target === dialogRef.current && mouseDownOnBackdrop.current) {
             onClose();
         }
       }}

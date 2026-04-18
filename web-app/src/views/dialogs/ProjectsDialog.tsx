@@ -22,12 +22,15 @@ export function ProjectsDialog({ onClose }: ProjectsDialogProps) {
     }
   }, []);
 
+  const mouseDownOnBackdrop = useRef(false);
+
   return (
     <dialog
       ref={dialogRef}
       onClose={onClose}
+      onMouseDown={(e) => { mouseDownOnBackdrop.current = e.target === dialogRef.current; }}
       onClick={(e) => {
-        if (e.target === dialogRef.current) { // Close on outside click
+        if (e.target === dialogRef.current && mouseDownOnBackdrop.current) {
             onClose();
         }
       }}
