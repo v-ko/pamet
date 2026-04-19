@@ -49,7 +49,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
   let errorMessages: string[] = []
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
-  const [mainMenuPos, setMainMenuPos] = useState<{x:number,y:number} | null>(null);
+  const [mainMenuPos, setMainMenuPos] = useState<{ x: number, y: number } | null>(null);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -91,7 +91,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
     };
   }, [state.loadingDialogState]);
 
-  // Check for resurce availability, and prep error messages if needed
+  // Check for resource availability, and prep error messages if needed
   let shouldDisplayPage = true
 
   if (!state.deviceId) {
@@ -113,7 +113,6 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
     if (state.currentPageViewState === null && state.pageError === PageError.NoError) {
       errorMessages.push("Page not set")
     }
-
   }
 
   const currentPageVS = state.currentPageViewState
@@ -217,87 +216,87 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
         {/* Main panel - logo, project name, save state, help button */}
         <Panel align='top-left'>
 
-        <div
-          style={{
-            fontSize: '1.1em',
-            fontWeight: 400,
-            cursor: 'pointer',
-          }}
-          onClick={() => appActions.openProjectsDialog(state)}
-          title="Go to projects"
-        >PAMET</div>
-        <VerticalSeparator />
+          <div
+            style={{
+              fontSize: '1.1em',
+              fontWeight: 400,
+              cursor: 'pointer',
+            }}
+            onClick={() => appActions.openProjectsDialog(state)}
+            title="Go to projects"
+          >PAMET</div>
+          <VerticalSeparator />
 
-        <div
-          className="project-name"
-          style={{
-            cursor: 'pointer'
-          }}
-          onClick={() => appActions.openProjectPropertiesDialog(state)}
-          title="Project properties"
-        >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
-        <img
-          src={storageStatusIconUrl}
-          alt="Storage status"
-          title={storageStatusTitle}
-          style={{ cursor: 'pointer' }}
-          onClick={() => appActions.openStorageStatusDialog(state)}
-        />
-        <VerticalSeparator />
-        <img src={shareIconUrl} alt="Share" />
-        <VerticalSeparator />
-        <div
-          title='Main menu'
-          style={{
-            fontSize: '1.2em',
-            textAlign: 'center',
-            cursor: 'pointer',
-          }}
-          onClick={(e) => {
-            const target = e.currentTarget as HTMLElement;
-            const panel = target.closest('.panel') as HTMLElement | null;
-            const r = (panel ?? target).getBoundingClientRect();
-            setMainMenuPos({ x: r.right, y: r.bottom + 6 });
-          }}
-        >
-          ☰
-        </div>
+          <div
+            className="project-name"
+            style={{
+              cursor: 'pointer'
+            }}
+            onClick={() => appActions.openProjectPropertiesDialog(state)}
+            title="Project properties"
+          >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
+          <img
+            src={storageStatusIconUrl}
+            alt="Storage status"
+            title={storageStatusTitle}
+            style={{ cursor: 'pointer' }}
+            onClick={() => appActions.openStorageStatusDialog(state)}
+          />
+          <VerticalSeparator />
+          <img src={shareIconUrl} alt="Share" />
+          <VerticalSeparator />
+          <div
+            title='Main menu'
+            style={{
+              fontSize: '1.2em',
+              textAlign: 'center',
+              cursor: 'pointer',
+            }}
+            onClick={(e) => {
+              const target = e.currentTarget as HTMLElement;
+              const panel = target.closest('.panel') as HTMLElement | null;
+              const r = (panel ?? target).getBoundingClientRect();
+              setMainMenuPos({ x: r.right, y: r.bottom + 6 });
+            }}
+          >
+            ☰
+          </div>
 
-      </Panel>
+        </Panel>
 
-      <Panel align='top-right'>
-        <div
-          title='Debug info'
-          onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
-          style={{ position: 'relative' }}
-        >
-          {'</>'}
-          {state.devErrors && (
-            <div style={{
-              position: 'absolute',
-              top: -2,
-              right: -4,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              backgroundColor: 'red',
-            }} />
-          )}
-        </div>
-        <VerticalSeparator />
-        <img src={helpCircleIconUrl} alt="Help"
-          style={{ cursor: 'pointer' }}
-          onClick={() => { commands.showHelp(); }}
-        />
-        <VerticalSeparator />
-        <div
-          onClick={() => appActions.openPageProperties(state)}
-          style={{ cursor: 'pointer' }}
-          title="Page properties"
-        >{currentPageVS ? currentPageVS.page().name : '(no page open)'}</div>
-        <VerticalSeparator />
-        <img src={accountCircleIconUrl} alt="Login/Sign up" />
-      </Panel>
+        <Panel align='top-right'>
+          <div
+            title='Debug info'
+            onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
+            style={{ position: 'relative' }}
+          >
+            {'</>'}
+            {state.devErrors && (
+              <div style={{
+                position: 'absolute',
+                top: -2,
+                right: -4,
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                backgroundColor: 'red',
+              }} />
+            )}
+          </div>
+          <VerticalSeparator />
+          <img src={helpCircleIconUrl} alt="Help"
+            style={{ cursor: 'pointer' }}
+            onClick={() => { commands.showHelp(); }}
+          />
+          <VerticalSeparator />
+          <div
+            onClick={() => appActions.openPageProperties(state)}
+            style={{ cursor: 'pointer' }}
+            title="Page properties"
+          >{currentPageVS ? currentPageVS.page().name : '(no page open)'}</div>
+          <VerticalSeparator />
+          <img src={accountCircleIconUrl} alt="Login/Sign up" />
+        </Panel>
 
         {/* Global search sidebar */}
         {state.globalSearchViewState &&

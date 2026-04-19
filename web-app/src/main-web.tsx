@@ -22,6 +22,7 @@ import { StorageService } from "fusion/storage/management/StorageService";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 import { buildDeviceBranchName } from "./app/util";
+import { ErrorBoundary } from "@/views/ErrorBoundary";
 
 const log = getLogger("main-web.tsx");
 setupWebWorkerLoggingChannel();
@@ -67,13 +68,15 @@ pamet.setAppViewState(appViewState)
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
     <React.StrictMode>
-        <WebApp state={pamet.appViewState} />
+        <ErrorBoundary>
+            <WebApp state={pamet.appViewState} />
+        </ErrorBoundary>
     </React.StrictMode>
 );
 
 // Initialize the web app (async: storage, config, routing)
 async function initializeWebApp() {
-
+  try {
     // Setup config store with localStorage sync
     await pamet.setupConfigStore(new LocalStorageConfigSync());
 
@@ -133,6 +136,9 @@ async function initializeWebApp() {
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
     }
+  } finally {
+    pamet.hideSplash();
+  }
 }
 
 initializeWebApp().catch((e) => {

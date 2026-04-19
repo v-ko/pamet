@@ -23,6 +23,7 @@ import { StorageService } from "fusion/storage/management/StorageService";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { buildDeviceBranchName } from "./app/util";
+import { ErrorBoundary } from "@/views/ErrorBoundary";
 
 const log = getLogger("main-desktop.tsx");
 setupWebWorkerLoggingChannel();
@@ -96,6 +97,7 @@ pamet.setStorageStatusIconSet({
 
 // Initialize the desktop app (async: storage, config, routing)
 async function initializeDesktopApp() {
+  try {
     // Setup config store with WebSocket sync to desktop server
     const wsUrl = baseUrl.replace(/^http/, 'ws') + '/config/store/ws?token=' + encodeURIComponent(desktopAccessToken!);
     const configSync = new WebSocketSyncService({
@@ -168,6 +170,9 @@ async function initializeDesktopApp() {
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
     }
+  } finally {
+    pamet.hideSplash();
+  }
 }
 
 let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
@@ -180,6 +185,8 @@ initializeDesktopApp().catch((e) => {
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(
     <React.StrictMode>
-        <WebApp state={pamet.appViewState} />
+        <ErrorBoundary>
+            <WebApp state={pamet.appViewState} />
+        </ErrorBoundary>
     </React.StrictMode>
 );

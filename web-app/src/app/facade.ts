@@ -88,6 +88,13 @@ export class PametFacade extends PametStore {
     renderErrorCount: number = 0;
     renderProfiler = new RenderProfiler();
 
+    hideSplash() {
+        const splash = document.getElementById('splash');
+        if (!splash) return;
+        splash.classList.add('fade-out');
+        setTimeout(() => splash.remove(), 350);
+    }
+
     undoService: UndoService;
 
     constructor() {

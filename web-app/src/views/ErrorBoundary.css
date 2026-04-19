@@ -1,0 +1,42 @@
+@import '../variables.css';
+
+.error-boundary {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+    padding: var(--space-3);
+}
+
+.error-boundary h2 {
+    margin-bottom: var(--space-1);
+}
+
+.error-boundary p {
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-3);
+}
+
+.error-boundary button {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--type-md);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-light-border);
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.error-boundary pre {
+    margin-top: var(--space-3);
+    padding: var(--space-2);
+    background: var(--color-bg-light);
+    border-radius: var(--radius-sm);
+    font-size: var(--type-xs);
+    color: var(--color-danger);
+    max-width: 80vw;
+    overflow: auto;
+    text-align: left;
+}
