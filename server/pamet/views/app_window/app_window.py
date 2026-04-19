@@ -207,6 +207,8 @@ class AppWindow(QWidget):
         # --- Shortcuts ---
         QShortcut(QKeySequence("Ctrl+W"), self, self._close_current_tab)
         QShortcut(QKeySequence("Ctrl+Shift+C"), self, self._toggle_dev_tools)
+        QShortcut(QKeySequence("Ctrl+Tab"), self, self._next_tab)
+        QShortcut(QKeySequence("Ctrl+Shift+Tab"), self, self._previous_tab)
         for i in range(1, 10):
             QShortcut(
                 QKeySequence(f"Ctrl+{i}"),
@@ -546,6 +548,16 @@ class AppWindow(QWidget):
     def _switch_to_tab(self, idx: int):
         if idx < len(self.state.tabs):
             self.state.current_tab_index = idx
+
+    def _next_tab(self):
+        n = len(self.state.tabs)
+        if n > 1:
+            self.state.current_tab_index = (self.state.current_tab_index + 1) % n
+
+    def _previous_tab(self):
+        n = len(self.state.tabs)
+        if n > 1:
+            self.state.current_tab_index = (self.state.current_tab_index - 1) % n
 
     # ------------------------------------------------------------------
     # Config injection
