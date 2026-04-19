@@ -28,7 +28,7 @@ from PySide6.QtWidgets import (
 )
 
 from pamet.actions.app import close_tab
-from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
+from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
 from pamet.views.app_window.app_window_view_state import AppWindowViewState, TabState
 
 _RESIZE_GRIP = 5  # px – edge/corner resize zone for frameless window

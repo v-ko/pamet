@@ -10,7 +10,7 @@ from fusion import get_logger
 from uvicorn import Config, Server
 
 import pamet
-from pamet.services.rest_api.auth import DESKTOP_ACCESS_TOKEN
+from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
 from pamet.services.rest_api.routes.desktop import desktop_router
 
 log = get_logger(__name__)
