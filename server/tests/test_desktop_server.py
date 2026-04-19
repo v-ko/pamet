@@ -1,19 +1,17 @@
-from time import sleep
-
 from pamet.services.rest_api.desktop_server import DesktopServer
+from pamet.services.rest_api.instance_check import get_running_instance_port
 
 
-def test_desktop_server(tmp_path):
+def test_desktop_server_start_stop(tmp_path):
     # Start the server
-    server1 = DesktopServer(config_dir=tmp_path)
-    server2 = DesktopServer(config_dir=tmp_path)
-    server1.start()
-    sleep(0.1)
+    server = DesktopServer(config_dir=tmp_path)
+    server.start()
+
     # Check that it's running
-    assert server2.get_running_instance_port()
+    assert get_running_instance_port(tmp_path)
 
     # Stop the server
-    server1.stop()
+    server.stop()
 
     # Check that it's not running
-    assert not server2.get_running_instance_port()
+    assert not get_running_instance_port(tmp_path)
