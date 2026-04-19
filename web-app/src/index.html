@@ -35,6 +35,16 @@
     <div id="splash">
       <img src="/logo256.png" alt="Pamet" />
     </div>
+    <script>
+      (function() {
+        function killSplash() {
+          var s = document.getElementById('splash');
+          if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 350); }
+        }
+        window.addEventListener('error', killSplash);
+        window.addEventListener('unhandledrejection', killSplash);
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/main.tsx"></script>
   </body>
