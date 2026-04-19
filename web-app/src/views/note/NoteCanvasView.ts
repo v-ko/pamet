@@ -1,5 +1,6 @@
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { NO_SCALE_LINE_SPACING } from "@/app/constants";
+import { NOTE_BORDER_WIDTH } from "@/app/constants";
 import { color_role_to_hex_color, TextLayout } from "@/app/util";
 
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
@@ -94,7 +95,6 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         let note = this.noteViewState.note();
         context.save()
         context.strokeStyle = color_role_to_hex_color(note.style.color_role);
-        const NOTE_BORDER_WIDTH = 0.5
         context.lineWidth = NOTE_BORDER_WIDTH;
         if (borderType === BorderType.Dashed) {
             context.setLineDash([10, 5]);

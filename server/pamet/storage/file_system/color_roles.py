@@ -2,9 +2,6 @@
 
 Provides legacy_normalized_rgba_to_role for converting legacy (0..1 float)
 RGBA values (used in v4 and earlier schemas) to named color roles.
-
-The mapping and algorithm match the TypeScript old_color_to_role in
-fusion/js-src/src/primitives/Color.ts.
 """
 
 from __future__ import annotations
