@@ -305,7 +305,7 @@ export class ArrowViewState extends ElementViewState {
             }
             let k = controlPointDistance / b;
             let zPrim = currentPoint.add(prevPoint.subtract(currentPoint).multiply(k));
-            let secondControlPoint = zPrim.rotated(alpha, currentPoint);
+            let secondControlPoint = zPrim.rotated(-alpha, currentPoint);
 
             // Save the params
             curves.push([prevPoint, firstCp, secondControlPoint, currentPoint]);
@@ -318,7 +318,7 @@ export class ArrowViewState extends ElementViewState {
             }
             k = controlPointDistance / a;
             let qPrim = currentPoint.add(nextPoint.subtract(currentPoint).multiply(k));
-            firstCp = qPrim.rotated(-alpha, currentPoint);
+            firstCp = qPrim.rotated(alpha, currentPoint);
 
             prevPoint = currentPoint;
         }
