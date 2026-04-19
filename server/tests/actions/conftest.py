@@ -1,13 +1,12 @@
 import fusion
 import pytest
 from fusion.libs import channel as channel_lib, model as entity_lib
+from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
 from PySide6.QtCore import Qt
 
 import pamet
-from pamet.actions import window as window_actions
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.init_config import configure_for_qt
-from pamet.storage.file_system.repository import FSStorageRepository
+from pamet.desktop_app.init_config import setup_fonts_and_icons
 
 
 def pytest_addoption(parser):
@@ -36,7 +35,11 @@ def window_fixture(request, tmp_path):
     # pamet.set_sync_repo(fs_repo)
 
     app = DesktopApp()
-    configure_for_qt(app)
+    import pamet.desktop_app as desktop_app
+
+    desktop_app.set_app(app)
+    fusion.set_main_loop(QtMainLoop(app))
+    setup_fonts_and_icons()
 
     # Create an initial page and open the window
     start_page = other_actions.create_default_page()

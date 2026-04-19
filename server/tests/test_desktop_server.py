@@ -1,6 +1,6 @@
 from time import sleep
 
-from pamet.services.rest_api.desktop import DesktopServer
+from pamet.services.rest_api.desktop_server import DesktopServer
 
 
 def test_desktop_server(tmp_path):

@@ -5,49 +5,27 @@ from pathlib import Path
 
 import click
 import fusion
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QDesktopServices
+from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
 from slugify import slugify
 
 import pamet
+import pamet.commands  # noqa: F401 — triggers @command registrations
+from pamet import desktop_app
 from pamet.constants import DEFAULT_PROJECT_ID, DEFAULT_PROJECT_TITLE, LOCAL_USER_ID
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, USER_SETTINGS_DIR
-from pamet.desktop_app.init_config import configure_for_qt
-from pamet.desktop_app.screen_snippet import grab_screen_snippet
+from pamet.desktop_app.init_config import setup_fonts_and_icons
 from pamet.model.config import UserSettings
 from pamet.services.config_file_manager import load_user_settings, save_user_settings
 from pamet.services.desktop_storage_service import DesktopStorageService
-from pamet.services.rest_api.desktop import DesktopServer
+from pamet.services.rest_api.client import send_command
+from pamet.services.rest_api.desktop_server import DesktopServer
+from pamet.services.rest_api.instance_check import get_running_instance_port
+from pamet.services.rest_api.routes.desktop import PUBLIC_COMMAND_NAMES
 from pamet.storage.migrations.v4_to_v5 import migrate_v4_user_settings
 from pamet.views.app_window.app_window import AppWindow
 
 log = fusion.get_logger(__name__)
-
-
-def raise_a_window():
-    windows = [
-        w for w in DesktopApp.instance().topLevelWidgets() if isinstance(w, AppWindow)
-    ]
-    if windows:
-        windows[0].show()
-        windows[0].activateWindow()
-        windows[0].raise_()
-
-
-def open_backups_folder(project_id: str):
-    dss = pamet.desktop_storage_service()
-    pfm = dss.project_folder_manager(project_id)
-    backup_folder = pfm.backup_service.backup_folder
-    backup_folder.mkdir(parents=True, exist_ok=True)
-    QDesktopServices.openUrl(QUrl.fromLocalFile(str(backup_folder)))
-
-
-local_server_commands = {
-    "grab_screen_snippet": grab_screen_snippet,
-    "raise_window": raise_a_window,
-    "open_backups_folder": open_backups_folder,
-}
 
 
 @click.command()
@@ -58,7 +36,7 @@ local_server_commands = {
     ),
     required=False,
 )
-@click.option("--command", type=click.Choice(local_server_commands.keys()))
+@click.option("--command", type=click.Choice(sorted(PUBLIC_COMMAND_NAMES)))
 @click.option(
     "--use-frontend-server",
     type=str,
@@ -181,31 +159,28 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
         settings.projects = projects
         save_user_settings(settings)
 
-    # Check if another instance is running and/or start the local server
-    # When using frontend server, we might not need to check for other instances
-    local_server = DesktopServer(
-        commands=local_server_commands,
-        config_dir=CONFIG_DIR,
-    )
-
-    if (
-        not use_frontend_server
-    ):  # Only check for other instances when using local server
-        port = local_server.get_running_instance_port()
+    # Check if another instance is running
+    if not use_frontend_server:
+        port = get_running_instance_port(CONFIG_DIR)
         if port:
             if command:
-                DesktopServer.send_command(port, command)
+                send_command(port, command)
             else:
-                DesktopServer.send_command(port, "raise_window")
+                send_command(port, "raise_window")
             return
 
     # Start the local server (needed for API endpoints even when using frontend server)
+    local_server = DesktopServer(config_dir=CONFIG_DIR)
     local_server.start()
 
     app = DesktopApp()
     app.aboutToQuit.connect(local_server.stop)
 
-    configure_for_qt(app)
+    log.info("Using config folder: %s", CONFIG_DIR)
+    log.info("Using app data folder: %s", APP_DATA_DIR)
+    desktop_app.set_app(app)
+    fusion.set_main_loop(QtMainLoop(app))
+    setup_fonts_and_icons()
 
     desktop_storage_service = DesktopStorageService()
     pamet.set_desktop_storage_service(desktop_storage_service)

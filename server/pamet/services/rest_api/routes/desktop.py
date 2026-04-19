@@ -18,6 +18,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse, StreamingResponse
+from fusion.libs.command import get_command
 from fusion.libs.model import dump_to_dict
 from fusion.logging import get_logger
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -96,6 +97,15 @@ def _project_runtime(project_id: str):
 # Commands
 # ---------------------------------------------------------------------------
 
+# Commands accessible without auth (for IPC from other processes)
+PUBLIC_COMMAND_NAMES = frozenset(
+    {
+        "raise_window",
+        "grab_screen_snippet",
+        "open_backups_folder",
+    }
+)
+
 
 @desktop_router.get("/version")
 def get_version():
@@ -108,24 +118,35 @@ def get_status():
     return dss.status
 
 
-@desktop_router.post(
-    "/commands/{command_name}/",
-    dependencies=[Depends(require_desktop_auth)],
-)
-def run_command(
-    command_name: str, request: Request, payload: dict | None = Body(default=None)
-):
-    commands: dict = getattr(request.app.state, "commands", {})
-    if command_name not in commands:
+def _run_command(command_name: str, payload: dict | None):
+    cmd = get_command(command_name)
+    if cmd is None:
         raise HTTPException(status_code=404, detail=f"Unknown command: {command_name}")
     try:
         if payload:
-            commands[command_name](**payload)
+            cmd(**payload)
         else:
-            commands[command_name]()
+            cmd()
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
     return {"ok": True}
+
+
+@desktop_router.post("/desktop/commands/{command_name}/")
+def run_public_command(command_name: str, payload: dict | None = Body(default=None)):
+    if command_name not in PUBLIC_COMMAND_NAMES:
+        raise HTTPException(
+            status_code=403, detail=f"Command not public: {command_name}"
+        )
+    return _run_command(command_name, payload)
+
+
+@desktop_router.post(
+    "/desktop/gui/commands/{command_name}/",
+    dependencies=[Depends(require_desktop_auth)],
+)
+def run_gui_command(command_name: str, payload: dict | None = Body(default=None)):
+    return _run_command(command_name, payload)
 
 
 # ---------------------------------------------------------------------------

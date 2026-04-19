@@ -78,7 +78,7 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
 
   function openBackupsFolder() {
     if (!projectId) return;
-    desktopFetch(`/commands/open_backups_folder/`, {
+    desktopFetch(`/desktop/gui/commands/open_backups_folder/`, {
       method: "POST",
       body: JSON.stringify({ project_id: projectId }),
     }).catch(e => log.error("Failed to open backups folder", e));

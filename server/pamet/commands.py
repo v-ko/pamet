@@ -1,51 +1,15 @@
 from __future__ import annotations
 
-from PySide6.QtCore import QUrl
+from typing import cast
+
+from fusion.libs.command import command
+from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices
 
 import pamet
-from fusion.libs.command import command
 from pamet import desktop_app
-from pamet.actions import tab as tab_actions
-from pamet.actions import window as window_actions
-from pamet.desktop_app.config import repo_settings_path
-from pamet.desktop_app.screen_snippet import grab_screen_snippet as _grab_screen_snippet
-from pamet.desktop_app.util import current_tab, current_window
-
-
-@command(title="Show all commands")
-def open_command_palette():
-    window_actions.open_command_view(current_window().state(), prefix=">")
-
-
-@command(title="Go to file")
-def open_command_palette_go_to_file():
-    window_actions.open_command_view(current_window().state())
-
-
-@command(title="Close tab")
-def close_current_tab():
-    window = current_window()
-    tab = window.current_tab()
-    window_actions.close_tab(window.state(), tab.state())
-
-
-@command(title="Navigate back")
-def navigate_back():
-    tab = current_tab()
-    tab_actions.navigation_back(tab.state())
-
-
-@command(title="Navigate forward")
-def navigate_forward():
-    tab = current_tab()
-    tab_actions.navigation_forward(tab.state())
-
-
-@command(title="Toggle between last two pages")
-def toggle_between_last_two_pages():
-    tab = current_tab()
-    tab_actions.navigation_toggle_last(tab.state())
+from pamet.desktop_app.app import DesktopApp
+from pamet.views.app_window.app_window import AppWindow
 
 
 @command(title="Open user settings (JSON)")
@@ -56,4 +20,35 @@ def open_user_settings_json():
 
 @command(title="Grab screen snippet")
 def grab_screen_snippet():
-    _grab_screen_snippet()
+    app = cast(DesktopApp, DesktopApp.instance())
+    if not app:
+        return
+
+    active_window = app.activeWindow()
+    if not active_window:
+        for window in app.topLevelWidgets():
+            if window != active_window:
+                window.setWindowState(Qt.WindowState.WindowMinimized)
+
+    app.selector_widget.showFullScreen()
+
+
+@command(title="Raise window")
+def raise_window():
+    app = cast(DesktopApp, DesktopApp.instance())
+    if not app:
+        return
+    windows = [w for w in app.topLevelWidgets() if isinstance(w, AppWindow)]
+    if windows:
+        windows[0].show()
+        windows[0].activateWindow()
+        windows[0].raise_()
+
+
+@command(title="Open backups folder")
+def open_backups_folder(project_id: str):
+    dss = pamet.desktop_storage_service()
+    pfm = dss.project_folder_manager(project_id)
+    backup_folder = pfm.backup_service.backup_folder
+    backup_folder.mkdir(parents=True, exist_ok=True)
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(backup_folder)))

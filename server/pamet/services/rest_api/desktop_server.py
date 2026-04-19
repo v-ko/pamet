@@ -9,13 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fusion import get_logger
 from uvicorn import Config, Server
 
-import pamet
 from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
+from pamet.services.rest_api.instance_check import (
+    remove_lock_file,
+    write_port_to_lock_file,
+)
 from pamet.services.rest_api.routes.desktop import desktop_router
 
 log = get_logger(__name__)
 
-SECRET_REPLY = {"result": "svoi"}
 DEFAULT_PORT = 11352
 LOCALHOST = "http://localhost"
 
@@ -35,16 +37,11 @@ class DesktopServer:
 
     def __init__(
         self,
+        config_dir: Path,
         port: int = None,
-        commands: dict = None,
-        config_dir: Path | str = None,
         web_app_static_build_path: Path | str = None,
         web_app_debug_server_host: str = None,
     ):
-        threading.Thread.__init__(self)
-        self.commands = commands or {}
-        if config_dir is None:
-            config_dir = pamet.desktop_app.CONFIG_DIR
         self.config_dir = Path(config_dir)
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
 
@@ -78,7 +75,6 @@ class DesktopServer:
                 "the same time"
             )
 
-        self.app.state.commands = self.commands
         self.app.state.web_app_static_build_path = self.web_app_static_build_path
         self.app.state.desktop_access_token = self.desktop_access_token
 
@@ -88,45 +84,11 @@ class DesktopServer:
     def port(self):
         return self._port
 
-    # File lock mechanism
-    def lock_path(self):
-        return self.config_dir / ".local_server.lock"
-
-    def get_port_from_lock_file(self):
-        lock_file = self.lock_path()
-        if lock_file.exists():
-            port = lock_file.read_text()
-            return int(port)
-        else:
-            return None
-
-    def write_port_to_lock_file(self, port: int):
-        lock_file = self.lock_path()
-        lock_file.parent.mkdir(parents=True, exist_ok=True)
-        lock_file.write_text(str(port))
-
-    def get_running_instance_port(self):
-        port = self.get_port_from_lock_file()
-
-        if port is None:
-            return None
-
-        # Check with a request (it's just a sanity check)
-        try:
-            reply = requests.get(f"{LOCALHOST}:{port}/version")  # @IgnoreException
-            if not reply.ok:
-                return None
-            if "data" in reply.json():
-                return port
-        except requests.ConnectionError:
-            return None
-        return port
-
     def start(self):
         log.info("Starting local server")
         # We're assuming a check has been made if another server is running
         # So if there's a lock - we're going to overwrite it
-        self.lock_path().unlink(missing_ok=True)
+        remove_lock_file(self.config_dir)
 
         port = self.port
         port_was_taken = False
@@ -134,7 +96,7 @@ class DesktopServer:
             port_was_taken = True
             log.warning(f"Port {port} is taken. Trying another one.")
             port = randint(10024, 65535)
-        self.write_port_to_lock_file(port)
+        write_port_to_lock_file(self.config_dir, port)
 
         if port_was_taken:
             log.warning(f"Requested port was taken. Using port {port}.")
@@ -157,11 +119,4 @@ class DesktopServer:
     def stop(self):
         self.server.should_exit = True
         self.thread.join()
-
-        # Remove the lock file
-        lock_file = self.lock_path()
-        lock_file.unlink()
-
-    @staticmethod
-    def send_command(port: int, command_name: str):
-        requests.post(f"{LOCALHOST}:{port}/commands/{command_name}/")
+        remove_lock_file(self.config_dir)
