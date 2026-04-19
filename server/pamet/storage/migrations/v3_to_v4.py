@@ -67,8 +67,9 @@ class V4Page:
         return {
             "id": self.id,
             "name": self.name,
-            "datetime_created": self.datetime_created,
-            "datetime_modified": self.datetime_modified,
+            "created": self.datetime_created,
+            "modified": self.datetime_modified,
+            "type_name": "Page",
         }
 
 
@@ -112,33 +113,37 @@ class V4Note:
         return self.rect().center()
 
     def to_dict(self) -> dict:
-        """Convert to V4 JSON format"""
-        result = {
-            "id": list(self.id),
-            "type_name": self.type_name,
-            "geometry": self.geometry,
+        """Convert to V4 on-disk JSON format (nested style/content/metadata)."""
+        style: dict = {
             "color": self.color,
             "background_color": self.background_color,
+        }
+
+        content: dict = {}
+        if self.text:
+            content["text"] = self.text
+        if self.url:
+            content["url"] = self.url
+        if self.image_url:
+            content["image_url"] = self.image_url
+        if self.local_image_url:
+            content["local_image_url"] = self.local_image_url
+        if self.script_path:
+            content["script_path"] = self.script_path
+        if self.command_args:
+            content["command_args"] = self.command_args
+
+        return {
+            "id": list(self.id),
+            "geometry": self.geometry,
+            "style": style,
+            "content": content,
+            "metadata": {},
             "created": self.created,
             "modified": self.modified,
             "tags": self.tags,
+            "type_name": self.type_name,
         }
-
-        # Add type-specific fields only if they're set
-        if self.text:
-            result["text"] = self.text
-        if self.url:
-            result["url"] = self.url
-        if self.image_url:
-            result["image_url"] = self.image_url
-        if self.local_image_url:
-            result["local_image_url"] = self.local_image_url
-        if self.script_path:
-            result["script_path"] = self.script_path
-        if self.command_args:
-            result["command_args"] = self.command_args
-
-        return result
 
 
 @dataclass
@@ -154,15 +159,23 @@ class V4Arrow:
     midpoints: list[list[float]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        """Convert to V4 JSON format"""
+        """Convert to V4 on-disk JSON format."""
         return {
             "id": list(self.id),
-            "page_id": self.page_id,
+            "tail_coords": None,
             "tail_note_id": self.tail_note_id,
+            "tail_anchor": self.tail_anchor_type.name,
+            "mid_point_coords": self.midpoints,
+            "head_coords": None,
             "head_note_id": self.head_note_id,
-            "tail_anchor_type": self.tail_anchor_type.value,
-            "head_anchor_type": self.head_anchor_type.value,
-            "midpoints": self.midpoints,
+            "head_anchor": self.head_anchor_type.name,
+            "color": None,
+            "line_type": None,
+            "line_thickness": 1.5,
+            "line_function_name": "bezier_cubic",
+            "head_shape": None,
+            "tail_shape": None,
+            "type_name": "Arrow",
         }
 
 
