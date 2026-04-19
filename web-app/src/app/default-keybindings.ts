@@ -39,7 +39,7 @@ export const DEFAULT_KEYBINDINGS = [
     },
     {
         key: '1',
-        command: commands.colorSelectedElementsPrimary.name,
+        command: commands.colorSelectedElementsDefault.name,
         when: 'canvasFocus'
     },
     {
@@ -49,12 +49,12 @@ export const DEFAULT_KEYBINDINGS = [
     },
     {
         key: '3',
-        command: commands.colorSelectedElementsError.name,
+        command: commands.colorSelectedElementsAttention.name,
         when: 'canvasFocus'
     },
     {
         key: '4',
-        command: commands.colorSelectedElementsSurfaceDim.name,
+        command: commands.colorSelectedElementsNeutral.name,
         when: 'canvasFocus'
     },
     {

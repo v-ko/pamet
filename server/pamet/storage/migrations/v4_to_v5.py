@@ -37,8 +37,8 @@ V4_FILE_EXT = ".pam4.json"
 CANVAS_FILE_EXT = ".canvas"
 PAGE_SCHEMA_VERSION = 5
 
-DEFAULT_TEXT_COLOR_ROLE = "onPrimary"
-DEFAULT_BACKGROUND_COLOR_ROLE = "primary"
+DEFAULT_TEXT_COLOR_ROLE = "onDefault"
+DEFAULT_BACKGROUND_COLOR_ROLE = "default"
 
 NOTE_LEGACY_TYPES = {
     "TextNote",
@@ -183,7 +183,7 @@ def convert_v4_to_v5_element(
                 "links, for e.g. new pages)",
             )
             style["color_role"] = "onSurface"
-            style["background_color_role"] = "surfaceDim"
+            style["background_color_role"] = "neutral"
 
         # Internal link URL → page_ref migration
         url = content.get("url")

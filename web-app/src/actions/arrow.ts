@@ -41,7 +41,7 @@ class ArrowActions {
         if (state.newArrowViewState === null) {
             let tail_coords: PointData | null;
             let tail_note_id: string | null;
-            let colorRole = 'onPrimary';
+            let colorRole = 'onDefault';
             if (noteVS_underMouse) {
                 let note = noteVS_underMouse.note();
                 tail_coords = null;

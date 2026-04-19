@@ -396,7 +396,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
           onMouseMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          style={{ position: 'fixed', inset: 0, zIndex: 9998 }}
+          style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-menu-backdrop)' as any }}
         />
       )}
 

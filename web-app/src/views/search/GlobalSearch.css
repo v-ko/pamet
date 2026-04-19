@@ -41,7 +41,7 @@
     border: none;
     font-size: var(--type-lg);
     cursor: pointer;
-    color: #666;
+    color: var(--color-text-muted);
     padding: 0.25rem;
     border-radius: var(--radius-xs);
     flex-shrink: 0;
@@ -88,28 +88,28 @@
 }
 
 .global-search-result-title mark {
-    background-color: #ffeb3b;
+    background-color: var(--color-highlight-search);
     padding: 0 2px;
     border-radius: 2px;
 }
 
 .global-search-result-page {
     font-size: var(--type-sm);
-    color: #666;
+    color: var(--color-text-muted);
     font-style: italic;
 }
 
 .global-search-no-results {
     padding: var(--space-2);
     text-align: center;
-    color: #666;
+    color: var(--color-text-muted);
     font-style: italic;
 }
 
 .global-search-result-count {
     padding: var(--space-1) var(--space-2);
     font-size: var(--type-sm);
-    color: #666;
+    color: var(--color-text-muted);
     background: var(--color-bg-light);
     border-bottom: 1px solid var(--color-light-border);
 }

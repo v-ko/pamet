@@ -1,15 +1,15 @@
 /* Pamet canvas viewer — standalone CSS for .canvas files */
 
 :root {
-    --c-primary: #0000ff1a;
-    --c-onPrimary: #0000ff;
-    --c-error: #ff00001a;
-    --c-onError: #ff0000;
+    --c-default: #0000ff1a;
+    --c-onDefault: #0000ff;
+    --c-attention: #ff00001a;
+    --c-onAttention: #ff0000;
     --c-success: #00ff001a;
     --c-onSuccess: #00a33c;
     --c-surface: #ffffff;
     --c-onSurface: #000000;
-    --c-surfaceDim: #0000001a;
+    --c-neutral: #0000001a;
     --c-transparent: #00000000;
 }
 

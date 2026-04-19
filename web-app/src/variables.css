@@ -6,10 +6,12 @@
   --type-lg: 1.25rem;   /* 20px */
   --type-xl: 1.5rem;    /* 24px */
 
-  /* Core spacing scale: only three steps for UI elements */
+  /* Core spacing scale */
+  --space-0: 0.25rem;   /* 4px  - minimal gaps */
   --space-1: 0.5rem;    /* 8px  - tight controls, small gaps */
   --space-2: 1rem;      /* 16px - default padding/gap */
   --space-3: 1.5rem;    /* 24px - generous spacing */
+  --space-4: 2rem;      /* 32px - section-level spacing */
 
   /* Border radius */
   --radius-xs: 0.15rem;
@@ -21,9 +23,11 @@
   --color-bg-light: #f5f5f5;
   --color-bg-medium: #dddddd;
   --color-bg-title: #dddddd;
+  --color-bg-pressed: #cccccc;
 
   --color-text: #333;
-  --color-text-muted: #666;
+  --color-text-muted: #595959;
+  --color-text-faded: #888;
 
   --color-light-border: #ddd;
   --color-dark-border: #5f5f5f;
@@ -41,10 +45,26 @@
 
   /* Subtle/disabled */
   --color-bg-subtle: #f0f0f0;
-  --color-text-faded: #999;
 
-  /* Shadow */
+  /* Functional */
+  --color-highlight-search: #ffeb3b;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+
+  /* Shadows */
   --shadow-sm: 0 0 0.5rem rgba(0,0,0,0.2);
   --shadow-md: 0 0 0.9375rem rgba(0,0,0,0.2);
   --shadow-lg: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5); /* 0 8px 24px */
+
+  /* Z-index layers (ascending) */
+  --z-local: 1;
+  --z-suggestion: 100;
+  --z-panel: 200;
+  --z-note-edit: 210;
+  --z-search: 300;
+  --z-command-palette: 400;
+  --z-menu-backdrop: 500;
+  --z-menu: 510;
 }

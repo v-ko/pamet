@@ -111,18 +111,18 @@ class PametCommands {
     }
 
     @command('Set default color to selected elements')
-    colorSelectedElementsPrimary() {
+    colorSelectedElementsDefault() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onPrimary', 'primary');
-        pageActions.colorSelectedArrows(pageVS, 'onPrimary');
+        pageActions.colorSelectedNotes(pageVS, 'onDefault', 'default');
+        pageActions.colorSelectedArrows(pageVS, 'onDefault');
         pageActions.clearSelection(pageVS);
     }
 
     @command('Set attention color to selected elements')
-    colorSelectedElementsError() {
+    colorSelectedElementsAttention() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onError', 'error');
-        pageActions.colorSelectedArrows(pageVS, 'onError');
+        pageActions.colorSelectedNotes(pageVS, 'onAttention', 'attention');
+        pageActions.colorSelectedArrows(pageVS, 'onAttention');
         pageActions.clearSelection(pageVS);
     }
 
@@ -135,9 +135,9 @@ class PametCommands {
     }
 
     @command('Set neutral color to selected elements')
-    colorSelectedElementsSurfaceDim() {
+    colorSelectedElementsNeutral() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onSurface', 'surfaceDim');
+        pageActions.colorSelectedNotes(pageVS, 'onSurface', 'neutral');
         pageActions.colorSelectedArrows(pageVS, 'onSurface');
         pageActions.clearSelection(pageVS);
     }

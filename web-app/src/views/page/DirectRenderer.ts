@@ -3,7 +3,7 @@ import { Viewport } from "@/views/page/Viewport";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR_ROLE, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
+import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTION_OVERLAY_COLOR } from "@/app/constants";
 import { getLogger } from "fusion/logging";
 import { color_role_to_hex_color, drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
@@ -39,8 +39,8 @@ export interface ElementDrawStats {
     render_time: number
 }
 
-const selectionColor = color_role_to_hex_color(SELECTED_ITEM_OVERLAY_COLOR_ROLE);
-const dragSelectRectColor = color_role_to_hex_color(DRAG_SELECT_COLOR_ROLE);
+const selectionColor = SELECTION_OVERLAY_COLOR;
+const dragSelectRectColor = DRAG_SELECT_COLOR;
 
 function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     let note = noteVS.note();

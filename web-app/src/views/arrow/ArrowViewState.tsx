@@ -7,7 +7,7 @@ import { Rectangle } from 'fusion/primitives/Rectangle';
 import { approximateMidpointOfBezierCurve, bezierIntersectsRect, bezierPoint } from "@/app/util";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { getCanvasContext } from "@/views/note/note-dependent-utils";
-import { ARROW_CONTROL_POINT_RADIUS, ARROW_INCLINATION_MEASURE_AT, POTENTIAL_CONTROL_POINT_RADIUS } from "@/app/constants";
+import { ARROW_CONTROL_POINT_RADIUS, ARROW_INCLINATION_MEASURE_AT, ARROW_POTENTIAL_CONTROL_POINT_RADIUS } from "@/app/constants";
 import { Change } from 'fusion/model/Change';
 import { pamet } from "@/app/facade";
 import { PageViewState } from "@/views/page/PageViewState";
@@ -454,7 +454,7 @@ export class ArrowViewState extends ElementViewState {
             let controlPoint = this.controlPointPosition(i);
             let distance = controlPoint.distanceTo(realPosition);
             // Skip if outside the circle
-            if (distance > POTENTIAL_CONTROL_POINT_RADIUS) {
+            if (distance > ARROW_POTENTIAL_CONTROL_POINT_RADIUS) {
                 continue;
             }
             if (distance < closestControlPointDistance) {

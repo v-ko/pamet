@@ -9,7 +9,7 @@
     border: 1px solid var(--color-dark-border);
     border-radius: var(--radius-xs);
     box-shadow: var(--shadow-sm);
-    z-index: 1500;
+    z-index: var(--z-search);
     font-size: var(--type-md);
     box-sizing: border-box;
 }
@@ -80,7 +80,7 @@
 
 /* Highlight styling for search matches */
 .local-search-result-title mark {
-    background-color: #ffeb3b;
+    background-color: var(--color-highlight-search);
     color: inherit;
     padding: 0;
 }

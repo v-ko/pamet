@@ -63,37 +63,27 @@ export const IMAGE_CACHE_PADDING = 3;
 export const MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME = 2;
 
 // Colors
-export const DEFAULT_TEXT_COLOR_ROLE = 'onPrimary'
-export const DEFAULT_BACKGROUND_COLOR_ROLE = 'primary'
-export const SELECTED_ITEM_OVERLAY_COLOR_ROLE = 'itemSelectionOverlay'
-export const DRAG_SELECT_COLOR_ROLE = 'interactiveSelectionMask'
+export const DEFAULT_TEXT_COLOR_ROLE = 'onDefault'
+export const DEFAULT_BACKGROUND_COLOR_ROLE = 'default'
 
-// Hardcoded color roles. Will be made dynamic at some point.
-// Naming: Use Material-like color roles  https://m3.material.io/styles/color/roles
+// Note/arrow domain color roles (persisted in .canvas files)
 export const COLOR_ROLE_MAP: { [key: string]: HexColorData } = {
-    'primary': '#0000ff1a', // blue transparent background
-    'onPrimary': '#0000ff', // blue text
-    'error': '#ff00001a', // red transparent background
-    'onError': '#ff0000', // red text
+    'default': '#0000ff1a', // blue transparent background
+    'onDefault': '#0000ff', // blue text
+    'attention': '#ff00001a', // red transparent background
+    'onAttention': '#ff0000', // red text
     'success': '#00ff001a', // green transparent background
     'onSuccess': '#00a33c', // green text
     'surface': '#ffffff', // white background
     'onSurface': '#000000', // black text
-    'surfaceDim': '#0000001a', // black transparent background
-    'itemSelectionOverlay': '#ffff0080',  // yellow transparent selection overlay
-    'interactiveSelectionMask': '#64646433',  // grey transparent selection mask
+    'neutral': '#0000001a', // black transparent background
     'transparent': '#00000000'  // transparent
 }
 
-// To consider:
-// Command palette
-// Panels
-// Note edit view
-// Canvas
-// System modal dialog
-// Future:
-// Search and other utils pane
-// Alert dialog?
+// Rendering-only colors (not persisted)
+export const SELECTION_OVERLAY_COLOR = '#ffff0080'  // yellow transparent
+export const DRAG_SELECT_COLOR = '#64646433'  // grey transparent
+
 export enum PametTabIndex {
     Page = 0,
 

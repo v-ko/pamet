@@ -53,7 +53,7 @@ class PageActions {
     header.metadata.is_project_index_header = true;
     // Use surface styling for the header
     header.style.color_role = 'onSurface';
-    header.style.background_color_role = 'surfaceDim';
+    header.style.background_color_role = 'neutral';
 
     // Auto-size and center
     const rect = header.rect();

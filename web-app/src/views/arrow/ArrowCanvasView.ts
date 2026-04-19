@@ -1,9 +1,9 @@
-import { ARROW_HAND_ANGLE_RAD, ARROW_HAND_LENGTH, ARROW_SELECTION_THICKNESS_DELTA, SELECTED_ITEM_OVERLAY_COLOR_ROLE } from "@/app/constants";
+import { ARROW_HAND_ANGLE_RAD, ARROW_HAND_LENGTH, ARROW_SELECTION_THICKNESS_DELTA, SELECTION_OVERLAY_COLOR } from "@/app/constants";
 import { color_role_to_hex_color } from "@/app/util";
 import { BaseCanvasView } from "@/views/note/BaseCanvasView";
 import { ArrowViewState, BezierCurve } from "@/views/arrow/ArrowViewState";
 
-const selectionColor = color_role_to_hex_color(SELECTED_ITEM_OVERLAY_COLOR_ROLE);
+const selectionColor = SELECTION_OVERLAY_COLOR;
 
 export class ArrowCanvasView extends BaseCanvasView {
     get arrowViewState(): ArrowViewState {

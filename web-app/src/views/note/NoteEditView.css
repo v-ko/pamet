@@ -22,8 +22,8 @@
   box-shadow: var(--shadow-lg);
   resize: both;
   overflow: auto;
-  z-index: 1003;
-  transition: opacity 0.2s;
+  z-index: var(--z-note-edit);
+  transition: opacity var(--transition-normal);
 }
 
 .note-edit-view.dragged {
@@ -41,7 +41,7 @@
   border-top-left-radius: var(--radius-md);
   border-top-right-radius: var(--radius-md);
   position: relative;
-  z-index: 1;
+  z-index: var(--z-local);
 }
 
 .move-area {
@@ -144,7 +144,7 @@
   border-radius: var(--radius-sm);
   padding: var(--space-1);
   font-size: var(--type-md);
-  background: #fff;
+  background: var(--color-bg-white);
   color: var(--color-text);
   outline: none;
   box-sizing: border-box;
@@ -184,11 +184,11 @@
 }
 
 .save-button:hover {
-  background: #ccc;
+  background: var(--color-bg-pressed);
 }
 
 .tool-button.toggled {
-  background-color: #ccc;
+  background-color: var(--color-bg-pressed);
 }
 
 .image-edit-props-widget {

@@ -50,8 +50,8 @@ export class CardNote extends Note {
             },
             geometry: [0, 0, 200, 100],
             style: {
-                background_color_role: 'primary',
-                color_role: 'onPrimary',
+                background_color_role: 'default',
+                color_role: 'onDefault',
             },
             created: currentTimestamp,
             modified: currentTimestamp,

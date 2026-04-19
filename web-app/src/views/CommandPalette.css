@@ -4,9 +4,9 @@
     left: 50%;
     transform: translateX(-50%);
     width: 30em;
-    background: white;
+    background: var(--color-bg-white);
     border: 1px solid var(--color-dark-border);
-    z-index: 2000;
+    z-index: var(--z-command-palette);
     box-sizing: border-box;
     font-size: 1.2rem;
 }
@@ -41,7 +41,7 @@
 
 .palette-subtitle {
     margin-left: auto;
-    color: #888;
+    color: var(--color-text-faded);
     font-size: 0.85em;
     white-space: nowrap;
     overflow: hidden;

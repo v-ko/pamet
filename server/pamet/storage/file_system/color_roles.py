@@ -14,13 +14,13 @@ log = get_logger(__name__)
 
 # Legacy (normalized 0..1) role mapping — must match the TS roleToRgbaMap
 LEGACY_ROLE_TO_RGBA_MAP = {
-    "primary": [0.0, 0.0, 1.0, 0.1],
-    "onPrimary": [0.0, 0.0, 1.0, 1.0],
-    "error": [1.0, 0.0, 0.0, 0.1],
-    "onError": [1.0, 0.0, 0.0, 1.0],
+    "default": [0.0, 0.0, 1.0, 0.1],
+    "onDefault": [0.0, 0.0, 1.0, 1.0],
+    "attention": [1.0, 0.0, 0.0, 0.1],
+    "onAttention": [1.0, 0.0, 0.0, 1.0],
     "success": [0.0, 1.0, 0.0, 0.1],
     "onSuccess": [0.0, 0.64, 0.235, 1.0],
-    "surfaceDim": [0.0, 0.0, 0.0, 0.1],
+    "neutral": [0.0, 0.0, 0.0, 0.1],
     "onSurface": [0.0, 0.0, 0.0, 1.0],
     "transparent": [0.0, 0.0, 0.0, 0.0],
 }

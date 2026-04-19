@@ -17,7 +17,7 @@
     border: 0.1rem solid var(--color-light-border);
     border-radius: var(--radius-sm);
     padding: var(--space-1);
-    background: #fff;
+    background: var(--color-bg-white);
     color: var(--color-text);
     font-size: var(--type-md);
     box-sizing: border-box;
@@ -92,7 +92,7 @@
     list-style: none;
     margin-top: 2px;
     padding: 0;
-    z-index: 1000;
+    z-index: var(--z-suggestion);
     max-height: 200px;
     overflow-y: auto;
     font-size: var(--type-md);

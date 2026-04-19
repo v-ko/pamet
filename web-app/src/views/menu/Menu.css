@@ -7,7 +7,7 @@
   box-shadow: var(--shadow-md);
   min-width: 180px;
   padding: 4px;
-  z-index: 10000;
+  z-index: var(--z-menu);
 }
 
 .MenuRoot.main {
