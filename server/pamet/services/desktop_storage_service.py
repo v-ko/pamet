@@ -28,7 +28,7 @@ class DesktopStorageService:
         self.status: DSSStatus = {"errors": {}, "backup_service": {}}
         self.status["errors"]["config_file_manager"] = {}
 
-        # Config store: holds UserSettings, MiscProperties, ProjectProperties
+        # Config store: holds UserSettings, DeviceState, ProjectProperties
         self._config_store = InMemoryStore()
         self._config_file_manager = ConfigFileManager(
             store=self._config_store,

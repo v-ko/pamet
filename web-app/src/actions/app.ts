@@ -62,7 +62,7 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    applyMiscConfig(state: AppViewState, deviceId: string | null, recentProjects: ProjectReference[]) {
+    applyDeviceState(state: AppViewState, deviceId: string | null, recentProjects: ProjectReference[]) {
         state.deviceId = deviceId;
         state.recentProjects = recentProjects;
     }

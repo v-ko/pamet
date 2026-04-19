@@ -16,7 +16,7 @@ class UserSettings(Entity):
 
 
 @entity_type
-class MiscProperties(Entity):
+class DeviceState(Entity):
     deviceId: str = ""
     recentProjects: list[dict[str, Any]] = attrs.Factory(list)
 

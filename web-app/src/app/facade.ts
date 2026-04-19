@@ -11,7 +11,7 @@ import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { OptimisticProjectSyncService } from "@/storage/OptimisticProjectSyncService";
 import { UserSettings } from "@/model/config/UserSettings";
-import { MiscProperties } from "@/model/config/MiscProperties";
+import { DeviceState } from "@/model/config/DeviceState";
 import { ProjectProperties } from "@/model/config/ProjectProperties";
 import { StorageService } from "fusion/storage/management/StorageService";
 import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
@@ -439,8 +439,8 @@ export class PametFacade extends PametStore {
     private _reduceConfigDelta(delta: Delta) {
         const state = this.appViewState;
         for (const entityId of delta.entityIds()) {
-            if (entityId === MiscProperties.SINGLETON_ID) {
-                appActions.applyMiscConfig(
+            if (entityId === DeviceState.SINGLETON_ID) {
+                appActions.applyDeviceState(
                     state,
                     this.getDeviceId() ?? null,
                     this.getRecentProjects(),
@@ -522,23 +522,23 @@ export class PametFacade extends PametStore {
         this.setUserData({ ...this.getUserData(), projects: projects.filter((p) => p.id !== projectId) });
     }
 
-    // MiscProperties accessors
+    // DeviceState accessors
     getDeviceId(): string | undefined {
-        const entity = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        const entity = this.appConfigStore.findOne({ id: DeviceState.SINGLETON_ID });
         if (!entity) return undefined;
-        const mp = entity as MiscProperties;
+        const mp = entity as DeviceState;
         return mp.deviceId;
     }
 
     setDeviceId(deviceId: string): void {
-        const existing = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        const existing = this.appConfigStore.findOne({ id: DeviceState.SINGLETON_ID });
         if (existing) {
-            const mp = existing as MiscProperties;
+            const mp = existing as DeviceState;
             mp.deviceId = deviceId;
             this.appConfigStore.updateOne(mp);
         } else {
-            const mp = new MiscProperties({
-                id: MiscProperties.SINGLETON_ID,
+            const mp = new DeviceState({
+                id: DeviceState.SINGLETON_ID,
                 parent_id: '',
                 deviceId: deviceId,
                 recentProjects: [],
@@ -548,20 +548,20 @@ export class PametFacade extends PametStore {
     }
 
     getRecentProjects(): ProjectReference[] {
-        const entity = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        const entity = this.appConfigStore.findOne({ id: DeviceState.SINGLETON_ID });
         if (!entity) return [];
-        return (entity as MiscProperties).recentProjects;
+        return (entity as DeviceState).recentProjects;
     }
 
     setRecentProjects(projects: ProjectReference[]): void {
-        const existing = this.appConfigStore.findOne({ id: MiscProperties.SINGLETON_ID });
+        const existing = this.appConfigStore.findOne({ id: DeviceState.SINGLETON_ID });
         if (existing) {
-            const mp = existing as MiscProperties;
+            const mp = existing as DeviceState;
             mp.recentProjects = projects;
             this.appConfigStore.updateOne(mp);
         } else {
-            const mp = new MiscProperties({
-                id: MiscProperties.SINGLETON_ID,
+            const mp = new DeviceState({
+                id: DeviceState.SINGLETON_ID,
                 parent_id: '',
                 recentProjects: projects,
             });

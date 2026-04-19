@@ -21,7 +21,7 @@ from pamet.desktop_app.config import CONFIG_DIR, USER_SETTINGS_DIR
 
 log = get_logger(__name__)
 
-MISC_PROPERTIES_PATH = CONFIG_DIR / "misc.json"
+DEVICE_STATE_PATH = CONFIG_DIR / "device-state.json"
 USER_SETTINGS_PATH = USER_SETTINGS_DIR / "settings.json"
 
 
@@ -51,7 +51,7 @@ class ConfigFileManager:
 
     Entity routing:
     - id == ``user-settings``       → ``{CONFIG}/user/settings.json``
-    - id == ``misc``                → ``{CONFIG}/misc.json``
+    - id == ``device-state``        → ``{CONFIG}/device-state.json``
     - id starts with ``project-props-`` → ``{repo_root}/.pamet/properties.json``
     """
 
@@ -112,7 +112,7 @@ class ConfigFileManager:
         """Return (path, entity_id) pairs for app-level config files."""
         files: list[tuple[Path, str]] = [
             (USER_SETTINGS_PATH, "user-settings"),
-            (MISC_PROPERTIES_PATH, "misc"),
+            (DEVICE_STATE_PATH, "device-state"),
         ]
         # We don't enumerate project files here — they're loaded on demand
         # when projects are tracked.  DSS can call load_project_properties()
@@ -148,8 +148,8 @@ class ConfigFileManager:
     def _resolve_path(self, entity_id: str) -> Path | None:
         if entity_id == "user-settings":
             return USER_SETTINGS_PATH
-        elif entity_id == "misc":
-            return MISC_PROPERTIES_PATH
+        elif entity_id == "device-state":
+            return DEVICE_STATE_PATH
         elif entity_id.startswith("project-props-"):
             if self._resolve_project_path is None:
                 log.warning(
@@ -208,8 +208,8 @@ def _read_config_entity(path: Path, entity_id: str):
         # Infer type from entity_id convention
         if entity_id == "user-settings":
             data["type_name"] = "UserSettings"
-        elif entity_id == "misc":
-            data["type_name"] = "MiscProperties"
+        elif entity_id == "device-state":
+            data["type_name"] = "DeviceState"
     return load_from_dict(data)
 
 

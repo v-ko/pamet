@@ -1,14 +1,14 @@
 import { Entity, EntityData, entityType } from "fusion/model/Entity"
 import { ProjectReference } from "@/model/Project";
 
-export interface MiscPropertiesData extends EntityData {
+export interface DeviceStateData extends EntityData {
     deviceId?: string;
     recentProjects?: ProjectReference[];
 }
 
-@entityType('MiscProperties')
-export class MiscProperties extends Entity<MiscPropertiesData> {
-    static readonly SINGLETON_ID = 'misc';
+@entityType('DeviceState')
+export class DeviceState extends Entity<DeviceStateData> {
+    static readonly SINGLETON_ID = 'device-state';
 
     get deviceId(): string | undefined { return this._data.deviceId; }
     set deviceId(value: string | undefined) { this._data.deviceId = value; }

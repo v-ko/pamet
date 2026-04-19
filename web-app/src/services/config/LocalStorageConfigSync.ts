@@ -7,7 +7,7 @@ import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
 
 // Import config entity types to ensure they're registered in the entity library
 import "@/model/config/UserSettings";
-import "@/model/config/MiscProperties";
+import "@/model/config/DeviceState";
 import "@/model/config/ProjectProperties";
 
 const log = getLogger('LocalStorageConfigSync');
