@@ -37,21 +37,6 @@ export const StringToArrowAnchorType: { [key: string]: ArrowAnchorOnNoteType } =
     'bottom_mid': ArrowAnchorOnNoteType.bottom_mid,
 };
 
-// export interface ArrowData extends PametElementData {
-//     tail_coords: PointData | null;
-//     head_coords: PointData | null;
-//     mid_point_coords: PointData[];
-//     head_note_id: string | null;
-//     tail_note_id: string | null;
-//     head_anchor: ArrowAnchorType;
-//     tail_anchor: ArrowAnchorType;
-//     color_role: string;
-//     line_type: ArrowLineType;
-//     line_thickness: number;
-//     line_function_name: ArrowFunctionName;
-//     head_shape: ArrowHeadShape;
-//     tail_shape: ArrowHeadShape;
-// }
 export interface EndPointProps {
     position: PointData | null;
     note_anchor_id: string | null;

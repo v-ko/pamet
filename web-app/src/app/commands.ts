@@ -414,9 +414,9 @@ class PametCommands {
 
 async function storeStateToClipboard() {
     // get the store state
-    let fdsState = pamet.frontendDomainStore.data()
+    let fdsState = pamet.currentProjectStore.data()
     // create a hash tree
-    let hashTree = await buildHashTree(pamet.frontendDomainStore)
+    let hashTree = await buildHashTree(pamet.currentProjectStore)
     // copy both to clipboard
     let nodes = Object.values(hashTree.nodes)
     let nodeData = nodes.map(node => node.data())

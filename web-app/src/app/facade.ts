@@ -62,10 +62,10 @@ export class PametFacade extends PametStore {
         throw new Error("Method not implemented.");
     }
     clear(): void {
-        this.frontendDomainStore.clear();
+        this.currentProjectStore.clear();
     }
 
-    _frontendDomainStore: InMemoryStore | null = null;
+    _currentProjectStore: InMemoryStore | null = null;
     private _projectSyncService: OptimisticProjectSyncService | null = null;
     private _appViewState: AppViewState | null = null;
     private _appConfigStore: InMemoryStore | null = null;
@@ -159,11 +159,11 @@ export class PametFacade extends PametStore {
         return this.projectStorageConfigFactory(projectId, userId, deviceId);
     }
 
-    get frontendDomainStore(): InMemoryStore {
-        if (!this._frontendDomainStore) {
-            throw Error('Frontend domain store not set');
+    get currentProjectStore(): InMemoryStore {
+        if (!this._currentProjectStore) {
+            throw Error('Current project store not set');
         }
-        return this._frontendDomainStore;
+        return this._currentProjectStore;
     }
 
     get projectSyncService(): OptimisticProjectSyncService {
@@ -355,7 +355,7 @@ export class PametFacade extends PametStore {
         }
 
         // Install the store and sync service
-        this._frontendDomainStore = store;
+        this._currentProjectStore = store;
         this._projectSyncService = syncService;
 
         // Hydrate from the storage service
@@ -379,7 +379,7 @@ export class PametFacade extends PametStore {
             return;
         }
 
-        this._frontendDomainStore = null;
+        this._currentProjectStore = null;
         this._projectSyncService = null;
         await this.storageService.unloadProject(currentProject.id).catch(
             (e) => {
@@ -672,23 +672,23 @@ export class PametFacade extends PametStore {
     }
 
     insertOne(entity: Entity<EntityData>): Change {
-        return this.frontendDomainStore.insertOne(entity);
+        return this.currentProjectStore.insertOne(entity);
     }
 
     updateOne(entity: Entity<EntityData>): Change {
-        return this.frontendDomainStore.updateOne(entity);
+        return this.currentProjectStore.updateOne(entity);
     }
 
     removeOne(entity: Entity<EntityData>): Change {
-        return this.frontendDomainStore.removeOne(entity);
+        return this.currentProjectStore.removeOne(entity);
     }
 
     find(filter: PametSearchFilter = {}): Generator<Entity<EntityData>> {
-        return this.frontendDomainStore.find(filter);
+        return this.currentProjectStore.find(filter);
     }
 
     findOne(filter: PametSearchFilter): Entity<EntityData> | undefined {
-        return this.frontendDomainStore.findOne(filter);
+        return this.currentProjectStore.findOne(filter);
     }
 
     // File CRUD methods
@@ -716,7 +716,7 @@ export class PametFacade extends PametStore {
 
     applyDelta(delta: Delta, origin?: string, skipIrrationalOperations: boolean = false): Delta {
         // onChange fires once for the whole batch via applyDelta
-        return this.frontendDomainStore.applyDelta(delta, origin, skipIrrationalOperations);
+        return this.currentProjectStore.applyDelta(delta, origin, skipIrrationalOperations);
     }
 }
 

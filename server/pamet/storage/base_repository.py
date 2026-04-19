@@ -15,7 +15,7 @@ class PametStore(Store):
     Provides typed CRUD convenience methods on top of the generic Store.
     Store methods are pure data operations that return Changes.
     Side effects (view updates, commit/save) belong in the concrete
-    runtime wrapper (like TS FrontendDomainStore).
+    runtime wrapper (like TS CurrentProjectStore).
     """
 
     def __init__(self) -> None:

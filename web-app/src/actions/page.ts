@@ -515,7 +515,7 @@ class PageActions {
 
     if (oldName !== undefined && oldName !== newName) {
       const updates = linkUpdatesForPageRename(
-        pamet.frontendDomainStore, newPageState.id, newName, newPageState.path
+        pamet.currentProjectStore, newPageState.id, newName, newPageState.path
       );
       for (const u of updates) {
         pamet.updateNote(u.updated);

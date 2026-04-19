@@ -112,7 +112,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
   const fetchFdsState = () => {
     try {
       console.log('Fetching FDS state');
-      const fdsData = pamet.frontendDomainStore.data();
+      const fdsData = pamet.currentProjectStore.data();
       setFdsState(fdsData);
     } catch (error) {
       console.error('Error fetching FDS state:', error);

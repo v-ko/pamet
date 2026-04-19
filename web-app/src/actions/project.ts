@@ -106,7 +106,7 @@ class ProjectActions {
 
   @action
   deletePageAndUpdateReferences(page: Page) {
-    const store = pamet.frontendDomainStore;
+    const store = pamet.currentProjectStore;
 
     // Compute all reference-fixup updates before mutating
     const imageUpdates = imageReassignmentUpdatesForPageDelete(store, page.id);
