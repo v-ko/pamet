@@ -17,32 +17,27 @@ from .utils import backup_file, new_id_for_legacy_note
 
 log = get_logger(__name__)
 
-V2_BACKUP_FOLDER_NAME = "__migration_backup_v2_to_v3__"
+V2_BACKUP_FOLDER_NAME = "__v2_legacy_pages_backup__"
 
 # Module-level state tracking for migration
 note_checksum_by_page_name: dict[str, int] = {}
 notes_by_page_name: dict[str, set[int]] = defaultdict(set)
 
 
-def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
-    """Migrate from V2 legacy Misli format (.misl) to V3 JSON format.
+def parse_v2_to_v3_dict(
+    misl_file_string: str,
+    page_name: str,
+) -> dict | None:
+    """Parse V2 legacy Misli format (.misl) text into a V3 page dict.
+
+    Pure in-memory transform — no filesystem access.
 
     Args:
-        file_path: Path to the .misl file to migrate
-        backup_folder: Folder to store backups of original files
+        misl_file_string: Contents of a .misl file
+        page_name: Stem of the file (used for state tracking / dedup)
 
     Returns:
-        Path to the created V3 .json file, or None if skipped (timeline file)
-
-    Handles:
-    - INI-like .misl file parsing
-    - Duplicate note ID resolution
-    - Property transformations (a→width, b→height, txt→text, etc.)
-    - Arrow/link extraction from embedded note properties
-    - Color format conversion (semicolon-separated to arrays)
-    - State tracking for verification
-
-    For detailed documentation see: pamet/wiki/migrations/v2-to-v3.md
+        V3 page dict with "notes" list, or None if this is a timeline file.
     """
     # Example V2 file structure:
     # [79367]
@@ -63,15 +58,10 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
     # l_CP_y=
     # tags=
 
-    file_path = Path(file_path)
-    page_name = file_path.stem
-
     # Initialize state tracking
     note_checksum_by_page_name[page_name] = 0
     if page_name not in notes_by_page_name:
         notes_by_page_name[page_name] = set()
-
-    misl_file_string = file_path.read_text()
 
     is_displayed_first_on_startup = False
     is_a_timeline_notefile = False
@@ -98,7 +88,7 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
         lines_left.append(line)
 
     if is_a_timeline_notefile:
-        return
+        return None
 
     # Extract groups
     notes = defaultdict(dict)
@@ -123,7 +113,10 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
             continue
 
         if "=" not in line:
-            raise Exception
+            raise Exception(
+                f"Expected key=value in page {page_name!r}, "
+                f"note [{current_note_id}], got: {line!r}"
+            )
 
         [key, value] = line.split("=", 1)
 
@@ -150,7 +143,10 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
         elif key in ["tags", "font_size", "t_mod", "t_made"]:
             pass
         else:
-            raise Exception
+            raise Exception(
+                f"Unknown key {key!r} in page {page_name!r}, "
+                f"note [{current_note_id}], value: {value!r}"
+            )
 
         notes[current_note_id][key] = value
 
@@ -185,8 +181,6 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
 
         if cp_xs and cp_ys:
             CPs = list(zip(cp_xs, cp_ys))
-            # # Clear empty ones
-            # CPs = [cp for cp in CPs if cp[0] and cp[1]]
             if len(to_ids) != len(CPs):
                 raise Exception(
                     f"Mismatch between link IDs and control points in note {note_id}"
@@ -211,6 +205,37 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
     page_dict: dict = {"notes": list(notes.values())}
     if is_displayed_first_on_startup:
         page_dict["is_displayed_first_on_startup"] = True
+
+    return page_dict
+
+
+def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
+    """Migrate from V2 legacy Misli format (.misl) to V3 JSON format.
+
+    Args:
+        file_path: Path to the .misl file to migrate
+        backup_folder: Folder to store backups of original files
+
+    Returns:
+        Path to the created V3 .json file, or None if skipped (timeline file)
+
+    Handles:
+    - INI-like .misl file parsing
+    - Duplicate note ID resolution
+    - Property transformations (a→width, b→height, txt→text, etc.)
+    - Arrow/link extraction from embedded note properties
+    - Color format conversion (semicolon-separated to arrays)
+    - State tracking for verification
+
+    For detailed documentation see: pamet/wiki/migrations/v2-to-v3.md
+    """
+    file_path = Path(file_path)
+    page_name = file_path.stem
+    misl_file_string = file_path.read_text()
+
+    page_dict = parse_v2_to_v3_dict(misl_file_string, page_name)
+    if page_dict is None:
+        return None
 
     new_path = file_path.with_suffix(".json")
     json_str = json.dumps(page_dict, indent=4, ensure_ascii=False)

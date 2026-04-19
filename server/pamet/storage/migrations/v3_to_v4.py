@@ -29,7 +29,7 @@ from .utils import backup_file, new_id_for_legacy_note
 
 log = get_logger(__name__)
 
-V3_BACKUP_FOLDER_NAME = "__migration_backup_v3_to_v4__"
+V3_BACKUP_FOLDER_NAME = "__v3_legacy_pages_backup__"
 
 # Constants
 TIME_FORMAT = "%d.%m.%Y %H:%M:%S"
@@ -181,7 +181,19 @@ def _serialize_v4_page(page: V4Page, notes: list[V4Note], arrows: list[V4Arrow])
     return json.dumps(page_dict, indent=4, ensure_ascii=False)
 
 
-def convert_v3_to_v4(json_path: str | Path, backup_folder: Path, repo_path: Path):
+def convert_v3_to_v4_in_memory(
+    page_name: str,
+    page_data: dict,
+) -> tuple[V4Page, list[V4Note], list[V4Arrow]]:
+    """Convert a V3 page dict to V4 structures, purely in memory.
+
+    Args:
+        page_name: The page name (used for ID generation and logging)
+        page_data: Parsed V3 JSON dict (must have "notes" key)
+
+    Returns:
+        (V4Page, list[V4Note], list[V4Arrow])
+    """
     # V3 example: {
     # "is_displayed_first_on_startup": true
     # "notes": [
@@ -207,13 +219,10 @@ def convert_v3_to_v4(json_path: str | Path, backup_folder: Path, repo_path: Path
     #     "x": 1,
     #     "y": -2.5}]}
 
-    json_path = Path(json_path)
-    page_data = json.loads(json_path.read_text())
-    notes_data = page_data.pop("notes")
+    notes_data = page_data.pop("notes") if "notes" in page_data else []
 
     # Create V4 page
-    page_id = get_new_id(json_path.stem)
-    page_name = json_path.stem
+    page_id = get_new_id(page_name)
     v3_note_checksum_by_page_name[page_name] = 0
 
     # Load the notes and arrows
@@ -479,7 +488,19 @@ def convert_v3_to_v4(json_path: str | Path, backup_folder: Path, repo_path: Path
         name=page_name,
         datetime_created=page_created_ts,
         datetime_modified=page_modified_ts,
-    )  # Calculate path and serialize
+    )
+
+    return page, notes, arrows
+
+
+def convert_v3_to_v4(json_path: str | Path, backup_folder: Path, repo_path: Path):
+    json_path = Path(json_path)
+    page_data = json.loads(json_path.read_text())
+    page_name = json_path.stem
+
+    page, notes, arrows = convert_v3_to_v4_in_memory(page_name, page_data)
+
+    # Calculate path and serialize
     new_path = _path_for_page(page, repo_path)
     new_path.parent.mkdir(parents=True, exist_ok=True)
 
