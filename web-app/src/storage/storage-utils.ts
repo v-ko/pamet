@@ -8,12 +8,11 @@ let log = getLogger('storage-utils');
 export const parsePametFileUrl: FileRequestParser = (storageService: StorageServiceActual, url: string): FileRequest | null => {
     const route = PametRoute.fromUrl(url);
 
-    if (route.fileItemId && route.projectId) {
+    if (route.filePath && route.projectId) {
         log.info(`Parsed file request from URL: ${url}`, route);
         return {
             projectId: route.projectId,
-            fileItemId: route.fileItemId,
-            fileItemContentHash: route.fileItemContentHash,
+            filePath: route.filePath,
         };
     }
 

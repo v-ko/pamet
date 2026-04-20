@@ -5,8 +5,6 @@ import { PametSearchFilter, PametStore } from "@/storage/PametStore";
 import { Entity, EntityData } from "fusion/model/Entity";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { ImageItem } from "fusion/model/ImageItem";
-import { FileItemMetadata } from "fusion/model/FileItem";
 import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
 import { PAMET_INMEMORY_STORE_CONFIG } from "@/storage/PametStore";
 import { OptimisticProjectSyncService } from "@/storage/OptimisticProjectSyncService";
@@ -699,26 +697,21 @@ export class PametFacade extends PametStore {
     }
 
     // File CRUD methods
-    async addFileToStore(blob: Blob, path: string, parentId: string, metadata: FileItemMetadata): Promise<ImageItem> {
+    async addFile(blob: Blob, path: string): Promise<{ hash: string, path: string }> {
         const currentProjectId = this.appViewState.currentProjectId;
         if (!currentProjectId) {
             throw new Error('No current project set');
         }
 
-        // Create the FileItem through the storage service
-        // This will handle blob storage and hash generation
-        const fileItemData = await this.storageService.addFile(currentProjectId, blob, path, parentId, metadata);
-
-        return new ImageItem(fileItemData);
+        return await this.storageService.addFile(currentProjectId, blob, path);
     }
-    async deleteFileFromStore(imageItem: ImageItem): Promise<void> {
+    async deleteFile(path: string): Promise<void> {
         const currentProjectId = this.appViewState.currentProjectId;
         if (!currentProjectId) {
             throw new Error('No current project set');
         }
 
-        // Remove the file item using the storage service
-        await this.storageService.removeFile(currentProjectId, imageItem.id, imageItem.contentHash);
+        await this.storageService.removeFile(currentProjectId, path);
     }
 
     applyDelta(delta: Delta, origin?: string, skipIrrationalOperations: boolean = false): Delta {
@@ -829,18 +822,6 @@ export function entityDeltaToViewModelReducer(appViewState: AppViewState, delta:
             if (element) {
                 // log.info('Adding view state for element', change.entityId, delta);
                 currentPageVS.addViewStateForElement(element as Note | Arrow);
-            }
-        }
-
-        // Process image item changes
-        const imageItem = pamet.imageItem(change.entityId);
-        if (imageItem) {
-            if (change.isDelete()) {
-                currentPageVS.fileUrlsByItemId.delete(imageItem.id);
-            } else {
-                // On create/update: always register the URL so notes on the
-                // current page can reference it (references may cross pages).
-                currentPageVS.addUrlForFileItem(imageItem);
             }
         }
     }

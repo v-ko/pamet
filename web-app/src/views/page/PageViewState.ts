@@ -14,8 +14,7 @@ import { ElementViewState as CanvasElementViewState } from "@/views/page/Element
 import { Size } from 'fusion/primitives/Size';
 import { Change } from 'fusion/model/Change';
 import { NoteEditViewState } from "@/views/note/NoteEditViewState";
-import { fileItemRoute } from '@/services/routing/PametRoute';
-import { ImageItem } from 'fusion/model/ImageItem';
+import { fileRoute } from '@/services/routing/PametRoute';
 import { createId } from 'fusion/util/base';
 
 let log = getLogger('PageViewState');
@@ -95,8 +94,8 @@ export class PageViewState {
     // Resize hover
     hoveredResizeNoteVS: NoteViewState | null = null;
 
-    // File items
-    fileUrlsByItemId: ObservableMap<string, string> = observable.map();
+    // File URLs keyed by relative file path
+    fileUrlsByPath: ObservableMap<string, string> = observable.map();
 
     // Debugging. It's for the RenderProfiler stuff. It might be unneded even for that (since state is mutable)
     renderId: number = 0; // Incremented on every render to force re-rendering
@@ -114,13 +113,8 @@ export class PageViewState {
         for (let note of notes) {
             this.addViewStateForElement(note);
 
-            if (note.content.image) {
-                let imageItem = pamet.imageItem(note.content.image.id);
-                if (!imageItem) {
-                    log.error('Image item not found for note', note.id);
-                    continue;
-                }
-                this.addUrlForFileItem(imageItem);
+            if (note.content.image?.path) {
+                this.addUrlForFilePath(note.content.image.path);
             }
         }
         for (let arrow of arrows) {
@@ -212,18 +206,18 @@ export class PageViewState {
         }
     }
 
-    addUrlForFileItem(imageItem: ImageItem) {
-        /* Adds a file item URL to the page view state.
-         * If the file item already exists, it will be overwritten.
+    addUrlForFilePath(filePath: string) {
+        /* Adds a file URL to the page view state keyed by path.
+         * If the path already exists, it will be overwritten.
          */
         const userId = pamet.appViewState.userId;
         const pametProjectId = pamet.appViewState.currentProjectId;
         if (!userId || !pametProjectId) {
-            log.error('Cannot add file item URL without userId or projectId');
+            log.error('Cannot add file URL without userId or projectId');
             return;
         }
-        const fileRoute = fileItemRoute(imageItem, userId, pametProjectId);
-        this.fileUrlsByItemId.set(imageItem.id, fileRoute.toRelativeReference());
+        const route = fileRoute(filePath, userId, pametProjectId);
+        this.fileUrlsByPath.set(filePath, route.toRelativeReference());
     }
 
     noteVS_anchorsForArrow(arrow: Arrow) {

@@ -10,7 +10,6 @@ import { PametTabIndex } from "@/app/constants";
 import "@/views/note/NoteEditView.css";
 import { ImageEditPropsWidget } from "@/views/note/edit-window/ImageEditPropsWidget";
 import { LinkEditWidget } from "@/views/note/edit-window/LinkEditWidget";
-import { ImageItem, ImageItemData } from 'fusion/model/ImageItem';
 import { extractImageDimensions } from 'fusion/util/media';
 import { NoteEditViewState } from "@/views/note/NoteEditViewState";
 import { Point2D } from 'fusion/primitives/Point2D';
@@ -46,7 +45,7 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
   const noteData = useRef(dumpToDict(state.targetNote) as SerializedNote);
   const committed = useRef(false);
-  const [uncommitedImage, setUncommitedImage] = useState<ImageItemData | null>(null);
+  const [uncommitedImagePath, setUncommitedImagePath] = useState<string | null>(null);
 
   // Initial toggle button positions
   const [textButtonToggled, setTextButtonToggled] = useState(() => {
@@ -138,12 +137,12 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
   useEffect(() => {
     return () => {
       // If the component unmounts and there's an uncommitted item, delete it
-      if (uncommitedImage && !committed.current) {
+      if (uncommitedImagePath && !committed.current) {
         const projectId = pamet.appViewState.currentProjectId;
         if (projectId) {
-          log.info('Cleaning up uncommitted image item on unmount:', uncommitedImage);
-          pamet.storageService.removeFile(projectId, uncommitedImage.id, uncommitedImage.content.hash)
-            .catch(err => log.error('Failed to clean up image item', err));
+          log.info('Cleaning up uncommitted image on unmount:', uncommitedImagePath);
+          pamet.storageService.removeFile(projectId, uncommitedImagePath)
+            .catch(err => log.error('Failed to clean up image', err));
         }
       }
     };
@@ -160,14 +159,13 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       throw new Error('No project loaded');
     }
 
-    if (uncommitedImage) {
+    if (uncommitedImagePath) {
       // The current image was added during this editing session and never saved.
       // Delete it from the store permanently since it was never committed.
-      await pamet.deleteFileFromStore(new ImageItem(uncommitedImage));
-      setUncommitedImage(null);
+      await pamet.deleteFile(uncommitedImagePath);
+      setUncommitedImagePath(null);
     }
     // If it's a previously saved image — we just clear the reference from the note.
-    // The FileItem entity is NOT deleted — it may be referenced by other notes/pages.
 
     // Clear the image from the note data state
     updateNoteData({ content: { ...noteData.current.content, image: undefined } });
@@ -195,25 +193,23 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       }, timeoutMs);
     });
 
-    const addFilePromise = pamet.storageService.addFile(
+    const uploadPromise = pamet.storageService.addFile(
       projectId,
       blob,
       path,
-      state.targetNote.parentId,
-      { width, height, size: blob.size, mime_type: blob.type }
     );
 
-    const newImageItem = await Promise.race([addFilePromise, timeoutPromise]) as ImageItemData;
+    const result = await Promise.race([uploadPromise, timeoutPromise]) as { hash: string, path: string };
 
-    // Clear the timer if addFile resolved first
+    // Clear the timer if upload resolved first
     clearTimeout(timeoutHandle!);
 
-    setUncommitedImage(newImageItem);
+    setUncommitedImagePath(result.path);
     updateNoteData({ content: { ...noteData.current.content, image: {
-      id: newImageItem.id,
-      path: newImageItem.path,
-      width: newImageItem.metadata.width,
-      height: newImageItem.metadata.height,
+      path: result.path,
+      width: width,
+      height: height,
+      hash: result.hash,
     } } });
   };
 
@@ -266,16 +262,15 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
 
     let note = loadFromDict(data) as Note;
     committed.current = true;
-    const addedMediaItem = uncommitedImage ? new ImageItem(uncommitedImage) : null;
 
     let currentPageVS = pamet.appViewState.currentPageViewState;
     if (!currentPageVS) {
       throw new Error('No current page view state found');
     }
-    pageActions.saveEditedNote(currentPageVS, note, addedMediaItem);
+    pageActions.saveEditedNote(currentPageVS, note);
 
     // On successful save, the media items are committed. Clear the state.
-    setUncommitedImage(null);
+    setUncommitedImagePath(null);
   };
 
   // Cancel and save operations
@@ -458,7 +453,6 @@ const NoteEditView: React.FC<EditComponentProps> = observer((
       <div className="main-content">
         {imageButtonToggled && <ImageEditPropsWidget
           noteData={noteData.current}
-          uncommitedMediaItem={uncommitedImage}
           setNoteImage={setNoteImage}
           removeNoteImage={removeNoteImage}
         />}

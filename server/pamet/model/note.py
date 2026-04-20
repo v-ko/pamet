@@ -23,10 +23,10 @@ log = get_logger(__name__)
 
 
 class ImageReference(TypedDict, total=False):
-    id: str
     path: str
     width: int
     height: int
+    hash: str
 
 
 class PageReference(TypedDict, total=False):

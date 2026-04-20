@@ -16,7 +16,6 @@ from pamet.desktop_app.config import (
     repo_settings_path,
 )
 from pamet.model.arrow import Arrow
-from pamet.model.file_item import FileItem
 from pamet.model.page import Page
 from pamet.services.backup import BackupService
 from pamet.services.constants import MAX_WALK_ENTRIES
@@ -112,8 +111,8 @@ class ProjectFolderManager:
                 title=self.repo_root.name,
             )
 
-        file_items = self._load_all_entities()
-        self.file_storage.rebuild_index(file_items)
+        self._load_all_entities()
+        self.file_storage.rebuild_index_from_store(self.store)
         log.info(
             "Loaded project %s from %s",
             self.project_id,
@@ -121,14 +120,8 @@ class ProjectFolderManager:
         )
         self.fs_watcher.start_watching()
 
-    def _load_all_entities(self) -> list[FileItem]:
-        """Read all .canvas files and populate the store.
-
-        Returns the loaded ``FileItem`` (and subclass) entities so the
-        caller can pass them to the file-storage index without a second
-        store scan.
-        """
-        file_items: list[FileItem] = []
+    def _load_all_entities(self) -> None:
+        """Read all .canvas files and populate the store."""
         for canvas_path in self._iter_canvas_page_paths():
             try:
                 entities = read_canvas_file(canvas_path, self.repo_root)
@@ -141,9 +134,6 @@ class ProjectFolderManager:
             self.failed_canvas_paths.discard(str(canvas_path))
             for entity in entities.values():
                 self.store.insert_one(entity)
-                if isinstance(entity, FileItem):
-                    file_items.append(entity)
-        return file_items
 
     def unload(self) -> None:
         self.backup_service.stop()
@@ -223,7 +213,6 @@ class ProjectFolderManager:
         page_dict: dict[str, Any],
         notes: list[dict[str, Any]],
         arrows: list[dict[str, Any]],
-        file_items: list[dict[str, Any]] | None = None,
     ) -> Path:
         """Assemble and write a .canvas file for the given page.
 
@@ -234,8 +223,6 @@ class ProjectFolderManager:
         file_data.pop("path", None)
         file_data["notes"] = notes
         file_data["arrows"] = arrows
-        if file_items:
-            file_data["file_items"] = file_items
         canvas_path = self.repo_root / page_path
         with self.write_lock:
             canvas_path.parent.mkdir(parents=True, exist_ok=True)
@@ -333,15 +320,12 @@ class ProjectFolderManager:
 
         notes: list[dict[str, Any]] = []
         arrows: list[dict[str, Any]] = []
-        file_items: list[dict[str, Any]] = []
 
         for child in self.store.find(parent_id=page_id):
             child_dict = dump_to_dict(child)
             if isinstance(child, Arrow):
                 arrows.append(child_dict)
-            elif isinstance(child, FileItem):
-                file_items.append(child_dict)
             else:
                 notes.append(child_dict)
 
-        self.write_page_canvas_file(page_path, page_dict, notes, arrows, file_items)
+        self.write_page_canvas_file(page_path, page_dict, notes, arrows)

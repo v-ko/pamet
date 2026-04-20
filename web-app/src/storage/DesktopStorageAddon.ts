@@ -6,7 +6,6 @@ import { stemFromPath } from '@/model/Page';
 import {
     linkUpdatesForPageRename,
     linkUpdatesForPageDelete,
-    imageReassignmentUpdatesForPageDelete,
 } from '@/model/correctness';
 import { buildRestApiAuthHeaders } from 'fusion/storage/rest-api/Auth';
 import type { DomainStoreAdapterArgs } from 'fusion/storage/domain-store-adapter/DomainStoreAdapter';
@@ -160,7 +159,7 @@ export class DesktopStorageAddon implements StorageAddon {
      * Enrich a raw FS delta with reference updates for page renames/deletes.
      *
      * The TS headStore still holds the pre-delta state, so we can query it
-     * to find CardNotes and ImageItems that need updating.
+     * to find CardNotes that need updating.
      */
     private _updateReferences(deltaData: DeltaData): DeltaData {
         const delta = new Delta(structuredClone(deltaData));
@@ -183,14 +182,10 @@ export class DesktopStorageAddon implements StorageAddon {
                         .map(u => Change.update(u.original, u.updated))
                 );
             } else if (change.isDelete()) {
-                // Page deleted — mark linking notes and reassign images
+                // Page deleted — mark linking notes
                 const pageName = stemFromPath(rev.path as string);
                 extraChanges.push(
                     ...linkUpdatesForPageDelete(headStore, change.entityId, pageName)
-                        .map(u => Change.update(u.original, u.updated))
-                );
-                extraChanges.push(
-                    ...imageReassignmentUpdatesForPageDelete(headStore, change.entityId)
                         .map(u => Change.update(u.original, u.updated))
                 );
             }

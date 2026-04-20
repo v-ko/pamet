@@ -6,7 +6,6 @@ import { OtherPageListNote } from "@/model/OtherPageListNote";
 import { ScriptNote } from "@/model/ScriptNote";
 import { Page } from "@/model/Page";
 import { Arrow } from "@/model/Arrow";
-import { ImageItem } from 'fusion/model/ImageItem';
 import { ScriptNoteCanvasView } from '@/views/note/ScriptNoteCanvasView';
 import { CardNoteCanvasView } from '@/views/note/CardNoteCanvasView';
 
@@ -21,7 +20,7 @@ export function registerEntityClasses(): void {
     // Ensure the imports are not tree-shaken by referencing them
     const entityClasses = [
         CardNote, OtherPageListNote, ScriptNote,
-        Page, Arrow, ImageItem, ScriptNoteCanvasView, CardNoteCanvasView
+        Page, Arrow, ScriptNoteCanvasView, CardNoteCanvasView
     ];
 
     log.info('Registered entity classes:', entityClasses.map(cls => cls.name));

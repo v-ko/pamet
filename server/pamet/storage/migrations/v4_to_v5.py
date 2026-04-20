@@ -5,8 +5,8 @@ Handles: composite ID flattening, color role conversion, note type unification,
 image metadata restructuring, internal URL rewrite, arrow endpoint restructuring,
 repo properties rename (`.pamet/settings.json` -> `.pamet/properties.json`).
 
-Image notes are migrated to page-scoped `ImageItem` entities embedded in the
-page payload.
+Image notes are migrated to inline image references with {path, hash, width, height}
+in the note content.
 
 The element migration logic mirrors the TypeScript tmpDynamicMigration in
 web-app/src/storage/DesktopImporter.ts.
@@ -17,13 +17,11 @@ Also has logic for migrating user settings and the backup folder
 import copy
 import hashlib
 import json
-import mimetypes
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from fusion.logging import get_logger
-from fusion.util import get_new_id
 from slugify import slugify
 
 from pamet.storage.canvas_html import write_canvas_file
@@ -301,7 +299,7 @@ def convert_v4_to_v5_element(
 
 
 # ---------------------------------------------------------------------------
-# Image → ImageItem migration helpers (no model dependency — plain dicts)
+# Image migration helpers (no model dependency — plain dicts)
 # ---------------------------------------------------------------------------
 
 
@@ -355,53 +353,14 @@ def _get_image_dimensions(file_path: Path) -> Tuple[int, int]:
         return img.size  # (width, height)
 
 
-def _guess_mime(file_path: Path) -> str:
-    mime, _ = mimetypes.guess_type(str(file_path))
-    return mime or "application/octet-stream"
-
-
-def _build_image_item_dict(
-    *,
-    file_path: Path,
-    rel_path: str,
-    parent_id: str,
-    width: int,
-    height: int,
-) -> Dict[str, Any]:
-    """Build a plain dict matching the ImageItem entity schema."""
-    content_hash = _compute_content_hash(file_path)
-    size = file_path.stat().st_size
-    mime = _guess_mime(file_path)
-
-    return {
-        "id": get_new_id(),
-        "parent_id": parent_id,
-        "type_name": "ImageItem",
-        "path": rel_path,
-        "content": {"hash": content_hash},
-        "metadata": {
-            "width": int(width),
-            "height": int(height),
-            "size": size,
-            "mimeType": mime,
-        },
-    }
-
-
 def _migrate_images_in_page(page_data: Dict[str, Any], repo_path: Path) -> None:
-    """Should be separate to dedupe image references"""
+    """Migrate image notes to inline references with {path, hash, width, height}."""
     page_id = page_data.get("id")
     if not page_id:
         return
     note_states = page_data.setdefault("notes", [])
-    file_items_states = page_data.setdefault("file_items", [])
-    existing_ids = {
-        fi.get("id")
-        for fi in file_items_states
-        if isinstance(fi, dict) and fi.get("type_name") == "ImageItem"
-    }
-    # Dedup: reuse the same ImageItem when multiple notes reference the same source file
-    image_item_by_source: Dict[Path, Dict[str, Any]] = {}
+    # Dedup: reuse the same inline ref when multiple notes reference the same source file
+    image_ref_by_source: Dict[Path, Dict[str, Any]] = {}
 
     for note in list(note_states):
         content = note.get("content")
@@ -416,9 +375,7 @@ def _migrate_images_in_page(page_data: Dict[str, Any], repo_path: Path) -> None:
                 content,
                 repo_path,
                 page_id,
-                file_items_states,
-                existing_ids,
-                image_item_by_source,
+                image_ref_by_source,
             )
         except Exception as exc:
             log.error(
@@ -438,9 +395,7 @@ def _migrate_single_image_note(
     content: Dict,
     repo_path: Path,
     page_id: str,
-    file_items_states: List,
-    existing_image_item_ids: set,
-    image_item_by_source: Dict[Path, Dict[str, Any]],
+    image_ref_by_source: Dict[Path, Dict[str, Any]],
 ) -> None:
     image_info = content["image"]
     original_url = image_info.pop("_original_url", None) or image_info.get("url", "")
@@ -476,18 +431,13 @@ def _migrate_single_image_note(
             content["text"] = error_text
         return
 
-    # Reuse existing ImageItem if the same source file was already processed
-    if file_path in image_item_by_source:
-        item_dict = image_item_by_source[file_path]
+    # Reuse existing inline ref if the same source file was already processed
+    if file_path in image_ref_by_source:
+        ref = image_ref_by_source[file_path]
         content.pop("image", None)
-        content["image"] = {
-            "id": item_dict["id"],
-            "path": item_dict["path"],
-            "width": item_dict["metadata"]["width"],
-            "height": item_dict["metadata"]["height"],
-        }
+        content["image"] = dict(ref)
         log.info(
-            f"  note {note['id']}: reusing ImageItem {item_dict['id']} "
+            f"  note {note['id']}: reusing image ref for {ref['path']} "
             f"(from: {original_url})"
         )
         return
@@ -537,33 +487,23 @@ def _migrate_single_image_note(
         width = int(v4_width)
         height = int(v4_height)
 
-    item_dict = _build_image_item_dict(
-        file_path=dest,
-        rel_path=rel_path,
-        parent_id=page_id,
-        width=width,
-        height=height,
-    )
-    if item_dict["id"] in existing_image_item_ids:
-        log.warning(f"  note {note['id']}: duplicate ImageItem id generated, skipping")
-        return
+    content_hash = _compute_content_hash(dest)
 
-    file_items_states.append(item_dict)
-    existing_image_item_ids.add(item_dict["id"])
-    image_item_by_source[file_path] = item_dict
-
-    # Rewrite the note
-    content.pop("image", None)
-    content["image"] = {
-        "id": item_dict["id"],
+    image_ref = {
         "path": rel_path,
         "width": width,
         "height": height,
+        "hash": content_hash,
     }
+    image_ref_by_source[file_path] = image_ref
+
+    # Rewrite the note with inline reference
+    content.pop("image", None)
+    content["image"] = dict(image_ref)
 
     log.info(
-        f"  note {note['id']}: created ImageItem {item_dict['id']} "
-        f"-> {rel_path} (from: {original_url})"
+        f"  note {note['id']}: migrated image -> {rel_path} "
+        f"(hash: {content_hash}, from: {original_url})"
     )
 
 
@@ -654,11 +594,6 @@ def convert_v4_to_v5_page_dict(
         result["arrows"] = [
             child for child in migrated_children if child.get("type_name") == "Arrow"
         ]
-        result["file_items"] = [
-            child
-            for child in migrated_children
-            if child.get("type_name") in ("FileItem", "ImageItem")
-        ]
         result.pop("children", None)
     else:
         all_notes = [
@@ -667,9 +602,6 @@ def convert_v4_to_v5_page_dict(
         ]
         result["notes"] = [
             n for n in all_notes if n.get("type_name") not in ("FileItem", "ImageItem")
-        ]
-        result["file_items"] = [
-            n for n in all_notes if n.get("type_name") in ("FileItem", "ImageItem")
         ]
         result["arrows"] = [
             convert_v4_to_v5_element(a, page_id, page_id_to_path, page_id_to_name)

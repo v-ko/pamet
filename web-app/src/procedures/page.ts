@@ -13,7 +13,6 @@ import { mapMimeTypeToFileExtension } from "fusion/util/base";
 import { CardNote } from "@/model/CardNote";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { ImageItem } from "fusion/model/ImageItem";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { dumpToDict, getEntityId, loadFromDict } from "fusion/model/Entity";
@@ -26,8 +25,7 @@ function preparePasteTransform(appViewState: AppViewState, state: PageViewState,
     const clipboard = appViewState.clipboard;
     const pageId = state.page().id;
 
-    // Split clipboard content by type (ImageItems on clipboard are ignored on
-    // same-project paste; notes keep their existing image references)
+    // Split clipboard content by type
     const clipboardNotes: Note[] = [];
     const clipboardArrows: Arrow[] = [];
     for (const e of clipboard) {
@@ -48,7 +46,7 @@ function preparePasteTransform(appViewState: AppViewState, state: PageViewState,
     const pasteOffset = util.snapVectorToGrid(relativeTo);
 
     // Notes: assign ids/parent, position.
-    // image references are preserved — the pasted note points to the same FileItem.
+    // image references are preserved — the pasted note keeps its image path.
     const notesToInsert: Note[] = [];
     for (const src of clipboardNotes) {
       const targetId = nextFreeIdOrSame(src.id);
@@ -123,20 +121,14 @@ export async function pasteInternal(
     const { notesToInsert, arrowsToInsert } = preparePasteTransform(appViewState, state, relativeTo);
 
     // Cross-project paste: if clipboard came from a different project,
-    // copy blobs into the current project and remap image refs on pasted notes.
+    // copy blobs into the current project and remap image paths on pasted notes.
     const currentProjectId = appViewState.currentProjectId;
     const sourceProjectId = appViewState.clipboardProjectId;
-    const newImageItems: ImageItem[] = [];
     if (currentProjectId && sourceProjectId && sourceProjectId !== currentProjectId) {
-        // Collect ImageItems from clipboard for lookup
-        const clipboardImageItems = new Map<string, ImageItem>();
-        for (const e of clipboard) {
-            if (e instanceof ImageItem) {
-                clipboardImageItems.set(e.id, e);
-            }
-        }
+        // Collect notes with images
+        const notesWithImages = notesToInsert.filter(n => n instanceof CardNote && n.content.image?.path);
 
-        if (clipboardImageItems.size > 0) {
+        if (notesWithImages.length > 0) {
             // Show loading dialog for cross-project file copy
             appActions.updateSystemDialogState(appViewState, {
                 title: 'Copying files from source project...',
@@ -147,38 +139,27 @@ export async function pasteInternal(
                 // Temporarily load the source project for file access
                 await pamet.storageService.loadProject(sourceProjectId, sourceConfig);
 
-                const imageIdRemap = new Map<string, string>(); // old image id -> new image id
-                for (const note of notesToInsert) {
-                    if (note instanceof CardNote && note.content.image) {
-                        const oldImageId = note.content.image.id;
-                        if (imageIdRemap.has(oldImageId)) {
-                            note.content.image = { ...note.content.image, id: imageIdRemap.get(oldImageId)! };
-                            continue;
-                        }
-                        const sourceImageItem = clipboardImageItems.get(oldImageId);
-                        if (!sourceImageItem) {
-                            log.warning(`Cross-project paste: ImageItem ${oldImageId} not on clipboard`);
+                const pathRemap = new Map<string, { path: string, hash: string }>(); // old path -> new {path, hash}
+                for (const note of notesWithImages) {
+                    if (note instanceof CardNote && note.content.image?.path) {
+                        const oldPath = note.content.image.path;
+                        if (pathRemap.has(oldPath)) {
+                            const remapped = pathRemap.get(oldPath)!;
+                            note.content.image = { ...note.content.image, path: remapped.path, hash: remapped.hash };
                             continue;
                         }
                         try {
-                            const blob = await pamet.storageService.getFile(
-                                sourceProjectId, sourceImageItem.id, sourceImageItem.contentHash
-                            );
-                            const newImageItem = await pamet.addFileToStore(
-                                blob, sourceImageItem.path, state.page().id,
-                                { width: sourceImageItem.width, height: sourceImageItem.height, size: blob.size, mime_type: blob.type }
-                            );
-                            imageIdRemap.set(oldImageId, newImageItem.id);
+                            const blob = await pamet.storageService.getFile(sourceProjectId, oldPath);
+                            const result = await pamet.addFile(blob, oldPath);
+                            pathRemap.set(oldPath, result);
                             note.content.image = {
-                                id: newImageItem.id,
-                                path: newImageItem.path,
-                                width: newImageItem.width,
-                                height: newImageItem.height,
+                                ...note.content.image,
+                                path: result.path,
+                                hash: result.hash,
                             };
-                            newImageItems.push(newImageItem);
-                            log.info(`Cross-project paste: remapped image ${oldImageId} -> ${newImageItem.id}`);
+                            log.info(`Cross-project paste: remapped image ${oldPath} -> ${result.path}`);
                         } catch (err) {
-                            log.error(`Cross-project paste: failed to copy file for image ${oldImageId}`, err);
+                            log.error(`Cross-project paste: failed to copy file for image ${oldPath}`, err);
                         }
                     }
                 }
@@ -193,7 +174,7 @@ export async function pasteInternal(
     }
 
     // Insert via action to update FDS and View state in one place
-    pageActions.pasteInternalAddElements(appViewState, state, notesToInsert, arrowsToInsert, newImageItems);
+    pageActions.pasteInternalAddElements(appViewState, state, notesToInsert, arrowsToInsert);
 }
 
 /**
@@ -240,17 +221,15 @@ export async function pasteInternal(
         if (!currentProjectId) {
             throw new Error('No current project set when pasting image');
         }
-        const imageItem = await pamet.addFileToStore(
+        const result = await pamet.addFile(
             finalImageBlob,
             imagePath,
-            pageId,
-            { width, height, size: finalImageBlob.size, mime_type: finalImageBlob.type },
         );
         note.content.image = {
-            id: imageItem.id,
-            path: imageItem.path,
-            width: imageItem.width,
-            height: imageItem.height,
+            path: result.path,
+            width,
+            height,
+            hash: result.hash,
         };
 
         // Configure note position and size
@@ -260,7 +239,7 @@ export async function pasteInternal(
         rect.setSize(size);
         note.setRect(rect);
 
-        pageActions.pasteSpecialAddElements([note], [imageItem]);
+        pageActions.pasteSpecialAddElements([note]);
 
         return position.add(new Point2D([0, size.y + AGU]));
 
@@ -315,7 +294,7 @@ export async function pasteSpecial(
                 rect.setSize(size);
                 note.setRect(rect);
 
-                pageActions.pasteSpecialAddElements([note], []);
+                pageActions.pasteSpecialAddElements([note]);
                 pasteAt = pasteAt.add(new Point2D([0, size.y + AGU]));
 
             } else if (item.type === 'image') {
@@ -362,8 +341,8 @@ export async function cutInternal(
     const pageId = state.page().id;
     const selectedNoteIds = new Set<string>(selectedNotes.map(n => n.id));
 
-    // 1) Prepare clipboard payload: notes/arrows with relative coords + trashed media for image notes
-    const clipboardEntities: (Note | Arrow | ImageItem)[] = [];
+    // 1) Prepare clipboard payload: notes/arrows with relative coords
+    const clipboardEntities: (Note | Arrow)[] = [];
 
     // Clone notes and shift to relative coordinates
     for (const note of selectedNotes) {
@@ -409,23 +388,11 @@ export async function cutInternal(
         clipboardEntities.push(cloned);
     }
 
-    // 2) Collect associated image items for clipboard reference (for display/re-reference on paste)
-    for (const note of selectedNotes) {
-        if (note instanceof CardNote && note.content.image) {
-            const imageItem = pamet.imageItem(note.content.image.id);
-            if (!imageItem) {
-                log.warning(`Cut: image item ${note.content.image.id} not found for note ${note.id}`);
-                continue;
-            }
-            clipboardEntities.push(imageItem); // Keep metadata on clipboard for reference
-        }
-    }
-
     // Place payload on internal clipboard
     appViewState.clipboard = clipboardEntities;
     appViewState.clipboardProjectId = appViewState.currentProjectId;
 
-    // 3) Compute elements to remove from the document
+    // 2) Compute elements to remove from the document
     // Notes: exactly the selected notes
     const notesForRemoval = selectedNotes;
 
@@ -444,6 +411,6 @@ export async function cutInternal(
         }
     }
 
-    // 4) Apply removals — only notes and arrows. FileItems are project-level and kept intact.
+    // 3) Apply removals — only notes and arrows.
     pageActions.cutRemoveElements(appViewState as any, state, notesForRemoval, arrowsForRemoval);
 }

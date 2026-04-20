@@ -5,10 +5,10 @@ import { textRect } from "@/views/note/util";
 import { entityType } from "fusion/model/Entity";
 
 export interface ImageReference {
-    id: string;
     path: string;
     width: number;
     height: number;
+    hash: string;
 }
 
 export interface PageReference {

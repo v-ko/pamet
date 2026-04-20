@@ -10,7 +10,6 @@ import { GlobalSearchViewState } from "@/views/search/GlobalSearchViewState";
 import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { ImageItem } from "fusion/model/ImageItem";
 import { StorageServiceRuntimeState, createInitialStorageServiceRuntimeState } from "fusion/storage/management/StorageService";
 
 
@@ -66,7 +65,7 @@ export class AppViewState {
   globalSearchViewState: GlobalSearchViewState | null = null;
 
   // Internal clipboard for copy/cut/paste (entities stored with relative coordinates)
-  clipboard: (Note | Arrow | ImageItem)[] = [];
+  clipboard: (Note | Arrow)[] = [];
   // The project ID the clipboard entities originate from (for cross-project paste)
   clipboardProjectId: string | null = null;
 

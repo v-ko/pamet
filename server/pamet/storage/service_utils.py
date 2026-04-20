@@ -61,7 +61,6 @@ def read_canvas_file(canvas_path: Path, repo_root: Path) -> dict[str, Entity]:
 
     notes = page_data.pop("notes", [])
     arrows = page_data.pop("arrows", [])
-    file_items = page_data.pop("file_items", [])
 
     # Infer path from file location, strip any serialized path/name
     page_data.pop("path", None)
@@ -73,7 +72,7 @@ def read_canvas_file(canvas_path: Path, repo_root: Path) -> dict[str, Entity]:
     # Page entity
     entities[page_id] = load_from_dict(page_data)
 
-    for child_dict in (*notes, *arrows, *file_items):
+    for child_dict in (*notes, *arrows):
         child_id = child_dict.get("id")
         if child_id:
             entities[child_id] = load_from_dict(child_dict)

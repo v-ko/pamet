@@ -11,7 +11,7 @@ import { DEFAULT_FONT_STRING } from "@/app/constants";
 import { textRect, imageGeometryToFitAre } from "@/views/note/util";
 import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
-import { fileItemRoute } from "@/services/routing/PametRoute";
+import { fileRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('NoteCanvasView');
 
@@ -112,16 +112,9 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
         let note = this.noteViewState.note();
         let noteRect = note.rect();
-        if (!note.content.image) {
+        if (!note.content.image?.path) {
             // Display error text instead
             let textLayout = calculateTextLayout('Image not set', textRect(noteRect), DEFAULT_FONT_STRING)
-            this.drawText(context, textLayout);
-            return;
-        }
-
-        const imageItem = pamet.imageItem(note.content.image.id);
-        if (!imageItem) {
-            let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
             return;
         }
@@ -132,9 +125,9 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             log.error('Cannot draw image: userId or projectId is undefined');
             return;
         }
-        let fileRoute = fileItemRoute(imageItem, userId, projectId);
+        let route = fileRoute(note.content.image.path, userId, projectId);
 
-        let image = this.renderer.getImage(fileRoute.toRelativeReference());
+        let image = this.renderer.getImage(route.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = '(image element missing)';

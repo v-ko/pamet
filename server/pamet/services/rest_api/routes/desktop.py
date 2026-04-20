@@ -12,7 +12,6 @@ from fastapi import (
     Body,
     Depends,
     File,
-    Form,
     HTTPException,
     Request,
     UploadFile,
@@ -314,61 +313,55 @@ def apply_changes(project_id: str, payload: dict = Body(...)):
 
 
 @desktop_router.post(
-    "/desktop/projects/{project_id}/files/{file_item_id}",
+    "/desktop/projects/{project_id}/files/{file_path:path}",
     dependencies=[Depends(require_desktop_auth)],
 )
 async def upload_file(
     project_id: str,
-    file_item_id: str,
-    content_hash: str = Form(...),
-    path: str = Form(...),
+    file_path: str,
     file: UploadFile = File(...),
 ):
-    _validate_id(file_item_id, "file_item_id")
-    _validate_id(content_hash, "content_hash")
-    raw = path.strip()
+    raw = file_path.strip()
     if not raw:
         raise HTTPException(status_code=400, detail="File path is required")
     rel = PurePosixPath(raw)
     if rel.is_absolute() or ".." in rel.parts:
-        raise HTTPException(status_code=400, detail=f"Invalid file path: {path}")
+        raise HTTPException(status_code=400, detail=f"Invalid file path: {file_path}")
 
     pfm = _project_runtime(project_id)
     data = await file.read()
     try:
-        pfm.file_storage.add(rel, data)
+        content_hash = pfm.file_storage.add(rel, data)
     except (ValueError, FileExistsError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"ok": True}
+    return {"ok": True, "hash": content_hash, "path": raw}
 
 
 @desktop_router.get(
-    "/desktop/projects/{project_id}/files/{file_item_id}/content",
+    "/desktop/projects/{project_id}/files/{file_path:path}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def get_file_item_content(
+async def get_file_content(
     project_id: str,
-    file_item_id: str,
+    file_path: str,
 ):
-    _validate_id(file_item_id, "file_item_id")
     pfm = _project_runtime(project_id)
-    path = pfm.file_storage.find_path(file_item_id)
+    path = pfm.file_storage.get_path(file_path)
     if path is None:
-        raise HTTPException(status_code=404, detail="File item not found")
+        raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path)
 
 
 @desktop_router.delete(
-    "/desktop/projects/{project_id}/files/{file_item_id}",
+    "/desktop/projects/{project_id}/files/{file_path:path}",
     dependencies=[Depends(require_desktop_auth)],
 )
-async def delete_file_item(
+async def delete_file(
     project_id: str,
-    file_item_id: str,
+    file_path: str,
 ):
-    _validate_id(file_item_id, "file_item_id")
     pfm = _project_runtime(project_id)
-    deleted = pfm.file_storage.remove(file_item_id)
+    deleted = pfm.file_storage.remove_by_path(file_path)
     if not deleted:
-        raise HTTPException(status_code=404, detail="File item not found")
+        raise HTTPException(status_code=404, detail="File not found")
     return {"ok": True}

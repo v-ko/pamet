@@ -1,4 +1,3 @@
-import { FileItem } from "fusion/model/FileItem";
 import { getLogger } from "fusion/logging";
 
 let log = getLogger('PametRoute');
@@ -30,9 +29,8 @@ export class PametRoute {
     viewportEyeHeight?: number = undefined;
     focusedNoteId?: string = undefined;
 
-    // File item specific
-    fileItemId?: string = undefined;
-    fileItemContentHash?: string = undefined;
+    // File specific
+    filePath?: string = undefined;
 
     constructor(props?: Partial<PametRoute>) {
         if (props) {
@@ -45,10 +43,9 @@ export class PametRoute {
             const pageId = subProjectParts[1];
             this.pageId = pageId;
         } else if (subProjectParts[0] == 'files') {
-            // File item route  like /files/{fileItemId}#{fileItemContentHash}
-            const fileItemId = subProjectParts[1];
-            this.fileItemId = fileItemId;
-            // Later we can add /media/path/MEDIA_PATH#hash for more readable urls
+            // File route like /files/path/to/image.png
+            const filePath = subProjectParts.slice(1).join('/');
+            this.filePath = filePath;
         }
     }
 
@@ -109,9 +106,6 @@ export class PametRoute {
         const hash = url_.hash;
         if (hash.startsWith('#note=')) {
             route.focusedNoteId = decodeURIComponent(hash.substring(6));
-        } else if (route.fileItemId && hash.length >= 2) {
-            // If file item id is set, the hash should be the content hash
-            route.fileItemContentHash = decodeURIComponent(hash.substring(1));
         }
 
         return route;
@@ -170,22 +164,19 @@ export class PametRoute {
 }
 
 export function toProjectScopedRelativeReference(route: PametRoute): string {
-    // same as the tuUrlPath logic but for the subpath after project
+    // same as the toUrlPath logic but for the subpath after project
     let path = '/';
 
     if (route.pageId && route.pageId.length === 8) {
         path += `page/${encodeURIComponent(route.pageId)}`;
-    } else if (route.fileItemId) {
-        // For file items, projectId is required for routing context
-        // (even though the actual file store keys don't include it)
+    } else if (route.filePath) {
+        // For files, projectId is required for routing context
         if (!route.projectId) {
-            throw new Error(`File item routes require projectId. Got projectId: ${route.projectId}`);
+            throw new Error(`File routes require projectId. Got projectId: ${route.projectId}`);
         }
-        path += `files/${encodeURIComponent(route.fileItemId)}`;
-        if (route.fileItemContentHash) {
-            path += `#${encodeURIComponent(route.fileItemContentHash)}`;
-        }
-        return path; // Return early for file items, no search params or note hash
+        const encodedPath = route.filePath.split('/').map(encodeURIComponent).join('/');
+        path += `files/${encodedPath}`;
+        return path; // Return early for files, no search params or note hash
     }
 
     let search = '';
@@ -202,13 +193,12 @@ export function toProjectScopedRelativeReference(route: PametRoute): string {
     return path + search + hash;
 }
 
-// Get the project-scoped URL for this file item
-export function fileItemRoute(fileItem: FileItem, userId: string, projectId: string): PametRoute {
+// Get the project-scoped URL for a file path
+export function fileRoute(filePath: string, userId: string, projectId: string): PametRoute {
     let route = new PametRoute({
         userId: userId,
         projectId: projectId,
-        fileItemId: fileItem.id,
-        fileItemContentHash: fileItem.contentHash,
+        filePath: filePath,
     });
     return route
 }

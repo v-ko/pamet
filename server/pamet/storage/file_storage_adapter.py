@@ -6,40 +6,42 @@ Composed into ``ProjectFolderManager`` as ``pfm.file_storage``.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from pathlib import Path, PurePosixPath
 
 from fusion.logging import get_logger
 
-from pamet.model.file_item import FileItem
+from pamet.model.note import Note
 from pamet.storage.file_index import FileIndex
-from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 
 log = get_logger(__name__)
 
 
 class FileStorageAdapter:
-    """Blob storage for FileItem entities within a project repo."""
+    """Blob storage for media files within a project repo."""
 
-    def __init__(self, repo_root: Path, store: PametInMemoryStore) -> None:
+    def __init__(self, repo_root: Path, store) -> None:
         self._repo_root = repo_root
         self._store = store
         self._index = FileIndex(repo_root / ".pamet" / "file-index.db")
 
     # -- Lifecycle -------------------------------------------------------------
 
-    def rebuild_index(self, file_items: Iterable[FileItem]) -> None:
-        """Rebuild the content-hash index for the given *file_items*."""
+    def rebuild_index_from_store(self, store) -> None:
+        """Rebuild the content-hash index from image paths referenced in notes."""
         referenced: dict[str, Path] = {}
-        for fi in file_items:
-            rel = fi.path
-            if not rel:
+        for entity in store.find():
+            if not isinstance(entity, Note):
                 continue
+            image_ref = getattr(entity, "content", {}).get("image")
+            if not image_ref or not image_ref.get("path"):
+                continue
+            rel = image_ref["path"]
             try:
                 abs_path = self._resolve_path(PurePosixPath(rel))
             except ValueError:
                 continue
-            referenced[rel] = abs_path
+            if abs_path.exists():
+                referenced[rel] = abs_path
         self._index.rebuild(referenced)
 
     def close(self) -> None:
@@ -62,41 +64,44 @@ class FileStorageAdapter:
         self,
         relative_path: PurePosixPath,
         data: bytes,
-    ) -> None:
+    ) -> str:
         """Write a file blob at the project-relative path.
 
         Raises ``FileExistsError`` if a file already exists at that path.
+        Returns the content hash.
         """
         dest = self._resolve_path(relative_path)
         if dest.exists():
             raise FileExistsError(f"File already exists at {relative_path}")
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(data)
-        self._index.put(relative_path.as_posix(), dest)
+        return self._index.put(relative_path.as_posix(), dest)
 
-    def find_path(self, file_item_id: str) -> Path | None:
-        """Resolve the on-disk path for a FileItem.
+    def get_path(self, relative_path: str) -> Path | None:
+        """Resolve the on-disk path for a project-relative path.
 
-        Returns ``None`` if the entity is missing, has no path,
-        or the file doesn't exist on disk.
+        Returns ``None`` if the file doesn't exist on disk.
         """
-        entity = self._store.find_one(id=file_item_id)
-        if entity is None:
+        try:
+            path = self._resolve_path(PurePosixPath(relative_path))
+        except ValueError:
             return None
-        rel_path = getattr(entity, "path", None)
-        if not isinstance(rel_path, str) or not rel_path:
-            return None
-        path = self._resolve_path(PurePosixPath(rel_path))
         if not path.exists():
             return None
         return path
 
-    def remove(self, file_item_id: str) -> bool:
-        """Delete a file blob from disk. Returns ``True`` if deleted."""
-        path = self.find_path(file_item_id)
-        if path is None:
+    def get_hash(self, relative_path: str) -> str | None:
+        """Return the cached content hash for a project-relative path."""
+        return self._index.get_hash(relative_path)
+
+    def remove_by_path(self, relative_path: str) -> bool:
+        """Delete a file blob from disk by path. Returns ``True`` if deleted."""
+        try:
+            path = self._resolve_path(PurePosixPath(relative_path))
+        except ValueError:
             return False
-        rel_path = path.relative_to(self._repo_root).as_posix()
+        if not path.exists():
+            return False
         path.unlink()
-        self._index.remove(rel_path)
+        self._index.remove(relative_path)
         return True

@@ -11,7 +11,6 @@ import { CardNote } from "@/model/CardNote";
 import { CANVAS_EXT } from "@/app/constants";
 import {
     linkUpdatesForPageDelete,
-    imageReassignmentUpdatesForPageDelete,
 } from '@/model/correctness';
 
 
@@ -109,13 +108,7 @@ class ProjectActions {
     const store = pamet.currentProjectStore;
 
     // Compute all reference-fixup updates before mutating
-    const imageUpdates = imageReassignmentUpdatesForPageDelete(store, page.id);
     const linkUpdates = linkUpdatesForPageDelete(store, page.id, page.name);
-
-    // Apply image reassignments
-    for (const u of imageUpdates) {
-      pamet.updateOne(u.updated);
-    }
 
     // Delete the page and its contents
     pamet.removePageWithChildren(page);

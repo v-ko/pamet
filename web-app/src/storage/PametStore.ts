@@ -1,4 +1,3 @@
-import { ImageItem } from 'fusion/model/ImageItem';
 import { Change } from 'fusion/model/Change'
 import { Store, SearchFilter } from 'fusion/storage/domain-store/BaseStore'
 import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'fusion/storage/domain-store/InMemoryStore'
@@ -12,7 +11,7 @@ export const PAMET_INMEMORY_STORE_CONFIG: readonly IndexConfig[] = [
     {
         name: "type_id",
         fields: [
-            { indexKey: ENTITY_TYPE_INDEX_KEY, allowedTypes: ['Page', 'Note', 'Arrow', 'ImageItem'] },
+            { indexKey: ENTITY_TYPE_INDEX_KEY, allowedTypes: ['Page', 'Note', 'Arrow'] },
             { indexKey: 'id' }
         ],
         isUnique: true
@@ -25,7 +24,7 @@ export const PAMET_INMEMORY_STORE_CONFIG: readonly IndexConfig[] = [
     {
         name: "type_parentId",
         fields: [
-            { indexKey: ENTITY_TYPE_INDEX_KEY, allowedTypes: ['Page', 'Note', 'Arrow', 'ImageItem'] },
+            { indexKey: ENTITY_TYPE_INDEX_KEY, allowedTypes: ['Page', 'Note', 'Arrow'] },
             { indexKey: 'parentId' }
         ],
         isUnique: false
@@ -48,7 +47,7 @@ export const PAMET_INMEMORY_STORE_CONFIG: readonly IndexConfig[] = [
 ];
 
 export interface PametSearchFilter extends SearchFilter {
-    type?: new (...args: any[]) => Page | Note | Arrow | ImageItem;
+    type?: new (...args: any[]) => Page | Note | Arrow;
     path?: string;
     hasInternalPageLink?: boolean;
     hasExternalPageLink?: boolean;
@@ -128,8 +127,4 @@ export abstract class PametStore extends Store {
         return this.findOne({id: arrow_id}) as Arrow | undefined
     }
 
-    // ImageItem CRUD
-    imageItem(id: string): ImageItem | undefined {
-        return this.findOne({ id: id, type: ImageItem }) as ImageItem | undefined
-    }
 }

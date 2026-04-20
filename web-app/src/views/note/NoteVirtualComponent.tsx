@@ -29,8 +29,8 @@ export const NoteVirtualComponent = observer(({ noteViewState, controller }: Not
 
   // Per-note hidden image element to drive image loading lifecycle.
   // When the image loads, invalidate this note's cache and request a re-render.
-  const imageId = noteViewState.note().content.image?.id;
-  const url = imageId ? noteViewState.pageViewState.fileUrlsByItemId.get(imageId) : undefined;
+  const imagePath = noteViewState.note().content.image?.path;
+  const url = imagePath ? noteViewState.pageViewState.fileUrlsByPath.get(imagePath) : undefined;
 
   if (!url) {
     return null;

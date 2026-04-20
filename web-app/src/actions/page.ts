@@ -14,15 +14,13 @@ import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { Arrow } from "@/model/Arrow";
 import { ArrowViewState } from "@/views/arrow/ArrowViewState";
-import { Page } from "@/model/Page";
-import { ImageItem } from "fusion/model/ImageItem";
 import { NoteEditViewState } from "@/views/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
 import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { AppViewState } from "@/views/AppViewState";
-import { FileItem } from "fusion/model/FileItem";
+import { Page } from "@/model/Page";
 
 
 let log = getLogger('MapActions');
@@ -322,7 +320,7 @@ class PageActions {
   }
 
   @action
-  saveEditedNote(state: PageViewState, note: Note, addedFileItem: FileItem | null) {
+  saveEditedNote(state: PageViewState, note: Note) {
     const editWS = state.noteEditWindowState;
     if (!editWS) {
       throw new Error('saveEditedNote called without noteEditWindowState');
@@ -332,9 +330,6 @@ class PageActions {
     if (!projectId) {
       throw new Error('No project loaded');
     }
-
-    // FileItems are NOT removed when an image is replaced on a note — they may
-    // be referenced by other notes/pages.
 
     // Save the note
     if (editWS.creatingNote) {
@@ -350,9 +345,9 @@ class PageActions {
       pamet.updateNote(note);
     }
 
-    // Handle file item changes
-    if (addedFileItem) {
-      pamet.insertOne(addedFileItem);
+    // Register file URL for the image if present
+    if (note.content.image?.path) {
+      state.addUrlForFilePath(note.content.image.path);
     }
 
     state.noteEditWindowState = null;
@@ -468,8 +463,7 @@ class PageActions {
       pamet.removeArrow(arrow);
     }
 
-    // FileItems are NOT removed when notes are deleted — they may be referenced
-    // by other notes. Orphan cleanup is handled at page-delete boundaries.
+    // Files are NOT removed when notes are deleted — orphan cleanup is handled separately.
     this.clearSelection(state);
   }
 
@@ -524,12 +518,7 @@ class PageActions {
   }
 
   @action({ issuer: 'paste-special-procedure' })
-  pasteSpecialAddElements(notes: Note[], fileItems: FileItem[]) {
-    // Add new file items via facade
-    for (let fileItem of fileItems) {
-      pamet.insertOne(fileItem);
-    }
-
+  pasteSpecialAddElements(notes: Note[]) {
     // Add new notes via facade
     for (let note of notes) {
       pamet.insertNote(note);
@@ -541,20 +530,15 @@ class PageActions {
     appViewState: AppViewState,
     state: PageViewState,
     notes: Note[],
-    arrows: Arrow[],
-    fileItems: FileItem[] = []) {
+    arrows: Arrow[]) {
 
-    // Insert new FileItems (e.g. from cross-project paste) into the domain store
-    for (let fileItem of fileItems) {
-      pamet.insertOne(fileItem);
-    }
     for (let note of notes) {
       pamet.insertNote(note);
     }
     for (let arrow of arrows) {
       pamet.insertArrow(arrow);
     }
-    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows,', fileItems.length, 'file items');
+    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows');
     // Clear selection
     this.clearSelection(state);
   }
@@ -574,7 +558,7 @@ class PageActions {
     for (let note of notes) {
       pamet.removeNote(note);
     }
-    // FileItems are NOT removed on cut; the clipboard keeps references for paste.
+    // Files are NOT removed on cut; the clipboard keeps references for paste.
 
     // Clear selection after cut
     this.clearSelection(state);
@@ -612,7 +596,7 @@ class PageActions {
       return;
     }
 
-    const clipboardEntities: (Note | Arrow | ImageItem)[] = [];
+    const clipboardEntities: (Note | Arrow)[] = [];
 
     // Clone and transform notes to relative coordinates
     for (const note of selectedNotes) {
@@ -648,18 +632,6 @@ class PageActions {
       cloned.replaceMidpoints(mids);
 
       clipboardEntities.push(cloned);
-    }
-
-    // Include associated file items for image notes (1-1 with notes; no dedup required)
-    for (const note of selectedNotes) {
-      if (note instanceof CardNote && note.content.image) {
-        const imageItem = pamet.imageItem(note.content.image.id);
-        if (imageItem) {
-          clipboardEntities.push(imageItem);
-        } else {
-          log.warning(`Image item ${note.content.image.id} not found for note ${note.id}`);
-        }
-      }
     }
 
     appViewState.clipboard = clipboardEntities;

@@ -29,7 +29,6 @@ from fusion.logging import get_logger
 from fusion.util import current_time, timestamp
 
 from pamet.model.arrow import Arrow
-from pamet.model.file_item import FileItem
 from pamet.model.page import Page
 from pamet.storage.canvas_html import dump_canvas_html
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
@@ -230,14 +229,11 @@ class BackupService:
         page_dict = dump_to_dict(page)
         notes: list[dict] = []
         arrows: list[dict] = []
-        file_items: list[dict] = []
 
         for child in self.store.find(parent_id=page_id):
             child_dict = dump_to_dict(child)
             if isinstance(child, Arrow):
                 arrows.append(child_dict)
-            elif isinstance(child, FileItem):
-                file_items.append(child_dict)
             else:
                 notes.append(child_dict)
 
@@ -245,8 +241,6 @@ class BackupService:
         file_data.pop("path", None)
         file_data["notes"] = notes
         file_data["arrows"] = arrows
-        if file_items:
-            file_data["file_items"] = file_items
 
         return dump_canvas_html(file_data)
 
