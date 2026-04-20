@@ -166,6 +166,7 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     import pamet
     import pamet.commands  # noqa: F401 — triggers @command registrations
     from pamet import desktop_app
+    from pamet.actions.app import open_tab
     from pamet.desktop_app.app import DesktopApp
     from pamet.desktop_app.init_config import setup_fonts_and_icons
     from pamet.services.desktop_storage_service import DesktopStorageService
@@ -214,6 +215,7 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
         initial_project_url = f"{endpoint_url.rstrip('/')}/{LOCAL_USER_ID}/{project_id}"
 
     # Create the QML app window
+    from PySide6.QtCore import QTimer
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuickControls2 import QQuickStyle
 
@@ -227,7 +229,7 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     )
 
     engine = QQmlApplicationEngine()
-    engine.rootContext().setContextProperty("state", view_state)
+    engine.rootContext().setContextProperty("appState", view_state)
     engine.rootContext().setContextProperty("backend", qml_backend)
 
     qml_path = (
@@ -244,6 +246,9 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     title_bar_height = 42  # must match header height in AppWindow.qml
     dbl_filter = TitleBarDoubleClickFilter(window, title_bar_height)
     window.installEventFilter(dbl_filter)
+
+    # Open the initial tab deferred so QML Repeater bindings are wired
+    QTimer.singleShot(0, lambda: open_tab(view_state, initial_project_url, True))
 
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")

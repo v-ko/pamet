@@ -8,10 +8,7 @@ from uuid import uuid4
 
 from fusion.libs.action import action
 
-from pamet.views.app_window.view_state import (
-    AppWindowViewState,
-    _Tab,
-)
+from pamet.views.app_window.view_state import AppWindowViewState, _Tab
 
 # # Old qt_widgets close_tab (uses widgets-era .tabs / .remove_tab API)
 # @action("window.close_tab")

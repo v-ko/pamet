@@ -12,7 +12,7 @@ ApplicationWindow {
     flags: Qt.FramelessWindowHint | Qt.Window
     visibility: Window.Maximized
 
-    // `state` and `backend` are set via QQmlContext.setContextProperty from Python
+    // `appState` and `backend` are set via QQmlContext.setContextProperty from Python
 
     color: palette.window
 
@@ -20,7 +20,7 @@ ApplicationWindow {
     property int _grip: 5
 
     // Close window when last tab is closed
-    Connections { target: state ?? null; function onClose_last_tab() { root.close() } }
+    Connections { target: appState ?? null; function onClose_last_tab() { root.close() } }
 
     // Dynamic window title
     onTitleChanged: {}  // let binding do the work
@@ -28,8 +28,8 @@ ApplicationWindow {
         target: root
         property: "title"
         value: {
-            if (!state) return "Pamet"
-            let idx = state.currentTabIndex
+            if (!appState) return "Pamet"
+            let idx = appState.currentTabIndex
             if (idx < 0) return "Pamet"
             let t = tabBar.contentChildren[idx]?.text ?? ""
             return t ? "Pamet — " + t : "Pamet"
@@ -86,8 +86,8 @@ ApplicationWindow {
             ToolButton {
                 Layout.fillHeight: true; Layout.preferredWidth: height
                 icon.name: "go-previous"; icon.color: palette.buttonText; focusPolicy: Qt.TabFocus
-                enabled: state ? state.canGoBack : false
-                onClicked: { if (!state) return; let v = webViewRepeater.itemAt(state.currentTabIndex); if (v) v.goBack() }
+                enabled: appState ? appState.canGoBack : false
+                onClicked: { if (!appState) return; let v = webViewRepeater.itemAt(appState.currentTabIndex); if (v) v.goBack() }
             }
             ToolButton {
                 Layout.fillHeight: true; Layout.preferredWidth: height
@@ -97,20 +97,20 @@ ApplicationWindow {
             ToolButton {
                 Layout.fillHeight: true; Layout.preferredWidth: height
                 icon.name: "go-next"; icon.color: palette.buttonText; focusPolicy: Qt.TabFocus
-                enabled: state ? state.canGoForward : false
-                onClicked: { if (!state) return; let v = webViewRepeater.itemAt(state.currentTabIndex); if (v) v.goForward() }
+                enabled: appState ? appState.canGoForward : false
+                onClicked: { if (!appState) return; let v = webViewRepeater.itemAt(appState.currentTabIndex); if (v) v.goForward() }
             }
 
             TabBar {
                 id: tabBar
                 Layout.fillWidth: true; Layout.fillHeight: true
                 topPadding: 0; bottomPadding: 0
-                currentIndex: state ? state.currentTabIndex : 0
+                currentIndex: appState ? appState.currentTabIndex : 0
                 onCurrentIndexChanged: { if (backend) backend.switchToTab(currentIndex) }
                 background: Item {}
 
                 Repeater {
-                    model: state ? state.tabModel : null
+                    model: appState ? appState.tabModel : null
                     TabButton {
                         id: tabBtn
                         text: model.title || "Untitled"
@@ -203,7 +203,7 @@ ApplicationWindow {
         StackLayout {
             id: webViewStack
             SplitView.fillWidth: true; SplitView.fillHeight: true
-            currentIndex: state ? state.currentTabIndex : 0
+            currentIndex: appState ? appState.currentTabIndex : 0
             onCurrentIndexChanged: {
                 if (!backend) return
                 let v = webViewRepeater.itemAt(currentIndex)
@@ -213,7 +213,7 @@ ApplicationWindow {
 
             Repeater {
                 id: webViewRepeater
-                model: state ? state.tabModel : null
+                model: appState ? appState.tabModel : null
                 WebEngineView {
                     id: webView
                     url: model.url

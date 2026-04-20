@@ -90,9 +90,6 @@ class QmlAppBackend(QObject):
             "console.log('Desktop access token injected');\n"
         )
 
-        # Open the initial tab
-        open_tab(self._state, endpoint, True)
-
     # -- Properties --
 
     @Property(str, constant=True)
