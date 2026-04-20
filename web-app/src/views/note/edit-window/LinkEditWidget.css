@@ -32,8 +32,11 @@
     padding: 0;
     background: transparent;
     outline: none;
-    font-size: inherit;                 /* fixes “too small” text */
-    flex: 1;
+    font-size: inherit;                 /* fixes “too small” text */  }
+
+  .link-input:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);    flex: 1;
     min-width: 0;
   }
 

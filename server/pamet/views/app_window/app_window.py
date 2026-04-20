@@ -15,7 +15,6 @@ from PySide6.QtGui import (
 from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile, QWebEngineScript
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (
-    QApplication,
     QHBoxLayout,
     QPushButton,
     QSizePolicy,
@@ -27,9 +26,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from pamet.actions.app import close_tab
+from pamet.actions.app import (  # noqa: F811 — uses new QML API now
+    close_tab as close_tab,
+)
+
+# TODO: restore widgets close_tab or remove widgets code path
 from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
 from pamet.views.app_window.app_window_view_state import AppWindowViewState, TabState
+from pamet.views.app_window.browser_input import BrowserInput
 
 _RESIZE_GRIP = 5  # px – edge/corner resize zone for frameless window
 
@@ -188,6 +192,9 @@ class AppWindow(QWidget):
 
         self.resize(800, 600)
 
+        # --- Browser input controller ---
+        self.browser_input = BrowserInput(parent=self)
+
         # --- Connections (widget -> state) ---
         self.tab_bar.currentChanged.connect(self._on_tab_bar_changed)
         self.tab_bar.tabCloseRequested.connect(self._on_tab_close_requested)
@@ -243,7 +250,7 @@ class AppWindow(QWidget):
             lambda title, wv=web_view: self._on_web_title_changed(wv, title)
         )
 
-        web_view.installEventFilter(self)
+        self.browser_input.install_on_web_view(web_view)
         self.stack.addWidget(web_view)
         tab_state = TabState(tab_id=tab_id, url=url)
         self.state.add_tab(tab_state, switch_to=switch_to)
@@ -281,21 +288,9 @@ class AppWindow(QWidget):
             widget.deleteLater()
 
     def eventFilter(self, obj, event):
-        if self._handle_webview_tab_key(obj, event):
-            return True
         if obj is self.tab_bar and self._handle_tab_bar_mouse(event):
             return True
         return super().eventFilter(obj, event)
-
-    def _handle_webview_tab_key(self, obj, event) -> bool:
-        """Intercept Tab/Shift+Tab on the web view's focus proxy."""
-        if isinstance(event, QKeyEvent) and event.type() == QEvent.Type.KeyPress:
-            if event.key() in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab):
-                wv = self._current_web_view()
-                if wv and (obj is wv or obj is wv.focusProxy()):
-                    self._handle_web_view_tab(event)
-                    return True
-        return False
 
     def _handle_tab_bar_mouse(self, event) -> bool:
         """Handle middle-click close and empty-area drag on the tab bar."""
@@ -349,122 +344,15 @@ class AppWindow(QWidget):
                 wv.page().setDevToolsPage(self.dev_tools_view.page())
 
     # ------------------------------------------------------------------
-    # Focus management
+    # Key events
     # ------------------------------------------------------------------
 
-    def _focus_is_on_shell_widget(self) -> bool:
-        """Return True if a Qt shell widget (not the web view) has focus."""
-        fw = QApplication.focusWidget()
-        if fw is None:
-            return False
-        wv = self._current_web_view()
-        if wv and (fw is wv or fw is wv.focusProxy()):
-            return False
-        return True
-
-    _forwarding_key = False  # re-entrancy guard for key forwarding
-
-    def _send_key_to_web_view(
-        self,
-        key: Qt.Key,
-        modifiers: Qt.KeyboardModifier = Qt.KeyboardModifier.NoModifier,
-        text: str = "",
-    ) -> bool:
-        """Send a synthetic key press+release to the current web view.
-
-        Returns True if the event was dispatched.
-        """
-        wv = self._current_web_view()
-        proxy = wv.focusProxy() if wv else None
-        if not proxy:
-            return False
-        press = QKeyEvent(QEvent.Type.KeyPress, key, modifiers, text)
-        release = QKeyEvent(QEvent.Type.KeyRelease, key, modifiers, text)
-        proxy.event(press)
-        proxy.event(release)
-        return True
-
-    def _forward_key_to_web_view(self, event: QKeyEvent, event_type: QEvent.Type):
-        """Forward a single key event to the web view's focus proxy.
-
-        Uses a re-entrancy guard: if the proxy does not consume the event
-        it propagates back up to keyPressEvent/keyReleaseEvent, which would
-        forward again without the guard.
-        """
-        if self._forwarding_key:
-            return
-        wv = self._current_web_view()
-        proxy = wv.focusProxy() if wv else None
-        if proxy:
-            self._forwarding_key = True
-            try:
-                fwd = QKeyEvent(
-                    event_type, event.key(), event.modifiers(), event.text()
-                )
-                proxy.event(fwd)
-            finally:
-                self._forwarding_key = False
-
-    def _handle_web_view_tab(self, event: QKeyEvent):
-        """Intercept Tab/Shift+Tab when the web view has focus.
-
-        We ask the page's FocusManager whether the current focus is at the
-        boundary.  If so, we move focus to the Qt chrome; otherwise we forward
-        the Tab event into the page.
-        """
-        wv = self._current_web_view()
-        if not wv:
-            return
-
-        shift = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
-        js_expr = (
-            "pamet.focusManager.atFirstTabIndex()"
-            if shift
-            else "pamet.focusManager.atLastTabIndex()"
-        )
-
-        def _on_result(at_boundary):
-            if at_boundary:
-                # Move focus out of the web view into the Qt chrome
-                if shift:
-                    self.focusPreviousChild()
-                else:
-                    self.focusNextChild()
-            else:
-                # Forward the Tab/Shift+Tab into the page
-                key = Qt.Key.Key_Backtab if shift else Qt.Key.Key_Tab
-                mods = (
-                    Qt.KeyboardModifier.ShiftModifier
-                    if shift
-                    else Qt.KeyboardModifier.NoModifier
-                )
-                self._send_key_to_web_view(key, mods)
-
-        wv.page().runJavaScript(js_expr, _on_result)
-
-    def _should_forward_key(self, event: QKeyEvent) -> bool:
-        """Return True if this key event should be forwarded to the web view."""
-        if event.isAccepted():
-            return False
-        # Tab/Shift+Tab drive Qt focus cycling, not forwarded
-        if event.key() in (Qt.Key.Key_Tab, Qt.Key.Key_Backtab):
-            return False
-        # Only forward when a chrome widget has focus.
-        # When focus is None or on the web view, Chromium handles events
-        # directly — forwarding would create a feedback loop.
-        return self._focus_is_on_shell_widget()
-
     def keyPressEvent(self, event: QKeyEvent):
-        """Forward unhandled key presses to the current web view."""
         super().keyPressEvent(event)
-        if self._should_forward_key(event):
-            self._forward_key_to_web_view(event, QEvent.Type.KeyPress)
+        self.browser_input.handle_key_event(event)
 
     def keyReleaseEvent(self, event: QKeyEvent):
-        """Forward unhandled key releases to the current web view."""
         super().keyReleaseEvent(event)
-        if self._should_forward_key(event):
-            self._forward_key_to_web_view(event, QEvent.Type.KeyRelease)
 
     # ------------------------------------------------------------------
     # Navigation
@@ -508,7 +396,9 @@ class AppWindow(QWidget):
     # ------------------------------------------------------------------
 
     def _toggle_shell(self):
-        self._send_key_to_web_view(Qt.Key.Key_Backspace)
+        wv = self._current_web_view()
+        if wv:
+            self.browser_input.send_key_to_chromium(wv, Qt.Key.Key_Backspace)
 
     # ------------------------------------------------------------------
     # Dev tools toggle

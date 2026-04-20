@@ -42,8 +42,12 @@
     outline: none;
   }
 
+  .image-preview-container:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
+  }
+
   .image-preview-container.dragging-over,
-  .image-preview-container:focus {
     border-color: var(--color-accent);
     background-color: var(--color-bg-light-accent);
   }
@@ -79,11 +83,14 @@
   background: var(--color-bg-medium);
 }
 
-.buttons-container .action-button:hover,
-.buttons-container .action-button:focus {
+.buttons-container .action-button:hover {
   background: var(--color-bg-pressed);
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
+}
+
+.buttons-container .action-button:focus-visible {
+  background: var(--color-bg-pressed);
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .tool-button.toggled {

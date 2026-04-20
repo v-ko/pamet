@@ -3,6 +3,11 @@ import { pamet } from "@/app/facade";
 
 const log = getLogger('FocusManager');
 
+/** Visibility check that works inside position:fixed containers (where offsetParent is always null). */
+function isElementVisible(el: HTMLElement): boolean {
+  return el.offsetWidth > 0 || el.offsetHeight > 0;
+}
+
 export interface FocusRegistration {
   selector: string;
   contextKey: string;
@@ -79,7 +84,7 @@ export class FocusManager {
 
     for (const registration of this.visibilityRegistrations.values()) {
       const el = document.querySelector(registration.selector) as HTMLElement | null;
-      const isVisible = el ? el.offsetParent !== null : false;
+      const isVisible = el ? isElementVisible(el) : false;
       const expectedValue = isVisible ? registration.valOnVisible : registration.valOnHidden;
 
       if (pamet.context[registration.contextKey] !== expectedValue) {
@@ -183,6 +188,18 @@ export class FocusManager {
      *
      * Always switches to an element with a tabindex set.
      */
+
+    // Bail out if focus already landed on a valid element. This happens
+    // when the Qt shell sends a synthetic Tab into Chromium: the focusout
+    // from the *previous* element has relatedTarget=null (synthetic events
+    // don't populate it), which queues correctFocus via rAF. By the time
+    // the rAF fires, Chromium has already moved focus to the next element
+    // — we must not steal it back.
+    const current = document.activeElement as HTMLElement | null;
+    if (current && current !== document.body && current.tabIndex >= 0) {
+      return;
+    }
+
     let elementToFocus: HTMLElement | null = null;
 
     // Strategy 1: Go back to what you were doing.
@@ -217,7 +234,7 @@ export class FocusManager {
       const allVisibleElements = [];
       for (const reg of this.focusRegistrations.values()) {
         const el = document.querySelector(reg.selector) as HTMLElement | null;
-        if (el && el.offsetParent !== null) { // is visible
+        if (el && isElementVisible(el)) { // is visible
           allVisibleElements.push(el);
         }
       }
@@ -244,13 +261,9 @@ export class FocusManager {
 
   private getVisibleFocusableElements(): HTMLElement[] {
     const elements: HTMLElement[] = [];
-    for (const reg of this.focusRegistrations.values()) {
-      const container = document.querySelector(reg.selector) as HTMLElement | null;
-      if (!container || container.offsetParent === null) continue;
-      for (const el of container.querySelectorAll<HTMLElement>('[tabindex]:not([tabindex="-1"])')) {
-        if (el.offsetParent !== null) {
-          elements.push(el);
-        }
+    for (const el of document.querySelectorAll<HTMLElement>('[tabindex]:not([tabindex="-1"])')) {
+      if (isElementVisible(el)) {
+        elements.push(el);
       }
     }
     return elements;

@@ -150,6 +150,11 @@
   box-sizing: border-box;
 }
 
+.text-container textarea:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
 
 /* Footer */
 .footer {

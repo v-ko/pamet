@@ -53,6 +53,10 @@
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
 
+  /* Focus */
+  --focus-ring: 2px solid var(--color-accent);
+  --focus-ring-offset: 1px;
+
   /* Shadows */
   --shadow-sm: 0 0 0.5rem rgba(0,0,0,0.2);
   --shadow-md: 0 0 0.9375rem rgba(0,0,0,0.2);

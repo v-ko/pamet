@@ -32,8 +32,9 @@
     box-sizing: border-box;
 }
 
-.global-search-input:focus {
-    border-color: var(--color-dark-border);
+.global-search-input:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-ring-offset);
 }
 
 .global-search-close {

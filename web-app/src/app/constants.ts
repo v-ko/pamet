@@ -139,6 +139,19 @@ export enum PametTabIndex {
     DebugDialog_CalcMobxSize = 92,
     DebugDialog_RestartServiceWorker = 93,
     DebugDialog_DebugPaintCheckbox = 94,
+
+    // Panel tab indices (top-left)
+    Panel_Projects = 100,
+    Panel_ProjectProperties = 101,
+    Panel_StorageStatus = 102,
+    Panel_Share = 103,
+    Panel_MainMenu = 104,
+
+    // Panel tab indices (top-right)
+    Panel_Debug = 110,
+    Panel_Help = 111,
+    Panel_PageProperties = 112,
+    Panel_Account = 113,
 }
 
 // Media related

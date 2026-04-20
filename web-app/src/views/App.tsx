@@ -33,6 +33,7 @@ import { PageAndCommandPalette, ProjectPalette } from "@/views/CommandPalette";
 import { LocalSearch } from "@/views/search/LocalSearch";
 import { GlobalSearch } from "@/views/search/GlobalSearch";
 import { pamet } from "@/app/facade";
+import { PametTabIndex } from "@/app/constants";
 import Menu, { MenuItem } from "@/views/menu/Menu";
 import { StorageStatusDialog } from "@/views/dialogs/StorageStatusDialog";
 
@@ -216,42 +217,40 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
         {/* Main panel - logo, project name, save state, help button */}
         <Panel align='top-left'>
 
-          <div
-            style={{
-              fontSize: '1.1em',
-              fontWeight: 400,
-              cursor: 'pointer',
-            }}
+          <button
+            className="panel-button"
             onClick={() => appActions.openProjectsDialog(state)}
             title="Go to projects"
-          >PAMET</div>
+            tabIndex={PametTabIndex.Panel_Projects}
+          >PAMET</button>
           <VerticalSeparator />
 
-          <div
-            className="project-name"
-            style={{
-              cursor: 'pointer'
-            }}
+          <button
+            className="panel-button project-name"
             onClick={() => appActions.openProjectPropertiesDialog(state)}
             title="Project properties"
-          >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</div>
-          <img
-            src={storageStatusIconUrl}
-            alt="Storage status"
+            tabIndex={PametTabIndex.Panel_ProjectProperties}
+          >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</button>
+          <button
+            className="panel-button"
             title={storageStatusTitle}
-            style={{ cursor: 'pointer' }}
             onClick={() => appActions.openStorageStatusDialog(state)}
-          />
+            tabIndex={PametTabIndex.Panel_StorageStatus}
+          >
+            <img src={storageStatusIconUrl} alt="Storage status" />
+          </button>
           <VerticalSeparator />
-          <img src={shareIconUrl} alt="Share" />
+          <button
+            className="panel-button"
+            onClick={() => alert('Share — not yet implemented')}
+            title="Share"
+            tabIndex={PametTabIndex.Panel_Share}
+          ><img src={shareIconUrl} alt="Share" /></button>
           <VerticalSeparator />
-          <div
+          <button
+            className="panel-button"
             title='Main menu'
-            style={{
-              fontSize: '1.2em',
-              textAlign: 'center',
-              cursor: 'pointer',
-            }}
+            tabIndex={PametTabIndex.Panel_MainMenu}
             onClick={(e) => {
               const target = e.currentTarget as HTMLElement;
               const panel = target.closest('.panel') as HTMLElement | null;
@@ -260,14 +259,16 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
             }}
           >
             ☰
-          </div>
+          </button>
 
         </Panel>
 
         <Panel align='top-right'>
-          <div
+          <button
+            className="panel-button"
             title='Debug info'
             onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
+            tabIndex={PametTabIndex.Panel_Debug}
             style={{ position: 'relative' }}
           >
             {'</>'}
@@ -282,20 +283,30 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
                 backgroundColor: 'red',
               }} />
             )}
-          </div>
+          </button>
           <VerticalSeparator />
-          <img src={helpCircleIconUrl} alt="Help"
-            style={{ cursor: 'pointer' }}
+          <button
+            className="panel-button"
+            title="Help"
             onClick={() => { commands.showHelp(); }}
-          />
+            tabIndex={PametTabIndex.Panel_Help}
+          >
+            <img src={helpCircleIconUrl} alt="Help" />
+          </button>
           <VerticalSeparator />
-          <div
+          <button
+            className="panel-button"
             onClick={() => appActions.openPageProperties(state)}
-            style={{ cursor: 'pointer' }}
             title="Page properties"
-          >{currentPageVS ? currentPageVS.page().name : '(no page open)'}</div>
+            tabIndex={PametTabIndex.Panel_PageProperties}
+          >{currentPageVS ? currentPageVS.page().name : '(no page open)'}</button>
           <VerticalSeparator />
-          <img src={accountCircleIconUrl} alt="Login/Sign up" />
+          <button
+            className="panel-button"
+            onClick={() => alert('Login / Sign up — not yet implemented')}
+            title="Login/Sign up"
+            tabIndex={PametTabIndex.Panel_Account}
+          ><img src={accountCircleIconUrl} alt="Login/Sign up" /></button>
         </Panel>
 
         {/* Global search sidebar */}

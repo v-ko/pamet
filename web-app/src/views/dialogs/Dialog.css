@@ -51,6 +51,12 @@
   box-sizing: border-box;
 }
 
+.dialog-input:focus-visible,
+.dialog-textarea:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+}
+
 .dialog-input:disabled {
   background: var(--color-bg-light);
   color: var(--color-text-muted, #666);
