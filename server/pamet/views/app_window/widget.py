@@ -32,8 +32,8 @@ from pamet.actions.app import (  # noqa: F811 — uses new QML API now
 
 # TODO: restore widgets close_tab or remove widgets code path
 from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
-from pamet.views.app_window.app_window_view_state import AppWindowViewState, TabState
 from pamet.views.app_window.browser_input import BrowserInput
+from pamet.views.app_window.view_state import AppWindowViewState, TabState
 
 _RESIZE_GRIP = 5  # px – edge/corner resize zone for frameless window
 

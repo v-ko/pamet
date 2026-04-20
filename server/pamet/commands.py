@@ -4,12 +4,11 @@ from typing import cast
 
 from fusion.libs.command import command
 from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QDesktopServices
+from PySide6.QtGui import QDesktopServices, QWindow
 
 import pamet
 from pamet import desktop_app
 from pamet.desktop_app.app import DesktopApp
-from pamet.views.app_window.app_window import AppWindow
 
 
 @command(title="Open user settings (JSON)")
@@ -38,11 +37,13 @@ def raise_window():
     app = cast(DesktopApp, DesktopApp.instance())
     if not app:
         return
-    windows = [w for w in app.topLevelWidgets() if isinstance(w, AppWindow)]
+    # Works for both QML (QQuickWindow) and widgets (QWidget windows)
+    windows = app.allWindows()
     if windows:
-        windows[0].show()
-        windows[0].activateWindow()
-        windows[0].raise_()
+        win = windows[0]
+        win.show()
+        win.requestActivate()
+        win.raise_()
 
 
 @command(title="Open backups folder")

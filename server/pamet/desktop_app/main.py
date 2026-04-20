@@ -5,25 +5,16 @@ from pathlib import Path
 
 import click
 import fusion
-from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
 from slugify import slugify
 
-import pamet
-import pamet.commands  # noqa: F401 — triggers @command registrations
-from pamet import desktop_app
 from pamet.constants import DEFAULT_PROJECT_ID, DEFAULT_PROJECT_TITLE, LOCAL_USER_ID
-from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR, USER_SETTINGS_DIR
-from pamet.desktop_app.init_config import setup_fonts_and_icons
+from pamet.desktop_app.config import APP_DATA_DIR, CONFIG_DIR
 from pamet.model.config import UserSettings
 from pamet.services.config_file_manager import load_user_settings, save_user_settings
-from pamet.services.desktop_storage_service import DesktopStorageService
 from pamet.services.rest_api.client import send_command
-from pamet.services.rest_api.desktop_server import DesktopServer
 from pamet.services.rest_api.instance_check import get_running_instance_port
 from pamet.services.rest_api.routes.desktop import PUBLIC_COMMAND_NAMES
 from pamet.storage.migrations.v4_to_v5 import migrate_v4_user_settings
-from pamet.views.app_window.app_window import AppWindow
 
 log = fusion.get_logger(__name__)
 
@@ -169,9 +160,30 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
                 send_command(port, "raise_window")
             return
 
+    # ── Heavy imports (PySide6, Qt, etc.) deferred to here ───────────
+    from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
+
+    import pamet
+    import pamet.commands  # noqa: F401 — triggers @command registrations
+    from pamet import desktop_app
+    from pamet.desktop_app.app import DesktopApp
+    from pamet.desktop_app.init_config import setup_fonts_and_icons
+    from pamet.services.desktop_storage_service import DesktopStorageService
+    from pamet.services.rest_api.desktop_server import DesktopServer
+    from pamet.views.app_window.qml_backend import (
+        QmlAppBackend,
+        TitleBarDoubleClickFilter,
+    )
+    from pamet.views.app_window.view_state import AppWindowViewState
+
     # Start the local server (needed for API endpoints even when using frontend server)
     local_server = DesktopServer(config_dir=CONFIG_DIR)
     local_server.start()
+
+    # QtWebEngineQuick must be initialized before the QApplication
+    from PySide6.QtWebEngineQuick import QtWebEngineQuick
+
+    QtWebEngineQuick.initialize()
 
     app = DesktopApp()
     app.aboutToQuit.connect(local_server.stop)
@@ -201,18 +213,37 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     else:
         initial_project_url = f"{endpoint_url.rstrip('/')}/{LOCAL_USER_ID}/{project_id}"
 
-    # # Debug
-    # misli_channels.state_changes_per_TLA_by_id.subscribe(
-    #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
+    # Create the QML app window
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuickControls2 import QQuickStyle
 
-    # Create the app window - show dev tools when using frontend server
-    app_window = AppWindow(
+    QQuickStyle.setStyle("Fusion")
+
+    view_state = AppWindowViewState()
+    qml_backend = QmlAppBackend(
+        view_state=view_state,
         endpoint=initial_project_url,
         desktop_api_base_url=desktop_api_base_url,
-        webengine_profile_root=USER_SETTINGS_DIR / "webengine-profile",
-        show_dev_tools=bool(use_frontend_server),
     )
-    app_window.showMaximized()
+
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("state", view_state)
+    engine.rootContext().setContextProperty("backend", qml_backend)
+
+    qml_path = (
+        Path(__file__).resolve().parents[1] / "views" / "app_window" / "AppWindow.qml"
+    )
+    engine.load(qml_path)
+
+    if not engine.rootObjects():
+        print("Failed to load QML")
+        return 1
+
+    # Install a native event filter for title-bar double-click → maximize
+    window = engine.rootObjects()[0]
+    title_bar_height = 42  # must match header height in AppWindow.qml
+    dbl_filter = TitleBarDoubleClickFilter(window, title_bar_height)
+    window.installEventFilter(dbl_filter)
 
     fusion.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")
