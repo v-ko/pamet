@@ -36,6 +36,19 @@ log = fusion.get_logger(__name__)
 def main(project_path: Path | None, command: str, use_frontend_server: str):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
+    # Check if another instance is running (must happen before prepare.py
+    # which wipes the config dir and would remove the lock file)
+    port = get_running_instance_port(CONFIG_DIR)
+    if port:
+        log.info(
+            f"Another instance is already running on port {port} — sending command and exiting"
+        )
+        if command:
+            send_command(port, command)
+        else:
+            send_command(port, "raise_window")
+        return
+
     # Temporary fixture setup for migration testing. Rebuild the prepared fixture
     # on startup, then restore legacy user settings from it into isolated app-data.
     prepared_repo_dir = (
@@ -149,16 +162,6 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
             projects.append(project_data)
         settings.projects = projects
         save_user_settings(settings)
-
-    # Check if another instance is running
-    if not use_frontend_server:
-        port = get_running_instance_port(CONFIG_DIR)
-        if port:
-            if command:
-                send_command(port, command)
-            else:
-                send_command(port, "raise_window")
-            return
 
     # ── Heavy imports (PySide6, Qt, etc.) deferred to here ───────────
     from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
