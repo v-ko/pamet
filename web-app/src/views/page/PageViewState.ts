@@ -199,7 +199,6 @@ export class PageViewState {
             this.selectedElementsVS.delete(elementVS!);
         }
         if (element instanceof Note) {
-            log.info('Proper removing note view state for element', element.id, this)
             this.noteViewStatesById.delete(element.id);
         } else if (element instanceof Arrow) {
             this.arrowViewStatesById.delete(element.id);

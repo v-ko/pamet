@@ -184,6 +184,17 @@ def main(project_path: Path | None, command: str, use_frontend_server: str):
     local_server = DesktopServer(config_dir=CONFIG_DIR)
     local_server.start()
 
+    # Workaround for Qt bug: QML WebEngineView renders black/stale after
+    # minimize-restore with OpenGL and transparent with Vulkan RHI backends.
+    # Software rendering is unaffected.
+    import os
+
+    if not os.environ.get("QT_QUICK_BACKEND"):
+        os.environ["QT_QUICK_BACKEND"] = "software"
+        log.info(
+            "Forcing software QML backend (WebEngineView minimize-restore workaround)"
+        )
+
     # QtWebEngineQuick must be initialized before the QApplication
     from PySide6.QtWebEngineQuick import QtWebEngineQuick
 
