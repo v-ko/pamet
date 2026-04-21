@@ -64,6 +64,13 @@ ApplicationWindow {
         ResizeEdge { edges: Qt.RightEdge | Qt.TopEdge; x: root.width - _grip; y: 0; width: _grip; height: _grip; z: 101 }
         ResizeEdge { edges: Qt.LeftEdge | Qt.BottomEdge; x: 0; y: root.height - _grip; width: _grip; height: _grip; z: 101 }
         ResizeEdge { edges: Qt.RightEdge | Qt.BottomEdge; x: root.width - _grip; y: root.height - _grip; width: _grip; height: _grip; z: 101 }
+
+        // Window border when not maximized
+        Rectangle {
+            anchors.fill: parent; visible: !root._isMax; z: 102
+            color: "transparent"; border.width: 1
+            border.color: Qt.rgba(palette.text.r, palette.text.g, palette.text.b, 0.15)
+        }
     }
 
     // ── Title bar ───────────────────────────────────────────────────
