@@ -202,6 +202,13 @@ ApplicationWindow {
     }
 
     // ── Content area ────────────────────────────────────────────────
+
+    // Derive system dark mode from QML palette for WebEngineView
+    property bool _paletteIsDark: {
+        var c = palette.window
+        return (c.r * 0.299 + c.g * 0.587 + c.b * 0.114) < 0.5
+    }
+
     SplitView {
         id: contentSplit
         anchors.fill: parent
@@ -229,6 +236,7 @@ ApplicationWindow {
                     id: webView
                     url: model.url
                     profile: webProfile
+                    settings.forceDarkMode: root._paletteIsDark
 
                     onLoadingChanged: function(loadReq) {
                         if (loadReq.status === WebEngineView.LoadSucceededStatus) {
