@@ -14,6 +14,7 @@ import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
 import { Note } from "@/model/Note";
 import { pamet } from "@/app/facade";
 import { getPageNavigationState, PageAnimation } from "@/views/page/render-utils";
+import { Point2D } from "fusion/primitives/Point2D";
 
 let log = getLogger('DirectRenderer');
 
@@ -413,16 +414,31 @@ export class DirectRenderer {
             ctx.strokeRect(...pageVS.viewport.realBounds.data());
         }
 
-        // Draw a rectangle for the page outline if the viewport is zoomed out
-        // enough
+        // Draw concentric circles for spatial awareness when zoomed out
         if (pageVS.viewportHeight > MAX_HEIGHT_SCALE * 0.9) {
             ctx.save();
             let heightScaleFactor = pageVS.viewport.heightScaleFactor()
-            ctx.strokeStyle = '#dddddd';
             ctx.lineWidth = 1 / heightScaleFactor;
-            ctx.beginPath();
-            ctx.arc(0, 0, PROPOSED_MAX_PAGE_WIDTH / 2, 0, 2 * Math.PI);
-            ctx.stroke();
+
+            const baseRadius = PROPOSED_MAX_PAGE_WIDTH / 2;
+            const viewport = pageVS.viewport;
+            let viewportStrayDistance = viewport.realBounds.center().distanceTo(new Point2D([0, 0]));
+            let realWidth = viewport.realBounds.width;
+            viewportStrayDistance += realWidth
+            viewportStrayDistance = Math.max(viewportStrayDistance, realWidth * 1000);
+            // From max-width/2 add a circle with radius+=max-width/2 for
+            // so that it seems they dont end. but with a reasonable x1000 circle bound
+            for (let radius = baseRadius; radius < viewportStrayDistance; radius += baseRadius) {
+                // Fade larger circles to lighter colors
+                const t = Math.log(radius / baseRadius) / Math.log(27);
+                const gray = Math.round(221 + t * (245 - 221)); // #dd to #f5
+
+                ctx.strokeStyle = `rgb(${gray}, ${gray}, ${gray})`;
+                ctx.beginPath();
+                ctx.arc(0, 0, radius, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+
             ctx.restore();
         }
         // Draw selection overlays
