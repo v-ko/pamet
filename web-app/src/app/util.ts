@@ -133,7 +133,7 @@ export class TextLayout {
     }
 
     text(): string {
-        return this._linesData.join('\n');
+        return this.lines.join('\n');
     }
     get lines(): string[] {
         return this._linesData.map((lineData) => lineData[0]);

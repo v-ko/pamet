@@ -240,7 +240,7 @@ export function minimalNonelidedSize(note: Note): Size {
     let maxW = MAX_NOTE_WIDTH;
 
     let unit = ALIGNMENT_GRID_UNIT;
-    let minWidthU = Math.floor(DEFAULT_NOTE_WIDTH / unit);
+    let minWidthU = Math.floor(MIN_NOTE_WIDTH / unit);
 
     // Do a binary search for the proper width (keeping the aspect ratio)
     let lowWidthBound = 0;
@@ -282,21 +282,18 @@ export function minimalNonelidedSize(note: Note): Size {
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
     }
 
-    // Adjust the width. We check for changes in the text, because
+    // Adjust the width. We check for changes in the rendered text, because
     // even elided text (if it's multi line) can have empty space laterally
-    let textBeforeAdjust = textLayout.text();
-    text = textBeforeAdjust;
     testRect.setSize(new Size([width, height]));
+    textLayout = calculateTextLayout(text, note.textRect(), noteFont);
+    let textBeforeAdjust = textLayout.text();
     while (testRect.width >= MIN_NOTE_WIDTH && testRect.height >= MIN_NOTE_HEIGHT) {
-        if (text !== textBeforeAdjust) {
-            break;
-        } else {
-            width = testRect.width;
-        }
-
         testRect.setSize(new Size([testRect.width - unit, testRect.height]));
         textLayout = calculateTextLayout(text, note.textRect(), noteFont);
-        text = textLayout.text();
+        if (textLayout.text() !== textBeforeAdjust || textLayout.isElided) {
+            break;
+        }
+        width = testRect.width;
     }
 
     return new Size([width, height]);
