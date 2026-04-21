@@ -19,6 +19,14 @@ body {
   overflow: clip;
   font-size: var(--type-md);
   line-height: 1.5;
+  color: var(--color-text);
+  background-color: var(--color-bg-white);
+}
+
+/* Ensure form elements inherit theme colors instead of browser defaults */
+input, textarea, select, button {
+  color: inherit;
+  background-color: inherit;
 }
 
 @font-face {

@@ -17,9 +17,10 @@
     font-size: 1em;
     border: none;
     border: 2px solid var(--color-dark-border);
-    /* border-bottom: 2px solid var(--color-dark-border); */
     outline: none;
     box-sizing: border-box;
+    background: var(--color-bg-white);
+    color: var(--color-text);
 }
 
 .command-list {

@@ -1,9 +1,8 @@
 import { ElementViewState } from "@/views/page/ElementViewState";
-import { ALIGNMENT_GRID_UNIT, COLOR_ROLE_MAP } from "@/app/constants";
+import { ALIGNMENT_GRID_UNIT } from "@/app/constants";
 import { getLogger } from "fusion/logging";
 import { Point2D, Vector2D } from "fusion/primitives/Point2D";
 import { Rectangle } from "fusion/primitives/Rectangle";
-import { HexColorData } from "fusion/primitives/Color";
 
 // Clipboard item types
 export type ClipboardItemType = 'text' | 'url' | 'image';
@@ -382,14 +381,7 @@ export function drawCrossingDiagonals(
 }
 
 
-export function color_role_to_hex_color(color_role: string): HexColorData {
-    if (color_role in COLOR_ROLE_MAP) {
-        return COLOR_ROLE_MAP[color_role];
-    } else {
-        log.error(`Color role "${color_role}" not found in color role map`);
-        return '#ff0000';
-    }
-}
+
 export function buildDeviceBranchName(userId: string, deviceId: string): string {
     return `${userId}__${deviceId}`;
 }

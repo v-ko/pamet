@@ -8,6 +8,7 @@
   box-sizing: border-box;
 
   background: var(--color-bg-white);
+  color: var(--color-text);
   display: flex;
   flex-direction: row;
   gap: 0.65rem;
@@ -33,6 +34,7 @@
 .panel > img {
   height: var(--type-xl);
   width: var(--type-xl);
+  filter: var(--icon-filter);
 }
 
 /* Reset button styles for interactive panel items */
@@ -57,4 +59,5 @@
 .panel-button img {
   height: var(--type-xl);
   width: var(--type-xl);
+  filter: var(--icon-filter);
 }

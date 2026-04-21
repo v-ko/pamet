@@ -34,6 +34,7 @@ import { AnimationService } from "@/services/AnimationService";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 import { StorageConnectionPhase } from "fusion/storage/management/StorageService";
+import { ThemeManager, ThemePreference, STORAGE_KEY_PREFERENCE } from "@/app/theme";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -73,6 +74,7 @@ export class PametFacade extends PametStore {
     _focusManager: FocusManager | null = null;
     searchService: SearchService = new SearchService();
     animationService: AnimationService = new AnimationService();
+    themeManager: ThemeManager = new ThemeManager();
     context: any = {};
     _projectStorageConfigFactory: ProjectStorageConfigFactory | null = null
     _entityProblemCounts: Map<string, { count: number, firstError?: unknown }> = new Map();
@@ -459,6 +461,12 @@ export class PametFacade extends PametStore {
                     this.getTrackedProjectsFromConfig(),
                 );
 
+                // Apply theme preference from config store
+                const pref = this.userSettings.themePreference ?? ThemePreference.Auto;
+                const resolved = this.themeManager.resolveMode(pref);
+                appActions.applyTheme(state, pref, resolved);
+                localStorage.setItem(STORAGE_KEY_PREFERENCE, pref); // splash hint
+
             } else if (entityId.startsWith('project-props-')) {
                 // Only care about the current project's properties
                 const currentId = state.currentProjectId;
@@ -478,6 +486,14 @@ export class PametFacade extends PametStore {
     }
 
     // UserSettings accessors
+    get userSettings(): UserSettings {
+        const entity = this.appConfigStore.findOne({ id: UserSettings.SINGLETON_ID });
+        if (!entity) {
+            throw Error('UserSettings not present in config store');
+        }
+        return entity as UserSettings;
+    }
+
     getUserData(): { id?: string; name?: string; projects?: ProjectReference[] } | undefined {
         const entity = this.appConfigStore.findOne({ id: UserSettings.SINGLETON_ID });
         if (!entity) return undefined;
@@ -508,6 +524,26 @@ export class PametFacade extends PametStore {
     getTrackedProjectsFromConfig(): ProjectReference[] {
         const userData = this.getUserData();
         return userData?.projects ?? [];
+    }
+
+    setThemePreference(pref: ThemePreference): void {
+        const us = this.userSettings;
+        us.themePreference = pref;
+        this.appConfigStore.updateOne(us);
+    }
+
+    /**
+     * Initialize theme system: sets up media query + DOM reaction, then applies
+     * an initial theme from the localStorage hint (pre-config-store).
+     * Call once after setAppViewState, before render.
+     */
+    initializeTheme(): void {
+        let pref: ThemePreference = ThemePreference.Auto;
+        const stored = localStorage.getItem(STORAGE_KEY_PREFERENCE);
+        if (stored === ThemePreference.Light || stored === ThemePreference.Dark || stored === ThemePreference.Auto) {
+            pref = stored;
+        }
+        this.themeManager.initialize(pref);
     }
 
     upsertTrackedProject(trackedProject: ProjectReference) {

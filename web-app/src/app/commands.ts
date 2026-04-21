@@ -3,6 +3,7 @@ import { pamet } from "@/app/facade";
 import { command } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
+import { ThemePreference } from "@/app/theme";
 import { Point2D } from "fusion/primitives/Point2D";
 import { arrowActions } from "@/actions/arrow";
 import { projectActions } from "@/actions/project";
@@ -409,6 +410,21 @@ class PametCommands {
     @command('Refresh page')
     refresh() {
         window.location.reload();
+    }
+
+    @command('Switch to dark mode')
+    switchToDarkMode() {
+        pamet.setThemePreference(ThemePreference.Dark);
+    }
+
+    @command('Switch to light mode')
+    switchToLightMode() {
+        pamet.setThemePreference(ThemePreference.Light);
+    }
+
+    @command('Match system color scheme')
+    matchSystemColorScheme() {
+        pamet.setThemePreference(ThemePreference.Auto);
     }
 }
 

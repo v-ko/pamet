@@ -199,7 +199,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
                 {commitStats.commits?.map((commit: any, index: number) => (
                   <div key={index} style={{ marginBottom: '8px', fontSize: '12px' }}>
                     <div><strong>{commit.id}</strong> - {commit.message}</div>
-                    <div style={{ color: '#666' }}>{commit.timestamp} | Delta size: {commit.deltaSize} bytes</div>
+                    <div style={{ color: 'var(--color-text-muted)' }}>{commit.timestamp} | Delta size: {commit.deltaSize} bytes</div>
                   </div>
                 )) || <p>No commits</p>}
               </>
@@ -256,7 +256,7 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
         const count = pamet.renderErrorCount;
         return err ? (
           <details open style={{ marginBottom: '10px' }}>
-            <summary style={{ color: 'red', fontWeight: 'bold' }}>Render Errors ({count})</summary>
+            <summary style={{ color: 'var(--color-danger)', fontWeight: 'bold' }}>Render Errors ({count})</summary>
             <pre style={{
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-all',

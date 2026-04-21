@@ -2,6 +2,7 @@ import "@/views/App.css";
 import "@/views/PanelLayer.css";
 import { useEffect, useState } from "react";
 import { observer } from "mobx-react-lite";
+import { ThemePreference } from "@/app/theme";
 
 import { PageView } from "@/views/page/PageView";
 
@@ -28,11 +29,11 @@ import { DebugDialog } from "@/views/dialogs/DebugDialog";
 
 import { AppViewState, ProjectError, PageError, AppDialogMode } from "@/views/AppViewState";
 import { MediaProcessingDialog } from "@/views/system-modal-dialog/LoadingDialog";
+import { pamet } from "@/app/facade";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
 import { PageAndCommandPalette, ProjectPalette } from "@/views/CommandPalette";
 import { LocalSearch } from "@/views/search/LocalSearch";
 import { GlobalSearch } from "@/views/search/GlobalSearch";
-import { pamet } from "@/app/facade";
 import { PametTabIndex } from "@/app/constants";
 import Menu, { MenuItem } from "@/views/menu/Menu";
 import { StorageStatusDialog } from "@/views/dialogs/StorageStatusDialog";
@@ -43,7 +44,7 @@ let log = getLogger("App");
 const VerticalSeparator = styled.div`
   width: 1px;
   height: 1em;
-  background: rgba(0,0,0,0.2);
+  background: var(--color-light-border);
 `
 
 const WebApp = observer(({ state }: { state: AppViewState }) => {
@@ -176,6 +177,27 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
         { label: 'Zoom In', onClick: () => commands.pageZoomIn(), shortcut: getShortcut(commands.pageZoomIn.name) },
         { label: 'Zoom Out', onClick: () => commands.pageZoomOut(), shortcut: getShortcut(commands.pageZoomOut.name) },
         { label: 'Reset Zoom', onClick: () => commands.pageZoomReset(), shortcut: getShortcut(commands.pageZoomReset.name) },
+        { type: 'separator', label: '' },
+        {
+          label: 'Appearance',
+          submenu: [
+            {
+              label: 'Light Mode',
+              onClick: () => commands.switchToLightMode(),
+              disabled: pamet.appViewState.themePreference === ThemePreference.Light,
+            },
+            {
+              label: 'Dark Mode',
+              onClick: () => commands.switchToDarkMode(),
+              disabled: pamet.appViewState.themePreference === ThemePreference.Dark,
+            },
+            {
+              label: 'Match System',
+              onClick: () => commands.matchSystemColorScheme(),
+              disabled: pamet.appViewState.themePreference === ThemePreference.Auto,
+            },
+          ],
+        },
       ]
     }
   ];
@@ -193,7 +215,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
         left: '50%',
         transform: 'translate(-50%, -50%)',
         textAlign: 'center',
-        color: 'red',
+        color: 'var(--color-danger)',
         fontWeight: 'bold',
         fontSize: '1.5em',
       }}>
@@ -280,7 +302,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
                 width: 8,
                 height: 8,
                 borderRadius: '50%',
-                backgroundColor: 'red',
+                backgroundColor: 'var(--color-danger)',
               }} />
             )}
           </button>

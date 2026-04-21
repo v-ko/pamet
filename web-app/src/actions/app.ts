@@ -10,6 +10,7 @@ import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/views/page/PageViewState";
 import type { PametProjectData, ProjectReference } from "@/model/Project";
 import { StorageServiceRuntimeState } from "fusion/storage/management/StorageService";
+import type { ThemePreference, ThemeMode } from "@/app/theme";
 
 let log = getLogger("AppActions");
 
@@ -170,6 +171,12 @@ class AppActions {
     @action
     closeGlobalSearch(appViewState: AppViewState) {
         appViewState.globalSearchViewState = null;
+    }
+
+    @action
+    applyTheme(state: AppViewState, preference: ThemePreference, resolvedMode: ThemeMode) {
+        state.themePreference = preference;
+        state.themeResolvedMode = resolvedMode;
     }
 }
 

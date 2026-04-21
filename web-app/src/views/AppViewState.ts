@@ -11,6 +11,7 @@ import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { StorageServiceRuntimeState, createInitialStorageServiceRuntimeState } from "fusion/storage/management/StorageService";
+import { ThemePreference, ThemeMode } from "@/app/theme";
 
 
 export enum AppDialogMode {
@@ -71,6 +72,9 @@ export class AppViewState {
 
   devErrors: boolean = false;
 
+  themePreference: ThemePreference = ThemePreference.Auto;
+  themeResolvedMode: ThemeMode = ThemeMode.Light;
+
   constructor(options: { userId: string }) {
     this.userId = options.userId;
     makeObservable(this, {
@@ -92,6 +96,8 @@ export class AppViewState {
       clipboard: observable,
       clipboardProjectId: observable,
       devErrors: observable,
+      themePreference: observable,
+      themeResolvedMode: observable,
     });
   }
 

@@ -5,7 +5,7 @@ import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTION_OVERLAY_COLOR } from "@/app/constants";
 import { getLogger } from "fusion/logging";
-import { color_role_to_hex_color, drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
+import { drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { ElementView, getElementView } from "@/views/elementViewLibrary";
@@ -44,7 +44,7 @@ const dragSelectRectColor = DRAG_SELECT_COLOR;
 
 function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     let note = noteVS.note();
-    ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+    ctx.strokeStyle = pamet.themeManager.canvasColor(note.style.color_role);
     let rect = note.rect();
     drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
 }
@@ -83,6 +83,19 @@ export class DirectRenderer {
 
     get nvsCacheSize(): number {
         return this._nvsCacheSize;
+    }
+
+    /** Flush all cached note bitmaps (e.g. after a theme change). */
+    clearAllCaches() {
+        for (const [, imageBitmap] of this._nvsCache) {
+            try {
+                imageBitmap.close();
+            } catch {
+                // ignore
+            }
+        }
+        this._nvsCache.clear();
+        this._nvsCacheSize = 0;
     }
 
     getImage(src: string): HTMLImageElement | null {
@@ -430,7 +443,7 @@ export class DirectRenderer {
         if (pageVS.hoveredResizeNoteVS) {
             let note = pageVS.hoveredResizeNoteVS.note();
             let bottomRight = note.rect().bottomRight();
-            ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+            ctx.strokeStyle = pamet.themeManager.canvasColor(note.style.color_role);
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(bottomRight.x, bottomRight.y, RESIZE_CIRCLE_RADIUS, 0, 2 * Math.PI);
@@ -452,7 +465,7 @@ export class DirectRenderer {
                     let anchorPosition = arrowAnchorPosition(note, anchorType as ArrowAnchorOnNoteType);
 
                     // Draw the circle
-                    ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+                    ctx.strokeStyle = pamet.themeManager.canvasColor(note.style.color_role);
                     ctx.lineWidth = 1;
                     ctx.beginPath();
                     ctx.arc(anchorPosition.x, anchorPosition.y, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, 0, 2 * Math.PI);
@@ -503,7 +516,7 @@ export class DirectRenderer {
                         rect.x - ALIGNMENT_LINE_LENGTH, rect.bottom(),
                         rect.right() + ALIGNMENT_LINE_LENGTH, rect.bottom(),
                     ];
-                    ctx.strokeStyle = color_role_to_hex_color(note.style.color_role);
+                    ctx.strokeStyle = pamet.themeManager.canvasColor(note.style.color_role);
                     ctx.lineWidth = 1;
                     ctx.beginPath();
                     ctx.moveTo(leftLine[0], leftLine[1]);
@@ -526,7 +539,7 @@ export class DirectRenderer {
             // Display control points and suggested control points
             let arrow = editableArrowVS.arrow();
 
-            ctx.strokeStyle = color_role_to_hex_color(arrow.colorRole);
+            ctx.strokeStyle = pamet.themeManager.canvasColor(arrow.colorRole);
             ctx.lineWidth = 1;
 
             // Display control points
@@ -563,7 +576,7 @@ export class DirectRenderer {
                     const rect = entity.rect();
                     const x = pasteOffset.x + rect.x;
                     const y = pasteOffset.y + rect.y;
-                    ctx.strokeStyle = color_role_to_hex_color(entity.style.color_role);
+                    ctx.strokeStyle = pamet.themeManager.canvasColor(entity.style.color_role);
                     ctx.lineWidth = NOTE_BORDER_WIDTH;
                     ctx.strokeRect(
                         x + NOTE_BORDER_WIDTH / 2,
@@ -739,7 +752,7 @@ export class DirectRenderer {
                 rect.height - selectionBorderWidth
             );
             // Draw the resize circles
-            ctx.fillStyle = color_role_to_hex_color(note.style.background_color_role);
+            ctx.fillStyle = pamet.themeManager.canvasColor(note.style.background_color_role);
             let bottomRight = rect.bottomRight();
             ctx.beginPath();
             ctx.arc(bottomRight.x, bottomRight.y, RESIZE_CIRCLE_RADIUS, 0, 2 * Math.PI);

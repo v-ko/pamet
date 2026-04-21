@@ -10,4 +10,6 @@
     outline: none;
     /* To prevent text selection during drag */
     user-select: none;
+    /* Canvas surface — theme-aware so dark mode works */
+    background-color: var(--color-bg-canvas);
 }

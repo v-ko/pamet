@@ -217,7 +217,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100px;
-  border: 1px dashed #ccc;
+  border: 1px dashed var(--color-light-border);
   border-radius: 4px;
   transition: border-color 0.2s, background-color 0.2s;
 }
@@ -228,7 +228,7 @@
 }
 
 .image-preview-placeholder {
-  color: #999;
+  color: var(--color-text-faded);
 }
 
 .text-container textarea:disabled {

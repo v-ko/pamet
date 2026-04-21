@@ -64,6 +64,7 @@ pamet.setStorageStatusIconSet({
 // Create app view state and render synchronously so the UI appears immediately
 let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
 pamet.setAppViewState(appViewState)
+pamet.initializeTheme();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
 root.render(

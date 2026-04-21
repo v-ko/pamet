@@ -5,6 +5,18 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pamet</title>
+    <script>
+      // Resolve theme before first paint to avoid white flash
+      (function() {
+        var pref = localStorage.getItem('pamet-theme:preference') || 'system';
+        var dark = pref === 'dark' ||
+          (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) {
+          document.documentElement.style.backgroundColor = '#121214';
+          document.documentElement.dataset.splashDark = '1';
+        }
+      })();
+    </script>
     <style>
       #splash {
         position: fixed;
@@ -15,6 +27,9 @@
         justify-content: center;
         background: #fff;
         transition: opacity 300ms ease-out;
+      }
+      html[data-splash-dark="1"] #splash {
+        background: #121214;
       }
       #splash.fade-out {
         opacity: 0;

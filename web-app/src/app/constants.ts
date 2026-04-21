@@ -19,7 +19,7 @@ export const MAX_HEIGHT_SCALE = 200
 export const ZOOM_SPEED = 0.2
 export const TOUCHPAD_PINCH_ZOOM_SPEED = 0.1  // Secondary multiplier for touchpad pinch (platform-dependent deltas)
 
-export const DEFAULT_VIEW_HEIGHT = 40
+export const DEFAULT_VIEW_HEIGHT = 30
 
 
 // Note related

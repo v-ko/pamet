@@ -1,7 +1,7 @@
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { NO_SCALE_LINE_SPACING } from "@/app/constants";
 import { NOTE_BORDER_WIDTH } from "@/app/constants";
-import { color_role_to_hex_color, TextLayout } from "@/app/util";
+import { TextLayout } from "@/app/util";
 
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
 import { Rectangle } from "fusion/primitives/Rectangle";
@@ -35,7 +35,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
 
     drawBackground(context: CanvasRenderingContext2D) {
         let note = this.noteViewState.note();
-        let backgroundColor = color_role_to_hex_color(note.style.background_color_role);
+        let backgroundColor = pamet.themeManager.canvasColor(note.style.background_color_role);
         context.fillStyle = backgroundColor;
         context.fillRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
     }
@@ -45,7 +45,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         context.save()
 
         let note = this.noteViewState.note();
-        let color = color_role_to_hex_color(note.style.color_role);
+        let color = pamet.themeManager.canvasColor(note.style.color_role);
 
         const textRect_ = textRect(textLayout.textRect)
         const textTopLeft = textRect_.topLeft();
@@ -94,7 +94,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
     drawBorder(context: CanvasRenderingContext2D, borderType: BorderType = BorderType.Solid) {
         let note = this.noteViewState.note();
         context.save()
-        context.strokeStyle = color_role_to_hex_color(note.style.color_role);
+        context.strokeStyle = pamet.themeManager.canvasColor(note.style.color_role);
         context.lineWidth = NOTE_BORDER_WIDTH;
         if (borderType === BorderType.Dashed) {
             context.setLineDash([10, 5]);

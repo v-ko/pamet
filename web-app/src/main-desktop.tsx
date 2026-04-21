@@ -177,6 +177,7 @@ async function initializeDesktopApp() {
 
 let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
 pamet.setAppViewState(appViewState)
+pamet.initializeTheme();
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);
 });

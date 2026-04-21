@@ -1,7 +1,7 @@
 
 import { FC, useMemo } from 'react';
 import { ArrowViewState, BezierCurve } from "@/views/arrow/ArrowViewState";
-import { color_role_to_hex_color } from "@/app/util";
+import { pamet } from "@/app/facade";
 
 export interface ArrowProps {
     arrowViewState: ArrowViewState;
@@ -29,7 +29,7 @@ export const ArrowComponent: FC<ArrowProps> = ({ arrowViewState, clickHandler }:
     }, [arrowViewState]);
 
     let arrow = arrowViewState.arrow();
-    let color = color_role_to_hex_color(arrow.colorRole)
+    let color = pamet.themeManager.canvasColor(arrow.colorRole)
     let line_thickness = arrow.thickness;
 
     return (
@@ -60,7 +60,7 @@ export const ArrowHeadComponent: FC<ArrowProps> = ({ arrowViewState }) => {
             refX="10" refY="3.5" orient="auto">
 
             <polygon points="0 0, 10 3.5, 0 7"
-                stroke={color_role_to_hex_color(arrowViewState.arrow().colorRole)}
+                stroke={pamet.themeManager.canvasColor(arrowViewState.arrow().colorRole)}
             />
         </marker>
     )

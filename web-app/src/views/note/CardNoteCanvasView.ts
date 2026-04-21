@@ -5,7 +5,6 @@ import { BorderType, NoteCanvasView } from "@/views/note/NoteCanvasView";
 import { textRect } from "@/views/note/util";
 import { DEFAULT_FONT_STRING } from "@/app/constants";
 import { Point2D } from "fusion/primitives/Point2D";
-import { color_role_to_hex_color } from "@/app/util";
 import { pamet } from "@/app/facade";
 
 const DECORATION_EDGE = 10;
@@ -48,7 +47,7 @@ export class CardNoteCanvasView extends NoteCanvasView {
             let p2 = p1.add(new Point2D([-DECORATION_EDGE, 0]));
             let p3 = p1.add(new Point2D([0, DECORATION_EDGE]));
 
-            context.fillStyle = color_role_to_hex_color(note.style.color_role);
+            context.fillStyle = pamet.themeManager.canvasColor(note.style.color_role);
             context.beginPath();
             context.moveTo(p1.x, p1.y);
             context.lineTo(p2.x, p2.y);

@@ -1,5 +1,5 @@
 import { ARROW_HAND_ANGLE_RAD, ARROW_HAND_LENGTH, ARROW_SELECTION_THICKNESS_DELTA, SELECTION_OVERLAY_COLOR } from "@/app/constants";
-import { color_role_to_hex_color } from "@/app/util";
+import { pamet } from "@/app/facade";
 import { BaseCanvasView } from "@/views/note/BaseCanvasView";
 import { ArrowViewState, BezierCurve } from "@/views/arrow/ArrowViewState";
 
@@ -74,7 +74,7 @@ export class ArrowCanvasView extends BaseCanvasView {
         }
         if (!curves || curves.length === 0 || !path) return;
 
-        context.strokeStyle = color_role_to_hex_color(arrow.colorRole);
+        context.strokeStyle = pamet.themeManager.canvasColor(arrow.colorRole);
         context.lineWidth = arrow.thickness;
         this._drawArrowBody(context, path);
         this._renderArrowHead(context, curves);

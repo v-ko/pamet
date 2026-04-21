@@ -1,10 +1,12 @@
 import { Entity, EntityData, entityType } from "fusion/model/Entity"
 import { ProjectReference } from "@/model/Project";
+import { ThemePreference } from "@/app/theme";
 
 export interface UserSettingsData extends EntityData {
     userId?: string;
     userName?: string;
     projects?: ProjectReference[];
+    themePreference?: ThemePreference;
 }
 
 @entityType('UserSettings')
@@ -19,4 +21,7 @@ export class UserSettings extends Entity<UserSettingsData> {
 
     get projects(): ProjectReference[] { return this._data.projects ?? []; }
     set projects(value: ProjectReference[]) { this._data.projects = value; }
+
+    get themePreference(): ThemePreference | undefined { return this._data.themePreference; }
+    set themePreference(value: ThemePreference | undefined) { this._data.themePreference = value; }
 }

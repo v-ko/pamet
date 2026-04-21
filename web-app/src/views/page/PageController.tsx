@@ -625,10 +625,15 @@ export class PageController {
         mousePosIfRelevant: mousePosIfRelevant,
         showClipboardPreview: this.pageVS.showClipboardPreview,
         hoveredResizeNoteVS: this.pageVS.hoveredResizeNoteVS,
+        themeMode: pamet.appViewState.themeResolvedMode,
       };
     },
-      () => {
+      (cur, prev) => {
         try {
+          // Flush bitmap cache when theme changes (cached images have baked-in colors)
+          if (cur.themeMode !== prev.themeMode) {
+            this._renderer?.clearAllCaches();
+          }
           this._renderer?.renderCurrentPage();
         } catch (e) {
           log.error('Error rendering page:', e);
