@@ -468,34 +468,24 @@ class PageActions {
   }
 
   @action
-  colorSelectedNotes(state: PageViewState, colorRole: string | null, backgroundColorRole: string | null) {
+  colorSelectedElements(state: PageViewState, colorRole: string | null, backgroundColorRole: string | null, arrowColorRole: string | null) {
     for (let elementVS of state.selectedElementsVS) {
-      if (!(elementVS instanceof NoteViewState)) { // Skip arrows
-        continue;
+      if (elementVS instanceof NoteViewState) {
+        let note = elementVS.note();
+        if (colorRole !== null) {
+          note.style.color_role = colorRole;
+        }
+        if (backgroundColorRole !== null) {
+          note.style.background_color_role = backgroundColorRole;
+        }
+        pamet.updateNote(note);
+      } else if (elementVS instanceof ArrowViewState && arrowColorRole !== null) {
+        let arrow = elementVS.arrow();
+        arrow.colorRole = arrowColorRole;
+        pamet.updateArrow(arrow);
       }
-      let noteVS = elementVS as NoteViewState;
-      let note = noteVS.note();
-      if (colorRole !== null) {
-        note.style.color_role = colorRole;
-      }
-      if (backgroundColorRole !== null) {
-        note.style.background_color_role = backgroundColorRole;
-      }
-      pamet.updateNote(note);
     }
-  }
-
-  @action
-  colorSelectedArrows(state: PageViewState, colorRole: string) {
-    for (let elementVS of state.selectedElementsVS) {
-      if (!(elementVS instanceof ArrowViewState)) { // Skip notes
-        continue;
-      }
-      let arrowVS = elementVS as ArrowViewState;
-      let arrow = arrowVS.arrow();
-      arrow.colorRole = colorRole;
-      pamet.updateArrow(arrow);
-    }
+    this.clearSelection(state);
   }
 
   @action

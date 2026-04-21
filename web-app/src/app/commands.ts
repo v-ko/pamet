@@ -114,40 +114,31 @@ class PametCommands {
     @command('Set default color to selected elements')
     colorSelectedElementsDefault() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onDefault', 'default');
-        pageActions.colorSelectedArrows(pageVS, 'onDefault');
-        pageActions.clearSelection(pageVS);
+        pageActions.colorSelectedElements(pageVS, 'onDefault', 'default', 'onDefault');
     }
 
     @command('Set attention color to selected elements')
     colorSelectedElementsAttention() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onAttention', 'attention');
-        pageActions.colorSelectedArrows(pageVS, 'onAttention');
-        pageActions.clearSelection(pageVS);
+        pageActions.colorSelectedElements(pageVS, 'onAttention', 'attention', 'onAttention');
     }
 
     @command('Set success color to selected elements')
     colorSelectedElementsSuccess() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onSuccess', 'success');
-        pageActions.colorSelectedArrows(pageVS, 'onSuccess');
-        pageActions.clearSelection(pageVS);
+        pageActions.colorSelectedElements(pageVS, 'onSuccess', 'success', 'onSuccess');
     }
 
     @command('Set neutral color to selected elements')
     colorSelectedElementsNeutral() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, 'onSurface', 'neutral');
-        pageActions.colorSelectedArrows(pageVS, 'onSurface');
-        pageActions.clearSelection(pageVS);
+        pageActions.colorSelectedElements(pageVS, 'onSurface', 'neutral', 'onSurface');
     }
 
     @command('Set transparent background to selected notes')
     setNoteBackgroundToTransparent() {
         let pageVS = getCurrentPageViewState();
-        pageActions.colorSelectedNotes(pageVS, null, 'transparent');
-        pageActions.clearSelection(pageVS);
+        pageActions.colorSelectedElements(pageVS, null, 'transparent', null);
     }
 
     @command('Create arrow')

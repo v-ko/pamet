@@ -19,6 +19,8 @@ let log = getLogger('NoteCanvasView');
 
 const IMAGE_MISSING_TEXT = '(image missing)'
 const IMAGE_NOT_LOADED_TEXT = '(loading...)'
+const IMAGE_ELEMENT_MISSING_TEXT = '(image element missing)'
+const IMAGE_LOAD_FAILED_TEXT = '(loading failed)'
 
 
 
@@ -114,7 +116,7 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         let noteRect = note.rect();
         if (!note.content.image?.path) {
             // Display error text instead
-            let textLayout = calculateTextLayout('Image not set', textRect(noteRect), DEFAULT_FONT_STRING)
+            let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
             this.drawText(context, textLayout);
             return;
         }
@@ -130,11 +132,11 @@ export abstract class NoteCanvasView extends BaseCanvasView {
         let image = this.renderer.getImage(route.toRelativeReference());
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
-            errorText = '(image element missing)';
+            errorText = IMAGE_ELEMENT_MISSING_TEXT;
         } else if (!image.complete) { // still loading
             errorText = IMAGE_NOT_LOADED_TEXT;
         } else if (image.naturalWidth === 0) { // loaded unsuccessfully
-            errorText = '(loading failed)';
+            errorText = IMAGE_LOAD_FAILED_TEXT;
         }
         if (errorText !== undefined) {
             let textLayout = calculateTextLayout(errorText, textRect(noteRect), DEFAULT_FONT_STRING)
