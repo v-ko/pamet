@@ -31,6 +31,10 @@ def close_tab(state: AppWindowViewState, index: int) -> None:
     if state._tab_model.count() <= 1:
         state.close_last_tab.emit()
         return
+    # Save the URL for Ctrl+Shift+T restore
+    tab = state._tab_model._tabs[index]
+    if tab.url:
+        state._closed_tab_urls.append(tab.url)
     state._tab_model.remove(index)
     n = state._tab_model.count()
     if state._current_tab_index >= n:
@@ -49,6 +53,11 @@ def close_current_tab(state: AppWindowViewState) -> None:
 @action("app_window.update_tab_title")
 def update_tab_title(state: AppWindowViewState, index: int, title: str) -> None:
     state._tab_model.set_title(index, title)
+
+
+@action("app_window.update_tab_url")
+def update_tab_url(state: AppWindowViewState, index: int, url: str) -> None:
+    state._tab_model.set_url(index, url)
 
 
 @action("app_window.update_nav_state")
@@ -77,3 +86,11 @@ def previous_tab(state: AppWindowViewState) -> None:
 def switch_to_tab(state: AppWindowViewState, index: int) -> None:
     if 0 <= index < state._tab_model.count():
         state.currentTabIndex = index
+
+
+@action("app_window.restore_tab")
+def restore_tab(state: AppWindowViewState) -> None:
+    if not state._closed_tab_urls:
+        return
+    url = state._closed_tab_urls.pop()
+    open_tab(state, url, switch_to=True)

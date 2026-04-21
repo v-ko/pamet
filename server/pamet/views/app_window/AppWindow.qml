@@ -251,6 +251,7 @@ ApplicationWindow {
                     }
                     onTitleChanged: backend.updateTabTitle(index, title)
                     onUrlChanged: {
+                        backend.updateTabUrl(index, webView.url.toString())
                         if (webViewStack.currentIndex === index)
                             backend.updateNavState(webView.canGoBack, webView.canGoForward)
                     }
@@ -300,6 +301,32 @@ ApplicationWindow {
     Shortcut { sequence: "Ctrl+Shift+C"; onActivated: backend.toggleDevTools() }
     Shortcut { sequence: "Ctrl+Tab"; onActivated: backend.nextTab() }
     Shortcut { sequence: "Ctrl+Shift+Tab"; onActivated: backend.previousTab() }
+    Shortcut { sequence: "Ctrl+T"; onActivated: backend.openNewTab() }
+    Shortcut { sequence: "Ctrl+Shift+T"; onActivated: backend.restoreTab() }
+    Shortcut {
+        sequence: "Alt+Left"
+        onActivated: {
+            if (!appState) return
+            let v = webViewRepeater.itemAt(appState.currentTabIndex)
+            if (v && v.canGoBack) v.goBack()
+        }
+    }
+    Shortcut {
+        sequence: "Alt+Right"
+        onActivated: {
+            if (!appState) return
+            let v = webViewRepeater.itemAt(appState.currentTabIndex)
+            if (v && v.canGoForward) v.goForward()
+        }
+    }
+    Shortcut {
+        sequence: "Ctrl+R"
+        onActivated: {
+            if (!appState) return
+            let v = webViewRepeater.itemAt(appState.currentTabIndex)
+            if (v) v.reload()
+        }
+    }
     Shortcut { sequence: "Ctrl+1"; onActivated: backend.switchToTab(0) }
     Shortcut { sequence: "Ctrl+2"; onActivated: backend.switchToTab(1) }
     Shortcut { sequence: "Ctrl+3"; onActivated: backend.switchToTab(2) }

@@ -78,6 +78,11 @@ class TabModel(QAbstractListModel):
         idx = self.index(row, 0)
         self.dataChanged.emit(idx, idx, [self.TitleRole])
 
+    def set_url(self, row: int, url: str) -> None:
+        if row < 0 or row >= len(self._tabs):
+            return
+        self._tabs[row].url = url
+
     def count(self) -> int:
         return len(self._tabs)
 
@@ -99,6 +104,7 @@ class AppWindowViewState(QObject):
         self._current_tab_index = -1
         self._can_go_back = False
         self._can_go_forward = False
+        self._closed_tab_urls: list[str] = []  # stack for Ctrl+Shift+T restore
 
     # -- tab model (constant, the object itself never changes) --
 

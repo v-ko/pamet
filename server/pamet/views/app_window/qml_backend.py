@@ -17,9 +17,11 @@ from pamet.actions.app import (
     next_tab,
     open_tab,
     previous_tab,
+    restore_tab,
     switch_to_tab,
     update_nav_state,
     update_tab_title,
+    update_tab_url,
 )
 from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
 from pamet.views.app_window.view_state import AppWindowViewState
@@ -75,6 +77,7 @@ class QmlAppBackend(QObject):
         super().__init__(parent)
         self._state = view_state
         self._dev_tools_visible = False
+        self._endpoint = endpoint
 
         # Collect internal hosts for URL classification
         self._internal_hosts: set[str] = set()
@@ -117,6 +120,10 @@ class QmlAppBackend(QObject):
     def updateTabTitle(self, index: int, title: str) -> None:
         update_tab_title(self._state, index, title)
 
+    @Slot(int, str)
+    def updateTabUrl(self, index: int, url: str) -> None:
+        update_tab_url(self._state, index, url)
+
     @Slot(bool, bool)
     def updateNavState(self, can_back: bool, can_forward: bool) -> None:
         update_nav_state(self._state, can_back, can_forward)
@@ -132,6 +139,14 @@ class QmlAppBackend(QObject):
     @Slot(int)
     def switchToTab(self, index: int) -> None:
         switch_to_tab(self._state, index)
+
+    @Slot()
+    def openNewTab(self) -> None:
+        open_tab(self._state, self._endpoint, switch_to=True)
+
+    @Slot()
+    def restoreTab(self) -> None:
+        restore_tab(self._state)
 
     # -- Non-action helpers (pure side-effects, no state mutation) --
 
