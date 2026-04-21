@@ -4,27 +4,6 @@ import { pamet } from "@/app/facade";
 
 const log = getLogger('KeybindingService');
 
-function contextConditionFulfilled(whenExpression: string): boolean {
-  if (whenExpression.includes('&&') || whenExpression.includes('||') ||
-    whenExpression.includes('==')) {
-    throw new Error('Logical expressions not implemented yet');
-  }
-
-  if (whenExpression === '') {
-    return true;
-  }
-
-  // For now, we only support simple conditions like 'pageHasFocus'
-  let contextKey = whenExpression;
-  const contextVal = pamet.context[contextKey];
-  if (contextVal === undefined) {
-    throw new Error(`Context condition not found: ${contextKey}`);
-  }
-  let satisfied = contextVal === true;
-
-  return satisfied;
-}
-
 export interface Keybinding {
   key: string;     // e.g. "Ctrl+Shift+N", "Alt+ArrowUp", "Ctrl+=", "Ctrl+Digit1"
   command: string; // The command name to be looked up in getCommand(commandName)
@@ -301,7 +280,7 @@ export class KeybindingService {
       return;
     }
 
-    if (!contextConditionFulfilled(matchedBinding.when)) {
+    if (!pamet.contextConditionFulfilled(matchedBinding.when)) {
       return;
     }
 

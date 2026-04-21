@@ -170,6 +170,7 @@ export const PageAndCommandPalette: React.FC<{ state: PageAndCommandPaletteState
             let commandItems: PaletteItemAttributes[] = [];
 
             for (const cmd of allCommands) {
+                if (cmd.enablement && !pamet.contextConditionFulfilled(cmd.enablement)) continue;
                 if (cmd.title.toLowerCase().includes(filterText)) {
                     commandItems.push({
                         id: cmd.name,

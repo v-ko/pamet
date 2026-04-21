@@ -99,43 +99,43 @@ class PametCommands {
         }
     }
 
-    @command('Auto-size selected notes')
+    @command('Auto-size selected notes', 'notesSelected')
     autoSizeSelectedNotes() {
         let pageVS = getCurrentPageViewState();
         pageActions.autoSizeSelectedNotes(pageVS);
     }
 
-    @command('Delete selected notes and arrows')
+    @command('Delete selected notes and arrows', 'hasSelection')
     deleteSelectedElements() {
         let pageVS = getCurrentPageViewState();
         pageActions.deleteSelectedElements(pageVS);
     }
 
-    @command('Set default color to selected elements')
+    @command('Set default color to selected elements', 'hasSelection')
     colorSelectedElementsDefault() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onDefault', 'default', 'onDefault');
     }
 
-    @command('Set attention color to selected elements')
+    @command('Set attention color to selected elements', 'hasSelection')
     colorSelectedElementsAttention() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onAttention', 'attention', 'onAttention');
     }
 
-    @command('Set success color to selected elements')
+    @command('Set success color to selected elements', 'hasSelection')
     colorSelectedElementsSuccess() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onSuccess', 'success', 'onSuccess');
     }
 
-    @command('Set neutral color to selected elements')
+    @command('Set neutral color to selected elements', 'hasSelection')
     colorSelectedElementsNeutral() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onSurface', 'neutral', 'onSurface');
     }
 
-    @command('Set transparent background to selected notes')
+    @command('Set transparent background to selected notes', 'notesSelected')
     setNoteBackgroundToTransparent() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, null, 'transparent', null);
@@ -188,7 +188,7 @@ class PametCommands {
         projectActions.openPageCreationDialog(appViewState, forwardLinkLocation);
     }
 
-    @command('Edit note')
+    @command('Edit note', 'notesSelected')
     editSelectedNote() {
         let pageVS = getCurrentPageViewState();
 
@@ -254,7 +254,7 @@ class PametCommands {
         pageActions.updateSelection(pageVS, selectionMap);
     }
 
-    @command('Copy selected elements')
+    @command('Copy selected elements', 'hasSelection')
     copySelectedElements() {
         const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();
@@ -273,7 +273,7 @@ class PametCommands {
         pageActions.copySelectedElements(appViewState, pageVS, relativeTo);
     }
 
-    @command('Cut')
+    @command('Cut', 'hasSelection')
     cutSelectedElements() {
         const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();

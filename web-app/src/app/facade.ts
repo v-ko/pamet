@@ -26,6 +26,7 @@ import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { pageActions } from "@/actions/page";
 import { PageViewState } from "@/views/page/PageViewState";
+import { NoteViewState } from "@/views/note/NoteViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { RenderProfiler } from "@/app/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
@@ -54,6 +55,31 @@ export type ProjectStorageConfigFactory = (
 ) => ProjectStorageConfig;
 
 
+
+function deriveContextFromViewState(facade: PametFacade) {
+    let pageVS: PageViewState | null;
+    try {
+        pageVS = facade.appViewState.currentPageViewState;
+    } catch {
+        return;
+    }
+    if (!pageVS) {
+        facade.setContext('notesSelected', false);
+        facade.setContext('hasSelection', false);
+        facade.setContext('noteEditing', false);
+        return;
+    }
+    let hasNotes = false;
+    for (const el of pageVS.selectedElementsVS) {
+        if (el instanceof NoteViewState) {
+            hasNotes = true;
+            break;
+        }
+    }
+    facade.setContext('notesSelected', hasNotes);
+    facade.setContext('hasSelection', pageVS.selectedElementsVS.size > 0);
+    facade.setContext('noteEditing', pageVS.noteEditWindowState !== null);
+}
 
 // Service related
 export class PametFacade extends PametStore {
@@ -140,6 +166,11 @@ export class PametFacade extends PametStore {
                 return;
             }
             completedActionsLogger.info(rootAction.name);
+        });
+
+        // Derive context from viewstate after each root action
+        registerRootActionCompletedHook(() => {
+            deriveContextFromViewState(this);
         });
     }
 
@@ -229,8 +260,22 @@ export class PametFacade extends PametStore {
     }
 
     setContext(key: string, value: boolean) {
-        console.log('Setting context', key, value)
         this.context[key] = value;
+    }
+
+    contextConditionFulfilled(whenExpression: string): boolean {
+        if (whenExpression.includes('&&') || whenExpression.includes('||') ||
+            whenExpression.includes('==')) {
+            throw new Error('Logical expressions not implemented yet');
+        }
+        if (whenExpression === '') {
+            return true;
+        }
+        const contextVal = this.context[whenExpression];
+        if (contextVal === undefined) {
+            return false;
+        }
+        return contextVal === true;
     }
 
     get appViewState(): AppViewState {
