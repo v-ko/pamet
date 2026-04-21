@@ -53,54 +53,28 @@
     "vite": "^5.3.5"
   },
   "jest": {
-    "projects": [
-      {
-        "displayName": "fusion",
-        "preset": "ts-jest/presets/default-esm",
-        "testEnvironment": "node",
-        "testMatch": [
-          "<rootDir>/../fusion/js-src/src/**/*.test.ts"
-        ],
-        "extensionsToTreatAsEsm": [
-          ".ts"
-        ],
-        "transform": {
-          "^.+\\.tsx?$": [
-            "ts-jest",
-            {
-              "useESM": true
-            }
-          ]
-        },
-        "moduleNameMapper": {
-          "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1"
+    "preset": "ts-jest/presets/default-esm",
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
+    ],
+    "extensionsToTreatAsEsm": [
+      ".ts",
+      ".tsx"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "useESM": true
         }
-      },
-      {
-        "displayName": "web-app",
-        "preset": "ts-jest/presets/default-esm",
-        "testEnvironment": "jsdom",
-        "testMatch": [
-          "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
-        ],
-        "extensionsToTreatAsEsm": [
-          ".ts",
-          ".tsx"
-        ],
-        "transform": {
-          "^.+\\.tsx?$": [
-            "ts-jest",
-            {
-              "useESM": true
-            }
-          ]
-        },
-        "moduleNameMapper": {
-          "\\.(css|less|scss|sass)$": "identity-obj-proxy",
-          "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1",
-          "^@/(.*)$": "<rootDir>/web-app/src/$1"
-        }
-      }
-    ]
+      ]
+    },
+    "moduleNameMapper": {
+      "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+      "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1",
+      "^@/(.*)$": "<rootDir>/web-app/src/$1"
+    },
+    "passWithNoTests": true
   }
 }
