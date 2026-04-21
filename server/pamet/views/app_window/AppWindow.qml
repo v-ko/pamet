@@ -209,6 +209,10 @@ ApplicationWindow {
                 let v = webViewRepeater.itemAt(currentIndex)
                 if (v) backend.updateNavState(v.canGoBack, v.canGoForward)
                 else backend.updateNavState(false, false)
+                // Rebind dev tools to the newly active tab
+                if (devToolsView.visible) {
+                    if (v) v.devToolsView = devToolsView
+                }
             }
 
             Repeater {
@@ -250,6 +254,38 @@ ApplicationWindow {
                 }
             }
         }
+
+        // Dev tools inspector panel
+        WebEngineView {
+            id: devToolsView
+            SplitView.fillWidth: true
+            SplitView.preferredHeight: contentSplit.height / 3
+            visible: false
+        }
+    }
+
+    // Show/hide dev tools from backend signal
+    Connections {
+        target: backend ?? null
+        function onDevToolsVisibleChanged() {
+            let show = backend.devToolsVisible
+            if (show) {
+                let v = webViewRepeater.itemAt(webViewStack.currentIndex)
+                if (v) v.devToolsView = devToolsView
+                devToolsView.visible = true
+            } else {
+                devToolsView.visible = false
+            }
+        }
+    }
+
+    // Responsive dev tools orientation
+    onWidthChanged: _updateDevToolsOrientation()
+    onHeightChanged: _updateDevToolsOrientation()
+    function _updateDevToolsOrientation() {
+        if (!devToolsView.visible) return
+        let ratio = root.width / (root.height || 1)
+        contentSplit.orientation = ratio > 1.3 ? Qt.Horizontal : Qt.Vertical
     }
 
     // ── Keyboard shortcuts ──────────────────────────────────────────

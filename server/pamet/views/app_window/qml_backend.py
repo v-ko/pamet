@@ -63,6 +63,8 @@ class QmlAppBackend(QObject):
     injection script and URL-classification helpers.
     """
 
+    devToolsVisibleChanged = Signal()
+
     def __init__(
         self,
         view_state: AppWindowViewState,
@@ -72,6 +74,7 @@ class QmlAppBackend(QObject):
     ):
         super().__init__(parent)
         self._state = view_state
+        self._dev_tools_visible = False
 
         # Collect internal hosts for URL classification
         self._internal_hosts: set[str] = set()
@@ -160,4 +163,9 @@ class QmlAppBackend(QObject):
 
     @Slot()
     def toggleDevTools(self) -> None:
-        print("[QML] Dev tools toggle not yet implemented")
+        self._dev_tools_visible = not self._dev_tools_visible
+        self.devToolsVisibleChanged.emit()
+
+    @Property(bool, notify=devToolsVisibleChanged)
+    def devToolsVisible(self) -> bool:
+        return self._dev_tools_visible
