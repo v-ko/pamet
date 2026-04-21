@@ -41,7 +41,8 @@ def raise_window():
     windows = app.allWindows()
     if windows:
         win = windows[0]
-        win.show()
+        if win.visibility() == win.Visibility.Minimized:
+            win.showNormal()
         win.requestActivate()
         win.raise_()
 
