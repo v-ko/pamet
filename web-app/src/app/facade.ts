@@ -15,7 +15,7 @@ import { StorageService } from "fusion/storage/management/StorageService";
 import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/repository/Repository";
 import { Router } from "@/services/routing/Router";
-import { registerRootActionCompletedHook } from "fusion/registries/Action";
+import { registerRootActionCompletedHook, setActionExceptionHandler } from "fusion/registries/Action";
 import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
@@ -25,7 +25,7 @@ import { switchProject } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { pageActions } from "@/actions/page";
-import { PageViewState } from "@/views/page/PageViewState";
+import { PageViewState, PageMode } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { RenderProfiler } from "@/app/RenderProfiler";
@@ -171,6 +171,33 @@ export class PametFacade extends PametStore {
         // Derive context from viewstate after each root action
         registerRootActionCompletedHook(() => {
             deriveContextFromViewState(this);
+        });
+
+        // Register action exception handler to clear page mode and alert
+        let _handlingException = false;
+        setActionExceptionHandler((actionState, error) => {
+            log.error(`Action exception in ${actionState.name}:`, error);
+
+            // Clear page mode with recursion guard
+            if (!_handlingException) {
+                _handlingException = true;
+                try {
+                    const pageVS = this._appViewState?.currentPageViewState;
+                    if (pageVS && pageVS.mode !== PageMode.None) {
+                        pageActions.clearMode(pageVS);
+                    }
+                } catch (e) {
+                    log.error('Error clearing page mode after action exception', e);
+                } finally {
+                    _handlingException = false;
+                }
+            }
+
+            // Schedule alert with the error
+            const errorMsg = error instanceof Error ? error.message : String(error);
+            setTimeout(() => {
+                alert(`Action error in ${actionState.name}:\n${errorMsg}`);
+            }, 0);
         });
     }
 
