@@ -7,15 +7,7 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
-from fastapi import (
-    APIRouter,
-    Body,
-    Depends,
-    File,
-    HTTPException,
-    Request,
-    UploadFile,
-)
+from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, StreamingResponse
 from fusion.libs.command import get_command
 from fusion.libs.model import dump_to_dict
@@ -36,6 +28,9 @@ desktop_router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
+DESKTOP_AUTH_COOKIE_NAME = "pamet_desktop_token"
+
+
 def _extract_bearer_token(auth_header: str | None) -> str | None:
     if not auth_header:
         return None
@@ -49,7 +44,10 @@ def _extract_bearer_token(auth_header: str | None) -> str | None:
 def require_desktop_auth(request: Request):
     expected_token = getattr(request.app.state, "desktop_access_token", None)
     if expected_token:
+        # Accept Bearer header or auth cookie
         provided = _extract_bearer_token(request.headers.get("Authorization"))
+        if not provided:
+            provided = request.cookies.get(DESKTOP_AUTH_COOKIE_NAME)
         if not provided or not hmac.compare_digest(provided, expected_token):
             raise HTTPException(
                 status_code=401,
@@ -95,6 +93,7 @@ def _project_runtime(project_id: str):
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
+
 
 # Commands accessible without auth (for IPC from other processes)
 PUBLIC_COMMAND_NAMES = frozenset(
@@ -270,6 +269,67 @@ def serve_project_index(user_id: str, project_id: str, request: Request):
 
 
 @desktop_router.get(
+    "/{user_id}/{project_id}/files/{file_path:path}",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def get_file(
+    user_id: str,
+    project_id: str,
+    file_path: str,
+):
+    _ = user_id
+    pfm = _project_runtime(project_id)
+    path = pfm.file_storage.get_path(file_path)
+    if path is None:
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(path)
+
+
+@desktop_router.post(
+    "/{user_id}/{project_id}/files/{file_path:path}",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def upload_file(
+    user_id: str,
+    project_id: str,
+    file_path: str,
+    file: UploadFile = File(...),
+):
+    _ = user_id
+    raw = file_path.strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="File path is required")
+    rel = PurePosixPath(raw)
+    if rel.is_absolute() or ".." in rel.parts:
+        raise HTTPException(status_code=400, detail=f"Invalid file path: {file_path}")
+
+    pfm = _project_runtime(project_id)
+    data = await file.read()
+    try:
+        content_hash = pfm.file_storage.add(rel, data)
+    except (ValueError, FileExistsError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "hash": content_hash, "path": raw}
+
+
+@desktop_router.delete(
+    "/{user_id}/{project_id}/files/{file_path:path}",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def delete_file(
+    user_id: str,
+    project_id: str,
+    file_path: str,
+):
+    _ = user_id
+    pfm = _project_runtime(project_id)
+    deleted = pfm.file_storage.remove_by_path(file_path)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="File not found")
+    return {"ok": True}
+
+
+@desktop_router.get(
     "/desktop/projects/{project_id}/changes/stream",
     dependencies=[Depends(require_desktop_auth)],
 )
@@ -309,59 +369,4 @@ def apply_changes(project_id: str, payload: dict = Body(...)):
             status_code=400, detail="'delta' must be a non-empty object"
         )
     runtime.apply_delta(delta_data)
-    return {"ok": True}
-
-
-@desktop_router.post(
-    "/desktop/projects/{project_id}/files/{file_path:path}",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def upload_file(
-    project_id: str,
-    file_path: str,
-    file: UploadFile = File(...),
-):
-    raw = file_path.strip()
-    if not raw:
-        raise HTTPException(status_code=400, detail="File path is required")
-    rel = PurePosixPath(raw)
-    if rel.is_absolute() or ".." in rel.parts:
-        raise HTTPException(status_code=400, detail=f"Invalid file path: {file_path}")
-
-    pfm = _project_runtime(project_id)
-    data = await file.read()
-    try:
-        content_hash = pfm.file_storage.add(rel, data)
-    except (ValueError, FileExistsError) as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"ok": True, "hash": content_hash, "path": raw}
-
-
-@desktop_router.get(
-    "/desktop/projects/{project_id}/files/{file_path:path}",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def get_file_content(
-    project_id: str,
-    file_path: str,
-):
-    pfm = _project_runtime(project_id)
-    path = pfm.file_storage.get_path(file_path)
-    if path is None:
-        raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(path)
-
-
-@desktop_router.delete(
-    "/desktop/projects/{project_id}/files/{file_path:path}",
-    dependencies=[Depends(require_desktop_auth)],
-)
-async def delete_file(
-    project_id: str,
-    file_path: str,
-):
-    pfm = _project_runtime(project_id)
-    deleted = pfm.file_storage.remove_by_path(file_path)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="File not found")
     return {"ok": True}

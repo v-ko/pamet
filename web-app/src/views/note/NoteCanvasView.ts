@@ -11,7 +11,6 @@ import { DEFAULT_FONT_STRING } from "@/app/constants";
 import { textRect, imageGeometryToFitAre } from "@/views/note/util";
 import { Size } from "fusion/primitives/Size";
 import { getLogger } from "fusion/logging";
-import { fileRoute } from "@/services/routing/PametRoute";
 
 let log = getLogger('NoteCanvasView');
 
@@ -121,15 +120,9 @@ export abstract class NoteCanvasView extends BaseCanvasView {
             return;
         }
 
-        let userId = pamet.appViewState.userId;
-        let projectId = pamet.appViewState.currentProjectId;
-        if (userId === null || projectId === null) {
-            log.error('Cannot draw image: userId or projectId is undefined');
-            return;
-        }
-        let route = fileRoute(note.content.image.path, userId, projectId);
+        const url = this.noteViewState.pageViewState.fileUrlsByPath.get(note.content.image.path);
 
-        let image = this.renderer.getImage(route.toRelativeReference());
+        let image = url ? this.renderer.getImage(url) : null;
         let errorText: string | undefined = undefined;
         if (image === null) { // element is not mounted (initial render or internal error)
             errorText = IMAGE_ELEMENT_MISSING_TEXT;

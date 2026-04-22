@@ -216,7 +216,8 @@ export class PageViewState {
             return;
         }
         const route = fileRoute(filePath, userId, pametProjectId);
-        this.fileUrlsByPath.set(filePath, route.toRelativeReference());
+        const baseUrl = window.PAMET_DESKTOP_API_BASE_URL ?? '';
+        this.fileUrlsByPath.set(filePath, baseUrl + route.toRelativeReference());
     }
 
     noteVS_anchorsForArrow(arrow: Arrow) {
