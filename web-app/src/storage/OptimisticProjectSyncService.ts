@@ -121,11 +121,20 @@ export class OptimisticProjectSyncService {
                 }
             })
             .catch((error) => {
-                log.error('Auto-commit failed. Discarded uncommitted delta.', {
+                log.error('Auto-commit failed. Returning delta to uncommitted changes.', {
                     error,
                     projectId: this._projectId,
                     delta: delta.data,
                 });
+
+                // Remove the failed delta from expectedDelta so reconciliation
+                // doesn't try to reverse changes that were never applied remotely.
+                const reversedFailed = delta.reversed();
+                this._expectedDelta.mergeWithPriority(reversedFailed);
+
+                // Put the failed changes back so the next flush retries them.
+                delta.mergeWithPriority(this._uncommittedDelta);
+                this._uncommittedDelta = delta;
             });
     }
 
