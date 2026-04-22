@@ -77,13 +77,6 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
     }).catch(e => log.error("Failed to open backups folder", e));
   }
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (dialog && !dialog.open) {
-      dialog.showModal();
-    }
-  }, []);
-
   const mouseDownOnBackdrop = useRef(false);
 
   return (
