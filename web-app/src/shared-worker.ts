@@ -1,15 +1,13 @@
 import { StorageServiceActual } from 'fusion/storage/management/StorageService';
 import { parsePametFileUrl } from "@/storage/storage-utils";
-import { setupServiceWorker } from 'fusion/storage/management/service-worker-utils';
+import { setupSharedWorker } from 'fusion/storage/management/shared-worker-utils';
 
 import { getLogger } from 'fusion/logging';
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 
-getLogger('service-worker');
-// let test=1
-// Register entity classes in service worker context
+getLogger('shared-worker');
+
 registerEntityClasses();
 
 let storageService = new StorageServiceActual(parsePametFileUrl);
-storageService.setupFileRequestInterception();
-setupServiceWorker(storageService);
+setupSharedWorker(storageService);

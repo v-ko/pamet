@@ -137,7 +137,7 @@ export enum PametTabIndex {
     DebugDialog_FetchCommitStats = 90,
     DebugDialog_FetchFdsState = 91,
     DebugDialog_CalcMobxSize = 92,
-    DebugDialog_RestartServiceWorker = 93,
+    DebugDialog_RestartStorageWorker = 93,
     DebugDialog_DebugPaintCheckbox = 94,
 
     // Panel tab indices (top-left)

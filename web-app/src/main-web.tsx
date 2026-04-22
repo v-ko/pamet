@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@/index.css";
-import serviceWorkerUrl from "@/service-worker?url"
+import sharedWorkerUrl from "@/shared-worker?url"
+import fileSwUrl from "@/service-worker-files?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
@@ -114,14 +115,21 @@ async function initializeWebApp() {
     pamet.setStorageService(storageService);
     try {
         log.info("Initializing storage service in web mode...");
-        if ('serviceWorker' in navigator) {
-            await storageService.setupInServiceWorker(serviceWorkerUrl);
+        if (typeof SharedWorker !== 'undefined') {
+            await storageService.setupInSharedWorker(sharedWorkerUrl);
         } else {
-            storageService.setupInMainThread();
+            storageService.setupInMainThread(); // Chrome Android fallback
         }
         log.info("Storage service initialized in web mode");
     } catch (e) {
         log.error("Failed to initialize storage service", e);
+    }
+
+    // Register stateless SW for serving cached files
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register(fileSwUrl, { type: 'module', scope: '/' }).catch(err => {
+            log.error("Failed to register file-serving service worker", err);
+        });
     }
 
     // Populate app view state from config store

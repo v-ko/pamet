@@ -255,9 +255,7 @@ export async function createDefaultProject(): Promise<ProjectData> {
     return newProject;
 }
 
-export async function restartServiceWorker(): Promise<void> {
-    log.info('Restarting service worker...');
-    await pamet.storageService.unregisterServiceWorker();
-    log.info('Service worker restarted. Reloading page...');
-    window.location.reload();
+export async function restartStorageWorker(): Promise<void> {
+    log.info('Restarting storage worker...');
+    await pamet.storageService.restartStorageWorker();
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@/index.css";
-import serviceWorkerUrl from "@/service-worker-desktop?url"
+import sharedWorkerDesktopUrl from "@/shared-worker-desktop?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
@@ -73,6 +73,7 @@ const desktopStorageConfigFactory: ProjectStorageConfigFactory = (projectId, use
         onDeviceFileStore: {
             name: 'RestApi' as FileStoreAdapterNames,
             args: {
+                userId: userId,
                 projectId: projectId,
                 baseUrl: baseUrl,
                 auth: desktopAuth,
@@ -98,6 +99,9 @@ pamet.setStorageStatusIconSet({
 // Initialize the desktop app (async: storage, config, routing)
 async function initializeDesktopApp() {
   try {
+    // Set auth cookie so bare <img src> requests carry credentials
+    document.cookie = `pamet_desktop_token=${desktopAccessToken}; path=/; samesite=strict`;
+
     // Setup config store with WebSocket sync to desktop server
     const wsUrl = baseUrl.replace(/^http/, 'ws') + '/config/store/ws?token=' + encodeURIComponent(desktopAccessToken!);
     const configSync = new WebSocketSyncService({
@@ -146,9 +150,9 @@ async function initializeDesktopApp() {
     });
     pamet.setStorageService(storageService);
     try {
-        log.info("Initializing storage service in desktop mode...");
-        await storageService.setupInServiceWorker(serviceWorkerUrl);
-        log.info("Storage service initialized in desktop mode");
+        log.info("Initializing storage service in desktop mode (SharedWorker)...");
+        await storageService.setupInSharedWorker(sharedWorkerDesktopUrl);
+        log.info("Storage service initialized in desktop mode (SharedWorker)");
     } catch (e) {
         log.error("Failed to initialize storage service", e);
     }

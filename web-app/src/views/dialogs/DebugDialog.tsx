@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { pamet } from "@/app/facade";
 import { Entity } from 'fusion/model/Entity';
 import { PametTabIndex } from '@/app/constants';
-import { restartServiceWorker } from '@/procedures/app';
+import { restartStorageWorker } from '@/procedures/app';
 
 interface DebugDialogProps {
   isOpen: boolean;
@@ -100,12 +100,12 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
     }
   };
 
-  const a_restartServiceWorker = async () => {
+  const a_restartStorageWorker = async () => {
     try {
-        await restartServiceWorker();
+        await restartStorageWorker();
     } catch (error) {
-        console.error('Error restarting service worker:', error);
-        alert('Error restarting service worker. See console for details.');
+        console.error('Error restarting storage worker:', error);
+        alert('Error restarting storage worker. See console for details.');
     }
     };
 
@@ -234,8 +234,8 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
             <p>MobX State Size: {(mobxStateSize / 1024).toFixed(2)} KB</p>
         )}
 
-      <button onClick={a_restartServiceWorker} tabIndex={PametTabIndex.DebugDialog_RestartServiceWorker}>
-        Restart Service Worker
+      <button onClick={a_restartStorageWorker} tabIndex={PametTabIndex.DebugDialog_RestartStorageWorker}>
+        Restart Storage Worker
       </button>
 
         <div>
