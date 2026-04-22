@@ -581,8 +581,7 @@ class PageActions {
 
     if (selectedNotes.length === 0) {
       log.warning('copySelectedElements called with no selected notes');
-      appViewState.clipboard = [];
-      appViewState.clipboardProjectId = null;
+      pamet.setClipboard([], null);
       return;
     }
 
@@ -624,8 +623,7 @@ class PageActions {
       clipboardEntities.push(cloned);
     }
 
-    appViewState.clipboard = clipboardEntities;
-    appViewState.clipboardProjectId = appViewState.currentProjectId;
+    pamet.setClipboard(clipboardEntities, appViewState.currentProjectId);
     log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
   }
 

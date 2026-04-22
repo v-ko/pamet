@@ -32,6 +32,7 @@ import { RenderProfiler } from "@/app/RenderProfiler";
 import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
 import { SearchService } from "@/services/SearchService";
 import { AnimationService } from "@/services/AnimationService";
+import { ClipboardService } from "@/services/ClipboardService";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 import { StorageConnectionPhase } from "fusion/storage/management/StorageService";
@@ -100,6 +101,7 @@ export class PametFacade extends PametStore {
     _focusManager: FocusManager | null = null;
     searchService: SearchService = new SearchService();
     animationService: AnimationService = new AnimationService();
+    clipboardService: ClipboardService = new ClipboardService();
     themeManager: ThemeManager = new ThemeManager();
     context: any = {};
     _projectStorageConfigFactory: ProjectStorageConfigFactory | null = null
@@ -395,6 +397,31 @@ export class PametFacade extends PametStore {
     toggleLastPage() {
         const appViewState = this.appViewState;
         this.router.toggleLastPage(appViewState.currentProjectId, appViewState.currentPageId);
+    }
+
+    // --- Clipboard coordination -----------------------------------------------
+
+    /** Initialize the clipboard service: load persisted data and wire cross-tab sync. */
+    initClipboard() {
+        const state = this.appViewState;
+
+        // Load persisted clipboard
+        const initial = this.clipboardService.getInternalClipboard();
+        if (initial.entities.length > 0) {
+            appActions.setClipboard(state, initial.entities, initial.projectId);
+        }
+
+        // Wire handler for cross-tab updates
+        this.clipboardService.setRemoteUpdateHandler((data) => {
+            appActions.setClipboard(state, data.entities, data.projectId);
+        });
+
+        this.clipboardService.connectListener();
+    }
+
+    setClipboard(entities: (Note | Arrow)[], projectId: string | null) {
+        appActions.setClipboard(this.appViewState, entities, projectId);
+        this.clipboardService.setInternalClipboard({ entities, projectId });
     }
 
     async attachProjectAsCurrent(projectId: string) {

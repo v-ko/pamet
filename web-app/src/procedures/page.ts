@@ -333,8 +333,7 @@ export async function cutInternal(
 
     if (selectedNotes.length === 0 && selectedArrowsDirect.length === 0) {
         log.warning('cutInternal called with no selected elements');
-        appViewState.clipboard = [];
-        appViewState.clipboardProjectId = null;
+        pamet.setClipboard([], null);
         return;
     }
 
@@ -389,8 +388,7 @@ export async function cutInternal(
     }
 
     // Place payload on internal clipboard
-    appViewState.clipboard = clipboardEntities;
-    appViewState.clipboardProjectId = appViewState.currentProjectId;
+    pamet.setClipboard(clipboardEntities, appViewState.currentProjectId);
 
     // 2) Compute elements to remove from the document
     // Notes: exactly the selected notes
