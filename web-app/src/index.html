@@ -27,6 +27,8 @@
         align-items: center;
         justify-content: center;
         background: #fff;
+        opacity: 0;
+        animation: splash-fade-in 3s ease-out forwards;
         transition: opacity 300ms ease-out;
       }
       html[data-splash-dark="1"] #splash {
@@ -41,15 +43,19 @@
         height: 96px;
         animation: splash-pulse 1.8s ease-in-out infinite;
       }
+      @keyframes splash-fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
       @keyframes splash-pulse {
-        0%, 100% { opacity: 0.4; transform: scale(0.95); }
-        50%      { opacity: 1;   transform: scale(1.05); }
+        0%, 100% { opacity: 0.6; transform: scale(0.98); }
+        50%      { opacity: 1;   transform: scale(1.02); }
       }
     </style>
   </head>
   <body>
     <div id="splash">
-      <img src="/logo256.png" alt="Pamet" />
+      <img src="/logo256.png" alt="" />
     </div>
     <script>
       (function() {

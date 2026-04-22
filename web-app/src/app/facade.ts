@@ -1,4 +1,4 @@
-import { AppViewState } from "@/views/AppViewState";
+import { AppViewState, SaveStatus } from "@/views/AppViewState";
 import { getLogger } from 'fusion/logging';
 import { Change } from "fusion/model/Change";
 import { PametSearchFilter, PametStore } from "@/storage/PametStore";
@@ -21,7 +21,7 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
-import { switchProject } from "@/procedures/app";
+import { switchProject, commitUnsavedChanges } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { pageActions } from "@/actions/page";
@@ -35,6 +35,7 @@ import { AnimationService } from "@/services/AnimationService";
 import { ClipboardService } from "@/services/ClipboardService";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
+import folderLineIconUrl from "@/resources/icons/folder-line.svg";
 import { ThemeManager, ThemePreference, STORAGE_KEY_PREFERENCE } from "@/app/theme";
 
 const log = getLogger('facade');
@@ -45,7 +46,9 @@ export interface PageQueryFilter { [key: string]: any }
 
 export interface StorageStatusIconSet {
     healthyIconUrl: string;
+    unsavedIconUrl: string;
     failedIconUrl: string;
+    unavailableIconUrl: string;
 }
 
 export type ProjectStorageConfigFactory = (
@@ -107,7 +110,9 @@ export class PametFacade extends PametStore {
     _entityProblemCounts: Map<string, { count: number, firstError?: unknown }> = new Map();
     private _storageStatusIconSet: StorageStatusIconSet = {
         healthyIconUrl: folderWarningIconUrl,
-        failedIconUrl: folderCloseIconUrl,
+        unsavedIconUrl: folderLineIconUrl,
+        failedIconUrl: folderWarningIconUrl,
+        unavailableIconUrl: folderCloseIconUrl,
     };
     debug = true;
     debugPaintOperations = false;
@@ -154,11 +159,18 @@ export class PametFacade extends PametStore {
         });
 
         // Register rootAction hook to auto-commit / save
-        registerRootActionCompletedHook(() => {
+        registerRootActionCompletedHook((rootAction) => {
+            if (rootAction.issuer !== 'user') {
+                return;
+            }
             if (!this._projectSyncService) {
                 return;
             }
-            this._projectSyncService.saveUncommittedChanges();
+            const phase = this._storageService?.state.connectionPhase;
+            if (phase !== 'ready') {
+                return;
+            }
+            commitUnsavedChanges();
         });
 
         // Register logger to root actions hooks
@@ -257,8 +269,17 @@ export class PametFacade extends PametStore {
         return this._storageStatusIconSet;
     }
 
-    getStorageStatusIconUrl(connectionPhase: StorageConnectionPhase): string {
-        if (connectionPhase === 'disconnected' || connectionPhase === 'fatal') {
+    getStorageStatusIconUrl(connectionPhase: StorageConnectionPhase, degraded: boolean = false, saveStatus: SaveStatus = 'saved'): string {
+        if (connectionPhase === 'fatal' || connectionPhase === 'disconnected' || degraded) {
+            return this._storageStatusIconSet.failedIconUrl;
+        }
+        if (connectionPhase === 'uninitialized' || connectionPhase === 'connecting') {
+            return this._storageStatusIconSet.unavailableIconUrl;
+        }
+        if (saveStatus === 'unsaved' || saveStatus === 'saving') {
+            return this._storageStatusIconSet.unsavedIconUrl;
+        }
+        if (saveStatus === 'error') {
             return this._storageStatusIconSet.failedIconUrl;
         }
         return this._storageStatusIconSet.healthyIconUrl;

@@ -22,13 +22,6 @@ interface StorageStatusDialogProps {
   onClose: () => void;
 }
 
-function formatTimestamp(timestamp: number | null): string {
-  if (timestamp === null) {
-    return "Never";
-  }
-  return new Date(timestamp).toLocaleString();
-}
-
 function desktopFetch(path: string, options?: RequestInit): Promise<Response> {
   const baseUrl = window.PAMET_DESKTOP_API_BASE_URL;
   const token = window.PAMET_DESKTOP_ACCESS_TOKEN;
@@ -160,39 +153,39 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
         <h4 style={{ margin: 0, color: 'var(--color-text)' }}>Frontend Storage Service</h4>
         <hr style={{ border: 'none', borderTop: '1px solid var(--color-light-border)', width: '100%', margin: '0' }} />
 
-        <div title="Backend / connection / worker lifecycle / project bridge">
-          <strong>Service Worker:</strong> {s.backend} · {s.connectionPhase} · {s.workerLifecycle} · project {s.projectPhase}
+        {s.degraded && (
+          <div style={{
+            padding: '0.5em 0.75em',
+            backgroundColor: 'var(--color-danger-bg, #fdecea)',
+            color: 'var(--color-danger, #e53935)',
+            borderRadius: '4px',
+            fontSize: '0.9em',
+          }}>
+            <strong>Degraded mode:</strong> {s.degradedReason ?? 'Unknown reason'}
+            <div style={{ marginTop: '0.3em', opacity: 0.85 }}>
+              Storage is running in the main thread. Cross-tab storage sharing is limited.
+              Reload the page to retry the SharedWorker.
+            </div>
+          </div>
+        )}
+
+        <div title="Connection phase and project bridge status">
+          <strong>Connection:</strong> {s.connectionPhase} · project {s.projectPhase}
         </div>
         <div title="The project ID currently loaded in the storage service (matches the URL route).">
           <strong>Active Project:</strong> {s.activeProjectId ?? "none"}
         </div>
-        <div title="Overall readiness: true when the service worker link is alive and a project is attached.">
-          <strong>Ready:</strong> {s.connected ? "yes" : "no"}
-        </div>
 
-        <div className="field">
-          <strong>Last Error</strong>
-          {s.lastError ? (
-            <>
-              <div title="Error classification code.">
-                <strong>Code:</strong> {s.lastError.code}
-              </div>
-              <div title="The storage operation that was in progress when the error occurred.">
-                <strong>Operation:</strong> {s.lastError.operation ?? "none"}
-              </div>
-              <div><strong>Message:</strong> {s.lastError.message}</div>
-              <div><strong>When:</strong> {formatTimestamp(s.lastError.timestamp)}</div>
-              {s.lastError.reloadRecommended && (
-                <div className="dialog-hint">Reload the page to restore service-worker storage.</div>
-              )}
-              {!s.lastError.reloadRecommended && s.lastError.recoverable && (
-                <div className="dialog-hint">The next storage action will try to reconnect once.</div>
-              )}
-            </>
-          ) : (
-            <div>No errors recorded.</div>
-          )}
-        </div>
+        {s.lastError ? (
+          <div>
+            <strong>Last Error:</strong> {s.lastError.message}
+            <div style={{ color: 'var(--color-danger, #e53935)', marginTop: '0.3em' }}>
+              Try reloading the page.
+            </div>
+          </div>
+        ) : (
+          <div>No errors recorded.</div>
+        )}
 
         {isDesktop && dssError && (
           <div className="dialog-error">

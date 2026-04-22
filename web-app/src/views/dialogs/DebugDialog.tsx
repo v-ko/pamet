@@ -237,6 +237,11 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       <button onClick={a_restartStorageWorker} tabIndex={PametTabIndex.DebugDialog_RestartStorageWorker}>
         Restart Storage Worker
       </button>
+      <button onClick={() => {
+          pamet.storageService.simulateWorkerCrash();
+      }}>
+        Simulate Worker Crash (test)
+      </button>
 
         <div>
             <label>

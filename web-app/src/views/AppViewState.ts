@@ -34,8 +34,11 @@ export enum ProjectError {
   NotFound
 }
 
+export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
+
 export interface PametStorageState {
   service: StorageProxyState;
+  saveStatus: SaveStatus;
 }
 
 
@@ -54,7 +57,8 @@ export class AppViewState {
   pageError: PageError = PageError.NoError;
 
   storageState: PametStorageState = {
-    service: createInitialStorageProxyState()
+    service: createInitialStorageProxyState(),
+    saveStatus: 'saved',
   };
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;

@@ -14,6 +14,8 @@ import { appActions } from "@/actions/app";
 import { LocalStorageConfigSync } from "@/services/config/LocalStorageConfigSync";
 
 import WebApp from "@/views/App";
+import folderCheckIconUrl from "@/resources/icons/folder-check-line.svg";
+import folderLineIconUrl from "@/resources/icons/folder-line.svg";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
@@ -58,8 +60,10 @@ const webStorageConfigFactory: ProjectStorageConfigFactory = (projectId, userId,
 
 pamet.setProjectStorageConfigFactory(webStorageConfigFactory);
 pamet.setStorageStatusIconSet({
-    healthyIconUrl: folderWarningIconUrl,
-    failedIconUrl: folderCloseIconUrl,
+    healthyIconUrl: folderCheckIconUrl,
+    unsavedIconUrl: folderLineIconUrl,
+    failedIconUrl: folderWarningIconUrl,
+    unavailableIconUrl: folderCloseIconUrl,
 });
 
 // Create app view state and render synchronously so the UI appears immediately
@@ -117,9 +121,16 @@ async function initializeWebApp() {
     try {
         log.info("Initializing storage service in web mode...");
         if (typeof SharedWorker !== 'undefined') {
-            await storageService.setupInSharedWorker(sharedWorkerUrl);
+            try {
+                await storageService.setupInSharedWorker(sharedWorkerUrl);
+            } catch (workerError) {
+                const reason = workerError instanceof Error ? workerError.message : String(workerError);
+                log.error("SharedWorker failed, falling back to main thread:", reason);
+                storageService.setupInMainThread();
+                storageService.setDegraded(`SharedWorker failed: ${reason}`);
+            }
         } else {
-            storageService.setupInMainThread(); // Chrome Android fallback
+            storageService.setupInMainThread();
         }
         log.info("Storage service initialized in web mode");
     } catch (e) {

@@ -119,7 +119,9 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
 
   const currentPageVS = state.currentPageViewState
   const storageConnectionPhase = state.storageState.service.connectionPhase;
-  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase);
+  const storageDegraded = state.storageState.service.degraded;
+  const saveStatus = state.storageState.saveStatus;
+  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase, storageDegraded, saveStatus);
 
   const storageStatusTitle = (() => {
     switch (storageConnectionPhase) {
@@ -205,16 +207,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
     <div className="app">
       {/* a div for the app messages to be displayed in the center of the screen */}
       {/* use only inline css */}
-      <div style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        textAlign: 'center',
-        color: 'var(--color-danger)',
-        fontWeight: 'bold',
-        fontSize: '1.5em',
-      }}>
+      <div className="app-error-overlay">
 
         {/* Display messages */}
         {errorMessages.map((message, index) => (
@@ -225,7 +218,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
 
       {/* If page data - display the page */}
       {shouldDisplayPage && (
-        <div style={{ width: '100%', height: '100%' }}>
+        <div className="page-container">
           <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />
         </div>
       )}
@@ -250,12 +243,19 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
             tabIndex={PametTabIndex.Panel_ProjectProperties}
           >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</button>
           <button
-            className="panel-button"
-            title={storageStatusTitle}
+            title={storageDegraded ? `${storageStatusTitle} (degraded)` : storageStatusTitle}
             onClick={() => appActions.openStorageStatusDialog(state)}
             tabIndex={PametTabIndex.Panel_StorageStatus}
+            className="panel-button panel-button-with-badge"
           >
-            <img src={storageStatusIconUrl} alt="Storage status" />
+            <img
+              src={storageStatusIconUrl}
+              alt="Storage status"
+              className={(storageConnectionPhase === 'disconnected' || storageConnectionPhase === 'fatal' || storageDegraded) ? 'storage-icon-error' : undefined}
+            />
+            {storageDegraded && (
+              <span className="status-badge" />
+            )}
           </button>
           <VerticalSeparator />
           <button
@@ -283,23 +283,14 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
 
         <Panel align='top-right'>
           <button
-            className="panel-button"
             title='Debug info'
             onClick={() => setDebugInfoModalOpen(!debugInfoModalOpen)}
             tabIndex={PametTabIndex.Panel_Debug}
-            style={{ position: 'relative' }}
+            className="panel-button panel-button-with-badge"
           >
             {'</>'}
             {state.devErrors && (
-              <div style={{
-                position: 'absolute',
-                top: -2,
-                right: -4,
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-danger)',
-              }} />
+              <span className="dev-error-badge" />
             )}
           </button>
           <VerticalSeparator />
@@ -425,7 +416,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
           onMouseMove={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onWheel={(e) => { e.preventDefault(); e.stopPropagation(); }}
           onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-menu-backdrop)' as any }}
+          className="menu-backdrop"
         />
       )}
 

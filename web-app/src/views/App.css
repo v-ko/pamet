@@ -3,3 +3,53 @@
 a.App {
   text-align: center;
 }
+
+.app-error-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--color-danger);
+  font-weight: bold;
+  font-size: 1.5em;
+}
+
+.page-container {
+  width: 100%;
+  height: 100%;
+}
+
+.panel-button-with-badge {
+  position: relative;
+}
+
+.status-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--color-danger, #e53935);
+}
+
+.dev-error-badge {
+  position: absolute;
+  top: -2px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-danger);
+}
+
+.storage-icon-error {
+  filter: brightness(0) saturate(100%) invert(22%) sepia(93%) saturate(6000%) hue-rotate(355deg) brightness(95%) contrast(95%);
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-menu-backdrop);
+}

@@ -11,6 +11,33 @@ import { currentTime, timestamp } from "fusion/util/base";
 const log = getLogger('AppProcedures');
 
 
+// --- Save / commit ---
+
+export function commitUnsavedChanges() {
+    const appViewState = pamet.appViewState;
+    const syncService = pamet.projectSyncService;
+
+    appActions.setSaveStatus(appViewState, 'unsaved');
+
+    const commitPromise = syncService.saveUncommittedChanges();
+    if (!commitPromise) {
+        // Nothing to flush — delta was empty
+        appActions.setSaveStatus(appViewState, 'saved');
+        return;
+    }
+
+    appActions.setSaveStatus(appViewState, 'saving');
+
+    commitPromise
+        .then(() => {
+            appActions.setSaveStatus(appViewState, 'saved');
+        })
+        .catch(() => {
+            appActions.setSaveStatus(appViewState, 'error');
+        });
+}
+
+
 // --- Project attach/detach ---
 
 let projectSwitchInFlight: Promise<void> | null = null;

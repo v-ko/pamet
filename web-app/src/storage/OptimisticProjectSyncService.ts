@@ -34,12 +34,21 @@ export class OptimisticProjectSyncService {
     private _uncommittedDelta: Delta = new Delta({});
     private _expectedDelta: Delta = new Delta({});
 
+    private _beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
+
     constructor(store: Store, storageService: StorageServiceProxy, projectId: string, currentBranch: string) {
         this._store = store;
         this._storageService = storageService;
         this._projectId = projectId;
         this._currentBranch = currentBranch;
         this._localCommitGraph = new CommitGraph();
+
+        this._beforeUnloadHandler = (e: BeforeUnloadEvent) => {
+            if (!this._uncommittedDelta.isEmpty() || !this._expectedDelta.isEmpty()) {
+                e.preventDefault();
+            }
+        };
+        window.addEventListener('beforeunload', this._beforeUnloadHandler);
     }
 
     get uncommittedDelta(): Delta {
@@ -93,11 +102,11 @@ export class OptimisticProjectSyncService {
 
     /**
      * Send accumulated uncommitted changes as a commit to the authority.
-     * To be called from the root-action-completed hook.
+     * Returns null if there's nothing to flush, otherwise a Promise.
      */
-    saveUncommittedChanges() {
+    saveUncommittedChanges(): Promise<void> | null {
         if (this._uncommittedDelta.isEmpty()) {
-            return;
+            return null;
         }
 
         log.info('Flushing uncommitted delta');
@@ -106,7 +115,7 @@ export class OptimisticProjectSyncService {
         this._uncommittedDelta = new Delta({});
         this._expectedDelta.mergeWithPriority(delta);
 
-        this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
+        return this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
             .then((result) => {
                 const appliedDeltaData = result.commit.deltaData;
                 const unappliedDelta = delta.copy();
@@ -135,6 +144,9 @@ export class OptimisticProjectSyncService {
                 // Put the failed changes back so the next flush retries them.
                 delta.mergeWithPriority(this._uncommittedDelta);
                 this._uncommittedDelta = delta;
+
+                // Re-throw so the caller knows it failed
+                throw error;
             });
     }
 

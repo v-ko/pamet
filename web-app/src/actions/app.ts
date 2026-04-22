@@ -1,4 +1,4 @@
-import { AppDialogMode, PageError, ProjectError, AppViewState } from "@/views/AppViewState";
+import { AppDialogMode, PageError, ProjectError, AppViewState, SaveStatus } from "@/views/AppViewState";
 import { LoadingDialogState } from "@/views/system-modal-dialog/state";
 import type { MouseState } from "@/views/AppViewState";
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
@@ -45,6 +45,11 @@ class AppActions {
     @action({ issuer: 'service' })
     setStorageServiceState(state: AppViewState, storageServiceState: StorageProxyState) {
         state.storageState.service = storageServiceState;
+    }
+
+    @action({ issuer: 'service' })
+    setSaveStatus(state: AppViewState, saveStatus: SaveStatus) {
+        state.storageState.saveStatus = saveStatus;
     }
 
     @action({ issuer: 'service' })

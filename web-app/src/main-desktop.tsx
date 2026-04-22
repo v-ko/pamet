@@ -14,6 +14,8 @@ import { WebSocketSyncService } from "fusion/storage/sync/WebSocketSyncService";
 
 import WebApp from "@/views/App";
 import folderCheckIconUrl from "@/resources/icons/folder-check-line.svg";
+import folderLineIconUrl from "@/resources/icons/folder-line.svg";
+import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
 import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
@@ -93,7 +95,9 @@ const desktopStorageConfigFactory: ProjectStorageConfigFactory = (projectId, use
 pamet.setProjectStorageConfigFactory(desktopStorageConfigFactory);
 pamet.setStorageStatusIconSet({
     healthyIconUrl: folderCheckIconUrl,
-    failedIconUrl: folderCloseIconUrl,
+    unsavedIconUrl: folderLineIconUrl,
+    failedIconUrl: folderWarningIconUrl,
+    unavailableIconUrl: folderCloseIconUrl,
 });
 
 // Initialize the desktop app (async: storage, config, routing)
