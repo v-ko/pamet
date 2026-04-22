@@ -1,4 +1,4 @@
-import { StorageServiceActual } from 'fusion/storage/management/StorageService';
+import { StorageService } from 'fusion/storage/management/StorageService';
 import { parsePametFileUrl } from "@/storage/storage-utils";
 import { setupSharedWorker } from 'fusion/storage/management/shared-worker-utils';
 
@@ -9,5 +9,5 @@ getLogger('shared-worker');
 
 registerEntityClasses();
 
-let storageService = new StorageServiceActual(parsePametFileUrl);
+let storageService = new StorageService(parsePametFileUrl);
 setupSharedWorker(storageService);

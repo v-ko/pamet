@@ -9,7 +9,7 @@ import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/views/page/PageViewState";
 import type { PametProjectData, ProjectReference } from "@/model/Project";
-import { StorageServiceRuntimeState } from "fusion/storage/management/StorageService";
+import { StorageProxyState } from "fusion/storage/management/StorageServiceProxy";
 import type { ThemePreference, ThemeMode } from "@/app/theme";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
@@ -43,7 +43,7 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
-    setStorageServiceState(state: AppViewState, storageServiceState: StorageServiceRuntimeState) {
+    setStorageServiceState(state: AppViewState, storageServiceState: StorageProxyState) {
         state.storageState.service = storageServiceState;
     }
 

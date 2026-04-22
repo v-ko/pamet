@@ -1,4 +1,4 @@
-import { StorageServiceActual } from 'fusion/storage/management/StorageService';
+import { StorageService } from 'fusion/storage/management/StorageService';
 import { parsePametFileUrl } from "@/storage/storage-utils";
 import { setupSharedWorker } from 'fusion/storage/management/shared-worker-utils';
 
@@ -10,7 +10,7 @@ getLogger('shared-worker-desktop');
 
 registerEntityClasses();
 
-let storageService = new StorageServiceActual(parsePametFileUrl, [
+let storageService = new StorageService(parsePametFileUrl, [
     { name: 'DesktopStorageAddon', create: (psm) => new DesktopStorageAddon(psm) },
 ]);
 setupSharedWorker(storageService);

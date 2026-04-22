@@ -19,7 +19,7 @@ import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
 import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
 import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
-import { StorageService } from "fusion/storage/management/StorageService";
+import { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 import { buildDeviceBranchName } from "./app/util";
@@ -65,6 +65,7 @@ pamet.setStorageStatusIconSet({
 // Create app view state and render synchronously so the UI appears immediately
 let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
 pamet.setAppViewState(appViewState)
+pamet.initClipboard();
 pamet.initializeTheme();
 
 const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement);
@@ -108,7 +109,7 @@ async function initializeWebApp() {
     });
 
     // Init storage service
-    let storageService = new StorageService();
+    let storageService = new StorageServiceProxy();
     storageService.setStateChangeHandler((nextState) => {
         appActions.setStorageServiceState(appViewState, nextState);
     });

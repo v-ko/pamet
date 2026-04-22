@@ -126,15 +126,11 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
       case 'ready':
         return 'Storage connected';
       case 'connecting':
-      case 'registering':
-      case 'waiting-for-controller':
         return 'Storage connecting';
       case 'disconnected':
         return 'Storage disconnected';
       case 'fatal':
         return 'Storage error';
-      case 'main-thread-ready':
-        return 'Storage running in main thread';
       default:
         return 'Storage status';
     }

@@ -19,7 +19,7 @@ import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
 import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
 import { DomainStoreAdapterNames } from 'fusion/storage/domain-store-adapter/DomainStoreAdapter';
-import { StorageService } from "fusion/storage/management/StorageService";
+import { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { buildDeviceBranchName } from "./app/util";
@@ -144,7 +144,7 @@ async function initializeDesktopApp() {
     });
 
     // Init storage service
-    let storageService = new StorageService();
+    let storageService = new StorageServiceProxy();
     storageService.setStateChangeHandler((nextState) => {
         appActions.setStorageServiceState(appViewState, nextState);
     });
@@ -181,6 +181,7 @@ async function initializeDesktopApp() {
 
 let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
 pamet.setAppViewState(appViewState)
+pamet.initClipboard();
 pamet.initializeTheme();
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);

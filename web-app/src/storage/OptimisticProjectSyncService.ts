@@ -5,7 +5,7 @@ import { CommitGraph } from "fusion/storage/version-control/CommitGraph";
 import { Commit } from "fusion/storage/version-control/Commit";
 import { computeRepoSyncDelta } from "fusion/storage/management/sync-utils";
 import type { RepoUpdateData } from "fusion/storage/repository/Repository";
-import type { StorageService } from "fusion/storage/management/StorageService";
+import type { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
 import { action } from "fusion/registries/Action";
 
 let log = getLogger('OptimisticProjectSyncService');
@@ -26,7 +26,7 @@ let log = getLogger('OptimisticProjectSyncService');
  */
 export class OptimisticProjectSyncService {
     private _store: Store;
-    private _storageService: StorageService;
+    private _storageService: StorageServiceProxy;
     private _projectId: string;
 
     private _localCommitGraph: CommitGraph;
@@ -34,7 +34,7 @@ export class OptimisticProjectSyncService {
     private _uncommittedDelta: Delta = new Delta({});
     private _expectedDelta: Delta = new Delta({});
 
-    constructor(store: Store, storageService: StorageService, projectId: string, currentBranch: string) {
+    constructor(store: Store, storageService: StorageServiceProxy, projectId: string, currentBranch: string) {
         this._store = store;
         this._storageService = storageService;
         this._projectId = projectId;

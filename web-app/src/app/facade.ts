@@ -11,7 +11,7 @@ import { OptimisticProjectSyncService } from "@/storage/OptimisticProjectSyncSer
 import { UserSettings } from "@/model/config/UserSettings";
 import { DeviceState } from "@/model/config/DeviceState";
 import { ProjectProperties } from "@/model/config/ProjectProperties";
-import { StorageService } from "fusion/storage/management/StorageService";
+import { StorageServiceProxy, StorageConnectionPhase } from "fusion/storage/management/StorageServiceProxy";
 import { ProjectStorageConfig } from "fusion/storage/management/ProjectStorageManager";
 import { RepoUpdateData } from "fusion/storage/repository/Repository";
 import { Router } from "@/services/routing/Router";
@@ -35,7 +35,6 @@ import { AnimationService } from "@/services/AnimationService";
 import { ClipboardService } from "@/services/ClipboardService";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
-import { StorageConnectionPhase } from "fusion/storage/management/StorageService";
 import { ThemeManager, ThemePreference, STORAGE_KEY_PREFERENCE } from "@/app/theme";
 
 const log = getLogger('facade');
@@ -95,7 +94,7 @@ export class PametFacade extends PametStore {
     private _projectSyncService: OptimisticProjectSyncService | null = null;
     private _appViewState: AppViewState | null = null;
     private _appConfigStore: InMemoryStore | null = null;
-    private _storageService: StorageService | null = null;
+    private _storageService: StorageServiceProxy | null = null;
     router: Router = new Router();
     keybindingService: KeybindingService | null = null;
     _focusManager: FocusManager | null = null;
@@ -246,7 +245,7 @@ export class PametFacade extends PametStore {
         }
         return this._storageService;
     }
-    setStorageService(storageService: StorageService) {
+    setStorageService(storageService: StorageServiceProxy) {
         this._storageService = storageService;
     }
 

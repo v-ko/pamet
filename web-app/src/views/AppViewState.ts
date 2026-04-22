@@ -10,7 +10,7 @@ import { GlobalSearchViewState } from "@/views/search/GlobalSearchViewState";
 import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { StorageServiceRuntimeState, createInitialStorageServiceRuntimeState } from "fusion/storage/management/StorageService";
+import { StorageProxyState, createInitialStorageProxyState } from "fusion/storage/management/StorageServiceProxy";
 import { ThemePreference, ThemeMode } from "@/app/theme";
 
 
@@ -35,7 +35,7 @@ export enum ProjectError {
 }
 
 export interface PametStorageState {
-  service: StorageServiceRuntimeState;
+  service: StorageProxyState;
 }
 
 
@@ -54,7 +54,7 @@ export class AppViewState {
   pageError: PageError = PageError.NoError;
 
   storageState: PametStorageState = {
-    service: createInitialStorageServiceRuntimeState()
+    service: createInitialStorageProxyState()
   };
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;
