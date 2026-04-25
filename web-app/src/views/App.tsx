@@ -7,7 +7,6 @@ import { ThemePreference } from "@/app/theme";
 import { PageView } from "@/views/page/PageView";
 
 import { getLogger } from "fusion/logging";
-import { styled } from "styled-components";
 import Panel from "@/views/Panel";
 
 import shareIconUrl from "@/resources/icons/share-2.svg";
@@ -19,6 +18,7 @@ import { pageActions } from "@/actions/page";
 import NoteEditView from "@/views/note/NoteEditView";
 import { CreatePageDialog } from "@/views/dialogs/CreateNewPageDialog";
 import { appActions } from "@/actions/app";
+import { replayActions } from "@/actions/replay";
 import { deletePageAndNavigate, createPageAndNavigate } from "@/procedures/app";
 import { PagePropertiesDialog } from "@/views/dialogs/PagePropertiesDialog";
 import { ProjectPropertiesDialog } from "@/views/dialogs/ProjectPropertiesDialog";
@@ -34,6 +34,8 @@ import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/Command
 import { PageAndCommandPalette, ProjectPalette } from "@/views/CommandPalette";
 import { LocalSearch } from "@/views/search/LocalSearch";
 import { GlobalSearch } from "@/views/search/GlobalSearch";
+import { ReplayPanel } from "@/views/replay/ReplayPanel";
+import { BackupsPane } from "@/views/replay/BackupsPane";
 import { PametTabIndex } from "@/app/constants";
 import Menu, { MenuItem } from "@/views/menu/Menu";
 import { StorageStatusDialog } from "@/views/dialogs/StorageStatusDialog";
@@ -41,17 +43,14 @@ import { StorageStatusDialog } from "@/views/dialogs/StorageStatusDialog";
 let log = getLogger("App");
 
 // Vertical line component
-const VerticalSeparator = styled.div`
-  width: 1px;
-  height: 1em;
-  background: var(--color-light-border);
-`
+const VerticalSeparator = () => <div className="vertical-separator" />;
 
 const WebApp = observer(({ state }: { state: AppViewState }) => {
   let errorMessages: string[] = []
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
   const [mainMenuPos, setMainMenuPos] = useState<{ x: number, y: number } | null>(null);
+  const [lastSeenErrorCount, setLastSeenErrorCount] = useState(0);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -120,6 +119,8 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
   const currentPageVS = state.currentPageViewState
   const storageConnectionPhase = state.storageState.service.connectionPhase;
   const storageDegraded = state.storageState.service.degraded;
+  const storageErrors = state.storageState.service.errors;
+  const hasUnseenErrors = storageErrors.length > lastSeenErrorCount;
   const saveStatus = state.storageState.saveStatus;
   const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase, storageDegraded, saveStatus);
 
@@ -157,6 +158,10 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
       submenu: [
         { label: 'New Page…', onClick: () => commands.createNewPage(), shortcut: getShortcut(commands.createNewPage.name) },
         { label: 'Page Properties…', onClick: () => appActions.openPageProperties(state), shortcut: getShortcut(commands.openPageProperties.name) },
+        ...(pamet.context.desktopMode ? [
+          { label: 'Replay History…', onClick: () => replayActions.openReplay(state), shortcut: getShortcut(commands.openReplay.name) },
+          { label: 'Backups…', onClick: () => replayActions.openBackups(state) },
+        ] : []),
         { type: 'separator', label: '' },
         { label: 'Delete Page', onClick: () => commands.deleteCurrentPage() },
       ]
@@ -217,9 +222,16 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
 
 
       {/* If page data - display the page */}
-      {shouldDisplayPage && (
+      {shouldDisplayPage && !state.historyPageViewState && (
         <div className="page-container">
           <PageView state={state.currentPageViewState!} mouseState={state.mouseState} />
+        </div>
+      )}
+
+      {/* History overlay — between page and panels */}
+      {state.historyPageViewState && (
+        <div className="replay-overlay">
+          <PageView state={state.historyPageViewState} mouseState={state.mouseState} />
         </div>
       )}
 
@@ -244,7 +256,10 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
           >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</button>
           <button
             title={storageDegraded ? `${storageStatusTitle} (degraded)` : storageStatusTitle}
-            onClick={() => appActions.openStorageStatusDialog(state)}
+            onClick={() => {
+              setLastSeenErrorCount(storageErrors.length);
+              appActions.openStorageStatusDialog(state);
+            }}
             tabIndex={PametTabIndex.Panel_StorageStatus}
             className="panel-button panel-button-with-badge"
           >
@@ -253,7 +268,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
               alt="Storage status"
               className={(storageConnectionPhase === 'disconnected' || storageConnectionPhase === 'fatal' || storageDegraded) ? 'storage-icon-error' : undefined}
             />
-            {storageDegraded && (
+            {(storageDegraded || hasUnseenErrors) && (
               <span className="status-badge" />
             )}
           </button>
@@ -321,6 +336,18 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
         {/* Global search sidebar */}
         {state.globalSearchViewState &&
           <GlobalSearch state={state.globalSearchViewState} />}
+
+        {/* Replay panel — bottom center */}
+        {state.replayPanelVS && (
+          <ReplayPanel
+            state={state.replayPanelVS}
+          />
+        )}
+
+        {/* Backups sidebar */}
+        {state.backupPanelVS && (
+          <BackupsPane state={state.backupPanelVS} />
+        )}
       </div>
 
       {/* Edit window (if open) */}

@@ -1,4 +1,4 @@
-import { dumpToDict, loadFromDict } from "fusion/model/Entity";
+import { dumpToDict, loadFromDict, SerializedEntityData } from "fusion/model/Entity";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { getLogger } from "fusion/logging";
@@ -8,7 +8,7 @@ const log = getLogger('ClipboardService');
 const CLIPBOARD_KEY = 'pamet_internal_clipboard';
 
 interface SerializedClipboard {
-    entities: object[];
+    entities: SerializedEntityData[];
     projectId: string | null;
 }
 

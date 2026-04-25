@@ -202,5 +202,10 @@ export const DEFAULT_KEYBINDINGS = [
         key: 'f5',
         command: commands.refresh.name,
         when: ''
-    }
+    },
+    {
+        key: 'alt+r',
+        command: commands.openReplay.name,
+        when: 'canvasFocus'
+    },
 ]

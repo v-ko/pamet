@@ -1,0 +1,148 @@
+.replay-controls {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-1);
+    padding: var(--space-0) var(--space-2);
+    background: rgba(30, 30, 30, 0.85);
+    backdrop-filter: blur(8px);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+    min-height: 50px;
+    color: #e0e0e0;
+    user-select: none;
+}
+
+.replay-controls-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    font-size: var(--type-sm);
+    color: rgba(200, 200, 200, 0.7);
+}
+
+.replay-controls-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: var(--space-0);
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.replay-commit-count {
+    font-size: var(--type-sm);
+    color: #e0e0e0;
+    white-space: nowrap;
+    margin-left: 2px;
+    cursor: default;
+}
+
+.replay-delay-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--type-sm);
+    color: #e0e0e0;
+    white-space: nowrap;
+    margin-left: 4px;
+    cursor: default;
+}
+
+.replay-delay-input {
+    width: 52px;
+    padding: 1px 4px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    font-size: var(--type-sm);
+    text-align: center;
+}
+
+.replay-delay-input:focus {
+    outline: none;
+    border-color: rgba(100, 180, 255, 0.6);
+}
+
+.replay-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.1);
+    color: #e0e0e0;
+    font-size: var(--type-md);
+    padding: var(--space-0) var(--space-1);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+.replay-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.replay-btn-play {
+    width: 32px;
+    height: 32px;
+    font-size: var(--type-md);
+}
+
+.replay-btn-speed {
+    font-size: var(--type-sm);
+    font-weight: 600;
+}
+
+/* Timeline area */
+.replay-timeline-area {
+    flex: 1 1 0;
+    position: relative;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Range selection handles */
+.replay-range-handle {
+    position: absolute;
+    top: 0;
+    width: 8px;
+    height: 100%;
+    cursor: ew-resize;
+    z-index: 2;
+    transform: translateX(-50%);
+}
+
+.replay-range-handle::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 32px;
+    border-radius: 2px;
+    background: rgba(100, 180, 255, 0.8);
+    transition: background var(--transition-fast);
+}
+
+.replay-range-handle:hover::after,
+.replay-range-handle:active::after {
+    background: rgba(130, 200, 255, 1);
+    width: 6px;
+}
+
+/* Range labels */
+.replay-range-labels {
+    position: absolute;
+    bottom: 2px;
+    left: 0;
+    right: 0;
+    height: 14px;
+    pointer-events: none;
+}
+
+.replay-range-label {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 9px;
+    color: rgba(100, 180, 255, 0.8);
+    white-space: nowrap;
+}

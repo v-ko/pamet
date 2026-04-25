@@ -17,12 +17,23 @@ export default defineConfig({
   root: './web-app/src',
   publicDir: '../public',
   build: {
-    outDir: isDesktop ? '../dist-desktop' : '../dist',
+    // 'web' build → web-app/dist (served by the standalone web deployment)
+    // 'desktop' build → server/pamet/desktop_app/_web_app_dist so it ships
+    // inside the Python wheel and can be served by DesktopServer.
+    outDir: isDesktop
+      ? path.resolve(__dirname, 'server/pamet/desktop_app/_web_app_dist')
+      : '../dist',
     sourcemap: true,
     emptyOutDir: true,
     rollupOptions: {
       input: path.resolve(__dirname, 'web-app/src/index.html'),
     }
+  },
+  worker: {
+    // Module workers (SharedWorker / ServiceWorker constructed via
+    // `new URL(..., import.meta.url)`) need ES output to support
+    // code-splitting their dep graph.
+    format: 'es',
   },
   plugins: [
     react(),

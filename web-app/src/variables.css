@@ -66,7 +66,9 @@
 
   /* Z-index layers (ascending) */
   --z-local: 1;
+  --z-render-canvas: 50;
   --z-suggestion: 100;
+  --z-overlay: 150;
   --z-panel: 200;
   --z-note-edit: 210;
   --z-search: 300;

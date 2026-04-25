@@ -7,6 +7,8 @@ export interface ProjectPropertiesData extends EntityData {
     created: string;
     home_page_id?: string;
     backups_enabled?: boolean;
+    record_all_changes?: boolean;
+    canvas_palette?: { [mode: string]: { [role: string]: string } };
 }
 
 @entityType('ProjectProperties')
@@ -30,4 +32,10 @@ export class ProjectProperties extends Entity<ProjectPropertiesData> {
 
     get backupsEnabled(): boolean { return this._data.backups_enabled ?? true; }
     set backupsEnabled(value: boolean) { this._data.backups_enabled = value; }
+
+    get recordAllChanges(): boolean { return this._data.record_all_changes ?? false; }
+    set recordAllChanges(value: boolean) { this._data.record_all_changes = value; }
+
+    get canvasPalette(): { [mode: string]: { [role: string]: string } } | undefined { return this._data.canvas_palette; }
+    set canvasPalette(value: { [mode: string]: { [role: string]: string } } | undefined) { this._data.canvas_palette = value; }
 }

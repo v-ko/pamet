@@ -23,6 +23,7 @@ import { Delta } from "fusion/model/Delta";
 import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
 import { switchProject, commitUnsavedChanges } from "@/procedures/app";
 import { appActions } from "@/actions/app";
+import { replayActions } from "@/actions/replay";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { pageActions } from "@/actions/page";
 import { PageViewState, PageMode } from "@/views/page/PageViewState";
@@ -33,10 +34,13 @@ import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo
 import { SearchService } from "@/services/SearchService";
 import { AnimationService } from "@/services/AnimationService";
 import { ClipboardService } from "@/services/ClipboardService";
+import { ChangeHistoryService } from "@/services/ChangeHistoryService";
+import { ReplayService, LockableStore } from "@/services/ReplayService";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 import folderLineIconUrl from "@/resources/icons/folder-line.svg";
 import { ThemeManager, ThemePreference, STORAGE_KEY_PREFERENCE } from "@/app/theme";
+import { Store } from "fusion/storage/domain-store/BaseStore";
 
 const log = getLogger('facade');
 const completedActionsLogger = getLogger('User action completed');
@@ -60,12 +64,13 @@ export type ProjectStorageConfigFactory = (
 
 
 function deriveContextFromViewState(facade: PametFacade) {
-    let pageVS: PageViewState | null;
-    try {
-        pageVS = facade.appViewState.currentPageViewState;
-    } catch {
-        return;
+    let pageVS = facade.appViewState.currentPageViewState;
+    if (facade.appViewState.historyPageViewState) {
+        facade.setContext('historyVisible', true);
+        // If history is visible - do the rest of the checks on it
+        pageVS = facade.appViewState.historyPageViewState;
     }
+
     if (!pageVS) {
         facade.setContext('notesSelected', false);
         facade.setContext('hasSelection', false);
@@ -104,6 +109,21 @@ export class PametFacade extends PametStore {
     searchService: SearchService = new SearchService();
     animationService: AnimationService = new AnimationService();
     clipboardService: ClipboardService = new ClipboardService();
+    changeHistoryService: ChangeHistoryService = new ChangeHistoryService();
+    private _historyStore: LockableStore = new LockableStore(PAMET_INMEMORY_STORE_CONFIG);
+    private _replayService: ReplayService | null = null;
+
+    get historyStore(): LockableStore {
+        return this._historyStore;
+    }
+
+    get replayService(): ReplayService {
+        if (!this._replayService) {
+            throw new Error('ReplayService not initialized (no project attached)');
+        }
+        return this._replayService;
+    }
+
     themeManager: ThemeManager = new ThemeManager();
     context: any = {};
     _projectStorageConfigFactory: ProjectStorageConfigFactory | null = null
@@ -119,6 +139,14 @@ export class PametFacade extends PametStore {
     lastRenderError: Error | null = null;
     renderErrorCount: number = 0;
     renderProfiler = new RenderProfiler();
+
+    /**
+     * Desktop-injected hook called when change history config may have changed.
+     * Receives the projectId so the desktop layer can enable/disable the
+     * ChangeHistoryService with the proper WebSocket URL.
+     * TODO: There's probably a better implementation for that
+     */
+    onChangeHistoryConfigChanged: ((projectId: string) => void) | null = null;
 
     hideSplash() {
         const splash = document.getElementById('splash');
@@ -159,6 +187,7 @@ export class PametFacade extends PametStore {
         });
 
         // Register rootAction hook to auto-commit / save
+        // and keep full change hystory if enabled (internal check in pushDelta)
         registerRootActionCompletedHook((rootAction) => {
             if (rootAction.issuer !== 'user') {
                 return;
@@ -170,6 +199,8 @@ export class PametFacade extends PametStore {
             if (phase !== 'ready') {
                 return;
             }
+            const uncommittedDelta = this._projectSyncService.uncommittedDelta;
+            this.changeHistoryService.pushDelta(uncommittedDelta.copy());
             commitUnsavedChanges();
         });
 
@@ -313,18 +344,39 @@ export class PametFacade extends PametStore {
     }
 
     contextConditionFulfilled(whenExpression: string): boolean {
-        if (whenExpression.includes('&&') || whenExpression.includes('||') ||
-            whenExpression.includes('==')) {
-            throw new Error('Logical expressions not implemented yet');
+        if (whenExpression.includes('==')) {
+            throw new Error('== not implemented yet');
         }
-        if (whenExpression === '') {
+        const expr = whenExpression.trim();
+        if (expr === '') {
             return true;
         }
-        const contextVal = this.context[whenExpression];
-        if (contextVal === undefined) {
-            return false;
+        // Disjunction (||) has lower precedence than conjunction (&&)
+        const orClauses = expr.split('||').map(c => c.trim()).filter(c => c.length > 0);
+        for (const clause of orClauses) {
+            if (this._evaluateConjunction(clause)) {
+                return true;
+            }
         }
-        return contextVal === true;
+        return false;
+    }
+
+    private _evaluateConjunction(clause: string): boolean {
+        const parts = clause.split('&&').map(p => p.trim()).filter(p => p.length > 0);
+        for (const part of parts) {
+            let key = part;
+            let negate = false;
+            if (key.startsWith('!')) {
+                negate = true;
+                key = key.slice(1).trim();
+            }
+            const contextVal = this.context[key];
+            const partResult = contextVal === true;
+            if ((negate ? !partResult : partResult) === false) {
+                return false;
+            }
+        }
+        return true;
     }
 
     get appViewState(): AppViewState {
@@ -341,6 +393,7 @@ export class PametFacade extends PametStore {
             throw Error('AppViewState already set');
         }
         this._appViewState = state;
+        this._historyStore.onChanges = (delta: Delta) => historyEntityDeltaToViewModelReducer(this.appViewState, delta, this._historyStore);
     }
 
     // --- Router coordination --------------------------------------------------
@@ -389,6 +442,9 @@ export class PametFacade extends PametStore {
         // Apply state
         if (pageId !== appViewState.currentPageId) {
             appActions.setCurrentPage(appViewState, pageId);
+            if (pageId) {
+                appActions.applyPageRefCorrections(appViewState, pageId);
+            }
         }
         if (appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
             const [x, y] = route.viewportCenter;
@@ -451,8 +507,14 @@ export class PametFacade extends PametStore {
         // Create the plain store and wire the view model reducer + change tracking to onChanges
         const store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
         store.onChanges = (delta, origin) => {
-            entityDeltaToViewModelReducer(this.appViewState, delta);
+            entityDeltaToViewModelReducer(this.appViewState, delta, store);
             syncService.trackDelta(delta, origin);
+
+            // Mark history replay index as stale (deferred to avoid action-in-action loops)
+            const replayVS = this._appViewState?.replayPanelVS;
+            if (replayVS?.indexedProjectId && !replayVS.indexStale) {
+                setTimeout(() => replayActions.setReplayIndexStale(replayVS, true), 0);
+            }
         };
 
         // Create the sync service (optimistic commit + reconciliation)
@@ -491,12 +553,35 @@ export class PametFacade extends PametStore {
         const allNotes = Array.from(this.notes());
         const allPages = Array.from(this.pages());
         await this.searchService.initializeIndices(allNotes, allPages);
+
+        // Enable change history if configured
+        this.onChangeHistoryConfigChanged?.(projectId);
+
+        // Create the replay service for this project
+        const baseUrl = (window as any).PAMET_DESKTOP_API_BASE_URL;
+        const token = (window as any).PAMET_DESKTOP_ACCESS_TOKEN;
+        if (baseUrl && token) {
+            const historyPathPrefix = `/desktop/projects/${encodeURIComponent(projectId)}/changes/history`;
+            this._replayService = new ReplayService(
+                this._historyStore,
+                historyPathPrefix,
+                'main',
+                baseUrl,
+                { type: 'Bearer', token },
+            );
+        }
     }
 
     async detachFromProject(projectId: string) {
         log.info('Detaching from project', projectId);
         this.undoService.clearAll();
         this.searchService.clear();
+        this.changeHistoryService.disable();
+        if (this._replayService) {
+            this._replayService.clear();
+            this._replayService = null;
+        }
+
         let currentProject: PametProjectData;
         try {
             currentProject = this.appViewState.getCurrentProject();
@@ -552,17 +637,13 @@ export class PametFacade extends PametStore {
                     log.error('Error pushing config delta to sync service', e);
                 });
             }
-            this._reduceConfigDelta(delta);
+            this._configUpdateReaction(delta);
         };
 
         this._appConfigStore = store;
     }
 
-    /**
-     * Reduce a config store delta into app view state updates.
-     * Routes by entity ID to update only the affected slice.
-     */
-    private _reduceConfigDelta(delta: Delta) {
+    private _configUpdateReaction(delta: Delta) {
         const state = this.appViewState;
         for (const entityId of delta.entityIds()) {
             if (entityId === DeviceState.SINGLETON_ID) {
@@ -586,6 +667,13 @@ export class PametFacade extends PametStore {
                 appActions.applyTheme(state, pref, resolved);
                 localStorage.setItem(STORAGE_KEY_PREFERENCE, pref); // splash hint
 
+                // Re-apply canvas palette for the (possibly new) theme mode
+                const currentProjId = state.currentProjectId;
+                if (currentProjId) {
+                    const projProps = this.loadProjectProperties(currentProjId);
+                    appActions.applyCanvasPalette(projProps?.canvas_palette?.[resolved] ?? null);
+                }
+
             } else if (entityId.startsWith('project-props-')) {
                 // Only care about the current project's properties
                 const currentId = state.currentProjectId;
@@ -598,6 +686,14 @@ export class PametFacade extends PametStore {
                     } else {
                         const props = this.loadProjectProperties(currentId);
                         appActions.reflectCurrentProjectState(state, props ?? null);
+
+                        // React to record_all_changes toggle
+                        this.onChangeHistoryConfigChanged?.(currentId);
+
+                        // Apply canvas palette from project properties
+                        const palette = props?.canvas_palette;
+                        const mode = this.themeManager.resolvedMode;
+                        appActions.applyCanvasPalette(palette?.[mode] ?? null);
                     }
                 }
             }
@@ -767,6 +863,7 @@ export class PametFacade extends PametStore {
                 created: pp.created,
                 home_page_id: pp.homePageId,
                 backups_enabled: pp.backupsEnabled,
+                canvas_palette: pp.canvasPalette,
             };
         }
         const recentProject = this.recentProject(trackedProject.id);
@@ -789,6 +886,7 @@ export class PametFacade extends PametStore {
             if (projectData.backups_enabled !== undefined) {
                 pp.backupsEnabled = projectData.backups_enabled;
             }
+            pp.canvasPalette = projectData.canvas_palette;
             this.appConfigStore.updateOne(pp);
         } else {
             const pp = new ProjectProperties({
@@ -800,6 +898,7 @@ export class PametFacade extends PametStore {
                 created: projectData.created,
                 home_page_id: projectData.home_page_id,
                 backups_enabled: projectData.backups_enabled,
+                canvas_palette: projectData.canvas_palette,
             });
             this.appConfigStore.insertOne(pp);
         }
@@ -915,17 +1014,19 @@ export function updateSearchIndicesFromDelta(searchService: SearchService, delta
 }
 
 
-export function entityDeltaToViewModelReducer(appViewState: AppViewState, delta: Delta) {
-    /**
-     * A reducer-like function to map entity changes to ViewStates
-     * Will be used synchrously from the facade entity CRUD methods (inside actions)
-     * And will be used by the domain store watcher service (responcible for
-     * updating the view states after external domain store changes)
-     *
-     *
-     */
-    // console.log('Applying delta to view states', delta)
+export interface ReducerOptions {
+    /** When true, skip navigation on page deletion and search index updates. */
+    readonly?: boolean;
+}
 
+export function entityDeltaToViewModelReducer(
+    appViewState: AppViewState,
+    delta: Delta,
+    store: Store
+) {
+    /**
+     * A reducer-like function to map entity changes to ViewStates upon root action completion
+     */
     let currentPageVS = appViewState.currentPageViewState
     if (currentPageVS === null) {
         log.error('No current page view state set, skipping delta', delta);
@@ -937,24 +1038,9 @@ export function entityDeltaToViewModelReducer(appViewState: AppViewState, delta:
         let currentPageId = currentPageVS.page().id;
         if (currentPageId === change.entityId) { // If it's a change of the entity of the currently opened page
             if (change.isDelete()) {
-                // If current page gets removed - go to the project page
-                if (currentPageId === change.entityId) {
-                    let projectId = appViewState.currentProjectId;
-                    if (projectId === null) {
-                        throw Error('No project set');
-                    }
-                    // Current page removed externally: navigate to home page (no auto-creation)
-                    const nextPageId = appViewState.currentProjectState?.home_page_id ?? null;
-                    const fallbackRoute = new PametRoute({
-                        userId: appViewState.userId,
-                        projectId: projectId,
-                        pageId: nextPageId ?? undefined,
-                    });
-                    pamet.navigateTo(fallbackRoute).catch((e) => {
-                        log.error('Error navigating after page deletion in delta reducer', e);
-                    });
-                    return;
-                }
+                appViewState.currentPageId = null;
+                alert('The page you were working on has been deleted (in another tab or manually from storage?).');
+                continue;
             }
             else if (change.isUpdate()) {
                 // update view state
@@ -973,19 +1059,58 @@ export function entityDeltaToViewModelReducer(appViewState: AppViewState, delta:
             elementVS.updateFromChange(change);
 
         } else if (change.isCreate()) {
-            const element = pamet.findOne({ id: change.entityId, parentId: currentPageId }); // Filter only for current page
+            const element = store.findOne({ id: change.entityId, parentId: currentPageId });
             if (element) {
                 // log.info('Adding view state for element', change.entityId, delta);
                 currentPageVS.addViewStateForElement(element as Note | Arrow);
             }
         }
     }
+}
 
-    // Update search indices (separated logic for potential future refactoring)
-    try {
-        updateSearchIndicesFromDelta(pamet.searchService, delta, pamet);
-    } catch (e) {
-        log.error('Error while updating search index from delta', e, delta)
+export function historyEntityDeltaToViewModelReducer(
+    appViewState: AppViewState,
+    delta: Delta,
+    store: Store
+) {
+    // Updates the history page view state based on history store changes
+    let currentPageVS = appViewState.historyPageViewState
+    if (currentPageVS === null) {
+        log.error('No current page view state set, skipping delta', delta);
+        return;
+    }
+
+    for (let change of delta.changes()) {
+        // If it's the current page
+        let historyPVS = currentPageVS.page().id;
+        if (historyPVS === change.entityId) { // If it's a change of the entity of the currently opened page
+            if (change.isDelete() || change.isCreate()){
+                // ignore and hope for the best (it's an edge case with an undo/redo or faulty migration)
+                continue;
+            }
+            else if (change.isUpdate()) {
+                // update view state
+                currentPageVS.updateFromChange(change);
+            }
+        }
+
+        // Process notes and arrows
+        let elementVS = currentPageVS.viewStateForElementId(change.entityId)
+        if (elementVS && change.isDelete()) {
+            // log.info('Removing view state for element', change.entityId, delta);
+            currentPageVS.removeViewStateForElement(elementVS.element() as Note | Arrow);
+
+        } else if (elementVS && change.isUpdate()) {
+            // log.info('Updating view state for element', change.entityId, change.data);
+            elementVS.updateFromChange(change);
+
+        } else if (change.isCreate()) {
+            const element = store.findOne({ id: change.entityId, parentId: historyPVS });
+            if (element) {
+                // log.info('Adding view state for element', change.entityId, delta);
+                currentPageVS.addViewStateForElement(element as Note | Arrow);
+            }
+        }
     }
 }
 

@@ -10,9 +10,10 @@ import { action } from "fusion/registries/Action";
 import { PageViewState } from "@/views/page/PageViewState";
 import type { PametProjectData, ProjectReference } from "@/model/Project";
 import { StorageProxyState } from "fusion/storage/management/StorageServiceProxy";
-import type { ThemePreference, ThemeMode } from "@/app/theme";
+import type { ThemePreference, ThemeMode, CanvasTokens } from "@/app/theme";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
+import { pageRefCorrectnessUpdates } from "@/model/correctness";
 
 let log = getLogger("AppActions");
 
@@ -39,7 +40,19 @@ class AppActions {
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
         }
+
         // URL synchronization is handled by the RoutingService reaction (State -> URL)
+    }
+
+    @action({ issuer: 'service' })
+    applyPageRefCorrections(_state: AppViewState, pageId: string) {
+        const refFixes = pageRefCorrectnessUpdates(pamet, pageId);
+        if (refFixes.length > 0) {
+            log.info(`Fixing ${refFixes.length} stale page_ref(s) on page ${pageId}`);
+            for (const { updated } of refFixes) {
+                pamet.updateOne(updated);
+            }
+        }
     }
 
     @action({ issuer: 'service' })
@@ -184,6 +197,17 @@ class AppActions {
     applyTheme(state: AppViewState, preference: ThemePreference, resolvedMode: ThemeMode) {
         state.themePreference = preference;
         state.themeResolvedMode = resolvedMode;
+    }
+
+    @action({ issuer: 'service' })
+    applyCanvasPalette(overrides: Partial<CanvasTokens> | null) {
+        const tm = pamet.themeManager;
+        tm.clearCanvasOverrides();
+        if (overrides && Object.keys(overrides).length > 0) {
+            tm.setCanvasOverrides(overrides);
+        }
+        const pvs = pamet.appViewState.currentPageViewState;
+        if (pvs) pvs.renderIdx++;
     }
 
     @action({ issuer: 'service' })

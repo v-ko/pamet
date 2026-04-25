@@ -8,10 +8,11 @@
   height: 100vh;
   display: grid;
   grid-template-columns: min-content 1fr auto;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   grid-template-areas:
     "top-left . top-right"
-    "sidebar-left . .";
+    "sidebar-left . ."
+    "replay replay replay";
   gap: var(--space-1);
   pointer-events: none; /* Allow clicks to pass through empty areas */
   z-index: var(--z-panel);

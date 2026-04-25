@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@/index.css";
-import sharedWorkerDesktopUrl from "@/shared-worker-desktop?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
@@ -23,6 +22,7 @@ import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
 import { DomainStoreAdapterNames } from 'fusion/storage/domain-store-adapter/DomainStoreAdapter';
 import { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
+import { ProjectProperties } from "@/model/config/ProjectProperties";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { buildDeviceBranchName } from "./app/util";
 import { ErrorBoundary } from "@/views/ErrorBoundary";
@@ -107,7 +107,7 @@ async function initializeDesktopApp() {
     document.cookie = `pamet_desktop_token=${desktopAccessToken}; path=/; samesite=strict`;
 
     // Setup config store with WebSocket sync to desktop server
-    const wsUrl = baseUrl.replace(/^http/, 'ws') + '/config/store/ws?token=' + encodeURIComponent(desktopAccessToken!);
+    const wsUrl = baseUrl.replace(/^http/, 'ws') + '/config/store/ws';
     const configSync = new WebSocketSyncService({
         role: 'receiver',
         url: wsUrl,
@@ -155,7 +155,11 @@ async function initializeDesktopApp() {
     pamet.setStorageService(storageService);
     try {
         log.info("Initializing storage service in desktop mode (SharedWorker)...");
-        await storageService.setupInSharedWorker(sharedWorkerDesktopUrl);
+        const worker = new SharedWorker(
+            new URL('@/shared-worker-desktop.ts', import.meta.url),
+            { type: 'module' },
+        );
+        await storageService.setupInSharedWorker(worker);
         log.info("Storage service initialized in desktop mode (SharedWorker)");
     } catch (e) {
         log.error("Failed to initialize storage service", e);
@@ -185,8 +189,34 @@ async function initializeDesktopApp() {
 
 let appViewState = new AppViewState({ userId: LOCAL_USER_ID })
 pamet.setAppViewState(appViewState)
+pamet.setContext('desktopMode', true);
 pamet.initClipboard();
 pamet.initializeTheme();
+
+// Wire desktop-specific change history hook
+pamet.onChangeHistoryConfigChanged = (projectId: string) => {
+    const propsEntity = pamet.appConfigStore.findOne({
+        id: ProjectProperties.idForProject(projectId),
+    });
+    const enabled = propsEntity
+        ? (propsEntity as ProjectProperties).recordAllChanges
+        : false;
+
+    if (enabled && !pamet.changeHistoryService.enabled) {
+        if (!pamet._currentProjectStore) {
+            log.info('ChangeHistory: store not attached yet, deferring enable');
+            return;
+        }
+        const wsUrl = baseUrl.replace(/^http/, 'ws')
+            + `/desktop/projects/${encodeURIComponent(projectId)}/changes/history/ws`;
+        pamet.changeHistoryService.enable(pamet._currentProjectStore, wsUrl).catch((e) => {
+            log.error('Failed to enable change history service', e);
+        });
+    } else if (!enabled && pamet.changeHistoryService.enabled) {
+        pamet.changeHistoryService.disable();
+    }
+};
+
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);
 });

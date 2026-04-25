@@ -12,6 +12,8 @@ import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { StorageProxyState, createInitialStorageProxyState } from "fusion/storage/management/StorageServiceProxy";
 import { ThemePreference, ThemeMode } from "@/app/theme";
+import { ReplayPanelViewState } from "@/views/replay/ReplayViewState";
+import { BackupPanelViewState } from "@/views/replay/BackupViewState";
 
 
 export enum AppDialogMode {
@@ -79,6 +81,21 @@ export class AppViewState {
   themePreference: ThemePreference = ThemePreference.Auto;
   themeResolvedMode: ThemeMode = ThemeMode.Light;
 
+  historyPageViewState: PageViewState | null = null; // Mock so we can reuse the reducer
+  replayPanelVS: ReplayPanelViewState | null = null;
+  backupPanelVS: BackupPanelViewState | null = null;
+
+  /** Clear the selected commit/backup so the history overlay hides. */
+  deselectHistoryItem() {
+    this.historyPageViewState = null;
+    if (this.replayPanelVS) {
+      this.replayPanelVS.currentMarkerIdx = -1;
+    }
+    if (this.backupPanelVS) {
+      this.backupPanelVS.selectedBackupId = null;
+    }
+  }
+
   constructor(options: { userId: string }) {
     this.userId = options.userId;
     makeObservable(this, {
@@ -102,6 +119,9 @@ export class AppViewState {
       devErrors: observable,
       themePreference: observable,
       themeResolvedMode: observable,
+      replayPanelVS: observable,
+      backupPanelVS: observable,
+      historyPageViewState: observable.ref,
     });
   }
 

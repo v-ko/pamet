@@ -1,8 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@/index.css";
-import sharedWorkerUrl from "@/shared-worker?url"
-import fileSwUrl from "@/service-worker-files?url"
 
 import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
@@ -122,7 +120,11 @@ async function initializeWebApp() {
         log.info("Initializing storage service in web mode...");
         if (typeof SharedWorker !== 'undefined') {
             try {
-                await storageService.setupInSharedWorker(sharedWorkerUrl);
+                const worker = new SharedWorker(
+                    new URL('@/shared-worker.ts', import.meta.url),
+                    { type: 'module' },
+                );
+                await storageService.setupInSharedWorker(worker);
             } catch (workerError) {
                 const reason = workerError instanceof Error ? workerError.message : String(workerError);
                 log.error("SharedWorker failed, falling back to main thread:", reason);
@@ -139,7 +141,10 @@ async function initializeWebApp() {
 
     // Register stateless SW for serving cached files
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register(fileSwUrl, { type: 'module', scope: '/' }).catch(err => {
+        navigator.serviceWorker.register(
+            new URL('@/service-worker-files.ts', import.meta.url),
+            { type: 'module', scope: '/' },
+        ).catch(err => {
             log.error("Failed to register file-serving service worker", err);
         });
     }

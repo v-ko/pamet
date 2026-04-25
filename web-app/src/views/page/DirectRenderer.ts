@@ -362,8 +362,10 @@ export class DirectRenderer {
         // rp.logTimeSinceMouseMove('DirectRenderer invoked', state.renderId!);
         // rp.clear(state.renderId!);
 
-        // Clear the canvas
+        // Clear the canvas and fill with surface color
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.fillStyle = pamet.themeManager.canvasColor('surface');
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
         ctx.resetTransform(); // may be redundant, but why not
 
         // Drawing without transformation

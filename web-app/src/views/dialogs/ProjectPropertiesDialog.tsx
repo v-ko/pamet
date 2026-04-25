@@ -4,6 +4,7 @@ import { pamet } from "@/app/facade";
 import { deleteProjectAndSwitch } from '@/procedures/app';
 import { getLogger } from 'fusion/logging';
 import { PametTabIndex } from '@/app/constants';
+import { PaletteEditor } from '@/views/dialogs/PaletteEditor';
 import "@/views/dialogs/Dialog.css";
 
 let log = getLogger("ProjectPropertiesDialog");
@@ -18,6 +19,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
   const [title, setTitle] = useState(project.title);
   const [backupsEnabled, setBackupsEnabled] = useState(project.backups_enabled ?? true);
   const [titleError, setTitleError] = useState<string | null>(null);
+  const paletteRef = useRef(project.canvas_palette);
   const trackedProjects = pamet.appViewState.trackedProjects;
 
   const trackedProject = trackedProjects.find(p => p.id === project.id);
@@ -71,23 +73,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
 
       <form
         className="form-vertical"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (titleError) return;
-
-          const updatedProject = {
-            ...project,
-            title: title.trim(),
-            backups_enabled: backupsEnabled,
-          };
-
-          try {
-            pamet.saveProjectProperties(updatedProject);
-            dialogRef.current?.close();
-          } catch (error) {
-            setTitleError((error as Error).message);
-          }
-        }}
+        onSubmit={e => e.preventDefault()}
       >
         <div className="field">
           <input
@@ -126,6 +112,11 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           Backups enabled
         </label>
 
+        <PaletteEditor
+          initialPalette={project.canvas_palette}
+          onPaletteChange={(palette) => { paletteRef.current = palette; }}
+        />
+
         <div className="dialog-actions row-between">
           <button
             type="button"
@@ -136,7 +127,22 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
             {isFileBacked ? 'Disconnect Project' : 'Delete Project'}
           </button>
           <button
-            type="submit"
+            type="button"
+            onClick={() => {
+              if (titleError) return;
+              const updatedProject = {
+                ...project,
+                title: title.trim(),
+                backups_enabled: backupsEnabled,
+                canvas_palette: paletteRef.current,
+              };
+              try {
+                pamet.saveProjectProperties(updatedProject);
+                dialogRef.current?.close();
+              } catch (error) {
+                setTitleError((error as Error).message);
+              }
+            }}
             disabled={!title.trim() || titleError !== null}
             className="btn btn-primary"
             tabIndex={PametTabIndex.ProjectPropertiesDialog_Save}
@@ -145,6 +151,7 @@ export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesD
           </button>
         </div>
       </form>
+
       <button
         type="button"
         className="icon-button dialog-close"

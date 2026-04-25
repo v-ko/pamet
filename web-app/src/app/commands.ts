@@ -3,6 +3,7 @@ import { pamet } from "@/app/facade";
 import { command } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
 import { appActions } from "@/actions/app";
+import { replayActions } from "@/actions/replay";
 import { ThemePreference } from "@/app/theme";
 import { Point2D } from "fusion/primitives/Point2D";
 import { arrowActions } from "@/actions/arrow";
@@ -16,6 +17,7 @@ import { parseClipboardContents } from "@/app/util";
 import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
 import { DEFAULT_VIEW_HEIGHT } from "@/app/constants";
 import { PametRoute } from "@/services/routing/PametRoute";
+import { HISTORY_MODIFY_MSG } from "@/services/ReplayService";
 
 let log = getLogger('PametCommands');
 
@@ -69,7 +71,7 @@ function computeSelectionAnchor(selectedNotes: Note[], mousePosPix: Point2D | nu
     return anchor;
 }
 class PametCommands {
-    @command('Create new note')
+    @command('Create new note', '!historyVisible')
     createNewNote() {
         console.log('createNewNote command executed')
 
@@ -89,7 +91,7 @@ class PametCommands {
         pageActions.startNoteCreation(pageVS, creationPos);
     }
 
-    @command('Create Project Links Index')
+    @command('Create Project Links Index', '!historyVisible')
     createProjectLinksIndex() {
         const pageVS = getCurrentPageViewState();
         try {
@@ -99,49 +101,49 @@ class PametCommands {
         }
     }
 
-    @command('Auto-size selected notes', 'notesSelected')
+    @command('Auto-size selected notes', 'notesSelected && !historyVisible')
     autoSizeSelectedNotes() {
         let pageVS = getCurrentPageViewState();
         pageActions.autoSizeSelectedNotes(pageVS);
     }
 
-    @command('Delete selected notes and arrows', 'hasSelection')
+    @command('Delete selected notes and arrows', 'hasSelection && !historyVisible')
     deleteSelectedElements() {
         let pageVS = getCurrentPageViewState();
         pageActions.deleteSelectedElements(pageVS);
     }
 
-    @command('Set default color to selected elements', 'hasSelection')
+    @command('Set default color to selected elements', 'hasSelection && !historyVisible')
     colorSelectedElementsDefault() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onDefault', 'default', 'onDefault');
     }
 
-    @command('Set attention color to selected elements', 'hasSelection')
+    @command('Set attention color to selected elements', 'hasSelection && !historyVisible')
     colorSelectedElementsAttention() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onAttention', 'attention', 'onAttention');
     }
 
-    @command('Set success color to selected elements', 'hasSelection')
+    @command('Set success color to selected elements', 'hasSelection && !historyVisible')
     colorSelectedElementsSuccess() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onSuccess', 'success', 'onSuccess');
     }
 
-    @command('Set neutral color to selected elements', 'hasSelection')
+    @command('Set neutral color to selected elements', 'hasSelection && !historyVisible')
     colorSelectedElementsNeutral() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, 'onSurface', 'neutral', 'onSurface');
     }
 
-    @command('Set transparent background to selected notes', 'notesSelected')
+    @command('Set transparent background to selected notes', 'notesSelected && !historyVisible')
     setNoteBackgroundToTransparent() {
         let pageVS = getCurrentPageViewState();
         pageActions.colorSelectedElements(pageVS, null, 'transparent', null);
     }
 
-    @command('Create arrow')
+    @command('Create arrow', '!historyVisible')
     createArrow() {
         let pageVS = getCurrentPageViewState();
         arrowActions.startArrowCreation(pageVS);
@@ -152,7 +154,7 @@ class PametCommands {
         alert('Help screen not implemented yet, lol. Right-click drag or two-finger drag to navigate. N for new note. E for edit. Click to select note, drag to move. L for link creation.')
     }
 
-    @command('Create new page')
+    @command('Create new page', '!historyVisible')
     createNewPage() {
         let appViewState = pamet.appViewState;
 
@@ -188,7 +190,7 @@ class PametCommands {
         projectActions.openPageCreationDialog(appViewState, forwardLinkLocation);
     }
 
-    @command('Edit note', 'notesSelected')
+    @command('Edit note', 'notesSelected && !historyVisible')
     editSelectedNote() {
         let pageVS = getCurrentPageViewState();
 
@@ -207,16 +209,21 @@ class PametCommands {
 
     @command('Cancel page action')
     cancelPageAction() {
+        const state = pamet.appViewState;
+        if (state.historyPageViewState !== null) {
+            state.deselectHistoryItem();
+            return;
+        }
         pageActions.clearMode(getCurrentPageViewState());
     }
 
-    @command('Undo')
+    @command('Undo', '!historyVisible')
     undo() {
         const pageVS = getCurrentPageViewState();
         pageActions.undoUserAction(pageVS);
     }
 
-    @command('Redo')
+    @command('Redo', '!historyVisible')
     redo() {
         const pageVS = getCurrentPageViewState();
         pageActions.reduUserAction(pageVS);
@@ -257,7 +264,11 @@ class PametCommands {
     @command('Copy selected elements', 'hasSelection')
     copySelectedElements() {
         const appViewState = pamet.appViewState;
-        const pageVS = getCurrentPageViewState();
+        let pageVS = getCurrentPageViewState();
+
+        if (appViewState.historyPageViewState !== null) {
+            pageVS = appViewState.historyPageViewState;
+        }
 
         // Collect selected notes
         const selectedNotes: Note[] = [];
@@ -273,7 +284,7 @@ class PametCommands {
         pageActions.copySelectedElements(appViewState, pageVS, relativeTo);
     }
 
-    @command('Cut', 'hasSelection')
+    @command('Cut', 'canvasFocus && hasSelection')
     cutSelectedElements() {
         const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();
@@ -299,7 +310,7 @@ class PametCommands {
         appActions.openPageProperties(pamet.appViewState);
     }
 
-    @command('Delete current page')
+    @command('Delete current page', '!historyVisible')
     deleteCurrentPage() {
         const page = getCurrentPageViewState().page();
         if (confirmPageDeletion(page.name)) {
@@ -326,6 +337,10 @@ class PametCommands {
 
     @command('Paste')
     paste() {
+        if (pamet.appViewState.historyPageViewState !== null) {
+            window.alert(HISTORY_MODIFY_MSG);
+            return;
+        }
         const appViewState = pamet.appViewState;
         const pageVS = getCurrentPageViewState();
 
@@ -343,6 +358,10 @@ class PametCommands {
 
     @command('Paste special')
     pasteSpecial() {
+        if (pamet.appViewState.historyPageViewState !== null) {
+            window.alert(HISTORY_MODIFY_MSG);
+            return;
+        }
         // Get the current page view state
         let pageVS = getCurrentPageViewState();
 
@@ -416,6 +435,16 @@ class PametCommands {
     @command('Match system color scheme')
     matchSystemColorScheme() {
         pamet.setThemePreference(ThemePreference.Auto);
+    }
+
+    @command('Open replay', 'desktopMode')
+    openReplay() {
+        replayActions.openReplay(pamet.appViewState);
+    }
+
+    @command('Open backups', 'desktopMode')
+    openBackups() {
+        replayActions.openBackups(pamet.appViewState);
     }
 }
 

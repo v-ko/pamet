@@ -117,7 +117,7 @@ export class OptimisticProjectSyncService {
 
         return this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
             .then((result) => {
-                const appliedDeltaData = result.commit.deltaData;
+                const appliedDeltaData = result.commit.delta_data;
                 const unappliedDelta = delta.copy();
                 unappliedDelta.mergeWithPriority(new Delta(appliedDeltaData).reversed());
                 if (!unappliedDelta.isEmpty()) {

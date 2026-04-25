@@ -139,7 +139,7 @@ export const GlobalSearch: React.FC<GlobalSearchProps> = observer(({ state }) =>
                     const currentHeight = currentPageVS.viewportHeight;
 
                     // Update viewport to center on the note (this is the main state change)
-                    pamet.pushNewViewportPosition(currentPageVS, noteCenter, currentHeight);
+                    pamet.updateViewportUrl(currentPageVS, noteCenter, currentHeight);
 
                     // Add smooth animation overlay using the animation service
                     // This will smoothly transition FROM the old state TO the new state

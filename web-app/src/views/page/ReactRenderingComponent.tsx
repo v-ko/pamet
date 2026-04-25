@@ -1,30 +1,20 @@
 // @ts-nocheck
 
 import React from "react";
-import styled from 'styled-components';
 
 import { PageViewState } from "@/views/page/PageViewState";
 import { NoteComponent } from "@/components/note/Note";
 import { ArrowComponent, ArrowHeadComponent } from "@/views/arrow/Arrow";
 import { observer } from "mobx-react-lite";
 
-export const CanvasWrapper = styled.div`
-
-width: ${props => props.viewport.geometry[2]}px;
-height: ${props => props.viewport.geometry[3]}px;
-width: 100%;
-height: 100%;
-
-transform:  scale(var(--map-scale)) translate(var(--map-translate-x), var(--map-translate-y));
-backface-visibility: hidden;  // Fixes rendering artefact bug
-
-// Transitions are very inefficient (at small scale coefficients)
-// So we disable them for now
-/* ${props => props.transformTransitionDuration > 0 ?
-        `transition: transform ${props.transformTransitionDuration}s;` : ''} */
-touch-action: none;
-user-select: none;
-`;
+const canvasWrapperStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    transform: 'scale(var(--map-scale)) translate(var(--map-translate-x), var(--map-translate-y))',
+    backfaceVisibility: 'hidden', // Fixes rendering artefact bug
+    touchAction: 'none',
+    userSelect: 'none',
+};
 
 export const CanvasReactComponent = observer(({state}: {state: PageViewState}) => {
 
@@ -35,15 +25,12 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
     let vb_height = 200000;
 
     return (
-        <CanvasWrapper
-            viewport={state.viewport}
-            // transformTransitionDuration={viewportTransitionDuration}
+        <div
             style={{
+                ...canvasWrapperStyle,
                 '--map-scale': state.viewport.heightScaleFactor(),
                 '--map-translate-x': -state.viewport.xReal + 'px',
                 '--map-translate-y': -state.viewport.yReal + 'px',
-                // '--map-translate-x': -state.viewport.center.x + 'px',
-                // '--map-translate-y': -state.viewport.center.y + 'px',
             }}
         >
 
@@ -51,7 +38,6 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
                 <NoteComponent
                     key={noteViewState.note().id}
                     noteViewState={noteViewState}
-                    // handleClick={(event) => { handleClickOnNote(event, noteViewState) }}
                     />
             ))}
 
@@ -80,6 +66,6 @@ export const CanvasReactComponent = observer(({state}: {state: PageViewState}) =
                     />
                 ))}
             </svg>
-        </CanvasWrapper>
+        </div>
     )
 });

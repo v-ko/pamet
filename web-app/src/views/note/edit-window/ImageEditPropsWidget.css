@@ -47,7 +47,7 @@
     outline-offset: var(--focus-ring-offset);
   }
 
-  .image-preview-container.dragging-over,
+  .image-preview-container.dragging-over {
     border-color: var(--color-accent);
     background-color: var(--color-bg-light-accent);
   }

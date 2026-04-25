@@ -11,5 +11,6 @@ export interface ProjectReference {
 export interface PametProjectData extends ProjectData {
     home_page_id?: string;
     backups_enabled?: boolean;
+    canvas_palette?: { [mode: string]: { [role: string]: string } };
     'files.exclude'?: Record<string, boolean>;
 }

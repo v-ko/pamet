@@ -7,7 +7,16 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
-from fastapi import APIRouter, Body, Depends, File, HTTPException, Request, UploadFile
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from fusion.libs.command import get_command
 from fusion.libs.model import dump_to_dict
@@ -205,19 +214,21 @@ def unload_project(project_id: str):
 
 @desktop_router.websocket("/config/store/ws")
 async def config_store_ws(ws: WebSocket):
-    """WebSocket endpoint for bidirectional config store sync.
-
-    Auth: bearer token passed as ?token= query param (WebSocket
-    doesn't support custom headers during the handshake).
-    """
+    """WebSocket endpoint for bidirectional config store sync."""
     # --- Auth ---
     expected_token = getattr(ws.app.state, "desktop_access_token", None)
     if expected_token:
-        provided = ws.query_params.get("token")
+        provided = ws.cookies.get(DESKTOP_AUTH_COOKIE_NAME)
         if not provided or not hmac.compare_digest(provided, expected_token):
+            log.warning(
+                "Config store WS auth failed: cookie %s, expected_token set=%s",
+                "present" if provided else "MISSING",
+                bool(expected_token),
+            )
             await ws.close(code=4401, reason="Unauthorized")
             return
 
+    log.info("Config store WS auth OK, accepting")
     await ws.accept()
 
     dss = pamet.desktop_storage_service()
@@ -237,35 +248,182 @@ async def config_store_ws(ws: WebSocket):
         log.error("Config store WS error: %s", exc)
 
 
-@desktop_router.get("/")
-def serve_index(request: Request):
-    static_root = getattr(request.app.state, "web_app_static_build_path", None)
-    if static_root is None:
-        raise HTTPException(status_code=404, detail="No static app configured")
-    index_path = static_root / "index.html"
-    return FileResponse(index_path)
+@desktop_router.websocket("/desktop/projects/{project_id}/changes/history/ws")
+async def change_history_ws(ws: WebSocket, project_id: str):
+    """WebSocket endpoint for full change history streaming.
+
+    The frontend connects as *authority* and streams deltas for each
+    user action.  The backend (receiver) commits them to a SQLite repo.
+    """
+    # --- Auth ---
+    expected_token = getattr(ws.app.state, "desktop_access_token", None)
+    if expected_token:
+        provided = ws.cookies.get(DESKTOP_AUTH_COOKIE_NAME)
+        if not provided or not hmac.compare_digest(provided, expected_token):
+            log.warning(
+                "Change history WS auth failed for project %s: cookie %s, expected_token set=%s",
+                project_id,
+                "present" if provided else "MISSING",
+                bool(expected_token),
+            )
+            await ws.close(code=4401, reason="Unauthorized")
+            return
+
+    dss = pamet.desktop_storage_service()
+    svc = dss.change_history_service(project_id)
+    if svc is None:
+        registered = list(dss._change_history_services.keys())
+        log.warning(
+            "Change history WS: service is None for project %s. "
+            "Registered services: %s",
+            project_id,
+            registered,
+        )
+        await ws.close(code=4503, reason="Change history not enabled for this project")
+        return
+
+    log.info("Change history WS auth OK for project %s, accepting", project_id)
+    await ws.accept()
+
+    sync = svc.ws_sync_service
+
+    async def send(msg: dict) -> None:
+        await ws.send_json(msg)
+
+    async def receive() -> dict:
+        return await ws.receive_json()
+
+    try:
+        await sync.run(send, receive)
+    except WebSocketDisconnect:
+        log.info("Change history WS client disconnected (project %s)", project_id)
+    except Exception as exc:
+        log.error("Change history WS error (project %s): %s", project_id, exc)
 
 
-@desktop_router.get("/static/{path:path}")
-def serve_static(path: str, request: Request):
-    static_root = getattr(request.app.state, "web_app_static_build_path", None)
-    if static_root is None:
-        raise HTTPException(status_code=404, detail="No static app configured")
-    static_path = (static_root / "static" / path).resolve()
-    if not static_path.is_relative_to(static_root):
-        raise HTTPException(status_code=400, detail="Invalid path")
-    return FileResponse(static_path)
+# ---------------------------------------------------------------------------
+# Change-history VCS read endpoints (used by replay)
+# ---------------------------------------------------------------------------
 
 
-@desktop_router.get("/{user_id}/{project_id}")
-def serve_project_index(user_id: str, project_id: str, request: Request):
-    _ = user_id
-    _ = project_id
-    static_root = getattr(request.app.state, "web_app_static_build_path", None)
-    if static_root is None:
-        raise HTTPException(status_code=404, detail="No static app configured")
-    index_path = static_root / "index.html"
-    return FileResponse(index_path)
+@desktop_router.get("/desktop/projects/{project_id}/changes/history/branches")
+def change_history_branches(
+    project_id: str,
+    request: Request,
+    _user: str = Depends(require_desktop_auth),
+):
+    """Return branch metadata for the change-history repository."""
+    dss = pamet.desktop_storage_service()
+    svc = dss.change_history_service(project_id)
+    if svc is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Change history not enabled for this project",
+        )
+
+    repo = svc.repository
+    graph = repo.get_commit_graph()
+    return [b.asdict() for b in graph.branches()]
+
+
+@desktop_router.get("/desktop/projects/{project_id}/changes/history/commit-graph")
+def change_history_commit_graph(
+    project_id: str,
+    request: Request,
+    branch: str = "main",
+    _user: str = Depends(require_desktop_auth),
+):
+    """Return the commit graph (branch metadata + commit metadata without
+    delta_data) for the change-history repository.
+
+    Returns ``{"branches": [...], "commits": [...]}``.
+    """
+    dss = pamet.desktop_storage_service()
+    svc = dss.change_history_service(project_id)
+    if svc is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Change history not enabled for this project",
+        )
+
+    repo = svc.repository
+    graph = repo.get_commit_graph()
+    return graph.data().__dict__
+
+
+@desktop_router.get("/desktop/projects/{project_id}/changes/history/commits")
+def change_history_commits(
+    project_id: str,
+    request: Request,
+    branch: str = "main",
+    from_id: str | None = None,
+    count: int = 50,
+    ids: list[str] | None = Query(None),
+    _user: str = Depends(require_desktop_auth),
+):
+    """Return commits (with delta_data) from the change-history repository.
+
+    **Mode 1 – by IDs** (when ``ids`` is provided):
+    Fetch specific commits by their IDs.  Returns a flat list of commit
+    dicts.
+
+    **Mode 2 – paginated walk** (default, when ``ids`` is absent):
+    Walk forward along ``branch`` starting after ``from_id``.
+
+    - ``branch``: branch name (default ``main``)
+    - ``from_id``: start *after* this commit ID (exclusive). If omitted
+      starts from the branch root.
+    - ``count``: max number of commits to return (default 50, capped at 500).
+
+    Returns ``{"commits": [...], "has_more": bool}``.
+    Each commit dict has: id, parent_id, snapshot_hash, timestamp, message,
+    delta_data.
+    """
+    dss = pamet.desktop_storage_service()
+    svc = dss.change_history_service(project_id)
+    if svc is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Change history not enabled for this project",
+        )
+
+    repo = svc.repository
+
+    # Mode 1: fetch by IDs
+    if ids:
+        full_commits = repo.get_commits(ids)
+        return [c.asdict() for c in full_commits]
+
+    # Mode 2: paginated walk
+    count = min(max(count, 1), 500)
+
+    graph = repo.get_commit_graph()
+    all_branch_commits = graph.branch_commits(branch)  # chronological
+
+    # Find start position
+    start_idx = 0
+    if from_id:
+        for i, cm in enumerate(all_branch_commits):
+            if cm.id == from_id:
+                start_idx = i + 1  # exclusive — start after from_id
+                break
+        else:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Commit {from_id} not found on branch {branch}",
+            )
+
+    selected_meta = all_branch_commits[start_idx : start_idx + count]
+    has_more = (start_idx + count) < len(all_branch_commits)
+
+    # Fetch full commits (with delta_data) from the repo
+    if selected_meta:
+        full_commits = repo.get_commits([cm.id for cm in selected_meta])
+        result = [c.asdict() for c in full_commits]
+    else:
+        result = []
+
+    return {"commits": result, "has_more": has_more}
 
 
 @desktop_router.get(

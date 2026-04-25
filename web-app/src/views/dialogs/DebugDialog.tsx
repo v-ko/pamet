@@ -84,12 +84,12 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
           id: commit.id.substring(0, 8),
           message: commit.message,
           timestamp: new Date(commit.timestamp).toLocaleString(),
-          deltaSize: JSON.stringify(commit.deltaData).length
+          deltaSize: JSON.stringify(commit.delta_data).length
         }));
 
         setCommitStats({
           branches: branches,
-          headCommitId: headCommit?.headCommitId?.substring(0, 8) || 'none',
+          headCommitId: headCommit?.head_commit_id?.substring(0, 8) || 'none',
           totalCommits: commits.length,
           commits: commitStats
         });

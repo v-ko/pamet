@@ -13,6 +13,7 @@ import { MouseState } from '@/views/AppViewState';
 import { NoteVirtualComponent } from '../note/NoteVirtualComponent';
 import { PageController } from '@/views/page/PageController';
 import Menu, { MenuItem } from '@/views/menu/Menu';
+import { pamet } from '@/app/facade';
 import { ArrowVirtualComponent } from '@/views/arrow/ArrowVirtualComponent';
 
 
@@ -169,6 +170,17 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
       {/* Old pamet-canvas element rendering */}
       {/* <CanvasReactComponent state={state} /> */}
 
+      {state.isReplay && (
+        <div
+          className="history-overlay-badge"
+          onClick={() => {
+            pamet.appViewState.deselectHistoryItem();
+          }}
+        >
+          History ✕
+        </div>
+      )}
+
       {/* Canvas to do the direct rendering on */}
       <canvas
         id="render-canvas"
@@ -179,7 +191,7 @@ export const PageView = observer(({ state, mouseState }: { state: PageViewState,
           width: `100vw`,
           height: `100vh`,
           pointerEvents: 'none',
-          zIndex: 1001,
+          zIndex: 'var(--z-render-canvas)',
         }}
         ref={canvasRef}
       />

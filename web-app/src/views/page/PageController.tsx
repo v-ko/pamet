@@ -10,6 +10,7 @@ import { MouseState } from '@/views/AppViewState';
 import { MIN_HEIGHT_SCALE, MAX_HEIGHT_SCALE, DEFAULT_VIEW_HEIGHT, ZOOM_SPEED, TOUCHPAD_PINCH_ZOOM_SPEED } from '@/app/constants';
 import { pamet } from '@/app/facade';
 import { commands } from '@/app/commands';
+import { HISTORY_MODIFY_MSG } from '@/services/ReplayService';
 import { CardNote } from '@/model/CardNote';
 import { Viewport } from '@/views/page/Viewport';
 import { PametRoute } from '@/services/routing/PametRoute';
@@ -70,6 +71,25 @@ export class PageController {
         pageActions.setClipboardPreview(this.pageVS, false);
       }
     };
+  }
+
+  private get isReplay(): boolean {
+    return this.pageVS.isReplay;
+  }
+
+  private _replayAlertShown = false;
+  private showReplayAlert() {
+    if (!this._replayAlertShown) {
+      this._replayAlertShown = true;
+      setTimeout(() => { this._replayAlertShown = false; }, 2000);
+      window.alert(HISTORY_MODIFY_MSG);
+    }
+    // The blocking alert swallows mouseUp, leaving stale press state.
+    // Clear it so drag selection doesn't start on the next mouse move.
+    appActions.updateMouseState(pamet.appViewState, {
+      buttons: 0,
+      positionOnPress: null,
+    });
   }
 
   public setupResizeObserver(canvas: HTMLCanvasElement) {
@@ -153,6 +173,7 @@ export class PageController {
         // Get noteVS whose riseze circle is clicked if any
         let resizedNoteVS = this.pageVS.resizeCircleAt(realClickPos);
         if (resizedNoteVS) {
+          if (this.isReplay) { this.showReplayAlert(); return; }
           // If the note is not selected - deselect all and select it
           if (!this.pageVS.selectedElementsVS.has(resizedNoteVS)) {
             pageActions.clearSelection(this.pageVS);
@@ -162,6 +183,7 @@ export class PageController {
           noteActions.startNotesResize(this.pageVS, resizedNoteVS, mousePos);
         }
       } else if (this.pageVS.mode === PageMode.CreateArrow) {
+        if (this.isReplay) { this.showReplayAlert(); return; }
         arrowActions.arrowCreationClick(this.pageVS, mousePos);
       }
     } else if (event.button === 2) { // right mouse
@@ -273,6 +295,15 @@ export class PageController {
     const getShortcut = (commandName: string): string | undefined => pamet.keybindingService?.getShortcutForCommand(commandName) || undefined;
     const items: MenuItem[] = [];
 
+    if (this.isReplay) {
+      // In replay mode only allow Copy
+      const hasSelection = this.pageVS.selectedElementsVS.size > 0;
+      items.push(
+        { label: 'Copy', onClick: () => commands.copySelectedElements(), shortcut: getShortcut(commands.copySelectedElements.name), disabled: !hasSelection },
+      );
+      return items;
+    }
+
     // If right-clicked over a note, prefer Edit Note as the first item
     try {
       const realPos = this.pageVS.viewport.unprojectPoint(new Point2D([clientX, clientY]));
@@ -344,52 +375,58 @@ export class PageController {
         if (!pressPos) {
           throw Error('Button pressed, but press pos not defined. This should not happen');
         }
-        // If a single arrow is selected - its control points are visible
-        // If the user drags a suggested control point - we create it
-        // In any case - we start the arrow control point drag
-        let editableArrow = this.pageVS.arrowVS_withVisibleControlPoints();
-        if (editableArrow !== null) {
-          // Check if we've clicked on an arrow control point
-          // Go through all arrows
-          let realPressPos = this.pageVS.viewport.unprojectPoint(pressPos);
-          let controlPointIndex = editableArrow.controlPointAt(realPressPos);
-          if (controlPointIndex !== null) {
-            if (controlPointIndex % 1 !== 0) {
-              // Whole indices are control points (.5 are suggested ones)
-              arrowActions.createControlPointAndStartDrag(this.pageVS, realPressPos, controlPointIndex);
-            } else {
-              // Dragging an existing control point
-              arrowActions.startControlPointDrag(this.pageVS, controlPointIndex);
+
+        if (!this.isReplay) {
+          // If a single arrow is selected - its control points are visible
+          // If the user drags a suggested control point - we create it
+          // In any case - we start the arrow control point drag
+          let editableArrow = this.pageVS.arrowVS_withVisibleControlPoints();
+          if (editableArrow !== null) {
+            // Check if we've clicked on an arrow control point
+            // Go through all arrows
+            let realPressPos = this.pageVS.viewport.unprojectPoint(pressPos);
+            let controlPointIndex = editableArrow.controlPointAt(realPressPos);
+            if (controlPointIndex !== null) {
+              if (controlPointIndex % 1 !== 0) {
+                // Whole indices are control points (.5 are suggested ones)
+                arrowActions.createControlPointAndStartDrag(this.pageVS, realPressPos, controlPointIndex);
+              } else {
+                // Dragging an existing control point
+                arrowActions.startControlPointDrag(this.pageVS, controlPointIndex);
+              }
+              // Update the drag position
+              arrowActions.controlPointDragMove(this.pageVS, mousePos);
+              return; // If user clicked on a control point - don't do anythin else
             }
-            // Update the drag position
-            arrowActions.controlPointDragMove(this.pageVS, mousePos);
-            return; // If user clicked on a control point - don't do anythin else
+          }
+
+          // If there was a note on the initial position - select and move it
+          let noteVS_underMouse = this.pageVS.noteViewStateAt(this.pageVS.viewport.unprojectPoint(pressPos));
+          let arrowVS_underMouse = this.pageVS.arrowViewStateAt(this.pageVS.viewport.unprojectPoint(pressPos));
+          let elementUnderMouse = noteVS_underMouse || arrowVS_underMouse;
+          if (elementUnderMouse !== null) {
+            if (!this.pageVS.selectedElementsVS.has(elementUnderMouse)) {
+              pageActions.clearSelection(this.pageVS);
+              pageActions.updateSelection(this.pageVS, new Map([[elementUnderMouse, true]]));
+            }
+            noteActions.startMovingElements(this.pageVS, pressPos);
+            noteActions.elementsMoveUpdate(this.pageVS, mousePos);
+            return;
           }
         }
 
-        // If there was a note on the initial position - select and move it
-        let noteVS_underMouse = this.pageVS.noteViewStateAt(this.pageVS.viewport.unprojectPoint(pressPos));
-        let arrowVS_underMouse = this.pageVS.arrowViewStateAt(this.pageVS.viewport.unprojectPoint(pressPos));
-        let elementUnderMouse = noteVS_underMouse || arrowVS_underMouse;
-        if (elementUnderMouse !== null) {
-          if (!this.pageVS.selectedElementsVS.has(elementUnderMouse)) {
-            pageActions.clearSelection(this.pageVS);
-            pageActions.updateSelection(this.pageVS, new Map([[elementUnderMouse, true]]));
-          }
-          noteActions.startMovingElements(this.pageVS, pressPos);
-          noteActions.elementsMoveUpdate(this.pageVS, mousePos);
-        } else {
-          // If there was no note under the mouse - start drag selection
-          pageActions.clearSelection(this.pageVS);
-          pageActions.startDragSelection(this.pageVS, pressPos);
-          pageActions.updateDragSelection(this.pageVS, mousePos);
-        }
+        // Drag selection (allowed in replay)
+        pageActions.clearSelection(this.pageVS);
+        pageActions.startDragSelection(this.pageVS, pressPos);
+        pageActions.updateDragSelection(this.pageVS, mousePos);
       } else {
         // No button pressed - update resize circle hover
-        let realMousePos = this.pageVS.viewport.unprojectPoint(mousePos);
-        let hoveredNoteVS = this.pageVS.resizeCircleAt(realMousePos);
-        if (hoveredNoteVS !== this.pageVS.hoveredResizeNoteVS) {
-          pageActions.updateResizeCircleOutline(this.pageVS, hoveredNoteVS);
+        if (!this.isReplay) {
+          let realMousePos = this.pageVS.viewport.unprojectPoint(mousePos);
+          let hoveredNoteVS = this.pageVS.resizeCircleAt(realMousePos);
+          if (hoveredNoteVS !== this.pageVS.hoveredResizeNoteVS) {
+            pageActions.updateResizeCircleOutline(this.pageVS, hoveredNoteVS);
+          }
         }
       }
     } else if (this.pageVS.mode === PageMode.DragNavigation) {
@@ -410,6 +447,35 @@ export class PageController {
   handleDoubleClick = (event: MouseEvent) => {
     let mousePos = new Point2D([event.clientX, event.clientY]);
     let realPos = this.pageVS.viewport.unprojectPoint(mousePos);
+
+    if (this.isReplay) {
+      // In replay mode only allow link following on double-click
+      let noteVS_underMouse = this.pageVS.noteViewStateAt(realPos);
+      if (noteVS_underMouse !== null) {
+        let note = noteVS_underMouse.note();
+        if (note instanceof CardNote && note.content.page_ref) {
+          let targetPage = pamet.page(note.content.page_ref.id);
+          if (targetPage !== undefined) {
+            pamet.navigateTo(new PametRoute({
+              userId: pamet.appViewState.userId,
+              projectId: pamet.appViewState.currentProjectId ?? undefined,
+              pageId: targetPage.id,
+            })).catch((e) => console.error('Error navigating to linked page', e));
+            return;
+          }
+        }
+        if (note instanceof CardNote && note.hasExternalLink) {
+          let url = note.content.url;
+          if (!url?.startsWith('http://') && !url?.startsWith('https://')) {
+            url = '//' + url;
+          }
+          window.open(url, '_blank');
+          return;
+        }
+      }
+      this.showReplayAlert();
+      return;
+    }
 
     // If an arrow is selected and a control point is under the mouse - delete it
     let editableArrowVS = this.pageVS.arrowVS_withVisibleControlPoints();
@@ -626,12 +692,13 @@ export class PageController {
         showClipboardPreview: this.pageVS.showClipboardPreview,
         hoveredResizeNoteVS: this.pageVS.hoveredResizeNoteVS,
         themeMode: pamet.appViewState.themeResolvedMode,
+        renderIdx: this.pageVS.renderIdx,
       };
     },
       (cur, prev) => {
         try {
-          // Flush bitmap cache when theme changes (cached images have baked-in colors)
-          if (cur.themeMode !== prev.themeMode) {
+          // Flush bitmap cache when theme/palette changes (cached images have baked-in colors)
+          if (cur.themeMode !== prev.themeMode || cur.renderIdx !== prev.renderIdx) {
             this._renderer?.clearAllCaches();
           }
           this._renderer?.renderCurrentPage();

@@ -17,11 +17,11 @@ from fusion.logging import get_logger
 from fusion.storage.delta import Delta
 from fusion.storage.in_memory_store import InMemoryStore
 
-from pamet.desktop_app.config import CONFIG_DIR, USER_SETTINGS_DIR
+from pamet.desktop_app.config import PAMET_CONFIG_DIR, USER_SETTINGS_DIR
 
 log = get_logger(__name__)
 
-DEVICE_STATE_PATH = CONFIG_DIR / "device-state.json"
+DEVICE_STATE_PATH = PAMET_CONFIG_DIR / "device-state.json"
 USER_SETTINGS_PATH = USER_SETTINGS_DIR / "settings.json"
 
 

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import QtWebEngine
 
 ApplicationWindow {
@@ -263,6 +264,12 @@ ApplicationWindow {
                         if (webViewStack.currentIndex === index)
                             backend.updateNavState(webView.canGoBack, webView.canGoForward)
                     }
+                    onColorDialogRequested: function(request) {
+                        request.accepted = true
+                        colorDialog.selectedColor = request.color
+                        colorDialog._webRequest = request
+                        colorDialog.open()
+                    }
                     onJavaScriptConsoleMessage: function(level, message, lineNumber, sourceId) {
                         let tag = level === 0 ? "js:info" : level === 1 ? "js:warn" : "js:error"
                         console.log(tag + ": " + message)
@@ -277,7 +284,16 @@ ApplicationWindow {
             SplitView.fillWidth: true
             SplitView.preferredHeight: contentSplit.height / 3
             visible: false
+            onWindowCloseRequested: backend.toggleDevTools()
         }
+    }
+
+    // ── Color picker dialog for WebEngine <input type="color"> ────
+    ColorDialog {
+        id: colorDialog
+        property var _webRequest: null
+        onAccepted: { if (_webRequest) _webRequest.dialogAccept(selectedColor); _webRequest = null }
+        onRejected: { if (_webRequest) _webRequest.dialogReject(); _webRequest = null }
     }
 
     // Show/hide dev tools from backend signal

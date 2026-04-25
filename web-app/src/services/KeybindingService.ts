@@ -302,6 +302,10 @@ export class KeybindingService {
 
     const cmd = getCommand(matchedBinding.command);
     if (cmd) {
+      // Also check the command's own enablement condition
+      if (cmd.enablement && !pamet.contextConditionFulfilled(cmd.enablement)) {
+        return;
+      }
       cmd.function();
     } else {
       log.error(`Command not found with name: ${matchedBinding.command}`);

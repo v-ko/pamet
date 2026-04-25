@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from fusion.logging import get_logger
+from fusion.util import get_new_id
 from slugify import slugify
 
 from pamet.storage.canvas_html import write_canvas_file
@@ -54,14 +55,39 @@ LEGACY_REPO_SETTINGS_FILENAME = "settings.json"
 V4_BACKUP_FOLDER_NAME = "__migration_backup_v4_to_v5__"
 
 
-def migrate_v4_user_settings(app_data_dir: Path) -> Optional[Dict[str, Any]]:
-    """Read and return legacy V4 user settings from app_data_dir/settings.json.
+def _v4_terminal_prefix_to_template(prefix: str) -> str:
+    """Convert a v4 bare prefix string into a v5 ``{cmd}``-template.
 
-    Returns a dict with the following keys (or None if no legacy file exists):
-    - repository_path
-    - accepted_script_risks
-    - run_in_terminal_prefix_posix
-    - run_in_terminal_prefix_windows
+    v4 stored e.g. ``'gnome-terminal -- '`` and concatenated the command after
+    it. v5 expects a template containing ``{cmd}`` so the runner can substitute
+    the assembled (shell-quoted) argv. POSIX prefixes typically end in an
+    argument separator that needs a real command after it, so we wrap with
+    ``bash -c {cmd}``; Windows shells consume the line as-is.
+    """
+    if "{cmd}" in prefix:
+        return prefix
+    suffix = "bash -c {cmd}" if "--" in prefix else "{cmd}"
+    return f"{prefix.rstrip()} {suffix}".strip()
+
+
+def process_v4_user_settings(app_data_dir: Path) -> Optional[Dict[str, Any]]:
+    """Read v4 ``settings.json`` and return a sparse v5 *overrides* dict.
+
+    The v4 file lives in the Qt ``GenericDataLocation`` directory (e.g.
+    ``~/.local/share/pamet/settings.json`` on Linux), which v5 exposes as
+    ``PAMET_APP_DATA_DIR``.
+
+    Returns ``None`` if no legacy file exists. Otherwise returns a dict
+    containing only the fields v4 actually carried, ready to be deep-merged
+    on top of fresh v5 defaults:
+
+    - ``repository_path`` (top-level convenience for caller; not a UserSettings field)
+    - ``scripts.run_in_terminal_prefix.{posix,windows}`` if v4 had non-default
+      values
+
+    The v5 structural defaults (``accepted_paths``, ``limits``) are owned by
+    :func:`pamet.model.config.default_script_settings` — never reproduced here.
+    The v4 ``accepted_script_risks`` boolean is intentionally dropped (logged).
     """
     legacy_path = app_data_dir / "settings.json"
     if not legacy_path.exists():
@@ -80,16 +106,56 @@ def migrate_v4_user_settings(app_data_dir: Path) -> Optional[Dict[str, Any]]:
             f"got {type(data).__name__}"
         )
 
-    return {
+    log.info(
+        "Migrating v4 user settings from %s: %s",
+        legacy_path,
+        json.dumps(data, indent=2, sort_keys=True),
+    )
+
+    if data.get("accepted_script_risks"):
+        log.info(
+            "v4->v5: 'accepted_script_risks' is dropped; v5 prompts per-path "
+            "and supports per-folder allowlisting."
+        )
+
+    overrides: Dict[str, Any] = {
         "repository_path": data.get("repository_path"),
-        "accepted_script_risks": data.get("accepted_script_risks", False),
-        "run_in_terminal_prefix_posix": data.get(
-            "run_in_terminal_prefix_posix", "gnome-terminal -- "
-        ),
-        "run_in_terminal_prefix_windows": data.get(
-            "run_in_terminal_prefix_windows", "powershell -noexit "
-        ),
     }
+
+    terminal_prefix: Dict[str, str] = {}
+    if "run_in_terminal_prefix_posix" in data:
+        terminal_prefix["posix"] = _v4_terminal_prefix_to_template(
+            data["run_in_terminal_prefix_posix"]
+        )
+    if "run_in_terminal_prefix_windows" in data:
+        terminal_prefix["windows"] = _v4_terminal_prefix_to_template(
+            data["run_in_terminal_prefix_windows"]
+        )
+    if terminal_prefix:
+        overrides["scripts"] = {"run_in_terminal_prefix": terminal_prefix}
+
+    return overrides
+
+
+V4_USER_SETTINGS_BACKUP_SUFFIX = ".v4.bak"
+
+
+def archive_v4_user_settings(legacy_path: Path) -> Path:
+    """Rename ``legacy_path`` to a sibling ``.v4.bak`` (uniquified on collision).
+
+    Preserved as an audit trail for fields v5 does not carry over (e.g. the
+    v4 ``accepted_script_risks`` boolean).
+    """
+    backup_path = legacy_path.with_suffix(
+        legacy_path.suffix + V4_USER_SETTINGS_BACKUP_SUFFIX
+    )
+    if backup_path.exists():
+        backup_path = legacy_path.with_suffix(
+            f"{legacy_path.suffix}{V4_USER_SETTINGS_BACKUP_SUFFIX}.{get_new_id()}"
+        )
+    legacy_path.rename(backup_path)
+    log.info("Archived legacy user settings %s -> %s", legacy_path, backup_path)
+    return backup_path
 
 
 def is_v4_page_file(path: Path) -> bool:
@@ -169,8 +235,27 @@ def convert_v4_to_v5_element(
         # Remove tags from root
         element_data.pop("tags", None)
 
-        # Unify type to CardNote
-        element_data["type_name"] = "CardNote"
+        # --- ScriptNote: preserve subtype + lift v4 root-level fields into content ---
+        # MUST run before the unify-to-CardNote step below.
+        if original_type == "ScriptNote":
+            sp = element_data.pop("script_path", None)
+            ca = element_data.pop("command_args", None)
+            rit = element_data.pop("run_in_terminal", None)
+            wd = element_data.pop("working_directory", None)
+
+            if sp is not None and sp != "":
+                content["script_path"] = str(sp)
+            if ca is not None:
+                content["command_args"] = str(ca)
+            if rit is not None:
+                content["run_in_terminal"] = bool(rit)
+            if wd is not None and wd != "":
+                content["working_directory"] = str(wd)
+
+            element_data["type_name"] = "ScriptNote"
+        else:
+            # Unify all other legacy note types to CardNote
+            element_data["type_name"] = "CardNote"
 
         # OtherPageListNote -> project index header
         if original_type == "OtherPageListNote":

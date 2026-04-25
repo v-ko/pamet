@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TypedDict, cast
+from typing import Generic, Mapping, TypedDict, TypeVar, cast
 
 import attrs
 from fusion import entity_type, get_logger
@@ -50,13 +50,20 @@ class NoteMetadata(TypedDict, total=False):
     is_project_index_header: bool
 
 
+# Note subtypes parameterise this with their own TypedDict content schema
+# (e.g. CardNote uses NoteContent, ScriptNote uses ScriptContent). Bound to
+# Mapping so static checkers know dict-like access is safe; at runtime every
+# content payload is just a plain dict.
+ContentT = TypeVar("ContentT", bound=Mapping[str, object])
+
+
 @entity_type
-class Note(PageChild):
+class Note(PageChild, Generic[ContentT]):
     geometry: list = attrs.Factory(
         lambda: [0, 0, DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT]
     )
     style: NoteStyle = attrs.Factory(lambda: cast(NoteStyle, {}))
-    content: NoteContent = attrs.Factory(lambda: cast(NoteContent, {}))
+    content: ContentT = attrs.Factory(lambda: cast(ContentT, {}))
     metadata: NoteMetadata = attrs.Factory(lambda: cast(NoteMetadata, {}))
     created: str = attrs.Factory(lambda: timestamp(current_time()))
     modified: str = attrs.Factory(lambda: timestamp(current_time()))

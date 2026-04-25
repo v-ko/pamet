@@ -6,7 +6,9 @@ from random import randint
 import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from fusion import get_logger
+from starlette.responses import FileResponse
 from uvicorn import Config, Server
 
 from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
@@ -38,9 +40,8 @@ class DesktopServer:
     def __init__(
         self,
         config_dir: Path,
-        port: int = None,
-        web_app_static_build_path: Path | str = None,
-        web_app_debug_server_host: str = None,
+        port: int | None = None,
+        web_app_static_build_path: Path | str | None = None,
     ):
         self.config_dir = Path(config_dir)
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
@@ -48,7 +49,6 @@ class DesktopServer:
         self.web_app_static_build_path = None
         if web_app_static_build_path:
             self.web_app_static_build_path = Path(web_app_static_build_path)
-        self.web_app_debug_server_host = web_app_debug_server_host
 
         self.thread = None
         self._port = port or DEFAULT_PORT
@@ -68,17 +68,40 @@ class DesktopServer:
             allow_headers=["*"],
         )
 
-        # Serve static build OR external dev server, but not both.
-        if web_app_static_build_path and web_app_debug_server_host:
-            raise Exception(
-                "Cannot serve static build path and debug server host at "
-                "the same time"
-            )
-
         self.app.state.web_app_static_build_path = self.web_app_static_build_path
         self.app.state.desktop_access_token = self.desktop_access_token
 
+        # API routes are registered first so they win over the SPA static
+        # mount below (which acts as a catch-all serving index.html).
         self.app.include_router(desktop_router)
+
+        if self.web_app_static_build_path:
+            build_path = self.web_app_static_build_path
+            index_path = build_path / "index.html"
+            if not index_path.exists():
+                raise FileNotFoundError(
+                    f"web_app_static_build_path {build_path} has no "
+                    "index.html — did you run `npm run build:desktop`?"
+                )
+
+            # Real assets (hashed JS/CSS/maps) — return 404 on miss so the
+            # browser surfaces a clear error instead of HTML-as-JS garbage.
+            self.app.mount(
+                "/assets",
+                StaticFiles(directory=build_path / "assets"),
+                name="web_app_assets",
+            )
+
+            # Everything else: serve the file at the build root if it
+            # exists (favicon.ico, logo256.png, manifest.json, …),
+            # otherwise fall back to index.html so the SPA router takes
+            # over. The SPA itself reports 404 for unknown routes.
+            @self.app.get("/{spa_path:path}", include_in_schema=False)
+            async def spa_fallback(spa_path: str):
+                candidate = (build_path / spa_path).resolve()
+                if spa_path and build_path in candidate.parents and candidate.is_file():
+                    return FileResponse(candidate)
+                return FileResponse(index_path)
 
     @property
     def port(self):
@@ -107,7 +130,7 @@ class DesktopServer:
 
         # Start the server in a thread
         self._ready_event.clear()
-        self.thread = threading.Thread(target=self.server.run)
+        self.thread = threading.Thread(target=self.server.run, daemon=True)
         self.thread.start()
 
         # Block until FastAPI's lifespan startup hook fires (server is ready)
@@ -118,5 +141,6 @@ class DesktopServer:
 
     def stop(self):
         self.server.should_exit = True
-        self.thread.join()
+        self.server.force_exit = True
+        self.thread.join(timeout=3)
         remove_lock_file(self.config_dir)

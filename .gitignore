@@ -6,6 +6,7 @@ node_modules/
 # Build outputs
 dist/
 dist-desktop/
+server/pamet/desktop_app/_web_app_dist/
 build/
 *.tsbuildinfo
 server/pamet/resources/mini_viewer/viewer.js

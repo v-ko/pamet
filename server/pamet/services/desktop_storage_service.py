@@ -10,6 +10,7 @@ from fusion.storage.ws_sync_service import WebSocketSyncService
 
 from pamet.model.config import ProjectProperties
 from pamet.services.config_file_manager import ConfigFileManager, DSSStatus
+from pamet.services.full_change_history_service import FullChangeHistoryService
 from pamet.services.project_sync.project_folder_manager import ProjectFolderManager
 
 log = get_logger(__name__)
@@ -22,6 +23,7 @@ class ProjectNotLoadedError(KeyError):
 class DesktopStorageService:
     def __init__(self):
         self._project_folder_managers: dict[str, ProjectFolderManager] = {}
+        self._change_history_services: dict[str, FullChangeHistoryService] = {}
         self._lock = threading.RLock()
 
         # Status object — services write errors here, exposed via /status
@@ -45,6 +47,13 @@ class DesktopStorageService:
         # Load existing config from disk
         self._config_file_manager.load_app_config(self._config_store)
 
+    def change_history_service(
+        self, project_id: str
+    ) -> FullChangeHistoryService | None:
+        """Return the change history service for a project, or None if disabled."""
+        with self._lock:
+            return self._change_history_services.get(project_id)
+
     @property
     def config_sync_service(self) -> WebSocketSyncService:
         return self._config_sync_service
@@ -66,6 +75,7 @@ class DesktopStorageService:
         self._config_file_manager.on_changes(delta, origin)
         self._config_sync_service.on_store_changes(delta, origin)
         self._apply_backup_settings_from_delta(delta)
+        self._apply_change_history_settings_from_delta(delta)
 
     def _apply_backup_settings_from_delta(self, delta: Delta) -> None:
         """Check if any ProjectProperties changed and update backup_service.backups_enabled."""
@@ -96,6 +106,50 @@ class DesktopStorageService:
                     self.status["errors"].setdefault("backup_service", {})
                     self.status["errors"]["backup_service"][project_id] = msg
 
+    def _apply_change_history_settings_from_delta(self, delta: Delta) -> None:
+        """Enable or disable the change history service when record_all_changes changes."""
+        for change in delta.changes():
+            entity_id = change.entity_id
+            if not entity_id.startswith("project-props-"):
+                continue
+            project_id = entity_id.removeprefix("project-props-")
+            with self._lock:
+                pfm = self._project_folder_managers.get(project_id)
+                if pfm is None:
+                    continue
+            entity = self._config_store.find_one(id=entity_id)
+            if entity is not None and isinstance(entity, ProjectProperties):
+                try:
+                    self._set_change_history_enabled(
+                        project_id, pfm.repo_root, entity.record_all_changes
+                    )
+                except Exception as exc:
+                    msg = (
+                        f"Change history toggle failed for project {project_id}: {exc}"
+                    )
+                    log.error(msg)
+                    self.status["errors"].setdefault("change_history", {})
+                    self.status["errors"]["change_history"][project_id] = msg
+
+    def _set_change_history_enabled(
+        self, project_id: str, repo_root: Path, enabled: bool
+    ) -> None:
+        with self._lock:
+            existing = self._change_history_services.get(project_id)
+            if enabled and existing is None:
+                db_path = repo_root / ".pamet" / "change-history.db"
+                svc = FullChangeHistoryService(db_path)
+                self._change_history_services[project_id] = svc
+                log.info(
+                    "Change history enabled for project %s (db: %s)",
+                    project_id,
+                    db_path,
+                )
+            elif not enabled and existing is not None:
+                existing.close()
+                del self._change_history_services[project_id]
+                log.info("Change history disabled for project %s", project_id)
+
     def load_project(self, project_id: str, repo_root: Path) -> None:
         with self._lock:
             if project_id in self._project_folder_managers:
@@ -121,9 +175,10 @@ class DesktopStorageService:
             )
 
             # Apply backup settings from loaded project properties
+            project_properties_key = ProjectProperties.id_for_project(project_id)
+            props = self._config_store.find_one(id=project_properties_key)
             try:
-                props_id = ProjectProperties.id_for_project(project_id)
-                props = self._config_store.find_one(id=props_id)
+
                 if props is not None and isinstance(props, ProjectProperties):
                     pfm.backup_service.backups_enabled = props.backups_enabled
                 else:
@@ -141,6 +196,29 @@ class DesktopStorageService:
                 "backup_folder": str(pfm.backup_service.backup_folder),
             }
 
+            # Apply change history settings from loaded project properties
+            try:
+                if props is not None and isinstance(props, ProjectProperties):
+                    log.info(
+                        "load_project %s: record_all_changes=%s",
+                        project_id,
+                        props.record_all_changes,
+                    )
+                    self._set_change_history_enabled(
+                        project_id, repo_root, props.record_all_changes
+                    )
+                else:
+                    log.info(
+                        "load_project %s: no ProjectProperties found (props=%r)",
+                        project_id,
+                        props,
+                    )
+            except Exception as exc:
+                msg = f"Change history failed to start for project {project_id}: {exc}"
+                log.error(msg)
+                self.status["errors"].setdefault("change_history", {})
+                self.status["errors"]["change_history"][project_id] = msg
+
             log.info(
                 "DesktopStorageService loaded ProjectFolderManager for %s",
                 project_id,
@@ -148,6 +226,11 @@ class DesktopStorageService:
 
     def unload_project(self, project_id: str) -> None:
         with self._lock:
+            # Tear down change history if active
+            chs = self._change_history_services.pop(project_id, None)
+            if chs is not None:
+                chs.close()
+
             pfm = self._project_folder_managers.pop(project_id, None)
             if pfm is None:
                 return

@@ -21,15 +21,52 @@ def _path_from_env_or_standard(
     return Path(QStandardPaths.writableLocation(standard_location))
 
 
-CONFIG_DIR = _path_from_env_or_standard(
+PAMET_CONFIG_DIR = _path_from_env_or_standard(
     "PAMET_CONFIG_DIR", QStandardPaths.StandardLocation.AppConfigLocation
 )
-APP_DATA_DIR = _path_from_env_or_standard(
+PAMET_APP_DATA_DIR = _path_from_env_or_standard(
     "PAMET_APP_DATA_DIR", QStandardPaths.StandardLocation.AppLocalDataLocation
 )
-PROJECTS_DIR = APP_DATA_DIR / "projects"
-USER_SETTINGS_DIR = CONFIG_DIR / "user"
+PROJECTS_DIR = PAMET_APP_DATA_DIR / "projects"
+USER_SETTINGS_DIR = PAMET_CONFIG_DIR / "user"
 REPO_PROPERTIES_JSON = "properties.json"
+
+
+# Bundled web-app build directory (vite outDir for BUILD_MODE=desktop).
+# Lives inside the package so it ships with the wheel.
+_BUNDLED_WEB_APP_DIST = Path(__file__).resolve().parent / "_web_app_dist"
+
+
+def web_app_static_build_path() -> Path:
+    """Locate the built desktop web-app to be served by DesktopServer.
+
+    Resolution order:
+      1. ``$PAMET_WEB_APP_DIST`` if set (escape hatch for ad-hoc builds).
+      2. The package-bundled ``_web_app_dist`` directory populated by
+         ``npm run build:desktop``.
+
+    Raises:
+        RuntimeError: if the resolved directory does not contain an
+            ``index.html`` (no build, partial build, or wrong path).
+    """
+    env_override = os.environ.get("PAMET_WEB_APP_DIST")
+    candidate = (
+        Path(env_override).expanduser() if env_override else _BUNDLED_WEB_APP_DIST
+    )
+
+    if not (candidate / "index.html").exists():
+        source = (
+            f"PAMET_WEB_APP_DIST={env_override}"
+            if env_override
+            else f"bundled path {candidate}"
+        )
+        raise RuntimeError(
+            f"No web-app build found at {source}. Run `npm run build:desktop` "
+            "in the pamet repo, or set PAMET_FRONTEND_DEV_SERVER / "
+            "--use-frontend-server to use a dev server instead."
+        )
+
+    return candidate
 
 
 class UserDesktopSettingsData(TypedDict):

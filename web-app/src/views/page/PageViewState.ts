@@ -97,11 +97,13 @@ export class PageViewState {
     // File URLs keyed by relative file path
     fileUrlsByPath: ObservableMap<string, string> = observable.map();
 
-    // Debugging. It's for the RenderProfiler stuff. It might be unneded even for that (since state is mutable)
-    renderId: number = 0; // Incremented on every render to force re-rendering
+    renderIdx: number = 0; // Bumped to force a canvas re-render (e.g. palette overrides)
 
     // Clipboard paste preview (shown while Ctrl is held)
     showClipboardPreview: boolean = false;
+
+    // Replay mode indicator
+    isReplay: boolean = false;
 
     constructor(page: Page, notes: Note[], arrows: Arrow[]) {
         this._pageData = page.data();
@@ -144,6 +146,10 @@ export class PageViewState {
             noteEditWindowState: observable,
 
             showClipboardPreview: observable,
+
+            renderIdx: observable,
+
+            isReplay: observable,
 
             hoveredResizeNoteVS: observable,
 

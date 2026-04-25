@@ -1,10 +1,10 @@
 from fusion.libs.model import entity_type
 
-from pamet.model.note import ImageReference, Note, PageReference
+from pamet.model.note import ImageReference, Note, NoteContent, PageReference
 
 
 @entity_type
-class CardNote(Note):
+class CardNote(Note[NoteContent]):
     """Unified note type matching TS CardNote.
 
     Content keys: text, url, page_ref, image
