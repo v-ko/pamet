@@ -1,34 +1,29 @@
-from PySide6.QtCore import Qt
-import pytest
 import fusion
-from fusion.libs import entity as entity_lib
-from fusion.libs import channel as channel_lib
-# from fusion.state_manager import FusionStateManager
+import pytest
+from fusion.libs import channel as channel_lib, model as entity_lib
+from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
+from PySide6.QtCore import Qt
 
 import pamet
-from pamet.desktop_app.init_config import configure_for_qt
 from pamet.desktop_app.app import DesktopApp
-from pamet.services.search.fuzzy import FuzzySearchService
-from pamet.services.undo import UndoService
-from pamet.storage.file_system.repository import FSStorageRepository
-from pamet.views.window.widget import WindowWidget
-from pamet.actions import window as window_actions
-from pamet.actions import other as other_actions
-from pamet import channels as pamet_channels
+from pamet.desktop_app.init_config import setup_fonts_and_icons
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        '--headless',
-        action='store',
+        "--headless",
+        action="store",
         default=False,
         type=bool,
-        help='Whether to show the app when running the action tests')
+        help="Whether to show the app when running the action tests",
+    )
 
 
 @pytest.fixture
 def window_fixture(request, tmp_path):
-    run_headless = request.config.getoption('--headless')
+    """DEPRECATED
+    can be helpful when fixing the new web shell for testing"""
+    run_headless = request.config.getoption("--headless")
     # Init the app
     fusion.set_reproducible_ids(True)
     entity_lib.reset_entity_id_counter()
@@ -37,19 +32,14 @@ def window_fixture(request, tmp_path):
     pamet.reset()
 
     fs_repo = FSStorageRepository.new(tmp_path, queue_save_on_change=True)
-    pamet.set_sync_repo(fs_repo)
+    # pamet.set_sync_repo(fs_repo)
 
     app = DesktopApp()
-    configure_for_qt(app)
+    import pamet.desktop_app as desktop_app
 
-    # Setup services
-    pamet.set_undo_service(
-        UndoService(pamet_channels.entity_change_sets_per_TLA))
-
-    search_service = FuzzySearchService(
-        pamet_channels.entity_change_sets_per_TLA)
-    search_service.load_all_content()
-    pamet.set_search_service(search_service)
+    desktop_app.set_app(app)
+    fusion.set_main_loop(QtMainLoop(app))
+    setup_fonts_and_icons()
 
     # Create an initial page and open the window
     start_page = other_actions.create_default_page()

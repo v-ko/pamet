@@ -1,0 +1,190 @@
+import { ImageConversionPreset } from "fusion/util/media";
+import { HexColorData } from "fusion/primitives/Color";
+
+// User identity when not logged in and storing repos locally
+export const LOCAL_USER_ID = 'local';  // Used in URLs when no user is authenticated
+
+// Base geometry
+export const NO_SCALE_LINE_SPACING = 20
+
+export const ALIGNMENT_GRID_UNIT = 10
+export const AGU = ALIGNMENT_GRID_UNIT
+
+export const PROPOSED_MAX_PAGE_WIDTH = 1000 * AGU;
+export const PROPOSED_MAX_PAGE_HEIGHT = 1000 * AGU;
+
+// Navigation
+export const MIN_HEIGHT_SCALE = 0.2
+export const MAX_HEIGHT_SCALE = 200
+export const ZOOM_SPEED = 0.2
+export const TOUCHPAD_PINCH_ZOOM_SPEED = 0.1  // Secondary multiplier for touchpad pinch (platform-dependent deltas)
+
+export const DEFAULT_VIEW_HEIGHT = 30
+
+
+// Note related
+export const NOTE_MARGIN = AGU / 2
+export const DEFAULT_NOTE_WIDTH = 32 * AGU
+export const DEFAULT_NOTE_HEIGHT = 16 * AGU
+export const MIN_NOTE_WIDTH = 3 * AGU
+export const MIN_NOTE_HEIGHT = 3 * AGU
+export const MAX_NOTE_WIDTH = 192 * AGU
+export const MAX_NOTE_HEIGHT = 192 * AGU
+
+export const RESIZE_CIRCLE_RADIUS = 2 * AGU
+export const ALIGNMENT_LINE_LENGTH = 12 * AGU
+
+
+export const DEFAULT_NOTE_FONT_SIZE = 18
+export const DEFAULT_NOTE_FONT_FAMILY = 'Open Sans'
+export const DEFAULT_NOTE_FONT_FAMILY_GENERIC = 'sans-serif'
+export const PREFERRED_TEXT_NOTE_ASPECT_RATIO = 5
+
+export const DEFAULT_FONT_STRING = `${DEFAULT_NOTE_FONT_SIZE}px/${NO_SCALE_LINE_SPACING}px ` +
+    `'${DEFAULT_NOTE_FONT_FAMILY}', ` +
+    `${DEFAULT_NOTE_FONT_FAMILY_GENERIC}`;
+
+export const NOTE_BORDER_WIDTH = 0.5
+
+// Arrow related
+export const ARROW_SELECTION_RADIUS = 10
+export const DEFAULT_ARROW_THICKNESS = 1.5
+export const ARROW_SELECTION_THICKNESS_DELTA = 3.5
+export const ARROW_HAND_LENGTH = 20
+export const ARROW_HAND_ANGLE_RAD = 25 * Math.PI / 180 // 25 degrees
+export const ARROW_INCLINATION_MEASURE_AT = ARROW_HAND_LENGTH / 2 // arc-length offset from tip
+export const ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS = 2 * AGU
+export const ARROW_CONTROL_POINT_RADIUS = 1.5 * AGU
+export const ARROW_POTENTIAL_CONTROL_POINT_RADIUS = ARROW_CONTROL_POINT_RADIUS * 0.7
+
+// Page render and cache related
+export const MAX_RENDER_TIME = 0.025  // (in seconds) ~24 fps
+export const IMAGE_CACHE_PADDING = 3;
+export const MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME = 2;
+
+// Colors
+export const DEFAULT_TEXT_COLOR_ROLE = 'onDefault'
+export const DEFAULT_BACKGROUND_COLOR_ROLE = 'default'
+
+// Note/arrow domain color roles (persisted in .canvas files)
+export const COLOR_ROLE_MAP: { [key: string]: HexColorData } = {
+    'default': '#0000ff1a', // blue transparent background
+    'onDefault': '#0000ff', // blue text
+    'attention': '#ff00001a', // red transparent background
+    'onAttention': '#ff0000', // red text
+    'success': '#00ff001a', // green transparent background
+    'onSuccess': '#00a33c', // green text
+    'surface': '#ffffff', // white background
+    'onSurface': '#000000', // black text
+    'neutral': '#0000001a', // black transparent background
+    'transparent': '#00000000'  // transparent
+}
+
+// Rendering-only colors (not persisted)
+export const SELECTION_OVERLAY_COLOR = '#ffff0080'  // yellow transparent
+export const DRAG_SELECT_COLOR = '#64646433'  // grey transparent
+
+export enum PametTabIndex {
+    Page = 0,
+
+    // Note Edit View tab indices
+    NoteEditView_Tool1 = 10,
+    NoteEditView_Tool2 = 11,
+    NoteEditView_Tool3 = 12,
+    NoteEditView_Tool4 = 13,
+
+    NoteEditView_ImageDropZone = 14,
+    NoteEditView_ImageUploadFile = 15,
+    NoteEditView_ImageFromUrl = 16,
+    NoteEditView_ImageCreateNew = 17,
+
+    NoteEditView_LinkInput = 18,
+    NoteEditView_InternalLinkRemoveButton = 19,
+    NoteEditView_LinkGetTitleButton = 20,
+
+    NoteEditViewText = 21,
+    NoteEditViewSave = 22,
+    NoteEditViewCancel = 23,
+
+    // Page Properties Dialog tab indices
+    PagePropertiesDialog_NameInput = 30,
+    PagePropertiesDialog_Delete = 31,
+    PagePropertiesDialog_Save = 32,
+
+    // Create Page Dialog tab indices
+    CreatePageDialog_NameInput = 40,
+    CreatePageDialog_Create = 41,
+
+    // Create Project Dialog tab indices
+    CreateProjectDialog_TitleInput = 50,
+    CreateProjectDialog_IdInput = 51,
+    CreateProjectDialog_DescriptionInput = 52,
+    CreateProjectDialog_Create = 53,
+
+    // Project Properties Dialog tab indices
+    ProjectPropertiesDialog_TitleInput = 60,
+    ProjectPropertiesDialog_BackupsCheckbox = 61,
+    ProjectPropertiesDialog_Delete = 62,
+    ProjectPropertiesDialog_Save = 63,
+
+    // Projects Dialog tab indices
+    ProjectsDialog_CreateButton = 70,
+
+    // Storage Status Dialog tab indices
+    StorageStatusDialog_OpenBackupsFolder = 80,
+
+    // Debug Dialog tab indices
+    DebugDialog_FetchCommitStats = 90,
+    DebugDialog_FetchFdsState = 91,
+    DebugDialog_CalcMobxSize = 92,
+    DebugDialog_RestartStorageWorker = 93,
+    DebugDialog_DebugPaintCheckbox = 94,
+
+    // Panel tab indices (top-left)
+    Panel_Projects = 100,
+    Panel_ProjectProperties = 101,
+    Panel_StorageStatus = 102,
+    Panel_Share = 103,
+    Panel_MainMenu = 104,
+
+    // Panel tab indices (top-right)
+    Panel_Debug = 110,
+    Panel_Help = 111,
+    Panel_PageProperties = 112,
+    Panel_Account = 113,
+}
+
+// Media related
+export const MAX_MEDIA_NAME_LENGTH = 100;
+
+// Media constraints
+// See policies.ts for usage
+
+export const MAX_IMAGE_SIZE = 5 * 1000 * 1000; // 5 MB
+export const MAX_IMAGE_DIMENSION = 2560; // for either width or height
+export const MAX_IMAGE_DIMENSION_FOR_COMPRESSION = 8192; // Reject larger images to avoid memory problems
+export const MAX_FILE_UPLOAD_SIZE_BYTES = 40 * 1000 * 1000; // 40 MB
+
+
+export const IMAGE_CONVERSION_PRESET_JPG: ImageConversionPreset = {
+    maxWidth: 2560,
+    maxHeight: 2560,
+    mimeType: 'image/jpeg',
+    quality: 0.9, // High quality
+};
+
+export const IMAGE_CONVERSION_PRESET_PNG: ImageConversionPreset = {
+    maxWidth: 1920,
+    maxHeight: 1920,
+    mimeType: 'image/png',
+    // PNG quality is about compression effort (0-9), not visual quality.
+    // The canvas 'toBlob' for PNG doesn't support a quality/effort setting.
+    // It's effectively lossless but without control over compression level.
+};
+
+// Page files
+export const CANVAS_EXT = '.canvas';
+export const DEFAULT_NEW_PAGE_PREFIX = 'New page';
+
+// Animation related
+export const SEARCH_RESULT_ANIMATION_TIME = 200 // ms

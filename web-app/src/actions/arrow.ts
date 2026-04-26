@@ -1,14 +1,14 @@
 import { action } from "fusion/registries/Action";
-import { PageMode, PageViewState } from "@/components/page/PageViewState";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { PageMode, PageViewState } from "@/views/page/PageViewState";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { Arrow, ArrowAnchorOnNoteType, ArrowAnchorTypeToString } from "@/model/Arrow";
 import { Point2D, PointData } from "fusion/primitives/Point2D";
-import { NoteViewState } from "@/components/note/NoteViewState";
-import { DEFAULT_ARROW_THICKNESS } from "@/core/constants";
-import { pamet } from "@/core/facade";
+import { NoteViewState } from "@/views/note/NoteViewState";
+import { DEFAULT_ARROW_THICKNESS } from "@/app/constants";
+import { pamet } from "@/app/facade";
 import { getEntityId } from "fusion/model/Entity";
 import { getLogger } from "fusion/logging";
-import { snapVectorToGrid } from "@/util";
+import { snapVectorToGrid } from "@/app/util";
 import { Note } from "@/model/Note";
 
 let log = getLogger('ArrowActions.ts');
@@ -41,7 +41,7 @@ class ArrowActions {
         if (state.newArrowViewState === null) {
             let tail_coords: PointData | null;
             let tail_note_id: string | null;
-            let colorRole = 'onPrimary';
+            let colorRole = 'onDefault';
             if (noteVS_underMouse) {
                 let note = noteVS_underMouse.note();
                 tail_coords = null;
@@ -57,13 +57,13 @@ class ArrowActions {
                 parent_id: state.page().id,
                 tail: {
                     position: tail_coords,
-                    noteAnchorId: tail_note_id,
-                    noteAnchorType: ArrowAnchorTypeToString[anchorUnderMouse],
+                    note_anchor_id: tail_note_id,
+                    note_anchor_type: ArrowAnchorTypeToString[anchorUnderMouse],
                 },
                 head: {
                     position: null,
-                    noteAnchorId: null,
-                    noteAnchorType: ArrowAnchorTypeToString[ArrowAnchorOnNoteType.none],
+                    note_anchor_id: null,
+                    note_anchor_type: ArrowAnchorTypeToString[ArrowAnchorOnNoteType.none],
                 },
                 mid_points: [],
                 style: {

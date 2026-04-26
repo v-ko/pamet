@@ -1,375 +1,273 @@
 import { getLogger } from "fusion/logging";
-import { pamet } from "@/core/facade";
-import { ProjectData } from "@/model/config/Project";
+import { pamet } from "@/app/facade";
+import { ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
-import { PametRoute } from "@/services/routing/route";
-import { ProjectError, WebAppState } from "@/containers/app/WebAppState";
+import { PametRoute } from "@/services/routing/PametRoute";
+import { ProjectError, AppViewState } from "@/views/AppViewState";
 import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
-import { createId, currentTime, timestamp } from "fusion/util/base";
-import { DesktopImporter } from "@/storage/DesktopImporter";
-import { pageActions } from "@/actions/page";
-import { Point2D } from "fusion/primitives/Point2D";
+import { currentTime, timestamp } from "fusion/util/base";
 
 const log = getLogger('AppProcedures');
 
 
-let projectSwithLock = false;
+// --- Save / commit ---
 
-export async function switchToProject(projectId: string | null): Promise<void> {
-    // A procedure to switch the storage backend to a new project. This
-    //  requires swapping out the frontend domain store and reporting the
-    // status of the backend availability to UI
+export function commitUnsavedChanges() {
+    const appViewState = pamet.appViewState;
+    const syncService = pamet.projectSyncService;
 
-    // Load the project storage manager in the storage service
-    // Swap out the frontend domain store (+ initial state) and connect it
-    // to the latter (for auto-save, etc.)
+    appActions.setSaveStatus(appViewState, 'unsaved');
 
-    if (projectSwithLock) {
-        log.error('Project switch already in progress');
+    const commitPromise = syncService.saveUncommittedChanges();
+    if (!commitPromise) {
+        // Nothing to flush — delta was empty
+        appActions.setSaveStatus(appViewState, 'saved');
         return;
     }
-    projectSwithLock = true;
-    log.info('Switching to project', projectId);
 
-    const appState = pamet.appViewState;
-    appActions.updateSystemDialogState(appState, {title: 'Switching project...'});
-    // await new Promise(resolve => setTimeout(resolve, 50)); // Simulate delay
+    appActions.setSaveStatus(appViewState, 'saving');
 
-    let currentProjectId = pamet.appViewState.currentProjectId;
-    let idsMatch = currentProjectId === projectId;
+    commitPromise
+        .then(() => {
+            appActions.setSaveStatus(appViewState, 'saved');
+        })
+        .catch(() => {
+            appActions.setSaveStatus(appViewState, 'error');
+        });
+}
 
-    // Setup the logic as flags
 
-    // If there's an FDS setup, and it's not the same as the one we're switching
-    // to - detach it
-    let shouldDetach = !!currentProjectId && !idsMatch;
+// --- Project attach/detach ---
 
-    // Check if the project for the id actually exists
-    let projectData = projectId ? pamet.project(projectId) : undefined;
-    let projectFound = !!projectData;
+let projectSwitchInFlight: Promise<void> | null = null;
 
-    // If there's a project id, and the project exists, and it's not the same
-    // as the one we're switching to - attach it
-    let shouldAttachNew = projectFound && !idsMatch;
-
-    try {
-        // Unload the current project if there is one
-        // and if it's not the same as the one we're switching to
-        if (shouldDetach) {
-            await pamet.detachFromProject(currentProjectId!);
-        }
-
-        if (shouldAttachNew) {
-            await pamet.attachProjectAsCurrent(projectData!.id);
-        }
-
-        // Reflect the new project state in the app state
-        // If we've attached a new project we update the view state
-        // If the project is the same - again we update the view state for good measure
-        if (shouldAttachNew || (idsMatch && projectData)) {
-            appActions.reflectCurrentProjectState(appState, projectData!);
-            projectActions.goToDefaultPage(pamet.appViewState);
-            return;
-            // If the request is to detach the FDS - reflect that
-        } else if (projectId === null) {
-            appActions.reflectCurrentProjectState(appState, null);
-
-            // If a request is made to load a project but it's not found, set error
-        } else if (projectId !== null && !projectFound) {
-            appActions.reflectCurrentProjectState(appState, null, ProjectError.NotFound);
-        }
-
-        // The state is updated - URL will sync via router reaction
-    } finally {
-        projectSwithLock = false;
-        appActions.updateSystemDialogState(appState, null);
+export function switchProject(projectId: string | null): Promise<void> {
+    if (projectSwitchInFlight) {
+        log.error('Project switch already in progress');
+        return projectSwitchInFlight;
     }
-    log.info('Project switch finished. App state:', pamet.appViewState);
+
+    const doSwitch = async () => {
+        log.info('Switching to project', projectId);
+        const appViewState = pamet.appViewState;
+        appActions.updateSystemDialogState(appViewState, {title: 'Switching project...'});
+
+        try {
+            const currentProjectId = appViewState.currentProjectId;
+
+            // Case 1: Detach (no target project)
+            if (projectId === null) {
+                if (currentProjectId) {
+                    await pamet.detachFromProject(currentProjectId);
+                }
+                appActions.reflectCurrentProjectState(appViewState, null);
+                return;
+            }
+
+            // Case 2: Same project — just ensure properties are loaded
+            if (projectId === currentProjectId) {
+                const projectData = appViewState.currentProjectState
+                    ?? pamet.loadProjectProperties(projectId);
+                if (projectData) {
+                    appActions.reflectCurrentProjectState(appViewState, projectData);
+                }
+                return;
+            }
+
+            // Case 3: Different project
+            if (currentProjectId) {
+                await pamet.detachFromProject(currentProjectId);
+            }
+
+            if (!appViewState.trackedProject(projectId)) {
+                appActions.reflectCurrentProjectState(appViewState, null, ProjectError.NotFound);
+                return;
+            }
+
+            await pamet.attachProjectAsCurrent(projectId);
+            const projectData = pamet.loadProjectProperties(projectId);
+            appActions.reflectCurrentProjectState(appViewState, projectData ?? null);
+        } finally {
+            appActions.updateSystemDialogState(appViewState, null);
+        }
+        log.info('Project switch finished. App view state:', appViewState);
+    };
+
+    projectSwitchInFlight = doSwitch().finally(() => { projectSwitchInFlight = null; });
+    return projectSwitchInFlight;
+}
+
+
+// --- Navigation procedures ---
+
+/** Delete a page, create home if last, then navigate. */
+export async function deletePageAndNavigate(appViewState: AppViewState, page: Page): Promise<void> {
+    projectActions.deletePageAndUpdateReferences(page);
+    appActions.closeAppDialog(appViewState);
+
+    let pageId = appViewState.currentProjectState?.home_page_id ?? null;
+    if (!pageId && appViewState.currentProjectState) {
+        let newPage = projectActions.createNewPageWithHelpNote();
+        projectActions.setHomePage(appViewState, newPage.id);
+        pageId = newPage.id;
+    }
+    await pamet.navigateTo(new PametRoute({
+        userId: appViewState.userId,
+        projectId: appViewState.currentProjectId ?? undefined,
+        pageId: pageId ?? undefined,
+    }));
+}
+
+/** Create a new page (with links) and navigate to it. */
+export async function createPageAndNavigate(appViewState: AppViewState, name: string): Promise<void> {
+    let page = projectActions.createNewPage(appViewState, name);
+    await pamet.navigateTo(new PametRoute({
+        userId: appViewState.userId,
+        projectId: appViewState.currentProjectId ?? undefined,
+        pageId: page.id,
+    }));
+}
+
+/** Navigate to a project, resolving the best page. No auto-creation. */
+export async function navigateToProject(projectId: string): Promise<void> {
+    const appViewState = pamet.appViewState;
+    const route = new PametRoute({
+        userId: appViewState.userId,
+        projectId,
+    });
+    await pamet.navigateTo(route);
+}
+
+/**
+ * Startup procedure (both modes).
+ * Ensures a project and page exist (creating defaults if needed), then navigates.
+ */
+export async function ensureProjectAndNavigate(): Promise<void> {
+    const route = pamet.router.currentRoute();
+    const appViewState = pamet.appViewState;
+
+    // 1. Resolve project
+    let projectId = route.projectId;
+
+    // Validate that the route's project is tracked, fall through if not
+    if (projectId && !appViewState.trackedProject(projectId)) {
+        projectId = undefined;
+    }
+
+    if (!projectId) {
+        const projects = pamet.trackedProjects();
+        if (projects.length === 0) {
+            log.info('No projects found. Creating a default one');
+            const newProject = await createDefaultProject();
+            projectId = newProject.id;
+        } else {
+            projectId = projects[0].id;
+        }
+    }
+
+    // 2. Attach project
+    await switchProject(projectId);
+    if (!appViewState.currentProjectState) return;
+
+    // 3. Resolve page (from route or home page), create if needed
+    let pageId = route.pageId ?? appViewState.currentProjectState.home_page_id;
+    if (!pageId) {
+        log.info('No home page set. Creating a home page');
+        let page = projectActions.createNewPageWithHelpNote();
+        projectActions.setHomePage(appViewState, page.id);
+        pageId = page.id;
+    }
+
+    // 4. Build route and navigate
+    const finalRoute = new PametRoute({
+        userId: appViewState.userId,
+        projectId,
+        pageId: pageId ?? undefined,
+    });
+    // Preserve viewport from original route if targeting the same page
+    if (route.pageId === pageId && route.viewportCenter) {
+        finalRoute.viewportCenter = route.viewportCenter;
+        finalRoute.viewportEyeHeight = route.viewportEyeHeight;
+    }
+    await pamet.navigateTo(finalRoute);
 }
 
 
 export async function deleteProjectAndSwitch(project: ProjectData) {
-    // call the async local data erase, then remove the project from the config
-    // then if deleting the currently open project
+    // Remove the project from the config and storage, then
+    // if removing the currently open project -
     // switch to another project (if none present - create a default one)
-    log.info("Starting delete procedure for project", project);
+    log.info("Starting remove procedure for project", project);
 
     // Get projects, return error if the project is missing
-    let projects = pamet.projects();
+    let projects = pamet.trackedProjects();
     if (!projects.find(p => p.id === project.id)) {
         throw new Error(`Project with ID ${project.id} not found`);
     }
 
     // Ask here, so that there's no chance another tab creates the default
     // project first, creating a conflict
-    if (pamet.projects().length === 1) {
+    if (pamet.trackedProjects().length === 1) {
         alert('You\'re deleting the last project. A new one will be created.')
     }
 
-    // If the project to be deleted is the currently open one
-    // we detach
-    if (pamet.appViewState.currentProjectId === project.id) {
-        log.info("Detaching FDS");
-        await switchToProject(null);
+    // If the project to be deleted is the currently open one - detach first
+    // so that the FDS stops pushing commits before storage is torn down
+    let deletingCurrentProject = pamet.appViewState.currentProjectId === project.id;
+    if (deletingCurrentProject) {
+        log.info("Detaching from current project before removal");
+        await switchProject(null);
     }
 
-    // Do the requested delete from the local config and storage backend
-    log.info("Removing project from config and indexeddb", project);
+    // Do the requested removal from config and storage
+    log.info("Removing project from config and storage", project);
     appActions.updateSystemDialogState(pamet.appViewState, {
-        title: 'Deleting project...',
+        title: 'Removing project...',
         taskProgress: -1,
     });
 
-    // Remove from config which will signal the other tabs to unload the project
-    pamet.config.removeProject(project.id);
-
-    await pamet.storageService.deleteProject(
-        project.id,
-        pamet.projectStorageConfig(project.id)
-    )
-    // auto-creation is handled in auto-assist i think
-    // // If there's no projects left, create a default one
-    // if (pamet.projects().length === 0) {
-    //     log.info("No projects left - creating a default one");
-    //     appActions.updateSystemDialogState(pamet.appViewState, {
-    //         title: 'Creating default project...',
-    //         taskProgress: 100,
-    //     });
-    //     let newProject = await createDefaultProject();
-    //     await switchToProject(newProject.id);
-    // }
-
-    // If the current project is null (i.e. we've deleted the current project)
-    // Use the auto-assist to switch to the first project in the list
-    // and create default page if needed, etc
-    if (pamet.appViewState.currentProjectId === null) {
-        await updateAppFromRouteOrAutoassist(new PametRoute());
-    }
-
-    log.info("Project deletion procedure completed");
-}
-
-
-export async function updateAppFromRoute(route: PametRoute): Promise<void> {
-    // Reflects the route in the app state without any URL mutations
-    log.info('updateAppFromRoute for route', route);
-
-    const appState = pamet.appViewState;
-
-    // 1) Project
-    const targetProjectId = route.projectId ?? null;
-    if (appState.currentProjectId !== targetProjectId) {
-        await switchToProject(targetProjectId);
-    }
-
-    // 2) Page
-    const targetPageId = route.pageId ?? null;
-    if (appState.currentPageId !== targetPageId) {
-        if (targetPageId) {
-            appActions.setCurrentPage(appState, targetPageId);
-        } else {
-            // Leave current page as-is when clearing pageId via pure reflect
-            // If needed, higher-level auto-assist decides defaults
-        }
-    }
-
-    // 3) Viewport (view_at) for current page, if provided
-    if (appState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
-        const [x, y] = route.viewportCenter;
-        pageActions.updateViewport(appState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
-    }
-}
-
-export async function updateAppFromRouteOrAutoassist(route: PametRoute): Promise<void> {
-    // "Reaches" the route by executing the necessary app configuration
-    log.info('updateAppFromRouteOrAutoassist for route', route);
-
-    // Get project data from config
-    let userId = pamet.appViewState.userId;
-    if (userId === null) {
-        log.error('User ID is not set. Cannot update app from route.');
-        return;
-    }
-
-    // If no project id - go to default project (or create one)
-    let projectId = route.projectId;
-    if (projectId === undefined) {
-        // go to default project
-        let projects = pamet.projects();
-        if (projects.length === 0) {
-            log.info('No projects found. Creating a default one');
-            let newProject = await createDefaultProject();
-            await switchToProject(newProject.id);
-            await updateAppFromRouteOrAutoassist(new PametRoute());
-            return;
-        } else {
-            log.info('Switching to the first project');
-            let firstProjectRoute = new PametRoute({
-                userId: userId,
-                projectId: projects[0].id,
-            })
-            await switchToProject(projects[0].id);
-            return;
-        }
-    }
-
-    await switchToProject(projectId); // view state updated here
-
-    let projectData = pamet.project(projectId);
-
-    // If undefined switching will have set the 404 message
-    if (!projectData) {
-        return;
-    }
-
-    // If there's a page id - apply it
-    let pageId = route.pageId;
-    if (pageId !== undefined) {
-        appActions.setCurrentPage(pamet.appViewState, pageId);
-        // Apply viewport (eye_at) if provided
-        if (pamet.appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
-            const [x, y] = route.viewportCenter;
-            pageActions.updateViewport(pamet.appViewState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
-        }
-    } else {  // If there's no page id
-        // Goto first/default page
-        let goToPageId: string | undefined = undefined;
-
-        // Check for default page in the project
-        if (projectData.defaultPageId) {
-            // Check that the page is present
-            let page = pamet.findOne({ id: projectData.defaultPageId });
-            if (!page) { // If the default page is set, but missing
-                log.error('Default page not found in the repo for id', projectData.defaultPageId);
-                log.info('Removing default page id from the project')
-                // Set defaultPageId to null in the project
-                projectData.defaultPageId = undefined;
-                projectActions.updateProject(projectData);
-            } else {
-                log.info('Switching to default page', projectData.defaultPageId);
-                goToPageId = projectData.defaultPageId;
-            }
-        }
-
-        // If no default page is set
-        if (!goToPageId) {
-            let firstPage = pamet.findOne({ type: Page });
-            if (firstPage) {
-                log.info('Switching to the first page', firstPage.id);
-                goToPageId = firstPage.id;
-            } else {  // If no pages present
-                // Create a default page
-                log.info('No pages found in the project. Creating a default page');
-                // TODO: Move that logic to somewhere else
-                projectActions.createDefaultPage(pamet.appViewState);
-                let newPage = pamet.findOne({ type: Page });
-                if (!newPage) {
-                    throw Error('Default page not created');
-                }
-                log.info('Switching to the newly created default page', newPage);
-                goToPageId = newPage.id;
-            }
-        }
-
-        if (goToPageId !== undefined) {
-            appActions.setCurrentPage(pamet.appViewState, goToPageId);
-            // Apply viewport (eye_at) if provided
-            if (pamet.appViewState.currentPageViewState && route.viewportCenter && route.viewportEyeHeight) {
-                const [x, y] = route.viewportCenter;
-                pageActions.updateViewport(pamet.appViewState.currentPageViewState, new Point2D([x, y]), route.viewportEyeHeight);
-            }
-        } else {
-            log.error('Could not find/create a page to go to.');
-        }
-    }
-}
-
-export async function updateAppStateFromConfig(appState: WebAppState) {
-    // Device
-    let device = pamet.config.getDeviceData();
-    if (device === undefined) {
-        appState.deviceId = null;
-    } else {
-        appState.deviceId = device.id;
-    }
-
-    // User
-    let user = pamet.config.getUserData();
-    if (user === undefined) {
-        appState.userId = null;
-    } else {
-        appState.userId = user.id;
-    }
-
-    // Settings - not yet implemented
-
-    // Projects
-    if (appState.currentProjectId) {
-        // If the current project has been deleted, reload the page so that
-        // the router goes to the default project
-        let projects = pamet.projects();
-        let currentProjectNewState = projects.find(p => p.id === appState.currentProjectId);
-        if (currentProjectNewState === undefined) {
-            log.info('Project deleted in other tab.');
-            alert('The project you were working on has been deleted in another tab. Reloading the page.');
-            window.location.reload();
-        } else {
-            // Else update the current project data in the app state
-            // * This should be implemented as a mobx reaction at some point to avoid
-            // redundant updates
-            log.info('AT updateAppStateFromConfig. Current project present. Reflecting new state', currentProjectNewState);
-            appActions.reflectCurrentProjectState(appState, currentProjectNewState);
-        }
-    }
-}
-
-export async function importDesktopDataForTesting() {
-    log.info('Starting import of desktop data for testing...');
-    const appState = pamet.appViewState;
-
-    appActions.updateSystemDialogState(appState, {title: 'Starting import...'});
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-
     try {
-        // 1. Create a new project for the imported data
-        appActions.updateSystemDialogState(appState, {title: 'Creating new project...'});
+        // Remove from config which will signal the other tabs to unload the project
+        pamet.removeTrackedProject(project.id);
+        if (pamet.recentProjects().some(p => p.id === project.id)) {
+            pamet.removeRecentProject(project.id);
+        }
 
-        const newProject: ProjectData = {
-            id: `desktop-import-${createId()}`,
-            title: 'Desktop Import',
-            description: 'Imported from desktop server',
-            owner: pamet.config.getUserData()!.id,
-            created: timestamp(currentTime()),
-        };
-        await createProject(newProject);
+        // Erase local caches; each adapter erases only what it owns
+        await pamet.storageService.removeProject(project.id, pamet.projectStorageConfig(project.id));
 
-        // 2. Switch to the new project
-        appActions.updateSystemDialogState(appState, {title: 'Switching to new project...'});
-        await switchToProject(newProject.id);
+        // If the current project is null (i.e. we've deleted the current project)
+        // use the auto-assist to switch to the first project in the list
+        // and create home page if needed, etc.
+        if (deletingCurrentProject) {
+            await ensureProjectAndNavigate();
+        }
 
-        // 3. Fetch data from desktop server and import it
-        const desktopImporter = new DesktopImporter("http://localhost", 11352);
-        await desktopImporter.importAllInProject((progress: number, message: string) => {
-            appActions.updateSystemDialogState(appState, {title: message, taskProgress: progress});
-        });
-
-        log.info(`Imported entities into project ${newProject.id}`);
-
-    } catch (e) {
-        log.error('Failed to import desktop data', e);
-        alert('Failed to import desktop data. See console for details.');
+        log.info("Project removal procedure completed");
     } finally {
-        // 6. Close the dialog
-        appActions.updateSystemDialogState(appState, null);
+        appActions.updateSystemDialogState(pamet.appViewState, null);
     }
-    projectActions.goToDefaultPage(appState);
 }
+
 
 export async function createProject(newProject: ProjectData): Promise<void> {
     log.info('Creating project', newProject.id);
-    await pamet.storageService.createProject(newProject.id, pamet.projectStorageConfig(newProject.id));
-    pamet.config.addProject(newProject);
+    const projectUri = await pamet.storageService.createProject(
+        newProject.id,
+        pamet.projectStorageConfig(newProject.id),
+    );
+    pamet.saveProjectProperties(newProject);
+    pamet.upsertTrackedProject({
+        id: newProject.id,
+        title: newProject.title,
+        uri: projectUri,
+    });
+    pamet.setMostRecentProject({
+        id: newProject.id,
+        title: newProject.title,
+        uri: projectUri,
+    });
     log.info('Project created and added to config', newProject.id);
 }
 
@@ -378,16 +276,13 @@ export async function createDefaultProject(): Promise<ProjectData> {
         id: 'notebook',
         title: 'Notebook',
         description: 'Default project',
-        owner: pamet.config.getUserData()!.id,
         created: timestamp(currentTime()),
     };
     await createProject(newProject);
     return newProject;
 }
 
-export async function restartServiceWorker(): Promise<void> {
-    log.info('Restarting service worker...');
-    await pamet.storageService.unregisterServiceWorker();
-    log.info('Service worker restarted. Reloading page...');
-    window.location.reload();
+export async function restartStorageWorker(): Promise<void> {
+    log.info('Restarting storage worker...');
+    await pamet.storageService.restartStorageWorker();
 }

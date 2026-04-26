@@ -1,0 +1,53 @@
+{
+    "id": "cf2cf58c",
+    "name": "Second page",
+    "created": "2026-04-16T10:51:35+03:00",
+    "modified": "2026-04-16T10:52:43+03:00",
+    "type_name": "Page",
+    "notes": [
+        {
+            "id": [
+                "cf2cf58c",
+                "6c8a5854"
+            ],
+            "geometry": [
+                -160.0,
+                -80.0,
+                210,
+                50
+            ],
+            "style": {},
+            "content": {
+                "text": "",
+                "url": "pamet:/p/17203d2c"
+            },
+            "metadata": {},
+            "created": "2026-04-16T10:51:35+03:00",
+            "modified": "2026-04-16T10:51:35+03:00",
+            "tags": [],
+            "type_name": "TextNote"
+        },
+        {
+            "id": [
+                "cf2cf58c",
+                "c2624820"
+            ],
+            "geometry": [
+                -190,
+                -260,
+                380,
+                110
+            ],
+            "style": {},
+            "content": {
+                "text": "Welcome to the other page, created to test the home page flag and page link migration"
+            },
+            "metadata": {},
+            "created": "2026-04-16T10:52:17+03:00",
+            "modified": "2026-04-16T10:52:17+03:00",
+            "tags": [],
+            "type_name": "TextNote"
+        }
+    ],
+    "arrows": []
+}

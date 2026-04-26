@@ -1,0 +1,204 @@
+import { getLogger } from "fusion/logging";
+
+let log = getLogger('PametRoute');
+
+
+export const PROJECT_PROTOCOL = 'project:';
+
+
+export enum PametRoutes {
+    ROOT = 'root',
+    PROJECT = 'project',
+    PAGE = 'page',
+    FILE = 'file'
+}
+
+export class PametRoute {
+    // General
+    originalPath: string = '';
+    protocol?: string = undefined;
+    host?: string = undefined;
+
+    // Pamet specific
+    userId?: string = undefined;
+    projectId?: string = undefined;
+
+    // Page specific
+    pageId?: string = undefined;
+    viewportCenter?: [number, number] = undefined;
+    viewportEyeHeight?: number = undefined;
+    focusedNoteId?: string = undefined;
+
+    // File specific
+    filePath?: string = undefined;
+
+    constructor(props?: Partial<PametRoute>) {
+        if (props) {
+            Object.assign(this, props);
+        }
+    }
+
+    _parseSubProjectParts(subProjectParts: string[]): void {
+        if (subProjectParts[0] == 'page') {
+            const pageId = subProjectParts[1];
+            this.pageId = pageId;
+        } else if (subProjectParts[0] == 'files') {
+            // File route like /files/path/to/image.png
+            const filePath = subProjectParts.slice(1).join('/');
+            this.filePath = filePath;
+        }
+    }
+
+    static fromUrl(url: string): PametRoute {
+        let url_: URL;
+        let route = new PametRoute();
+        try{
+            url_ = new URL(url);
+        } catch (e) {
+            route.originalPath = url;
+            return route;
+        }
+
+        // Local urls start with project:///, globals are regular with a host
+
+        if (url_.protocol) {
+            route.protocol = url_.protocol
+        }
+        if (url_.host) {
+            route.host = url_.host;
+        }
+
+        const path = url_.pathname;
+
+        if (url_.protocol === PROJECT_PROTOCOL) {
+            route._parseSubProjectParts(path.split('/').slice(1).map(decodeURIComponent));
+        } else if (path) {  // Should be a network protocol htpp/https
+
+            // The user is the first segment if specfied
+            const pathParts = path.split('/').map(decodeURIComponent);  // pathname starts with leading /,
+
+            if (pathParts[1].length > 0) {
+                route.userId = pathParts[1];
+            }
+
+            // Get the project id from the path
+            // Check that there's at least a project id
+            if (pathParts.length >= 3) {
+                route.projectId = pathParts[2];
+            }
+
+            route._parseSubProjectParts(pathParts.slice(3));
+        }
+
+        // Parse the search
+        const search = url_.search;
+        const searchParams = new URLSearchParams(search);
+        const view_at = searchParams.get('view_at');
+        if (view_at) {
+            const [eyeHeight, x, y] = view_at.split('/').map(parseFloat);
+            if (!isNaN(eyeHeight) && !isNaN(x) && !isNaN(y)) {
+                route.viewportEyeHeight = eyeHeight;
+                route.viewportCenter = [x, y];
+            }
+        }
+
+        // Parse the hash
+        const hash = url_.hash;
+        if (hash.startsWith('#note=')) {
+            route.focusedNoteId = decodeURIComponent(hash.substring(6));
+        }
+
+        return route;
+    }
+
+    get isInternal(): boolean {
+        return this.protocol === PROJECT_PROTOCOL;
+    }
+
+    projectScopedPath(): string {
+        return toProjectScopedRelativeReference(this);
+    }
+
+    toRelativeReference(): string {
+        /**
+         * This is not called path, because it also includes anchors and search params.
+         */
+        let path = '/';
+
+        if (this.projectId) {
+            if (!this.userId) {
+                throw new Error(`Project id set without user id. Got userId: ${this.userId}, projectId: ${this.projectId}`);
+            }
+            path += `${encodeURIComponent(this.userId)}/`;
+            path += `${encodeURIComponent(this.projectId)}`;
+        }
+
+        let projectScopedPath = toProjectScopedRelativeReference(this);
+        if (projectScopedPath !== '/') {
+            path += projectScopedPath;
+        }
+
+        return path;
+    }
+
+    toProjectScopedURI(): string {
+        let path = toProjectScopedRelativeReference(this);
+        return `project://${path}`;
+    }
+
+    toUrlString(): string {
+        if (!this.host) {
+            throw new Error('Host is not set. Cannot create URL string.');
+        }
+        if (!this.protocol) {
+            throw new Error('Protocol is not set. Cannot create URL string.');
+        }
+        const base = this.protocol + '//' + this.host;
+        const url = new URL(this.toRelativeReference(), base);
+        return url.toString();
+    }
+
+    toString(): string {
+        return this.toUrlString();
+    }
+}
+
+export function toProjectScopedRelativeReference(route: PametRoute): string {
+    // same as the toUrlPath logic but for the subpath after project
+    let path = '/';
+
+    if (route.pageId && route.pageId.length === 8) {
+        path += `page/${encodeURIComponent(route.pageId)}`;
+    } else if (route.filePath) {
+        // For files, projectId is required for routing context
+        if (!route.projectId) {
+            throw new Error(`File routes require projectId. Got projectId: ${route.projectId}`);
+        }
+        const encodedPath = route.filePath.split('/').map(encodeURIComponent).join('/');
+        path += `files/${encodedPath}`;
+        return path; // Return early for files, no search params or note hash
+    }
+
+    let search = '';
+    if (route.viewportEyeHeight && route.viewportCenter) {
+        const to2 = (n: number) => n.toFixed(2);
+        search = `?view_at=${to2(route.viewportEyeHeight)}/${to2(route.viewportCenter[0])}/${to2(route.viewportCenter[1])}`;
+    }
+
+    let hash = '';
+    if (route.focusedNoteId) {
+        hash = `#note=${route.focusedNoteId}`;
+    }
+
+    return path + search + hash;
+}
+
+// Get the project-scoped URL for a file path
+export function fileRoute(filePath: string, userId: string, projectId: string): PametRoute {
+    let route = new PametRoute({
+        userId: userId,
+        projectId: projectId,
+        filePath: filePath,
+    });
+    return route
+}

@@ -1,25 +1,26 @@
-import * as util from "@/util";
-import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/components/page/PageViewState";
+import * as util from "@/app/util";
+import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/views/page/PageViewState";
 import { Point2D } from "fusion/primitives/Point2D";
+import { pamet } from "@/app/facade";
 
 import { action } from "fusion/registries/Action";
 
 import { getLogger } from "fusion/logging";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { Size } from "fusion/primitives/Size";
-import { AGU, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, MIN_NOTE_HEIGHT } from "@/core/constants";
-import { pamet } from "@/core/facade";
+import { AGU, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, MIN_NOTE_HEIGHT } from "@/app/constants";
 import { Note } from "@/model/Note";
-import { minimalNonelidedSize } from "@/components/note/note-dependent-utils";
-import { NoteViewState } from "@/components/note/NoteViewState";
+import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
+import { NoteViewState } from "@/views/note/NoteViewState";
 import { Arrow } from "@/model/Arrow";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
-import { Page } from "@/model/Page";
-import { MediaItem } from "fusion/model/MediaItem";
-import { NoteEditViewState } from "@/components/note/NoteEditViewState";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
+import { NoteEditViewState } from "@/views/note/NoteEditViewState";
 import { CardNote } from "@/model/CardNote";
+import { linkUpdatesForPageRename } from '@/model/correctness';
 import { UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo/UndoService";
-import { WebAppState } from "@/containers/app/WebAppState";
+import { PametRoute } from "@/services/routing/PametRoute";
+import { AppViewState } from "@/views/AppViewState";
+import { Page } from "@/model/Page";
 
 
 let log = getLogger('MapActions');
@@ -34,6 +35,11 @@ class PageActions {
     state.viewportGeometry = geometry;
   }
 
+  @action
+  updateResizeCircleOutline(state: PageViewState, noteVS: NoteViewState | null) {
+    state.hoveredResizeNoteVS = noteVS;
+  }
+
   @action({ issuer: 'user' })
   createProjectLinksIndex(state: PageViewState) {
     const pageId = state.page().id;
@@ -45,7 +51,7 @@ class PageActions {
     header.metadata.is_project_index_header = true;
     // Use surface styling for the header
     header.style.color_role = 'onSurface';
-    header.style.background_color_role = 'surfaceDim';
+    header.style.background_color_role = 'neutral';
 
     // Auto-size and center
     const rect = header.rect();
@@ -72,9 +78,8 @@ class PageActions {
     // Represented page ids on current page
     const represented = new Set<string>();
     for (const note of pamet.notes({ parentId: pageId })) {
-      if (note instanceof CardNote && note.hasInternalPageLink) {
-        const pid = note.internalLinkRoute()?.pageId;
-        if (pid) represented.add(pid);
+      if (note instanceof CardNote && note.content.page_ref) {
+        represented.add(note.content.page_ref.id);
       }
     }
 
@@ -152,6 +157,8 @@ class PageActions {
   @action
   endDragNavigation(state: PageViewState) {
     state.setMode(PageMode.None);
+    const route = pamet.appViewState.toRoute();
+    pamet.router.replaceRoute(route);
   }
 
   @action
@@ -313,7 +320,7 @@ class PageActions {
   }
 
   @action
-  saveEditedNote(state: PageViewState, note: Note, addedMediaItem: MediaItem | null, removedMediaItem: MediaItem | null) {
+  saveEditedNote(state: PageViewState, note: Note) {
     const editWS = state.noteEditWindowState;
     if (!editWS) {
       throw new Error('saveEditedNote called without noteEditWindowState');
@@ -322,12 +329,6 @@ class PageActions {
     const projectId = pamet.appViewState.currentProjectId;
     if (!projectId) {
       throw new Error('No project loaded');
-    }
-
-    if (removedMediaItem) {
-      // If an existing media item was removed, just remove the entity.
-      // Storage commit-time automation will move the blob to trash.
-      pamet.removeOne(removedMediaItem);
     }
 
     // Save the note
@@ -344,9 +345,9 @@ class PageActions {
       pamet.updateNote(note);
     }
 
-    // Handle media item changes
-    if (addedMediaItem) {
-      pamet.insertOne(addedMediaItem);
+    // Register file URL for the image if present
+    if (note.content.image?.path) {
+      state.addUrlForFilePath(note.content.image.path);
     }
 
     state.noteEditWindowState = null;
@@ -425,7 +426,6 @@ class PageActions {
     // add them for removal too
     let notesForRemoval: Note[] = [];
     let arrowsForRemoval: Arrow[] = [];
-    let mediaItemsForTrashing: MediaItem[] = [];
     let noteIds = new Set<string>(); // For checking if the note has a connected arrow
     let pageId: string = elements[0].parentId;
 
@@ -433,16 +433,6 @@ class PageActions {
       if (element instanceof Note) {
         notesForRemoval.push(element)
         noteIds.add(element.id)
-
-        // Mark media for trashing if the note has an image
-        if (element instanceof CardNote && element.content.image_id) {  // Should catch both card notes and image notes
-          let mediaItem = pamet.mediaItem(element.content.image_id!);
-          if (mediaItem) {
-            mediaItemsForTrashing.push(mediaItem);
-          } else {
-            log.warning(`Note with id ${element.id} and image_id ${element.content.image_id} has no media item associated.`);
-          }
-        }
       } else if (element instanceof Arrow) {
         arrowsForRemoval.push(element)
       }
@@ -473,42 +463,29 @@ class PageActions {
       pamet.removeArrow(arrow);
     }
 
-    // Remove media entities; storage commit-time automation will move blobs to trash
-    for (let mediaItem of mediaItemsForTrashing) {
-      pamet.removeOne(mediaItem);
-    }
+    // Files are NOT removed when notes are deleted — orphan cleanup is handled separately.
     this.clearSelection(state);
   }
 
   @action
-  colorSelectedNotes(state: PageViewState, colorRole: string | null, backgroundColorRole: string | null) {
+  colorSelectedElements(state: PageViewState, colorRole: string | null, backgroundColorRole: string | null, arrowColorRole: string | null) {
     for (let elementVS of state.selectedElementsVS) {
-      if (!(elementVS instanceof NoteViewState)) { // Skip arrows
-        continue;
+      if (elementVS instanceof NoteViewState) {
+        let note = elementVS.note();
+        if (colorRole !== null) {
+          note.style.color_role = colorRole;
+        }
+        if (backgroundColorRole !== null) {
+          note.style.background_color_role = backgroundColorRole;
+        }
+        pamet.updateNote(note);
+      } else if (elementVS instanceof ArrowViewState && arrowColorRole !== null) {
+        let arrow = elementVS.arrow();
+        arrow.colorRole = arrowColorRole;
+        pamet.updateArrow(arrow);
       }
-      let noteVS = elementVS as NoteViewState;
-      let note = noteVS.note();
-      if (colorRole !== null) {
-        note.style.color_role = colorRole;
-      }
-      if (backgroundColorRole !== null) {
-        note.style.background_color_role = backgroundColorRole;
-      }
-      pamet.updateNote(note);
     }
-  }
-
-  @action
-  colorSelectedArrows(state: PageViewState, colorRole: string) {
-    for (let elementVS of state.selectedElementsVS) {
-      if (!(elementVS instanceof ArrowViewState)) { // Skip notes
-        continue;
-      }
-      let arrowVS = elementVS as ArrowViewState;
-      let arrow = arrowVS.arrow();
-      arrow.colorRole = colorRole;
-      pamet.updateArrow(arrow);
-    }
+    this.clearSelection(state);
   }
 
   @action
@@ -521,26 +498,17 @@ class PageActions {
     pamet.updatePage(newPageState);
 
     if (oldName !== undefined && oldName !== newName) {
-      for (const n of pamet.notes()) {
-        if (n instanceof CardNote && n.hasInternalPageLink) {
-          const pid = n.internalLinkRoute()?.pageId;
-          if (pid === newPageState.id) {
-            // Update displayed text to match page name
-            const updated = new CardNote({ ...n.data(), content: { ...n.content, text: newName } });
-            pamet.updateNote(updated);
-          }
-        }
+      const updates = linkUpdatesForPageRename(
+        pamet.currentProjectStore, newPageState.id, newName, newPageState.path
+      );
+      for (const u of updates) {
+        pamet.updateNote(u.updated);
       }
     }
   }
 
   @action({ issuer: 'paste-special-procedure' })
-  pasteSpecialAddElements(notes: Note[], mediaItems: MediaItem[]) {
-    // Add new media items via facade
-    for (let mediaItem of mediaItems) {
-      pamet.insertOne(mediaItem);
-    }
-
+  pasteSpecialAddElements(notes: Note[]) {
     // Add new notes via facade
     for (let note of notes) {
       pamet.insertNote(note);
@@ -549,40 +517,29 @@ class PageActions {
 
   @action({ issuer: 'user' })
   pasteInternalAddElements(
-    appState: WebAppState,
+    appViewState: AppViewState,
     state: PageViewState,
     notes: Note[],
-    arrows: Arrow[],
-    mediaItems: MediaItem[]) {
+    arrows: Arrow[]) {
 
     for (let note of notes) {
       pamet.insertNote(note);
     }
-    for (let mediaItem of mediaItems) {
-      pamet.insertOne(mediaItem);
-    }
     for (let arrow of arrows) {
       pamet.insertArrow(arrow);
     }
-    // Clear the clipboard after pasting
-    // appState.clipboard = [];
-    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows and', mediaItems.length, 'media items');
+    log.info('Pasted', notes.length, 'notes,', arrows.length, 'arrows');
     // Clear selection
     this.clearSelection(state);
   }
 
   @action({ issuer: 'user' })
   cutRemoveElements(
-    appState: WebAppState,
+    appViewState: AppViewState,
     state: PageViewState,
     notes: Note[],
-    arrows: Arrow[],
-    mediaItems: MediaItem[]
+    arrows: Arrow[]
   ) {
-    // Remove media entities from the domain store (blob is already moved to trash by the procedure)
-    for (let mediaItem of mediaItems) {
-      pamet.removeOne(mediaItem);
-    }
     // Remove arrows
     for (let arrow of arrows) {
       pamet.removeArrow(arrow);
@@ -591,9 +548,11 @@ class PageActions {
     for (let note of notes) {
       pamet.removeNote(note);
     }
+    // Files are NOT removed on cut; the clipboard keeps references for paste.
+
     // Clear selection after cut
     this.clearSelection(state);
-    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows, ${mediaItems.length} media items`);
+    log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows`);
   }
 
   @action({ issuer: 'service', name: UNDO_ACTION_NAME })
@@ -607,7 +566,7 @@ class PageActions {
   }
 
   @action
-  copySelectedElements(appState: WebAppState, state: PageViewState, relativeTo: Point2D) {
+  copySelectedElements(appViewState: AppViewState, state: PageViewState, relativeTo: Point2D) {
     // Gather selected notes
     const selectedNotes: Note[] = [];
     const selectedNoteIds = new Set<string>();
@@ -622,11 +581,11 @@ class PageActions {
 
     if (selectedNotes.length === 0) {
       log.warning('copySelectedElements called with no selected notes');
-      appState.clipboard = [];
+      pamet.setClipboard([], null);
       return;
     }
 
-    const clipboardEntities: (Note | Arrow | MediaItem)[] = [];
+    const clipboardEntities: (Note | Arrow)[] = [];
 
     // Clone and transform notes to relative coordinates
     for (const note of selectedNotes) {
@@ -664,20 +623,43 @@ class PageActions {
       clipboardEntities.push(cloned);
     }
 
-    // Include associated MediaItems for image notes (1-1 with notes; no dedup required)
-    for (const note of selectedNotes) {
-      if (note instanceof CardNote && note.content.image_id) {
-        const mediaItem = pamet.mediaItem(note.content.image_id);
-        if (mediaItem) {
-          clipboardEntities.push(mediaItem);
-        } else {
-          log.warning(`Media item ${note.content.image_id} not found for note ${note.id}`);
-        }
+    pamet.setClipboard(clipboardEntities, appViewState.currentProjectId);
+    log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
+  }
+
+  /**
+   * Open the link target of a note in a new browser tab.
+   * Returns the URL that was opened, or null if the note has no link.
+   */
+  openNoteLinkInNewTab(noteVS: NoteViewState, userId: string, projectId: string | undefined): string | null {
+    let note = noteVS.note();
+    if (note instanceof CardNote && note.content.page_ref) {
+      let targetPage = pamet.page(note.content.page_ref.id);
+      if (targetPage !== undefined) {
+        let route = new PametRoute({
+          userId,
+          projectId,
+          pageId: targetPage.id,
+        });
+        let url = route.toRelativeReference();
+        window.open(url, '_blank');
+        return url;
       }
     }
+    if (note instanceof CardNote && note.hasExternalLink) {
+      let url = note.content.url;
+      if (!url?.startsWith('http://') && !url?.startsWith('https://')) {
+        url = '//' + url;
+      }
+      window.open(url!, '_blank');
+      return url!;
+    }
+    return null;
+  }
 
-    appState.clipboard = clipboardEntities;
-    log.info('Copied to internal clipboard', clipboardEntities.length, 'entities');
+  @action
+  setClipboardPreview(state: PageViewState, show: boolean) {
+    state.showClipboardPreview = show;
   }
 
 }

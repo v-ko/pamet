@@ -2,12 +2,72 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="color-scheme" content="dark light" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pamet</title>
+    <script>
+      // Resolve theme before first paint to avoid white flash
+      (function() {
+        var pref = localStorage.getItem('pamet-theme:preference') || 'system';
+        var dark = pref === 'dark' ||
+          (pref === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) {
+          document.documentElement.style.backgroundColor = '#121214';
+          document.documentElement.dataset.splashDark = '1';
+        }
+      })();
+    </script>
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff;
+        opacity: 0;
+        animation: splash-fade-in 3s ease-out forwards;
+        transition: opacity 300ms ease-out;
+      }
+      html[data-splash-dark="1"] #splash {
+        background: #121214;
+      }
+      #splash.fade-out {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #splash img {
+        width: 96px;
+        height: 96px;
+        animation: splash-pulse 1.8s ease-in-out infinite;
+      }
+      @keyframes splash-fade-in {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes splash-pulse {
+        0%, 100% { opacity: 0.6; transform: scale(0.98); }
+        50%      { opacity: 1;   transform: scale(1.02); }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash">
+      <img src="/logo256.png" alt="" />
+    </div>
+    <script>
+      (function() {
+        function killSplash() {
+          var s = document.getElementById('splash');
+          if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 350); }
+        }
+        window.addEventListener('error', killSplash);
+        window.addEventListener('unhandledrejection', killSplash);
+      })();
+    </script>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/main.tsx"></script>
   </body>
 </html>

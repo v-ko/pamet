@@ -1,29 +1,8 @@
 import { getCommand } from "fusion/registries/Command";
 import { getLogger } from "fusion/logging";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 
 const log = getLogger('KeybindingService');
-
-function contextConditionFulfilled(whenExpression: string): boolean {
-  if (whenExpression.includes('&&') || whenExpression.includes('||') ||
-    whenExpression.includes('==')) {
-    throw new Error('Logical expressions not implemented yet');
-  }
-
-  if (whenExpression === '') {
-    return true;
-  }
-
-  // For now, we only support simple conditions like 'pageHasFocus'
-  let contextKey = whenExpression;
-  const contextVal = pamet.context[contextKey];
-  if (contextVal === undefined) {
-    throw new Error(`Context condition not found: ${contextKey}`);
-  }
-  let satisfied = contextVal === true;
-
-  return satisfied;
-}
 
 export interface Keybinding {
   key: string;     // e.g. "Ctrl+Shift+N", "Alt+ArrowUp", "Ctrl+=", "Ctrl+Digit1"
@@ -84,6 +63,11 @@ const SPECIAL_KEY_MAP: Record<string, string> = {
   'enter': 'Enter',
   'home': 'Home',
   'end': 'End',
+
+  // Function keys
+  'f1': 'F1', 'f2': 'F2', 'f3': 'F3', 'f4': 'F4',
+  'f5': 'F5', 'f6': 'F6', 'f7': 'F7', 'f8': 'F8',
+  'f9': 'F9', 'f10': 'F10', 'f11': 'F11', 'f12': 'F12',
   // ... add more as needed
 };
 
@@ -296,7 +280,7 @@ export class KeybindingService {
       return;
     }
 
-    if (!contextConditionFulfilled(matchedBinding.when)) {
+    if (!pamet.contextConditionFulfilled(matchedBinding.when)) {
       return;
     }
 
@@ -318,6 +302,10 @@ export class KeybindingService {
 
     const cmd = getCommand(matchedBinding.command);
     if (cmd) {
+      // Also check the command's own enablement condition
+      if (cmd.enablement && !pamet.contextConditionFulfilled(cmd.enablement)) {
+        return;
+      }
       cmd.function();
     } else {
       log.error(`Command not found with name: ${matchedBinding.command}`);

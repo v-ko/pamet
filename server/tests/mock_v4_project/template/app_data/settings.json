@@ -1,0 +1,10 @@
+{
+    "id": "77b8b2b3",
+    "repository_path": "{template_root}/repo",
+    "scripts_folder": "{template_root}/scripts",
+    "script_templates_folder": "{template_root}/script_templates",
+    "accepted_script_risks": false,
+    "run_in_terminal_prefix_posix": "gnome-terminal -- ",
+    "run_in_terminal_prefix_windows": "powershell -noexit ",
+    "static_export_folder": "{template_root}/static_export"
+}

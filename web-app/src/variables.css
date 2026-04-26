@@ -6,40 +6,73 @@
   --type-lg: 1.25rem;   /* 20px */
   --type-xl: 1.5rem;    /* 24px */
 
-  /* Core spacing scale: only three steps for UI elements */
+  /* Core spacing scale */
+  --space-0: 0.25rem;   /* 4px  - minimal gaps */
   --space-1: 0.5rem;    /* 8px  - tight controls, small gaps */
   --space-2: 1rem;      /* 16px - default padding/gap */
   --space-3: 1.5rem;    /* 24px - generous spacing */
+  --space-4: 2rem;      /* 32px - section-level spacing */
 
   /* Border radius */
   --radius-xs: 0.15rem;
   --radius-sm: 0.5rem;  /* 8px */
   --radius-md: 0.75rem; /* 12px */
 
-  /* Colors */
+  /*
+   * Color tokens are set at runtime by ThemeManager (theme.ts).
+   * Light-mode fallbacks here ensure the page looks right even before JS runs.
+   */
   --color-bg-white: #ffffff;
   --color-bg-light: #f5f5f5;
   --color-bg-medium: #dddddd;
   --color-bg-title: #dddddd;
+  --color-bg-pressed: #cccccc;
+  --color-bg-subtle: #f0f0f0;
+  --color-bg-canvas: #ffffff;
 
   --color-text: #333;
-  --color-text-muted: #666;
+  --color-text-muted: #595959;
+  --color-text-faded: #888;
 
   --color-light-border: #ddd;
   --color-dark-border: #5f5f5f;
-  
-  --color-hover-dark: #555;
+
   --color-hover-light: #e0e0e0;
   --color-close-hover: #777;
 
-  /* Accents */
   --color-primary: #0066cc;
   --color-primary-contrast: #ffffff;
+  --color-accent: #0066cc;
+  --color-bg-light-accent: #e6f0ff;
   --color-danger: #dc3545;
   --color-danger-contrast: #ffffff;
+  --color-highlight-search: #ffeb3b;
 
-  /* Shadow */
+  /* Icon filter (overridden by ThemeManager for dark mode) */
+  --icon-filter: none;
+
+  /* Transitions */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+
+  /* Focus */
+  --focus-ring: 2px solid var(--color-accent);
+  --focus-ring-offset: 1px;
+
+  /* Shadows (also overridden by ThemeManager for dark mode) */
   --shadow-sm: 0 0 0.5rem rgba(0,0,0,0.2);
   --shadow-md: 0 0 0.9375rem rgba(0,0,0,0.2);
   --shadow-lg: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.5); /* 0 8px 24px */
+
+  /* Z-index layers (ascending) */
+  --z-local: 1;
+  --z-render-canvas: 50;
+  --z-suggestion: 100;
+  --z-overlay: 150;
+  --z-panel: 200;
+  --z-note-edit: 210;
+  --z-search: 300;
+  --z-command-palette: 400;
+  --z-menu-backdrop: 500;
+  --z-menu: 510;
 }

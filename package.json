@@ -1,27 +1,29 @@
 {
   "name": "pamet",
-  "version": "0.0.1",
+  "version": "5.0.0-alpha.1",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
   "scripts": {
     "dev": "vite",
+    "dev:desktop": "BUILD_MODE=desktop vite",
     "build": "tsc && vite build",
+    "build:web": "tsc && BUILD_MODE=web vite build",
+    "build:desktop": "tsc && BUILD_MODE=desktop vite build",
     "preview": "vite preview",
+    "preview:desktop": "BUILD_MODE=desktop vite preview",
+    "build:viewer": "vite build --config web-app/src/mini-viewer/vite.config.viewer.ts",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test": "jest"
   },
   "dependencies": {
-    "@types/styled-components": "^5.1.34",
     "flexsearch": "^0.8.205",
     "idb": "^8.0.0",
     "mobx": "^6.13.1",
     "mobx-react-lite": "^4.0.7",
-    "paper": "^0.12.18",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "slugify": "^1.6.6",
-    "styled-components": "^6.1.12"
+    "slugify": "^1.6.6"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.4.8",
@@ -49,57 +51,28 @@
     "vite": "^5.3.5"
   },
   "jest": {
-    "projects": [
-      {
-        "displayName": "fusion",
-        "preset": "ts-jest/presets/default-esm",
-        "testEnvironment": "node",
-        "testMatch": [
-          "<rootDir>/fusion/js-src/src/**/*.test.ts"
-        ],
-        "extensionsToTreatAsEsm": [
-          ".ts"
-        ],
-        "transform": {
-          "^.+\\.tsx?$": [
-            "ts-jest",
-            {
-              "useESM": true
-            }
-          ]
-        },
-        "moduleNameMapper": {
-          "^fusion/(.*)$": "<rootDir>/fusion/js-src/src/$1"
+    "preset": "ts-jest/presets/default-esm",
+    "testEnvironment": "jsdom",
+    "testMatch": [
+      "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
+    ],
+    "extensionsToTreatAsEsm": [
+      ".ts",
+      ".tsx"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": [
+        "ts-jest",
+        {
+          "useESM": true
         }
-      },
-      {
-        "displayName": "web-app",
-        "preset": "ts-jest/presets/default-esm",
-        "testEnvironment": "jsdom",
-        "testMatch": [
-          "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
-        ],
-        "setupFilesAfterEnv": [
-          "<rootDir>/web-app/src/setupTests.ts"
-        ],
-        "extensionsToTreatAsEsm": [
-          ".ts",
-          ".tsx"
-        ],
-        "transform": {
-          "^.+\\.tsx?$": [
-            "ts-jest",
-            {
-              "useESM": true
-            }
-          ]
-        },
-        "moduleNameMapper": {
-          "\\.(css|less|scss|sass)$": "identity-obj-proxy",
-          "^fusion/(.*)$": "<rootDir>/fusion/js-src/src/$1",
-          "^@/(.*)$": "<rootDir>/web-app/src/$1"
-        }
-      }
-    ]
+      ]
+    },
+    "moduleNameMapper": {
+      "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+      "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1",
+      "^@/(.*)$": "<rootDir>/web-app/src/$1"
+    },
+    "passWithNoTests": true
   }
 }

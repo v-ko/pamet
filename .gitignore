@@ -5,11 +5,19 @@ node_modules/
 
 # Build outputs
 dist/
+dist-desktop/
+server/pamet/desktop_app/_web_app_dist/
 build/
 *.tsbuildinfo
+server/pamet/resources/mini_viewer/viewer.js
+server/pamet/resources/mini_viewer/viewer.css
 
 # Testing
 coverage/
+# Test time v4 repo
+server/tests/mock_v4_project/prepared_test_time
+# Original project with absolute paths etc. (the anonymized is in template/)
+server/tests/mock_v4_project/original
 
 # Misc
 .DS_Store
@@ -18,9 +26,7 @@ coverage/
 # Editor directories and files
 .idea
 .vscode/*
-#!.vscode/settings.json
-#!.vscode/extensions.json
-#!.vscode/launch.json
+!.vscode/launch.json
 *.swp
 *.swo
 
@@ -54,5 +60,3 @@ venv/
 # Temporary files
 *.tmp
 *.temp
-
-#

@@ -1,7 +1,12 @@
 import { getLogger } from "fusion/logging";
-import { pamet } from "@/core/facade";
+import { pamet } from "@/app/facade";
 
 const log = getLogger('FocusManager');
+
+/** Visibility check that works inside position:fixed containers (where offsetParent is always null). */
+function isElementVisible(el: HTMLElement): boolean {
+  return el.offsetWidth > 0 || el.offsetHeight > 0;
+}
 
 export interface FocusRegistration {
   selector: string;
@@ -72,9 +77,14 @@ export class FocusManager {
   }
 
   private reevaluateVisibilityContexts() {
+    // Clear stale lastFocusedElement if it's no longer in the DOM
+    if (this.lastFocusedElement && !this.lastFocusedElement.isConnected) {
+      this.lastFocusedElement = null;
+    }
+
     for (const registration of this.visibilityRegistrations.values()) {
       const el = document.querySelector(registration.selector) as HTMLElement | null;
-      const isVisible = el ? el.offsetParent !== null : false;
+      const isVisible = el ? isElementVisible(el) : false;
       const expectedValue = isVisible ? registration.valOnVisible : registration.valOnHidden;
 
       if (pamet.context[registration.contextKey] !== expectedValue) {
@@ -152,7 +162,9 @@ export class FocusManager {
     if (!relatedTarget) {
       // When the element with focus is removed (e.g. the command palette is closed),
       // we need to correct focus to a sensible element.
-      this.correctFocus();
+      // Deferred to next frame so React can finish unmounting removed elements,
+      // preventing correctFocus from picking stale/half-removed DOM nodes.
+      requestAnimationFrame(() => this.correctFocus());
       return;
     }
 
@@ -176,11 +188,23 @@ export class FocusManager {
      *
      * Always switches to an element with a tabindex set.
      */
+
+    // Bail out if focus already landed on a valid element. This happens
+    // when the Qt shell sends a synthetic Tab into Chromium: the focusout
+    // from the *previous* element has relatedTarget=null (synthetic events
+    // don't populate it), which queues correctFocus via rAF. By the time
+    // the rAF fires, Chromium has already moved focus to the next element
+    // — we must not steal it back.
+    const current = document.activeElement as HTMLElement | null;
+    if (current && current !== document.body && current.tabIndex >= 0) {
+      return;
+    }
+
     let elementToFocus: HTMLElement | null = null;
 
     // Strategy 1: Go back to what you were doing.
     // We check what was the last thing you clicked on.
-    if (this.lastFocusedElement) {
+    if (this.lastFocusedElement && this.lastFocusedElement.isConnected) {
       // Find the main component area (e.g., the note editor or the page view) that contains the last element.
       // We pick the most specific one (e.g., note editor wins over the page view if it's inside it).
       const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
@@ -210,7 +234,7 @@ export class FocusManager {
       const allVisibleElements = [];
       for (const reg of this.focusRegistrations.values()) {
         const el = document.querySelector(reg.selector) as HTMLElement | null;
-        if (el && el.offsetParent !== null) { // is visible
+        if (el && isElementVisible(el)) { // is visible
           allVisibleElements.push(el);
         }
       }
@@ -233,6 +257,42 @@ export class FocusManager {
     } else {
       log.warning('Could not find any element to correct focus to.');
     }
+  }
+
+  private getVisibleFocusableElements(): HTMLElement[] {
+    const elements: HTMLElement[] = [];
+    for (const el of document.querySelectorAll<HTMLElement>('[tabindex]:not([tabindex="-1"])')) {
+      if (isElementVisible(el)) {
+        elements.push(el);
+      }
+    }
+    return elements;
+  }
+
+  /**
+   * Returns true when the currently focused element has the highest tabIndex
+   * among all visible focusable elements in registered areas
+   * (i.e. Tab would have nowhere to go).
+   */
+  atLastTabIndex(): boolean {
+    const focused = document.activeElement as HTMLElement | null;
+    if (!focused || focused.tabIndex < 0) return true;
+    const maxTabIndex = this.getVisibleFocusableElements()
+      .reduce((max, el) => Math.max(max, el.tabIndex), -1);
+    return focused.tabIndex >= maxTabIndex;
+  }
+
+  /**
+   * Returns true when the currently focused element has the lowest tabIndex
+   * among all visible focusable elements in registered areas
+   * (i.e. Shift+Tab would have nowhere to go).
+   */
+  atFirstTabIndex(): boolean {
+    const focused = document.activeElement as HTMLElement | null;
+    if (!focused || focused.tabIndex < 0) return true;
+    const minTabIndex = this.getVisibleFocusableElements()
+      .reduce((min, el) => Math.min(min, el.tabIndex), Infinity);
+    return focused.tabIndex <= minTabIndex;
   }
 
   destroy(): void {

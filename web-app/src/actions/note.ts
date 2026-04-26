@@ -1,12 +1,12 @@
 import { action } from "fusion/registries/Action";
-import { PageMode, PageViewState } from "@/components/page/PageViewState";
-import { NoteViewState } from "@/components/note/NoteViewState";
+import { PageMode, PageViewState } from "@/views/page/PageViewState";
+import { NoteViewState } from "@/views/note/NoteViewState";
 import { Point2D } from "fusion/primitives/Point2D";
 import { Size } from "fusion/primitives/Size";
-import { snapVectorToGrid } from "@/util";
-import { pamet } from "@/core/facade";
-import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "@/core/constants";
-import { ArrowViewState } from "@/components/arrow/ArrowViewState";
+import { snapVectorToGrid } from "@/app/util";
+import { pamet } from "@/app/facade";
+import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "@/app/constants";
+import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 
 class NoteActions {
     @action
@@ -91,7 +91,7 @@ class NoteActions {
         let realMousePos = state.viewport.unprojectPoint(mousePosOnScreen)
         let realDelta = realMousePos.subtract(state.realMousePosOnElementMoveStart)
 
-        let movedNoteIds = [];
+        let movedNoteIds = new Set<string>();
         for (let noteVS of state.movedNoteVSs) {
             let viewStateNote = noteVS.note();
             let initialNote = pamet.note(viewStateNote.id);
@@ -99,7 +99,7 @@ class NoteActions {
                 throw new Error('Entity for moved note not found');
             }
 
-            movedNoteIds.push(initialNote.id);
+            movedNoteIds.add(initialNote.id);
 
             let rect = initialNote.rect();
             rect.setTopLeft(snapVectorToGrid(rect.topLeft().add(realDelta)));
@@ -126,14 +126,14 @@ class NoteActions {
                     initialArrow.tailPoint!.add(realDelta));
                 tailMoved = true;
             } else {
-                tailMoved = movedNoteIds.includes(initialArrow.tailNoteId!);
+                tailMoved = movedNoteIds.has(initialArrow.tailNoteId!);
             }
             if (viewStateArrow.headPoint) {
                 viewStateArrow.headPoint = snapVectorToGrid(
                     initialArrow.headPoint!.add(realDelta));
                 headMoved = true;
             } else {
-                headMoved = movedNoteIds.includes(initialArrow.headNoteId!);
+                headMoved = movedNoteIds.has(initialArrow.headNoteId!);
             }
 
             // If both head and tail are anchored to notes which move - move midpoints

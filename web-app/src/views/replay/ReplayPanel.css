@@ -1,0 +1,99 @@
+@import '../../variables.css';
+
+/* ── Replay panel: spans the full bottom row of the panel-layer ── */
+.replay-panel {
+    grid-area: replay;
+    position: static;
+
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+
+    background: var(--color-bg-white);
+    color: var(--color-text);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-light-border);
+    border-radius: var(--radius-xs);
+
+    pointer-events: auto;
+    overflow: hidden;
+}
+
+/* The ReplayControls inside the panel should blend in */
+.replay-panel .replay-controls {
+    flex: 1 1 0;
+    min-width: 0;
+    background: transparent;
+    backdrop-filter: none;
+    border-radius: 0;
+    color: var(--color-text);
+    min-height: 40px;
+}
+
+/* Ensure count label inherits the panel text color */
+.replay-panel .replay-commit-count {
+    color: var(--color-text);
+}
+
+/* Override the button colours to match the panel theme */
+.replay-panel .replay-btn {
+    background: var(--color-bg-subtle);
+    color: var(--color-text);
+}
+.replay-panel .replay-btn:hover {
+    background: var(--color-bg-subtle-hover, rgba(0, 0, 0, 0.08));
+}
+
+/* Range handle colour tweak for light themes */
+.replay-panel .replay-range-handle::after {
+    background: var(--color-accent, rgba(100, 180, 255, 0.8));
+}
+
+/* Inline button (e.g. Backups toggle) */
+.replay-panel-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 var(--space-2);
+    border: none;
+    border-right: 1px solid var(--color-light-border);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--type-sm);
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--transition-fast);
+}
+.replay-panel-btn:hover {
+    background: var(--color-bg-subtle-hover, rgba(0, 0, 0, 0.06));
+}
+
+/* Reindex button — eye-catching red */
+.replay-panel-btn.reindex-btn {
+    background: #d32f2f;
+    color: #fff;
+    font-weight: 700;
+}
+.replay-panel-btn.reindex-btn:hover {
+    background: #b71c1c;
+}
+
+/* Close button on the right edge */
+.replay-panel-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    min-width: 36px;
+    border: none;
+    border-left: 1px solid var(--color-light-border);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--type-lg);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+}
+.replay-panel-close:hover {
+    background: var(--color-bg-subtle-hover, rgba(0, 0, 0, 0.06));
+}

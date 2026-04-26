@@ -1,0 +1,106 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Desktop app (py)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/server/pamet/desktop_app/main.py",
+            "env": {
+                "LOGLEVEL": "DEBUG"
+            },
+            "justMyCode": true
+        },
+        // {
+        //     "name": "pamet-profile",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "module": "cProfile",
+        //     // "env": {
+        //     //     "LOGLEVEL": "DEBUG"
+        //     // },
+        //     "args": [
+        //         "-o",
+        //         "/tmp/tmp.prof", // Use snakeviz to view the profile
+        //         "${workspaceFolder}/server/pamet/desktop_app/main.py"
+        //     ]
+        // },
+        // {
+        //     "name": "Record test",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/dev_venv/bin/pytest",
+        //     "args": [
+        //         "${workspaceFolder}/tests/actions/record_new.py"
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
+        // {
+        //     "name": "Fusion coverage",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/dev_venv/bin/coverage",
+        //     "args": [
+        //         "run",
+        //         "--source=fusion",
+        //         "-m",
+        //         "pytest",
+        //         "${workspaceFolder}/fusion",
+        //     ],
+        //     "console": "integratedTerminal",
+        //     "justMyCode": true
+        // },
+        // {
+        //     "name": "Pamet coverage",
+        //     "type": "debugpy",
+        //     "request": "launch",
+        //     "program": "${workspaceFolder}/dev_venv/bin/coverage",
+        //     "args": [
+        //         "run",
+        //         "--source=fusion",
+        //         "-m",
+        //         "pytest",
+        //         "${workspaceFolder}",
+        //         // "--headless",
+        //     ],
+        //     "console": "integratedTerminal",
+        //     // "env": {"PYTEST_ADDOPTS": "--headless"},
+        //     "justMyCode": true
+        // },
+        {
+            "name": "Frontend:webapp vite",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev"
+            ],
+            "console": "integratedTerminal",
+        },
+        {
+            "name": "Frontend:desktop vite",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": [
+                "run",
+                "dev:desktop"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Web Debugger",
+            "type": "chrome",
+            "request": "launch",
+            "url": "http://localhost:3000",
+            "webRoot": "${workspaceFolder}/web-app/src",
+        }
+    ],
+}

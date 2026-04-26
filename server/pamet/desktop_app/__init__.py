@@ -1,98 +1,61 @@
 from __future__ import annotations
+
 from copy import copy
-import json
-from pathlib import Path
-from PySide6.QtGui import QColor
+from typing import Any, cast
 
 from fusion.logging import get_logger
 
-from pamet.constants import SELECTION_OVERLAY_COLOR
 from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.config import RepoSettings, UserDesktopSettings
+from pamet.desktop_app.config import (
+    SettingsAdapter,
+    UserDesktopSettingsData,
+    user_settings_path,
+)
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
-from pamet.services.media_store import MediaStore
-from pamet.services.script_runner import ScriptRunner
-from pamet.desktop_app.config import pamet_data_folder_path
 
 log = get_logger(__name__)
 
-SETTINGS_JSON = 'settings.json'
-
 icons = PametQtWidgetsCachedIcons()
 
-selection_overlay_qcolor = QColor(
-    *SELECTION_OVERLAY_COLOR.to_uint8_rgba_list())
-
 _app = None
-_media_store = None
-_backup_service = None
-
 _default_note_font = None
-script_runner = ScriptRunner()
 
-_config_path = None
-
-
-def set_user_settings_path(config_path: Path):
-    global _config_path
-    _config_path = config_path
+_user_settings_adapter = SettingsAdapter(
+    user_settings_path(),
+)
 
 
-def user_settings_path() -> Path:
-    if not _config_path:
-        return pamet_data_folder_path / SETTINGS_JSON
-    return _config_path
+def get_user_settings() -> UserDesktopSettingsData:
+    return cast(UserDesktopSettingsData, _user_settings_adapter.get())
 
 
-def repo_settings_path(repo_path: Path) -> Path:
-    return repo_path / '.pamet' / SETTINGS_JSON
+def save_user_settings(updated_config: UserDesktopSettingsData | dict[str, Any]):
+    _user_settings_adapter.write(cast(dict[str, Any], updated_config))
 
 
-# Config handling
-def get_user_settings() -> UserDesktopSettings:
-    settings_path = user_settings_path()
-    if not settings_path.exists():
-        settings = UserDesktopSettings()
-        save_user_settings(settings)
-        return settings
+def upsert_tracked_project(project_id: str, uri: str, title: str):
+    settings = get_user_settings()
+    if not settings:
+        raise Exception("User settings not found when trying to upsert tracked project")
 
-    with open(settings_path) as settings_file:
-        config_dict = json.load(settings_file)
-        return UserDesktopSettings.load(config_dict)
+    projects = list(settings["projects"])
+    project_data: dict[str, str] = {
+        "id": project_id,
+        "uri": uri,
+        "title": title,
+    }
 
+    replaced = False
+    for index, existing_project in enumerate(projects):
+        if existing_project.get("id") == project_id:
+            projects[index] = project_data
+            replaced = True
+            break
 
-def save_user_settings(updated_config: UserDesktopSettings):
-    config_str = json.dumps(updated_config.asdict(),
-                            indent=4,
-                            ensure_ascii=False)
-    config_path = user_settings_path()
-    config_path.write_text(config_str)
+    if not replaced:
+        projects.append(project_data)
 
-
-def get_repo_settings(repo_path: Path) -> RepoSettings:
-    config_path = repo_settings_path(repo_path)
-    if not config_path.exists():
-        settings = RepoSettings(repo_path=repo_path)
-        save_repo_settings(settings)
-        return settings
-
-    with open(config_path) as config_file:
-        config_dict = json.load(config_file)
-        dict_on_load = copy(config_dict)
-        settings_id = config_dict.pop('id')
-        settings = RepoSettings(id=settings_id, repo_path=repo_path)
-        settings.replace_silent(**config_dict)
-        settings._dict_on_load = dict_on_load
-        return settings
-
-
-def save_repo_settings(repo_settings: RepoSettings):
-    config_str = json.dumps(repo_settings.asdict(),
-                            indent=4,
-                            ensure_ascii=False)
-    config_path = repo_settings_path(repo_settings.repo_path)
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    config_path.write_text(config_str)
+    save_user_settings({**settings, "projects": projects})
 
 
 def default_note_font():
@@ -105,27 +68,11 @@ def set_default_note_font(new_default_note_font):
 
 
 def get_app() -> DesktopApp:
+    if _app is None:
+        raise Exception("App not set")
     return _app
 
 
 def set_app(new_app):
     global _app
     _app = new_app
-
-
-def media_store() -> MediaStore:
-    return _media_store
-
-
-def set_media_store(new_media_store):
-    global _media_store
-    _media_store = new_media_store
-
-
-def backup_service() -> FSStorageBackupService:
-    return _backup_service
-
-
-def set_backup_service(backup_service_):
-    global _backup_service
-    _backup_service = backup_service_

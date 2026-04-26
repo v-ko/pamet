@@ -1,0 +1,149 @@
+import { NoteViewState } from "@/views/note/NoteViewState";
+import { NO_SCALE_LINE_SPACING } from "@/app/constants";
+import { NOTE_BORDER_WIDTH } from "@/app/constants";
+import { TextLayout } from "@/app/util";
+
+import { calculateTextLayout } from "@/views/note/note-dependent-utils";
+import { Rectangle } from "fusion/primitives/Rectangle";
+import { BaseCanvasView } from "@/views/note/BaseCanvasView";
+import { pamet } from "@/app/facade";
+import { DEFAULT_FONT_STRING } from "@/app/constants";
+import { textRect, imageGeometryToFitAre } from "@/views/note/util";
+import { Size } from "fusion/primitives/Size";
+import { getLogger } from "fusion/logging";
+
+let log = getLogger('NoteCanvasView');
+
+
+
+const IMAGE_MISSING_TEXT = '(image missing)'
+const IMAGE_NOT_LOADED_TEXT = '(loading...)'
+const IMAGE_ELEMENT_MISSING_TEXT = '(image element missing)'
+const IMAGE_LOAD_FAILED_TEXT = '(loading failed)'
+
+
+
+export enum BorderType {
+    Solid,
+    Dashed,
+}
+
+export abstract class NoteCanvasView extends BaseCanvasView {
+
+    get noteViewState(): NoteViewState {
+        return this.elementViewState as NoteViewState;
+    }
+
+    drawBackground(context: CanvasRenderingContext2D) {
+        let note = this.noteViewState.note();
+        let backgroundColor = pamet.themeManager.canvasColor(note.style.background_color_role);
+        context.fillStyle = backgroundColor;
+        context.fillRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
+    }
+
+    drawText(context: CanvasRenderingContext2D, textLayout: TextLayout) {
+
+        context.save()
+
+        let note = this.noteViewState.note();
+        let color = pamet.themeManager.canvasColor(note.style.color_role);
+
+        const textRect_ = textRect(textLayout.textRect)
+        const textTopLeft = textRect_.topLeft();
+
+        // Center align vertically in textRect
+        let textHeight = textLayout.lines.length * NO_SCALE_LINE_SPACING;
+        textTopLeft.y += (textRect_.height - textHeight) / 2;
+
+        // Adjust for the text body to be drawn in the middle of the line
+        let adjTopLeft = textTopLeft.copy();
+        let hackyPadding = NO_SCALE_LINE_SPACING / 7.5; // TODO: Should be dependent on font descent
+        adjTopLeft.y = adjTopLeft.y + hackyPadding;
+
+        // // Debug: draw the translatedtextrect with a red border
+        // textRect.setTopLeft(textTopLeft);
+        // textRect.setHeight(textHeight);
+        // ctx.strokeStyle = 'red';
+        // ctx.lineWidth = 1;
+        // ctx.strokeRect(textRect.left(), textRect.top(), textRect.width(), textRect.height());
+
+        // Correct for ctx center align behavior
+        if (textLayout.alignment === 'center') {
+            adjTopLeft.x = adjTopLeft.x + textRect_.width / 2;
+        }
+
+        // Draw text
+        context.font = DEFAULT_FONT_STRING;
+        context.textBaseline = 'top';
+        context.textAlign = textLayout.alignment;
+        context.fillStyle = color;
+        for (let i = 0; i < textLayout.lines.length; i++) {
+            context.fillText(
+                textLayout.lines[i],
+                adjTopLeft.x,
+                adjTopLeft.y + i * NO_SCALE_LINE_SPACING,
+            );
+
+            // // Debug: Draw line bounding box
+            // ctx.strokeStyle = 'blue';
+            // ctx.lineWidth = 1;
+            // ctx.strokeRect(textTopLeft.x, textTopLeft.y + i * NO_SCALE_LINE_SPACING, textRect.width(), NO_SCALE_LINE_SPACING);
+        }
+        context.restore();
+    }
+
+    drawBorder(context: CanvasRenderingContext2D, borderType: BorderType = BorderType.Solid) {
+        let note = this.noteViewState.note();
+        context.save()
+        context.strokeStyle = pamet.themeManager.canvasColor(note.style.color_role);
+        context.lineWidth = NOTE_BORDER_WIDTH;
+        if (borderType === BorderType.Dashed) {
+            context.setLineDash([10, 5]);
+        }
+        context.strokeRect(note.geometry[0] + NOTE_BORDER_WIDTH / 2, note.geometry[1] + NOTE_BORDER_WIDTH / 2, note.geometry[2] - NOTE_BORDER_WIDTH, note.geometry[3] - NOTE_BORDER_WIDTH);
+        if (pamet.debugPaintOperations) {
+            // Make the fine border position visible (canvas has some weird assumptions about the border position)
+            context.strokeStyle = 'orange';
+            context.lineWidth = 0.1;
+            context.strokeRect(note.geometry[0], note.geometry[1], note.geometry[2], note.geometry[3]);
+        }
+        context.restore()
+    }
+
+    drawImage(context: CanvasRenderingContext2D, imageArea: Rectangle) {
+        let note = this.noteViewState.note();
+        let noteRect = note.rect();
+        if (!note.content.image?.path) {
+            // Display error text instead
+            let textLayout = calculateTextLayout(IMAGE_MISSING_TEXT, textRect(noteRect), DEFAULT_FONT_STRING)
+            this.drawText(context, textLayout);
+            return;
+        }
+
+        const url = this.noteViewState.pageViewState.fileUrlsByPath.get(note.content.image.path);
+
+        let image = url ? this.renderer.getImage(url) : null;
+        let errorText: string | undefined = undefined;
+        if (image === null) { // element is not mounted (initial render or internal error)
+            errorText = IMAGE_ELEMENT_MISSING_TEXT;
+        } else if (!image.complete) { // still loading
+            errorText = IMAGE_NOT_LOADED_TEXT;
+        } else if (image.naturalWidth === 0) { // loaded unsuccessfully
+            errorText = IMAGE_LOAD_FAILED_TEXT;
+        }
+        if (errorText !== undefined) {
+            let textLayout = calculateTextLayout(errorText, textRect(noteRect), DEFAULT_FONT_STRING)
+            this.drawText(context, textLayout);
+            return;
+        }
+
+        let imgRect = imageGeometryToFitAre(imageArea, new Size([image!.naturalWidth, image!.naturalHeight]));
+        context.drawImage(image!, imgRect.x, imgRect.y, imgRect.w, imgRect.h);
+
+        context.strokeStyle = '#dddddd';
+        context.lineWidth = 0.5;
+        context.strokeRect(noteRect.x, noteRect.y, noteRect.w, noteRect.h);
+    }
+
+    abstract render(context: CanvasRenderingContext2D): void;
+}

@@ -1,21 +1,28 @@
-from dataclasses import field
 from datetime import datetime
+from pathlib import PurePosixPath
+
+import attrs
 from fusion import Entity, entity_type
-from pamet.util.url import Url
 from fusion.util import current_time, timestamp
 
 
 @entity_type
 class Page(Entity):
-    name: str = ''
-    created: str = field(default_factory=lambda: timestamp(current_time()))
-    modified: str = field(default_factory=lambda: timestamp(current_time()))
+    path: str = ""
+    created: str = attrs.Factory(lambda: timestamp(current_time()))
+    modified: str = attrs.Factory(lambda: timestamp(current_time()))
 
     def __repr__(self):
-        return f'<Page gid={self.gid()} name={self.name}>'
+        return f"<Page id={self.id} path={self.path}>"
 
-    def url(self):
-        return Url(f'pamet:///p/{self.id}')
+    @property
+    def name(self) -> str:
+        return PurePosixPath(self.path).stem if self.path else ""
+
+    @property
+    def folder(self) -> str:
+        parent = PurePosixPath(self.path).parent.as_posix() if self.path else ""
+        return "" if parent == "." else parent
 
     @property
     def datetime_created(self) -> datetime:

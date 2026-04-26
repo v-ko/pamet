@@ -1,13 +1,26 @@
 import { Rectangle } from "fusion/primitives/Rectangle";
 
 import { PametElement, PametElementData } from "@/model/Element";
-import { textRect } from "@/components/note/util";
+import { textRect } from "@/views/note/util";
 import { entityType } from "fusion/model/Entity";
+
+export interface ImageReference {
+    path: string;
+    width: number;
+    height: number;
+    hash: string;
+}
+
+export interface PageReference {
+    id: string;
+    path: string;
+}
 
 export interface NoteContent {
     text?: string;
     url?: string;
-    image_id?: string;
+    page_ref?: PageReference;
+    image?: ImageReference;
 }
 export interface NoteStyle {
     color_role: string;
@@ -25,7 +38,6 @@ export interface NoteData extends PametElementData {
     created: string;
     modified: string;
     metadata: NoteMetadata;
-    tags: string[];
 }
 
 export interface SerializedNote extends NoteData {
@@ -54,9 +66,6 @@ export class Note extends PametElement<NoteData> {
     }
     get metadata(): NoteMetadata {
         return this._data.metadata;
-    }
-    get tags(): string[] {
-        return this._data.tags;
     }
     get style(): NoteStyle {
         return this._data.style;

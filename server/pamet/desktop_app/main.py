@@ -1,207 +1,333 @@
 import os
+import signal
+import subprocess
+import sys
 from pathlib import Path
-from PySide6.QtWidgets import QMessageBox
+from typing import cast
+
 import click
-
 import fusion
-from fusion.libs.action import actions_log_channel
-from fusion.libs.action.action_call import ActionCall, ActionRunStates
-from fusion.logging import LOGGING_LEVEL, LoggingLevels
-from pamet import channels as pamet_channels, commands, set_semantic_search_service
+from fusion.util import deep_merge
+from PySide6.QtCore import QStandardPaths
+from slugify import slugify
 
-import pamet
-from pamet import desktop_app
-from pamet.actions import window as window_actions
-from pamet.actions import other as other_actions
-from pamet.desktop_app.app import DesktopApp
-from pamet.desktop_app.init_config import configure_for_qt
-from pamet.model.page import Page
-
-from pamet.services.backup import AnotherServiceAlreadyRunningException
-from pamet.services.backup import FSStorageBackupService
-from pamet.services.file_note_watcher import FileNoteWatcherService
-from pamet.services.media_store import MediaStore
-from pamet.services.other_pages_list_update import OtherPagesListUpdateService
-from pamet.services.rest_api.desktop import DesktopServer
-
-from pamet.services.search.fuzzy import FuzzySearchService
-from pamet.services.undo import UndoService
-from pamet.storage import FSStorageRepository
-from pamet.views.window.widget import WindowWidget
+from pamet.constants import LOCAL_USER_ID
+from pamet.desktop_app.config import (
+    PAMET_APP_DATA_DIR,
+    PAMET_CONFIG_DIR,
+    web_app_static_build_path,
+)
+from pamet.model.config import ScriptSettings, UserSettings, default_script_settings
+from pamet.services.config_file_manager import load_user_settings, save_user_settings
+from pamet.services.rest_api.client import send_command
+from pamet.services.rest_api.instance_check import get_running_instance_port
+from pamet.services.rest_api.routes.desktop import PUBLIC_COMMAND_NAMES
+from pamet.storage.migrations.v4_to_v5 import (
+    archive_v4_user_settings,
+    process_v4_user_settings,
+)
 
 log = fusion.get_logger(__name__)
 
 
-def raise_a_window():
-    windows = [
-        w for w in DesktopApp.instance().topLevelWidgets()
-        if isinstance(w, WindowWidget)
-    ]
-    if windows:
-        windows[0].show()
-        windows[0].activateWindow()
-        windows[0].raise_()
-
-
-local_server_commands = {
-    'grab_screen_snippet': commands.grab_screen_snippet,
-    'raise_window': raise_a_window
-}
-
-
 @click.command()
-@click.argument('path', type=click.Path(exists=True), required=False)
-@click.option('--command', type=click.Choice(local_server_commands.keys()))
-@click.option('--config-path', type=click.Path())
-def main(path: str, command: str, config_path: str):
-    if config_path:
-        desktop_app.set_user_settings_path(Path(config_path))
+@click.argument(
+    "project_path",
+    type=click.Path(
+        exists=True, dir_okay=True, file_okay=False, readable=True, path_type=Path
+    ),
+    required=False,
+)
+@click.option("--command", type=click.Choice(sorted(PUBLIC_COMMAND_NAMES)))
+@click.option(
+    "--use-frontend-server",
+    type=str,
+    help="Connect to frontend dev server at specified host (e.g. http://localhost:3000)",
+)
+@click.option(
+    "--mock-v4-fixture",
+    is_flag=True,
+    default=False,
+    help="Rebuild the v4 mock-repo fixture and run against isolated config/app-data dirs.",
+)
+def main(
+    project_path: Path | None,
+    command: str,
+    use_frontend_server: str | None,
+    mock_v4_fixture: bool,
+):
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    # Load configs and repo path
-    user_config = desktop_app.get_user_settings()
+    # CLI flag is just an alias for the env var; flag wins if both are set.
+    frontend_dev_server = use_frontend_server or os.environ.get(
+        "PAMET_FRONTEND_DEV_SERVER"
+    )
 
-    if path:
-        repo_path = Path(path)
-    else:
-        repo_path = Path(user_config.repository_path)
-    log.info('Using repository: %s' % repo_path)
-
-    repo_settings = desktop_app.get_repo_settings(repo_path)
-
-    # Check if another instance is running and/or start the local server
-    local_server = DesktopServer(
-        commands=local_server_commands,
-        media_store_path=repo_settings.media_store_path)
-
-    if local_server.another_instance_is_running():
-        port = local_server.get_port_from_lock_file()
+    # Check if another instance is running (must happen before prepare.py
+    # which wipes the config dir and would remove the lock file)
+    port = get_running_instance_port(PAMET_CONFIG_DIR)
+    if port:
+        log.info(
+            f"Another instance is already running on port {port} — sending command and exiting"
+        )
         if command:
-            DesktopServer.send_command(port, command)
+            send_command(port, command)
         else:
-            DesktopServer.send_command(port, 'raise_window')
+            send_command(port, "raise_window")
         return
+
+    # Temporary fixture setup for migration testing. When --mock-v4-fixture is
+    # passed, rebuild the prepared fixture on startup so legacy user settings
+    # can be restored from it into isolated app-data. Guarded to refuse running
+    # against the user's real Qt-default config/app-data dirs.
+    if mock_v4_fixture:
+        prepared_repo_dir = (
+            Path(__file__).resolve().parents[2] / "tests" / "mock_v4_project"
+        )
+        prepare_script_path = prepared_repo_dir / "prepare.py"
+
+        qt_default_config = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.AppConfigLocation
+        )
+        qt_default_app_data = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.AppLocalDataLocation
+        )
+        if PAMET_CONFIG_DIR == qt_default_config:
+            raise Exception(
+                f"--mock-v4-fixture refuses to run on default config dir: {PAMET_CONFIG_DIR}"
+            )
+        if PAMET_APP_DATA_DIR == qt_default_app_data:
+            raise Exception(
+                f"--mock-v4-fixture refuses to run on default app-data dir: {PAMET_APP_DATA_DIR}"
+            )
+
+        log.info("Preparing mock repo and settings via %s", prepare_script_path)
+        subprocess.run(
+            [sys.executable, str(prepare_script_path)],
+            cwd=prepared_repo_dir,
+            check=True,
+        )
+    # END OF TMP MIGRATION TESTING LOGIC
+
+    # Load v5 UserSettings, migrating from v4 if needed. The v4 ``settings.json``
+    # lives in the Qt GenericDataLocation dir (PAMET_APP_DATA_DIR), e.g.
+    # ``~/.local/share/pamet/settings.json`` on Linux. After consumption it is
+    # archived as a sibling .v4.bak.
+    legacy_settings_path = PAMET_APP_DATA_DIR / "settings.json"
+    had_legacy_settings = legacy_settings_path.exists()
+    legacy_overrides: dict = {}
+    try:
+        legacy_overrides = process_v4_user_settings(PAMET_APP_DATA_DIR) or {}
+    except Exception as e:
+        log.error("Failed to migrate legacy user settings: %s", e)
+
+    settings = load_user_settings()
+
+    if had_legacy_settings and settings is not None:
+        log.warning(
+            "Legacy v4 user settings found but current settings already exist "
+            "— ignoring legacy values"
+        )
+        legacy_overrides = {}
+
+    if settings is None:
+        log.info("No user settings found — creating defaults")
+        # Start from v5 defaults, then overlay any v4-derived overrides.
+        script_settings: ScriptSettings = default_script_settings()
+        scripts_overrides = legacy_overrides.get("scripts")
+        if scripts_overrides:
+            script_settings = cast(
+                ScriptSettings,
+                deep_merge(script_settings, scripts_overrides),
+            )
+        settings = UserSettings(
+            id="user-settings",
+            userId=LOCAL_USER_ID,
+            userName="Local User",
+            projects=[],
+            scripts=script_settings,
+        )
+        save_user_settings(settings)
+
+    if had_legacy_settings:
+        archive_v4_user_settings(legacy_settings_path)
+
+    legacy_repo_path = legacy_overrides.get("repository_path")
+
+    # Setup project if legacy present or path is passed via cli argument
+    project_id: str | None = None
+    project_title: str | None = None
+
+    # If v4 settings had a repo path - use it for project startup
+    if not project_path and legacy_repo_path:
+        if not Path(legacy_repo_path).exists():
+            log.error(
+                "Legacy repository_path %s does not exist. Ignoring.", legacy_repo_path
+            )
+        else:
+            project_path = Path(legacy_repo_path).resolve()
+            project_title = project_path.name
+            project_id = slugify(project_title)
+
+    elif project_path is not None:
+        # Resolve so folder-name derivation works for relative inputs like "."
+        # (Path(".").stem == "", which silently broke project_id/title).
+        project_path = project_path.resolve()
+
+        # If project is already tracked - use the existing title/id
+        for tracked_project in settings.projects or []:
+            if tracked_project.get("uri") == project_path.as_uri():
+                project_id = tracked_project.get("id")
+                project_title = tracked_project.get("title")
+                break
+
+        # If not tracked - set default id and title based on folder name
+        if not project_title:
+            project_title = project_path.name
+
+        if not project_id:
+            project_id = slugify(project_title)
+
+        if not project_title or not project_id:
+            raise RuntimeError(
+                f"Could not derive a project id/title from path {project_path}"
+            )
+
+    # If the path is set (regardless if legacy or cli) - we need to add it to the tracked projects
+    # so that the frontend can load it
+    if project_path and project_title and project_id:
+        log.info("Start up repository: %s" % project_path)
+
+        # Upsert tracked project in user settings
+        project_data = {
+            "id": project_id,
+            "uri": project_path.resolve().as_uri(),
+            "title": project_title,
+        }
+        projects = list(settings.projects or [])
+        replaced = False
+        for i, p in enumerate(projects):
+            if p.get("id") == project_id:
+                projects[i] = project_data
+                replaced = True
+                break
+        if not replaced:
+            projects.append(project_data)
+        settings.projects = projects
+        save_user_settings(settings)
+
+    # ── Heavy imports (PySide6, Qt, etc.) deferred to here ───────────
+    from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
+    from PySide6.QtCore import QTimer
+    from PySide6.QtQml import QQmlApplicationEngine
+    from PySide6.QtQuickControls2 import QQuickStyle
+    from PySide6.QtWebEngineQuick import QtWebEngineQuick
+
+    import pamet
+    import pamet.commands  # noqa: F401 — triggers @command registrations
+    from pamet import desktop_app
+    from pamet.actions.app import open_tab
+    from pamet.desktop_app.app import DesktopApp
+    from pamet.desktop_app.init_config import setup_fonts_and_icons
+    from pamet.services.desktop_storage_service import DesktopStorageService
+    from pamet.services.rest_api.desktop_server import DesktopServer
+    from pamet.views.app_window.qml_backend import (
+        QmlAppBackend,
+        TitleBarDoubleClickFilter,
+    )
+    from pamet.views.app_window.view_state import AppWindowViewState
+
+    # The desktop server always serves the JSON API. It also serves the SPA
+    # bundle UNLESS a frontend dev server is configured — in which case the
+    # WebEngineView loads the dev server URL directly and the SPA discovers
+    # the API base URL via window.PAMET_DESKTOP_API_BASE_URL (injected by the
+    # WebEngineProfile). This mirrors the production deployment, where SPA
+    # and API live on different hosts (e.g. app.pamet.io / api.pamet.io).
+    if frontend_dev_server:
+        static_build_path = None
+        log.info("Frontend will be served via dev server: %s", frontend_dev_server)
     else:
-        local_server.start()
+        static_build_path = web_app_static_build_path()
+        log.info("Serving bundled web-app build from %s", static_build_path)
+
+    local_server = DesktopServer(
+        config_dir=PAMET_CONFIG_DIR,
+        web_app_static_build_path=static_build_path,
+    )
+    local_server.start()
+
+    # Workaround for Qt bug: QML WebEngineView renders black/stale after
+    # minimize-restore with OpenGL and transparent with Vulkan RHI backends.
+    # Software rendering is unaffected.
+    if not os.environ.get("QT_QUICK_BACKEND"):
+        os.environ["QT_QUICK_BACKEND"] = "software"
+        log.info(
+            "Forcing software QML backend (WebEngineView minimize-restore workaround)"
+        )
+
+    # QtWebEngineQuick must be initialized before the QApplication
+    QtWebEngineQuick.initialize()
 
     app = DesktopApp()
     app.aboutToQuit.connect(local_server.stop)
 
-    configure_for_qt(app)
+    log.info("Using config folder: %s", PAMET_CONFIG_DIR)
+    log.info("Using app data folder: %s", PAMET_APP_DATA_DIR)
+    desktop_app.set_app(app)
+    fusion.set_main_loop(QtMainLoop(app))
+    setup_fonts_and_icons()
 
-    # If there's changes after the load it means that some default is not saved
-    # to disk or some other irregularity has been handled by the config class
-    if user_config.changes_present:
-        desktop_app.save_user_settings(user_config)
+    desktop_storage_service = DesktopStorageService()
+    pamet.set_desktop_storage_service(desktop_storage_service)
 
-    # Init the repo
-    if os.path.exists(repo_path):
-        fs_repo = FSStorageRepository.open(repo_path,
-                                           queue_save_on_change=True)
-        legacy_page_paths = fs_repo.process_legacy_pages()
-        fs_repo.load_all_pages()
-
-        # Checksum legacy pages and fix internal links in them
-        for page_path in legacy_page_paths:
-            page_id = fs_repo.id_from_page_path(page_path)
-            page = fs_repo.find_one(id=page_id)
-
-            fs_repo.checksum_imported_page_notes(page)
-            fs_repo.fix_legacy_page_internal_links(page)
+    desktop_api_base_url = f"http://localhost:{local_server.port}"
+    frontend_base_url = (
+        frontend_dev_server.rstrip("/") if frontend_dev_server else desktop_api_base_url
+    )
+    if project_id is None:
+        initial_project_url = frontend_base_url
     else:
-        fs_repo = FSStorageRepository.new(repo_path, queue_save_on_change=True)
+        initial_project_url = f"{frontend_base_url}/{LOCAL_USER_ID}/{project_id}"
 
-    if repo_settings.changes_present():
-        desktop_app.save_repo_settings(repo_settings)
+    # Create the QML app window
 
-    pamet.set_sync_repo(fs_repo)
-    desktop_app.set_media_store(MediaStore(repo_settings.media_store_path))
+    QQuickStyle.setStyle("Fusion")
 
-    pamet.set_undo_service(
-        UndoService(pamet_channels.entity_change_sets_per_TLA))
+    view_state = AppWindowViewState()
+    qml_backend = QmlAppBackend(
+        view_state=view_state,
+        endpoint=initial_project_url,
+        desktop_api_base_url=desktop_api_base_url,
+    )
 
-    # # Debug
-    # misli_channels.state_changes_per_TLA_by_id.subscribe(
-    #     lambda x: print(f'STATE_CHANGES_BY_ID CHANNEL: {x}'))
+    engine = QQmlApplicationEngine()
+    engine.rootContext().setContextProperty("appState", view_state)
+    engine.rootContext().setContextProperty("backend", qml_backend)
 
-    start_page = pamet.default_page() or fs_repo.find_one(type=Page)
-    if not start_page:
-        start_page = other_actions.create_default_page()
+    qml_path = (
+        Path(__file__).resolve().parents[1] / "views" / "app_window" / "AppWindow.qml"
+    )
+    engine.load(qml_path)
 
-    window_state = window_actions.new_browser_window()
-    window = WindowWidget(initial_state=window_state)
-    window.showMaximized()
+    if not engine.rootObjects():
+        print("Failed to load QML")
+        return 1
 
-    window_actions.new_browser_tab(window_state, start_page)
+    # Install a native event filter for title-bar double-click → maximize
+    window = engine.rootObjects()[0]
+    title_bar_height = 42  # must match header height in AppWindow.qml
+    dbl_filter = TitleBarDoubleClickFilter(window, title_bar_height)
+    window.installEventFilter(dbl_filter)
 
-    search_service = FuzzySearchService(
-        pamet_channels.entity_change_sets_per_TLA)
-    search_service.load_all_content()
-    pamet.set_search_service(search_service)
-
-    other_page_list_service = OtherPagesListUpdateService()
-    other_page_list_service.start()
-
-    # Setup exception reporting for failed actions
-    if LOGGING_LEVEL != LoggingLevels.DEBUG.value:
-
-        def show_exception_for_failed_action(action_call: ActionCall):
-            if action_call.run_state != ActionRunStates.FAILED:
-                return
-            title = f'Exception raised during action "{action_call.name}"'
-            app.present_exception(exception=action_call.error, title=title)
-
-        actions_log_channel.subscribe(show_exception_for_failed_action)
-
-    if repo_settings.backups_enabled:
-        backup_service = FSStorageBackupService(
-            backup_folder=repo_settings.backup_folder,
-            repository=fs_repo,
-            changeset_channel=pamet_channels.entity_change_sets_per_TLA,
-            record_all_changes=repo_settings.record_all_changes)
-
-        service_started = False
-        try:
-            backup_service.start()
-            service_started = True
-        except AnotherServiceAlreadyRunningException:
-            log.info('Backup service not started. '
-                     'Probably another instance is running')
-            reply = QMessageBox.question(
-                window, 'Backup service conflict',
-                'A backup service lock is present. If you\'re sure there\'s '
-                'no other instances running on the same repo - '
-                'press Yes to override.')
-            if reply == QMessageBox.StandardButton.Yes:
-                backup_service.service_lock_path().unlink()
-                backup_service.start()
-                service_started = True
-
-        if service_started:
-            app.aboutToQuit.connect(backup_service.stop)
-            pamet.desktop_app.set_backup_service(backup_service)
-
-    # Experimental semantic search
-    if repo_settings.semantic_search_enabled:
-        from pamet.services.search.semantic import SemanticSearchService
-        semantic_search_service = SemanticSearchService(
-            data_folder=repo_path / '__semantic_index__',
-            change_set_channel=pamet_channels.entity_change_sets_per_TLA)
-
-        print('Loading semantic search index...')
-        semantic_search_service.load_all_content()
-        print('Semantic search index loaded')
-        set_semantic_search_service(semantic_search_service)
+    # Open the initial tab deferred so QML Repeater bindings are wired
+    QTimer.singleShot(0, lambda: open_tab(view_state, initial_project_url, True))
 
     fusion.set_main_loop_exception_handler(
-        lambda e: app.present_exception(e, title='Main loop exception'))
-
-    # Watch files that have previews in notes and update them
-    file_note_watcher_service = FileNoteWatcherService()
-    file_note_watcher_service.start()
-    app.aboutToQuit.connect(file_note_watcher_service.stop)
+        lambda e: app.present_exception(e, title="Main loop exception")
+    )
 
     return app.exec()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

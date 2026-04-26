@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pamet"
-version = "4.0.0.alpha17"
+version = "5.0.0a1"
 description = "An app for organizing notes and thoughts"
 authors = [{ name = "Petko Dichev", email = "pditchev@gmail.com" }]
 license = { text = "GPLv3" }
@@ -12,15 +12,16 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     'PySide6',
-    'python-fusion>=0.8.6',
+    'python-fusion>=0.10.0',
     'click',
     'python-slugify',
     'thefuzz',
     'peewee',
     'pillow',
-    'watchdog',
     'fastapi',
+    'python-multipart',
     'uvicorn',
+    'websockets',
     'sqlitedict',
     'requests',
     'markdown',
@@ -37,5 +38,29 @@ classifiers = [
 
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"
+
+[project.optional-dependencies]
+dev = ["pytest", "black", "isort", "pre-commit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.black]
+line-length = 88
+
+[tool.isort]
+profile = "black"
+line_length = 88
+combine_as_imports = true
+
 [tool.setuptools.packages.find]
 exclude = ["web_app*"]
+
+[tool.setuptools.package-data]
+# Bundle the desktop web-app build (vite outDir for BUILD_MODE=desktop) so
+# wheels can serve the SPA without an external dev server. Also include the
+# mini-viewer template/css/js used by canvas_html for v4→v5 migration.
+"pamet" = [
+    "desktop_app/_web_app_dist/**/*",
+    "resources/mini_viewer/*",
+]
