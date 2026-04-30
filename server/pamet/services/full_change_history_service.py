@@ -17,7 +17,11 @@ from fusion.logging import get_logger
 from fusion.storage.base_store import Store
 from fusion.storage.change import Change
 from fusion.storage.delta import Delta
-from fusion.storage.repository import Repository
+from fusion.storage.repository import (
+    EmptyRepositoryError,
+    MissingBranchError,
+    Repository,
+)
 from fusion.storage.sqlite_vcs_adapter import SqliteVcsAdapter
 from fusion.storage.ws_sync_service import WebSocketSyncService
 
@@ -145,11 +149,10 @@ class FullChangeHistoryService:
         # Persistent storage
         self._adapter = SqliteVcsAdapter(db_path)
 
-        # Repository — create or open
-        graph = self._adapter.get_commit_graph()
-        if graph.branch("main") is not None:
+        # Repository — open existing or create new
+        try:
             self._repo = Repository.open(self._adapter, branch_name="main")
-        else:
+        except (EmptyRepositoryError, MissingBranchError):
             self._repo = Repository.create(self._adapter, branch_name="main")
 
         self._store_adapter = _CommittingStoreAdapter(self._repo)
