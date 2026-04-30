@@ -21,7 +21,7 @@ import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "fusion/model/Delta";
 import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
-import { switchProject, commitUnsavedChanges } from "@/procedures/app";
+import { switchProject } from "@/procedures/app";
 import { appActions } from "@/actions/app";
 import { replayActions } from "@/actions/replay";
 import { PametRoute } from "@/services/routing/PametRoute";
@@ -201,7 +201,7 @@ export class PametFacade extends PametStore {
             }
             const uncommittedDelta = this._projectSyncService.uncommittedDelta;
             this.changeHistoryService.pushDelta(uncommittedDelta.copy());
-            commitUnsavedChanges();
+            this._projectSyncService.saveUncommittedChanges();
         });
 
         // Register logger to root actions hooks

@@ -7,8 +7,13 @@ import { computeRepoSyncDelta } from "fusion/storage/management/sync-utils";
 import type { RepoUpdateData } from "fusion/storage/repository/Repository";
 import type { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
 import { action } from "fusion/registries/Action";
+import { appActions } from "@/actions/app";
+import { pamet } from "@/app/facade";
 
 let log = getLogger('OptimisticProjectSyncService');
+
+const FLUSH_DEBOUNCE_MS = 100;
+const COMMIT_SAFETY_TIMEOUT_MS = 10000;
 
 /**
  * Handles the optimistic-commit + reconciliation cycle for a single project.
@@ -21,6 +26,9 @@ let log = getLogger('OptimisticProjectSyncService');
  * - Reconciles: reverses the expected delta, applies the authority's actual delta
  *   back into the store
  *
+ * Commits are serialized (only one in-flight at a time) and debounced to
+ * avoid races where a repo-update reverses not-yet-committed changes.
+ *
  * Does NOT own the store. Does NOT touch the view model.
  * The store's onChange callback is the view model's concern.
  */
@@ -31,12 +39,22 @@ export class OptimisticProjectSyncService {
 
     private _localCommitGraph: CommitGraph;
     private _currentBranch: string;
-    private _uncommittedDelta: Delta = new Delta({});
+    private _unstagedChanges: Delta = new Delta({});
+    private _stagedChanges: Delta = new Delta({});
     private _expectedDelta: Delta = new Delta({});
+
+    private _commitInFlight = false;
+    private _flushTimer: ReturnType<typeof setTimeout> | null = null;
+    private _commitSafetyTimer: ReturnType<typeof setTimeout> | null = null;
 
     private _beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
 
-    constructor(store: Store, storageService: StorageServiceProxy, projectId: string, currentBranch: string) {
+    constructor(
+        store: Store,
+        storageService: StorageServiceProxy,
+        projectId: string,
+        currentBranch: string,
+    ) {
         this._store = store;
         this._storageService = storageService;
         this._projectId = projectId;
@@ -44,7 +62,9 @@ export class OptimisticProjectSyncService {
         this._localCommitGraph = new CommitGraph();
 
         this._beforeUnloadHandler = (e: BeforeUnloadEvent) => {
-            if (!this._uncommittedDelta.isEmpty() || !this._expectedDelta.isEmpty()) {
+            if (!this._unstagedChanges.isEmpty() ||
+                !this._stagedChanges.isEmpty() ||
+                !this._expectedDelta.isEmpty()) {
                 e.preventDefault();
             }
         };
@@ -52,7 +72,7 @@ export class OptimisticProjectSyncService {
     }
 
     get uncommittedDelta(): Delta {
-        return this._uncommittedDelta;
+        return this._unstagedChanges;
     }
 
     /**
@@ -96,26 +116,59 @@ export class OptimisticProjectSyncService {
             return;
         }
         if (!delta.isEmpty()) {
-            this._uncommittedDelta.mergeWithPriority(delta);
+            this._unstagedChanges.mergeWithPriority(delta);
         }
     }
 
     /**
-     * Send accumulated uncommitted changes as a commit to the authority.
-     * Returns null if there's nothing to flush, otherwise a Promise.
+     * Stage accumulated uncommitted changes for commit.
+     * The actual network commit is debounced and serialized (one in-flight at a time).
+     * Returns true if data was staged, false if there was nothing to stage.
      */
-    saveUncommittedChanges(): Promise<void> | null {
-        if (this._uncommittedDelta.isEmpty()) {
-            return null;
+    saveUncommittedChanges(): boolean {
+        if (this._unstagedChanges.isEmpty()) {
+            return false;
         }
 
-        log.info('Flushing uncommitted delta');
+        log.info('Staging uncommitted delta');
 
-        let delta = this._uncommittedDelta;
-        this._uncommittedDelta = new Delta({});
+        // Move uncommitted → staged. This replaces _uncommittedDelta with a new
+        // object so that undo references (which hold the old object) remain stable.
+        this._stagedChanges.mergeWithPriority(this._unstagedChanges);
+        this._unstagedChanges = new Delta({});
+
+        this._scheduleFlush();
+        return true;
+    }
+
+    private _scheduleFlush() {
+        // Reset the debounce timer on each call (trailing-edge debounce)
+        if (this._flushTimer !== null) {
+            clearTimeout(this._flushTimer);
+        }
+        this._flushTimer = setTimeout(() => {
+            this._flushTimer = null;
+            this._flushStaged();
+        }, FLUSH_DEBOUNCE_MS);
+    }
+
+    private _flushStaged() {
+        if (this._stagedChanges.isEmpty()) {
+            return;
+        }
+        if (this._commitInFlight) {
+            // Will be retried when the current commit's repo-update arrives
+            return;
+        }
+
+        this._commitInFlight = true;
+        const delta = this._stagedChanges;
+        this._stagedChanges = new Delta({});
         this._expectedDelta.mergeWithPriority(delta);
 
-        return this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
+        appActions.setSaveStatus(pamet.appViewState, 'saving');
+
+        this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
             .then((result) => {
                 const appliedDeltaData = result.commit.delta_data;
                 const unappliedDelta = delta.copy();
@@ -130,7 +183,7 @@ export class OptimisticProjectSyncService {
                 }
             })
             .catch((error) => {
-                log.error('Auto-commit failed. Returning delta to uncommitted changes.', {
+                log.error('Auto-commit failed. Returning delta to staged.', {
                     error,
                     projectId: this._projectId,
                     delta: delta.data,
@@ -141,13 +194,25 @@ export class OptimisticProjectSyncService {
                 const reversedFailed = delta.reversed();
                 this._expectedDelta.mergeWithPriority(reversedFailed);
 
-                // Put the failed changes back so the next flush retries them.
-                delta.mergeWithPriority(this._uncommittedDelta);
-                this._uncommittedDelta = delta;
+                // Put the failed changes back into staged so the next flush retries them.
+                delta.mergeWithPriority(this._stagedChanges);
+                this._stagedChanges = delta;
 
-                // Re-throw so the caller knows it failed
-                throw error;
+                this._commitInFlight = false;
+                appActions.setSaveStatus(pamet.appViewState, 'error');
+
+                // Re-schedule flush for retry
+                this._scheduleFlush();
             });
+
+        // Safety timeout: if we never receive a repoUpdate, unblock commits
+        this._commitSafetyTimer = setTimeout(() => {
+            if (this._commitInFlight) {
+                log.warning('Commit safety timeout reached — clearing in-flight flag');
+                this._commitInFlight = false;
+                this._flushStaged();
+            }
+        }, COMMIT_SAFETY_TIMEOUT_MS);
     }
 
     /**
@@ -171,6 +236,7 @@ export class OptimisticProjectSyncService {
 
             if (!repoSyncDelta) {
                 log.info('No repo sync changes needed');
+                this._onCommitSettled();
                 return;
             }
 
@@ -189,6 +255,23 @@ export class OptimisticProjectSyncService {
         } catch (e) {
             log.error('Error applying repo update:', e);
             alert('Critical error (check the console). Please reload the page');
+        }
+
+        this._onCommitSettled();
+    }
+
+    private _onCommitSettled() {
+        this._commitInFlight = false;
+        if (this._commitSafetyTimer !== null) {
+            clearTimeout(this._commitSafetyTimer);
+            this._commitSafetyTimer = null;
+        }
+
+        // If there's more staged work, flush it now
+        if (!this._stagedChanges.isEmpty()) {
+            this._flushStaged();
+        } else if (this._unstagedChanges.isEmpty()) {
+            appActions.setSaveStatus(pamet.appViewState, 'saved');
         }
     }
 }
