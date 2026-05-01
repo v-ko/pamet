@@ -259,6 +259,7 @@ def main(
     # Workaround for Qt bug: QML WebEngineView renders black/stale after
     # minimize-restore with OpenGL and transparent with Vulkan RHI backends.
     # Software rendering is unaffected.
+    # https://qt-project.atlassian.net/browse/PYSIDE-3323
     if not os.environ.get("QT_QUICK_BACKEND"):
         os.environ["QT_QUICK_BACKEND"] = "software"
         log.info(

@@ -5,6 +5,8 @@ import attrs
 from fusion import Entity, entity_type
 from fusion.util import current_time, timestamp
 
+from pamet.services.constants import CANVAS_FILE_EXT
+
 
 @entity_type
 class Page(Entity):
@@ -17,7 +19,14 @@ class Page(Entity):
 
     @property
     def name(self) -> str:
-        return PurePosixPath(self.path).stem if self.path else ""
+        if not self.path:
+            return ""
+        filename = PurePosixPath(self.path).name
+        if not filename.endswith(CANVAS_FILE_EXT):
+            raise ValueError(
+                f"Page path {self.path!r} does not end with {CANVAS_FILE_EXT!r}"
+            )
+        return filename[: -len(CANVAS_FILE_EXT)]
 
     @property
     def folder(self) -> str:

@@ -2,7 +2,7 @@ import { getLogger } from 'fusion/logging';
 import type { ProjectStorageManager, StorageAddon } from 'fusion/storage/management/ProjectStorageManager';
 import { Delta, type DeltaData } from 'fusion/model/Delta';
 import { Change } from 'fusion/model/Change';
-import { stemFromPath } from '@/model/Page';
+import { canvasPageNameFromPath } from '@/model/Page';
 import {
     linkUpdatesForPageRename,
     linkUpdatesForPageDelete,
@@ -176,14 +176,14 @@ export class DesktopStorageAddon implements StorageAddon {
             if (change.isUpdate() && 'path' in fwd && 'path' in rev) {
                 // Page renamed — update link text and page_ref on matching notes
                 const newPath = fwd.path as string;
-                const newName = stemFromPath(newPath);
+                const newName = canvasPageNameFromPath(newPath);
                 extraChanges.push(
                     ...linkUpdatesForPageRename(headStore, change.entityId, newName, newPath)
                         .map(u => Change.update(u.original, u.updated))
                 );
             } else if (change.isDelete()) {
                 // Page deleted — mark linking notes
-                const pageName = stemFromPath(rev.path as string);
+                const pageName = canvasPageNameFromPath(rev.path as string);
                 extraChanges.push(
                     ...linkUpdatesForPageDelete(headStore, change.entityId, pageName)
                         .map(u => Change.update(u.original, u.updated))

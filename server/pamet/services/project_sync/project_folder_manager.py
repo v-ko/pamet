@@ -18,7 +18,7 @@ from pamet.desktop_app.config import (
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page
 from pamet.services.backup import BackupService
-from pamet.services.constants import MAX_WALK_ENTRIES
+from pamet.services.constants import CANVAS_FILE_EXT, MAX_WALK_ENTRIES
 from pamet.services.file_system_watcher import FileSystemWatcher
 from pamet.storage.canvas_html import write_canvas_file
 from pamet.storage.file_storage_adapter import FileStorageAdapter
@@ -26,7 +26,6 @@ from pamet.storage.migrations.manager import (
     MIGRATION_BACKUP_DIR_NAMES,
     MigrationManager,
 )
-from pamet.storage.migrations.v4_to_v5 import CANVAS_FILE_EXT
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 from pamet.storage.service_utils import (
     CanvasParseError,
@@ -197,7 +196,7 @@ class ProjectFolderManager:
 
     def _iter_canvas_page_paths(self) -> Iterator[Path]:
         for path in self._walk_project():
-            if not path.is_dir() and path.suffix == CANVAS_FILE_EXT:
+            if not path.is_dir() and path.name.endswith(CANVAS_FILE_EXT):
                 yield path
 
     def compute_bootstrap_delta(self) -> dict[str, Any]:

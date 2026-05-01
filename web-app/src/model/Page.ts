@@ -1,13 +1,16 @@
 import { Entity, EntityData, entityType } from "fusion/model/Entity"
 import { timestamp } from 'fusion/util/base';
 import { PametRoute } from "@/services/routing/PametRoute";
+import { CANVAS_EXT } from "@/app/constants";
 
-/** Extract the filename stem (name without extension) from a POSIX path. */
-export function stemFromPath(path: string): string {
+/** Extract the page name from a path by stripping the canvas extension. */
+export function canvasPageNameFromPath(path: string): string {
   const lastSlash = path.lastIndexOf('/');
   const filename = lastSlash !== -1 ? path.substring(lastSlash + 1) : path;
-  const dotIndex = filename.lastIndexOf('.');
-  return dotIndex !== -1 ? filename.substring(0, dotIndex) : filename;
+  if (!filename.endsWith(CANVAS_EXT)) {
+    throw new Error(`Page path '${path}' does not end with '${CANVAS_EXT}'`);
+  }
+  return filename.substring(0, filename.length - CANVAS_EXT.length);
 }
 
 export interface TourSegment {
@@ -66,7 +69,7 @@ export class Page extends Entity<PageData> {
   /** Derived: filename stem without extension */
   get name(): string {
     if (!this.path) return '';
-    return stemFromPath(this.path);
+    return canvasPageNameFromPath(this.path);
   }
   /** Derived: parent directory (empty string for root) */
   get folder(): string {

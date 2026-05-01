@@ -8,7 +8,6 @@ from fusion.logging import get_logger
 from .v2_to_v3 import V2_BACKUP_FOLDER_NAME
 from .v3_to_v4 import V3_BACKUP_FOLDER_NAME
 from .v4_to_v5 import (
-    CANVAS_FILE_EXT,
     V4_BACKUP_FOLDER_NAME,
     is_v4_page_file,
     migrate_v4_to_v5,

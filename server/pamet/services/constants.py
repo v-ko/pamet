@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+# V5 canvas file extension
+CANVAS_FILE_EXT = ".canvas.html"
+
 # Media-related constants (server-side)
 
 # MIME type to extension mapping (normalized to lowercase)

@@ -32,8 +32,9 @@ from ..file_system.color_roles import legacy_normalized_rgba_to_role
 
 log = get_logger(__name__)
 
+from pamet.services.constants import CANVAS_FILE_EXT
+
 V4_FILE_EXT = ".pam4.json"
-CANVAS_FILE_EXT = ".canvas"
 PAGE_SCHEMA_VERSION = 5
 
 DEFAULT_TEXT_COLOR_ROLE = "onDefault"

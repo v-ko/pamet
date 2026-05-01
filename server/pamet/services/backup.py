@@ -30,6 +30,7 @@ from fusion.util import current_time, timestamp
 
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page
+from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.storage.canvas_html import dump_canvas_html
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 
@@ -47,7 +48,6 @@ BACKUP_INTERVAL = 1 * HOUR
 PRUNE_INTERVAL = DAY
 
 TIME_FORMAT = "%Y-%m-%dT%H-%M-%S%z"
-CANVAS_EXT = ".canvas"
 
 
 def datetime_from_backup_path(path: Path) -> datetime:
@@ -64,8 +64,8 @@ def file_timestamp(dt: datetime) -> str:
 
 def _page_path_stem(page_path: str) -> str:
     """Return the page's project-relative path without the .canvas extension."""
-    if page_path.endswith(CANVAS_EXT):
-        return page_path[: -len(CANVAS_EXT)]
+    if page_path.endswith(CANVAS_FILE_EXT):
+        return page_path[: -len(CANVAS_FILE_EXT)]
     return page_path
 
 
@@ -154,14 +154,14 @@ class BackupService:
         return self.backup_folder / page_path_stem
 
     def recent_backup_path(self, page_path_stem: str, dt: datetime) -> Path:
-        name = f"{BACKUP}_{file_timestamp(dt)}{CANVAS_EXT}"
+        name = f"{BACKUP}_{file_timestamp(dt)}{CANVAS_FILE_EXT}"
         return self.page_backup_folder(page_path_stem) / name
 
     def permanent_backups_folder(self, page_path_stem: str, dt: datetime) -> Path:
         return self.page_backup_folder(page_path_stem) / str(dt.year)
 
     def permanent_backup_path(self, page_path_stem: str, dt: datetime) -> Path:
-        name = f"{BACKUP}_{file_timestamp(dt)}{CANVAS_EXT}"
+        name = f"{BACKUP}_{file_timestamp(dt)}{CANVAS_FILE_EXT}"
         return self.permanent_backups_folder(page_path_stem, dt) / name
 
     def _page_path_stem_for_id(self, page_id: str) -> str | None:

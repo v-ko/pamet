@@ -14,9 +14,9 @@ BACKUP_INTERVAL = 1
 PRUNE_INTERVAL = 1.5
 PERMANENT_BACKUP_AGE = 30
 
-PAGE_PATH = "test.canvas"
+PAGE_PATH = "test.canvas.html"
 PAGE_PATH_STEM = "test"
-SUB_PAGE_PATH = "notes/deep.canvas"
+SUB_PAGE_PATH = "notes/deep.canvas.html"
 SUB_PAGE_PATH_STEM = "notes/deep"
 
 
@@ -49,7 +49,7 @@ def test_backup_basic(tmp_path):
     backups = svc.recent_backups_for_page(PAGE_PATH_STEM)
     assert len(backups) == 1
     assert backups[0].exists()
-    assert backups[0].suffix == ".canvas"
+    assert backups[0].name.endswith(".canvas.html")
 
 
 def test_backup_subfolder_page(tmp_path):

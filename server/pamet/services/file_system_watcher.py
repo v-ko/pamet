@@ -11,7 +11,7 @@ from fusion.storage.delta import Delta
 from PySide6.QtCore import QFileSystemWatcher, QTimer
 
 from pamet.model.page import Page
-from pamet.storage.migrations.v4_to_v5 import CANVAS_FILE_EXT
+from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.storage.service_utils import (
     CanvasParseError,
     ForeignCanvasFile,
@@ -286,7 +286,7 @@ class FileSystemWatcher:
             except OSError:
                 continue
             for entry in entries:
-                if entry.is_file() and entry.suffix == CANVAS_FILE_EXT:
+                if entry.is_file() and entry.name.endswith(CANVAS_FILE_EXT):
                     try:
                         entities = read_canvas_file(entry, repo_root)
                     except (ForeignCanvasFile, CanvasParseError):
