@@ -238,6 +238,8 @@ ApplicationWindow {
                     url: model.url
                     profile: webProfile
                     settings.forceDarkMode: root._paletteIsDark
+                    settings.javascriptCanAccessClipboard: true
+                    settings.javascriptCanPaste: true
 
                     onLoadingChanged: function(loadReq) {
                         if (loadReq.status === WebEngineView.LoadSucceededStatus) {
