@@ -114,10 +114,6 @@ export class PageViewState {
         // Create element view states
         for (let note of notes) {
             this.addViewStateForElement(note);
-
-            if (note.content.image?.path) {
-                this.addUrlForFilePath(note.content.image.path);
-            }
         }
         for (let arrow of arrows) {
             this.addViewStateForElement(arrow);
@@ -189,6 +185,9 @@ export class PageViewState {
                 this._addViewStateForNote(element);
             } catch (e) {
                 log.error('Error adding note view state for note', element, e)
+            }
+            if (element.content.image?.path) {
+                this.addUrlForFilePath(element.content.image.path);
             }
         } else if (element instanceof Arrow) {
             try {

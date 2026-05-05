@@ -40,6 +40,7 @@ export const NoteVirtualComponent = observer(({ noteViewState, controller }: Not
     <img
       key={url}
       src={url}
+      crossOrigin="use-credentials"
       alt=""
       style={{ display: 'none' }}
       onLoad={() => {

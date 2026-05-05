@@ -42,6 +42,7 @@ class DesktopServer:
         config_dir: Path,
         port: int | None = None,
         web_app_static_build_path: Path | str | None = None,
+        frontend_dev_server_url: str | None = None,
     ):
         self.config_dir = Path(config_dir)
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
@@ -60,13 +61,14 @@ class DesktopServer:
             yield
 
         self.app = FastAPI(lifespan=_lifespan)
-        self.app.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        if frontend_dev_server_url:
+            self.app.add_middleware(
+                CORSMiddleware,
+                allow_origins=[frontend_dev_server_url.rstrip("/")],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
 
         self.app.state.web_app_static_build_path = self.web_app_static_build_path
         self.app.state.desktop_access_token = self.desktop_access_token

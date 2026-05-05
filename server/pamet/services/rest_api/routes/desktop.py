@@ -440,7 +440,9 @@ async def get_file(
     path = pfm.file_storage.get_path(file_path)
     if path is None:
         raise HTTPException(status_code=404, detail="File not found")
-    return FileResponse(path)
+    # Vary: Origin prevents the browser from reusing a non-CORS cached response
+    # for a CORS request (crossOrigin="use-credentials" on <img> elements).
+    return FileResponse(path, headers={"Vary": "Origin"})
 
 
 @desktop_router.post(

@@ -14,6 +14,7 @@ import { PageViewState } from "@/views/page/PageViewState";
 import { buildHashTree } from "fusion/storage/version-control/HashTree";
 import { Rectangle } from "fusion/primitives/Rectangle";
 import { parseClipboardContents } from "@/app/util";
+import { writeSelectedNotesToOsClipboard } from "@/app/clipboard-utils";
 import { pasteSpecial as pasteSpecialProcedure, pasteInternal as pasteInternalProcedure, cutInternal as cutInternalProcedure } from "@/procedures/page";
 import { DEFAULT_VIEW_HEIGHT } from "@/app/constants";
 import { PametRoute } from "@/services/routing/PametRoute";
@@ -70,11 +71,10 @@ function computeSelectionAnchor(selectedNotes: Note[], mousePosPix: Point2D | nu
 
     return anchor;
 }
+
 class PametCommands {
     @command('Create new note', '!historyVisible')
     createNewNote() {
-        console.log('createNewNote command executed')
-
         // Get the real mouse pos on canvas (if it's over the viewport)
         let pageVS = getCurrentPageViewState();
         let mousePos = pamet.appViewState.mouseState.position
@@ -282,6 +282,7 @@ class PametCommands {
         const relativeTo = computeSelectionAnchor(selectedNotes, appViewState.mouseState.positionOnPress, pageVS);
 
         pageActions.copySelectedElements(appViewState, pageVS, relativeTo);
+        writeSelectedNotesToOsClipboard(selectedNotes, pageVS);
     }
 
     @command('Cut', 'canvasFocus && hasSelection')
@@ -300,6 +301,7 @@ class PametCommands {
         // Compute relativeTo via shared helper
         const relativeTo = computeSelectionAnchor(selectedNotes, appViewState.mouseState.position, pageVS);
 
+        writeSelectedNotesToOsClipboard(selectedNotes, pageVS);
         cutInternalProcedure(appViewState, pageVS, relativeTo).catch((error) => {
             log.error('Error in internal cut procedure:', error);
         });

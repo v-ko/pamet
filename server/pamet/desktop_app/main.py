@@ -253,6 +253,7 @@ def main(
     local_server = DesktopServer(
         config_dir=PAMET_CONFIG_DIR,
         web_app_static_build_path=static_build_path,
+        frontend_dev_server_url=frontend_dev_server,
     )
     local_server.start()
 

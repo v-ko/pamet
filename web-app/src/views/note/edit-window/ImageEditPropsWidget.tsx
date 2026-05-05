@@ -245,9 +245,8 @@ export const ImageEditPropsWidget: React.FC<ImageEditPropsWidgetProps> = ({ note
         const projectId = pamet.appViewState.currentProjectId;
         if (userId && projectId) {
             const route = fileRoute(noteData.content.image.path, userId, projectId);
-            route.host = window.location.host;
-            route.protocol = window.location.protocol;
-            imageUrl = route.toString();
+            const baseUrl = window.PAMET_DESKTOP_API_BASE_URL ?? '';
+            imageUrl = baseUrl + route.toRelativeReference();
         }
     }
 
