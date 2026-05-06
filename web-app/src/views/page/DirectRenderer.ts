@@ -494,7 +494,6 @@ export class DirectRenderer {
 
             // Draw the currently created arrow
             if (pageVS.newArrowViewState !== null) {
-                console.log('Drawing new arrow', pageVS.newArrowViewState);
                 // Head should be null, and we want to set it to the mouse pos
                 let arrow = pageVS.newArrowViewState.arrow()
                 arrow.setHead(realMousePos, null, ArrowAnchorOnNoteType.none);

@@ -24,7 +24,7 @@ export function switchProject(projectId: string | null): Promise<void> {
     const doSwitch = async () => {
         log.info('Switching to project', projectId);
         const appViewState = pamet.appViewState;
-        appActions.updateSystemDialogState(appViewState, {title: 'Switching project...'});
+        appActions.updateSystemDialogState(appViewState, {title: 'Loading project...'});
 
         try {
             const currentProjectId = appViewState.currentProjectId;

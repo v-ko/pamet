@@ -61,9 +61,11 @@ export class ArrowViewState extends ElementViewState {
     }
 
     updateFromChange(change: Change) {
+        if (change.isEmpty()) {
+            return;
+        }
         if (!change.isUpdate()) {
             throw Error(`Can only update from an update type change ${change.data}`);
-            // return;
         }
         log.info('Updating arrow view state from change', change);
         let update = change.forwardComponent as Partial<ArrowData>;

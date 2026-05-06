@@ -422,44 +422,34 @@ class PageActions {
       return;
     }
 
-    // Split into notes and arrows and where a note has connected arrows -
-    // add them for removal too
-    let notesForRemoval: Note[] = [];
-    let arrowsForRemoval: Arrow[] = [];
-    let noteIds = new Set<string>(); // For checking if the note has a connected arrow
+    // Split selected elements into notes and arrows
+    let notesForRemoval = new Map<string, Note>();
+    let arrowsForRemoval = new Map<string, Arrow>();
     let pageId: string = elements[0].parentId;
 
     for (let element of elements) {
-      if (element instanceof Note) {
-        notesForRemoval.push(element)
-        noteIds.add(element.id)
-      } else if (element instanceof Arrow) {
-        arrowsForRemoval.push(element)
-      }
-
-      // Verify pageId
       if (element.parentId !== pageId) {
         throw Error('Trying to delete elements from different pages')
       }
-    }
-
-    // Get the arrows that are connected to the notes (check just one page)
-    let allArrows = pamet.arrows({ parentId: pageId });
-    for (let arrow of allArrows) {
-      // If the arrow has tail/head in the notesForRemoval - add it of removal
-      if (arrow.tailNoteId && noteIds.has(arrow.tailNoteId) ||
-        arrow.headNoteId && noteIds.has(arrow.headNoteId)) {
-        arrowsForRemoval.push(arrow);
+      if (element instanceof Note) {
+        notesForRemoval.set(element.id, element)
+      } else if (element instanceof Arrow) {
+        arrowsForRemoval.set(element.id, element)
       }
     }
 
-    // Remove the notes
-    for (let note of notesForRemoval) {
-      pamet.removeNote(note);
+    // Also remove arrows connected to deleted notes
+    for (let arrow of pamet.arrows({ parentId: pageId })) {
+      if (arrow.tailNoteId && notesForRemoval.has(arrow.tailNoteId) ||
+        arrow.headNoteId && notesForRemoval.has(arrow.headNoteId)) {
+        arrowsForRemoval.set(arrow.id, arrow);
+      }
     }
 
-    // Remove the arrows
-    for (let arrow of arrowsForRemoval) {
+    for (let note of notesForRemoval.values()) {
+      pamet.removeNote(note);
+    }
+    for (let arrow of arrowsForRemoval.values()) {
       pamet.removeArrow(arrow);
     }
 
