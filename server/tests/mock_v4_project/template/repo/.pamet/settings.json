@@ -3,7 +3,7 @@
     "backups_enabled": true,
     "backup_folder": "{template_root}/repo/.pamet/backups",
     "home_page": "17203d2c",
-    "record_all_changes": false,
+    "record_all_changes": true,
     "semantic_search_enabled": false,
     "media_store_path": "{template_root}/repo/.pamet/media"
 }

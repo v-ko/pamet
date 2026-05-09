@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import threading
-from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -18,49 +17,19 @@ from pamet.desktop_app.config import (
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page
 from pamet.services.backup import BackupService
-from pamet.services.constants import CANVAS_FILE_EXT, MAX_WALK_ENTRIES
 from pamet.services.file_system_watcher import FileSystemWatcher
 from pamet.storage.canvas_html import write_canvas_file
 from pamet.storage.file_storage_adapter import FileStorageAdapter
-from pamet.storage.migrations.manager import (
-    MIGRATION_BACKUP_DIR_NAMES,
-    MigrationManager,
-)
+from pamet.storage.migrations.manager import MigrationManager
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
+from pamet.storage.project_walk import iter_canvas_paths, walk_project
 from pamet.storage.service_utils import (
     CanvasParseError,
     ForeignCanvasFile,
-    ProjectTooLargeError,
     read_canvas_file,
 )
 
 log = get_logger(__name__)
-
-_IGNORED_DIRS = {".pamet"} | MIGRATION_BACKUP_DIR_NAMES
-
-
-def _matches_exclude(name: str, rel_path: str, patterns: list[str]) -> bool:
-    """Match a file/dir name against exclude patterns.
-
-    Supports:
-      - bare names/globs: matched against the basename (e.g. "build", "*.tmp")
-      - **/name patterns: matched against the basename (any depth)
-      - path patterns (contain /): matched against the relative path from repo root
-    """
-    for pat in patterns:
-        if pat.startswith("**/"):
-            # "**/<glob>" → match basename at any depth
-            if fnmatch(name, pat[3:]):
-                return True
-        elif "/" in pat:
-            # path-relative pattern → match against relative path
-            if fnmatch(rel_path, pat):
-                return True
-        else:
-            # bare name/glob → match against basename
-            if fnmatch(name, pat):
-                return True
-    return False
 
 
 class ProjectFolderManager:
@@ -148,56 +117,13 @@ class ProjectFolderManager:
         *,
         budget: list[int] | None = None,
     ) -> Iterator[Path]:
-        """Recursively yield all non-ignored paths under *root*.
-
-        Yields both directories and files.  Directories are yielded before
-        their contents (pre-order).  Uses ``os.scandir`` for a single clear
-        recursion with consistent ignore/exclude handling everywhere.
-
-        *budget* is a one-element list used as a mutable counter.  When the
-        counter reaches zero, ``ProjectTooLargeError`` is raised.
-        """
-        if root is None:
-            root = self.repo_root
-        if budget is None:
-            budget = [MAX_WALK_ENTRIES]
-
-        try:
-            entries = sorted(root.iterdir(), key=lambda p: p.name)
-        except OSError:
-            return
-
-        for entry in entries:
-            budget[0] -= 1
-            if budget[0] <= 0:
-                raise ProjectTooLargeError(
-                    f"Project folder {self.repo_root} exceeds the walk "
-                    f"budget of {MAX_WALK_ENTRIES} filesystem entries"
-                )
-
-            if entry.is_symlink():
-                continue
-
-            rel = entry.relative_to(self.repo_root).as_posix()
-
-            if entry.is_dir():
-                if entry.name in _IGNORED_DIRS:
-                    continue
-                if _matches_exclude(entry.name, rel, self._exclude_patterns):
-                    continue
-                yield entry
-                yield from self._walk_project(entry, budget=budget)
-            else:
-                if _matches_exclude(entry.name, rel, self._exclude_patterns):
-                    continue
-                yield entry
+        """Recursively yield all non-ignored paths under *root*."""
+        return walk_project(self.repo_root, self._exclude_patterns, root, budget=budget)
 
     # -- Canvas file I/O -------------------------------------------------------
 
     def _iter_canvas_page_paths(self) -> Iterator[Path]:
-        for path in self._walk_project():
-            if not path.is_dir() and path.name.endswith(CANVAS_FILE_EXT):
-                yield path
+        return iter_canvas_paths(self.repo_root, self._exclude_patterns)
 
     def compute_bootstrap_delta(self) -> dict[str, Any]:
         """Return the full store state as wire-format DeltaData of CREATE entries."""

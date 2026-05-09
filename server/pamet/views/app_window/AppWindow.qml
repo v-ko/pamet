@@ -189,7 +189,7 @@ ApplicationWindow {
     }
 
     // ── Shared web engine profile with desktop config injection ────
-    WebEngineProfile {
+    WebEngineProfilePrototype {
         id: webProfile
         storageName: "pamet-desktop-qml"
         Component.onCompleted: {

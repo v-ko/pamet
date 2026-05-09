@@ -51,14 +51,8 @@ export class FocusManager {
 
   public updateContextOnFocus(registration: FocusRegistration) {
     /**
-     * Whem focus is on the element matched by the selector - the
+     * When focus is on the element matched by the selector - the
      * contextKey is set to valOnFocus, and vice versa.
-     * These registrations are also used when correcting focus. If the
-     * focused element has no tabindex - focus is automatically switched to
-     * 1. The last focused element (if it has tabindex and is present)
-     * 2. The registered parent of the focused element
-     * 3. Any registered element
-     * 4. The element with the highest tab index on the page.
      */
     if (this.focusRegistrations.has(registration.selector)) {
       throw new Error(`Focus registration for selector "${registration.selector}" already exists.`);
@@ -77,7 +71,6 @@ export class FocusManager {
   }
 
   private reevaluateVisibilityContexts() {
-    // Clear stale lastFocusedElement if it's no longer in the DOM
     if (this.lastFocusedElement && !this.lastFocusedElement.isConnected) {
       this.lastFocusedElement = null;
     }
@@ -149,8 +142,7 @@ export class FocusManager {
     if (target && target.tabIndex > -1) {
       this.lastFocusedElement = target;
     } else if (target && target.tabIndex === -1) {
-      // log.info('Focused element has tabIndex -1, correcting focus.');
-      // Correct focus always sets to a tabIndex != -1 element, so no recursion risk supposedly
+      // Correct focus always sets to a tabIndex != -1 element, so no recursion risk
       this.correctFocus();
     }
   }
@@ -183,10 +175,12 @@ export class FocusManager {
 
   private correctFocus(): void {
     /**
-     * Corrects focus to a sensible element based on the last focused element or
-     * registered elements.
+     * Corrects focus when it is lost (element removed) or lands on a
+     * non-focusable element.
      *
-     * Always switches to an element with a tabindex set.
+     * 1. If the last focused element is still in the DOM, return to it.
+     * 2. Otherwise fall back to the visible element with the lowest tabIndex
+     *    (in practice the page-view canvas at tabIndex=0).
      */
 
     // Bail out if focus already landed on a valid element. This happens
@@ -202,51 +196,18 @@ export class FocusManager {
 
     let elementToFocus: HTMLElement | null = null;
 
-    // Strategy 1: Go back to what you were doing.
-    // We check what was the last thing you clicked on.
-    if (this.lastFocusedElement && this.lastFocusedElement.isConnected) {
-      // Find the main component area (e.g., the note editor or the page view) that contains the last element.
-      // We pick the most specific one (e.g., note editor wins over the page view if it's inside it).
-      const matchedElements: Map<HTMLElement, FocusRegistration> = new Map();
-      for (const reg of this.focusRegistrations.values()) {
-        const el = this.lastFocusedElement.closest(reg.selector);
-        if (el) {
-          matchedElements.set(el as HTMLElement, reg);
-        }
-      }
-      const dominantElement = this.getDominantElement(Array.from(matchedElements.keys()));
-
-      if (dominantElement) {
-        // If that main area itself can be focused, let's focus it.
-        if (dominantElement.matches('[tabindex]:not([tabindex="-1"])')) {
-          elementToFocus = dominantElement;
-        } else {
-          // Otherwise, find the first thing we can focus inside it.
-          elementToFocus = dominantElement.querySelector<HTMLElement>('[tabindex]:not([tabindex="-1"])');
-        }
-      }
+    // Strategy 1: return to the last focused element if it's still around
+    if (this.lastFocusedElement && this.lastFocusedElement.isConnected
+        && isElementVisible(this.lastFocusedElement) && this.lastFocusedElement.tabIndex >= 0) {
+      elementToFocus = this.lastFocusedElement;
     }
 
-    // Strategy 2: If strategy 1 fails, find any registered component on screen.
-    // This is a fallback in case the last thing you were doing is now gone.
+    // Strategy 2: pick the visible focusable element with the lowest tabIndex
     if (!elementToFocus) {
-      // Find all visible registered components (e.g., page view, note editor).
-      const allVisibleElements = [];
-      for (const reg of this.focusRegistrations.values()) {
-        const el = document.querySelector(reg.selector) as HTMLElement | null;
-        if (el && isElementVisible(el)) { // is visible
-          allVisibleElements.push(el);
-        }
-      }
-      // Pick the most specific one that's visible.
-      const dominantVisibleElement = this.getDominantElement(allVisibleElements);
-      if (dominantVisibleElement) {
-        // If that main area itself can be focused, let's focus it.
-        if (dominantVisibleElement.matches('[tabindex]:not([tabindex="-1"])')) {
-          elementToFocus = dominantVisibleElement;
-        } else {
-          // Otherwise, find the first thing we can focus inside it.
-          elementToFocus = dominantVisibleElement.querySelector<HTMLElement>('[tabindex]:not([tabindex="-1"])');
+      const candidates = this.getVisibleFocusableElements();
+      for (const el of candidates) {
+        if (!elementToFocus || el.tabIndex < elementToFocus.tabIndex) {
+          elementToFocus = el;
         }
       }
     }

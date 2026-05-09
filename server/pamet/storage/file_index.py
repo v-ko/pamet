@@ -14,17 +14,14 @@ import peewee as pw
 
 from pamet.services.constants import CONTENT_HASH_HEX_LEN
 
-_db_proxy = pw.DatabaseProxy()
-
 
 class FileIndexEntry(pw.Model):
-    rel_path = pw.TextField(primary_key=True)
-    hash = pw.TextField()
-    mtime_ns = pw.BigIntegerField()
+    rel_path: str = pw.TextField(primary_key=True)  # type: ignore[assignment]
+    hash: str = pw.TextField()  # type: ignore[assignment]
+    mtime_ns: int = pw.BigIntegerField()  # type: ignore[assignment]
 
-    class Meta:
-        database = _db_proxy
-        table_name = "file_index"
+
+_ALL_MODELS = [FileIndexEntry]
 
 
 class FileIndex:
@@ -33,9 +30,12 @@ class FileIndex:
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
         self._db = pw.SqliteDatabase(str(db_path), pragmas={"journal_mode": "wal"})
-        _db_proxy.initialize(self._db)
         self._db.connect()
-        self._db.create_tables([FileIndexEntry])
+        with self._db.bind_ctx(_ALL_MODELS):
+            self._db.create_tables(_ALL_MODELS)
+
+    def _ctx(self):
+        return self._db.bind_ctx(_ALL_MODELS)
 
     def close(self) -> None:
         if not self._db.is_closed():
@@ -50,7 +50,7 @@ class FileIndex:
         paths.  Entries not in *referenced* are pruned.  Hashes are only
         recomputed when mtime_ns differs from the cached value.
         """
-        with self._db.atomic():
+        with self._ctx(), self._db.atomic():
             # Prune stale entries
             (
                 FileIndexEntry.delete()
@@ -80,22 +80,25 @@ class FileIndex:
     # -- Single-entry operations -----------------------------------------------
 
     def get_hash(self, rel_path: str) -> str | None:
-        entry = FileIndexEntry.get_or_none(FileIndexEntry.rel_path == rel_path)
-        return entry.hash if entry else None
+        with self._ctx():
+            entry = FileIndexEntry.get_or_none(FileIndexEntry.rel_path == rel_path)
+            return entry.hash if entry else None
 
     def put(self, rel_path: str, abs_path: Path) -> str:
         """Compute hash, store entry, return the hash."""
         st = abs_path.stat()
         content_hash = _compute_hash(abs_path)
-        FileIndexEntry.replace(
-            rel_path=rel_path,
-            hash=content_hash,
-            mtime_ns=st.st_mtime_ns,
-        ).execute()
+        with self._ctx():
+            FileIndexEntry.replace(
+                rel_path=rel_path,
+                hash=content_hash,
+                mtime_ns=st.st_mtime_ns,
+            ).execute()
         return content_hash
 
     def remove(self, rel_path: str) -> None:
-        FileIndexEntry.delete_by_id(rel_path)
+        with self._ctx():
+            FileIndexEntry.delete_by_id(rel_path)
 
 
 def _compute_hash(path: Path) -> str:

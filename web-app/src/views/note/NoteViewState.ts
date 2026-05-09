@@ -42,7 +42,7 @@ export class NoteViewState extends ElementViewState {
         return this.note();
     }
     updateFromChange(change: Change) {
-        if (!change.isUpdate) {
+        if (!change.isUpdate()) {
             log.error('Can only update from an update type change');
             return;
         }

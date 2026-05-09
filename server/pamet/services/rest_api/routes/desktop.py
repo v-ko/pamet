@@ -25,7 +25,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 import pamet
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
-from pamet.storage.service_utils import ProjectTooLargeError
+from pamet.storage.project_walk import ProjectTooLargeError
 
 log = get_logger(__name__)
 
