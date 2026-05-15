@@ -21,7 +21,8 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fusion.libs.command import get_command
 from fusion.libs.model import dump_to_dict
 from fusion.logging import get_logger
-from starlette.websockets import WebSocket, WebSocketDisconnect
+from fusion.storage.starlette_sync import StarletteSyncEndpoint
+from starlette.websockets import WebSocket
 
 import pamet
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
@@ -228,24 +229,11 @@ async def config_store_ws(ws: WebSocket):
             await ws.close(code=4401, reason="Unauthorized")
             return
 
-    log.info("Config store WS auth OK, accepting")
-    await ws.accept()
-
+    log.info("Config store WS auth OK")
     dss = pamet.desktop_storage_service()
-    sync = dss.config_sync_service
-
-    async def send(msg: dict) -> None:
-        await ws.send_json(msg)
-
-    async def receive() -> dict:
-        return await ws.receive_json()
-
-    try:
-        await sync.run(send, receive)
-    except WebSocketDisconnect:
-        log.info("Config store WS client disconnected")
-    except Exception as exc:
-        log.error("Config store WS error: %s", exc)
+    endpoint = StarletteSyncEndpoint(sync_service=dss.config_sync_service)
+    await endpoint.serve(ws)
+    log.info("Config store WS client disconnected")
 
 
 @desktop_router.websocket("/desktop/projects/{project_id}/changes/history/ws")
@@ -282,23 +270,10 @@ async def change_history_ws(ws: WebSocket, project_id: str):
         await ws.close(code=4503, reason="Change history not enabled for this project")
         return
 
-    log.info("Change history WS auth OK for project %s, accepting", project_id)
-    await ws.accept()
-
-    sync = svc.ws_sync_service
-
-    async def send(msg: dict) -> None:
-        await ws.send_json(msg)
-
-    async def receive() -> dict:
-        return await ws.receive_json()
-
-    try:
-        await sync.run(send, receive)
-    except WebSocketDisconnect:
-        log.info("Change history WS client disconnected (project %s)", project_id)
-    except Exception as exc:
-        log.error("Change history WS error (project %s): %s", project_id, exc)
+    log.info("Change history WS auth OK for project %s", project_id)
+    endpoint = StarletteSyncEndpoint(sync_service=svc.ws_sync_service)
+    await endpoint.serve(ws)
+    log.info("Change history WS client disconnected (project %s)", project_id)
 
 
 # ---------------------------------------------------------------------------

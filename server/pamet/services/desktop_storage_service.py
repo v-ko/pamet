@@ -6,7 +6,7 @@ from pathlib import Path
 from fusion.logging import get_logger
 from fusion.storage.delta import Delta
 from fusion.storage.in_memory_store import InMemoryStore
-from fusion.storage.ws_sync_service import WebSocketSyncService
+from fusion.storage.websocket_sync_service import WebSocketSyncService
 
 from pamet.model.config import ProjectProperties
 from pamet.services.config_file_manager import ConfigFileManager, DSSStatus
@@ -42,7 +42,7 @@ class DesktopStorageService:
         )
 
         # Wire persistence: store changes → file manager + backup config watcher
-        self._config_store.on_changes = self._on_config_changes
+        self._config_store.add_on_changes_callback(self._on_config_changes)
 
         # Load existing config from disk
         self._config_file_manager.load_app_config(self._config_store)
@@ -71,9 +71,8 @@ class DesktopStorageService:
         return None
 
     def _on_config_changes(self, delta: Delta, origin: str | None = None) -> None:
-        """Chained config store callback: persist to disk + broadcast via WS + react to backup settings."""
+        """Chained config store callback: persist to disk + react to settings."""
         self._config_file_manager.on_changes(delta, origin)
-        self._config_sync_service.on_store_changes(delta, origin)
         self._apply_backup_settings_from_delta(delta)
         self._apply_change_history_settings_from_delta(delta)
 

@@ -23,7 +23,7 @@ from fusion.storage.repository import (
     Repository,
 )
 from fusion.storage.sqlite_vcs_adapter import SqliteVcsAdapter
-from fusion.storage.ws_sync_service import WebSocketSyncService
+from fusion.storage.websocket_sync_service import WebSocketSyncService
 
 log = get_logger(__name__)
 

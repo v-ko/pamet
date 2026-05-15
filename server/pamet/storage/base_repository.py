@@ -19,6 +19,7 @@ class PametStore(Store):
     """
 
     def __init__(self) -> None:
+        super().__init__()
         self.home_page_id = None
 
     # -------------Pages CRUD-------------

@@ -190,16 +190,18 @@ ApplicationWindow {
 
     // ── Shared web engine profile with desktop config injection ────
     WebEngineProfilePrototype {
-        id: webProfile
+        id: webProfileProto
         storageName: "pamet-desktop-qml"
-        Component.onCompleted: {
-            userScripts.collection = [{
-                name: "desktopConfig",
-                sourceCode: backend.injectionScript,
-                injectionPoint: WebEngineScript.DocumentCreation,
-                worldId: WebEngineScript.MainWorld
-            }]
-        }
+    }
+    property WebEngineProfile webProfile
+    Component.onCompleted: {
+        webProfile = webProfileProto.instance()
+        webProfile.userScripts.collection = [{
+            name: "desktopConfig",
+            sourceCode: backend.injectionScript,
+            injectionPoint: WebEngineScript.DocumentCreation,
+            worldId: WebEngineScript.MainWorld
+        }]
     }
 
     // ── Content area ────────────────────────────────────────────────
