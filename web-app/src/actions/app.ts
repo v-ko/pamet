@@ -14,6 +14,7 @@ import type { ThemePreference, ThemeMode, CanvasTokens } from "@/app/theme";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { pageRefCorrectnessUpdates } from "@/model/correctness";
+import { ReplayService } from "@/services/ReplayService";
 
 let log = getLogger("AppActions");
 
@@ -39,6 +40,18 @@ class AppActions {
             state.currentPageId = null;
             state.currentPageViewState = null;
             state.pageError = PageError.NotFound;
+        }
+
+        // Update replay markers for the new page if replay panel is open
+        const replayVS = state.replayPanelVS;
+        const index = pamet.replayService.index;
+        if (replayVS && index && pageId) {
+            const markers = ReplayService.getPageRelevantIndices(index, pageId)
+                .map(i => ({ id: index.allCommits[i].id, timestamp: index.allCommits[i].timestamp }));
+            replayVS.setCommitMarkers(markers);
+            replayVS.currentMarkerIdx = markers.length > 0 ? markers.length - 1 : -1;
+            // Hide stale history overlay from the previous page
+            state.historyPageViewState = null;
         }
 
         // URL synchronization is handled by the RoutingService reaction (State -> URL)
@@ -124,7 +137,7 @@ class AppActions {
         appViewState.dialogMode = AppDialogMode.StorageStatus;
     }
 
-    @action
+    @action({ issuer: 'service' })
     updateSystemDialogState(appViewState: AppViewState, props: Partial<LoadingDialogState> | LoadingDialogState | null) {
         if (appViewState.loadingDialogState === null) {  // Open dialog
             if (props === null) {

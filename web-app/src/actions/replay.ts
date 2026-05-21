@@ -1,7 +1,7 @@
 import { AppViewState } from "@/views/AppViewState";
 import { getLogger } from "fusion/logging";
 import { action } from "fusion/registries/Action";
-import { ReplayPanelViewState, CommitMarker } from "@/views/replay/ReplayViewState";
+import { ReplayPanelViewState, CommitMarker, IntegrityOpState } from "@/views/replay/ReplayViewState";
 import { BackupPanelViewState } from "@/views/replay/BackupViewState";
 import { PageViewState } from "@/views/page/PageViewState";
 import { Note } from "@/model/Note";
@@ -97,8 +97,25 @@ class ReplayActions {
     }
 
     @action({ issuer: 'service' })
+    setIntegrityError(state: ReplayPanelViewState, hasError: boolean) {
+        state.hasIntegrityError = hasError;
+    }
+
+    @action({ issuer: 'service' })
+    setIntegrityOp(state: ReplayPanelViewState, op: IntegrityOpState) {
+        state.integrityOp = op;
+    }
+
+    @action({ issuer: 'service' })
     hideHistoryPage(appViewState: AppViewState) {
         appViewState.historyPageViewState = null;
+    }
+
+    @action({ issuer: 'service' })
+    seekToPage(state: ReplayPanelViewState, markers: CommitMarker[], targetCommitId: string) {
+        state.setCommitMarkers(markers);
+        const markerIdx = markers.findIndex(m => m.id === targetCommitId);
+        state.currentMarkerIdx = markerIdx >= 0 ? markerIdx : markers.length - 1;
     }
 }
 

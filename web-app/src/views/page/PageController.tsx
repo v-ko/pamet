@@ -14,6 +14,7 @@ import { HISTORY_MODIFY_MSG } from '@/services/ReplayService';
 import { CardNote } from '@/model/CardNote';
 import { Viewport } from '@/views/page/Viewport';
 import { PametRoute } from '@/services/routing/PametRoute';
+import { navigateReplayToPage } from '@/procedures/replay';
 import { Point2D } from 'fusion/primitives/Point2D';
 import { reaction } from 'mobx';
 import { getLogger } from 'fusion/logging';
@@ -32,6 +33,7 @@ export class PageController {
   private mobxReactionRegistration?: () => void;
   private _renderer?: DirectRenderer;
   private resizeObserver?: ResizeObserver;
+  private _viewportSettleTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Touch / pinch state
   private pinchStartDistance: number = 0;
@@ -456,11 +458,8 @@ export class PageController {
         if (note instanceof CardNote && note.content.page_ref) {
           let targetPage = pamet.page(note.content.page_ref.id);
           if (targetPage !== undefined) {
-            pamet.navigateTo(new PametRoute({
-              userId: pamet.appViewState.userId,
-              projectId: pamet.appViewState.currentProjectId ?? undefined,
-              pageId: targetPage.id,
-            })).catch((e) => console.error('Error navigating to linked page', e));
+            navigateReplayToPage(targetPage.id)
+              .catch((e) => console.error('Error navigating replay to linked page', e));
             return;
           }
         }
@@ -702,6 +701,27 @@ export class PageController {
             this._renderer?.clearAllCaches();
           }
           this._renderer?.renderCurrentPage();
+
+          // Workaround: flush caches after viewport stops changing.
+          // The cache validity check only compares bitmap dimensions (which depend
+          // on note_size * scale * dpr). But the sub-pixel offset baked into each
+          // cached bitmap depends on the viewport position (via
+          // floor((note.x - viewport.xReal) * hsf * dpr)). During zoom-to-cursor
+          // the viewport center shifts slightly each tick. If two consecutive
+          // viewport states produce the same floored bitmap dimensions but
+          // different fractional pixel offsets, the stale cache is incorrectly
+          // reused — causing 1px border artifacts between adjacent notes.
+          // A proper fix would store the cache rect origin alongside the bitmap
+          // and invalidate on position change, but that would also invalidate on
+          // every pan frame (hurting pan performance). For now, a settle timeout
+          // ensures pixel-perfect rendering once interaction stops.
+          if (cur.viewport !== prev.viewport || cur.viewportHeight !== prev.viewportHeight) {
+            if (this._viewportSettleTimeout) clearTimeout(this._viewportSettleTimeout);
+            this._viewportSettleTimeout = setTimeout(() => {
+              this._renderer?.expireAllCaches();
+              this._renderer?.renderCurrentPage();
+            }, 150);
+          }
         } catch (e) {
           log.error('Error rendering page:', e);
         }
@@ -733,6 +753,10 @@ export class PageController {
     log.info('Unbinding events from PageViewController');
 
     // Always dispose reaction and renderer, even if element is already gone
+    if (this._viewportSettleTimeout) {
+      clearTimeout(this._viewportSettleTimeout);
+      this._viewportSettleTimeout = null;
+    }
     if (this.mobxReactionRegistration) {
       this.mobxReactionRegistration();
       this.mobxReactionRegistration = undefined;

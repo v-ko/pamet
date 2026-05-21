@@ -36,6 +36,9 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[project.scripts]
+pamet-cli = "pamet.notes_cli:cli"
+
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"
 

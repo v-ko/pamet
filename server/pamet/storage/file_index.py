@@ -29,6 +29,7 @@ class FileIndex:
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        db_path.parent.mkdir(parents=True, exist_ok=True)
         self._db = pw.SqliteDatabase(str(db_path), pragmas={"journal_mode": "wal"})
         self._db.connect()
         with self._db.bind_ctx(_ALL_MODELS):

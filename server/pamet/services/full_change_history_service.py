@@ -8,6 +8,7 @@ queried for replay / visualization.
 
 from __future__ import annotations
 
+import threading
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
@@ -141,31 +142,87 @@ class FullChangeHistoryService:
            streams deltas.
         3. Each delta is committed to the repository.
         4. ``close()`` tears down the adapter.
+
+    If the repository fails to hydrate (e.g. RepositoryIntegrityError),
+    the service stays alive in a degraded state: the adapter remains open
+    for repair operations, but ``repository`` and ``ws_sync_service`` are
+    unavailable.
     """
 
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
+        self._error: str | None = None
+        self._integrity_lock = threading.Lock()
 
-        # Persistent storage
+        # Persistent storage — always available regardless of health
         self._adapter = SqliteVcsAdapter(db_path)
 
         # Repository — open existing or create new
+        self._repo: Repository | None = None
+        self._store_adapter: _CommittingStoreAdapter | None = None
+        self._ws_sync: WebSocketSyncService | None = None
+
         try:
             self._repo = Repository.open(self._adapter, branch_name="main")
         except (EmptyRepositoryError, MissingBranchError):
             self._repo = Repository.create(self._adapter, branch_name="main")
+        except Exception as exc:
+            self._error = str(exc)
+            log.error("FullChangeHistoryService degraded (db: %s): %s", db_path, exc)
+            return
 
         self._store_adapter = _CommittingStoreAdapter(self._repo)
         self._ws_sync = WebSocketSyncService(self._store_adapter, role="receiver")
 
     @property
+    def is_healthy(self) -> bool:
+        """True if the repository hydrated successfully."""
+        return self._repo is not None
+
+    @property
+    def error(self) -> str | None:
+        """Error message if service is degraded, None if healthy."""
+        return self._error
+
+    @property
     def ws_sync_service(self) -> WebSocketSyncService:
+        if self._ws_sync is None:
+            raise RuntimeError(
+                "Change history service is degraded — ws_sync unavailable"
+            )
         return self._ws_sync
 
     @property
+    def adapter(self) -> SqliteVcsAdapter:
+        return self._adapter
+
+    @property
+    def integrity_lock(self) -> threading.Lock:
+        """Lock to prevent concurrent integrity operations."""
+        return self._integrity_lock
+
+    @property
     def repository(self) -> Repository:
+        if self._repo is None:
+            raise RuntimeError(
+                "Change history service is degraded — repository unavailable"
+            )
         return self._repo
+
+    def retry_hydration(self) -> None:
+        """Re-attempt repository hydration after a repair. Raises on failure."""
+        repo = Repository.open(self._adapter, branch_name="main")
+        self._repo = repo
+        self._store_adapter = _CommittingStoreAdapter(repo)
+        self._ws_sync = WebSocketSyncService(self._store_adapter, role="receiver")
+        self._error = None
+        log.info("FullChangeHistoryService recovered (db: %s)", self._db_path)
 
     def close(self) -> None:
         self._adapter.close()
         log.info("FullChangeHistoryService closed (db: %s)", self._db_path)
+
+    @property
+    def diagnostics_dir(self) -> Path:
+        """Directory for diagnostics log files (next to the DB)."""
+        return self._db_path.parent

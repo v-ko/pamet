@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hmac
 import json
 import re
@@ -166,7 +167,7 @@ def run_gui_command(command_name: str, payload: dict | None = Body(default=None)
     "/desktop/projects/{project_id}/bridge",
     dependencies=[Depends(require_desktop_auth)],
 )
-def load_project(project_id: str, payload: dict | None = Body(default=None)):
+async def load_project(project_id: str, payload: dict | None = Body(default=None)):
     _validate_id(project_id, "project_id")
     storage_service = pamet.desktop_storage_service()
     try:
@@ -192,13 +193,26 @@ def load_project(project_id: str, payload: dict | None = Body(default=None)):
                 "Desktop project file URI must resolve to an absolute path"
             )
 
-        storage_service.load_project(project_id, repo_root=repo_root)
+        # 1. Blocking I/O in a thread (read .canvas files)
+        await asyncio.to_thread(storage_service.load_project_fs, project_id, repo_root)
     except ValueError as exc:
         log.error("Bridge load_project failed: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except ProjectTooLargeError as exc:
         log.error("Bridge load_project failed (too large): %s", exc)
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    # 2. Config store update on the event loop (fires push_delta)
+    log.info("bridge load_project: calling load_project_config for %s", project_id)
+    storage_service.load_project_config(project_id)
+
+    # 3. Wait for the config delta to be delivered to the client
+    future = storage_service.config_sync_service.last_push_future
+    if future is not None:
+        await future
+    log.info(
+        "bridge load_project: config sync complete for %s, returning 200", project_id
+    )
     return {"ok": True}
 
 
@@ -270,6 +284,10 @@ async def change_history_ws(ws: WebSocket, project_id: str):
         await ws.close(code=4503, reason="Change history not enabled for this project")
         return
 
+    if not svc.is_healthy:
+        await ws.close(code=4503, reason=f"Change history degraded: {svc.error}")
+        return
+
     log.info("Change history WS auth OK for project %s", project_id)
     endpoint = StarletteSyncEndpoint(sync_service=svc.ws_sync_service)
     await endpoint.serve(ws)
@@ -295,6 +313,10 @@ def change_history_branches(
             status_code=404,
             detail="Change history not enabled for this project",
         )
+    if not svc.is_healthy:
+        raise HTTPException(
+            status_code=503, detail=f"Change history degraded: {svc.error}"
+        )
 
     repo = svc.repository
     graph = repo.get_commit_graph()
@@ -319,6 +341,10 @@ def change_history_commit_graph(
         raise HTTPException(
             status_code=404,
             detail="Change history not enabled for this project",
+        )
+    if not svc.is_healthy:
+        raise HTTPException(
+            status_code=503, detail=f"Change history degraded: {svc.error}"
         )
 
     repo = svc.repository
@@ -361,6 +387,10 @@ def change_history_commits(
             status_code=404,
             detail="Change history not enabled for this project",
         )
+    if not svc.is_healthy:
+        raise HTTPException(
+            status_code=503, detail=f"Change history degraded: {svc.error}"
+        )
 
     repo = svc.repository
 
@@ -399,6 +429,166 @@ def change_history_commits(
         result = []
 
     return {"commits": result, "has_more": has_more}
+
+
+# ---------------------------------------------------------------------------
+# Change-history VCS integrity endpoints
+# ---------------------------------------------------------------------------
+
+
+def _write_integrity_log(svc, operation: str, data: dict) -> str:
+    """Write a JSON diagnostics log file, open it, and return its absolute path."""
+    from datetime import datetime
+
+    import fusion
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QDesktopServices
+
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = svc.diagnostics_dir / f"integrity-{operation}-{ts}.json"
+    log_path.write_text(json.dumps(data, indent=2, default=str))
+
+    # Open the file on the main thread (server runs in a background thread)
+    path_str = str(log_path.resolve())
+    fusion.call_delayed(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(path_str)))
+
+    return path_str
+
+
+@desktop_router.post(
+    "/desktop/projects/{project_id}/changes/history/check-all",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def change_history_check_all(project_id: str):
+    """Linear replay checking all stored hashes. Streams progress via SSE."""
+    from fusion.storage.vcs_diagnostics import verify_or_fix_hashes
+
+    dss = pamet.desktop_storage_service()
+    svc = dss.change_history_service(project_id)
+    if svc is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Change history not enabled for this project",
+        )
+
+    if not svc.integrity_lock.acquire(blocking=False):
+        raise HTTPException(
+            status_code=409, detail="An integrity operation is already running"
+        )
+
+    def _sse_generator():
+        try:
+            mismatches = 0
+            total = 0
+            mismatch_commits = []
+            for progress in verify_or_fix_hashes(svc.adapter, "main", fix=False):
+                total = progress.total_commits
+                if progress.status == "mismatch_reported":
+                    mismatches += 1
+                    mismatch_commits.append(
+                        {
+                            "index": progress.commit_index,
+                            "commit_id": progress.commit_id,
+                            "computed_hash": progress.computed_hash,
+                            "stored_hash": progress.stored_hash,
+                            "delta_data": progress.delta_data,
+                            "parent_id": progress.parent_id,
+                            "timestamp": progress.timestamp,
+                            "message": progress.message,
+                        }
+                    )
+                yield f"data: {json.dumps({'type': 'progress', 'index': progress.commit_index, 'total': progress.total_commits, 'status': progress.status, 'commit_id': progress.commit_id, 'computed_hash': progress.computed_hash, 'stored_hash': progress.stored_hash})}\n\n"
+            log_data = {
+                "total": total,
+                "mismatches": mismatches,
+                "mismatch_commits": mismatch_commits,
+            }
+            yield f"data: {json.dumps({'type': 'done', 'total': total, 'mismatches': mismatches, 'log_path': _write_integrity_log(svc, 'check-all', log_data)})}\n\n"
+        finally:
+            svc.integrity_lock.release()
+
+    return StreamingResponse(
+        _sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@desktop_router.post(
+    "/desktop/projects/{project_id}/changes/history/repair-hashes",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def change_history_repair_hashes(project_id: str):
+    """Linear replay fixing all mismatched hashes. Streams progress via SSE."""
+    from fusion.storage.vcs_diagnostics import verify_or_fix_hashes
+
+    dss = pamet.desktop_storage_service()
+    svc = dss.change_history_service(project_id)
+    if svc is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Change history not enabled for this project",
+        )
+
+    if not svc.integrity_lock.acquire(blocking=False):
+        raise HTTPException(
+            status_code=409, detail="An integrity operation is already running"
+        )
+
+    def _sse_generator():
+        try:
+            fixed = 0
+            total = 0
+            mismatch_commits = []
+            for progress in verify_or_fix_hashes(svc.adapter, "main", fix=True):
+                total = progress.total_commits
+                if progress.status == "mismatch_fixed":
+                    fixed += 1
+                    mismatch_commits.append(
+                        {
+                            "index": progress.commit_index,
+                            "commit_id": progress.commit_id,
+                            "computed_hash": progress.computed_hash,
+                            "stored_hash": progress.stored_hash,
+                            "delta_data": progress.delta_data,
+                            "parent_id": progress.parent_id,
+                            "timestamp": progress.timestamp,
+                            "message": progress.message,
+                        }
+                    )
+                yield f"data: {json.dumps({'type': 'progress', 'index': progress.commit_index, 'total': progress.total_commits, 'status': progress.status, 'commit_id': progress.commit_id})}\n\n"
+
+            # Attempt to recover the service after repair
+            recovery_error = None
+            if fixed > 0 and not svc.is_healthy:
+                try:
+                    svc.retry_hydration()
+                except Exception as exc:
+                    recovery_error = str(exc)
+
+            # Clear the status error if service recovered
+            if svc.is_healthy:
+                ch_errors = dss.status.get("errors", {}).get("change_history")
+                if ch_errors and project_id in ch_errors:
+                    del ch_errors[project_id]
+
+            log_data = {
+                "total": total,
+                "fixed": fixed,
+                "recovered": svc.is_healthy,
+                "recovery_error": recovery_error,
+                "mismatch_commits": mismatch_commits,
+            }
+            log_path = _write_integrity_log(svc, "repair-hashes", log_data)
+            yield f"data: {json.dumps({'type': 'done', 'total': total, 'fixed': fixed, 'recovered': svc.is_healthy, 'recovery_error': recovery_error, 'log_path': log_path})}\n\n"
+        finally:
+            svc.integrity_lock.release()
+
+    return StreamingResponse(
+        _sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @desktop_router.get(

@@ -9,6 +9,7 @@ from fusion.storage.in_memory_store import InMemoryStore
 from fusion.storage.websocket_sync_service import WebSocketSyncService
 
 from pamet.model.config import ProjectProperties
+from pamet.model.page import Page
 from pamet.services.config_file_manager import ConfigFileManager, DSSStatus
 from pamet.services.full_change_history_service import FullChangeHistoryService
 from pamet.services.project_sync.project_folder_manager import ProjectFolderManager
@@ -72,6 +73,12 @@ class DesktopStorageService:
 
     def _on_config_changes(self, delta: Delta, origin: str | None = None) -> None:
         """Chained config store callback: persist to disk + react to settings."""
+        if origin == "remote":
+            entity_ids = [c.entity_id for c in delta.changes()]
+            log.warning(
+                "_on_config_changes: REMOTE delta from client! entities=%s",
+                entity_ids,
+            )
         self._config_file_manager.on_changes(delta, origin)
         self._apply_backup_settings_from_delta(delta)
         self._apply_change_history_settings_from_delta(delta)
@@ -139,17 +146,37 @@ class DesktopStorageService:
                 db_path = repo_root / ".pamet" / "change-history.db"
                 svc = FullChangeHistoryService(db_path)
                 self._change_history_services[project_id] = svc
-                log.info(
-                    "Change history enabled for project %s (db: %s)",
-                    project_id,
-                    db_path,
-                )
+                if svc.is_healthy:
+                    log.info(
+                        "Change history enabled for project %s (db: %s)",
+                        project_id,
+                        db_path,
+                    )
+                else:
+                    log.error(
+                        "Change history unhealthy for project %s: %s",
+                        project_id,
+                        svc.error,
+                    )
+                    self.status["errors"].setdefault("change_history", {})
+                    self.status["errors"]["change_history"][project_id] = svc.error
             elif not enabled and existing is not None:
                 existing.close()
                 del self._change_history_services[project_id]
                 log.info("Change history disabled for project %s", project_id)
 
     def load_project(self, project_id: str, repo_root: Path) -> None:
+        """Load a project fully (blocking). Use load_project_fs + load_project_config
+        for async endpoints where the event loop must stay free."""
+        self.load_project_fs(project_id, repo_root)
+        self.load_project_config(project_id)
+
+    def load_project_fs(self, project_id: str, repo_root: Path) -> None:
+        """Blocking phase: read .canvas files from disk, create PFM.
+
+        After this returns the PFM is registered but config store has NOT
+        been updated (no WebSocket delta is fired).
+        """
         with self._lock:
             if project_id in self._project_folder_managers:
                 log.info(
@@ -167,15 +194,65 @@ class DesktopStorageService:
             pfm.load()
             self._project_folder_managers[project_id] = pfm
 
+    def load_project_config(self, project_id: str) -> None:
+        """Event-loop phase: update config store and apply settings.
+
+        Must be called AFTER load_project_fs. This modifies the config store,
+        which fires on_changes → WebSocket push_delta.  Safe to call on the
+        event loop since it does no blocking I/O.
+        """
+        with self._lock:
+            pfm = self._project_folder_managers.get(project_id)
+            if pfm is None:
+                log.warning("load_project_config: PFM not found for %s", project_id)
+                return
+
+            # Check if entity already exists before loading
+            project_properties_key = ProjectProperties.id_for_project(project_id)
+            existing = self._config_store.find_one(id=project_properties_key)
+            if existing:
+                log.warning(
+                    "load_project_config: entity ALREADY in store before load "
+                    "(home_page_id=%r). Something else created it!",
+                    getattr(existing, "home_page_id", "N/A"),
+                )
+
             # Load project properties into the config store
             self._config_file_manager.load_project_properties(
                 self._config_store,
                 project_id,
             )
 
-            # Apply backup settings from loaded project properties
+            # Ensure project properties exist in the store
             project_properties_key = ProjectProperties.id_for_project(project_id)
             props = self._config_store.find_one(id=project_properties_key)
+            if props is None:
+                # No properties file on disk — create default entity
+                props = ProjectProperties(
+                    id=project_properties_key,
+                    project_id=project_id,
+                    title=pfm.repo_root.name,
+                )
+                self._config_store.insert_one(props)
+
+            # If no home page set, pick the first available page
+            if isinstance(props, ProjectProperties) and not props.home_page_id:
+                first_page = next(pfm.store.find(type=Page), None)
+                if first_page is not None:
+                    props.home_page_id = first_page.id
+                    self._config_store.update_one(props)
+                    log.info(
+                        "load_project_config: auto-set home_page_id=%s for %s",
+                        props.home_page_id,
+                        project_id,
+                    )
+
+            log.info(
+                "load_project_config: props in store for %s: %s (home_page_id=%s)",
+                project_id,
+                props is not None,
+                getattr(props, "home_page_id", "N/A") if props else "N/A",
+            )
             try:
 
                 if props is not None and isinstance(props, ProjectProperties):
@@ -204,7 +281,7 @@ class DesktopStorageService:
                         props.record_all_changes,
                     )
                     self._set_change_history_enabled(
-                        project_id, repo_root, props.record_all_changes
+                        project_id, pfm.repo_root, props.record_all_changes
                     )
                 else:
                     log.info(

@@ -5,6 +5,15 @@ export interface CommitMarker {
     timestamp: number;
 }
 
+export type IntegrityOpStatus = "idle" | "running" | "done" | "error";
+
+export interface IntegrityOpState {
+    status: IntegrityOpStatus;
+    progressIndex: number;
+    progressTotal: number;
+    resultSummary: string | null;
+}
+
 const MIN_RANGE_SPAN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 /**
@@ -38,6 +47,17 @@ export class ReplayPanelViewState {
     /** Delay between animation steps in ms. */
     intervalMs: number = 300;
 
+    /** Whether an integrity error has been detected for this project. */
+    hasIntegrityError: boolean = false;
+
+    /** State of the current integrity operation (locate/check/repair). */
+    integrityOp: IntegrityOpState = {
+        status: "idle",
+        progressIndex: 0,
+        progressTotal: 0,
+        resultSummary: null,
+    };
+
     constructor() {
         makeObservable(this, {
             rangeStart: observable,
@@ -48,6 +68,8 @@ export class ReplayPanelViewState {
             currentMarkerIdx: observable,
             playing: observable,
             intervalMs: observable,
+            hasIntegrityError: observable,
+            integrityOp: observable.ref,
         });
     }
 

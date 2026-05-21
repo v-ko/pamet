@@ -209,7 +209,16 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.headPoint) {
                     headPoint = arrow.headPoint;
                 } else {
-                    headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), arrow.headAnchorType);
+                    if (!this.headAnchorNoteViewState) {
+                        // We have a fallback here too, because mobx computed with keepAlive true
+                        // computes at the value change call site and raises exception in the
+                        // action or wherever.
+                        // TODO: It would be nice if we deal with this more gracefully
+                        log.error('Head anchor note view state is null for arrow', arrow.id);
+                        headPoint = new Point2D([0, 0]);
+                    } else {
+                        headPoint = arrowAnchorPosition(this.headAnchorNoteViewState.note(), arrow.headAnchorType);
+                    }
                 }
                 effectiveTailAnchorType = this.inferTailAnchorType(headPoint);
                 effectiveHeadAnchorType = arrow.headAnchorType;
@@ -218,7 +227,12 @@ export class ArrowViewState extends ElementViewState {
                 if (arrow.tailPoint) {
                     tailPoint = arrow.tailPoint;
                 } else {
-                    tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), arrow.tailAnchorType);
+                    if (!this.tailAnchorNoteViewState) {
+                        log.error('Tail anchor note view state is null for arrow', arrow.id);
+                        tailPoint = new Point2D([0, 0]);
+                    } else {
+                        tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState.note(), arrow.tailAnchorType);
+                    }
                 }
                 effectiveHeadAnchorType = this.inferHeadAnchorType(tailPoint);
                 effectiveTailAnchorType = arrow.tailAnchorType;
@@ -235,13 +249,23 @@ export class ArrowViewState extends ElementViewState {
         if (effectiveTailAnchorType === ArrowAnchorOnNoteType.none) {
             tailPoint = arrow.tailPoint!;
         } else {
-            tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState!.note(), effectiveTailAnchorType);
+            if (!this.tailAnchorNoteViewState) {
+                log.error('Tail anchor note view state is null for arrow', arrow.id);
+                tailPoint = new Point2D([0, 0]);
+            } else {
+                tailPoint = arrowAnchorPosition(this.tailAnchorNoteViewState.note(), effectiveTailAnchorType);
+            }
         }
 
         if (effectiveHeadAnchorType === ArrowAnchorOnNoteType.none) {
             headPoint = arrow.headPoint!;
         } else {
-            headPoint = arrowAnchorPosition(this.headAnchorNoteViewState!.note(), effectiveHeadAnchorType);
+            if (!this.headAnchorNoteViewState) {
+                log.error('Head anchor note view state is null for arrow', arrow.id);
+                headPoint = new Point2D([0, 0]);
+            } else {
+                headPoint = arrowAnchorPosition(this.headAnchorNoteViewState.note(), effectiveHeadAnchorType);
+            }
         }
 
 

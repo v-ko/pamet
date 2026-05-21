@@ -1,3 +1,4 @@
+import logging
 import os
 import signal
 import subprocess
@@ -215,6 +216,9 @@ def main(
             projects.append(project_data)
         settings.projects = projects
         save_user_settings(settings)
+
+    # Silence noisy third-party loggers while keeping our own level low.
+    logging.getLogger("peewee").setLevel(logging.WARNING)
 
     # ── Heavy imports (PySide6, Qt, etc.) deferred to here ───────────
     from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop

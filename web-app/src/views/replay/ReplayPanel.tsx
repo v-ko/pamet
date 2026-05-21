@@ -4,7 +4,7 @@ import { ReplayControls } from "@/views/replay/ReplayControls";
 import { ReplayPanelViewState } from "@/views/replay/ReplayViewState";
 import { replayActions } from "@/actions/replay";
 import { pamet } from "@/app/facade";
-import { buildReplayIndex } from "@/procedures/replay";
+import { buildReplayIndex, startIntegrityOp } from "@/procedures/replay";
 import "@/views/replay/ReplayPanel.css";
 
 /**
@@ -22,6 +22,9 @@ export const ReplayPanel = observer(({
 
     const stopPropagation = (e: React.MouseEvent) => e.stopPropagation();
     const stopTouchPropagation = (e: React.TouchEvent) => e.stopPropagation();
+
+    const op = state.integrityOp;
+    const opRunning = op.status === "running";
 
     return (
         <div
@@ -43,6 +46,42 @@ export const ReplayPanel = observer(({
                 >
                     Reindex
                 </button>
+            )}
+            {state.hasIntegrityError && (
+                <div className="replay-panel-integrity">
+                    <div className="integrity-label">⚠ Integrity error detected</div>
+                    <div className="integrity-buttons">
+                        <button
+                            className="replay-panel-btn"
+                            disabled={opRunning}
+                            onClick={() => startIntegrityOp(state, "checkAllHistory")}
+                            title="Check all commits for hash mismatches"
+                        >
+                            Check All
+                        </button>
+                        <button
+                            className="replay-panel-btn"
+                            disabled={opRunning}
+                            onClick={() => startIntegrityOp(state, "repairHashes")}
+                            title="Re-generate all bad content hashes"
+                        >
+                            Repair Hashes
+                        </button>
+                    </div>
+                    {opRunning && (
+                        <div className="integrity-progress">
+                            {op.progressTotal > 0
+                                ? <><progress value={op.progressIndex} max={op.progressTotal} /><span>{op.progressIndex} / {op.progressTotal}</span></>
+                                : <><progress /><span>Working…</span></>
+                            }
+                        </div>
+                    )}
+                    {(op.status === "done" || op.status === "error") && op.resultSummary && (
+                        <div className={`integrity-result ${op.status}`}>
+                            {op.resultSummary}
+                        </div>
+                    )}
+                </div>
             )}
             <button
                 className="replay-panel-close"

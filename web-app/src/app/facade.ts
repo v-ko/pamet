@@ -851,6 +851,7 @@ export class PametFacade extends PametStore {
     loadProjectProperties(projectId: string): PametProjectData | undefined {
         const trackedProject = this.appViewState.trackedProject(projectId);
         if (!trackedProject) {
+            log.info('[loadProjectProperties] trackedProject NOT found for', projectId);
             return undefined;
         }
         const propsEntity = this.appConfigStore.findOne({ id: ProjectProperties.idForProject(projectId) });
@@ -1076,7 +1077,7 @@ export function historyEntityDeltaToViewModelReducer(
     // Updates the history page view state based on history store changes
     let currentPageVS = appViewState.historyPageViewState
     if (currentPageVS === null) {
-        log.error('No current page view state set, skipping delta', delta);
+        // Expected during replay page transitions (PVS hidden before seek)
         return;
     }
 

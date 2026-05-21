@@ -50,10 +50,17 @@ function renderPattern(ctx: CanvasRenderingContext2D, noteVS: NoteViewState) {
     drawCrossingDiagonals(ctx, rect.x, rect.y, rect.width, rect.height, 20);
 }
 
+// We may benefit refactoring the cache system at some point, since generation is not the
+// only way we do invalidation currently, so it's not the most readable approach
+interface CacheEntry {
+    bitmap: ImageBitmap;
+    generation: number;
+}
 
 export class DirectRenderer {
-    private _nvsCache: Map<NoteViewState, ImageBitmap> = new Map();
+    private _nvsCache: Map<NoteViewState, CacheEntry> = new Map();
     private _nvsCacheSize: number = 0;
+    private _cacheGeneration: number = 0;
     private reqeustAnimationFrameRet: number | null = null;
     private _followupRenderSteps: number = 0;
     private _context: CanvasRenderingContext2D;
@@ -71,9 +78,9 @@ export class DirectRenderer {
             this.reqeustAnimationFrameRet = null;
         }
         // Release cached bitmaps
-        for (const [, imageBitmap] of this._nvsCache) {
+        for (const [, entry] of this._nvsCache) {
             try {
-                imageBitmap.close();
+                entry.bitmap.close();
             } catch {
                 // ignore errors from closing
             }
@@ -88,9 +95,9 @@ export class DirectRenderer {
 
     /** Flush all cached note bitmaps (e.g. after a theme change). */
     clearAllCaches() {
-        for (const [, imageBitmap] of this._nvsCache) {
+        for (const [, entry] of this._nvsCache) {
             try {
-                imageBitmap.close();
+                entry.bitmap.close();
             } catch {
                 // ignore
             }
@@ -99,13 +106,25 @@ export class DirectRenderer {
         this._nvsCacheSize = 0;
     }
 
+    /** Mark all caches as expired without destroying bitmaps.
+     * They will be dirty-reused and progressively re-rendered. */
+    expireAllCaches() {
+        this._cacheGeneration++;
+    }
+
     getImage(src: string): HTMLImageElement | null {
         // console.log('-----------------getImage', src)
         let img = document.querySelector(`img[src="${src}"]`) as HTMLImageElement;
         return img;
     }
     nvsCache(noteViewState: NoteViewState): ImageBitmap | undefined {
-        return this._nvsCache.get(noteViewState);
+        let entry = this._nvsCache.get(noteViewState);
+        return entry?.bitmap;
+    }
+
+    nvsCacheGeneration(noteViewState: NoteViewState): number {
+        let entry = this._nvsCache.get(noteViewState);
+        return entry?.generation ?? -1;
     }
 
     setNvsCache(noteViewState: NoteViewState, imageBitmap: ImageBitmap) {
@@ -113,17 +132,17 @@ export class DirectRenderer {
             this.deleteNvsCache(noteViewState);
         }
 
-        this._nvsCache.set(noteViewState, imageBitmap);
+        this._nvsCache.set(noteViewState, { bitmap: imageBitmap, generation: this._cacheGeneration });
         let imageSize = imageBitmap.width * imageBitmap.height * 4;
         this._nvsCacheSize += imageSize;
     }
     deleteNvsCache(noteViewState: NoteViewState) {
-        let imageBitmap = this._nvsCache.get(noteViewState);
-        if (imageBitmap !== undefined) {
+        let entry = this._nvsCache.get(noteViewState);
+        if (entry !== undefined) {
             this._nvsCache.delete(noteViewState);
-            let imageSize = imageBitmap.width * imageBitmap.height * 4;
+            let imageSize = entry.bitmap.width * entry.bitmap.height * 4;
             this._nvsCacheSize -= imageSize;
-            imageBitmap.close();
+            entry.bitmap.close();
         }
     }
 
@@ -653,20 +672,23 @@ export class DirectRenderer {
             let imageBitmap = this.nvsCache(noteVS);
             let cachePresent: boolean;
             let sizeMatches: boolean;
+            let generationMatches: boolean;
 
             // Prep flags
             const cacheRectAfterDPR = this.cacheRectAfterDPR(noteVS, viewport);
             if (imageBitmap !== undefined) {
                 cachePresent = true;
                 sizeMatches = imageBitmap.width === cacheRectAfterDPR.width && imageBitmap.height === cacheRectAfterDPR.height;
+                generationMatches = this.nvsCacheGeneration(noteVS) === this._cacheGeneration;
             } else {
                 cachePresent = false;
                 sizeMatches = false;
+                generationMatches = false;
             }
 
             // Plan painting
             if (cachePresent) {
-                if (sizeMatches) {
+                if (sizeMatches && generationMatches) {
                     withCorrectCache.add(noteVS);
                 } else {
                     withExpiredCache.add(noteVS);

@@ -83,7 +83,8 @@ class ConfigFileManager:
                         f"Entity {entity_id} not found in store after on_changes fired"
                     )
                 try:
-                    self._write_file(entity_id, dump_to_dict(entity))
+                    data = dump_to_dict(entity)
+                    self._write_file(entity_id, data)
                     # Clear any previous I/O error for this service
                     self._status_errors.pop("io", None)
                 except OSError as e:

@@ -193,7 +193,7 @@ export class DesktopStorageAddon implements StorageAddon {
 
         // Merge extra changes into the delta
         for (const c of extraChanges) {
-            delta.addChangeFromData(c.data);
+            delta.addChange(c);
         }
 
         return delta.data;

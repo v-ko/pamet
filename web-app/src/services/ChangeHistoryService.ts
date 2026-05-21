@@ -21,9 +21,21 @@ const log = getLogger('ChangeHistoryService');
 export class ChangeHistoryService {
     private _syncService: WebSocketSyncService | null = null;
     private _enabled = false;
+    private _onError: ((message: string) => void) | null = null;
 
     get enabled(): boolean {
         return this._enabled;
+    }
+
+    set onError(handler: ((message: string) => void) | null) {
+        this._onError = handler;
+    }
+
+    private _reportError(message: string): void {
+        log.error(message);
+        if (this._onError) {
+            this._onError(message);
+        }
     }
 
     /**
@@ -48,7 +60,7 @@ export class ChangeHistoryService {
             this._enabled = true;
             log.info('ChangeHistoryService enabled');
         } catch (e) {
-            log.error('ChangeHistoryService failed to connect', e);
+            this._reportError(`ChangeHistoryService failed to connect: ${e}`);
             syncService.dispose();
         }
     }
@@ -79,7 +91,7 @@ export class ChangeHistoryService {
             return;
         }
         this._syncService.pushDelta(delta).catch((err) => {
-            log.error('ChangeHistoryService: failed to push delta', err);
+            this._reportError(`ChangeHistoryService: failed to push delta: ${err}`);
         });
     }
 }

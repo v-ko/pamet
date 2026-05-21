@@ -194,6 +194,17 @@ pamet.initClipboard();
 pamet.initializeTheme();
 
 // Wire desktop-specific change history hook
+pamet.changeHistoryService.onError = (message: string) => {
+    pamet.storageService.reportError(message);
+    // Flag integrity error in replay panel if it's a hash mismatch
+    if (message.includes("hash mismatch") || message.includes("Snapshot hash mismatch")) {
+        const vs = pamet.appViewState.replayPanelVS;
+        if (vs) {
+            vs.hasIntegrityError = true;
+        }
+    }
+};
+
 pamet.onChangeHistoryConfigChanged = (projectId: string) => {
     const propsEntity = pamet.appConfigStore.findOne({
         id: ProjectProperties.idForProject(projectId),

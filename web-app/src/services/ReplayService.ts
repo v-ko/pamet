@@ -80,6 +80,13 @@ export class ReplayService {
     private _vcsAdapter: RestApiVcsAdapter;
     private _storeStateAtCommitId: string | null = null;
     private _playbackTimer: ReturnType<typeof setTimeout> | null = null;
+    private _baseUrl: string;
+    private _pathPrefix: string;
+    private _auth: RestApiAuthConfig;
+    private _integrityAbort: AbortController | null = null;
+
+    /** Expose the project index (null if not yet built). */
+    get index(): ProjectReplayIndex | null { return this._index; }
 
     constructor(
         store: LockableStore,
@@ -89,6 +96,9 @@ export class ReplayService {
         auth: RestApiAuthConfig,
     ) {
         this._store = store;
+        this._baseUrl = baseUrl;
+        this._pathPrefix = pathPrefix;
+        this._auth = auth;
         this._vcsAdapter = new RestApiVcsAdapter(pathPrefix, localBranchName, baseUrl, auth);
     }
 
@@ -105,7 +115,7 @@ export class ReplayService {
     async buildProjectIndex(
         onProgress?: (processed: number, total: number | null) => void,
     ): Promise<ProjectReplayIndex> {
-        const batchSize = 50;
+        const batchSize = 200;
 
         const commitGraph = await this._vcsAdapter.getCommitGraph();
         const branchCommits = commitGraph.branchCommits(this._vcsAdapter.localBranchName);
@@ -272,27 +282,18 @@ export class ReplayService {
             return;
         }
 
-        // Full replay from the beginning, with page-aware batching
-        const pageRelevantSet = new Set(
-            ReplayService.getPageRelevantIndices(index, pageId)
-        );
-
+        // Full replay from the beginning — squash all deltas and apply once.
         this._store.unlock();
         this._store.clear();
 
-        let pendingDeltas: DeltaData[] = [];
-        for (let i = 0; i <= targetIdx; i++) {
-            pendingDeltas.push(ac[i].deltaData);
-
-            if (pageRelevantSet.has(i) || i === targetIdx) {
-                // Squash accumulated deltas and apply in one batch
-                const squashed = pendingDeltas.length === 1
-                    ? pendingDeltas[0]
-                    : squashDeltas(pendingDeltas).data;
-                this._store.applyDelta(new Delta(squashed), undefined, true);
-                pendingDeltas = [];
-            }
+        const allDeltas = ac.slice(0, targetIdx + 1).map(c => c.deltaData);
+        let squashed: DeltaData;
+        if (allDeltas.length === 1) {
+            squashed = allDeltas[0];
+        } else {
+            squashed = squashDeltas(allDeltas).data;
         }
+        this._store.applyDelta(new Delta(squashed), undefined, true);
 
         this._store.lock();
         this._storeStateAtCommitId = targetCommitId;
@@ -397,5 +398,97 @@ export class ReplayService {
         }
 
         return index.allCommits[pri[bestIdx]].id;
+    }
+
+    // -----------------------------------------------------------------------
+    // VCS Integrity Operations
+    // -----------------------------------------------------------------------
+
+    /**
+     * Run an integrity operation via SSE. Calls onProgress for each event,
+     * onDone when completed. Returns an abort function.
+     */
+    private _runIntegritySSE(
+        endpoint: string,
+        onProgress: (data: any) => void,
+        onDone: (data: any) => void,
+        onError: (err: string) => void,
+    ): () => void {
+        const abort = new AbortController();
+        this._integrityAbort = abort;
+
+        const url = `${this._baseUrl}${this._pathPrefix}/${endpoint}`;
+        const headers: Record<string, string> = {
+            Authorization: `Bearer ${this._auth.token}`,
+        };
+
+        fetch(url, { method: "POST", headers, signal: abort.signal })
+            .then(async (response) => {
+                if (!response.ok) {
+                    onError(`HTTP ${response.status}: ${response.statusText}`);
+                    return;
+                }
+                const reader = response.body?.getReader();
+                if (!reader) {
+                    onError("No response body");
+                    return;
+                }
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    // Parse SSE lines
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() || "";
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const payload = JSON.parse(line.slice(6));
+                            if (payload.type === "done") {
+                                onDone(payload);
+                            } else {
+                                onProgress(payload);
+                            }
+                        }
+                    }
+                }
+            })
+            .catch((err) => {
+                if (err.name !== "AbortError") {
+                    onError(String(err));
+                }
+            })
+            .finally(() => {
+                this._integrityAbort = null;
+            });
+
+        return () => abort.abort();
+    }
+
+    /** Check all history for mismatches (linear replay). */
+    checkAllHistory(
+        onProgress: (data: any) => void,
+        onDone: (data: any) => void,
+        onError: (err: string) => void,
+    ): () => void {
+        return this._runIntegritySSE("check-all", onProgress, onDone, onError);
+    }
+
+    /** Repair all mismatched hashes (linear replay + fix). */
+    repairHashes(
+        onProgress: (data: any) => void,
+        onDone: (data: any) => void,
+        onError: (err: string) => void,
+    ): () => void {
+        return this._runIntegritySSE("repair-hashes", onProgress, onDone, onError);
+    }
+
+    /** Cancel any running integrity operation. */
+    cancelIntegrityOp(): void {
+        this._integrityAbort?.abort();
+        this._integrityAbort = null;
     }
 }
