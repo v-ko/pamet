@@ -84,13 +84,14 @@ class ReplayActions {
         const pvs = new PageViewState(page, notes, arrows);
         pvs.isReplay = true;
 
-        // Copy viewport from the live page so replay shows the same view
-        const livePVS = appViewState.currentPageViewState;
-        if (livePVS) {
-            pvs.viewportCenter.x = livePVS.viewportCenter.x;
-            pvs.viewportCenter.y = livePVS.viewportCenter.y;
-            pvs.viewportHeight = livePVS.viewportHeight;
-            pvs.viewportGeometry = [...livePVS.viewportGeometry] as [number, number, number, number];
+        // Copy viewport from existing history overlay (preserves position when
+        // switching commits), falling back to the live page on first open.
+        const sourceVS = appViewState.historyPageViewState ?? appViewState.currentPageViewState;
+        if (sourceVS) {
+            pvs.viewportCenter.x = sourceVS.viewportCenter.x;
+            pvs.viewportCenter.y = sourceVS.viewportCenter.y;
+            pvs.viewportHeight = sourceVS.viewportHeight;
+            pvs.viewportGeometry = [...sourceVS.viewportGeometry] as [number, number, number, number];
         }
 
         appViewState.historyPageViewState = pvs;

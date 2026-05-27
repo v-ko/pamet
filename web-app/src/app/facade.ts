@@ -466,6 +466,10 @@ export class PametFacade extends PametStore {
 
     updateViewportUrl(state: PageViewState, viewportCenter: Point2D, viewportHeight: number) {
         pageActions.updateViewport(state, viewportCenter, viewportHeight);
+        // Sync viewport to live page when navigating in history overlay
+        if (state.isReplay && this.appViewState.currentPageViewState) {
+            pageActions.updateViewport(this.appViewState.currentPageViewState, viewportCenter, viewportHeight);
+        }
         const route = this.appViewState.toRoute();
         this.router.replaceRoute(route, { debounce: true });
     }

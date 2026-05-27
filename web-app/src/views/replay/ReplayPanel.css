@@ -49,6 +49,19 @@
     background: var(--color-accent, rgba(100, 180, 255, 0.8));
 }
 
+/* Current commit ID badge */
+.replay-panel-commit-id {
+    display: flex;
+    align-items: center;
+    padding: 0 var(--space-2);
+    border-left: 1px solid var(--color-light-border);
+    font-size: var(--type-xs, 11px);
+    font-family: monospace;
+    color: var(--color-text);
+    white-space: nowrap;
+    user-select: all;
+}
+
 /* Inline button (e.g. Backups toggle) */
 .replay-panel-btn {
     display: flex;

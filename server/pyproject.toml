@@ -38,6 +38,7 @@ classifiers = [
 
 [project.scripts]
 pamet-cli = "pamet.notes_cli:cli"
+pamet-history = "pamet.history_cli:history"
 
 [project.gui-scripts]
 pamet = "pamet.desktop_app.main:main"

@@ -3,7 +3,7 @@ import { Viewport } from "@/views/page/Viewport";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTION_OVERLAY_COLOR } from "@/app/constants";
+import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, NOTE_DATETIME_MIN_SCALE, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTION_OVERLAY_COLOR } from "@/app/constants";
 import { getLogger } from "fusion/logging";
 import { drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
@@ -620,6 +620,41 @@ export class DirectRenderer {
                         rect.width - NOTE_BORDER_WIDTH,
                         rect.height - NOTE_BORDER_WIDTH
                     );
+                }
+            }
+            ctx.restore();
+        }
+
+        // Draw note date/time labels when zoomed in very close
+        const heightScale = effectiveViewport.heightScaleFactor();
+        if (heightScale >= NOTE_DATETIME_MIN_SCALE) {
+            ctx.save();
+            ctx.fillStyle = pamet.themeManager.canvasColor('onSurface');
+            ctx.globalAlpha = 0.7;
+            ctx.textBaseline = 'top';
+
+            const viewBounds = effectiveViewport.realBounds;
+            for (const childVS of pageVS.noteViewStatesById.values()) {
+                const note = childVS.note();
+                const rect = note.rect();
+                if (!rect.intersects(viewBounds)) continue;
+
+                const created = note.created;
+                const modified = note.modified;
+                if (!created && !modified) continue;
+
+                // Font size scales with note (proportional to note height)
+                const fontSize = rect.height * 0.06;
+                ctx.font = `${fontSize}px sans-serif`;
+
+                const x = rect.x + fontSize * 0.3;
+                const y = rect.y - fontSize * 2.4;
+
+                if (created) {
+                    ctx.fillText(`Created: ${created.replace('T', ' ').slice(0, 19)}`, x, y);
+                }
+                if (modified) {
+                    ctx.fillText(`Modified: ${modified.replace('T', ' ').slice(0, 19)}`, x, y + fontSize * 1.2);
                 }
             }
             ctx.restore();

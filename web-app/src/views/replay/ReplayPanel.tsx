@@ -26,6 +26,11 @@ export const ReplayPanel = observer(({
     const op = state.integrityOp;
     const opRunning = op.status === "running";
 
+    const historyOpen = pamet.appViewState.historyPageViewState !== null;
+    const currentMarker = state.currentMarkerIdx >= 0
+        ? state.commitMarkers[state.currentMarkerIdx]
+        : null;
+
     return (
         <div
             className="replay-panel"
@@ -38,6 +43,11 @@ export const ReplayPanel = observer(({
             onTouchEnd={stopTouchPropagation}
         >
             <ReplayControls state={state} />
+            {historyOpen && currentMarker && (
+                <div className="replay-panel-commit-id" title={currentMarker.id}>
+                    {state.currentMarkerIdx}/{pamet.replayService.index?.allCommits.length ?? '?'} {currentMarker.id.slice(0, 8)}
+                </div>
+            )}
             {state.indexStale && (
                 <button
                     className="replay-panel-btn reindex-btn"

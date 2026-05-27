@@ -368,5 +368,193 @@ def search(store: PametInMemoryStore, query: str, page: str | None) -> None:
         click.echo(f"  [{page_name}] ({cx:+.0f},{cy:+.0f})  {preview}")
 
 
+# ---------------------------------------------------------------------------
+# Diagnostic commands
+# ---------------------------------------------------------------------------
+
+
+@cli.command("bad-arrows")
+@click.option(
+    "--page",
+    default=None,
+    help="Limit to a single page (exact name, case-insensitive). "
+    "Default: check all pages.",
+)
+@click.option(
+    "--verbose", "-v", is_flag=True, help="Show arrow IDs and anchor details."
+)
+@pass_store
+def bad_arrows(store: PametInMemoryStore, page: str | None, verbose: bool) -> None:
+    """Find arrows with broken anchors (pointing to non-existent notes).
+
+    Reports arrows whose tail or head note_anchor_id references a note
+    that does not exist on the same page. Useful for diagnosing migration
+    issues where notes are missing or arrows ended up in the wrong commit.
+    """
+    total_bad = 0
+    pages_checked = 0
+
+    for pg in sorted(store.pages(), key=lambda p: p.name):
+        if page and pg.name.lower() != page.lower():
+            continue
+        pages_checked += 1
+
+        notes_on_page = {n.id for n in store.notes(pg.id)}
+        bad_on_page = []
+
+        for arrow in store.arrows(pg.id):
+            tail_id = arrow.tail.get("note_anchor_id")
+            head_id = arrow.head.get("note_anchor_id")
+
+            bad_tail = tail_id and tail_id not in notes_on_page
+            bad_head = head_id and head_id not in notes_on_page
+
+            if bad_tail or bad_head:
+                bad_on_page.append((arrow, bad_tail, bad_head, tail_id, head_id))
+
+        if bad_on_page:
+            click.echo(f"\n[{pg.name}] — {len(bad_on_page)} bad arrow(s):")
+            for arrow, bad_tail, bad_head, tail_id, head_id in bad_on_page:
+                parts = []
+                if bad_tail:
+                    parts.append(f"tail→MISSING({tail_id})")
+                if bad_head:
+                    parts.append(f"head→MISSING({head_id})")
+                label = ", ".join(parts)
+
+                # Try to describe the valid end
+                context_parts = []
+                if not bad_tail and tail_id:
+                    note = store.note(tail_id)
+                    if note:
+                        txt = note_text(note).split("\n")[0][:60]
+                        context_parts.append(f"tail note: {txt}")
+                if not bad_head and head_id:
+                    note = store.note(head_id)
+                    if note:
+                        txt = note_text(note).split("\n")[0][:60]
+                        context_parts.append(f"head note: {txt}")
+
+                if verbose:
+                    click.echo(f"  arrow_id={arrow.id}  {label}")
+                    if context_parts:
+                        click.echo(f"    {'; '.join(context_parts)}")
+                else:
+                    ctx = f"  ({'; '.join(context_parts)})" if context_parts else ""
+                    click.echo(f"  {label}{ctx}")
+
+            total_bad += len(bad_on_page)
+
+    click.echo(
+        f"\n--- Summary: {total_bad} bad arrows across {pages_checked} pages ---"
+    )
+
+
+@cli.command("overlapping-notes")
+@click.option(
+    "--page",
+    default=None,
+    help="Limit to a single page (exact name, case-insensitive). "
+    "Default: check all pages.",
+)
+@click.option(
+    "--min-overlap",
+    type=float,
+    default=0.5,
+    help="Minimum overlap ratio (intersection area / smaller note area) "
+    "to report. 0.5 = at least 50%% overlap. Use 0 for any overlap.",
+)
+@click.option(
+    "--verbose", "-v", is_flag=True, help="Show note IDs and geometry details."
+)
+@pass_store
+def overlapping_notes(
+    store: PametInMemoryStore, page: str | None, min_overlap: float, verbose: bool
+) -> None:
+    """Find notes that significantly overlap each other on the same page.
+
+    Reports pairs of notes whose bounding rectangles overlap by at least
+    --min-overlap ratio (relative to the smaller note's area). Useful for
+    detecting misplaced notes from migration bugs where notes from different
+    time periods got stacked on top of each other.
+    """
+    total_overlaps = 0
+    pages_checked = 0
+
+    for pg in sorted(store.pages(), key=lambda p: p.name):
+        if page and pg.name.lower() != page.lower():
+            continue
+        pages_checked += 1
+
+        all_notes = python_list(store.notes(pg.id))
+        if len(all_notes) < 2:
+            continue
+
+        overlaps_on_page = []
+
+        for i in range(len(all_notes)):
+            rect_i = all_notes[i].rect()
+            for j in range(i + 1, len(all_notes)):
+                rect_j = all_notes[j].rect()
+                intersection = rect_i.intersection(rect_j)
+                if intersection is None:
+                    continue
+
+                inter_area = intersection.width() * intersection.height()
+                smaller_area = min(
+                    rect_i.width() * rect_i.height(),
+                    rect_j.width() * rect_j.height(),
+                )
+                if smaller_area <= 0:
+                    continue
+
+                ratio = inter_area / smaller_area
+                if ratio >= min_overlap:
+                    overlaps_on_page.append(
+                        (all_notes[i], all_notes[j], ratio, intersection)
+                    )
+
+        if overlaps_on_page:
+            # Sort by overlap ratio descending
+            overlaps_on_page.sort(key=lambda x: x[2], reverse=True)
+            click.echo(f"\n[{pg.name}] — {len(overlaps_on_page)} overlapping pair(s):")
+            for note_a, note_b, ratio, inter in overlaps_on_page:
+                text_a = note_text(note_a).split("\n")[0][:50]
+                text_b = note_text(note_b).split("\n")[0][:50]
+                ca = note_a.rect().center()
+                cb = note_b.rect().center()
+
+                if verbose:
+                    click.echo(
+                        f"  [{ratio:.0%} overlap] "
+                        f"intersection: {inter.width():.0f}x{inter.height():.0f}"
+                    )
+                    click.echo(
+                        f"    A: id={note_a.id} "
+                        f"({ca.x():+.0f},{ca.y():+.0f}) "
+                        f"{note_a.width:.0f}x{note_a.height:.0f}  "
+                        f"{text_a}"
+                    )
+                    click.echo(
+                        f"    B: id={note_b.id} "
+                        f"({cb.x():+.0f},{cb.y():+.0f}) "
+                        f"{note_b.width:.0f}x{note_b.height:.0f}  "
+                        f"{text_b}"
+                    )
+                else:
+                    click.echo(
+                        f"  [{ratio:.0%}] "
+                        f'({ca.x():+.0f},{ca.y():+.0f}) "{text_a}" ∩ '
+                        f'({cb.x():+.0f},{cb.y():+.0f}) "{text_b}"'
+                    )
+
+            total_overlaps += len(overlaps_on_page)
+
+    click.echo(
+        f"\n--- Summary: {total_overlaps} overlapping pairs across "
+        f"{pages_checked} pages (threshold: {min_overlap:.0%}) ---"
+    )
+
+
 if __name__ == "__main__":
     cli()

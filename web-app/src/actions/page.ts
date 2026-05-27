@@ -157,6 +157,14 @@ class PageActions {
   @action
   endDragNavigation(state: PageViewState) {
     state.setMode(PageMode.None);
+    // Sync viewport to live page after panning in history overlay
+    if (state.isReplay && pamet.appViewState.currentPageViewState) {
+      this.updateViewport(
+        pamet.appViewState.currentPageViewState,
+        state.viewportCenter,
+        state.viewportHeight,
+      );
+    }
     const route = pamet.appViewState.toRoute();
     pamet.router.replaceRoute(route);
   }

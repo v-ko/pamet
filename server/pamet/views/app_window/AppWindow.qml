@@ -202,6 +202,9 @@ ApplicationWindow {
             injectionPoint: WebEngineScript.DocumentCreation,
             worldId: WebEngineScript.MainWorld
         }]
+        webProfile.downloadRequested.connect(function(download) {
+            backend.handleDownload(download)
+        })
     }
 
     // ── Content area ────────────────────────────────────────────────

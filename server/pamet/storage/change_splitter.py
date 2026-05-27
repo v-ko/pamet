@@ -10,8 +10,10 @@ Arrows have no timestamps — they're assigned to the temporal group of
 their connected notes via a piggyback heuristic.
 
 Deletions have no reliable "deletion time" (the entity's ``modified``
-reflects its last edit, not its removal), so they're placed in the
-newest-timed-change group as fallback.
+reflects its last edit, not its removal).  When a deleted note's position
+overlaps with a timed note (create/update), the deletion is grouped with
+that note's day (they're logically coupled — one replaces the other).
+Otherwise deletions fall back to the newest-timed-change group.
 
 Usage in the backward pipeline
 ------------------------------
@@ -148,32 +150,94 @@ def infer_deltas_between_stores(
     max_timed_date = max(ts.date() for ts, _, _ in timed)
 
     # ------------------------------------------------------------------
-    # 3. Arrow piggyback: link to connected notes' day
+    # 3. Untimed changes (deletions) → spatial-match or fallback
+    #
+    # Deletions have no reliable timestamp. When a deleted note's position
+    # overlaps with a timed note (create/update), group the deletion with
+    # that note's day — they're logically coupled (one replaces the other).
+    # Otherwise fall back to max_timed_date.
+    # ------------------------------------------------------------------
+    # Build spatial index of timed notes: position → day
+    # We use the entity's geometry center (rounded) as a spatial key.
+    timed_note_positions: dict[tuple[int, int], date] = {}
+    for ts, _, entity in timed:
+        if isinstance(entity, Note):
+            rect = entity.rect()
+            cx = int(round(rect.center().x()))
+            cy = int(round(rect.center().y()))
+            timed_note_positions[(cx, cy)] = ts.date()
+
+    untimed_linked = 0
+    untimed_fallback = 0
+
+    # Track which day each deleted note was assigned to, so arrows
+    # referencing them can piggyback on the same day.
+    deleted_note_day: dict[str, date] = {}
+
+    for ch in untimed:
+        # Try to find a spatial match for deleted notes
+        linked_day = None
+        deleted_entity = older_by_id.get(ch.entity_id)
+        if deleted_entity and isinstance(deleted_entity, Note):
+            rect = deleted_entity.rect()
+            cx = int(round(rect.center().x()))
+            cy = int(round(rect.center().y()))
+            # Check exact position match
+            if (cx, cy) in timed_note_positions:
+                linked_day = timed_note_positions[(cx, cy)]
+            else:
+                # Check nearby positions (within ~50px tolerance for notes
+                # that moved slightly while replacing another)
+                for (tx, ty), day in timed_note_positions.items():
+                    if abs(tx - cx) < 50 and abs(ty - cy) < 50:
+                        linked_day = day
+                        break
+
+        if linked_day:
+            day_groups[linked_day].append(ch)
+            deleted_note_day[ch.entity_id] = linked_day
+            untimed_linked += 1
+        else:
+            day_groups[max_timed_date].append(ch)
+            deleted_note_day[ch.entity_id] = max_timed_date
+            untimed_fallback += 1
+
+    # ------------------------------------------------------------------
+    # 4. Arrow piggyback: link to connected notes' day
+    #
+    # Arrows have no timestamps. They piggyback on the day of their
+    # connected notes. We check both timed notes (create/update) and
+    # deleted notes (from the untimed section above). For arrow CREATEs,
+    # use max(connected days) so the arrow appears after both endpoints.
+    # For arrow DELETEs, use min(connected days) so the arrow disappears
+    # no later than its referenced notes.
     # ------------------------------------------------------------------
     note_day: dict[str, date] = {}
     for ts, _, entity in timed:
         if isinstance(entity, Note):
             note_day[entity.id] = ts.date()
+    # Merge deleted note days — arrows referencing deleted notes should
+    # be grouped with those deletions.
+    note_day.update(deleted_note_day)
 
     arrows_linked = 0
     arrows_fallback = 0
 
     for ch, arrow in arrows:
-        day = note_day.get(arrow.tail_note_id) if arrow.tail_note_id else None
-        if day is None and arrow.head_note_id:
-            day = note_day.get(arrow.head_note_id)
-        if day is not None:
+        tail_day = note_day.get(arrow.tail_note_id) if arrow.tail_note_id else None
+        head_day = note_day.get(arrow.head_note_id) if arrow.head_note_id else None
+        days = [d for d in (tail_day, head_day) if d is not None]
+        if days:
+            # For DELETEs: use min — arrow must disappear no later than its
+            # referenced notes. For CREATEs/UPDATEs: use max — arrow must
+            # appear after both endpoints exist.
+            is_delete = ch.type().name == "DELETE"
+            day = min(days) if is_delete else max(days)
             day_groups[day].append(ch)
             arrows_linked += 1
         else:
             day_groups[max_timed_date].append(ch)
             arrows_fallback += 1
-
-    # ------------------------------------------------------------------
-    # 4. Untimed → newest timed day
-    # ------------------------------------------------------------------
-    if untimed:
-        day_groups[max_timed_date].extend(untimed)
 
     # ------------------------------------------------------------------
     # 4b. Coalesce page creates/deletes with ALL their children.

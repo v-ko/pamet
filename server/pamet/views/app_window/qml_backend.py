@@ -6,10 +6,12 @@ app_window_actions.
 """
 
 import json
+from pathlib import Path
 from urllib.parse import urlparse
 
 from PySide6.QtCore import Property, QEvent, QObject, Qt, QUrl, Signal, Slot
 from PySide6.QtGui import QDesktopServices, QGuiApplication, QKeyEvent, QWindow
+from PySide6.QtWidgets import QFileDialog
 
 from pamet.actions.app import (
     close_current_tab,
@@ -184,3 +186,21 @@ class QmlAppBackend(QObject):
     @Property(bool, notify=devToolsVisibleChanged)
     def devToolsVisible(self) -> bool:
         return self._dev_tools_visible
+
+    @Slot(QObject)
+    def handleDownload(self, download: QObject) -> None:
+        suggested = download.property("suggestedFileName") or "download"
+        default_dir = Path.home() / "Downloads"
+        default_path = str(default_dir / suggested)
+
+        path, _ = QFileDialog.getSaveFileName(
+            None, "Save download", default_path, "All files (*)"
+        )
+        if not path:
+            download.cancel()
+            return
+
+        dest = Path(path)
+        download.setProperty("downloadDirectory", str(dest.parent))
+        download.setProperty("downloadFileName", dest.name)
+        download.accept()

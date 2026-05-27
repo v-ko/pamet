@@ -242,6 +242,25 @@ export const DebugDialog: React.FC<DebugDialogProps> = ({ isOpen, onClose }) => 
       }}>
         Simulate Worker Crash (test)
       </button>
+      <button onClick={() => {
+          console.log('[DebugDialog] Export History Store clicked');
+          const storeData = pamet.historyStore.data();
+          const json = JSON.stringify(storeData, null, 2);
+          console.log('[DebugDialog] Serialized history store, size:', json.length);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          console.log('[DebugDialog] Blob URL created:', url);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `history-store-${Date.now()}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          console.log('[DebugDialog] Download triggered');
+      }}>
+        Export History Store JSON
+      </button>
 
         <div>
             <label>
