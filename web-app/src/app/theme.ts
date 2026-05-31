@@ -162,18 +162,17 @@ export const DARK_THEME: ThemeDefinition = {
         'icon-filter': 'invert(1) brightness(0.85)',
     },
     canvas: {
-        // Chalkboard: brighter chalk on darker slate for contrast.
-        // Surface is darker than chrome panels → notes recede, UI floats.
-        // Backgrounds stay 10% alpha — faint chalk-dust marks.
-        'default': '#8ab4ff1a',     // blue chalk dust
-        'onDefault': '#8ab4ff',     // blue chalk         — 8.4:1 on surface
-        'attention': '#f0908a1a',   // pink chalk dust
-        'onAttention': '#f0908a',   // pink chalk         — 7.7:1 on surface
-        'success': '#8ed8961a',     // sage chalk dust
-        'onSuccess': '#8ed896',     // sage chalk         — 10.5:1 on surface
-        'surface': '#121214',       // dark slate board
-        'onSurface': '#b8b8b4',     // muted chalk        — 9.0:1 on surface
-        'neutral': '#b0b0aa1a',     // pale chalk dust
+        // Ayu-mirage inspired, night-mode (red filter) compatible.
+        // R-channel separation: green=135, onSurface=204, default=155, attention=242
+        'default': '#9bb9ff1a',     // soft blue fill
+        'onDefault': '#9bb9ff',     // soft blue text
+        'attention': '#f287791a',   // coral fill
+        'onAttention': '#f28779',   // coral text
+        'success': '#87d96c1a',     // lime fill
+        'onSuccess': '#87d96c',     // lime text
+        'surface': '#121214',       // dark slate
+        'onSurface': '#cccac2',     // ayu foreground
+        'neutral': '#cccac21a',     // neutral fill
         'transparent': '#00000000',
     },
 };

@@ -99,7 +99,7 @@
             "name": "Web Debugger",
             "type": "chrome",
             "request": "launch",
-            "url": "http://localhost:3000",
+            "url": "http://localhost:3010",
             "webRoot": "${workspaceFolder}/web-app/src",
         }
     ],

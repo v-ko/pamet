@@ -39,7 +39,7 @@ export default defineConfig({
     react(),
   ],
   server: {
-    port: 3000,
+    port: 3010,
     // Allow Vite to serve the lib files from the sibling dir
     ...(fusionDev ? { fs: { allow: [path.resolve(__dirname, '..')] } } : {}),
   },

@@ -188,8 +188,8 @@ export function PaletteEditor({ initialPalette, onPaletteChange }: PaletteEditor
                                     }}>
                                         <span style={{ flex: '1 1 auto', minWidth: 0 }}>
                                             {label}
-                                            <span style={{ fontFamily: 'monospace', fontSize: '0.8em', color: 'var(--color-text-faded)', marginLeft: '0.3em' }}>{role}</span>
                                         </span>
+                                        <span style={{ fontFamily: 'monospace', fontSize: '0.75em', color: 'var(--color-text-faded)', flexShrink: 0 }}>{role}</span>
                                         <input
                                             type="color"
                                             value={toPickerHex(val, defaults[role] as string)}
