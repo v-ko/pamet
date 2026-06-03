@@ -33,7 +33,7 @@ Will update the instructions soon. The app is transitioning to web technologies.
 https://github.com/v-ko/pamet/assets/3106360/c1d0f848-4e98-4c20-8d5e-5c7764e9c9d4
 
 ## Development install
-Clone the repo with `--recurse-submodules`, since the [sivkit](https://github.com/v-ko/sivkit) library is integrated as a git submodule at dev time.
+Clone the repo with `--recurse-submodules`, since the [SivKit](https://github.com/v-ko/sivkit) library is integrated as a git submodule at dev time.
 
 ## Testing
 There are unit tests for some of the functionality and testing for the actions(=controller) which are not precise but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
