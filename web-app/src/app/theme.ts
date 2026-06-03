@@ -1,5 +1,5 @@
-import { HexColorData } from "fusion/primitives/Color";
-import { getLogger } from "fusion/logging";
+import { HexColorData } from "sivkit/primitives/Color";
+import { getLogger } from "sivkit/logging";
 import { reaction, IReactionDisposer } from "mobx";
 // Lazy access: imported circularly but only used at runtime (after module init)
 import { pamet } from "@/app/facade";

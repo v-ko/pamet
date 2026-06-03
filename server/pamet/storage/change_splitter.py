@@ -27,10 +27,10 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import date, datetime, time, timezone
 
-from fusion.libs.model import Entity, dump_to_dict
-from fusion.storage.change import Change
-from fusion.storage.delta import Delta
-from fusion.storage.in_memory_store import InMemoryStore
+from sivkit.libs.model import Entity, dump_to_dict
+from sivkit.storage.change import Change
+from sivkit.storage.delta import Delta
+from sivkit.storage.in_memory_store import InMemoryStore
 
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note

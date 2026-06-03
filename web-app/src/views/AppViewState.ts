@@ -1,7 +1,7 @@
 import { makeObservable, observable } from "mobx";
 import { PageViewState } from "@/views/page/PageViewState";
 import { PametProjectData, ProjectReference } from "@/model/Project";
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { LoadingDialogState } from "@/views/system-modal-dialog/state";
 import { CommandPaletteState } from "@/views/CommandPaletteState";
@@ -10,7 +10,7 @@ import { GlobalSearchViewState } from "@/views/search/GlobalSearchViewState";
 import React from "react";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { StorageProxyState, createInitialStorageProxyState } from "fusion/storage/management/StorageServiceProxy";
+import { StorageProxyState, createInitialStorageProxyState } from "sivkit/storage/management/StorageServiceProxy";
 import { ThemePreference, ThemeMode } from "@/app/theme";
 import { ReplayPanelViewState } from "@/views/replay/ReplayViewState";
 import { BackupPanelViewState } from "@/views/replay/BackupViewState";

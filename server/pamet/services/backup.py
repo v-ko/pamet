@@ -24,9 +24,9 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
-from fusion.libs.model import dump_to_dict
-from fusion.logging import get_logger
-from fusion.util import current_time, timestamp
+from sivkit.libs.model import dump_to_dict
+from sivkit.logging import get_logger
+from sivkit.util import current_time, timestamp
 
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page

@@ -1,4 +1,4 @@
-import type { Entity, EntityData } from 'fusion/model/Entity';
+import type { Entity, EntityData } from 'sivkit/model/Entity';
 import { CardNote } from '@/model/CardNote';
 import { Page } from '@/model/Page';
 

@@ -1,9 +1,9 @@
-import { getLogger } from "fusion/logging";
-import { Delta } from "fusion/model/Delta";
-import { Change, ChangeType } from "fusion/model/Change";
-import { Entity, EntityData, SerializedEntityData, dumpToDict, loadFromDict } from "fusion/model/Entity";
-import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
-import { StoreSyncService } from "fusion/storage/sync/StoreSyncService";
+import { getLogger } from "sivkit/logging";
+import { Delta } from "sivkit/model/Delta";
+import { Change, ChangeType } from "sivkit/model/Change";
+import { Entity, EntityData, SerializedEntityData, dumpToDict, loadFromDict } from "sivkit/model/Entity";
+import { InMemoryStore } from "sivkit/storage/domain-store/InMemoryStore";
+import { StoreSyncService } from "sivkit/storage/sync/StoreSyncService";
 
 // Import config entity types to ensure they're registered in the entity library
 import "@/model/config/UserSettings";

@@ -1,8 +1,8 @@
-import { action } from "fusion/registries/Action";
+import { action } from "sivkit/registries/Action";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { Point2D } from "fusion/primitives/Point2D";
-import { Size } from "fusion/primitives/Size";
+import { Point2D } from "sivkit/primitives/Point2D";
+import { Size } from "sivkit/primitives/Size";
 import { snapVectorToGrid } from "@/app/util";
 import { pamet } from "@/app/facade";
 import { MAX_NOTE_HEIGHT, MAX_NOTE_WIDTH, MIN_NOTE_HEIGHT, MIN_NOTE_WIDTH } from "@/app/constants";

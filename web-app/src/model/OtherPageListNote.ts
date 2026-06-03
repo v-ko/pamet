@@ -1,4 +1,4 @@
-import { entityType } from "fusion/model/Entity";
+import { entityType } from "sivkit/model/Entity";
 import { Note } from "@/model/Note";
 
 @entityType('OtherPageListNote')

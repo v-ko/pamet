@@ -2,7 +2,7 @@ import { registerElementView } from "@/views/elementViewLibrary";
 import { ScriptNote } from "@/model/ScriptNote";
 
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 import { NoteCanvasView } from "@/views/note/NoteCanvasView";
 import { textRect } from "@/views/note/util";
 import { DEFAULT_FONT_STRING } from "@/app/constants";

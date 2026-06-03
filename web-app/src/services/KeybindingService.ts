@@ -1,5 +1,5 @@
-import { getCommand } from "fusion/registries/Command";
-import { getLogger } from "fusion/logging";
+import { getCommand } from "sivkit/registries/Command";
+import { getLogger } from "sivkit/logging";
 import { pamet } from "@/app/facade";
 
 const log = getLogger('KeybindingService');

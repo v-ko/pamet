@@ -1,11 +1,11 @@
-import { action } from "fusion/registries/Action";
+import { action } from "sivkit/registries/Action";
 import { AppDialogMode, AppViewState } from "@/views/AppViewState";
 import { pamet } from "@/app/facade";
 import { Page, PageData } from "@/model/Page";
-import { currentTime, timestamp } from "fusion/util/base";
+import { currentTime, timestamp } from "sivkit/util/base";
 import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";
-import { Point2D } from "fusion/primitives/Point2D";
-import { getEntityId } from "fusion/model/Entity";
+import { Point2D } from "sivkit/primitives/Point2D";
+import { getEntityId } from "sivkit/model/Entity";
 import { snapVectorToGrid } from "@/app/util";
 import { CardNote } from "@/model/CardNote";
 import { CANVAS_EXT } from "@/app/constants";

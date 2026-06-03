@@ -1,13 +1,13 @@
 import * as util from "@/app/util";
 import { PageMode, PageViewState, ViewportAutoNavAnimation } from "@/views/page/PageViewState";
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 import { pamet } from "@/app/facade";
 
-import { action } from "fusion/registries/Action";
+import { action } from "sivkit/registries/Action";
 
-import { getLogger } from "fusion/logging";
-import { Rectangle } from "fusion/primitives/Rectangle";
-import { Size } from "fusion/primitives/Size";
+import { getLogger } from "sivkit/logging";
+import { Rectangle } from "sivkit/primitives/Rectangle";
+import { Size } from "sivkit/primitives/Size";
 import { AGU, MAX_HEIGHT_SCALE, MIN_HEIGHT_SCALE, MIN_NOTE_HEIGHT } from "@/app/constants";
 import { Note } from "@/model/Note";
 import { minimalNonelidedSize } from "@/views/note/note-dependent-utils";

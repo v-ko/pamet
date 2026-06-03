@@ -11,10 +11,10 @@
  * persistence.
  */
 
-import { getLogger } from "fusion/logging";
-import { Delta } from "fusion/model/Delta";
-import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
-import { WebSocketSyncService } from "fusion/storage/sync/WebSocketSyncService";
+import { getLogger } from "sivkit/logging";
+import { Delta } from "sivkit/model/Delta";
+import { InMemoryStore } from "sivkit/storage/domain-store/InMemoryStore";
+import { WebSocketSyncService } from "sivkit/storage/sync/WebSocketSyncService";
 
 const log = getLogger('ChangeHistoryService');
 

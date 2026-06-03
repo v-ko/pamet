@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, TypedDict
 
 import attrs
-from fusion import Entity, entity_type
+from sivkit import Entity, entity_type
 
 
 class TerminalPrefixSettings(TypedDict, total=False):

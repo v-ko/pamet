@@ -1,6 +1,6 @@
 import { NOTE_MARGIN } from "@/app/constants";
-import { Rectangle } from "fusion/primitives/Rectangle";
-import { Size } from "fusion/primitives/Size";
+import { Rectangle } from "sivkit/primitives/Rectangle";
+import { Size } from "sivkit/primitives/Size";
 
 export function textRect(forArea: Rectangle): Rectangle {
     return new Rectangle([

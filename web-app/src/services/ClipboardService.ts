@@ -1,7 +1,7 @@
-import { dumpToDict, loadFromDict, SerializedEntityData } from "fusion/model/Entity";
+import { dumpToDict, loadFromDict, SerializedEntityData } from "sivkit/model/Entity";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 
 const log = getLogger('ClipboardService');
 

@@ -1,6 +1,6 @@
 [tool.pytest.ini_options]
-pythonpath = ["fusion/py-src", "server"]
-testpaths = ["server/tests", "fusion/py-src/tests"]
+pythonpath = ["sivkit/python", "server"]
+testpaths = ["server/tests", "sivkit/python/tests"]
 addopts = [
     "--ignore=server/tests/actions",
     "--ignore=server/tests/test_backup_service.py",

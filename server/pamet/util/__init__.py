@@ -4,8 +4,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Union
 
-from fusion.logging import get_logger
-from fusion.util.point2d import Point2D
+from sivkit.logging import get_logger
+from sivkit.util.point2d import Point2D
 
 from pamet.constants import ALIGNMENT_GRID_UNIT
 
@@ -37,4 +37,3 @@ def resource_dir(dir_subpath: str | Path):
 
 def snap_to_grid(x: Union[float, Point2D]) -> Union[float, Point2D]:
     return round(x / ALIGNMENT_GRID_UNIT) * ALIGNMENT_GRID_UNIT
-

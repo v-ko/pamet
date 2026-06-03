@@ -4,8 +4,8 @@ import "@/views/CommandPalette.css";
 import { pamet } from "@/app/facade";
 import { appActions } from "@/actions/app";
 import { navigateToProject } from "@/procedures/app";
-import { getLogger } from 'fusion/logging';
-import { getCommands } from 'fusion/registries/Command';
+import { getLogger } from 'sivkit/logging';
+import { getCommands } from 'sivkit/registries/Command';
 import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/CommandPaletteState";
 
 import { PametRoute } from "@/services/routing/PametRoute";

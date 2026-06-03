@@ -19,10 +19,10 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse, StreamingResponse
-from fusion.libs.command import get_command
-from fusion.libs.model import dump_to_dict
-from fusion.logging import get_logger
-from fusion.storage.starlette_sync import StarletteSyncEndpoint
+from sivkit.libs.command import get_command
+from sivkit.libs.model import dump_to_dict
+from sivkit.logging import get_logger
+from sivkit.storage.starlette_sync import StarletteSyncEndpoint
 from starlette.websockets import WebSocket
 
 import pamet
@@ -440,7 +440,7 @@ def _write_integrity_log(svc, operation: str, data: dict) -> str:
     """Write a JSON diagnostics log file, open it, and return its absolute path."""
     from datetime import datetime
 
-    import fusion
+    import sivkit
     from PySide6.QtCore import QUrl
     from PySide6.QtGui import QDesktopServices
 
@@ -450,7 +450,7 @@ def _write_integrity_log(svc, operation: str, data: dict) -> str:
 
     # Open the file on the main thread (server runs in a background thread)
     path_str = str(log_path.resolve())
-    fusion.call_delayed(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(path_str)))
+    sivkit.call_delayed(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(path_str)))
 
     return path_str
 
@@ -461,7 +461,7 @@ def _write_integrity_log(svc, operation: str, data: dict) -> str:
 )
 async def change_history_check_all(project_id: str):
     """Linear replay checking all stored hashes. Streams progress via SSE."""
-    from fusion.storage.vcs_diagnostics import verify_or_fix_hashes
+    from sivkit.storage.vcs_diagnostics import verify_or_fix_hashes
 
     dss = pamet.desktop_storage_service()
     svc = dss.change_history_service(project_id)
@@ -520,7 +520,7 @@ async def change_history_check_all(project_id: str):
 )
 async def change_history_repair_hashes(project_id: str):
     """Linear replay fixing all mismatched hashes. Streams progress via SSE."""
-    from fusion.storage.vcs_diagnostics import verify_or_fix_hashes
+    from sivkit.storage.vcs_diagnostics import verify_or_fix_hashes
 
     dss = pamet.desktop_storage_service()
     svc = dss.change_history_service(project_id)

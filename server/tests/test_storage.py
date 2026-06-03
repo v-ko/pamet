@@ -1,7 +1,7 @@
 from copy import copy
 
 import pytest
-from fusion.storage.in_memory_store import InMemoryStore
+from sivkit.storage.in_memory_store import InMemoryStore
 
 from pamet.model.card_note import CardNote
 from pamet.model.note import Note

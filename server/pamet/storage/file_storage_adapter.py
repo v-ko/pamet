@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
 
-from fusion.logging import get_logger
+from sivkit.logging import get_logger
 
 from pamet.model.note import Note
 from pamet.storage.file_index import FileIndex

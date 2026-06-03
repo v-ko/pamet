@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import "@/views/dialogs/Dialog.css";
 import { AppViewState } from "@/views/AppViewState";
 import { PametTabIndex } from '@/app/constants';
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 
 const log = getLogger("StorageStatusDialog");
 

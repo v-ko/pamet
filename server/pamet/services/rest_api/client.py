@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import requests
-from fusion import get_logger
+from sivkit import get_logger
 
 log = get_logger(__name__)
 

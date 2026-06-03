@@ -1,4 +1,4 @@
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import { pamet } from "@/app/facade";
 import { appActions } from "@/actions/app";
 import { replayActions } from "@/actions/replay";

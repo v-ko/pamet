@@ -13,18 +13,18 @@ from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
-from fusion import Entity
-from fusion.logging import get_logger
-from fusion.storage.base_store import Store
-from fusion.storage.change import Change
-from fusion.storage.delta import Delta
-from fusion.storage.repository import (
+from sivkit import Entity
+from sivkit.logging import get_logger
+from sivkit.storage.base_store import Store
+from sivkit.storage.change import Change
+from sivkit.storage.delta import Delta
+from sivkit.storage.repository import (
     EmptyRepositoryError,
     MissingBranchError,
     Repository,
 )
-from fusion.storage.sqlite_vcs_adapter import SqliteVcsAdapter
-from fusion.storage.websocket_sync_service import WebSocketSyncService
+from sivkit.storage.sqlite_vcs_adapter import SqliteVcsAdapter
+from sivkit.storage.websocket_sync_service import WebSocketSyncService
 
 log = get_logger(__name__)
 

@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import "@/index.css";
 
-import { getLogger, setupWebWorkerLoggingChannel } from 'fusion/logging';
+import { getLogger, setupWebWorkerLoggingChannel } from 'sivkit/logging';
 import { pamet, type ProjectStorageConfigFactory } from "@/app/facade";
 import { AppViewState } from "@/views/AppViewState";
 import { DEFAULT_KEYBINDINGS } from "@/app/default-keybindings";
@@ -17,9 +17,9 @@ import folderLineIconUrl from "@/resources/icons/folder-line.svg";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
 
-import { FileStoreAdapterNames } from 'fusion/storage/management/ProjectStorageManager';
-import { VcsAdapterNames } from 'fusion/storage/repository/Repository';
-import { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
+import { FileStoreAdapterNames } from 'sivkit/storage/management/ProjectStorageManager';
+import { VcsAdapterNames } from 'sivkit/storage/repository/Repository';
+import { StorageServiceProxy } from "sivkit/storage/management/StorageServiceProxy";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 import { buildDeviceBranchName } from "./app/util";

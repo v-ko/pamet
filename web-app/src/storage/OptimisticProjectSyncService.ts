@@ -1,12 +1,12 @@
-import { getLogger } from "fusion/logging";
-import { Store } from "fusion/storage/domain-store/BaseStore";
-import { Delta } from "fusion/model/Delta";
-import { CommitGraph } from "fusion/storage/version-control/CommitGraph";
-import { Commit } from "fusion/storage/version-control/Commit";
-import { computeRepoSyncDelta } from "fusion/storage/management/sync-utils";
-import type { RepoUpdateData } from "fusion/storage/repository/Repository";
-import type { StorageServiceProxy } from "fusion/storage/management/StorageServiceProxy";
-import { action } from "fusion/registries/Action";
+import { getLogger } from "sivkit/logging";
+import { Store } from "sivkit/storage/domain-store/BaseStore";
+import { Delta } from "sivkit/model/Delta";
+import { CommitGraph } from "sivkit/storage/version-control/CommitGraph";
+import { Commit } from "sivkit/storage/version-control/Commit";
+import { computeRepoSyncDelta } from "sivkit/storage/management/sync-utils";
+import type { RepoUpdateData } from "sivkit/storage/repository/Repository";
+import type { StorageServiceProxy } from "sivkit/storage/management/StorageServiceProxy";
+import { action } from "sivkit/registries/Action";
 import { appActions } from "@/actions/app";
 import { pamet } from "@/app/facade";
 

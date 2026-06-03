@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import cast
 
 import click
-import fusion
-from fusion.util import deep_merge
+import sivkit
 from PySide6.QtCore import QStandardPaths
+from sivkit.util import deep_merge
 from slugify import slugify
 
 from pamet.constants import LOCAL_USER_ID
@@ -28,7 +28,7 @@ from pamet.storage.migrations.v4_to_v5 import (
     process_v4_user_settings,
 )
 
-log = fusion.get_logger(__name__)
+log = sivkit.get_logger(__name__)
 
 
 @click.command()
@@ -221,11 +221,11 @@ def main(
     logging.getLogger("peewee").setLevel(logging.WARNING)
 
     # ── Heavy imports (PySide6, Qt, etc.) deferred to here ───────────
-    from fusion.platform.qt_widgets.qt_main_loop import QtMainLoop
     from PySide6.QtCore import QTimer
     from PySide6.QtQml import QQmlApplicationEngine
     from PySide6.QtQuickControls2 import QQuickStyle
     from PySide6.QtWebEngineQuick import QtWebEngineQuick
+    from sivkit.platform.qt_widgets.qt_main_loop import QtMainLoop
 
     import pamet
     import pamet.commands  # noqa: F401 — triggers @command registrations
@@ -280,7 +280,7 @@ def main(
     log.info("Using config folder: %s", PAMET_CONFIG_DIR)
     log.info("Using app data folder: %s", PAMET_APP_DATA_DIR)
     desktop_app.set_app(app)
-    fusion.set_main_loop(QtMainLoop(app))
+    sivkit.set_main_loop(QtMainLoop(app))
     setup_fonts_and_icons()
 
     desktop_storage_service = DesktopStorageService()
@@ -328,7 +328,7 @@ def main(
     # Open the initial tab deferred so QML Repeater bindings are wired
     QTimer.singleShot(0, lambda: open_tab(view_state, initial_project_url, True))
 
-    fusion.set_main_loop_exception_handler(
+    sivkit.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")
     )
 

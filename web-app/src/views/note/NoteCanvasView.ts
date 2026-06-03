@@ -4,13 +4,13 @@ import { NOTE_BORDER_WIDTH } from "@/app/constants";
 import { TextLayout } from "@/app/util";
 
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
-import { Rectangle } from "fusion/primitives/Rectangle";
+import { Rectangle } from "sivkit/primitives/Rectangle";
 import { BaseCanvasView } from "@/views/note/BaseCanvasView";
 import { pamet } from "@/app/facade";
 import { DEFAULT_FONT_STRING } from "@/app/constants";
 import { textRect, imageGeometryToFitAre } from "@/views/note/util";
-import { Size } from "fusion/primitives/Size";
-import { getLogger } from "fusion/logging";
+import { Size } from "sivkit/primitives/Size";
+import { getLogger } from "sivkit/logging";
 
 let log = getLogger('NoteCanvasView');
 

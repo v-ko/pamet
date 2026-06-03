@@ -21,8 +21,8 @@ import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from fusion.logging import get_logger
-from fusion.util import get_new_id
+from sivkit.logging import get_logger
+from sivkit.util import get_new_id
 from slugify import slugify
 
 from pamet.storage.canvas_html import write_canvas_file

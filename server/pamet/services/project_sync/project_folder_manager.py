@@ -4,10 +4,10 @@ import threading
 from pathlib import Path
 from typing import Any, Iterator
 
-from fusion.libs.model import dump_to_dict
-from fusion.logging import get_logger
-from fusion.storage.change import Change
-from fusion.storage.delta import Delta
+from sivkit.libs.model import dump_to_dict
+from sivkit.logging import get_logger
+from sivkit.storage.change import Change
+from sivkit.storage.delta import Delta
 
 from pamet.desktop_app.config import (
     create_repo_settings,

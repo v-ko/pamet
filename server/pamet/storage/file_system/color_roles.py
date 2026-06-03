@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import List
 
-from fusion.logging import get_logger
+from sivkit.logging import get_logger
 
 log = get_logger(__name__)
 

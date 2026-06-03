@@ -1,17 +1,17 @@
 import { Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType, ArrowData, SerializedArrow } from "@/model/Arrow";
 import { computed, makeObservable, observable, toJS } from 'mobx';
 import { NoteViewState } from "@/views/note/NoteViewState";
-import { getLogger } from 'fusion/logging';
-import { Point2D } from 'fusion/primitives/Point2D';
-import { Rectangle } from 'fusion/primitives/Rectangle';
+import { getLogger } from 'sivkit/logging';
+import { Point2D } from 'sivkit/primitives/Point2D';
+import { Rectangle } from 'sivkit/primitives/Rectangle';
 import { approximateMidpointOfBezierCurve, bezierIntersectsRect, bezierPoint } from "@/app/util";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { getCanvasContext } from "@/views/note/note-dependent-utils";
 import { ARROW_CONTROL_POINT_RADIUS, ARROW_INCLINATION_MEASURE_AT, ARROW_POTENTIAL_CONTROL_POINT_RADIUS } from "@/app/constants";
-import { Change } from 'fusion/model/Change';
+import { Change } from 'sivkit/model/Change';
 import { pamet } from "@/app/facade";
 import { PageViewState } from "@/views/page/PageViewState";
-import { dumpToDict, loadFromDict } from "fusion/model/Entity";
+import { dumpToDict, loadFromDict } from "sivkit/model/Entity";
 
 let log = getLogger('ArrowViewState');
 

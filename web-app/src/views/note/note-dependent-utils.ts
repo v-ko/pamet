@@ -2,8 +2,8 @@ import { DEFAULT_NOTE_WIDTH, DEFAULT_NOTE_HEIGHT, DEFAULT_FONT_STRING, MAX_NOTE_
 import { imageGeometryToFitAre } from "@/views/note/util";
 import { Note } from "@/model/Note";
 import { TextLayout, EMPTY_TOKEN, truncateText } from "@/app/util";
-import { Rectangle } from "fusion/primitives/Rectangle";
-import { Size } from "fusion/primitives/Size";
+import { Rectangle } from "sivkit/primitives/Rectangle";
+import { Size } from "sivkit/primitives/Size";
 
 // Lazy-initialized offscreen canvas singleton for text measurement and path hit-testing.
 // No DOM element is created — works in both window and service worker contexts.

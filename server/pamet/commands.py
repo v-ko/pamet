@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import cast
 
-from fusion.libs.command import command
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QDesktopServices, QWindow
+from sivkit.libs.command import command
 
 import pamet
 from pamet import desktop_app

@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from fusion.logging import get_logger
+from sivkit.logging import get_logger
 
 from .v2_to_v3 import V2_BACKUP_FOLDER_NAME
 from .v3_to_v4 import V3_BACKUP_FOLDER_NAME

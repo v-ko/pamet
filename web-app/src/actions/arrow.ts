@@ -1,13 +1,13 @@
-import { action } from "fusion/registries/Action";
+import { action } from "sivkit/registries/Action";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { Arrow, ArrowAnchorOnNoteType, ArrowAnchorTypeToString } from "@/model/Arrow";
-import { Point2D, PointData } from "fusion/primitives/Point2D";
+import { Point2D, PointData } from "sivkit/primitives/Point2D";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { DEFAULT_ARROW_THICKNESS } from "@/app/constants";
 import { pamet } from "@/app/facade";
-import { getEntityId } from "fusion/model/Entity";
-import { getLogger } from "fusion/logging";
+import { getEntityId } from "sivkit/model/Entity";
+import { getLogger } from "sivkit/logging";
 import { snapVectorToGrid } from "@/app/util";
 import { Note } from "@/model/Note";
 

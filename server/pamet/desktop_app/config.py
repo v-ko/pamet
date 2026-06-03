@@ -6,8 +6,8 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any, Mapping, NotRequired, TypedDict, cast
 
-from fusion.util import get_new_id
 from PySide6.QtCore import QCoreApplication, QStandardPaths
+from sivkit.util import get_new_id
 
 QCoreApplication.setApplicationName("pamet")
 

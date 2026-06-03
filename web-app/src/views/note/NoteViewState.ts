@@ -2,11 +2,11 @@ import { computed, makeObservable, observable, toJS } from "mobx";
 import { Note, SerializedNote } from "@/model/Note";
 import { TextLayout } from "@/app/util";
 import { calculateTextLayout } from "@/views/note/note-dependent-utils";
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { DEFAULT_FONT_STRING } from "@/app/constants";
-import { loadFromDict } from "fusion/model/Entity";
-import { Change } from "fusion/model/Change";
+import { loadFromDict } from "sivkit/model/Entity";
+import { Change } from "sivkit/model/Change";
 import { PageViewState } from "@/views/page/PageViewState";
 
 let log = getLogger('NoteViewState.ts');

@@ -1,18 +1,18 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { Rectangle } from 'fusion/primitives/Rectangle';
+import { Rectangle } from 'sivkit/primitives/Rectangle';
 import { Note, NoteContent, SerializedNote } from '@/model/Note';
 import { pamet } from "@/app/facade";
-import { dumpToDict, loadFromDict } from 'fusion/model/Entity';
-import { currentTime, timestamp } from 'fusion/util/base';
-import { getLogger } from 'fusion/logging';
+import { dumpToDict, loadFromDict } from 'sivkit/model/Entity';
+import { currentTime, timestamp } from 'sivkit/util/base';
+import { getLogger } from 'sivkit/logging';
 import { PametTabIndex } from "@/app/constants";
 import "@/views/note/NoteEditView.css";
 import { ImageEditPropsWidget } from "@/views/note/edit-window/ImageEditPropsWidget";
 import { LinkEditWidget } from "@/views/note/edit-window/LinkEditWidget";
-import { extractImageDimensions } from 'fusion/util/media';
+import { extractImageDimensions } from 'sivkit/util/media';
 import { NoteEditViewState } from "@/views/note/NoteEditViewState";
-import { Point2D } from 'fusion/primitives/Point2D';
+import { Point2D } from 'sivkit/primitives/Point2D';
 import { pageActions } from '@/actions/page';
 
 let log = getLogger('EditComponent');

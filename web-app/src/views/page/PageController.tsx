@@ -15,9 +15,9 @@ import { CardNote } from '@/model/CardNote';
 import { Viewport } from '@/views/page/Viewport';
 import { PametRoute } from '@/services/routing/PametRoute';
 import { navigateReplayToPage } from '@/procedures/replay';
-import { Point2D } from 'fusion/primitives/Point2D';
+import { Point2D } from 'sivkit/primitives/Point2D';
 import { reaction } from 'mobx';
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import React from 'react';
 import type { MenuItem } from '@/views/menu/Menu';
 

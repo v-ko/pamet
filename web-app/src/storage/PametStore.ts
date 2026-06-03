@@ -1,6 +1,6 @@
-import { Change } from 'fusion/model/Change'
-import { Store, SearchFilter } from 'fusion/storage/domain-store/BaseStore'
-import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'fusion/storage/domain-store/InMemoryStore'
+import { Change } from 'sivkit/model/Change'
+import { Store, SearchFilter } from 'sivkit/storage/domain-store/BaseStore'
+import { IndexConfig, ENTITY_TYPE_INDEX_KEY } from 'sivkit/storage/domain-store/InMemoryStore'
 import { Arrow } from "@/model/Arrow"
 import { Note } from "@/model/Note"
 import { Page } from "@/model/Page"

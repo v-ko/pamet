@@ -1,5 +1,5 @@
-import { ImageConversionPreset } from "fusion/util/media";
-import { HexColorData } from "fusion/primitives/Color";
+import { ImageConversionPreset } from "sivkit/util/media";
+import { HexColorData } from "sivkit/primitives/Color";
 
 // User identity when not logged in and storing repos locally
 export const LOCAL_USER_ID = 'local';  // Used in URLs when no user is authenticated

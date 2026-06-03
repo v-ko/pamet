@@ -1,6 +1,6 @@
 import { pamet } from "@/app/facade";
 import { BaseAnimation, EasingFunction } from "@/services/AnimationService";
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 import { AUTO_NAVIGATE_TRANSITION_DURATION } from "@/actions/page";
 
 export class PageAnimation extends BaseAnimation {

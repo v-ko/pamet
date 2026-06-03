@@ -4,8 +4,8 @@ from datetime import datetime
 from typing import Generic, Mapping, TypedDict, TypeVar, cast
 
 import attrs
-from fusion import entity_type, get_logger
-from fusion.util import Point2D, Rectangle, current_time, timestamp
+from sivkit import entity_type, get_logger
+from sivkit.util import Point2D, Rectangle, current_time, timestamp
 
 from pamet.constants import (
     DEFAULT_BG_COLOR_ROLE,

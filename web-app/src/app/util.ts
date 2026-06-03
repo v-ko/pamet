@@ -1,8 +1,8 @@
 import { ElementViewState } from "@/views/page/ElementViewState";
 import { ALIGNMENT_GRID_UNIT } from "@/app/constants";
-import { getLogger } from "fusion/logging";
-import { Point2D, Vector2D } from "fusion/primitives/Point2D";
-import { Rectangle } from "fusion/primitives/Rectangle";
+import { getLogger } from "sivkit/logging";
+import { Point2D, Vector2D } from "sivkit/primitives/Point2D";
+import { Rectangle } from "sivkit/primitives/Rectangle";
 
 // Clipboard item types
 export type ClipboardItemType = 'text' | 'url' | 'image';

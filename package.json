@@ -70,7 +70,7 @@
     },
     "moduleNameMapper": {
       "\\.(css|less|scss|sass)$": "identity-obj-proxy",
-      "^fusion/(.*)$": "<rootDir>/../fusion/js-src/src/$1",
+      "^sivkit/(.*)$": "<rootDir>/../sivkit/typescript/src/$1",
       "^@/(.*)$": "<rootDir>/web-app/src/$1"
     },
     "passWithNoTests": true

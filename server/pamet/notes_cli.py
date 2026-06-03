@@ -22,7 +22,7 @@ import click
 # Add the server package to the path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fusion.util import Point2D
+from sivkit.util import Point2D
 
 from pamet.desktop_app.config import get_repo_settings
 from pamet.model.arrow import Arrow

@@ -11,10 +11,10 @@ from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
-from fusion.logging import get_logger
-from fusion.util import current_time, get_new_id, timestamp
-from fusion.util.point2d import Point2D
-from fusion.util.rectangle import Rectangle
+from sivkit.logging import get_logger
+from sivkit.util import current_time, get_new_id, timestamp
+from sivkit.util.point2d import Point2D
+from sivkit.util.rectangle import Rectangle
 from slugify import slugify
 
 from pamet.constants import (

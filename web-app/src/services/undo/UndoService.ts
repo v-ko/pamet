@@ -1,5 +1,5 @@
-import { Delta } from "fusion/model/Delta";
-import { getLogger } from "fusion/logging";
+import { Delta } from "sivkit/model/Delta";
+import { getLogger } from "sivkit/logging";
 import { PametFacade } from "@/app/facade";
 
 const log = getLogger("UndoService");

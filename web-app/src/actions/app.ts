@@ -5,11 +5,11 @@ import { PageAndCommandPaletteState, ProjectPaletteState } from "@/views/Command
 import { LocalSearchViewState } from "@/views/search/LocalSearchViewState";
 import { GlobalSearchViewState } from "@/views/search/GlobalSearchViewState";
 import { pamet } from "@/app/facade";
-import { getLogger } from "fusion/logging";
-import { action } from "fusion/registries/Action";
+import { getLogger } from "sivkit/logging";
+import { action } from "sivkit/registries/Action";
 import { PageViewState } from "@/views/page/PageViewState";
 import type { PametProjectData, ProjectReference } from "@/model/Project";
-import { StorageProxyState } from "fusion/storage/management/StorageServiceProxy";
+import { StorageProxyState } from "sivkit/storage/management/StorageServiceProxy";
 import type { ThemePreference, ThemeMode, CanvasTokens } from "@/app/theme";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";

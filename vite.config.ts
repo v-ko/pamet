@@ -8,10 +8,10 @@ import * as fs from 'fs';
 const buildMode = process.env.BUILD_MODE || 'web';
 const isDesktop = buildMode === 'desktop';
 
-// Auto-detect local fusion source for tandem development.
+// Auto-detect local sivkit source for tandem development.
 // Falls back to the npm package if the sibling repo isn't present.
-const fusionLocalPath = path.resolve(__dirname, '../fusion/js-src/src');
-const fusionDev = fs.existsSync(fusionLocalPath);
+const sivkitLocalPath = path.resolve(__dirname, '../sivkit/typescript/src');
+const sivkitDev = fs.existsSync(sivkitLocalPath);
 
 export default defineConfig({
   root: './web-app/src',
@@ -41,11 +41,11 @@ export default defineConfig({
   server: {
     port: 3010,
     // Allow Vite to serve the lib files from the sibling dir
-    ...(fusionDev ? { fs: { allow: [path.resolve(__dirname, '..')] } } : {}),
+    ...(sivkitDev ? { fs: { allow: [path.resolve(__dirname, '..')] } } : {}),
   },
   resolve: {
     alias: {
-      ...(fusionDev ? { 'fusion': fusionLocalPath } : {}),
+      ...(sivkitDev ? { 'sivkit': sivkitLocalPath } : {}),
       '@': path.resolve(__dirname, './web-app/src'),
     },
   },

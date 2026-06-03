@@ -1,13 +1,13 @@
 import { AppViewState } from "@/views/AppViewState";
-import { getLogger } from "fusion/logging";
-import { action } from "fusion/registries/Action";
+import { getLogger } from "sivkit/logging";
+import { action } from "sivkit/registries/Action";
 import { ReplayPanelViewState, CommitMarker, IntegrityOpState } from "@/views/replay/ReplayViewState";
 import { BackupPanelViewState } from "@/views/replay/BackupViewState";
 import { PageViewState } from "@/views/page/PageViewState";
 import { Note } from "@/model/Note";
 import { Arrow } from "@/model/Arrow";
 import { Page } from "@/model/Page";
-import { Store } from "fusion/storage/domain-store/BaseStore";
+import { Store } from "sivkit/storage/domain-store/BaseStore";
 
 let log = getLogger("ReplayActions");
 

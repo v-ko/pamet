@@ -1,4 +1,4 @@
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import { Note } from "@/model/Note";
 import { PageViewState } from "@/views/page/PageViewState";
 

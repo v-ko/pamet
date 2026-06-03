@@ -3,7 +3,7 @@ import { pamet } from '@/app/facade';
 import { appActions } from '@/actions/app';
 import { PametRoute } from "@/services/routing/PametRoute";
 import { PametTabIndex } from '@/app/constants';
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import "@/views/dialogs/Dialog.css";
 
 let log = getLogger('ProjectsDialog')

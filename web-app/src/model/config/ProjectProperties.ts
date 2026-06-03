@@ -1,4 +1,4 @@
-import { Entity, EntityData, entityType } from "fusion/model/Entity"
+import { Entity, EntityData, entityType } from "sivkit/model/Entity"
 
 export interface ProjectPropertiesData extends EntityData {
     project_id: string;

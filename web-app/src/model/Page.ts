@@ -1,5 +1,5 @@
-import { Entity, EntityData, entityType } from "fusion/model/Entity"
-import { timestamp } from 'fusion/util/base';
+import { Entity, EntityData, entityType } from "sivkit/model/Entity"
+import { timestamp } from 'sivkit/util/base';
 import { PametRoute } from "@/services/routing/PametRoute";
 import { CANVAS_EXT } from "@/app/constants";
 

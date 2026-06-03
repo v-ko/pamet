@@ -3,7 +3,7 @@ import { reaction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { NoteViewState } from './NoteViewState';
 import { PageController } from '../page/PageController';
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 
 let log = getLogger('NoteCacheManager.tsx');
 

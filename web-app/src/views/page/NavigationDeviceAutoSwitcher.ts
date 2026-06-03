@@ -1,4 +1,4 @@
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 
 export enum NavigationDevice {
     MOUSE = "mouse",

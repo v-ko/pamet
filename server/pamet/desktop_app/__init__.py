@@ -3,7 +3,7 @@ from __future__ import annotations
 from copy import copy
 from typing import Any, cast
 
-from fusion.logging import get_logger
+from sivkit.logging import get_logger
 
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import (

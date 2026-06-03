@@ -1,4 +1,4 @@
-import { Entity, EntityData, entityType } from "fusion/model/Entity"
+import { Entity, EntityData, entityType } from "sivkit/model/Entity"
 import { ProjectReference } from "@/model/Project";
 import { ThemePreference } from "@/app/theme";
 

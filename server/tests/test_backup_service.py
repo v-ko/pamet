@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from fusion.util import current_time, fake_time
+from sivkit.util import current_time, fake_time
 
 from pamet.model.card_note import CardNote
 from pamet.model.page import Page

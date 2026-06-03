@@ -1,8 +1,8 @@
 from typing import Generator
 
-from fusion.storage.base_store import Store
-from fusion.storage.change import Change
-from fusion.util import current_time
+from sivkit.storage.base_store import Store
+from sivkit.storage.change import Change
+from sivkit.util import current_time
 
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note

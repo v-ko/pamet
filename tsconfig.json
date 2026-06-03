@@ -15,16 +15,16 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "paths": {
-      // For tandem development of the fusion lib (sibling repo).
+      // For tandem development of the sivkit lib (sibling repo).
       // (should?) Falls back to the npm package if the local path doesn't exist.
-      "fusion/*": ["../fusion/js-src/src/*"],
+      "sivkit/*": ["../sivkit/typescript/src/*"],
       "@/*": ["./web-app/src/*"]
     },
     "types": ["node", "vite/client", "jest"]
   },
   "include": [
-    "../fusion/js-src/src/**/*.ts",
-    "../fusion/js-src/src/**/*.tsx",
+    "../sivkit/typescript/src/**/*.ts",
+    "../sivkit/typescript/src/**/*.tsx",
     "web-app/src/**/*.ts",
     "web-app/src/**/*.tsx",
     "vite.config.ts"

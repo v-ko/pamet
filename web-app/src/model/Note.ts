@@ -1,8 +1,8 @@
-import { Rectangle } from "fusion/primitives/Rectangle";
+import { Rectangle } from "sivkit/primitives/Rectangle";
 
 import { PametElement, PametElementData } from "@/model/Element";
 import { textRect } from "@/views/note/util";
-import { entityType } from "fusion/model/Entity";
+import { entityType } from "sivkit/model/Entity";
 
 export interface ImageReference {
     path: string;

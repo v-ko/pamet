@@ -1,4 +1,4 @@
-import type { ProjectData } from "fusion/storage/management/StorageService";
+import type { ProjectData } from "sivkit/storage/management/StorageService";
 
 export type { ProjectData };
 

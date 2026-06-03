@@ -1,7 +1,7 @@
-import { Change } from "fusion/model/Change";
+import { Change } from "sivkit/model/Change";
 import { PametElement, PametElementData } from "@/model/Element";
 import { PageViewState } from "@/views/page/PageViewState";
-import { dumpToDict, SerializedEntityData } from "fusion/model/Entity";
+import { dumpToDict, SerializedEntityData } from "sivkit/model/Entity";
 
 export abstract class ElementViewState {
     _elementData: SerializedEntityData;

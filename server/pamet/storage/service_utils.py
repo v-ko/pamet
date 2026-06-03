@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fusion.libs.model import Entity, load_from_dict
+from sivkit.libs.model import Entity, load_from_dict
 
 from pamet.services.constants import MAX_CANVAS_FILE_BYTES
 from pamet.storage.canvas_html import read_canvas_file as _read_canvas_html

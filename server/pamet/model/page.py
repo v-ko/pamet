@@ -2,8 +2,8 @@ from datetime import datetime
 from pathlib import PurePosixPath
 
 import attrs
-from fusion import Entity, entity_type
-from fusion.util import current_time, timestamp
+from sivkit import Entity, entity_type
+from sivkit.util import current_time, timestamp
 
 from pamet.services.constants import CANVAS_FILE_EXT
 

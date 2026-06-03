@@ -1,4 +1,4 @@
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 
 const log = getLogger('AnimationService');
 

@@ -4,7 +4,7 @@ import { calculateTextLayout } from "@/views/note/note-dependent-utils";
 import { BorderType, NoteCanvasView } from "@/views/note/NoteCanvasView";
 import { textRect } from "@/views/note/util";
 import { DEFAULT_FONT_STRING } from "@/app/constants";
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 import { pamet } from "@/app/facade";
 
 const DECORATION_EDGE = 10;

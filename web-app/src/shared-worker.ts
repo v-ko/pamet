@@ -1,7 +1,7 @@
-import { StorageService } from 'fusion/storage/management/StorageService';
-import { setupSharedWorker } from 'fusion/storage/management/shared-worker-utils';
+import { StorageService } from 'sivkit/storage/management/StorageService';
+import { setupSharedWorker } from 'sivkit/storage/management/shared-worker-utils';
 
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
 
 getLogger('shared-worker');

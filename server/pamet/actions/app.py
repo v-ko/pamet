@@ -6,7 +6,7 @@ The QML backend calls these — it never mutates state directly.
 
 from uuid import uuid4
 
-from fusion.libs.action import action
+from sivkit.libs.action import action
 
 from pamet.views.app_window.view_state import AppWindowViewState, _Tab
 

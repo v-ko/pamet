@@ -12,7 +12,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     'PySide6',
-    'python-fusion>=0.10.0',
+    'sivkit>=0.10.0',
     'click',
     'python-slugify',
     'thefuzz',

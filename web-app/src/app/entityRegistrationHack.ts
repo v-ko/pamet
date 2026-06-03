@@ -1,4 +1,4 @@
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 
 // Entity imports that are required to activate @entityType decorators
 import { CardNote } from "@/model/CardNote";

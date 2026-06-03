@@ -6,7 +6,7 @@ import { ThemePreference } from "@/app/theme";
 
 import { PageView } from "@/views/page/PageView";
 
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import Panel from "@/views/Panel";
 
 import shareIconUrl from "@/resources/icons/share-2.svg";

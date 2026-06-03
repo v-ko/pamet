@@ -1,4 +1,4 @@
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import { pamet } from "@/app/facade";
 import { ProjectData } from "@/model/Project";
 import { appActions } from "@/actions/app";
@@ -6,7 +6,7 @@ import { PametRoute } from "@/services/routing/PametRoute";
 import { ProjectError, AppViewState } from "@/views/AppViewState";
 import { projectActions } from "@/actions/project";
 import { Page } from "@/model/Page";
-import { currentTime, timestamp } from "fusion/util/base";
+import { currentTime, timestamp } from "sivkit/util/base";
 
 const log = getLogger('AppProcedures');
 

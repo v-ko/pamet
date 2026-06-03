@@ -1,4 +1,4 @@
-from fusion.storage.in_memory_store import InMemoryStore
+from sivkit.storage.in_memory_store import InMemoryStore
 
 from pamet.model.arrow import Arrow
 from pamet.model.note import Note

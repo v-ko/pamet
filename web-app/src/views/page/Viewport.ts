@@ -1,7 +1,7 @@
 import { NO_SCALE_LINE_SPACING } from "@/app/constants";
-import { Point2D } from 'fusion/primitives/Point2D';
-import { RectangleData } from 'fusion/primitives/Rectangle';
-import { Rectangle } from 'fusion/primitives/Rectangle';
+import { Point2D } from 'sivkit/primitives/Point2D';
+import { RectangleData } from 'sivkit/primitives/Rectangle';
+import { Rectangle } from 'sivkit/primitives/Rectangle';
 
 
 function unprojectX(xOnScreen: number, viewportLeftReal: number, heightScaleFactor: number): number {

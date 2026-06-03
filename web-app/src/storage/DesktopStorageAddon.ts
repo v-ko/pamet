@@ -1,14 +1,14 @@
-import { getLogger } from 'fusion/logging';
-import type { ProjectStorageManager, StorageAddon } from 'fusion/storage/management/ProjectStorageManager';
-import { Delta, type DeltaData } from 'fusion/model/Delta';
-import { Change } from 'fusion/model/Change';
+import { getLogger } from 'sivkit/logging';
+import type { ProjectStorageManager, StorageAddon } from 'sivkit/storage/management/ProjectStorageManager';
+import { Delta, type DeltaData } from 'sivkit/model/Delta';
+import { Change } from 'sivkit/model/Change';
 import { canvasPageNameFromPath } from '@/model/Page';
 import {
     linkUpdatesForPageRename,
     linkUpdatesForPageDelete,
 } from '@/model/correctness';
-import { buildRestApiAuthHeaders } from 'fusion/storage/rest-api/Auth';
-import type { DomainStoreAdapterArgs } from 'fusion/storage/domain-store-adapter/DomainStoreAdapter';
+import { buildRestApiAuthHeaders } from 'sivkit/storage/rest-api/Auth';
+import type { DomainStoreAdapterArgs } from 'sivkit/storage/domain-store-adapter/DomainStoreAdapter';
 
 const log = getLogger('DesktopStorageAddon');
 

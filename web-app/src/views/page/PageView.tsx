@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { observer } from 'mobx-react-lite';
 
 import { PametTabIndex } from "@/app/constants";
-import { Point2D } from 'fusion/primitives/Point2D';
+import { Point2D } from 'sivkit/primitives/Point2D';
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import React from 'react';
 import "@/views/page/PageView.css";
 

@@ -2,9 +2,9 @@ from enum import Enum
 from typing import List, TypedDict
 
 import attrs
-from fusion.libs.model import entity_type
-from fusion.logging import get_logger
-from fusion.util.point2d import Point2D
+from sivkit.libs.model import entity_type
+from sivkit.logging import get_logger
+from sivkit.util.point2d import Point2D
 
 from pamet.constants import DEFAULT_ARROW_THICKNESS, DEFAULT_COLOR_ROLE
 from pamet.model.page_child import PageChild

@@ -1,5 +1,5 @@
 import { Charset, Document, Encoder } from 'flexsearch';
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import { Note } from '@/model/Note';
 import { Page } from '@/model/Page';
 import slugify from 'slugify';

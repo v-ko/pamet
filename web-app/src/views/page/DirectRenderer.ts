@@ -4,17 +4,17 @@ import { ElementViewState } from "@/views/page/ElementViewState";
 import { PageMode, PageViewState } from "@/views/page/PageViewState";
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { AGU, ALIGNMENT_LINE_LENGTH, ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_CONTROL_POINT_RADIUS, ARROW_POTENTIAL_CONTROL_POINT_RADIUS, DRAG_SELECT_COLOR, IMAGE_CACHE_PADDING, MAX_HEIGHT_SCALE, MAX_RENDER_TIME, MINIMUM_DENOVO_RENDERED_NOTES_PER_FRAME, NOTE_BORDER_WIDTH, NOTE_DATETIME_MIN_SCALE, PROPOSED_MAX_PAGE_WIDTH, RESIZE_CIRCLE_RADIUS, SELECTION_OVERLAY_COLOR } from "@/app/constants";
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import { drawCrossingDiagonals, snapVectorToGrid } from "@/app/util";
 
-import { Rectangle } from "fusion/primitives/Rectangle";
+import { Rectangle } from "sivkit/primitives/Rectangle";
 import { ElementView, getElementView } from "@/views/elementViewLibrary";
 import { ArrowCanvasView } from "@/views/arrow/ArrowCanvasView";
 import { arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
 import { Note } from "@/model/Note";
 import { pamet } from "@/app/facade";
 import { getPageNavigationState, PageAnimation } from "@/views/page/render-utils";
-import { Point2D } from "fusion/primitives/Point2D";
+import { Point2D } from "sivkit/primitives/Point2D";
 
 let log = getLogger('DirectRenderer');
 

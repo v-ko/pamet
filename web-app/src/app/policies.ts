@@ -5,7 +5,7 @@ import {
     IMAGE_CONVERSION_PRESET_PNG,
     MAX_IMAGE_DIMENSION_FOR_COMPRESSION
 } from "@/app/constants";
-import { ImageConversionPreset } from "fusion/util/media";
+import { ImageConversionPreset } from "sivkit/util/media";
 
 interface ImageInfo {
     width: number;

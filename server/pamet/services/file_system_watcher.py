@@ -5,10 +5,10 @@ from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Set, cast
 
-from fusion.logging import get_logger
-from fusion.storage.change import Change
-from fusion.storage.delta import Delta
 from PySide6.QtCore import QFileSystemWatcher, QTimer
+from sivkit.logging import get_logger
+from sivkit.storage.change import Change
+from sivkit.storage.delta import Delta
 
 from pamet.model.page import Page
 from pamet.services.constants import CANVAS_FILE_EXT

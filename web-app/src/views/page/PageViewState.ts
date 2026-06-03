@@ -1,21 +1,21 @@
 import { ObservableMap, ObservableSet, computed, makeObservable, observable, reaction, toJS } from 'mobx';
 import { ARROW_ANCHOR_ON_NOTE_SUGGEST_RADIUS, ARROW_SELECTION_RADIUS, DEFAULT_VIEW_HEIGHT, RESIZE_CIRCLE_RADIUS } from "@/app/constants";
-import { Point2D } from 'fusion/primitives/Point2D';
+import { Point2D } from 'sivkit/primitives/Point2D';
 import { Page, PageData } from "@/model/Page";
 import { Viewport } from "@/views/page/Viewport";
-import { Rectangle, RectangleData } from 'fusion/primitives/Rectangle';
+import { Rectangle, RectangleData } from 'sivkit/primitives/Rectangle';
 import { NoteViewState } from "@/views/note/NoteViewState";
 import { ArrowViewState } from "@/views/arrow/ArrowViewState";
 import { pamet } from "@/app/facade";
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import { Note } from "@/model/Note";
 import { anchorIntersectsCircle, Arrow, arrowAnchorPosition, ArrowAnchorOnNoteType } from "@/model/Arrow";
 import { ElementViewState as CanvasElementViewState } from "@/views/page/ElementViewState";
-import { Size } from 'fusion/primitives/Size';
-import { Change } from 'fusion/model/Change';
+import { Size } from 'sivkit/primitives/Size';
+import { Change } from 'sivkit/model/Change';
 import { NoteEditViewState } from "@/views/note/NoteEditViewState";
 import { fileRoute } from '@/services/routing/PametRoute';
-import { createId } from 'fusion/util/base';
+import { createId } from 'sivkit/util/base';
 
 let log = getLogger('PageViewState');
 

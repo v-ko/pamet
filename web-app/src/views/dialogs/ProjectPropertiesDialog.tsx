@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { PametProjectData } from '@/model/Project';
 import { pamet } from "@/app/facade";
 import { deleteProjectAndSwitch } from '@/procedures/app';
-import { getLogger } from 'fusion/logging';
+import { getLogger } from 'sivkit/logging';
 import { PametTabIndex } from '@/app/constants';
 import { PaletteEditor } from '@/views/dialogs/PaletteEditor';
 import "@/views/dialogs/Dialog.css";

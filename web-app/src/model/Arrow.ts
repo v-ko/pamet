@@ -1,5 +1,5 @@
-import { entityType } from 'fusion/model/Entity';
-import { Point2D, PointData } from 'fusion/primitives/Point2D';
+import { entityType } from 'sivkit/model/Entity';
+import { Point2D, PointData } from 'sivkit/primitives/Point2D';
 import { PametElement, PametElementData } from "@/model/Element";
 import { Note } from "@/model/Note";
 

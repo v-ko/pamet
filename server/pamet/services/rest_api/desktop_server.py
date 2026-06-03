@@ -7,7 +7,7 @@ import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fusion import get_logger
+from sivkit import get_logger
 from starlette.responses import FileResponse
 from uvicorn import Config, Server
 

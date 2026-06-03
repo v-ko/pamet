@@ -14,11 +14,11 @@ import click
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from fusion.libs.model import load_from_dict
-from fusion.storage.commit import Commit
-from fusion.storage.delta import Delta
-from fusion.storage.in_memory_store import InMemoryStore
-from fusion.storage.sqlite_vcs_adapter import SqliteVcsAdapter
+from sivkit.libs.model import load_from_dict
+from sivkit.storage.commit import Commit
+from sivkit.storage.delta import Delta
+from sivkit.storage.in_memory_store import InMemoryStore
+from sivkit.storage.sqlite_vcs_adapter import SqliteVcsAdapter
 
 from pamet.model.arrow import Arrow  # noqa: F401 — register entity type
 from pamet.model.card_note import CardNote  # noqa: F401
@@ -657,7 +657,7 @@ def list_snapshots(ctx: click.Context) -> None:
 @click.pass_context
 def save_snapshot(ctx: click.Context, ref: str) -> None:
     """Save a snapshot at a specific commit (seeks and stores the full state)."""
-    from fusion.libs.model import dump_to_dict
+    from sivkit.libs.model import dump_to_dict
 
     adapter: SqliteVcsAdapter = ctx.obj["adapter"]
     chain = get_branch_chain(adapter)
@@ -681,7 +681,7 @@ def save_snapshot(ctx: click.Context, ref: str) -> None:
 def remove_snapshot(ctx: click.Context, ref: str) -> None:
     """Remove a snapshot at a specific commit."""
     import peewee as pw
-    from fusion.storage.sqlite_vcs_adapter import SnapshotRow
+    from sivkit.storage.sqlite_vcs_adapter import SnapshotRow
 
     adapter: SqliteVcsAdapter = ctx.obj["adapter"]
     chain = get_branch_chain(adapter)

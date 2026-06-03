@@ -1,4 +1,4 @@
-import { getLogger } from "fusion/logging";
+import { getLogger } from "sivkit/logging";
 import { PametRoute } from "@/services/routing/PametRoute";
 
 const log = getLogger('RoutingService');

@@ -1,4 +1,4 @@
-import { Entity, EntityData } from "fusion/model/Entity";
+import { Entity, EntityData } from "sivkit/model/Entity";
 
 export interface PametElementData extends EntityData {
 }

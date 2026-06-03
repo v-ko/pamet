@@ -9,9 +9,9 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from fusion.logging import get_logger
-from fusion.util import get_new_id
-from fusion.util.point2d import Point2D
+from sivkit.logging import get_logger
+from sivkit.util import get_new_id
+from sivkit.util.point2d import Point2D
 
 from .utils import backup_file, new_id_for_legacy_note
 

@@ -1,10 +1,10 @@
-import { InMemoryStore } from "fusion/storage/domain-store/InMemoryStore";
-import { Delta, DeltaData, squashDeltas } from "fusion/model/Delta";
-import { Change, ChangeType } from "fusion/model/Change";
-import { getLogger } from "fusion/logging";
-import { Entity, EntityData } from "fusion/model/Entity";
-import { RestApiVcsAdapter } from "fusion/storage/repository/RestApiVcsAdapter";
-import { RestApiAuthConfig } from "fusion/storage/rest-api/Auth";
+import { InMemoryStore } from "sivkit/storage/domain-store/InMemoryStore";
+import { Delta, DeltaData, squashDeltas } from "sivkit/model/Delta";
+import { Change, ChangeType } from "sivkit/model/Change";
+import { getLogger } from "sivkit/logging";
+import { Entity, EntityData } from "sivkit/model/Entity";
+import { RestApiVcsAdapter } from "sivkit/storage/repository/RestApiVcsAdapter";
+import { RestApiAuthConfig } from "sivkit/storage/rest-api/Auth";
 import { replayActions } from "@/actions/replay";
 import { pamet } from "@/app/facade";
 
