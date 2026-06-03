@@ -1,3 +1,4 @@
+import logging
 import traceback
 
 import sivkit
@@ -8,7 +9,7 @@ from sivkit.logging import LOGGING_LEVEL, LoggingLevels
 import pamet
 from pamet.views.selector_widget import SelectorWidget
 
-log = sivkit.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class DesktopApp(QApplication):

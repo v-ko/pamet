@@ -28,7 +28,7 @@ from pamet.storage.migrations.v4_to_v5 import (
     process_v4_user_settings,
 )
 
-log = sivkit.get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 @click.command()

@@ -1,9 +1,8 @@
 from __future__ import annotations
 
+import logging
 from copy import copy
 from typing import Any, cast
-
-from sivkit.logging import get_logger
 
 from pamet.desktop_app.app import DesktopApp
 from pamet.desktop_app.config import (
@@ -13,7 +12,7 @@ from pamet.desktop_app.config import (
 )
 from pamet.desktop_app.icon_cache import PametQtWidgetsCachedIcons
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 icons = PametQtWidgetsCachedIcons()
 

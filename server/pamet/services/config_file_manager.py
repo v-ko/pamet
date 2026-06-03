@@ -8,18 +8,18 @@ persisted to the appropriate JSON file on disk.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypedDict
 
 from sivkit.libs.model import dump_to_dict, load_from_dict
-from sivkit.logging import get_logger
 from sivkit.storage.delta import Delta
 from sivkit.storage.in_memory_store import InMemoryStore
 
 from pamet.desktop_app.config import PAMET_CONFIG_DIR, USER_SETTINGS_DIR
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 DEVICE_STATE_PATH = PAMET_CONFIG_DIR / "device-state.json"
 USER_SETTINGS_PATH = USER_SETTINGS_DIR / "settings.json"

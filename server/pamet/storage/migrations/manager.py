@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
-
-from sivkit.logging import get_logger
 
 from .v2_to_v3 import V2_BACKUP_FOLDER_NAME
 from .v3_to_v4 import V3_BACKUP_FOLDER_NAME
@@ -13,7 +12,7 @@ from .v4_to_v5 import (
     migrate_v4_to_v5,
 )
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 MIGRATION_BACKUP_DIR_NAMES = {
     V2_BACKUP_FOLDER_NAME,

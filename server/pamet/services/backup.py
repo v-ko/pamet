@@ -16,6 +16,7 @@ folder structure.  Empty subdirectories are cleaned up on pruning.
 
 from __future__ import annotations
 
+import logging
 import os
 import sched
 import threading
@@ -25,7 +26,6 @@ from datetime import datetime
 from pathlib import Path
 
 from sivkit.libs.model import dump_to_dict
-from sivkit.logging import get_logger
 from sivkit.util import current_time, timestamp
 
 from pamet.model.arrow import Arrow
@@ -34,7 +34,7 @@ from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.storage.canvas_html import dump_canvas_html
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 BACKUP = "backup"
 

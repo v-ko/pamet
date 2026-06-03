@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 from pathlib import Path
 
-from sivkit.logging import get_logger
 from sivkit.util import get_new_id
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 def new_id_for_legacy_note(note_id, timestamp, content: str, all_ids: list):

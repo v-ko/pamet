@@ -6,11 +6,10 @@ RGBA values (used in v4 and earlier schemas) to named color roles.
 
 from __future__ import annotations
 
+import logging
 from typing import List
 
-from sivkit.logging import get_logger
-
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 # Legacy (normalized 0..1) role mapping — must match the TS roleToRgbaMap
 LEGACY_ROLE_TO_RGBA_MAP = {

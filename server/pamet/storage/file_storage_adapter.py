@@ -6,14 +6,13 @@ Composed into ``ProjectFolderManager`` as ``pfm.file_storage``.
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path, PurePosixPath
-
-from sivkit.logging import get_logger
 
 from pamet.model.note import Note
 from pamet.storage.file_index import FileIndex
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class FileStorageAdapter:

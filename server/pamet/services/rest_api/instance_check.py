@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import requests
-from sivkit import get_logger
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 LOCALHOST = "http://localhost"
 

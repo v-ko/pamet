@@ -6,16 +6,16 @@ See pamet/wiki/migrations/v2-to-v3.md for detailed documentation.
 from __future__ import annotations
 
 import json
+import logging
 from collections import defaultdict
 from pathlib import Path
 
-from sivkit.logging import get_logger
 from sivkit.util import get_new_id
 from sivkit.util.point2d import Point2D
 
 from .utils import backup_file, new_id_for_legacy_note
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 V2_BACKUP_FOLDER_NAME = "__v2_legacy_pages_backup__"
 

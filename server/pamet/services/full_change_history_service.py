@@ -8,13 +8,13 @@ queried for replay / visualization.
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 
 from sivkit import Entity
-from sivkit.logging import get_logger
 from sivkit.storage.base_store import Store
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
@@ -26,7 +26,7 @@ from sivkit.storage.repository import (
 from sivkit.storage.sqlite_vcs_adapter import SqliteVcsAdapter
 from sivkit.storage.websocket_sync_service import WebSocketSyncService
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class _CommittingStoreAdapter(Store):

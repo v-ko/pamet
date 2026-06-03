@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 
-from sivkit.logging import get_logger
 from sivkit.storage.delta import Delta
 from sivkit.storage.in_memory_store import InMemoryStore
 from sivkit.storage.websocket_sync_service import WebSocketSyncService
@@ -14,7 +14,7 @@ from pamet.services.config_file_manager import ConfigFileManager, DSSStatus
 from pamet.services.full_change_history_service import FullChangeHistoryService
 from pamet.services.project_sync.project_folder_manager import ProjectFolderManager
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class ProjectNotLoadedError(KeyError):

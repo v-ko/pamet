@@ -1,15 +1,15 @@
 from __future__ import annotations
 
+import logging
 from importlib import resources
 from pathlib import Path
 from typing import Union
 
-from sivkit.logging import get_logger
 from sivkit.util.point2d import Point2D
 
 from pamet.constants import ALIGNMENT_GRID_UNIT
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 def resource_path(subpath: Union[str, Path]):

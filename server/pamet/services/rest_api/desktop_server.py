@@ -1,3 +1,4 @@
+import logging
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -7,7 +8,6 @@ import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sivkit import get_logger
 from starlette.responses import FileResponse
 from uvicorn import Config, Server
 
@@ -18,7 +18,7 @@ from pamet.services.rest_api.instance_check import (
 )
 from pamet.services.rest_api.routes.desktop import desktop_router
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 DEFAULT_PORT = 11352
 LOCALHOST = "http://localhost"

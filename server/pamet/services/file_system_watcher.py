@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Set, cast
 
 from PySide6.QtCore import QFileSystemWatcher, QTimer
-from sivkit.logging import get_logger
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
 
@@ -18,7 +18,7 @@ from pamet.storage.service_utils import (
     read_canvas_file,
 )
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 # Debounce tolerance for filesystem events (milliseconds).
 # Rapid create/delete/rename sequences (e.g. editor save via tmp file)

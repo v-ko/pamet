@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hmac
 import json
+import logging
 import re
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlparse
@@ -21,7 +22,6 @@ from fastapi import (
 from fastapi.responses import FileResponse, StreamingResponse
 from sivkit.libs.command import get_command
 from sivkit.libs.model import dump_to_dict
-from sivkit.logging import get_logger
 from sivkit.storage.starlette_sync import StarletteSyncEndpoint
 from starlette.websockets import WebSocket
 
@@ -29,7 +29,7 @@ import pamet
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
 from pamet.storage.project_walk import ProjectTooLargeError
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 desktop_router = APIRouter()
 

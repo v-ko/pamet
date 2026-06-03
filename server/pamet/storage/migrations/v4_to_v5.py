@@ -17,11 +17,11 @@ Also has logic for migrating user settings and the backup folder
 import copy
 import hashlib
 import json
+import logging
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from sivkit.logging import get_logger
 from sivkit.util import get_new_id
 from slugify import slugify
 
@@ -30,7 +30,7 @@ from pamet.storage.migrations.utils import backup_file
 
 from ..file_system.color_roles import legacy_normalized_rgba_to_role
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 from pamet.services.constants import CANVAS_FILE_EXT
 

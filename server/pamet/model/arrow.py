@@ -1,15 +1,15 @@
+import logging
 from enum import Enum
 from typing import List, TypedDict
 
 import attrs
 from sivkit.libs.model import entity_type
-from sivkit.logging import get_logger
 from sivkit.util.point2d import Point2D
 
 from pamet.constants import DEFAULT_ARROW_THICKNESS, DEFAULT_COLOR_ROLE
 from pamet.model.page_child import PageChild
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 BEZIER_CUBIC = "bezier_cubic"
 
 

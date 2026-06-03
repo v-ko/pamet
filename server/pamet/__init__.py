@@ -8,10 +8,11 @@ from pamet.services.desktop_storage_service import DesktopStorageService
 
 __version__ = importlib.metadata.version(__package__)
 
-from sivkit.extensions_loader import ExtensionsLoader
-from sivkit.logging import get_logger
+import logging
 
-log = get_logger(__name__)
+from sivkit.extensions_loader import ExtensionsLoader
+
+log = logging.getLogger(__name__)
 
 pamet_root = Path(str(resources.files("pamet")))
 entity_types_loader = ExtensionsLoader(pamet_root)

@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import logging
 import threading
 from pathlib import Path
 from typing import Any, Iterator
 
 from sivkit.libs.model import dump_to_dict
-from sivkit.logging import get_logger
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
 
@@ -29,7 +29,7 @@ from pamet.storage.service_utils import (
     read_canvas_file,
 )
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class ProjectFolderManager:

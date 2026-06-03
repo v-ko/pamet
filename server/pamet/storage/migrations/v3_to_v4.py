@@ -6,12 +6,12 @@ See pamet/wiki/migrations/v3-to-v4.md for detailed documentation.
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path
 
-from sivkit.logging import get_logger
 from sivkit.util import current_time, get_new_id, timestamp
 from sivkit.util.point2d import Point2D
 from sivkit.util.rectangle import Rectangle
@@ -27,7 +27,7 @@ from pamet.util import snap_to_grid
 
 from .utils import backup_file, new_id_for_legacy_note
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 V3_BACKUP_FOLDER_NAME = "__v3_legacy_pages_backup__"
 

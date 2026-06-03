@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-import requests
-from sivkit import get_logger
+import logging
 
-log = get_logger(__name__)
+import requests
+
+log = logging.getLogger(__name__)
 
 LOCALHOST = "http://localhost"
 

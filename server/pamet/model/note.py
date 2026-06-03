@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Generic, Mapping, TypedDict, TypeVar, cast
 
 import attrs
-from sivkit import entity_type, get_logger
+from sivkit import entity_type
 from sivkit.util import Point2D, Rectangle, current_time, timestamp
 
 from pamet.constants import (
@@ -19,7 +20,7 @@ from pamet.constants import (
 )
 from pamet.model.page_child import PageChild
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__)
 
 
 class ImageReference(TypedDict, total=False):
