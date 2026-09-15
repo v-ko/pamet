@@ -1,10 +1,8 @@
 import logging
 import traceback
 
-import sivkit
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QApplication, QMessageBox
-from sivkit.logging import LOGGING_LEVEL, LoggingLevels
 
 import pamet
 from pamet.views.selector_widget import SelectorWidget
@@ -18,7 +16,7 @@ class DesktopApp(QApplication):
 
         name = "pamet"
 
-        if LOGGING_LEVEL == LoggingLevels.DEBUG:
+        if logging.root.level == logging.DEBUG:
             name += "-debug"
 
         self.setOrganizationName("p10")
@@ -40,10 +38,10 @@ class DesktopApp(QApplication):
 
         QTimer.singleShot(0, present)
 
-    def present_exception(self, exception: Exception, title: str = None):
+    def present_exception(self, exception: Exception, title: str | None = None):
         title = title or "Exception raised"
         text = str(exception) + "\n\nTraceback:\n" + traceback.format_exc()
         self.message_box.setText(text)
         self.message_box.setWindowTitle(title)
-        self.message_box.setIcon(QMessageBox.Critical)
+        self.message_box.setIcon(QMessageBox.Icon.Critical)
         self.hacky_present_modal(self.message_box)

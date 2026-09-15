@@ -172,9 +172,6 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
         {s.lastError ? (
           <div>
             <strong>Last Error:</strong> {s.lastError.message}
-            <div style={{ color: 'var(--color-danger, #e53935)', marginTop: '0.3em' }}>
-              Try reloading the page.
-            </div>
           </div>
         ) : (
           <div>No errors recorded.</div>

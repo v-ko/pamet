@@ -103,7 +103,9 @@ class DesktopServer:
                 candidate = (build_path / spa_path).resolve()
                 if spa_path and build_path in candidate.parents and candidate.is_file():
                     return FileResponse(candidate)
-                return FileResponse(index_path)
+                # index.html references content-hashed assets; never cache the
+                # document itself or a stale copy pins the old asset graph.
+                return FileResponse(index_path, headers={"Cache-Control": "no-store"})
 
     @property
     def port(self):

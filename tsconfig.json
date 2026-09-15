@@ -11,7 +11,7 @@
     "esModuleInterop": true,
     "isolatedModules": true,
     "experimentalDecorators": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable", "WebWorker"],
+    "lib": ["ES2020", "ES2022.Error", "DOM", "DOM.Iterable", "WebWorker"],
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "paths": {
