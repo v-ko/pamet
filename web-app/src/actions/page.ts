@@ -553,12 +553,12 @@ class PageActions {
     log.info(`Cut removed ${notes.length} notes, ${arrows.length} arrows`);
   }
 
-  @action({ issuer: 'service', name: UNDO_ACTION_NAME })
+  @action({ issuer: 'user', name: UNDO_ACTION_NAME })
   undoUserAction(state: PageViewState) {
     pamet.undoService.undo(state._pageData.id);
   }
 
-  @action({ issuer: 'service', name: REDO_ACTION_NAME })
+  @action({ issuer: 'user', name: REDO_ACTION_NAME })
   reduUserAction(state: PageViewState) {
     pamet.undoService.redo(state._pageData.id);
   }

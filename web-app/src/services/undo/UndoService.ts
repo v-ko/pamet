@@ -80,7 +80,8 @@ class UndoHistory {
  * Undo/Redo Service
  * - Maintains per-page undo histories
  * - Records change sets (as Deltas) after root user actions complete (hooked from PametFacade)
- * - Applies undo/redo by directly applying deltas to the store + view (no repo commit, no uncommitted buffering)
+ * - Applies undo/redo through the normal store + view pipeline; the enclosing
+ *   user action's completion hook stages the tracked changes for autosave.
  *
  * NOTE: First iteration records the delta for the current page context.
  *       Future iteration can split by page id if needed.
@@ -123,7 +124,7 @@ export class UndoService {
 
   /**
    * Apply one undo step for the page, ignoring failures (conflicts) per spec.
-   * No repo commit; strictly local mutation.
+   * The enclosing user action's completion hook stages this change for autosave.
    */
   undo(pageId: string) {
     const h = this._historiesByPageId.get(pageId);
@@ -153,7 +154,7 @@ export class UndoService {
 
   /**
    * Apply one redo step for the page, ignoring failures (conflicts) per spec.
-   * No repo commit; strictly local mutation.
+   * The enclosing user action's completion hook stages this change for autosave.
    */
   redo(pageId: string) {
     const h = this._historiesByPageId.get(pageId);

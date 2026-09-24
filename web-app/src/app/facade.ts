@@ -170,8 +170,9 @@ export class PametFacade extends PametStore {
             if (!rootAction || rootAction.issuer !== 'user') {
                 return;
             }
-            // Ignore undo/redo actions themselves
-            if (rootAction.name === UNDO_ACTION_NAME || rootAction.name === REDO_ACTION_NAME) {
+            // Undo/redo save like other user actions, but must not record new steps.
+            // Sivkit includes the issuer prefix in action names.
+            if (rootAction.name === `[user]${UNDO_ACTION_NAME}` || rootAction.name === `[user]${REDO_ACTION_NAME}`) {
                 return;
             }
             const uncommittedDelta = this._projectSyncService.uncommittedDelta;

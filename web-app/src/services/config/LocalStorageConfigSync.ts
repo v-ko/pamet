@@ -2,8 +2,7 @@ import { getLogger } from "sivkit/logging";
 import { Delta } from "sivkit/model/Delta";
 import { Change, ChangeType } from "sivkit/model/Change";
 import { Entity, EntityData, SerializedEntityData, dumpToDict, loadFromDict } from "sivkit/model/Entity";
-import { InMemoryStore } from "sivkit/storage/domain-store/InMemoryStore";
-import { StoreSyncService } from "sivkit/storage/sync/StoreSyncService";
+import { StoreSyncServiceBase } from "sivkit/storage/sync/StoreSyncServiceBase";
 
 // Import config entity types to ensure they're registered in the entity library
 import "@/model/config/UserSettings";
@@ -14,20 +13,8 @@ const log = getLogger('LocalStorageConfigSync');
 
 const CONFIG_KEY_PREFIX = 'pamet-config:';
 
-export class LocalStorageConfigSync implements StoreSyncService {
-    private _store: InMemoryStore | null = null;
+export class LocalStorageConfigSync extends StoreSyncServiceBase {
     private _storageListener: ((event: StorageEvent) => void) | null = null;
-
-    setStore(store: InMemoryStore): void {
-        this._store = store;
-    }
-
-    private get store(): InMemoryStore {
-        if (!this._store) {
-            throw new Error('Store not set. Call setStore() before using LocalStorageConfigSync.');
-        }
-        return this._store;
-    }
 
     async initialize(): Promise<void> {
         const entities: Entity<EntityData>[] = [];
@@ -62,9 +49,8 @@ export class LocalStorageConfigSync implements StoreSyncService {
                 // Key was removed — delete entity from store if it exists
                 const existing = this.store.findOne({ id: entityId });
                 if (existing) {
-                    this.store.applyDelta(
-                        Delta.fromChanges([Change.delete(existing)]),
-                        'remote'
+                    this.applyRemoteDelta(
+                        Delta.fromChanges([Change.delete(existing)])
                     );
                 }
             } else {
@@ -76,9 +62,8 @@ export class LocalStorageConfigSync implements StoreSyncService {
                         ? entity.changeFrom(existing)
                         : Change.create(entity);
                     if (!change.isEmpty()) {
-                        this.store.applyDelta(
-                            Delta.fromChanges([change]),
-                            'remote'
+                        this.applyRemoteDelta(
+                            Delta.fromChanges([change])
                         );
                     }
                 } catch (e) {
