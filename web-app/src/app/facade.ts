@@ -394,7 +394,7 @@ export class PametFacade extends PametStore {
             throw Error('AppViewState already set');
         }
         this._appViewState = state;
-        this._historyStore.onChanges = (delta: Delta) => historyEntityDeltaToViewModelReducer(this.appViewState, delta, this._historyStore);
+        this._historyStore.addOnChangesCallback((delta: Delta) => historyEntityDeltaToViewModelReducer(this.appViewState, delta, this._historyStore));
     }
 
     // --- Router coordination --------------------------------------------------
@@ -509,9 +509,9 @@ export class PametFacade extends PametStore {
         // Reset undo histories when switching projects
         this.undoService.clearAll();
 
-        // Create the plain store and wire the view model reducer + change tracking to onChanges
+        // Create the plain store and wire the view model reducer + change tracking to its changes
         const store = new InMemoryStore(PAMET_INMEMORY_STORE_CONFIG);
-        store.onChanges = (delta, origin) => {
+        store.addOnChangesCallback((delta, origin) => {
             entityDeltaToViewModelReducer(this.appViewState, delta, store);
             syncService.trackDelta(delta, origin);
 
@@ -520,7 +520,7 @@ export class PametFacade extends PametStore {
             if (replayVS?.indexedProjectId && !replayVS.indexStale) {
                 setTimeout(() => replayActions.setReplayIndexStale(replayVS, true), 0);
             }
-        };
+        });
 
         // Create the sync service (optimistic commit + reconciliation)
         const storageConfig = pamet.projectStorageConfig(projectId);
@@ -636,14 +636,14 @@ export class PametFacade extends PametStore {
         syncService.setStore(store);
         await syncService.initialize();
 
-        store.onChanges = (delta, origin) => {
+        store.addOnChangesCallback((delta, origin) => {
             if (origin !== 'remote') {
                 syncService.pushDelta(delta).catch((e) => {
                     log.error('Error pushing config delta to sync service', e);
                 });
             }
             this._configUpdateReaction(delta);
-        };
+        });
 
         this._appConfigStore = store;
     }
