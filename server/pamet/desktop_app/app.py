@@ -22,6 +22,7 @@ class DesktopApp(QApplication):
         self.setOrganizationName("p10")
         self.setApplicationName(name)
         self.setApplicationVersion(pamet.__version__)
+        self.setDesktopFileName("pamet")
         self.setQuitOnLastWindowClosed(True)  # Needed for some reason
 
         # TODO: This is a hack to make the app not crash when showing
