@@ -137,6 +137,7 @@ async function initializeWebApp() {
         log.info("Storage service initialized in web mode");
     } catch (e) {
         log.error("Failed to initialize storage service", e);
+        appActions.reportStartupError(appViewState, "Failed to initialize storage", e);
     }
 
     // Register stateless SW for serving cached files
@@ -161,6 +162,7 @@ async function initializeWebApp() {
         await ensureProjectAndNavigate()
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
+        appActions.reportStartupError(appViewState, "Failed to open project", e);
     }
   } finally {
     pamet.hideSplash();
@@ -169,4 +171,5 @@ async function initializeWebApp() {
 
 initializeWebApp().catch((e) => {
     log.error("Error in initializeWebApp", e);
+    appActions.reportStartupError(appViewState, "Failed to start", e);
 });

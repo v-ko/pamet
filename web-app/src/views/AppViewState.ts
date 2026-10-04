@@ -58,6 +58,8 @@ export class AppViewState {
   currentPageViewState: PageViewState | null = null;
   pageError: PageError = PageError.NoError;
 
+  startupErrors: string[] = [];
+
   storageState: PametStorageState = {
     service: createInitialStorageProxyState(),
     saveStatus: 'saved',
@@ -109,6 +111,7 @@ export class AppViewState {
       storageState: observable,
       pageError: observable,
       projectError: observable,
+      startupErrors: observable,
       dialogMode: observable,
       loadingDialogState: observable,
       commandPaletteState: observable,

@@ -111,10 +111,15 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
       shouldDisplayPage = false
     }
 
-    if (state.currentPageViewState === null && state.pageError === PageError.NoError) {
+    if (
+      state.currentPageViewState === null &&
+      state.pageError === PageError.NoError &&
+      state.startupErrors.length === 0
+    ) {
       errorMessages.push("Page not set")
     }
   }
+  errorMessages.push(...state.startupErrors)
 
   const currentPageVS = state.currentPageViewState
   const storageConnectionPhase = state.storageState.service.connectionPhase;

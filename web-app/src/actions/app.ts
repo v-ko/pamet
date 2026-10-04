@@ -90,6 +90,12 @@ class AppActions {
     }
 
     @action({ issuer: 'service' })
+    reportStartupError(state: AppViewState, context: string, error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        state.startupErrors.push(`${context}: ${message}`);
+    }
+
+    @action({ issuer: 'service' })
     applyUserConfig(state: AppViewState, userId: string, trackedProjects: ProjectReference[]) {
         state.userId = userId;
         state.trackedProjects = trackedProjects;

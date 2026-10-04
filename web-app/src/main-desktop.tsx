@@ -163,6 +163,7 @@ async function initializeDesktopApp() {
         log.info("Storage service initialized in desktop mode (SharedWorker)");
     } catch (e) {
         log.error("Failed to initialize storage service", e);
+        appActions.reportStartupError(appViewState, "Failed to initialize storage", e);
     }
 
     // Populate app view state from config store
@@ -181,6 +182,7 @@ async function initializeDesktopApp() {
         await ensureProjectAndNavigate()
     } catch (e) {
         log.error("Error in updateAppFromRouteOrAutoassist", e);
+        appActions.reportStartupError(appViewState, "Failed to open project", e);
     }
   } finally {
     pamet.hideSplash();
@@ -230,6 +232,7 @@ pamet.onChangeHistoryConfigChanged = (projectId: string) => {
 
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);
+    appActions.reportStartupError(appViewState, "Failed to start", e);
 });
 
 // Render the app

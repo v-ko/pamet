@@ -19,6 +19,8 @@ a.App {
   color: var(--color-danger);
   font-weight: bold;
   font-size: 1.5em;
+  max-width: 80vw;
+  overflow-wrap: anywhere;
 }
 
 .page-container {
