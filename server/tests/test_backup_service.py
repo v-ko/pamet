@@ -12,7 +12,6 @@ from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 # Short intervals for testing
 BACKUP_INTERVAL = 1
 PRUNE_INTERVAL = 1.5
-PERMANENT_BACKUP_AGE = 30
 
 PAGE_PATH = "test.canvas.html"
 PAGE_PATH_STEM = "test"
@@ -86,11 +85,7 @@ def test_backup_two_snapshots(tmp_path):
 def test_pruning(tmp_path):
     """Staggered pruning keeps one backup per time bin."""
     store, page = _make_store_with_page()
-    svc = BackupService(
-        backup_folder=tmp_path,
-        store=store,
-        permanent_backup_age=PERMANENT_BACKUP_AGE,
-    )
+    svc = BackupService(backup_folder=tmp_path, store=store)
 
     for_removal: list[Path] = []
     for_keeping: list[Path] = []
@@ -159,6 +154,17 @@ def test_pruning(tmp_path):
         svc.backup_changed_pages()
     for_keeping.append(svc.recent_backup_path(PAGE_PATH_STEM, hourly_kept_time))
 
+    # --- Past the permanent age: 2 backups in same week, both kept ---
+    for day in (1, 2):
+        permanent_age_time = datetime.fromisocalendar(
+            year=2098, week=10, day=day
+        ).astimezone()
+        with fake_time(permanent_age_time):
+            _add_note(store, page, f"permanent-age-{day}")
+            svc.mark_pages_changed({page.id})
+            svc.backup_changed_pages()
+        for_keeping.append(svc.recent_backup_path(PAGE_PATH_STEM, permanent_age_time))
+
     # Prune at 2100-06-30 23:01:00
     with fake_time(
         datetime(year=2100, month=6, day=30, hour=23, minute=1, second=0).astimezone()
@@ -192,11 +198,7 @@ def test_permanent_storage(tmp_path):
 def test_empty_dir_cleanup_on_prune(tmp_path):
     """After pruning removes all backups for a subfolder page, empty dirs are cleaned."""
     store, page = _make_store_with_page(SUB_PAGE_PATH)
-    svc = BackupService(
-        backup_folder=tmp_path,
-        store=store,
-        permanent_backup_age=PERMANENT_BACKUP_AGE,
-    )
+    svc = BackupService(backup_folder=tmp_path, store=store)
 
     # Create a backup then move it to permanent (simulating age)
     t = datetime(year=2000, month=1, day=1).astimezone()

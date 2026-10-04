@@ -52,9 +52,8 @@ TIME_FORMAT = "%Y-%m-%dT%H-%M-%S%z"
 
 def datetime_from_backup_path(path: Path) -> datetime:
     """Extracts the timestamp from the path/name of a backup file."""
-    stem = path.stem  # e.g. backup_2026-03-18T18-50-12+0200
-    parts = stem.split("_", 1)
-    ts = parts[1]
+    # e.g. backup_2026-03-18T18-50-12+0200.canvas.html, or .json (from v4)
+    ts = path.name.split("_", 1)[1].split(".", 1)[0]
     return datetime.strptime(ts, TIME_FORMAT)
 
 
