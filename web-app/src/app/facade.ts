@@ -34,7 +34,6 @@ import { UndoService, UNDO_ACTION_NAME, REDO_ACTION_NAME } from "@/services/undo
 import { SearchService } from "@/services/SearchService";
 import { AnimationService } from "@/services/AnimationService";
 import { ClipboardService } from "@/services/ClipboardService";
-import { ChangeHistoryService } from "@/services/ChangeHistoryService";
 import { ReplayService, LockableStore } from "@/services/ReplayService";
 import folderWarningIconUrl from "@/resources/icons/folder-warning-line.svg";
 import folderCloseIconUrl from "@/resources/icons/folder-close-line.svg";
@@ -109,7 +108,6 @@ export class PametFacade extends PametStore {
     searchService: SearchService = new SearchService();
     animationService: AnimationService = new AnimationService();
     clipboardService: ClipboardService = new ClipboardService();
-    changeHistoryService: ChangeHistoryService = new ChangeHistoryService();
     private _historyStore: LockableStore = new LockableStore(PAMET_INMEMORY_STORE_CONFIG);
     private _replayService: ReplayService | null = null;
 
@@ -139,14 +137,6 @@ export class PametFacade extends PametStore {
     lastRenderError: Error | null = null;
     renderErrorCount: number = 0;
     renderProfiler = new RenderProfiler();
-
-    /**
-     * Desktop-injected hook called when change history config may have changed.
-     * Receives the projectId so the desktop layer can enable/disable the
-     * ChangeHistoryService with the proper WebSocket URL.
-     * TODO: There's probably a better implementation for that
-     */
-    onChangeHistoryConfigChanged: ((projectId: string) => void) | null = null;
 
     hideSplash() {
         const splash = document.getElementById('splash');
@@ -188,7 +178,6 @@ export class PametFacade extends PametStore {
         });
 
         // Register rootAction hook to auto-commit / save
-        // and keep full change hystory if enabled (internal check in pushDelta)
         registerRootActionCompletedHook((rootAction) => {
             if (rootAction.issuer !== 'user') {
                 return;
@@ -200,9 +189,7 @@ export class PametFacade extends PametStore {
             if (phase !== 'ready') {
                 return;
             }
-            const uncommittedDelta = this._projectSyncService.uncommittedDelta;
-            this.changeHistoryService.pushDelta(uncommittedDelta.copy());
-            this._projectSyncService.saveUncommittedChanges();
+            this._projectSyncService.saveUncommittedChanges(rootAction.name);
         });
 
         // Register logger to root actions hooks
@@ -559,8 +546,7 @@ export class PametFacade extends PametStore {
         const allPages = Array.from(this.pages());
         await this.searchService.initializeIndices(allNotes, allPages);
 
-        // Enable change history if configured
-        this.onChangeHistoryConfigChanged?.(projectId);
+        this._applyHistorySetting(projectId);
 
         // Create the replay service for this project
         const baseUrl = (window as any).PAMET_DESKTOP_API_BASE_URL;
@@ -581,7 +567,6 @@ export class PametFacade extends PametStore {
         log.info('Detaching from project', projectId);
         this.undoService.clearAll();
         this.searchService.clear();
-        this.changeHistoryService.disable();
         if (this._replayService) {
             this._replayService.clear();
             this._replayService = null;
@@ -692,8 +677,7 @@ export class PametFacade extends PametStore {
                         const props = this.loadProjectProperties(currentId);
                         appActions.reflectCurrentProjectState(state, props ?? null);
 
-                        // React to record_all_changes toggle
-                        this.onChangeHistoryConfigChanged?.(currentId);
+                        this._applyHistorySetting(currentId);
 
                         // Apply canvas palette from project properties
                         const palette = props?.canvas_palette;
@@ -703,6 +687,13 @@ export class PametFacade extends PametStore {
                 }
             }
         }
+    }
+
+    private _applyHistorySetting(projectId: string) {
+        const props = this.appConfigStore.findOne({ id: ProjectProperties.idForProject(projectId) });
+        const enabled = (props as ProjectProperties | undefined)?.recordAllChanges ?? false;
+        this.storageService.sendToAddon(projectId, 'HistoryAddon', { type: 'setEnabled', enabled })
+            .catch(e => log.error('Failed to toggle change history', e));
     }
 
     // UserSettings accessors

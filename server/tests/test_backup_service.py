@@ -1,4 +1,4 @@
-import time
+import asyncio
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -9,9 +9,9 @@ from pamet.model.page import Page
 from pamet.services.backup import BackupService, _page_path_stem
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 
-# Short intervals for testing
-BACKUP_INTERVAL = 1
-PRUNE_INTERVAL = 1.5
+# Only the first scheduled run happens during a test
+BACKUP_INTERVAL = 60
+PRUNE_INTERVAL = 60
 
 PAGE_PATH = "test.canvas.html"
 PAGE_PATH_STEM = "test"
@@ -225,8 +225,8 @@ def test_empty_dir_cleanup_on_prune(tmp_path):
     assert not notes_dir.exists()
 
 
-def test_scheduler_and_worker(tmp_path):
-    """Worker thread runs backup+prune on schedule."""
+def test_backup_task(tmp_path):
+    """The task backs up and prunes on start; close flushes pending changes."""
     store, page = _make_store_with_page()
     svc = BackupService(
         backup_folder=tmp_path,
@@ -235,36 +235,17 @@ def test_scheduler_and_worker(tmp_path):
         prune_interval=PRUNE_INTERVAL,
     )
 
-    svc.start()
+    async def run():
+        svc.mark_pages_changed({page.id})
+        svc.backups_enabled = True
+        while not svc.last_prune_timestamp_path().exists():
+            await asyncio.sleep(0.01)
+        assert len(svc.recent_backups_for_page(PAGE_PATH_STEM)) == 1
 
-    # Mark a page changed
-    svc.mark_pages_changed({page.id})
+        _add_note(store, page, "pending at close")
+        svc.mark_pages_changed({page.id})
+        with fake_time(time=current_time() + timedelta(seconds=1)):
+            await svc.close()
+        assert len(svc.recent_backups_for_page(PAGE_PATH_STEM)) == 2
 
-    # Wait for backup cycle
-    time.sleep(1.5)
-    assert svc.last_backup_time(PAGE_PATH_STEM) is not None
-
-    svc.stop()
-
-    assert svc.last_backup_timestamp_path().exists()
-    assert svc.last_prune_timestamp_path().exists()
-
-
-def test_backups_enabled_toggle(tmp_path):
-    """Setting backups_enabled starts/stops the worker thread."""
-    store, page = _make_store_with_page()
-    svc = BackupService(
-        backup_folder=tmp_path,
-        store=store,
-        backup_interval=BACKUP_INTERVAL,
-        prune_interval=PRUNE_INTERVAL,
-    )
-
-    assert not svc.backups_enabled
-    assert svc.worker_thread is None
-
-    svc.backups_enabled = True
-    assert svc.worker_thread is not None and svc.worker_thread.is_alive()
-
-    svc.backups_enabled = False
-    assert svc.worker_thread is None or not svc.worker_thread.is_alive()
+    asyncio.run(asyncio.wait_for(run(), 10))

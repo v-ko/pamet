@@ -680,9 +680,6 @@ def save_snapshot(ctx: click.Context, ref: str) -> None:
 @click.pass_context
 def remove_snapshot(ctx: click.Context, ref: str) -> None:
     """Remove a snapshot at a specific commit."""
-    import peewee as pw
-    from sivkit.storage.sqlite_vcs_adapter import SnapshotRow
-
     adapter: SqliteVcsAdapter = ctx.obj["adapter"]
     chain = get_branch_chain(adapter)
     idx, commit_id = resolve_commit_ref(chain, ref)
@@ -691,12 +688,7 @@ def remove_snapshot(ctx: click.Context, ref: str) -> None:
         click.echo(f"No snapshot at commit {idx} ({commit_id[:12]})")
         return
 
-    db = pw.SqliteDatabase(
-        str(ctx.obj["repo"] / ".pamet" / "change-history.db"),
-        pragmas={"journal_mode": "wal"},
-    )
-    with db.bind_ctx([SnapshotRow]):
-        SnapshotRow.delete().where(SnapshotRow.commit_id == commit_id).execute()
+    adapter.delete_snapshot(commit_id)
 
     click.echo(f"Removed snapshot at commit {idx} ({commit_id[:12]}).")
 

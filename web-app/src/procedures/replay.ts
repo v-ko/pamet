@@ -63,10 +63,7 @@ export function startIntegrityOp(
             let summary: string;
             if (data.fixed !== undefined) {
                 summary = `Repaired ${data.fixed} of ${data.total} commits.`;
-                if (data.recovered) {
-                    summary += " Service recovered.";
-                    void checkIntegrityStatus().then(() => buildReplayIndex());
-                }
+                void checkIntegrityStatus().then(() => buildReplayIndex());
             } else if (data.mismatches !== undefined) {
                 summary = `Checked ${data.total} commits: ${data.mismatches} mismatches found.`;
             } else {

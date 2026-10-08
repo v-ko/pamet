@@ -449,6 +449,8 @@ export class ReplayService {
                             const payload = JSON.parse(line.slice(6));
                             if (payload.type === "done") {
                                 onDone(payload);
+                            } else if (payload.type === "error") {
+                                onError(payload.message);
                             } else {
                                 onProgress(payload);
                             }

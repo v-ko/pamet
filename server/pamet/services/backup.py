@@ -16,11 +16,9 @@ folder structure.  Empty subdirectories are cleaned up on pruning.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
-import sched
-import threading
-import time
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -95,8 +93,8 @@ class BackupService:
     backups and scheduling only happens while ``backups_enabled`` is True.
 
     Changed page IDs are fed in via ``mark_pages_changed()``—called by the
-    PFM whenever a delta is applied.  The worker thread periodically
-    snapshots those pages and prunes old backups.
+    PFM whenever a delta is applied.  A task on the event loop periodically
+    snapshots those pages and prunes old backups in a worker thread.
     """
 
     def __init__(
@@ -115,12 +113,10 @@ class BackupService:
         self.permanent_backup_age = permanent_backup_age
 
         self._changed_page_ids: set[str] = set()
-        self._lock = threading.Lock()
 
         self._backups_enabled = False
-        self.stop_event = threading.Event()
-        self.worker_thread: threading.Thread | None = None
-        self.scheduler = sched.scheduler(time.time, time.sleep)
+        self._stop = asyncio.Event()
+        self._task: asyncio.Task | None = None
 
         # Ensure top-level backup directory exists
         self.backup_folder.mkdir(exist_ok=True, parents=True)
@@ -213,9 +209,8 @@ class BackupService:
     # -- Signalling ------------------------------------------------------------
 
     def mark_pages_changed(self, page_ids: set[str]) -> None:
-        """Called by PFM after applying a delta.  Thread-safe."""
-        with self._lock:
-            self._changed_page_ids.update(page_ids)
+        """Called by PFM after applying a delta."""
+        self._changed_page_ids.update(page_ids)
 
     # -- Backup creation -------------------------------------------------------
 
@@ -245,9 +240,8 @@ class BackupService:
 
     def backup_changed_pages(self) -> None:
         """Snapshot all pages marked as changed."""
-        with self._lock:
-            page_ids = self._changed_page_ids.copy()
-            self._changed_page_ids.clear()
+        page_ids = self._changed_page_ids
+        self._changed_page_ids = set()
 
         if not page_ids:
             return
@@ -380,80 +374,67 @@ class BackupService:
 
     # -- Scheduling ------------------------------------------------------------
 
-    def _backup_and_reschedule(self) -> None:
-        self.backup_changed_pages()
-        self.scheduler.enter(self.backup_interval, 2, self._backup_and_reschedule)
+    def _initial_delay(self, ts_path: Path, interval: float) -> float:
+        """Seconds left of *interval* since the timestamp stored in *ts_path*."""
+        if not ts_path.exists():
+            return 0.0
+        try:
+            ts_text = ts_path.read_text().strip()
+            if not ts_text:
+                return 0.0
+            last_run = datetime.fromisoformat(ts_text)
+        except (ValueError, OSError) as e:
+            log.warning("Could not parse %s, running now: %s", ts_path, e)
+            return 0.0
+        elapsed = (current_time() - last_run).total_seconds()
+        return max(0.0, interval - elapsed)
 
-    def _prune_and_reschedule(self) -> None:
-        self.prune_all()
-        self.scheduler.enter(self.prune_interval, 2, self._prune_and_reschedule)
+    async def _run(self) -> None:
+        loop = asyncio.get_running_loop()
+        next_backup = loop.time() + self._initial_delay(
+            self.last_backup_timestamp_path(), self.backup_interval
+        )
+        next_prune = loop.time() + self._initial_delay(
+            self.last_prune_timestamp_path(), self.prune_interval
+        )
+        while not self._stop.is_set():
+            if loop.time() >= next_backup:
+                try:
+                    self.backup_changed_pages()
+                except Exception:
+                    log.exception("Backup failed in %s", self.backup_folder)
+                next_backup = loop.time() + self.backup_interval
 
-    def _run_scheduler(self) -> None:
-        timeout = 1
-        while timeout and timeout > 0:
-            timeout = self.scheduler.run(blocking=False)
-            self.stop_event.wait(timeout)
+            if loop.time() >= next_prune:
+                try:
+                    await asyncio.to_thread(self.prune_all)
+                except Exception:
+                    log.exception("Pruning failed in %s", self.backup_folder)
+                next_prune = loop.time() + self.prune_interval
 
-    def start(self) -> None:
-        """Start the backup worker thread."""
-        if self.worker_thread is not None and self.worker_thread.is_alive():
-            return
-
-        log.info("Starting backup service for %s", self.backup_folder)
-        self.stop_event.clear()
-
-        # Schedule backup based on last backup timestamp
-        backup_delay = 0.0
-        backup_ts_path = self.last_backup_timestamp_path()
-        if backup_ts_path.exists():
+            timeout = max(0.0, min(next_backup, next_prune) - loop.time())
             try:
-                ts_text = backup_ts_path.read_text().strip()
-                if ts_text:
-                    last_backup_dt = datetime.fromisoformat(ts_text)
-                    elapsed = (current_time() - last_backup_dt).total_seconds()
-                    if elapsed < self.backup_interval:
-                        backup_delay = self.backup_interval - elapsed
-            except (ValueError, OSError) as e:
-                log.warning(
-                    "Could not parse last backup timestamp, "
-                    "scheduling immediate backup: %s",
-                    e,
-                )
-        self.scheduler.enter(backup_delay, 2, self._backup_and_reschedule)
-
-        # Schedule pruning based on last prune timestamp
-        prune_delay = 0.0
-        prune_ts_path = self.last_prune_timestamp_path()
-        if prune_ts_path.exists():
-            try:
-                ts_text = prune_ts_path.read_text().strip()
-                if ts_text:
-                    last_prune_dt = datetime.fromisoformat(ts_text)
-                    elapsed = (current_time() - last_prune_dt).total_seconds()
-                    if elapsed < self.prune_interval:
-                        prune_delay = self.prune_interval - elapsed
-            except (ValueError, OSError) as e:
-                log.warning(
-                    "Could not parse last prune timestamp, "
-                    "scheduling immediate prune: %s",
-                    e,
-                )
-        self.scheduler.enter(prune_delay, 2, self._prune_and_reschedule)
-
-        self.worker_thread = threading.Thread(target=self._run_scheduler, daemon=True)
-        self.worker_thread.start()
-
-    def stop(self) -> None:
-        """Stop the backup worker thread."""
-        for event in list(self.scheduler.queue):
-            try:
-                self.scheduler.cancel(event)
-            except ValueError:
+                await asyncio.wait_for(self._stop.wait(), timeout)
+            except TimeoutError:
                 pass
 
-        self.stop_event.set()
-        if self.worker_thread is not None and self.worker_thread.is_alive():
-            self.worker_thread.join(timeout=5)
-        self.worker_thread = None
+    def start(self) -> None:
+        """Start the backup task. Must be called on the event loop."""
+        self._stop.clear()
+        if self._task is None or self._task.done():
+            log.info("Starting backup service for %s", self.backup_folder)
+            self._task = asyncio.ensure_future(self._run())
 
-        log.info("Stopped backup service for %s", self.backup_folder)
+    def stop(self) -> None:
+        """Ask the backup task to end after its current job."""
+        self._stop.set()
+        log.info("Stopping backup service for %s", self.backup_folder)
+
+    async def close(self) -> None:
+        """Wait for the backup task to end, then back up pending changes."""
+        self._stop.set()
+        if self._task is not None:
+            await self._task
+            self._task = None
+        if self._backups_enabled:
+            self.backup_changed_pages()

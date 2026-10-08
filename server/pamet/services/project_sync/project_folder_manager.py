@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import logging
 import threading
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
 
-from sivkit.libs.model import dump_to_dict
+from sivkit.libs.model import Entity, dump_to_dict
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
 
@@ -19,7 +20,7 @@ from pamet.model.page import Page
 from pamet.services.backup import BackupService
 from pamet.services.file_system_watcher import FileSystemWatcher
 from pamet.storage.canvas_html import write_canvas_file
-from pamet.storage.file_storage_adapter import FileStorageAdapter
+from pamet.storage.file_storage_adapter import FileStorageAdapter, rebuild_file_index
 from pamet.storage.migrations.manager import MigrationManager
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
 from pamet.storage.project_walk import iter_canvas_paths, walk_project
@@ -32,6 +33,47 @@ from pamet.storage.service_utils import (
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class ProjectSnapshot:
+    """What a project scan read from disk. Not tied to any store or thread."""
+
+    entities: list[Entity] = field(default_factory=list)
+    exclude_patterns: list[str] = field(default_factory=list)
+    failed_canvas_paths: set[str] = field(default_factory=set)
+
+
+def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
+    """Blocking: migrate, read all .canvas files, rebuild the file index.
+
+    Runs in a worker thread.
+    """
+    MigrationManager(repo_root).do_all_migrations()
+
+    if not repo_settings_path(repo_root).exists():
+        create_repo_settings(repo_root, repo_id=project_id, title=repo_root.name)
+
+    settings = get_repo_settings(repo_root)
+    snapshot = ProjectSnapshot(
+        exclude_patterns=[
+            pat for pat, enabled in settings.get("files.exclude", {}).items() if enabled
+        ]
+    )
+
+    for canvas_path in iter_canvas_paths(repo_root, snapshot.exclude_patterns):
+        try:
+            entities = read_canvas_file(canvas_path, repo_root)
+        except ForeignCanvasFile:
+            continue
+        except CanvasParseError:
+            log.warning("Failed to parse canvas file: %s", canvas_path)
+            snapshot.failed_canvas_paths.add(str(canvas_path))
+            continue
+        snapshot.entities.extend(entities.values())
+
+    rebuild_file_index(repo_root, snapshot.entities)
+    return snapshot
+
+
 class ProjectFolderManager:
     """
     Per-project desktop runtime owner.
@@ -42,21 +84,18 @@ class ProjectFolderManager:
     ``FileSystemWatcher`` handles change detection.
     """
 
-    def __init__(self, project_id: str, repo_root: Path):
+    def __init__(self, project_id: str, repo_root: Path, snapshot: ProjectSnapshot):
         self.project_id = project_id
         self.repo_root = Path(repo_root)
         self.store = PametInMemoryStore()
         self.write_lock = threading.Lock()  # Held during writes to suppress watcher
         self.failed_watch_count: int = 0
-        self.failed_canvas_paths: set[str] = set()  # Paths that failed to parse
-        self.migration_manager = MigrationManager(self.repo_root)
+        self.failed_canvas_paths = set(snapshot.failed_canvas_paths)
+        self._exclude_patterns = list(snapshot.exclude_patterns)
+        for entity in snapshot.entities:
+            self.store.insert_one(entity)
 
-        # Load user-configured exclude patterns from repo settings
-        settings = get_repo_settings(self.repo_root)
-        self._exclude_patterns: list[str] = [
-            pat for pat, enabled in settings.get("files.exclude", {}).items() if enabled
-        ]
-
+        # Not started: the watchdog watcher replaces it (M4).
         self.fs_watcher = FileSystemWatcher(self)
         self.file_storage = FileStorageAdapter(self.repo_root, self.store)
 
@@ -69,42 +108,8 @@ class ProjectFolderManager:
 
     # -- Lifecycle -------------------------------------------------------------
 
-    def load(self) -> None:
-        self.migration_manager.do_all_migrations()
-
-        if not repo_settings_path(self.repo_root).exists():
-            create_repo_settings(
-                self.repo_root,
-                repo_id=self.project_id,
-                title=self.repo_root.name,
-            )
-
-        self._load_all_entities()
-        self.file_storage.rebuild_index_from_store(self.store)
-        log.info(
-            "Loaded project %s from %s",
-            self.project_id,
-            self.repo_root,
-        )
-        self.fs_watcher.start_watching()
-
-    def _load_all_entities(self) -> None:
-        """Read all .canvas files and populate the store."""
-        for canvas_path in self._iter_canvas_page_paths():
-            try:
-                entities = read_canvas_file(canvas_path, self.repo_root)
-            except ForeignCanvasFile:
-                continue
-            except CanvasParseError:
-                log.warning("Failed to parse canvas file: %s", canvas_path)
-                self.failed_canvas_paths.add(str(canvas_path))
-                continue
-            self.failed_canvas_paths.discard(str(canvas_path))
-            for entity in entities.values():
-                self.store.insert_one(entity)
-
-    def unload(self) -> None:
-        self.backup_service.stop()
+    async def unload(self) -> None:
+        await self.backup_service.close()
         self.fs_watcher.stop_watching()
         self.file_storage.close()
         self.store.clear()

@@ -41,6 +41,7 @@ export class OptimisticProjectSyncService {
     private _currentBranch: string;
     private _unstagedChanges: Delta = new Delta({});
     private _stagedChanges: Delta = new Delta({});
+    private _stagedActionNames: string[] = [];
     private _expectedDelta: Delta = new Delta({});
 
     private _commitInFlight = false;
@@ -125,7 +126,7 @@ export class OptimisticProjectSyncService {
      * The actual network commit is debounced and serialized (one in-flight at a time).
      * Returns true if data was staged, false if there was nothing to stage.
      */
-    saveUncommittedChanges(): boolean {
+    saveUncommittedChanges(actionName?: string): boolean {
         if (this._unstagedChanges.isEmpty()) {
             return false;
         }
@@ -136,6 +137,7 @@ export class OptimisticProjectSyncService {
         // object so that undo references (which hold the old object) remain stable.
         this._stagedChanges.mergeWithPriority(this._unstagedChanges);
         this._unstagedChanges = new Delta({});
+        if (actionName) this._stagedActionNames.push(actionName);
 
         this._scheduleFlush();
         return true;
@@ -164,11 +166,13 @@ export class OptimisticProjectSyncService {
         this._commitInFlight = true;
         const delta = this._stagedChanges;
         this._stagedChanges = new Delta({});
+        const actionNames = this._stagedActionNames;
+        this._stagedActionNames = [];
         this._expectedDelta.mergeWithPriority(delta);
 
         appActions.setSaveStatus(pamet.appViewState, 'saving');
 
-        this._storageService.commit(this._projectId, delta.data, 'Auto-commit')
+        this._storageService.commit(this._projectId, delta.data, actionNames.join(', ') || 'Auto-commit')
             .then((result) => {
                 const appliedDeltaData = result.commit.delta_data;
                 const unappliedDelta = delta.copy();
@@ -197,6 +201,7 @@ export class OptimisticProjectSyncService {
                 // Put the failed changes back into staged so the next flush retries them.
                 delta.mergeWithPriority(this._stagedChanges);
                 this._stagedChanges = delta;
+                this._stagedActionNames = [...actionNames, ...this._stagedActionNames];
 
                 this._commitInFlight = false;
                 appActions.setSaveStatus(pamet.appViewState, 'error');

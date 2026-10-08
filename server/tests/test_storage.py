@@ -6,6 +6,26 @@ from sivkit.storage.in_memory_store import InMemoryStore
 from pamet.model.card_note import CardNote
 from pamet.model.note import Note
 from pamet.model.page import Page
+from pamet.storage.file_index import FileIndex
+
+
+def test_file_index(tmp_path):
+    a, b = tmp_path / "a.txt", tmp_path / "b.txt"
+    a.write_text("a")
+    b.write_text("b")
+    index = FileIndex(tmp_path / ".pamet" / "file-index.db")
+    index.rebuild({"a.txt": a, "b.txt": b, "gone.txt": tmp_path / "gone.txt"})
+    hash_a = index.get_hash("a.txt")
+    assert hash_a and index.get_hash("b.txt") and index.get_hash("gone.txt") is None
+
+    a.write_text("changed")
+    assert index.put("a.txt", a) == index.get_hash("a.txt") != hash_a
+
+    index.rebuild({"b.txt": b})
+    assert index.get_hash("a.txt") is None and index.get_hash("b.txt")
+    index.remove("b.txt")
+    assert index.get_hash("b.txt") is None
+    index.close()
 
 
 def test_in_memory_repo():

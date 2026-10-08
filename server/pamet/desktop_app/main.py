@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import signal
@@ -218,7 +219,7 @@ def main(
         save_user_settings(settings)
 
     # Silence noisy third-party loggers while keeping our own level low.
-    logging.getLogger("peewee").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
 
     # ── Heavy imports (PySide6, Qt, etc.) deferred to here ───────────
     from PySide6.QtCore import QTimer
@@ -227,13 +228,11 @@ def main(
     from PySide6.QtWebEngineQuick import QtWebEngineQuick
     from sivkit.platform.qt_widgets.qt_main_loop import QtMainLoop
 
-    import pamet
     import pamet.commands  # noqa: F401 — triggers @command registrations
     from pamet import desktop_app
     from pamet.actions.app import open_tab
     from pamet.desktop_app.app import DesktopApp
     from pamet.desktop_app.init_config import setup_fonts_and_icons
-    from pamet.services.desktop_storage_service import DesktopStorageService
     from pamet.services.rest_api.desktop_server import DesktopServer
     from pamet.views.app_window.qml_backend import (
         QmlAppBackend,
@@ -254,13 +253,6 @@ def main(
         static_build_path = web_app_static_build_path()
         log.info("Serving bundled web-app build from %s", static_build_path)
 
-    local_server = DesktopServer(
-        config_dir=PAMET_CONFIG_DIR,
-        web_app_static_build_path=static_build_path,
-        frontend_dev_server_url=frontend_dev_server,
-    )
-    local_server.start()
-
     # Workaround for Qt bug: QML WebEngineView renders black/stale after
     # minimize-restore with OpenGL and transparent with Vulkan RHI backends.
     # Software rendering is unaffected.
@@ -275,7 +267,8 @@ def main(
     QtWebEngineQuick.initialize()
 
     app = DesktopApp()
-    app.aboutToQuit.connect(local_server.stop)
+    # Window close requests the shutdown below; it quits once the server is done
+    app.setQuitOnLastWindowClosed(False)
 
     log.info("Using config folder: %s", PAMET_CONFIG_DIR)
     log.info("Using app data folder: %s", PAMET_APP_DATA_DIR)
@@ -283,8 +276,28 @@ def main(
     sivkit.set_main_loop(QtMainLoop(app))
     setup_fonts_and_icons()
 
-    desktop_storage_service = DesktopStorageService()
-    pamet.set_desktop_storage_service(desktop_storage_service)
+    async def shutdown(exit_code: int = 0) -> None:
+        try:
+            await local_server.stop()
+        except Exception:
+            log.exception("Server shutdown failed")
+        app.exit(exit_code)
+
+    shutdown_task: asyncio.Task | None = None
+
+    def request_shutdown() -> None:
+        nonlocal shutdown_task
+        if shutdown_task is None:
+            shutdown_task = asyncio.ensure_future(shutdown())
+
+    app.lastWindowClosed.connect(request_shutdown)
+
+    local_server = DesktopServer(
+        config_dir=PAMET_CONFIG_DIR,
+        web_app_static_build_path=static_build_path,
+        frontend_dev_server_url=frontend_dev_server,
+        on_signal=request_shutdown,
+    )
 
     desktop_api_base_url = f"http://localhost:{local_server.port}"
     frontend_base_url = (
@@ -313,25 +326,31 @@ def main(
     qml_path = (
         Path(__file__).resolve().parents[1] / "views" / "app_window" / "AppWindow.qml"
     )
-    engine.load(qml_path)
 
-    if not engine.rootObjects():
-        print("Failed to load QML")
-        return 1
+    async def startup() -> None:
+        try:
+            await local_server.start()
+            engine.load(qml_path)
+            if not engine.rootObjects():
+                raise RuntimeError("Failed to load QML")
+        except Exception:
+            log.exception("Startup failed")
+            await shutdown(1)
+            return
 
-    # Install a native event filter for title-bar double-click → maximize
-    window = engine.rootObjects()[0]
-    title_bar_height = 42  # must match header height in AppWindow.qml
-    dbl_filter = TitleBarDoubleClickFilter(window, title_bar_height)
-    window.installEventFilter(dbl_filter)
+        # Install a native event filter for title-bar double-click → maximize
+        window = engine.rootObjects()[0]
+        title_bar_height = 42  # must match header height in AppWindow.qml
+        window.installEventFilter(TitleBarDoubleClickFilter(window, title_bar_height))
 
-    # Open the initial tab deferred so QML Repeater bindings are wired
-    QTimer.singleShot(0, lambda: open_tab(view_state, initial_project_url, True))
+        # Open the initial tab deferred so QML Repeater bindings are wired
+        QTimer.singleShot(0, lambda: open_tab(view_state, initial_project_url, True))
 
     sivkit.set_main_loop_exception_handler(
         lambda e: app.present_exception(e, title="Main loop exception")
     )
 
+    startup_task = asyncio.ensure_future(startup())  # noqa: F841 — keeps it alive
     return app.exec()
 
 

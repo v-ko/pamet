@@ -1,5 +1,8 @@
+import asyncio
+import contextlib
 import logging
-import threading
+import signal
+from collections.abc import Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
 from random import randint
@@ -10,7 +13,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import FileResponse
 from uvicorn import Config, Server
+from uvicorn.server import HANDLED_SIGNALS
 
+import pamet
+from pamet.services.desktop_storage_service import DesktopStorageService
 from pamet.services.rest_api.desktop_access_token import DESKTOP_ACCESS_TOKEN
 from pamet.services.rest_api.instance_check import (
     remove_lock_file,
@@ -23,9 +29,6 @@ log = logging.getLogger(__name__)
 DEFAULT_PORT = 11352
 LOCALHOST = "http://localhost"
 
-# Maximum time (seconds) to wait for uvicorn to start accepting connections.
-_SERVER_STARTUP_TIMEOUT = 10
-
 
 def port_is_taken(port: int):
     try:
@@ -35,7 +38,30 @@ def port_is_taken(port: int):
     return True
 
 
+class _Server(Server):
+    """Signals call ``on_signal`` instead of being re-raised after ``serve()``."""
+
+    def __init__(self, config: Config, on_signal: Callable[[], None]):
+        super().__init__(config)
+        self._on_signal = on_signal
+
+    @contextlib.contextmanager
+    def capture_signals(self):
+        loop = asyncio.get_running_loop()
+
+        def handle(sig, frame):
+            loop.call_soon_threadsafe(self._on_signal)
+
+        previous = {sig: signal.signal(sig, handle) for sig in HANDLED_SIGNALS}
+        try:
+            yield
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+
+
 class DesktopServer:
+    """Uvicorn as a task on the running (Qt) loop. Its lifespan owns the DSS."""
 
     def __init__(
         self,
@@ -43,6 +69,7 @@ class DesktopServer:
         port: int | None = None,
         web_app_static_build_path: Path | str | None = None,
         frontend_dev_server_url: str | None = None,
+        on_signal: Callable[[], None] | None = None,
     ):
         self.config_dir = Path(config_dir)
         self.desktop_access_token = DESKTOP_ACCESS_TOKEN
@@ -51,14 +78,17 @@ class DesktopServer:
         if web_app_static_build_path:
             self.web_app_static_build_path = Path(web_app_static_build_path)
 
-        self.thread = None
-        self._port = port or DEFAULT_PORT
-        self._ready_event = threading.Event()
+        self._port = self._pick_port(port or DEFAULT_PORT)
+        self._on_signal = on_signal or self._exit
+        self.server: _Server | None = None
+        self._serve_task: asyncio.Task | None = None
 
         @asynccontextmanager
         async def _lifespan(app: FastAPI):
-            self._ready_event.set()
+            dss = DesktopStorageService()
+            pamet.set_desktop_storage_service(dss)
             yield
+            await dss.close()
 
         self.app = FastAPI(lifespan=_lifespan)
         if frontend_dev_server_url:
@@ -111,40 +141,54 @@ class DesktopServer:
     def port(self):
         return self._port
 
-    def start(self):
-        log.info("Starting local server")
-        # We're assuming a check has been made if another server is running
-        # So if there's a lock - we're going to overwrite it
-        remove_lock_file(self.config_dir)
-
-        port = self.port
-        port_was_taken = False
+    @staticmethod
+    def _pick_port(port: int) -> int:
+        requested = port
         while port_is_taken(port):
-            port_was_taken = True
             log.warning(f"Port {port} is taken. Trying another one.")
             port = randint(10024, 65535)
-        write_port_to_lock_file(self.config_dir, port)
-
-        if port_was_taken:
+        if port != requested:
             log.warning(f"Requested port was taken. Using port {port}.")
+        return port
 
-        self._port = port
-        config = Config(app=self.app, host="127.0.0.1", port=self.port)
-        self.server = Server(config=config)
+    async def start(self) -> None:
+        """Start serving and return once the socket accepts connections."""
+        log.info("Starting local server")
+        config = Config(
+            app=self.app,
+            host="127.0.0.1",
+            port=self._port,
+            timeout_graceful_shutdown=2,
+        )
+        self.server = _Server(config, self._on_signal)
+        self._serve_task = asyncio.ensure_future(self._serve(self.server))
+        # Lifespan startup runs before the socket is bound, so wait for started
+        while not self.server.started:
+            if self._serve_task.done():
+                self._serve_task.result()
+                raise RuntimeError("Server exited during startup")
+            await asyncio.sleep(0.01)
 
-        # Start the server in a thread
-        self._ready_event.clear()
-        self.thread = threading.Thread(target=self.server.run, daemon=True)
-        self.thread.start()
+        # Another running instance was ruled out before, so a lock is stale
+        write_port_to_lock_file(self.config_dir, self._port)
 
-        # Block until FastAPI's lifespan startup hook fires (server is ready)
-        if not self._ready_event.wait(timeout=_SERVER_STARTUP_TIMEOUT):
-            raise RuntimeError(
-                f"Server did not become ready within {_SERVER_STARTUP_TIMEOUT}s"
-            )
-
-    def stop(self):
+    async def stop(self) -> None:
+        """Graceful shutdown, including the lifespan shutdown. Idempotent."""
+        assert self.server is not None and self._serve_task is not None
         self.server.should_exit = True
-        self.server.force_exit = True
-        self.thread.join(timeout=3)
-        remove_lock_file(self.config_dir)
+        try:
+            await self._serve_task
+        finally:
+            remove_lock_file(self.config_dir)
+
+    @staticmethod
+    async def _serve(server: _Server) -> None:
+        try:
+            await server.serve()
+        except SystemExit as exc:
+            # uvicorn calls sys.exit() when it can't bind
+            raise RuntimeError(f"Server exited with code {exc.code}") from exc
+
+    def _exit(self) -> None:
+        if self.server is not None:
+            self.server.should_exit = True

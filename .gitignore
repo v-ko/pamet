@@ -61,3 +61,6 @@ venv/
 # Temporary files
 *.tmp
 *.temp
+
+# Local planning documents and assets
+/planning-docs/

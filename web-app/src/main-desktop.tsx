@@ -22,7 +22,6 @@ import { VcsAdapterNames } from 'sivkit/storage/repository/Repository';
 import { DomainStoreAdapterNames } from 'sivkit/storage/domain-store-adapter/DomainStoreAdapter';
 import { StorageServiceProxy } from "sivkit/storage/management/StorageServiceProxy";
 import { registerEntityClasses } from "@/app/entityRegistrationHack";
-import { ProjectProperties } from "@/model/config/ProjectProperties";
 import { LOCAL_USER_ID } from "@/app/constants";
 import { buildDeviceBranchName } from "./app/util";
 import { ErrorBoundary } from "@/views/ErrorBoundary";
@@ -194,41 +193,6 @@ pamet.setAppViewState(appViewState)
 pamet.setContext('desktopMode', true);
 pamet.initClipboard();
 pamet.initializeTheme();
-
-// Wire desktop-specific change history hook
-pamet.changeHistoryService.onError = (message: string) => {
-    pamet.storageService.reportError(message);
-    // Flag integrity error in replay panel if it's a hash mismatch
-    if (message.includes("hash mismatch") || message.includes("Snapshot hash mismatch")) {
-        const vs = pamet.appViewState.replayPanelVS;
-        if (vs) {
-            vs.hasIntegrityError = true;
-        }
-    }
-};
-
-pamet.onChangeHistoryConfigChanged = (projectId: string) => {
-    const propsEntity = pamet.appConfigStore.findOne({
-        id: ProjectProperties.idForProject(projectId),
-    });
-    const enabled = propsEntity
-        ? (propsEntity as ProjectProperties).recordAllChanges
-        : false;
-
-    if (enabled && !pamet.changeHistoryService.enabled) {
-        if (!pamet._currentProjectStore) {
-            log.info('ChangeHistory: store not attached yet, deferring enable');
-            return;
-        }
-        const wsUrl = baseUrl.replace(/^http/, 'ws')
-            + `/desktop/projects/${encodeURIComponent(projectId)}/changes/history/ws`;
-        pamet.changeHistoryService.enable(pamet._currentProjectStore, wsUrl).catch((e) => {
-            log.error('Failed to enable change history service', e);
-        });
-    } else if (!enabled && pamet.changeHistoryService.enabled) {
-        pamet.changeHistoryService.disable();
-    }
-};
 
 initializeDesktopApp().catch((e) => {
     log.error("Error in initializeDesktopApp", e);

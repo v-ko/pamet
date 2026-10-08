@@ -5,6 +5,7 @@ import hmac
 import json
 import logging
 import re
+import threading
 from pathlib import Path, PurePosixPath
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
@@ -20,13 +21,20 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import FileResponse, StreamingResponse
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QDesktopServices
 from sivkit.libs.command import get_command
 from sivkit.libs.model import dump_to_dict
+from sivkit.storage.commit import Commit
 from sivkit.storage.starlette_sync import StarletteSyncEndpoint
 from starlette.websockets import WebSocket
 
 import pamet
 from pamet.services.desktop_storage_service import ProjectNotLoadedError
+from pamet.services.full_change_history_service import (
+    FullChangeHistoryService,
+    ParentMismatchError,
+)
 from pamet.storage.project_walk import ProjectTooLargeError
 
 log = logging.getLogger(__name__)
@@ -52,7 +60,7 @@ def _extract_bearer_token(auth_header: str | None) -> str | None:
     return token or None
 
 
-def require_desktop_auth(request: Request):
+async def require_desktop_auth(request: Request):
     expected_token = getattr(request.app.state, "desktop_access_token", None)
     if expected_token:
         # Accept Bearer header or auth cookie
@@ -117,12 +125,12 @@ PUBLIC_COMMAND_NAMES = frozenset(
 
 
 @desktop_router.get("/version")
-def get_version():
+async def get_version():
     return {"data": pamet.__version__}
 
 
 @desktop_router.get("/status", dependencies=[Depends(require_desktop_auth)])
-def get_status():
+async def get_status():
     dss = pamet.desktop_storage_service()
     return dss.status
 
@@ -142,7 +150,9 @@ def _run_command(command_name: str, payload: dict | None):
 
 
 @desktop_router.post("/desktop/commands/{command_name}/")
-def run_public_command(command_name: str, payload: dict | None = Body(default=None)):
+async def run_public_command(
+    command_name: str, payload: dict | None = Body(default=None)
+):
     if command_name not in PUBLIC_COMMAND_NAMES:
         raise HTTPException(
             status_code=403, detail=f"Command not public: {command_name}"
@@ -154,7 +164,7 @@ def run_public_command(command_name: str, payload: dict | None = Body(default=No
     "/desktop/gui/commands/{command_name}/",
     dependencies=[Depends(require_desktop_auth)],
 )
-def run_gui_command(command_name: str, payload: dict | None = Body(default=None)):
+async def run_gui_command(command_name: str, payload: dict | None = Body(default=None)):
     return _run_command(command_name, payload)
 
 
@@ -193,8 +203,8 @@ async def load_project(project_id: str, payload: dict | None = Body(default=None
                 "Desktop project file URI must resolve to an absolute path"
             )
 
-        # 1. Blocking I/O in a thread (read .canvas files)
-        await asyncio.to_thread(storage_service.load_project_fs, project_id, repo_root)
+        # 1. Scan in a worker, then build the project on the loop
+        await storage_service.load_project_fs(project_id, repo_root)
     except ValueError as exc:
         log.error("Bridge load_project failed: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -220,10 +230,10 @@ async def load_project(project_id: str, payload: dict | None = Body(default=None
     "/desktop/projects/{project_id}/bridge",
     dependencies=[Depends(require_desktop_auth)],
 )
-def unload_project(project_id: str):
+async def unload_project(project_id: str):
     _validate_id(project_id, "project_id")
     storage_service = pamet.desktop_storage_service()
-    storage_service.unload_project(project_id)
+    await storage_service.unload_project(project_id)
     return {"ok": True}
 
 
@@ -250,81 +260,93 @@ async def config_store_ws(ws: WebSocket):
     log.info("Config store WS client disconnected")
 
 
-@desktop_router.websocket("/desktop/projects/{project_id}/changes/history/ws")
-async def change_history_ws(ws: WebSocket, project_id: str):
-    """WebSocket endpoint for full change history streaming.
+# ---------------------------------------------------------------------------
+# Change history (written by the storage worker, read by replay)
+# ---------------------------------------------------------------------------
 
-    The frontend connects as *authority* and streams deltas for each
-    user action.  The backend (receiver) commits them to a SQLite repo.
-    """
-    # --- Auth ---
-    expected_token = getattr(ws.app.state, "desktop_access_token", None)
-    if expected_token:
-        provided = ws.cookies.get(DESKTOP_AUTH_COOKIE_NAME)
-        if not provided or not hmac.compare_digest(provided, expected_token):
-            log.warning(
-                "Change history WS auth failed for project %s: cookie %s, expected_token set=%s",
-                project_id,
-                "present" if provided else "MISSING",
-                bool(expected_token),
-            )
-            await ws.close(code=4401, reason="Unauthorized")
-            return
 
-    dss = pamet.desktop_storage_service()
-    svc = dss.change_history_service(project_id)
-    if svc is None:
-        registered = list(dss._change_history_services.keys())
-        log.warning(
-            "Change history WS: service is None for project %s. "
-            "Registered services: %s",
-            project_id,
-            registered,
+def _history_service(project_id: str) -> FullChangeHistoryService:
+    _validate_id(project_id, "project_id")
+    history_service = pamet.desktop_storage_service().change_history_service(project_id)
+    if history_service is None:
+        raise HTTPException(
+            status_code=412,
+            detail=f"Desktop project session is not loaded for '{project_id}'",
         )
-        await ws.close(code=4503, reason="Change history not enabled for this project")
-        return
-
-    if not svc.is_healthy:
-        await ws.close(code=4503, reason=f"Change history degraded: {svc.error}")
-        return
-
-    log.info("Change history WS auth OK for project %s", project_id)
-    endpoint = StarletteSyncEndpoint(sync_service=svc.ws_sync_service)
-    await endpoint.serve(ws)
-    log.info("Change history WS client disconnected (project %s)", project_id)
+    return history_service
 
 
-# ---------------------------------------------------------------------------
-# Change-history VCS read endpoints (used by replay)
-# ---------------------------------------------------------------------------
+def _set_history_error(project_id: str, message: str | None) -> None:
+    errors = pamet.desktop_storage_service().status["errors"]
+    if message is None:
+        errors.get("change_history", {}).pop(project_id, None)
+    else:
+        errors.setdefault("change_history", {})[project_id] = message
+
+
+@desktop_router.post(
+    "/desktop/projects/{project_id}/changes/history/commits",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def change_history_append(project_id: str, payload: dict = Body(...)):
+    """Append commits in one transaction; 409 if the first parent isn't the head."""
+    history_service = _history_service(project_id)
+    try:
+        commits = [Commit.from_dict(c) for c in payload["commits"]]
+    except (KeyError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=f"Bad commits: {exc}") from exc
+    if not commits:
+        raise HTTPException(status_code=400, detail="'commits' must not be empty")
+    try:
+        head_id = await asyncio.to_thread(history_service.append, commits)
+    except ParentMismatchError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"head_id": head_id}
+
+
+@desktop_router.post(
+    "/desktop/projects/{project_id}/changes/history/check",
+    dependencies=[Depends(require_desktop_auth)],
+)
+async def change_history_verify_and_reconcile(
+    project_id: str, payload: dict = Body(...)
+):
+    """Verify stored hashes and automatically commit any missing project changes."""
+    history_service = _history_service(project_id)
+    entities = payload.get("entities")
+    snapshot_hash = payload.get("snapshot_hash")
+    if not isinstance(entities, list) or not isinstance(snapshot_hash, str):
+        raise HTTPException(
+            status_code=400, detail="Expected 'entities' list and 'snapshot_hash'"
+        )
+    result = await asyncio.to_thread(
+        history_service.verify_and_reconcile, entities, snapshot_hash
+    )
+    if result["mismatches"]:
+        _set_history_error(
+            project_id, f"hash mismatch in {result['mismatches']} history commits"
+        )
+    elif result["hashes_disagree"]:
+        _set_history_error(project_id, "hash mismatch between TS and Python")
+    else:
+        _set_history_error(project_id, None)
+    return result
 
 
 @desktop_router.get("/desktop/projects/{project_id}/changes/history/branches")
-def change_history_branches(
+async def change_history_branches(
     project_id: str,
     request: Request,
     _user: str = Depends(require_desktop_auth),
 ):
     """Return branch metadata for the change-history repository."""
-    dss = pamet.desktop_storage_service()
-    svc = dss.change_history_service(project_id)
-    if svc is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Change history not enabled for this project",
-        )
-    if not svc.is_healthy:
-        raise HTTPException(
-            status_code=503, detail=f"Change history degraded: {svc.error}"
-        )
-
-    repo = svc.repository
-    graph = repo.get_commit_graph()
+    history_service = _history_service(project_id)
+    graph = await asyncio.to_thread(history_service.commit_graph)
     return [b.asdict() for b in graph.branches()]
 
 
 @desktop_router.get("/desktop/projects/{project_id}/changes/history/commit-graph")
-def change_history_commit_graph(
+async def change_history_commit_graph(
     project_id: str,
     request: Request,
     branch: str = "main",
@@ -335,25 +357,13 @@ def change_history_commit_graph(
 
     Returns ``{"branches": [...], "commits": [...]}``.
     """
-    dss = pamet.desktop_storage_service()
-    svc = dss.change_history_service(project_id)
-    if svc is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Change history not enabled for this project",
-        )
-    if not svc.is_healthy:
-        raise HTTPException(
-            status_code=503, detail=f"Change history degraded: {svc.error}"
-        )
-
-    repo = svc.repository
-    graph = repo.get_commit_graph()
+    history_service = _history_service(project_id)
+    graph = await asyncio.to_thread(history_service.commit_graph)
     return graph.data().__dict__
 
 
 @desktop_router.get("/desktop/projects/{project_id}/changes/history/commits")
-def change_history_commits(
+async def change_history_commits(
     project_id: str,
     request: Request,
     branch: str = "main",
@@ -380,29 +390,17 @@ def change_history_commits(
     Each commit dict has: id, parent_id, snapshot_hash, timestamp, message,
     delta_data.
     """
-    dss = pamet.desktop_storage_service()
-    svc = dss.change_history_service(project_id)
-    if svc is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Change history not enabled for this project",
-        )
-    if not svc.is_healthy:
-        raise HTTPException(
-            status_code=503, detail=f"Change history degraded: {svc.error}"
-        )
-
-    repo = svc.repository
+    history_service = _history_service(project_id)
 
     # Mode 1: fetch by IDs
     if ids:
-        full_commits = repo.get_commits(ids)
+        full_commits = await asyncio.to_thread(history_service.get_commits, ids)
         return [c.asdict() for c in full_commits]
 
     # Mode 2: paginated walk
     count = min(max(count, 1), 500)
 
-    graph = repo.get_commit_graph()
+    graph = await asyncio.to_thread(history_service.commit_graph)
     all_branch_commits = graph.branch_commits(branch)  # chronological
 
     # Find start position
@@ -423,7 +421,9 @@ def change_history_commits(
 
     # Fetch full commits (with delta_data) from the repo
     if selected_meta:
-        full_commits = repo.get_commits([cm.id for cm in selected_meta])
+        full_commits = await asyncio.to_thread(
+            history_service.get_commits, [cm.id for cm in selected_meta]
+        )
         result = [c.asdict() for c in full_commits]
     else:
         result = []
@@ -436,23 +436,53 @@ def change_history_commits(
 # ---------------------------------------------------------------------------
 
 
-def _write_integrity_log(svc, operation: str, data: dict) -> str:
-    """Write a JSON diagnostics log file, open it, and return its absolute path."""
-    from datetime import datetime
+def _start_integrity_run(project_id: str, fix: bool) -> StreamingResponse:
+    history_service = _history_service(project_id)
+    if (
+        history_service.integrity_task is not None
+        and not history_service.integrity_task.done()
+    ):
+        raise HTTPException(
+            status_code=409, detail="An integrity operation is already running"
+        )
 
-    import sivkit
-    from PySide6.QtCore import QUrl
-    from PySide6.QtGui import QDesktopServices
+    loop = asyncio.get_running_loop()
+    queue: asyncio.Queue[dict | None] = asyncio.Queue()
+    listening = threading.Event()
+    listening.set()
 
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    log_path = svc.diagnostics_dir / f"integrity-{operation}-{ts}.json"
-    log_path.write_text(json.dumps(data, indent=2, default=str))
+    def post(event: dict | None) -> None:
+        if listening.is_set():
+            loop.call_soon_threadsafe(queue.put_nowait, event)
 
-    # Open the file on the main thread (server runs in a background thread)
-    path_str = str(log_path.resolve())
-    sivkit.call_delayed(lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(path_str)))
+    async def run() -> None:
+        try:
+            summary = await asyncio.to_thread(history_service.run_integrity, fix, post)
+            QDesktopServices.openUrl(QUrl.fromLocalFile(summary["log_path"]))
+            if fix:
+                _set_history_error(project_id, None)
+            post({"type": "done", **summary})
+        except Exception as exc:
+            log.exception("Change history integrity run failed")
+            post({"type": "error", "message": str(exc)})
+        finally:
+            post(None)
 
-    return path_str
+    history_service.integrity_task = asyncio.create_task(run())
+
+    # A client that disconnects stops the stream, not the run.
+    async def _sse_generator():
+        try:
+            while (event := await queue.get()) is not None:
+                yield f"data: {json.dumps(event)}\n\n"
+        finally:
+            listening.clear()
+
+    return StreamingResponse(
+        _sse_generator(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @desktop_router.post(
@@ -461,57 +491,7 @@ def _write_integrity_log(svc, operation: str, data: dict) -> str:
 )
 async def change_history_check_all(project_id: str):
     """Linear replay checking all stored hashes. Streams progress via SSE."""
-    from sivkit.storage.vcs_diagnostics import verify_or_fix_hashes
-
-    dss = pamet.desktop_storage_service()
-    svc = dss.change_history_service(project_id)
-    if svc is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Change history not enabled for this project",
-        )
-
-    if not svc.integrity_lock.acquire(blocking=False):
-        raise HTTPException(
-            status_code=409, detail="An integrity operation is already running"
-        )
-
-    def _sse_generator():
-        try:
-            mismatches = 0
-            total = 0
-            mismatch_commits = []
-            for progress in verify_or_fix_hashes(svc.adapter, "main", fix=False):
-                total = progress.total_commits
-                if progress.status == "mismatch_reported":
-                    mismatches += 1
-                    mismatch_commits.append(
-                        {
-                            "index": progress.commit_index,
-                            "commit_id": progress.commit_id,
-                            "computed_hash": progress.computed_hash,
-                            "stored_hash": progress.stored_hash,
-                            "delta_data": progress.delta_data,
-                            "parent_id": progress.parent_id,
-                            "timestamp": progress.timestamp,
-                            "message": progress.message,
-                        }
-                    )
-                yield f"data: {json.dumps({'type': 'progress', 'index': progress.commit_index, 'total': progress.total_commits, 'status': progress.status, 'commit_id': progress.commit_id, 'computed_hash': progress.computed_hash, 'stored_hash': progress.stored_hash})}\n\n"
-            log_data = {
-                "total": total,
-                "mismatches": mismatches,
-                "mismatch_commits": mismatch_commits,
-            }
-            yield f"data: {json.dumps({'type': 'done', 'total': total, 'mismatches': mismatches, 'log_path': _write_integrity_log(svc, 'check-all', log_data)})}\n\n"
-        finally:
-            svc.integrity_lock.release()
-
-    return StreamingResponse(
-        _sse_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    return _start_integrity_run(project_id, fix=False)
 
 
 @desktop_router.post(
@@ -520,75 +500,7 @@ async def change_history_check_all(project_id: str):
 )
 async def change_history_repair_hashes(project_id: str):
     """Linear replay fixing all mismatched hashes. Streams progress via SSE."""
-    from sivkit.storage.vcs_diagnostics import verify_or_fix_hashes
-
-    dss = pamet.desktop_storage_service()
-    svc = dss.change_history_service(project_id)
-    if svc is None:
-        raise HTTPException(
-            status_code=404,
-            detail="Change history not enabled for this project",
-        )
-
-    if not svc.integrity_lock.acquire(blocking=False):
-        raise HTTPException(
-            status_code=409, detail="An integrity operation is already running"
-        )
-
-    def _sse_generator():
-        try:
-            fixed = 0
-            total = 0
-            mismatch_commits = []
-            for progress in verify_or_fix_hashes(svc.adapter, "main", fix=True):
-                total = progress.total_commits
-                if progress.status == "mismatch_fixed":
-                    fixed += 1
-                    mismatch_commits.append(
-                        {
-                            "index": progress.commit_index,
-                            "commit_id": progress.commit_id,
-                            "computed_hash": progress.computed_hash,
-                            "stored_hash": progress.stored_hash,
-                            "delta_data": progress.delta_data,
-                            "parent_id": progress.parent_id,
-                            "timestamp": progress.timestamp,
-                            "message": progress.message,
-                        }
-                    )
-                yield f"data: {json.dumps({'type': 'progress', 'index': progress.commit_index, 'total': progress.total_commits, 'status': progress.status, 'commit_id': progress.commit_id})}\n\n"
-
-            # Attempt to recover the service after repair
-            recovery_error = None
-            if fixed > 0 and not svc.is_healthy:
-                try:
-                    svc.retry_hydration()
-                except Exception as exc:
-                    recovery_error = str(exc)
-
-            # Clear the status error if service recovered
-            if svc.is_healthy:
-                ch_errors = dss.status.get("errors", {}).get("change_history")
-                if ch_errors and project_id in ch_errors:
-                    del ch_errors[project_id]
-
-            log_data = {
-                "total": total,
-                "fixed": fixed,
-                "recovered": svc.is_healthy,
-                "recovery_error": recovery_error,
-                "mismatch_commits": mismatch_commits,
-            }
-            log_path = _write_integrity_log(svc, "repair-hashes", log_data)
-            yield f"data: {json.dumps({'type': 'done', 'total': total, 'fixed': fixed, 'recovered': svc.is_healthy, 'recovery_error': recovery_error, 'log_path': log_path})}\n\n"
-        finally:
-            svc.integrity_lock.release()
-
-    return StreamingResponse(
-        _sse_generator(),
-        media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-    )
+    return _start_integrity_run(project_id, fix=True)
 
 
 @desktop_router.get(
@@ -676,7 +588,7 @@ async def project_changes_stream(project_id: str):
     "/desktop/projects/{project_id}/entities",
     dependencies=[Depends(require_desktop_auth)],
 )
-def find_entities(project_id: str):
+async def find_entities(project_id: str):
     runtime = _project_runtime(project_id)
     entities = [dump_to_dict(e) for e in runtime.store.find()]
     return {"entities": entities}
@@ -686,7 +598,7 @@ def find_entities(project_id: str):
     "/desktop/projects/{project_id}/changes",
     dependencies=[Depends(require_desktop_auth)],
 )
-def apply_changes(project_id: str, payload: dict = Body(...)):
+async def apply_changes(project_id: str, payload: dict = Body(...)):
     runtime = _project_runtime(project_id)
     delta_data = payload.get("delta")
     if not delta_data or not isinstance(delta_data, dict):
