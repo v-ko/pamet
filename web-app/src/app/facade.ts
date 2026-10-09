@@ -102,6 +102,7 @@ export class PametFacade extends PametStore {
     private _appViewState: AppViewState | null = null;
     private _appConfigStore: InMemoryStore | null = null;
     private _storageService: StorageServiceProxy | null = null;
+    private _historyAvailable = true;
     router: Router = new Router();
     keybindingService: KeybindingService | null = null;
     _focusManager: FocusManager | null = null;
@@ -278,6 +279,10 @@ export class PametFacade extends PametStore {
     }
     setStorageService(storageService: StorageServiceProxy) {
         this._storageService = storageService;
+    }
+
+    setHistoryAvailable(available: boolean) {
+        this._historyAvailable = available;
     }
 
     setStorageStatusIconSet(iconSet: StorageStatusIconSet) {
@@ -690,6 +695,7 @@ export class PametFacade extends PametStore {
     }
 
     private _applyHistorySetting(projectId: string) {
+        if (!this._historyAvailable) return;
         const props = this.appConfigStore.findOne({ id: ProjectProperties.idForProject(projectId) });
         const enabled = (props as ProjectProperties | undefined)?.recordAllChanges ?? false;
         this.storageService.sendToAddon(projectId, 'HistoryAddon', { type: 'setEnabled', enabled })

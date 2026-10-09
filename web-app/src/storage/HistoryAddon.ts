@@ -15,6 +15,8 @@ const log = getLogger('HistoryAddon');
 
 const BRANCH = 'main';
 const REPLAY_BATCH = 500;
+const RETRY_DELAY_MS = 3000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 export type HistoryAddonConfig =
     | { check: 'backend' }
@@ -39,13 +41,16 @@ export class HistoryAddon implements StorageAddon {
     private _adapter: VcsAdapter | null = null;
 
     private _state: 'off' | 'checking' | 'recording' = 'off';
-    // Bumped on every enable/disable/re-check; stale results are dropped.
-    private _generation = 0;
+    // A re-enable requests the next session; it must not cancel the current drain.
+    private _recordingRequested = false;
+    private _draining = false;
+    private _disposed = false;
+    private _worker: Promise<void> | null = null;
+    private _wakeWorker: (() => void) | null = null;
+    private _retryTimer: ReturnType<typeof setTimeout> | null = null;
+    private _failureReported = false;
     private _headId = '';
     private _queue: CommitData[] = [];
-    private _sending = false;
-    private _releaseWriterLock: (() => void) | null = null;
-    private _writerLock: Promise<unknown> = Promise.resolve();
 
     constructor(psm: ProjectStorageManager, config: HistoryAddonConfig) {
         this._psm = psm;
@@ -62,25 +67,27 @@ export class HistoryAddon implements StorageAddon {
     async onProjectLoaded(): Promise<void> { }
 
     async onProjectUnloading(): Promise<void> {
-        this._stop();
+        this._disposed = true;
+        await this._stop();
+        // Keep the adapter across disable/re-enable, but never close it while
+        // the worker is still acquiring or using it.
         this._adapter?.close();
         this._adapter = null;
     }
 
     onCommitted(commit: CommitData): void {
-        if (this._state === 'off') return;
+        if (!this._recordingRequested || this._disposed || this._draining || this._state === 'off') return;
         this._queue.push(structuredClone(commit));
-        if (this._state === 'recording') void this._flush();
+        this._wakeWorker?.();
     }
 
     onMessage(message: unknown): unknown {
         const msg = message as { type?: string, enabled?: boolean };
         if (msg.type !== 'setEnabled') throw new Error(`Unknown HistoryAddon message: ${msg.type}`);
-        if (!msg.enabled) {
-            this._stop();
-        } else if (this._state === 'off') {
-            void this._start();
-        }
+        if (this._disposed) return;
+        if (!msg.enabled) return this._stop();
+        this._recordingRequested = true;
+        this._start();
         return undefined;
     }
 
@@ -93,45 +100,55 @@ export class HistoryAddon implements StorageAddon {
         this._psm.parentStorageService?.reportError(message);
     }
 
-    private _stop() {
-        this._generation++;
-        this._state = 'off';
-        this._queue = [];
-        this._releaseWriterLock?.();
-        this._releaseWriterLock = null;
+    private _stop(): Promise<void> {
+        this._recordingRequested = false;
+        this._draining = true;
+        if (this._retryTimer !== null) clearTimeout(this._retryTimer);
+        this._retryTimer = null;
+        this._wakeWorker?.();
+        return this._worker ?? Promise.resolve();
     }
 
-    private async _start(): Promise<void> {
-        const gen = ++this._generation;
-        this._state = 'checking';
-        // Let a previous enable release the lock first
-        await this._writerLock;
-        if (gen !== this._generation) return;
-
-        let resolveAcquired!: (acquired: boolean) => void;
-        const acquired = new Promise<boolean>(resolve => { resolveAcquired = resolve; });
-        this._writerLock = navigator.locks.request(`history-${this._projectId}`, { ifAvailable: true }, lock => {
-            resolveAcquired(lock !== null);
-            if (!lock || gen !== this._generation) return;
-            return new Promise<void>(release => { this._releaseWriterLock = release; });
-        });
-        if (!await acquired) {
-            if (gen === this._generation) {
-                this._state = 'off';
-                this._report('Change history is being recorded by an older version of Pamet open in another tab. Reload all Pamet tabs to record here.');
+    private _start(): void {
+        if (this._worker || this._retryTimer !== null || !this._recordingRequested || this._disposed) return;
+        this._draining = false;
+        let retry = false;
+        this._worker = Promise.resolve().then(async () => {
+            retry = (await this._runSession()) === 'busy';
+        }).catch(error => {
+            // An append may have succeeded despite a failed response. Reconcile
+            // on the next attempt instead of replaying an uncertain batch.
+            this._queue = [];
+            retry = true;
+            if (!this._failureReported) this._report(`Change history failed: ${error}`);
+            this._failureReported = true;
+        }).finally(() => {
+            this._state = 'off';
+            this._worker = null;
+            this._wakeWorker = null;
+            if (!this._recordingRequested || this._disposed) return;
+            if (retry) {
+                this._retryTimer = setTimeout(() => {
+                    this._retryTimer = null;
+                    this._start();
+                }, RETRY_DELAY_MS);
+            } else {
+                // A re-enable received during draining starts only after release.
+                this._start();
             }
-            return;
-        }
-        if (gen !== this._generation) return;
-        await this._verifyAndReconcile(gen);
+        });
     }
 
-    private async _verifyAndReconcile(gen: number): Promise<void> {
-        try {
+    private async _runSession(): Promise<'busy' | 'stopped'> {
+        // The lock covers reconciliation, recording and the final drain.
+        return navigator.locks.request(`history-${this._projectId}`, { ifAvailable: true }, async lock => {
+            if (!lock) return 'busy';
+            if (this._draining || this._disposed) return 'stopped';
+
+            this._state = 'checking';
             const result = this._config.check === 'backend'
                 ? await this._verifyAndReconcileBackend()
                 : await this._verifyAndReconcileLocal();
-            if (gen !== this._generation) return;
             this._headId = result.head_id;
             if (result.mismatches > 0) {
                 this._report(`Change history: hash mismatch in ${result.mismatches} commits`);
@@ -139,12 +156,39 @@ export class HistoryAddon implements StorageAddon {
             if (result.hashes_disagree) {
                 this._report('Change history: hash mismatch between the frontend and the backend');
             }
+
             this._state = 'recording';
-            void this._flush();
-        } catch (e) {
-            if (gen !== this._generation) return;
-            this._report(`Change history reconciliation failed, recording stopped: ${e}`);
-            this._stop();
+            await this._recordUntilStopped();
+            return 'stopped';
+        });
+    }
+
+    private async _recordUntilStopped(): Promise<void> {
+        // Stop accepting commits on disable, but finish those already queued.
+        while (this._queue.length || (!this._draining && !this._disposed)) {
+            if (this._queue.length) {
+                await this._flush();
+                continue;
+            }
+
+            if (this._failureReported) log.info('Change history recording recovered');
+            this._failureReported = false;
+            await new Promise<void>(resolve => { this._wakeWorker = resolve; });
+            this._wakeWorker = null;
+        }
+    }
+
+    private async _post<T>(path: string, body: string): Promise<T> {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        try {
+            const response = await fetch(`${this._historyUrl}/${path}`, {
+                method: 'POST', headers: this._headers, body, signal: controller.signal,
+            });
+            if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
+            return await response.json() as T;
+        } finally {
+            clearTimeout(timeout);
         }
     }
 
@@ -161,11 +205,7 @@ export class HistoryAddon implements StorageAddon {
                 snapshot_hash: repo.hashTree.rootHash(),
             });
         });
-        const response = await fetch(`${this._historyUrl}/check`, {
-            method: 'POST', headers: this._headers, body,
-        });
-        if (!response.ok) throw new Error(`reconciliation failed (${response.status} ${await response.text()})`);
-        return await response.json() as ReconciliationResult;
+        return this._post<ReconciliationResult>('check', body);
     }
 
     private async _localAdapter(): Promise<VcsAdapter> {
@@ -229,36 +269,17 @@ export class HistoryAddon implements StorageAddon {
     }
 
     private async _flush(): Promise<void> {
-        if (this._sending || this._state !== 'recording' || this._queue.length === 0) return;
-        const gen = this._generation;
-        this._sending = true;
         const commits = this._queue.splice(0);
         let parent = this._headId;
         for (const commit of commits) {
             commit.parent_id = parent;
             parent = commit.id;
         }
-        try {
-            if (this._config.check === 'backend') {
-                const response = await fetch(`${this._historyUrl}/commits`, {
-                    method: 'POST', headers: this._headers, body: JSON.stringify({ commits }),
-                });
-                if (!response.ok) throw new Error(`${response.status} ${await response.text()}`);
-            } else {
-                await this._appendLocal(commits.map(c => new Commit(c)));
-            }
-            if (gen === this._generation) this._headId = parent;
-        } catch (e) {
-            if (gen === this._generation) {
-                this._report(`Change history append failed, reconciling: ${e}`);
-                const reconciliationGeneration = ++this._generation;
-                this._state = 'checking';
-                this._queue = [];
-                void this._verifyAndReconcile(reconciliationGeneration);
-            }
-        } finally {
-            this._sending = false;
-            void this._flush();
+        if (this._config.check === 'backend') {
+            await this._post('commits', JSON.stringify({ commits }));
+        } else {
+            await this._appendLocal(commits.map(c => new Commit(c)));
         }
+        this._headId = parent;
     }
 }

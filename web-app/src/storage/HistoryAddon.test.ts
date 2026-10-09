@@ -55,7 +55,9 @@ test('HistoryAddon seeds history, copies commits and patches edits missed while 
         const ids = (await adapter.getCommitGraph()).branchCommits('main').map(c => c.id);
         return await adapter.getCommits(ids);
     };
-    const idle = () => waitFor(() => addon.state === 'recording' && !addon['_sending']);
+    const idle = () => waitFor(() =>
+        addon.state === 'recording' && addon['_wakeWorker'] !== null && addon['_queue'].length === 0
+    );
 
     // Advance the project as a normal save would, then return its commit.
     async function commit(name: string): Promise<CommitData> {

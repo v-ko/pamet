@@ -129,10 +129,12 @@ async function initializeWebApp() {
                 const reason = workerError instanceof Error ? workerError.message : String(workerError);
                 log.error("SharedWorker failed, falling back to main thread:", reason);
                 storageService.setupInMainThread();
+                pamet.setHistoryAvailable(false);
                 storageService.setDegraded(`SharedWorker failed: ${reason}`);
             }
         } else {
             storageService.setupInMainThread();
+            pamet.setHistoryAvailable(false);
         }
         log.info("Storage service initialized in web mode");
     } catch (e) {
