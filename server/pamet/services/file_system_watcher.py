@@ -49,6 +49,7 @@ class FileSystemWatcher:
         # Single subscriber queue (fed from Qt thread via call_soon_threadsafe)
         self._queue: asyncio.Queue | None = None
         self._loop: asyncio.AbstractEventLoop | None = None
+        self._stream_closed = False
 
         # Debounce: accumulate changed paths, process after timer fires
         self._debounce_timer = QTimer()
@@ -69,6 +70,8 @@ class FileSystemWatcher:
         Flushes any accumulated pending delta first, then streams new
         deltas as they are detected by the filesystem watcher.
         """
+        if self._stream_closed:
+            return
         if self._queue is not None:
             raise RuntimeError("Already subscribed — only one subscriber supported")
 
@@ -83,10 +86,18 @@ class FileSystemWatcher:
 
             while True:
                 delta_dict = await self._queue.get()
+                if delta_dict is None:
+                    return
                 yield delta_dict
         finally:
             self._queue = None
             self._loop = None
+
+    def close_stream(self) -> None:
+        """End the subscriber, including a response whose generator starts late."""
+        self._stream_closed = True
+        if self._queue is not None:
+            self._queue.put_nowait(None)
 
     def _watch_new_subdirs(self, changed_dir: str) -> None:
         """Add watches for new subdirectories under *changed_dir*.
@@ -148,6 +159,9 @@ class FileSystemWatcher:
         )
 
     def stop_watching(self) -> None:
+        self._debounce_timer.stop()
+        self._pending_dir_changes.clear()
+        self._pending_file_changes.clear()
         if self._watcher is None:
             return
         try:

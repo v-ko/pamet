@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 from sivkit.storage.delta import Delta
 from sivkit.storage.in_memory_store import InMemoryStore
@@ -25,11 +27,33 @@ class ProjectNotLoadedError(KeyError):
     pass
 
 
+class StorageClosingError(RuntimeError):
+    pass
+
+
+@dataclass
+class _Project:
+    root: Path
+    state: Literal["loading", "open", "closing"] = "loading"
+    load_task: asyncio.Task | None = None
+    unload_task: asyncio.Task | None = None
+    pfm: ProjectFolderManager | None = None
+    history: FullChangeHistoryService | None = None
+    close_callbacks: set[Callable[[], None]] = field(default_factory=set)
+
+
+def _observe_task(task: asyncio.Task) -> None:
+    # The request may have disconnected; still retrieve the owned task's error.
+    if not task.cancelled():
+        task.exception()
+
+
 class DesktopStorageService:
     def __init__(self):
-        self._project_folder_managers: dict[str, ProjectFolderManager] = {}
-        self._change_history_services: dict[str, FullChangeHistoryService] = {}
-        self._lock = threading.RLock()
+        self._projects: dict[str, _Project] = {}
+        self.closing = False
+        self._close_callbacks: set[Callable[[], None]] = set()
+        self._close_task: asyncio.Task | None = None
 
         # Status object — services write errors here, exposed via /status
         self.status: DSSStatus = {"errors": {}, "backup_service": {}}
@@ -52,12 +76,57 @@ class DesktopStorageService:
         # Load existing config from disk
         self._config_file_manager.load_app_config(self._config_store)
 
-    def change_history_service(
-        self, project_id: str
-    ) -> FullChangeHistoryService | None:
-        """Return the project's change history service, or None if not loaded."""
-        with self._lock:
-            return self._change_history_services.get(project_id)
+    def _require_open_project(self, project_id: str) -> _Project:
+        project = self._projects.get(project_id)
+        if self.closing or (project is not None and project.state == "closing"):
+            raise StorageClosingError(f"Desktop project '{project_id}' is closing")
+        if project is None or project.state != "open":
+            raise ProjectNotLoadedError(f"No active project runtime for '{project_id}'")
+        return project
+
+    def change_history_service(self, project_id: str) -> FullChangeHistoryService:
+        history = self._require_open_project(project_id).history
+        assert history is not None
+        return history
+
+    def register_close_callback(
+        self, close: Callable[[], None], project_id: str | None = None
+    ) -> Callable[[], None]:
+        """Register when a connection starts; return a function to unregister it.
+
+        The callback runs on project unload or DSS shutdown. Without a project
+        ID it runs only on DSS shutdown. Registration after closing is refused.
+        """
+        if self.closing:
+            raise StorageClosingError("Desktop storage is closing")
+        close_callbacks = (
+            self._close_callbacks
+            if project_id is None
+            else self._require_open_project(project_id).close_callbacks
+        )
+        close_callbacks.add(close)
+        return lambda: close_callbacks.discard(close)
+
+    @staticmethod
+    def _run_close_callbacks(close_callbacks: set[Callable[[], None]]) -> None:
+        for close in list(close_callbacks):
+            try:
+                close()
+            except Exception:
+                log.exception("Failed to run desktop close callback")
+        close_callbacks.clear()
+
+    def begin_closing(self) -> None:
+        """Close admission and streams before uvicorn waits for requests."""
+        self.closing = True
+        self._run_close_callbacks(self._close_callbacks)
+        for project in self._projects.values():
+            self._end_project_streams(project)
+
+    def _end_project_streams(self, project: _Project) -> None:
+        self._run_close_callbacks(project.close_callbacks)
+        if project.pfm is not None:
+            project.pfm.fs_watcher.close_stream()
 
     @property
     def config_sync_service(self) -> WebSocketSyncService:
@@ -69,11 +138,8 @@ class DesktopStorageService:
 
     def _resolve_project_path(self, project_id: str) -> Path | None:
         """Resolve a project ID to its repo root path."""
-        with self._lock:
-            pfm = self._project_folder_managers.get(project_id)
-            if pfm is not None:
-                return pfm.repo_root
-        return None
+        project = self._projects.get(project_id)
+        return project.root if project is not None and project.pfm is not None else None
 
     def _on_config_changes(self, delta: Delta, origin: str | None = None) -> None:
         """Chained config store callback: persist to disk + react to settings."""
@@ -93,10 +159,10 @@ class DesktopStorageService:
             if not entity_id.startswith("project-props-"):
                 continue
             project_id = entity_id.removeprefix("project-props-")
-            with self._lock:
-                pfm = self._project_folder_managers.get(project_id)
-                if pfm is None:
-                    continue
+            project = self._projects.get(project_id)
+            if project is None or project.pfm is None or project.state == "closing":
+                continue
+            pfm = project.pfm
             # Read the current entity from the store
             entity = self._config_store.find_one(id=entity_id)
             if entity is not None and isinstance(entity, ProjectProperties):
@@ -115,144 +181,159 @@ class DesktopStorageService:
                     self.status["errors"].setdefault("backup_service", {})
                     self.status["errors"]["backup_service"][project_id] = msg
 
-    async def load_project_fs(self, project_id: str, repo_root: Path) -> None:
-        """Scan the project in a worker, then build the PFM on the loop.
+    async def load_project(self, project_id: str, repo_root: Path) -> None:
+        """Scan the project in a worker, then build it on the loop.
 
-        After this returns the PFM is registered but config store has NOT
-        been updated (no WebSocket delta is fired).
+        Concurrent calls share one load task, which a cancelled request doesn't stop.
         """
         if not repo_root.is_absolute():
             raise ValueError("repo_root must be an absolute path")
-        if project_id in self._project_folder_managers:
-            log.info(
-                "DesktopStorageService load_project is idempotent for %s",
-                project_id,
+        if self.closing:
+            raise StorageClosingError("Desktop storage is closing")
+        project = self._projects.get(project_id)
+        if project is not None:
+            if project.state == "closing":
+                raise StorageClosingError(f"Desktop project '{project_id}' is closing")
+            if project.root != repo_root:
+                raise ValueError(
+                    f"Project '{project_id}' is already loaded at another path"
+                )
+        else:
+            project = _Project(repo_root)
+            self._projects[project_id] = project
+            project.load_task = asyncio.create_task(
+                self._load_project(project_id, project)
             )
-            return
+            project.load_task.add_done_callback(_observe_task)
+        assert project.load_task is not None
+        await asyncio.shield(project.load_task)
+        # An unload may have begun while the scan was running.
+        if project.state == "closing":
+            raise StorageClosingError(f"Desktop project '{project_id}' is closing")
+        self._require_open_project(project_id)
 
-        snapshot = await asyncio.to_thread(scan_project, project_id, repo_root)
-
-        # A concurrent load may have finished first (lifecycle ordering: M2.6).
-        if project_id in self._project_folder_managers:
-            return
-        pfm = ProjectFolderManager(project_id, repo_root, snapshot)
-        chs = FullChangeHistoryService(repo_root / ".pamet" / "change-history.db")
-        with self._lock:
-            self._project_folder_managers[project_id] = pfm
-            self._change_history_services[project_id] = chs
-        log.info("Loaded project %s from %s", project_id, repo_root)
-
-    def load_project_config(self, project_id: str) -> None:
-        """Event-loop phase: update config store and apply settings.
-
-        Must be called AFTER load_project_fs. This modifies the config store,
-        which fires on_changes → WebSocket push_delta.  Safe to call on the
-        event loop since it does no blocking I/O.
-        """
-        with self._lock:
-            pfm = self._project_folder_managers.get(project_id)
-            if pfm is None:
-                log.warning("load_project_config: PFM not found for %s", project_id)
+    async def _load_project(self, project_id: str, project: _Project) -> None:
+        try:
+            snapshot = await asyncio.to_thread(scan_project, project_id, project.root)
+            if project.state == "closing" or self.closing:
                 return
-
-            # Check if entity already exists before loading
-            project_properties_key = ProjectProperties.id_for_project(project_id)
-            existing = self._config_store.find_one(id=project_properties_key)
-            if existing:
-                log.warning(
-                    "load_project_config: entity ALREADY in store before load "
-                    "(home_page_id=%r). Something else created it!",
-                    getattr(existing, "home_page_id", "N/A"),
-                )
-
-            # Load project properties into the config store
-            self._config_file_manager.load_project_properties(
-                self._config_store,
-                project_id,
+            project.pfm = ProjectFolderManager(project_id, project.root, snapshot)
+            project.history = FullChangeHistoryService(
+                project.root / ".pamet" / "change-history.db"
             )
+            self._load_project_config(project_id, project.pfm)
+            project.state = "open"
+            log.info("Loaded project %s from %s", project_id, project.root)
+        except Exception:
+            log.exception("Failed to load project %s", project_id)
+            project.state = "closing"
+            await self._release_project(project_id, project)
+            if project.unload_task is None:
+                self._projects.pop(project_id, None)
+            raise
 
-            # Ensure project properties exist in the store
-            project_properties_key = ProjectProperties.id_for_project(project_id)
-            props = self._config_store.find_one(id=project_properties_key)
-            if props is None:
-                # No properties file on disk — create default entity
-                props = ProjectProperties(
-                    id=project_properties_key,
-                    project_id=project_id,
-                    title=pfm.repo_root.name,
-                )
-                self._config_store.insert_one(props)
+    def _load_project_config(self, project_id: str, pfm: ProjectFolderManager) -> None:
+        """Initialize config once, inside the owned load task on the loop."""
+        self._config_file_manager.load_project_properties(
+            self._config_store, project_id
+        )
+        project_properties_key = ProjectProperties.id_for_project(project_id)
+        props = self._config_store.find_one(id=project_properties_key)
+        if props is None:
+            props = ProjectProperties(
+                id=project_properties_key,
+                project_id=project_id,
+                title=pfm.repo_root.name,
+            )
+            self._config_store.insert_one(props)
 
-            # If no home page set, pick the first available page
-            if isinstance(props, ProjectProperties) and not props.home_page_id:
+        backups_enabled = True
+        if isinstance(props, ProjectProperties):
+            backups_enabled = props.backups_enabled
+            if not props.home_page_id:
                 first_page = next(pfm.store.find(type=Page), None)
                 if first_page is not None:
                     props.home_page_id = first_page.id
                     self._config_store.update_one(props)
-                    log.info(
-                        "load_project_config: auto-set home_page_id=%s for %s",
-                        props.home_page_id,
-                        project_id,
-                    )
 
-            log.info(
-                "load_project_config: props in store for %s: %s (home_page_id=%s)",
-                project_id,
-                props is not None,
-                getattr(props, "home_page_id", "N/A") if props else "N/A",
-            )
-            try:
+        backup = pfm.backup_service
+        try:
+            backup.backups_enabled = backups_enabled
+        except Exception as exc:
+            msg = f"Backup service failed to start for project {project_id}: {exc}"
+            log.error(msg)
+            self.status["errors"].setdefault("backup_service", {})[project_id] = msg
 
-                if props is not None and isinstance(props, ProjectProperties):
-                    pfm.backup_service.backups_enabled = props.backups_enabled
-                else:
-                    pfm.backup_service.backups_enabled = True
-            except Exception as exc:
-                msg = f"Backup service failed to start for project {project_id}: {exc}"
-                log.error(msg)
-                self.status["errors"].setdefault("backup_service", {})
-                self.status["errors"]["backup_service"][project_id] = msg
-
-            # Register backup service status
-            self.status["backup_service"][project_id] = {
-                "present": True,
-                "backups_enabled": pfm.backup_service.backups_enabled,
-                "backup_folder": str(pfm.backup_service.backup_folder),
-            }
-
-            log.info(
-                "DesktopStorageService loaded ProjectFolderManager for %s",
-                project_id,
-            )
+        self.status["backup_service"][project_id] = {
+            "present": True,
+            "backups_enabled": backup.backups_enabled,
+            "backup_folder": str(backup.backup_folder),
+        }
 
     async def unload_project(self, project_id: str) -> None:
-        with self._lock:
-            chs = self._change_history_services.pop(project_id, None)
-            pfm = self._project_folder_managers.pop(project_id, None)
-            self.status["backup_service"].pop(project_id, None)
-
-        if chs is not None:
-            await asyncio.to_thread(chs.close)
-        if pfm is None:
+        project = self._projects.get(project_id)
+        if project is None:
             return
-        await pfm.unload()
-        log.info(
-            "DesktopStorageService unloaded ProjectFolderManager for %s",
-            project_id,
-        )
+        if project.unload_task is None:
+            project.state = "closing"
+            self._end_project_streams(project)
+            project.unload_task = asyncio.create_task(
+                self._unload_project(project_id, project)
+            )
+            project.unload_task.add_done_callback(_observe_task)
+        await asyncio.shield(project.unload_task)
+
+    async def _unload_project(self, project_id: str, project: _Project) -> None:
+        try:
+            if project.load_task is not None:
+                try:
+                    await project.load_task
+                except Exception:
+                    log.exception("Project %s failed to load before unload", project_id)
+            await self._release_project(project_id, project)
+        finally:
+            self._projects.pop(project_id, None)
+        log.info("Unloaded project %s", project_id)
+
+    async def _release_project(self, project_id: str, project: _Project) -> None:
+        self._end_project_streams(project)
+        pfm, history = project.pfm, project.history
+        if pfm is not None:
+            try:
+                await pfm.stop()
+            except Exception:
+                log.exception("Failed to stop/flush project %s", project_id)
+        if history is not None:
+            try:
+                await history.close()
+            except Exception:
+                log.exception("Failed to close history for %s", project_id)
+        if pfm is not None:
+            try:
+                pfm.close()
+            except Exception:
+                log.exception("Failed to close project %s", project_id)
+        project.pfm = None
+        project.history = None
+        self.status["backup_service"].pop(project_id, None)
 
     async def close(self) -> None:
-        for project_id in list(self._project_folder_managers):
+        self.begin_closing()
+        if self._close_task is None:
+            self._close_task = asyncio.create_task(self._close())
+            self._close_task.add_done_callback(_observe_task)
+        await asyncio.shield(self._close_task)
+
+    async def _close(self) -> None:
+        # Includes projects whose scan has not finished yet.
+        for project_id in list(self._projects):
             try:
                 await self.unload_project(project_id)
             except Exception:
                 log.exception("Failed to unload project %s", project_id)
+        self._config_store.remove_on_changes_callback(self._on_config_changes)
 
     def project_folder_manager(self, project_id: str) -> ProjectFolderManager:
-        with self._lock:
-            pfm = self._project_folder_managers.get(project_id)
-            if pfm is None:
-                raise ProjectNotLoadedError(
-                    f"No active project runtime for '{project_id}'"
-                )
-            return pfm
+        pfm = self._require_open_project(project_id).pfm
+        assert pfm is not None
+        return pfm

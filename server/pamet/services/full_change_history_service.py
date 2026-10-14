@@ -2,8 +2,8 @@
 
 The web app's storage worker appends commits and verifies and reconciles history
 when recording starts, automatically committing any missing project changes.
-All methods block; callers run them in worker threads.
-One operation at a time per project.
+The service owns serial worker execution and drains admitted work on close.
+Public methods run on the owner loop; private database methods run in workers.
 """
 
 from __future__ import annotations
@@ -11,12 +11,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import threading
 import time
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ParamSpec, TypeVar
 
 from sivkit.libs.model import load_from_dict
 from sivkit.storage.change import Change
@@ -33,9 +32,23 @@ from sivkit.util import get_new_id
 log = logging.getLogger(__name__)
 
 BRANCH = "main"
+T = TypeVar("T")
+P = ParamSpec("P")
 
 
 class ParentMismatchError(Exception):
+    pass
+
+
+class HistoryClosedError(RuntimeError):
+    pass
+
+
+class IntegrityRunningError(RuntimeError):
+    pass
+
+
+class HistoryCommitNotFoundError(KeyError):
     pass
 
 
@@ -57,12 +70,84 @@ def _repository_update(
 class FullChangeHistoryService:
     def __init__(self, db_path: Path) -> None:
         self._db_path = db_path
-        self._lock = threading.Lock()
+        self._lock = asyncio.Lock()
+        self._tasks: set[asyncio.Task] = set()
+        self._close_task: asyncio.Task | None = None
+        self._closing = False
         self._adapter: SqliteVcsAdapter | None = None
         self._head_commit_id = ""
-        self._closed = False
-        # The running check-all / repair, for the 409.
-        self.integrity_task: asyncio.Task | None = None
+        self._integrity_task: asyncio.Task | None = None
+
+    def _start_worker_task(
+        self, method: Callable[P, T], *args: P.args, **kwargs: P.kwargs
+    ) -> asyncio.Task[T]:
+        """Run a private database method serially; retain it until close can drain it."""
+        if self._closing:
+            raise HistoryClosedError("Change history is closing")
+
+        async def run() -> T:
+            async with self._lock:
+                return await asyncio.to_thread(method, *args, **kwargs)
+
+        task = asyncio.create_task(run())
+        self._tasks.add(task)
+        task.add_done_callback(self._task_done)
+        return task
+
+    def _task_done(self, task: asyncio.Task) -> None:
+        self._tasks.discard(task)
+        if not task.cancelled():
+            task.exception()  # Retrieve failures even when the caller disconnected.
+
+    async def append(self, commits: list[Commit]) -> str:
+        """Append one batch, preserving order with checks, repairs and reads."""
+        return await asyncio.shield(self._start_worker_task(self._append, commits))
+
+    async def verify_and_reconcile(
+        self, entities: list[dict[str, Any]], snapshot_hash: str
+    ) -> dict[str, Any]:
+        return await asyncio.shield(
+            self._start_worker_task(self._verify_and_reconcile, entities, snapshot_hash)
+        )
+
+    async def commit_graph(self) -> CommitGraph:
+        return await asyncio.shield(self._start_worker_task(self._commit_graph))
+
+    async def get_commits(self, ids: list[str]) -> list[Commit]:
+        return await asyncio.shield(self._start_worker_task(self._get_commits, ids))
+
+    async def get_commits_page(
+        self, branch: str, from_id: str | None, count: int
+    ) -> tuple[list[Commit], bool]:
+        return await asyncio.shield(
+            self._start_worker_task(self._get_commits_page, branch, from_id, count)
+        )
+
+    def start_integrity(
+        self, fix: bool, on_progress: Callable[[dict], None]
+    ) -> asyncio.Future[dict]:
+        """Start a check/repair independent of its stream; progress runs in the worker."""
+        if self._integrity_task is not None and not self._integrity_task.done():
+            raise IntegrityRunningError("An integrity operation is already running")
+        # Admission is synchronous so the route can reject a second run before
+        # returning its StreamingResponse. The returned future is cancellation-safe.
+        self._integrity_task = self._start_worker_task(
+            self._run_integrity, fix, on_progress
+        )
+        return asyncio.shield(self._integrity_task)
+
+    async def close(self) -> None:
+        """Refuse new work, drain admitted jobs and close SQLite. Safe to repeat."""
+        if self._close_task is None:
+            self._closing = True
+            self._close_task = asyncio.create_task(self._drain_and_close())
+            self._close_task.add_done_callback(self._task_done)
+        await asyncio.shield(self._close_task)
+
+    async def _drain_and_close(self) -> None:
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+        await asyncio.to_thread(self._close)
 
     @property
     def diagnostics_dir(self) -> Path:
@@ -70,8 +155,6 @@ class FullChangeHistoryService:
 
     def _load_existing_history(self) -> SqliteVcsAdapter | None:
         """Lazily load existing history without creating a database or branch."""
-        if self._closed:
-            raise RuntimeError("Change history is closed")
         if self._adapter is None:
             if not self._db_path.exists():
                 return None
@@ -111,12 +194,11 @@ class FullChangeHistoryService:
         )
         self._head_commit_id = expected_parent_id
 
-    def append(self, commits: list[Commit]) -> str:
+    def _append(self, commits: list[Commit]) -> str:
         """Append commits on top of the head. Returns the new head id."""
-        with self._lock:
-            adapter = self._ensure_history_created()
-            self._append_commits(adapter, commits)
-            return self._head_commit_id
+        adapter = self._ensure_history_created()
+        self._append_commits(adapter, commits)
+        return self._head_commit_id
 
     def _verify_stored_hashes(
         self, adapter: SqliteVcsAdapter | None
@@ -168,123 +250,132 @@ class FullChangeHistoryService:
             delta_data=delta.asdict(),
         )
 
-    def verify_and_reconcile(
+    def _verify_and_reconcile(
         self, entities: list[dict[str, Any]], snapshot_hash: str
     ) -> dict:
         """Verify stored hashes and automatically append a History patch if needed."""
-        with self._lock:
-            adapter = self._load_existing_history()
-            graph = adapter.get_commit_graph() if adapter is not None else None
-            history = (
-                adapter
-                if graph is not None and graph.branch(BRANCH) is not None
-                else None
-            )
-            mismatch_count, computed_head_hash = self._verify_stored_hashes(history)
-            hashes_disagree = False
-            if computed_head_hash != snapshot_hash:
-                commit_ids = (
-                    [commit.id for commit in graph.branch_commits(BRANCH)]
-                    if graph is not None and history is not None
-                    else []
-                )
-                reconciliation_delta = self._calculate_reconciliation_delta(
-                    history, commit_ids, entities
-                )
-                if reconciliation_delta.is_empty():
-                    hashes_disagree = True
-                else:
-                    adapter = self._ensure_history_created()
-                    patch = self._build_reconciliation_commit(
-                        reconciliation_delta, entities
-                    )
-                    self._append_commits(adapter, [patch])
-                    hashes_disagree = patch.snapshot_hash != snapshot_hash
-                    log.info("Patched change history with %s", patch.id)
-            return {
-                "head_id": self._head_commit_id,
-                "mismatches": mismatch_count,
-                "hashes_disagree": hashes_disagree,
-            }
-
-    def commit_graph(self) -> CommitGraph:
-        with self._lock:
-            adapter = self._load_existing_history()
-            if adapter is None:
-                graph = CommitGraph()
-                graph.create_branch(BRANCH)
-                return graph
-            return adapter.get_commit_graph()
-
-    def get_commits(self, ids: list[str]) -> list[Commit]:
-        with self._lock:
-            adapter = self._load_existing_history()
-            return adapter.get_commits(ids) if adapter is not None else []
-
-    def run_integrity(self, fix: bool, on_progress: Callable[[dict], None]) -> dict:
-        """Check (or repair) every hash, write a log file, return a summary."""
-        with self._lock:
-            adapter = self._load_existing_history()
-            mismatch_status = "mismatch_fixed" if fix else "mismatch_reported"
-            total_commits = 0
-            mismatch_commits: list[dict] = []
-            progress_events = (
-                verify_or_fix_hashes(adapter, BRANCH, fix=fix)
-                if adapter is not None
-                and adapter.get_commit_graph().branch(BRANCH) is not None
+        adapter = self._load_existing_history()
+        graph = adapter.get_commit_graph() if adapter is not None else None
+        history = (
+            adapter if graph is not None and graph.branch(BRANCH) is not None else None
+        )
+        mismatch_count, computed_head_hash = self._verify_stored_hashes(history)
+        hashes_disagree = False
+        if computed_head_hash != snapshot_hash:
+            commit_ids = (
+                [commit.id for commit in graph.branch_commits(BRANCH)]
+                if graph is not None and history is not None
                 else []
             )
-            for progress in progress_events:
-                total_commits = progress.total_commits
-                if progress.status == mismatch_status:
-                    mismatch_commits.append(
-                        {
-                            "index": progress.commit_index,
-                            "commit_id": progress.commit_id,
-                            "computed_hash": progress.computed_hash,
-                            "stored_hash": progress.stored_hash,
-                            "delta_data": progress.delta_data,
-                            "parent_id": progress.parent_id,
-                            "timestamp": progress.timestamp,
-                            "message": progress.message,
-                        }
-                    )
-                on_progress(
+            reconciliation_delta = self._calculate_reconciliation_delta(
+                history, commit_ids, entities
+            )
+            if reconciliation_delta.is_empty():
+                hashes_disagree = True
+            else:
+                adapter = self._ensure_history_created()
+                patch = self._build_reconciliation_commit(
+                    reconciliation_delta, entities
+                )
+                self._append_commits(adapter, [patch])
+                hashes_disagree = patch.snapshot_hash != snapshot_hash
+                log.info("Patched change history with %s", patch.id)
+        return {
+            "head_id": self._head_commit_id,
+            "mismatches": mismatch_count,
+            "hashes_disagree": hashes_disagree,
+        }
+
+    def _commit_graph(self) -> CommitGraph:
+        adapter = self._load_existing_history()
+        if adapter is None:
+            graph = CommitGraph()
+            graph.create_branch(BRANCH)
+            return graph
+        return adapter.get_commit_graph()
+
+    def _get_commits(self, ids: list[str]) -> list[Commit]:
+        adapter = self._load_existing_history()
+        return adapter.get_commits(ids) if adapter is not None else []
+
+    def _get_commits_page(
+        self, branch: str, from_id: str | None, count: int
+    ) -> tuple[list[Commit], bool]:
+        commits = self._commit_graph().branch_commits(branch)
+        start = 0
+        if from_id:
+            for index, commit in enumerate(commits):
+                if commit.id == from_id:
+                    start = index + 1
+                    break
+            else:
+                raise HistoryCommitNotFoundError(from_id)
+        selected = commits[start : start + count]
+        return self._get_commits(
+            [commit.id for commit in selected]
+        ), start + count < len(commits)
+
+    def _run_integrity(self, fix: bool, on_progress: Callable[[dict], None]) -> dict:
+        """Check (or repair) every hash, write a log file, return a summary."""
+        adapter = self._load_existing_history()
+        mismatch_status = "mismatch_fixed" if fix else "mismatch_reported"
+        total_commits = 0
+        mismatch_commits: list[dict] = []
+        progress_events = (
+            verify_or_fix_hashes(adapter, BRANCH, fix=fix)
+            if adapter is not None
+            and adapter.get_commit_graph().branch(BRANCH) is not None
+            else []
+        )
+        for progress in progress_events:
+            total_commits = progress.total_commits
+            if progress.status == mismatch_status:
+                mismatch_commits.append(
                     {
-                        "type": "progress",
                         "index": progress.commit_index,
-                        "total": progress.total_commits,
-                        "status": progress.status,
                         "commit_id": progress.commit_id,
                         "computed_hash": progress.computed_hash,
                         "stored_hash": progress.stored_hash,
+                        "delta_data": progress.delta_data,
+                        "parent_id": progress.parent_id,
+                        "timestamp": progress.timestamp,
+                        "message": progress.message,
                     }
                 )
-            if fix and adapter is not None:
-                # A repair can remove the head commit.
-                branch = adapter.get_commit_graph().branch(BRANCH)
-                self._head_commit_id = ""
-                if branch is not None:
-                    self._head_commit_id = branch.head_commit_id or ""
-
-            operation = "repair-hashes" if fix else "check-all"
-            count_field = "fixed" if fix else "mismatches"
-            summary = {"total": total_commits, count_field: len(mismatch_commits)}
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            log_path = self.diagnostics_dir / f"integrity-{operation}-{timestamp}.json"
-            log_path.write_text(
-                json.dumps(
-                    {**summary, "mismatch_commits": mismatch_commits},
-                    indent=2,
-                    default=str,
-                )
+            on_progress(
+                {
+                    "type": "progress",
+                    "index": progress.commit_index,
+                    "total": progress.total_commits,
+                    "status": progress.status,
+                    "commit_id": progress.commit_id,
+                    "computed_hash": progress.computed_hash,
+                    "stored_hash": progress.stored_hash,
+                }
             )
-            return {**summary, "log_path": str(log_path.resolve())}
+        if fix and adapter is not None:
+            # A repair can remove the head commit.
+            branch = adapter.get_commit_graph().branch(BRANCH)
+            self._head_commit_id = ""
+            if branch is not None:
+                self._head_commit_id = branch.head_commit_id or ""
 
-    def close(self) -> None:
-        with self._lock:
-            self._closed = True
-            if self._adapter is not None:
-                self._adapter.close()
-                self._adapter = None
+        operation = "repair-hashes" if fix else "check-all"
+        count_field = "fixed" if fix else "mismatches"
+        summary = {"total": total_commits, count_field: len(mismatch_commits)}
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        log_path = self.diagnostics_dir / f"integrity-{operation}-{timestamp}.json"
+        log_path.write_text(
+            json.dumps(
+                {**summary, "mismatch_commits": mismatch_commits},
+                indent=2,
+                default=str,
+            )
+        )
+        return {**summary, "log_path": str(log_path.resolve())}
+
+    def _close(self) -> None:
+        if self._adapter is not None:
+            self._adapter.close()
+            self._adapter = None
         log.info("FullChangeHistoryService closed (db: %s)", self._db_path)

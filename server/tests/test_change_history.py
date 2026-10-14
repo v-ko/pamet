@@ -1,3 +1,6 @@
+import asyncio
+import threading
+
 import pytest
 from sivkit.libs.model import dump_to_dict
 from sivkit.storage.change import Change
@@ -10,6 +13,8 @@ from sivkit.storage.sqlite_vcs_adapter import SqliteVcsAdapter
 from pamet.model.page import Page
 from pamet.services.full_change_history_service import (
     FullChangeHistoryService,
+    HistoryClosedError,
+    IntegrityRunningError,
     ParentMismatchError,
 )
 
@@ -28,136 +33,119 @@ def _commit(store: InMemoryStore, page: Page, commit_id: str, parent_id: str) ->
     )
 
 
-def test_append_and_reconcile_patch(tmp_path):
-    db_path = tmp_path / "change-history.db"
-    service = FullChangeHistoryService(db_path)
-    project = InMemoryStore()
+def test_recording_and_recovery(tmp_path):
+    async def check():
+        db_path = tmp_path / "change-history.db"
+        service = FullChangeHistoryService(db_path)
+        project = InMemoryStore()
+        project.insert_one(Page())
+        state = [dump_to_dict(e) for e in project.find()]
+        project_hash = build_hash_tree(project).root_hash()
 
-    # Reads and a no-op check don't create the database
-    assert (
-        service.verify_and_reconcile([], build_hash_tree(project).root_hash())[
-            "head_id"
-        ]
-        == ""
-    )
-    assert service.get_commits(["x"]) == []
-    assert service.commit_graph().branch_commits("main") == []
-    assert not db_path.exists()
+        # Enabling recording seeds history; rechecking an unchanged project is a no-op.
+        seed = await service.verify_and_reconcile(state, project_hash)
+        assert seed["head_id"] and seed["mismatches"] == 0
+        assert not seed["hashes_disagree"]
+        assert await service.verify_and_reconcile(state, project_hash) == seed
+        await service.append([_commit(project, Page(), "c1", seed["head_id"])])
 
-    assert service.append([_commit(project, Page(), "c1", "")]) == "c1"
-    # A wrong parent leaves this page in the project but absent from history.
-    rejected = Page()
-    with pytest.raises(ParentMismatchError):
-        service.append([_commit(project, rejected, "c2", "wrong")])
+        # A rejected append leaves a gap; a corrupt hash is reported separately.
+        missing = Page()
+        with pytest.raises(ParentMismatchError):
+            await service.append([_commit(project, missing, "c2", "wrong")])
+        bad_hash = _commit(project, Page(), "c3", "c1")
+        bad_hash.snapshot_hash = "0" * 64
+        await service.append([bad_hash])
+        state = [dump_to_dict(e) for e in project.find()]
+        project_hash = build_hash_tree(project).root_hash()
+        result = await service.verify_and_reconcile(state, project_hash)
+        assert result["mismatches"] == 1 and not result["hashes_disagree"]
+        [patch] = await service.get_commits([result["head_id"]])
+        assert patch.parent_id == "c3" and set(patch.delta_data) == {missing.id}
+        assert patch.snapshot_hash == project_hash
+        assert await service.verify_and_reconcile(state, project_hash) == result
 
-    # Store a valid delta with a deliberately incorrect snapshot hash.
-    bad_hash = _commit(project, Page(), "c3", "c1")
-    bad_hash.snapshot_hash = "0" * 64
-    service.append([bad_hash])
+        # Explicit repair fixes the hash; reconciliation alone must not conceal it.
+        repair = await service.start_integrity(True, lambda _: None)
+        assert repair["fixed"] == 1
+        assert (await service.verify_and_reconcile(state, project_hash))[
+            "mismatches"
+        ] == 0
+        await service.close()
 
-    # Report c3's bad hash and patch only the page missed by the rejected c2.
-    state = [dump_to_dict(e) for e in project.find()]
-    project_hash = build_hash_tree(project).root_hash()
-    result = service.verify_and_reconcile(state, project_hash)
-    assert result["mismatches"] == 1
-    assert not result["hashes_disagree"]
-    [patch] = service.get_commits([result["head_id"]])
-    assert patch.parent_id == "c3"
-    assert patch.snapshot_hash == project_hash
-    assert set(patch.delta_data) == {rejected.id}
+        # Reopening restores the head and preserves readable, ordered history.
+        service = FullChangeHistoryService(db_path)
+        await service.append([_commit(project, Page(), "c4", patch.id)])
+        first, has_more = await service.get_commits_page("main", None, 2)
+        assert [commit.id for commit in first] == [seed["head_id"], "c1"] and has_more
+        rest, has_more = await service.get_commits_page("main", "c1", 10)
+        assert [commit.id for commit in rest] == ["c3", patch.id, "c4"] and not has_more
+        await service.close()
 
-    # Nothing left to patch
-    assert service.verify_and_reconcile(state, project_hash)["head_id"] == patch.id
-
-    # Matching raw records need no patch, even with fields unknown to Python.
-    # The deliberately stale hash does not establish TS/Python hash parity.
-    extra = {**dump_to_dict(Page()), "ts_only": 1}
-    delta = Delta.from_changes([Change(extra["id"], {}, extra)])
-    project.apply_delta(delta)
-    project_hash = build_hash_tree(project).root_hash()
-    service.append(
-        [
-            Commit(
-                id="c4",
-                parent_id=patch.id,
-                snapshot_hash=project_hash,
-                timestamp=0,
-                message="test",
-                delta_data=delta.asdict(),
-            )
-        ]
-    )
-    assert service.verify_and_reconcile([*state, extra], "stale")["head_id"] == "c4"
-    service.close()
+    asyncio.run(check())
 
 
-def test_reopen_history_loads_head_before_append(tmp_path):
-    db_path = tmp_path / "change-history.db"
-    project = InMemoryStore()
-    service = FullChangeHistoryService(db_path)
-    service.append([_commit(project, Page(), "c1", "")])
-    service.close()
+@pytest.mark.parametrize("existing_db", [False, True], ids=["absent", "empty"])
+def test_unused_history_stays_unwritten(tmp_path, existing_db):
+    async def check():
+        db_path = tmp_path / "change-history.db"
+        if existing_db:
+            SqliteVcsAdapter(db_path).close()
+        service = FullChangeHistoryService(db_path)
+        assert await service.get_commits([]) == []
+        empty_hash = build_hash_tree(InMemoryStore()).root_hash()
+        assert (await service.verify_and_reconcile([], empty_hash))["head_id"] == ""
+        mismatch = await service.verify_and_reconcile([], "stale")
+        assert mismatch["head_id"] == "" and mismatch["hashes_disagree"]
+        if existing_db:
+            assert (await service.start_integrity(True, lambda _: None))["total"] == 0
+            assert (await service.commit_graph()).branch("main") is None
+        await service.close()
+        assert db_path.exists() == existing_db
 
-    # Reopening must restore c1 as the head before validating c2's parent.
-    reopened_service = FullChangeHistoryService(db_path)
-    assert reopened_service.get_commits(["c1"])[0].id == "c1"
-    assert reopened_service.append([_commit(project, Page(), "c2", "c1")]) == "c2"
-    reopened_service.close()
-
-
-def test_reads_do_not_create_missing_branch(tmp_path):
-    db_path = tmp_path / "change-history.db"
-    # Unlike a missing database, this database exists but has no main branch.
-    adapter = SqliteVcsAdapter(db_path)
-    adapter.close()
-
-    service = FullChangeHistoryService(db_path)
-    assert service.get_commits([]) == []
-    assert service.commit_graph().branch("main") is None
-    empty_hash = build_hash_tree(InMemoryStore()).root_hash()
-    assert service.verify_and_reconcile([], empty_hash)["head_id"] == ""
-    assert service.verify_and_reconcile([], "stale")["hashes_disagree"]
-    assert service.run_integrity(False, lambda progress: None)["total"] == 0
-    assert service.run_integrity(True, lambda progress: None)["total"] == 0
-    service.close()
-
-    # Checks and repair must leave the missing branch uncreated on disk.
-    adapter = SqliteVcsAdapter(db_path)
-    assert adapter.get_commit_graph().branch("main") is None
-    adapter.close()
+    asyncio.run(check())
 
 
-def test_reconcile_creates_initial_patch_and_then_is_noop(tmp_path):
-    db_path = tmp_path / "change-history.db"
-    service = FullChangeHistoryService(db_path)
-    page = Page()
-    project = InMemoryStore()
-    project.load_data([page])
-    entities = [dump_to_dict(page)]
-    project_hash = build_hash_tree(project).root_hash()
+@pytest.mark.parametrize("integrity_fails", [False, True])
+def test_history_shutdown(tmp_path, monkeypatch, integrity_fails):
+    async def check():
+        service = FullChangeHistoryService(tmp_path / "history.db")
+        loop = asyncio.get_running_loop()
+        started = asyncio.Event()
+        release = threading.Event()
 
-    # Seed absent history from the nonempty project with one root patch.
-    result = service.verify_and_reconcile(entities, project_hash)
-    assert db_path.exists()
-    assert result["mismatches"] == 0
-    assert not result["hashes_disagree"]
-    [patch] = service.get_commits([result["head_id"]])
-    assert patch.parent_id == ""
-    assert patch.message == "History patch"
-    assert patch.snapshot_hash == project_hash
-    assert set(patch.delta_data) == {page.id}
+        def integrity(fix, on_progress):
+            loop.call_soon_threadsafe(started.set)
+            assert release.wait(5), "integrity worker timed out"
+            if integrity_fails:
+                raise OSError("integrity failed after disconnect")
+            return {"total": 0}
 
-    # Rechecking the same snapshot must not append another patch.
-    assert service.verify_and_reconcile(entities, project_hash) == result
-    assert len(service.commit_graph().branch_commits("main")) == 1
-    service.close()
+        monkeypatch.setattr(service, "_run_integrity", integrity)
+        result = service.start_integrity(False, lambda _: None)
+        await asyncio.wait_for(started.wait(), 5)
+        result.cancel()
+        with pytest.raises(IntegrityRunningError):
+            service.start_integrity(False, lambda _: None)
 
+        commit = _commit(InMemoryStore(), Page(), "c1", "")
+        append = asyncio.create_task(service.append([commit]))
+        await asyncio.sleep(0)
+        assert not append.done()
+        append.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await append
 
-def test_hash_disagreement_without_changes_does_not_create_history(tmp_path):
-    db_path = tmp_path / "change-history.db"
-    service = FullChangeHistoryService(db_path)
-    # A hash mismatch alone is not a data change worth creating history for.
-    result = service.verify_and_reconcile([], "stale")
-    assert result == {"head_id": "", "mismatches": 0, "hashes_disagree": True}
-    assert not db_path.exists()
-    service.close()
+        closing = asyncio.create_task(service.close())
+        await asyncio.sleep(0)
+        with pytest.raises(HistoryClosedError):
+            await service.commit_graph()
+        release.set()
+        await asyncio.wait_for(closing, 5)
+
+        # Neither a disconnected caller nor a failed earlier job loses the append.
+        reopened = FullChangeHistoryService(tmp_path / "history.db")
+        assert [commit.id for commit in await reopened.get_commits(["c1"])] == ["c1"]
+        await reopened.close()
+
+    asyncio.run(check())

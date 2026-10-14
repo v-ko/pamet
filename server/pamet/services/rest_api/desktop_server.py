@@ -82,13 +82,17 @@ class DesktopServer:
         self._on_signal = on_signal or self._exit
         self.server: _Server | None = None
         self._serve_task: asyncio.Task | None = None
+        self._storage_service: DesktopStorageService | None = None
 
         @asynccontextmanager
         async def _lifespan(app: FastAPI):
             dss = DesktopStorageService()
+            self._storage_service = dss
             pamet.set_desktop_storage_service(dss)
-            yield
-            await dss.close()
+            try:
+                yield
+            finally:
+                await dss.close()
 
         self.app = FastAPI(lifespan=_lifespan)
         if frontend_dev_server_url:
@@ -171,15 +175,13 @@ class DesktopServer:
 
         # Another running instance was ruled out before, so a lock is stale
         write_port_to_lock_file(self.config_dir, self._port)
+        self._serve_task.add_done_callback(lambda _: remove_lock_file(self.config_dir))
 
     async def stop(self) -> None:
         """Graceful shutdown, including the lifespan shutdown. Idempotent."""
         assert self.server is not None and self._serve_task is not None
-        self.server.should_exit = True
-        try:
-            await self._serve_task
-        finally:
-            remove_lock_file(self.config_dir)
+        self._exit()
+        await asyncio.shield(self._serve_task)
 
     @staticmethod
     async def _serve(server: _Server) -> None:
@@ -190,5 +192,7 @@ class DesktopServer:
             raise RuntimeError(f"Server exited with code {exc.code}") from exc
 
     def _exit(self) -> None:
+        if self._storage_service is not None:
+            self._storage_service.begin_closing()
         if self.server is not None:
             self.server.should_exit = True

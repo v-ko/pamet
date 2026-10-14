@@ -97,7 +97,6 @@ class ProjectFolderManager:
 
         # Not started: the watchdog watcher replaces it (M4).
         self.fs_watcher = FileSystemWatcher(self)
-        self.file_storage = FileStorageAdapter(self.repo_root, self.store)
 
         # Backup service — always present (for querying), scheduling
         # controlled by backups_enabled property
@@ -105,14 +104,25 @@ class ProjectFolderManager:
             backup_folder=self.repo_root / ".pamet" / "backups",
             store=self.store,
         )
+        # Open the index last so failed backup setup cannot leak its engine.
+        self.file_storage = FileStorageAdapter(self.repo_root, self.store)
 
     # -- Lifecycle -------------------------------------------------------------
 
-    async def unload(self) -> None:
-        await self.backup_service.close()
-        self.fs_watcher.stop_watching()
-        self.file_storage.close()
-        self.store.clear()
+    async def stop(self) -> None:
+        """Stop producers and flush backups while the store is still available."""
+        try:
+            self.fs_watcher.close_stream()
+            self.fs_watcher.stop_watching()
+        finally:
+            await self.backup_service.close()
+
+    def close(self) -> None:
+        """Release storage after DSS has drained the project's history work."""
+        try:
+            self.file_storage.close()
+        finally:
+            self.store.clear()
 
     # -- Project tree walking ---------------------------------------------------
 

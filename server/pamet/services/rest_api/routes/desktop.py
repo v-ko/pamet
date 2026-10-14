@@ -30,9 +30,14 @@ from sivkit.storage.starlette_sync import StarletteSyncEndpoint
 from starlette.websockets import WebSocket
 
 import pamet
-from pamet.services.desktop_storage_service import ProjectNotLoadedError
+from pamet.services.desktop_storage_service import (
+    ProjectNotLoadedError,
+    StorageClosingError,
+)
 from pamet.services.full_change_history_service import (
     FullChangeHistoryService,
+    HistoryCommitNotFoundError,
+    IntegrityRunningError,
     ParentMismatchError,
 )
 from pamet.storage.project_walk import ProjectTooLargeError
@@ -97,6 +102,8 @@ def _project_runtime(project_id: str):
     try:
         storage_service = pamet.desktop_storage_service()
         return storage_service.project_folder_manager(project_id)
+    except StorageClosingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ProjectNotLoadedError as exc:
         raise HTTPException(
             status_code=412,
@@ -203,8 +210,9 @@ async def load_project(project_id: str, payload: dict | None = Body(default=None
                 "Desktop project file URI must resolve to an absolute path"
             )
 
-        # 1. Scan in a worker, then build the project on the loop
-        await storage_service.load_project_fs(project_id, repo_root)
+        await storage_service.load_project(project_id, repo_root)
+    except StorageClosingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
         log.error("Bridge load_project failed: %s", exc)
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -212,14 +220,11 @@ async def load_project(project_id: str, payload: dict | None = Body(default=None
         log.error("Bridge load_project failed (too large): %s", exc)
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
-    # 2. Config store update on the event loop (fires push_delta)
-    log.info("bridge load_project: calling load_project_config for %s", project_id)
-    storage_service.load_project_config(project_id)
-
-    # 3. Wait for the config delta to be delivered to the client
+    # The client must receive the project's config before the load returns.
     future = storage_service.config_sync_service.last_push_future
     if future is not None:
-        await future
+        await asyncio.shield(future)
+    _project_runtime(project_id)
     log.info(
         "bridge load_project: config sync complete for %s, returning 200", project_id
     )
@@ -255,8 +260,27 @@ async def config_store_ws(ws: WebSocket):
 
     log.info("Config store WS auth OK")
     dss = pamet.desktop_storage_service()
+    if dss.closing:
+        await ws.close(code=1001, reason="Desktop storage is closing")
+        return
     endpoint = StarletteSyncEndpoint(sync_service=dss.config_sync_service)
-    await endpoint.serve(ws)
+    task = asyncio.create_task(endpoint.serve(ws))
+    ended_by_storage = False
+
+    def end() -> None:
+        nonlocal ended_by_storage
+        ended_by_storage = True
+        task.cancel()
+
+    remove_close_callback = dss.register_close_callback(end)
+    try:
+        await task
+    except asyncio.CancelledError:
+        if not ended_by_storage:
+            raise
+        await ws.close(code=1001, reason="Desktop storage is closing")
+    finally:
+        remove_close_callback()
     log.info("Config store WS client disconnected")
 
 
@@ -267,13 +291,15 @@ async def config_store_ws(ws: WebSocket):
 
 def _history_service(project_id: str) -> FullChangeHistoryService:
     _validate_id(project_id, "project_id")
-    history_service = pamet.desktop_storage_service().change_history_service(project_id)
-    if history_service is None:
+    try:
+        return pamet.desktop_storage_service().change_history_service(project_id)
+    except StorageClosingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProjectNotLoadedError as exc:
         raise HTTPException(
             status_code=412,
             detail=f"Desktop project session is not loaded for '{project_id}'",
-        )
-    return history_service
+        ) from exc
 
 
 def _set_history_error(project_id: str, message: str | None) -> None:
@@ -298,7 +324,7 @@ async def change_history_append(project_id: str, payload: dict = Body(...)):
     if not commits:
         raise HTTPException(status_code=400, detail="'commits' must not be empty")
     try:
-        head_id = await asyncio.to_thread(history_service.append, commits)
+        head_id = await history_service.append(commits)
     except ParentMismatchError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {"head_id": head_id}
@@ -319,9 +345,7 @@ async def change_history_verify_and_reconcile(
         raise HTTPException(
             status_code=400, detail="Expected 'entities' list and 'snapshot_hash'"
         )
-    result = await asyncio.to_thread(
-        history_service.verify_and_reconcile, entities, snapshot_hash
-    )
+    result = await history_service.verify_and_reconcile(entities, snapshot_hash)
     if result["mismatches"]:
         _set_history_error(
             project_id, f"hash mismatch in {result['mismatches']} history commits"
@@ -341,7 +365,7 @@ async def change_history_branches(
 ):
     """Return branch metadata for the change-history repository."""
     history_service = _history_service(project_id)
-    graph = await asyncio.to_thread(history_service.commit_graph)
+    graph = await history_service.commit_graph()
     return [b.asdict() for b in graph.branches()]
 
 
@@ -358,7 +382,7 @@ async def change_history_commit_graph(
     Returns ``{"branches": [...], "commits": [...]}``.
     """
     history_service = _history_service(project_id)
-    graph = await asyncio.to_thread(history_service.commit_graph)
+    graph = await history_service.commit_graph()
     return graph.data().__dict__
 
 
@@ -394,41 +418,21 @@ async def change_history_commits(
 
     # Mode 1: fetch by IDs
     if ids:
-        full_commits = await asyncio.to_thread(history_service.get_commits, ids)
+        full_commits = await history_service.get_commits(ids)
         return [c.asdict() for c in full_commits]
 
     # Mode 2: paginated walk
     count = min(max(count, 1), 500)
 
-    graph = await asyncio.to_thread(history_service.commit_graph)
-    all_branch_commits = graph.branch_commits(branch)  # chronological
-
-    # Find start position
-    start_idx = 0
-    if from_id:
-        for i, cm in enumerate(all_branch_commits):
-            if cm.id == from_id:
-                start_idx = i + 1  # exclusive — start after from_id
-                break
-        else:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Commit {from_id} not found on branch {branch}",
-            )
-
-    selected_meta = all_branch_commits[start_idx : start_idx + count]
-    has_more = (start_idx + count) < len(all_branch_commits)
-
-    # Fetch full commits (with delta_data) from the repo
-    if selected_meta:
-        full_commits = await asyncio.to_thread(
-            history_service.get_commits, [cm.id for cm in selected_meta]
+    try:
+        commits, has_more = await history_service.get_commits_page(
+            branch, from_id, count
         )
-        result = [c.asdict() for c in full_commits]
-    else:
-        result = []
-
-    return {"commits": result, "has_more": has_more}
+    except HistoryCommitNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Commit {from_id} not found on branch {branch}"
+        ) from exc
+    return {"commits": [commit.asdict() for commit in commits], "has_more": has_more}
 
 
 # ---------------------------------------------------------------------------
@@ -438,26 +442,34 @@ async def change_history_commits(
 
 def _start_integrity_run(project_id: str, fix: bool) -> StreamingResponse:
     history_service = _history_service(project_id)
-    if (
-        history_service.integrity_task is not None
-        and not history_service.integrity_task.done()
-    ):
-        raise HTTPException(
-            status_code=409, detail="An integrity operation is already running"
-        )
-
     loop = asyncio.get_running_loop()
     queue: asyncio.Queue[dict | None] = asyncio.Queue()
     listening = threading.Event()
     listening.set()
 
+    def deliver(event: dict | None) -> None:
+        if listening.is_set():
+            queue.put_nowait(event)
+
     def post(event: dict | None) -> None:
         if listening.is_set():
-            loop.call_soon_threadsafe(queue.put_nowait, event)
+            loop.call_soon_threadsafe(deliver, event)
 
-    async def run() -> None:
+    def end_stream() -> None:
+        listening.clear()
+        queue.put_nowait(None)
+
+    dss = pamet.desktop_storage_service()
+    remove_close_callback = dss.register_close_callback(end_stream, project_id)
+    try:
+        operation = history_service.start_integrity(fix, post)
+    except IntegrityRunningError as exc:
+        remove_close_callback()
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    def finished(result: asyncio.Future) -> None:
         try:
-            summary = await asyncio.to_thread(history_service.run_integrity, fix, post)
+            summary = result.result()
             QDesktopServices.openUrl(QUrl.fromLocalFile(summary["log_path"]))
             if fix:
                 _set_history_error(project_id, None)
@@ -467,8 +479,9 @@ def _start_integrity_run(project_id: str, fix: bool) -> StreamingResponse:
             post({"type": "error", "message": str(exc)})
         finally:
             post(None)
+            remove_close_callback()
 
-    history_service.integrity_task = asyncio.create_task(run())
+    operation.add_done_callback(finished)
 
     # A client that disconnects stops the stream, not the run.
     async def _sse_generator():
@@ -477,6 +490,7 @@ def _start_integrity_run(project_id: str, fix: bool) -> StreamingResponse:
                 yield f"data: {json.dumps(event)}\n\n"
         finally:
             listening.clear()
+            remove_close_callback()
 
     return StreamingResponse(
         _sse_generator(),
@@ -542,6 +556,8 @@ async def upload_file(
 
     pfm = _project_runtime(project_id)
     data = await file.read()
+    if _project_runtime(project_id) is not pfm:
+        raise HTTPException(status_code=409, detail="Desktop project session changed")
     try:
         content_hash = pfm.file_storage.add(rel, data)
     except (ValueError, FileExistsError) as exc:
