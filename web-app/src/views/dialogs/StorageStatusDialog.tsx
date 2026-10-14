@@ -12,9 +12,21 @@ interface BackupServiceStatus {
   backup_folder: string;
 }
 
+interface ProjectProblem {
+  kind: "unreadable_file" | "unlisted_folder";
+  path: string;
+  reason: string;
+}
+
+const PROBLEM_LABELS: Record<ProjectProblem["kind"], string> = {
+  unreadable_file: "Unreadable file",
+  unlisted_folder: "Folder can't be listed",
+};
+
 interface DSSStatus {
   errors: Record<string, Record<string, string>>;
   backup_service: Record<string, BackupServiceStatus>;
+  problems: Record<string, ProjectProblem[]>;
 }
 
 interface StorageStatusDialogProps {
@@ -46,6 +58,7 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
 
   const projectId = s.activeProjectId;
   const backupStatus = projectId && dssStatus?.backup_service?.[projectId];
+  const problems = (projectId && dssStatus?.problems?.[projectId]) || [];
   const isDesktop = !!window.PAMET_DESKTOP_API_BASE_URL;
 
   useEffect(() => {
@@ -130,12 +143,19 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
               const errorItems = Object.entries(dssStatus.errors).flatMap(([service, errors]) =>
                 Object.entries(errors).map(([errType, msg]) => ({ key: `${service}-${errType}`, service, msg }))
               );
-              return errorItems.length > 0 ? (
-                errorItems.map(({ key, service, msg }) => (
-                  <div key={key} className="dialog-error">
-                    <strong>{service}:</strong> {msg}
-                  </div>
-                ))
+              return errorItems.length > 0 || problems.length > 0 ? (
+                <>
+                  {errorItems.map(({ key, service, msg }) => (
+                    <div key={key} className="dialog-error">
+                      <strong>{service}:</strong> {msg}
+                    </div>
+                  ))}
+                  {problems.map(p => (
+                    <div key={p.path} className="dialog-error">
+                      <strong>{PROBLEM_LABELS[p.kind] ?? p.kind}:</strong> {p.path} ({p.reason})
+                    </div>
+                  ))}
+                </>
               ) : (
                 <div>No errors.</div>
               );

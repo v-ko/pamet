@@ -15,6 +15,7 @@ from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.storage.service_utils import (
     CanvasParseError,
     ForeignCanvasFile,
+    ProjectProblem,
     read_canvas_file,
 )
 
@@ -227,15 +228,17 @@ class FileSystemWatcher:
             # File deleted — handled by _scan_changed_directories
             return
 
+        rel = canvas_path.relative_to(self.repo_root).as_posix()
+        problems = self.project_folder_manager.problems
         try:
             disk_entities = read_canvas_file(canvas_path, self.repo_root)
         except ForeignCanvasFile:
             return
-        except CanvasParseError:
-            log.warning("Failed to parse canvas file: %s", canvas_path)
-            self.project_folder_manager.failed_canvas_paths.add(str(canvas_path))
+        except CanvasParseError as exc:
+            log.warning("Failed to parse canvas file %s: %s", canvas_path, exc)
+            problems[rel] = ProjectProblem("unreadable_file", rel, str(exc))
             return
-        self.project_folder_manager.failed_canvas_paths.discard(str(canvas_path))
+        problems.pop(rel, None)
 
         # Extract page_id from the parsed entities (filename is no longer the id)
         page_id = None

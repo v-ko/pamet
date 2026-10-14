@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterator
+from typing import Callable, Iterator
 
 from pamet.services.constants import CANVAS_FILE_EXT, MAX_WALK_ENTRIES
 from pamet.storage.migrations.manager import MIGRATION_BACKUP_DIR_NAMES
@@ -48,11 +48,13 @@ def walk_project(
     root: Path | None = None,
     *,
     budget: list[int] | None = None,
+    onerror: Callable[[Path, OSError], None] | None = None,
 ) -> Iterator[Path]:
     """Recursively yield all non-ignored paths under *root*.
 
     Yields both directories and files.  Directories are yielded before
-    their contents (pre-order).
+    their contents (pre-order). A folder that can't be listed is skipped
+    and reported to *onerror*.
     """
     if exclude_patterns is None:
         exclude_patterns = []
@@ -63,7 +65,9 @@ def walk_project(
 
     try:
         entries = sorted(root.iterdir(), key=lambda p: p.name)
-    except OSError:
+    except OSError as exc:
+        if onerror is not None:
+            onerror(root, exc)
         return
 
     for entry in entries:
@@ -85,7 +89,9 @@ def walk_project(
             if matches_exclude(entry.name, rel, exclude_patterns):
                 continue
             yield entry
-            yield from walk_project(repo_root, exclude_patterns, entry, budget=budget)
+            yield from walk_project(
+                repo_root, exclude_patterns, entry, budget=budget, onerror=onerror
+            )
         else:
             if matches_exclude(entry.name, rel, exclude_patterns):
                 continue
@@ -95,8 +101,10 @@ def walk_project(
 def iter_canvas_paths(
     repo_root: Path,
     exclude_patterns: list[str] | None = None,
+    *,
+    onerror: Callable[[Path, OSError], None] | None = None,
 ) -> Iterator[Path]:
     """Yield all .canvas file paths in the project, respecting ignores."""
-    for path in walk_project(repo_root, exclude_patterns):
+    for path in walk_project(repo_root, exclude_patterns, onerror=onerror):
         if not path.is_dir() and path.name.endswith(CANVAS_FILE_EXT):
             yield path

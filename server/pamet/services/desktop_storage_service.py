@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -88,6 +88,14 @@ class DesktopStorageService:
         history = self._require_open_project(project_id).history
         assert history is not None
         return history
+
+    def project_problems(self) -> dict[str, list[dict]]:
+        """Problems of each open project, as listed in ``/status``."""
+        return {
+            project_id: [asdict(problem) for problem in project.pfm.problems.values()]
+            for project_id, project in self._projects.items()
+            if project.state == "open" and project.pfm is not None
+        }
 
     def register_close_callback(
         self, close: Callable[[], None], project_id: str | None = None

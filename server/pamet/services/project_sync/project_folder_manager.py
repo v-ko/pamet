@@ -27,6 +27,7 @@ from pamet.storage.project_walk import iter_canvas_paths, walk_project
 from pamet.storage.service_utils import (
     CanvasParseError,
     ForeignCanvasFile,
+    ProjectProblem,
     read_canvas_file,
 )
 
@@ -39,7 +40,7 @@ class ProjectSnapshot:
 
     entities: list[Entity] = field(default_factory=list)
     exclude_patterns: list[str] = field(default_factory=list)
-    failed_canvas_paths: set[str] = field(default_factory=set)
+    problems: dict[str, ProjectProblem] = field(default_factory=dict)  # by path
 
 
 def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
@@ -59,14 +60,24 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
         ]
     )
 
-    for canvas_path in iter_canvas_paths(repo_root, snapshot.exclude_patterns):
+    def on_list_error(folder: Path, exc: OSError) -> None:
+        log.warning("Failed to list folder %s: %s", folder, exc)
+        rel = folder.relative_to(repo_root).as_posix()
+        snapshot.problems[rel] = ProjectProblem(
+            "unlisted_folder", rel, exc.strerror or str(exc)
+        )
+
+    for canvas_path in iter_canvas_paths(
+        repo_root, snapshot.exclude_patterns, onerror=on_list_error
+    ):
         try:
             entities = read_canvas_file(canvas_path, repo_root)
         except ForeignCanvasFile:
             continue
-        except CanvasParseError:
-            log.warning("Failed to parse canvas file: %s", canvas_path)
-            snapshot.failed_canvas_paths.add(str(canvas_path))
+        except CanvasParseError as exc:
+            log.warning("Failed to parse canvas file %s: %s", canvas_path, exc)
+            rel = canvas_path.relative_to(repo_root).as_posix()
+            snapshot.problems[rel] = ProjectProblem("unreadable_file", rel, str(exc))
             continue
         snapshot.entities.extend(entities.values())
 
@@ -90,7 +101,7 @@ class ProjectFolderManager:
         self.store = PametInMemoryStore()
         self.write_lock = threading.Lock()  # Held during writes to suppress watcher
         self.failed_watch_count: int = 0
-        self.failed_canvas_paths = set(snapshot.failed_canvas_paths)
+        self.problems = dict(snapshot.problems)
         self._exclude_patterns = list(snapshot.exclude_patterns)
         for entity in snapshot.entities:
             self.store.insert_one(entity)

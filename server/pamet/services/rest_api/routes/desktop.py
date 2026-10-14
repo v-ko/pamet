@@ -139,7 +139,7 @@ async def get_version():
 @desktop_router.get("/status", dependencies=[Depends(require_desktop_auth)])
 async def get_status():
     dss = pamet.desktop_storage_service()
-    return dss.status
+    return {**dss.status, "problems": dss.project_problems()}
 
 
 def _run_command(command_name: str, payload: dict | None):
