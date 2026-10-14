@@ -1,5 +1,7 @@
 import { getLogger } from 'sivkit/logging';
 import type { ProjectStorageManager, StorageAddon } from 'sivkit/storage/management/ProjectStorageManager';
+import type { StorageAddonDescriptor } from 'sivkit/storage/management/StorageService';
+import { IndexedDBVcsAdapter } from 'sivkit/storage/repository/IndexedDBVcsAdapter';
 import type { DomainStoreAdapterArgs } from 'sivkit/storage/domain-store-adapter/DomainStoreAdapter';
 import { buildRestApiAuthHeaders } from 'sivkit/storage/rest-api/Auth';
 import { getVcsAdapter } from 'sivkit/storage/repository/Repository';
@@ -21,6 +23,20 @@ const REQUEST_TIMEOUT_MS = 15000;
 export type HistoryAddonConfig =
     | { check: 'backend' }
     | { check: 'local', vcsAdapter: 'IndexedDB' | 'InMemory' };
+
+/** Desktop disconnects preserve backend history; offline removal erases its local copy. */
+export function historyAddonDescriptor(config: HistoryAddonConfig): StorageAddonDescriptor {
+    return {
+        name: 'HistoryAddon',
+        create: psm => new HistoryAddon(psm, config),
+        eraseLocalStorage: config.check === 'local' && config.vcsAdapter === 'IndexedDB'
+            ? async storageConfig => {
+                // Delete directly: missing history must not be opened or seeded.
+                await new IndexedDBVcsAdapter(`${storageConfig.projectId}-history`).eraseStorage();
+            }
+            : undefined,
+    };
+}
 
 export interface ReconciliationResult {
     head_id: string;

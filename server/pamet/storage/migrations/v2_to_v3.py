@@ -1,6 +1,6 @@
 """V2 to V3 Migration
 
-See pamet/wiki/migrations/v2-to-v3.md for detailed documentation.
+See docs/migrations/v2-to-v3.md for detailed documentation.
 """
 
 from __future__ import annotations
@@ -227,7 +227,7 @@ def convert_v2_to_v3(file_path: Path, backup_folder: Path) -> Path | None:
     - Color format conversion (semicolon-separated to arrays)
     - State tracking for verification
 
-    For detailed documentation see: pamet/wiki/migrations/v2-to-v3.md
+    For detailed documentation see: docs/migrations/v2-to-v3.md
     """
     file_path = Path(file_path)
     page_name = file_path.stem

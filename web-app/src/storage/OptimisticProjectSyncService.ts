@@ -45,6 +45,7 @@ export class OptimisticProjectSyncService {
     private _expectedDelta: Delta = new Delta({});
 
     private _commitInFlight = false;
+    private _removed = false;
     private _flushTimer: ReturnType<typeof setTimeout> | null = null;
     private _commitSafetyTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -113,7 +114,7 @@ export class OptimisticProjectSyncService {
      * Designed to be called directly from store.onChanges.
      */
     trackDelta(delta: Delta, origin?: string) {
-        if (origin === 'remote') {
+        if (this._removed || origin === 'remote') {
             return;
         }
         if (!delta.isEmpty()) {
@@ -127,7 +128,7 @@ export class OptimisticProjectSyncService {
      * Returns true if data was staged, false if there was nothing to stage.
      */
     saveUncommittedChanges(actionName?: string): boolean {
-        if (this._unstagedChanges.isEmpty()) {
+        if (this._removed || this._unstagedChanges.isEmpty()) {
             return false;
         }
 
@@ -155,7 +156,7 @@ export class OptimisticProjectSyncService {
     }
 
     private _flushStaged() {
-        if (this._stagedChanges.isEmpty()) {
+        if (this._removed || this._stagedChanges.isEmpty()) {
             return;
         }
         if (this._commitInFlight) {
@@ -187,6 +188,13 @@ export class OptimisticProjectSyncService {
                 }
             })
             .catch((error) => {
+                // A removed project cannot accept retries. Other lifecycle or
+                // persistence failures remain visible and keep their normal policy.
+                if (error?.name === 'ProjectStorageLifecycleError' &&
+                    !pamet.trackedProjects().some(project => project.id === this._projectId)) {
+                    this._stopForRemoval();
+                    return;
+                }
                 log.error('Auto-commit failed. Returning delta to staged.', {
                     error,
                     projectId: this._projectId,
@@ -220,6 +228,21 @@ export class OptimisticProjectSyncService {
         }, COMMIT_SAFETY_TIMEOUT_MS);
     }
 
+    private _stopForRemoval() {
+        this._removed = true;
+        if (this._flushTimer !== null) clearTimeout(this._flushTimer);
+        if (this._commitSafetyTimer !== null) clearTimeout(this._commitSafetyTimer);
+        if (this._beforeUnloadHandler) window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+        this._flushTimer = this._commitSafetyTimer = null;
+        this._beforeUnloadHandler = null;
+        this._commitInFlight = false;
+        this._expectedDelta = new Delta({});
+        this._stagedChanges = new Delta({});
+        this._unstagedChanges = new Delta({});
+        this._stagedActionNames = [];
+        log.info('Discarding pending save for removed project', this._projectId);
+    }
+
     /**
      * Receive an update from the authority (via BroadcastChannel).
      * Reconciles optimistic local state with the canonical remote state.
@@ -229,6 +252,7 @@ export class OptimisticProjectSyncService {
      */
     @action({ issuer: 'service' })
     receiveRepoUpdate(repoUpdate: RepoUpdateData) {
+        if (this._removed) return;
         log.info('Received repo update', repoUpdate);
 
         try {

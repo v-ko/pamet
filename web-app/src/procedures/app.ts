@@ -178,6 +178,9 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
     if (!projects.find(p => p.id === project.id)) {
         throw new Error(`Project with ID ${project.id} not found`);
     }
+    // Capture before detach/untracking: storage descriptors still need this config
+    // to erase local data after all users of the project have been stopped.
+    const storageConfig = pamet.projectStorageConfig(project.id);
 
     // Ask here, so that there's no chance another tab creates the default
     // project first, creating a conflict
@@ -208,7 +211,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
         }
 
         // Erase local caches; each adapter erases only what it owns
-        await pamet.storageService.removeProject(project.id, pamet.projectStorageConfig(project.id));
+        await pamet.storageService.removeProject(project.id, storageConfig);
 
         // If the current project is null (i.e. we've deleted the current project)
         // use the auto-assist to switch to the first project in the list

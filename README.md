@@ -33,15 +33,18 @@ Will update the instructions soon. The app is transitioning to web technologies.
 https://github.com/v-ko/pamet/assets/3106360/c1d0f848-4e98-4c20-8d5e-5c7764e9c9d4
 
 ## Development install
-Clone the repo with `--recurse-submodules`, since the [SivKit](https://github.com/v-ko/sivkit) library is integrated as a git submodule at dev time.
+The [SivKit](https://github.com/v-ko/sivkit) library is a development dependency.
+
+## Documentation
+See the [documentation index](docs/README.md) for architecture, storage, security and migrations.
 
 ## Testing
-There are unit tests for some of the functionality and testing for the actions(=controller) which are not precise but are quite useful for visual verification (+are [easy to generate](tests/actions/new_test_HOW_TO.md)).
+There are unit tests for some of the functionality and testing for the actions(=controller) which are not precise but are quite useful for visual verification (+are [easy to generate](server/tests/actions/new_test_HOW_TO.md)).
 
-![screenshot](http://misli.org/static/presentation/pamet_test_suite_demo.gif)
+![Action test suite demo](https://misli.org/static/presentation/pamet_test_suite_demo.gif)
 
 ## Development state and future
-Check some notes on the [development so far](development-history.md)
+Check some notes on the [development so far](server/development-history.md)
 
 Currently the code documentation isn't updated, and typing annotations have to be completed in places.
 

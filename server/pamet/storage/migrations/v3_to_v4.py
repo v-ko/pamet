@@ -1,6 +1,6 @@
 """V3 to V4 Migration
 
-See pamet/wiki/migrations/v3-to-v4.md for detailed documentation.
+See docs/migrations/v3-to-v4.md for detailed documentation.
 """
 
 from __future__ import annotations
