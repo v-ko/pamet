@@ -570,6 +570,10 @@ export class PametFacade extends PametStore {
 
     async detachFromProject(projectId: string) {
         log.info('Detaching from project', projectId);
+        const syncService = this._projectSyncService;
+        this._projectSyncService = null;
+        await syncService?.flushAndDispose();
+
         this.undoService.clearAll();
         this.searchService.clear();
         if (this._replayService) {
@@ -577,17 +581,8 @@ export class PametFacade extends PametStore {
             this._replayService = null;
         }
 
-        let currentProject: PametProjectData;
-        try {
-            currentProject = this.appViewState.getCurrentProject();
-        } catch (e) {
-            log.error('Error getting current project', e);
-            return;
-        }
-
         this._currentProjectStore = null;
-        this._projectSyncService = null;
-        await this.storageService.unloadProject(currentProject.id).catch(
+        await this.storageService.unloadProject(projectId).catch(
             (e) => {
                 log.error('Error unloading project', e);
             }

@@ -14,6 +14,9 @@ let log = getLogger('OptimisticProjectSyncService');
 
 const FLUSH_DEBOUNCE_MS = 100;
 const COMMIT_SAFETY_TIMEOUT_MS = 10000;
+const CLOSE_TIMEOUT_MS = 5000;
+
+export type CloseOutcome = 'completed' | 'failed' | 'timed out';
 
 /**
  * Handles the optimistic-commit + reconciliation cycle for a single project.
@@ -45,7 +48,9 @@ export class OptimisticProjectSyncService {
     private _expectedDelta: Delta = new Delta({});
 
     private _commitInFlight = false;
-    private _removed = false;
+    private _pendingCommits = new Set<Promise<boolean>>();  // Until each commit request settles
+    private _closing = false;
+    private _disposed = false;
     private _flushTimer: ReturnType<typeof setTimeout> | null = null;
     private _commitSafetyTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -114,7 +119,7 @@ export class OptimisticProjectSyncService {
      * Designed to be called directly from store.onChanges.
      */
     trackDelta(delta: Delta, origin?: string) {
-        if (this._removed || origin === 'remote') {
+        if (this._disposed || this._closing || origin === 'remote') {
             return;
         }
         if (!delta.isEmpty()) {
@@ -128,7 +133,7 @@ export class OptimisticProjectSyncService {
      * Returns true if data was staged, false if there was nothing to stage.
      */
     saveUncommittedChanges(actionName?: string): boolean {
-        if (this._removed || this._unstagedChanges.isEmpty()) {
+        if (this._disposed || this._unstagedChanges.isEmpty()) {
             return false;
         }
 
@@ -145,6 +150,7 @@ export class OptimisticProjectSyncService {
     }
 
     private _scheduleFlush() {
+        if (this._closing) return;
         // Reset the debounce timer on each call (trailing-edge debounce)
         if (this._flushTimer !== null) {
             clearTimeout(this._flushTimer);
@@ -156,7 +162,7 @@ export class OptimisticProjectSyncService {
     }
 
     private _flushStaged() {
-        if (this._removed || this._stagedChanges.isEmpty()) {
+        if (this._disposed || this._stagedChanges.isEmpty()) {
             return;
         }
         if (this._commitInFlight) {
@@ -173,7 +179,7 @@ export class OptimisticProjectSyncService {
 
         appActions.setSaveStatus(pamet.appViewState, 'saving');
 
-        this._storageService.commit(this._projectId, delta.data, actionNames.join(', ') || 'Auto-commit')
+        const pendingCommit = this._storageService.commit(this._projectId, delta.data, actionNames.join(', ') || 'Auto-commit')
             .then((result) => {
                 const appliedDeltaData = result.commit.delta_data;
                 const unappliedDelta = delta.copy();
@@ -186,14 +192,19 @@ export class OptimisticProjectSyncService {
                         commit: result.commit,
                     });
                 }
+                return true;
             })
             .catch((error) => {
+                if (this._disposed) {
+                    log.error('Save failed after the project was closed', { error, delta: delta.data });
+                    return false;
+                }
                 // A removed project cannot accept retries. Other lifecycle or
                 // persistence failures remain visible and keep their normal policy.
                 if (error?.name === 'ProjectStorageLifecycleError' &&
                     !pamet.trackedProjects().some(project => project.id === this._projectId)) {
                     this._stopForRemoval();
-                    return;
+                    return false;
                 }
                 log.error('Auto-commit failed. Returning delta to staged.', {
                     error,
@@ -216,11 +227,17 @@ export class OptimisticProjectSyncService {
 
                 // Re-schedule flush for retry
                 this._scheduleFlush();
+                return false;
+            })
+            .finally(() => {
+                this._pendingCommits.delete(pendingCommit);
             });
+        this._pendingCommits.add(pendingCommit);
 
         // Safety timeout: if we never receive a repoUpdate, unblock commits
+        if (this._commitSafetyTimer !== null) clearTimeout(this._commitSafetyTimer);
         this._commitSafetyTimer = setTimeout(() => {
-            if (this._commitInFlight) {
+            if (this._commitInFlight && !this._closing) {
                 log.warning('Commit safety timeout reached — clearing in-flight flag');
                 this._commitInFlight = false;
                 this._flushStaged();
@@ -228,13 +245,62 @@ export class OptimisticProjectSyncService {
         }, COMMIT_SAFETY_TIMEOUT_MS);
     }
 
-    private _stopForRemoval() {
-        this._removed = true;
+    /**
+     * Prepare to close: stop taking edits, send the pending save and wait for
+     * it. The timers and the beforeunload listener are disposed even when the
+     * save fails or times out; the unsaved changes are then logged.
+     */
+    async flushAndDispose(timeoutMs = CLOSE_TIMEOUT_MS): Promise<CloseOutcome> {
+        this.saveUncommittedChanges('Close');
+        this._closing = true;
+        if (this._flushTimer !== null) clearTimeout(this._flushTimer);
+        this._flushTimer = null;
+
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const timedOut = new Promise<CloseOutcome>(resolve => {
+            timeout = setTimeout(() => resolve('timed out'), timeoutMs);
+        });
+        const outcome = await Promise.race([this._drain(), timedOut]);
+        clearTimeout(timeout);
+
+        if (outcome !== 'completed') {
+            log.error(`Closing project ${this._projectId}: save ${outcome}`, {
+                unsent: this._stagedChanges.data,
+                requestsPending: this._pendingCommits.size,
+            });
+        }
+        // Repo updates, which would normally set it, are ignored while closing
+        appActions.setSaveStatus(pamet.appViewState, outcome === 'completed' ? 'saved' : 'error');
+        this._dispose();
+        return outcome;
+    }
+
+    private async _drain(): Promise<CloseOutcome> {
+        while (this._pendingCommits.size || !this._stagedChanges.isEmpty()) {
+            if (this._disposed) return 'timed out';
+            if (this._pendingCommits.size) {
+                const results = await Promise.all(this._pendingCommits);
+                if (results.includes(false)) return 'failed';
+                continue;
+            }
+            // Closing doesn't wait for the repo update, only for the request
+            this._commitInFlight = false;
+            this._flushStaged();
+        }
+        return 'completed';
+    }
+
+    private _dispose() {
+        this._disposed = true;
         if (this._flushTimer !== null) clearTimeout(this._flushTimer);
         if (this._commitSafetyTimer !== null) clearTimeout(this._commitSafetyTimer);
         if (this._beforeUnloadHandler) window.removeEventListener('beforeunload', this._beforeUnloadHandler);
         this._flushTimer = this._commitSafetyTimer = null;
         this._beforeUnloadHandler = null;
+    }
+
+    private _stopForRemoval() {
+        this._dispose();
         this._commitInFlight = false;
         this._expectedDelta = new Delta({});
         this._stagedChanges = new Delta({});
@@ -252,7 +318,8 @@ export class OptimisticProjectSyncService {
      */
     @action({ issuer: 'service' })
     receiveRepoUpdate(repoUpdate: RepoUpdateData) {
-        if (this._removed) return;
+        // While closing, the store is about to be dropped
+        if (this._disposed || this._closing) return;
         log.info('Received repo update', repoUpdate);
 
         try {
