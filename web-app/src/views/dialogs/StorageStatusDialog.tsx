@@ -13,7 +13,7 @@ interface BackupServiceStatus {
 }
 
 interface ProjectProblem {
-  kind: "unreadable_file" | "unlisted_folder";
+  kind: "unreadable_file" | "unlisted_folder" | "duplicate_id";
   path: string;
   reason: string;
 }
@@ -21,6 +21,7 @@ interface ProjectProblem {
 const PROBLEM_LABELS: Record<ProjectProblem["kind"], string> = {
   unreadable_file: "Unreadable file",
   unlisted_folder: "Folder can't be listed",
+  duplicate_id: "Not loaded (duplicate id)",
 };
 
 interface DSSStatus {

@@ -18,8 +18,10 @@ from pamet.desktop_app.config import (
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page
 from pamet.services.backup import BackupService
+from pamet.services.constants import CANVAS_FILE_EXT, CANVAS_TEMP_EXT
 from pamet.services.file_system_watcher import FileSystemWatcher
 from pamet.storage.canvas_html import write_canvas_file
+from pamet.storage.disk_index import DiskEntry, Fingerprint, file_fingerprint
 from pamet.storage.file_storage_adapter import FileStorageAdapter, rebuild_file_index
 from pamet.storage.migrations.manager import MigrationManager
 from pamet.storage.pamet_in_memory_store import PametInMemoryStore
@@ -41,12 +43,15 @@ class ProjectSnapshot:
     entities: list[Entity] = field(default_factory=list)
     exclude_patterns: list[str] = field(default_factory=list)
     problems: dict[str, ProjectProblem] = field(default_factory=dict)  # by path
+    disk_index: dict[str, DiskEntry] = field(default_factory=dict)  # by path
 
 
 def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     """Blocking: migrate, read all .canvas files, rebuild the file index.
 
-    Runs in a worker thread.
+    Files that claim an id already loaded from a newer file are duplicates
+    and aren't loaded. Leftover temp files from interrupted writes are
+    deleted. Runs in a worker thread.
     """
     MigrationManager(repo_root).do_all_migrations()
 
@@ -67,19 +72,51 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
             "unlisted_folder", rel, exc.strerror or str(exc)
         )
 
-    for canvas_path in iter_canvas_paths(
+    parsed: list[tuple[str, Fingerprint | None, dict[str, Entity]]] = []
+    for path in walk_project(
         repo_root, snapshot.exclude_patterns, onerror=on_list_error
     ):
+        is_temp = path.name.endswith(CANVAS_TEMP_EXT)
+        if not (is_temp or path.name.endswith(CANVAS_FILE_EXT)) or path.is_dir():
+            continue
+        if is_temp:
+            try:
+                path.unlink()
+            except OSError as exc:
+                log.warning("Failed to delete leftover temp file %s: %s", path, exc)
+            continue
+
+        rel = path.relative_to(repo_root).as_posix()
+        # Stat first: a change during the read then shows as a new fingerprint
+        fingerprint = file_fingerprint(path)
         try:
-            entities = read_canvas_file(canvas_path, repo_root)
+            entities = read_canvas_file(path, repo_root)
         except ForeignCanvasFile:
             continue
         except CanvasParseError as exc:
-            log.warning("Failed to parse canvas file %s: %s", canvas_path, exc)
-            rel = canvas_path.relative_to(repo_root).as_posix()
+            log.warning("Failed to parse canvas file %s: %s", path, exc)
             snapshot.problems[rel] = ProjectProblem("unreadable_file", rel, str(exc))
+            snapshot.disk_index[rel] = DiskEntry(fingerprint, read_error=str(exc))
             continue
-        snapshot.entities.extend(entities.values())
+        parsed.append((rel, fingerprint, entities))
+
+    # The newest file wins duplicate ids; on a tie, path order decides.
+    parsed.sort(key=lambda item: (-(item[1][1] if item[1] else 0), item[0]))
+    owners: dict[str, str] = {}  # entity id → owning path
+    for rel, fingerprint, entities in parsed:
+        taken = next((id_ for id_ in entities if id_ in owners), None)
+        if taken is None:
+            owners.update(dict.fromkeys(entities, rel))
+            snapshot.entities.extend(entities.values())
+            role = "owner"
+        else:
+            snapshot.problems[rel] = ProjectProblem(
+                "duplicate_id",
+                rel,
+                f"Id {taken} is already loaded from {owners[taken]}",
+            )
+            role = "duplicate"
+        snapshot.disk_index[rel] = DiskEntry(fingerprint, role, ids=tuple(entities))
 
     rebuild_file_index(repo_root, snapshot.entities)
     return snapshot
@@ -102,6 +139,7 @@ class ProjectFolderManager:
         self.write_lock = threading.Lock()  # Held during writes to suppress watcher
         self.failed_watch_count: int = 0
         self.problems = dict(snapshot.problems)
+        self.disk_index = dict(snapshot.disk_index)
         self._exclude_patterns = list(snapshot.exclude_patterns)
         for entity in snapshot.entities:
             self.store.insert_one(entity)
