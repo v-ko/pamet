@@ -1,16 +1,23 @@
 """Project loading, closing, and shutdown integration."""
 
 import asyncio
+import json
+import os
 import threading
 from types import SimpleNamespace
 
 import pytest
 from PySide6.QtWidgets import QApplication
+from sivkit.libs.model import dump_to_dict
 
 import pamet
+from pamet.model.card_note import CardNote
 from pamet.model.page import Page
 from pamet.services import desktop_storage_service as storage
-from pamet.services.project_sync.project_folder_manager import ProjectSnapshot
+from pamet.services.project_sync.project_folder_manager import (
+    ProjectSnapshot,
+    scan_project,
+)
 from pamet.services.rest_api.routes import desktop as routes
 
 
@@ -80,6 +87,56 @@ def test_project_loading(dss, tmp_path, monkeypatch):
         await dss.close()
 
     run(check())
+
+
+def write_canvas(path, page, notes, mtime=None):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({**dump_to_dict(page), "notes": notes, "arrows": []}))
+    if mtime is not None:
+        os.utime(path, (mtime, mtime))
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root can list any folder")
+def test_loading_with_problems(dss, tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "scan_project", scan_project)
+    page = Page()
+    note = dump_to_dict(CardNote(parent_id=page.id, content={"text": "original"}))
+    newer = {**note, "content": {"text": "newer"}}
+    # A sync conflict copy saved later wins; older files sharing its page or
+    # note id are listed.
+    write_canvas(tmp_path / "page.canvas.html", page, [], mtime=2000)
+    write_canvas(tmp_path / "page.sync-conflict.canvas.html", page, [newer], 3000)
+    write_canvas(tmp_path / "other.canvas.html", Page(), [note], mtime=1000)
+    write_canvas(tmp_path / "null-notes.canvas.html", Page(), None)
+    untyped = dump_to_dict(CardNote(parent_id=page.id))
+    del untyped["type_name"]
+    write_canvas(tmp_path / "untyped.canvas.html", Page(), [untyped])
+    write_canvas(tmp_path / "locked" / "hidden.canvas.html", Page(), [])
+    (tmp_path / "locked").chmod(0)
+    leftover = tmp_path / "page.canvas.html.tmp"
+    leftover.write_text("interrupted write")
+
+    async def check():
+        await dss.load_project("p", tmp_path)
+        pfm = dss.project_folder_manager("p")
+        assert {e.id for e in pfm.store.find()} == {page.id, note["id"]}
+        assert pfm.store.find_one(id=note["id"]).text == "newer"
+        status = await routes.get_status()
+        problems = {p["path"]: p["kind"] for p in status["problems"]["p"]}
+        assert problems == {
+            "page.canvas.html": "duplicate_id",
+            "other.canvas.html": "duplicate_id",
+            "null-notes.canvas.html": "unreadable_file",
+            "untyped.canvas.html": "unreadable_file",
+            "locked": "unlisted_folder",
+        }
+        assert not leftover.exists()
+        await dss.close()
+
+    try:
+        run(check())
+    finally:
+        (tmp_path / "locked").chmod(0o755)
 
 
 @pytest.mark.parametrize("shutdown", [False, True], ids=["unload", "shutdown"])

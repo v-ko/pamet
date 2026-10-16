@@ -14,6 +14,9 @@ jest.mock('@/actions/app', () => ({
     appActions: { setSaveStatus: jest.fn() },
 }));
 
+// jsdom lacks structuredClone; delta data is plain JSON.
+globalThis.structuredClone ??= value => JSON.parse(JSON.stringify(value));
+
 test('only lifecycle-rejected saves for removed projects stop retries and unload warnings', async () => {
     jest.useFakeTimers();
     try {
@@ -61,6 +64,65 @@ test('only lifecycle-rejected saves for removed projects stop retries and unload
             }
         }
     } finally {
+        jest.useRealTimers();
+    }
+});
+
+test('closing delivers the pending save, or gives up and disposes', async () => {
+    jest.useFakeTimers();
+    const page = (id: string) => Delta.fromChanges([
+        Change.create(new DummyPage({ id, parent_id: '', name: id })),
+    ]);
+    const saved = (delta: Delta) => ({ commit: { delta_data: delta.data } });
+    const logError = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+        for (const outcome of ['completed', 'failed', 'timed out'] as const) {
+            jest.clearAllMocks();
+            (pamet.trackedProjects as jest.Mock).mockReturnValue([{ id: 'p1' }]);
+            const first = page('first'), second = page('second');
+            let finishFirst!: (value: unknown) => void;
+            const secondResult = {
+                'completed': () => Promise.resolve(saved(second)),
+                'failed': () => Promise.reject(new Error('save failed')),
+                'timed out': () => new Promise(() => {}),
+            }[outcome];
+            const commit = jest.fn()
+                .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve; }))
+                .mockImplementationOnce(secondResult);
+            const service = new OptimisticProjectSyncService(
+                new InMemoryStore(), { commit } as unknown as StorageServiceProxy, 'p1', 'main',
+            );
+
+            // A save is in flight and a newer edit is not staged yet.
+            service.trackDelta(first);
+            service.saveUncommittedChanges('first');
+            await jest.advanceTimersByTimeAsync(100);
+            service.trackDelta(second);
+            let settled = false;
+            const closing = service.flushAndDispose().finally(() => { settled = true; });
+            service.trackDelta(page('ignored'));
+            await jest.advanceTimersByTimeAsync(0);
+            expect(commit).toHaveBeenCalledTimes(1);
+            expect(settled).toBe(false);
+
+            // The edit is sent once the earlier request ends, without a repo update.
+            finishFirst(saved(first));
+            await jest.advanceTimersByTimeAsync(5000);
+            expect(await closing).toBe(outcome);
+            expect(commit).toHaveBeenCalledTimes(2);
+            expect(commit.mock.calls[1][1]).toEqual(second.data);
+            expect(appActions.setSaveStatus).toHaveBeenLastCalledWith(
+                pamet.appViewState, outcome === 'completed' ? 'saved' : 'error',
+            );
+
+            // Disposed either way: no retry and no unload warning.
+            expect(jest.getTimerCount()).toBe(0);
+            const beforeUnload = new Event('beforeunload', { cancelable: true });
+            window.dispatchEvent(beforeUnload);
+            expect(beforeUnload.defaultPrevented).toBe(false);
+        }
+    } finally {
+        logError.mockRestore();
         jest.useRealTimers();
     }
 });

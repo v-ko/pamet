@@ -129,6 +129,27 @@ test('HistoryAddon seeds history, copies commits and patches edits missed while 
     expect(commits[2].message).toBe('History patch');
     expect(Object.keys(commits[2].deltaData)).toEqual(Object.keys(missed.delta_data));
     expect(commits[2].snapshotHash).toBe(repo.hashTree.rootHash());
+
+    // A disable racing an enable leaves recording off: during a drain and during the check.
+    addon.onMessage({ type: 'setEnabled', enabled: false });
+    addon.onMessage({ type: 'setEnabled', enabled: true });
+    await addon.onMessage({ type: 'setEnabled', enabled: false });
+    expect(addon['_worker']).toBeNull();
+    const checked = signal();
+    const reconcile = addon['_verifyAndReconcileLocal'].bind(addon);
+    jest.spyOn(addon as any, '_verifyAndReconcileLocal')
+        .mockImplementation(async () => { await checked.promise; return reconcile(); });
+    addon.onMessage({ type: 'setEnabled', enabled: true });
+    await waitFor(() => addon.state === 'checking');
+    const disabling = addon.onMessage({ type: 'setEnabled', enabled: false });
+    addon.onCommitted(await commit('ignored'));
+    checked.resolve();
+    await disabling;
+    expect(addon['_worker']).toBeNull();
+    // The check already running patches the edit in; its commit isn't copied.
+    expect((await history()).map(c => c.message)).toEqual([
+        'History patch', 'second', 'History patch', 'History patch',
+    ]);
     expect(reportError).not.toHaveBeenCalled();
 
     await addon.onProjectUnloading();

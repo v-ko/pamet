@@ -113,15 +113,24 @@ def test_history_shutdown(tmp_path, monkeypatch, integrity_fails):
         loop = asyncio.get_running_loop()
         started = asyncio.Event()
         release = threading.Event()
+        order = []
 
         def integrity(fix, on_progress):
             loop.call_soon_threadsafe(started.set)
             assert release.wait(5), "integrity worker timed out"
+            order.append("integrity")
             if integrity_fails:
                 raise OSError("integrity failed after disconnect")
             return {"total": 0}
 
+        append_commits = service._append
+
+        def append_after(commits):
+            order.append("append")
+            return append_commits(commits)
+
         monkeypatch.setattr(service, "_run_integrity", integrity)
+        monkeypatch.setattr(service, "_append", append_after)
         result = service.start_integrity(False, lambda _: None)
         await asyncio.wait_for(started.wait(), 5)
         result.cancel()
@@ -142,6 +151,7 @@ def test_history_shutdown(tmp_path, monkeypatch, integrity_fails):
             await service.commit_graph()
         release.set()
         await asyncio.wait_for(closing, 5)
+        assert order == ["integrity", "append"]
 
         # Neither a disconnected caller nor a failed earlier job loses the append.
         reopened = FullChangeHistoryService(tmp_path / "history.db")
