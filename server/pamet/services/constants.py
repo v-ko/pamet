@@ -2,8 +2,6 @@ from __future__ import annotations
 
 # V5 canvas file extension
 CANVAS_FILE_EXT = ".canvas.html"
-# Written next to the target and replaced onto it; leftovers are deleted at load
-CANVAS_TEMP_EXT = CANVAS_FILE_EXT + ".tmp"
 
 # Media-related constants (server-side)
 

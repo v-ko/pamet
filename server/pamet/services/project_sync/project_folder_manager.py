@@ -18,9 +18,10 @@ from pamet.desktop_app.config import (
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page
 from pamet.services.backup import BackupService
-from pamet.services.constants import CANVAS_FILE_EXT, CANVAS_TEMP_EXT
+from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.services.file_system_watcher import FileSystemWatcher
-from pamet.storage.canvas_html import write_canvas_file
+from pamet.storage.atomic_write import TEMP_SUFFIX, atomic_write
+from pamet.storage.canvas_html import dump_canvas_html
 from pamet.storage.disk_index import DiskEntry, Fingerprint, file_fingerprint
 from pamet.storage.file_storage_adapter import FileStorageAdapter, rebuild_file_index
 from pamet.storage.migrations.manager import MigrationManager
@@ -76,7 +77,7 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     for path in walk_project(
         repo_root, snapshot.exclude_patterns, onerror=on_list_error
     ):
-        is_temp = path.name.endswith(CANVAS_TEMP_EXT)
+        is_temp = path.name.endswith(CANVAS_FILE_EXT + TEMP_SUFFIX)
         if not (is_temp or path.name.endswith(CANVAS_FILE_EXT)) or path.is_dir():
             continue
         if is_temp:
@@ -213,9 +214,9 @@ class ProjectFolderManager:
         file_data["notes"] = notes
         file_data["arrows"] = arrows
         canvas_path = self.repo_root / page_path
+        data = dump_canvas_html(file_data).encode("utf-8")
         with self.write_lock:
-            canvas_path.parent.mkdir(parents=True, exist_ok=True)
-            write_canvas_file(canvas_path, file_data)
+            atomic_write(canvas_path, data)
         return canvas_path
 
     def delete_page_canvas_file(self, page_path: str) -> None:
