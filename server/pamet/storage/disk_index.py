@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-Fingerprint = tuple[int, int, int]  # size, mtime_ns, inode
+from sivkit.storage.fs.ops import Fingerprint, fingerprint
 
 
 @dataclass
@@ -24,12 +23,9 @@ class DiskEntry:
     ids: tuple[str, ...] = ()  # The page id first, then its children's
 
 
-def fingerprint(st: os.stat_result) -> Fingerprint:
-    return (st.st_size, st.st_mtime_ns, st.st_ino)
-
-
 def file_fingerprint(path: Path) -> Fingerprint | None:
+    """None if the file is missing or can't be statted."""
     try:
-        return fingerprint(path.stat())
+        return fingerprint(path)
     except OSError:
         return None

@@ -113,7 +113,7 @@ def test_loading_with_problems(dss, tmp_path, monkeypatch):
     write_canvas(tmp_path / "untyped.canvas.html", Page(), [untyped])
     write_canvas(tmp_path / "locked" / "hidden.canvas.html", Page(), [])
     (tmp_path / "locked").chmod(0)
-    leftover = tmp_path / "page.canvas.html.tmp"
+    leftover = tmp_path / ".page.canvas.html.0123456789abcdef.tmp"
     leftover.write_text("interrupted write")
 
     async def check():
@@ -130,7 +130,7 @@ def test_loading_with_problems(dss, tmp_path, monkeypatch):
             "untyped.canvas.html": "unreadable_file",
             "locked": "unlisted_folder",
         }
-        assert not leftover.exists()
+        assert leftover.exists()
         await dss.close()
 
     try:

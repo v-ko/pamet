@@ -26,6 +26,8 @@ from PySide6.QtGui import QDesktopServices
 from sivkit.libs.command import get_command
 from sivkit.libs.model import dump_to_dict
 from sivkit.storage.commit import Commit
+from sivkit.storage.fs.names import UnsafeName
+from sivkit.storage.fs.ops import Conflict, UnsafePath
 from sivkit.storage.starlette_sync import StarletteSyncEndpoint
 from starlette.websockets import WebSocket
 
@@ -624,8 +626,12 @@ async def apply_changes(project_id: str, payload: dict = Body(...)):
         )
     try:
         await pamet.desktop_storage_service().save_changes(project_id, delta_data)
-    except SaveRejected as exc:
+    except (SaveRejected, UnsafeName, UnsafePath) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Conflict as exc:
+        raise HTTPException(
+            status_code=409, detail=f"A file on disk is in the way: {exc.path}"
+        ) from exc
     except StorageClosingError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ProjectNotLoadedError as exc:

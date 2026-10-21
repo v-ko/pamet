@@ -26,7 +26,7 @@ class ProjectTooLargeError(Exception):
 class ProjectProblem:
     """A problem with a project's files, listed in ``/status`` until cleared."""
 
-    kind: Literal["unreadable_file", "unlisted_folder", "duplicate_id"]
+    kind: Literal["unreadable_file", "unlisted_folder", "duplicate_id", "sync_conflict"]
     path: str  # Relative to the project root
     reason: str
 

@@ -5,12 +5,14 @@ import logging
 import threading
 from collections import Counter
 from dataclasses import dataclass, field
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Iterator
 
 from sivkit.libs.model import Entity, dump_to_dict
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
+from sivkit.storage.fs.changes import ApplyResult, Create, Delete, Rename, Replace
 from sivkit.storage.fs.names import canonical_key
 
 from pamet.desktop_app.config import (
@@ -23,15 +25,14 @@ from pamet.model.page import Page
 from pamet.services.backup import BackupService
 from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.services.file_system_watcher import FileSystemWatcher
-from pamet.storage.atomic_write import TEMP_SUFFIX
 from pamet.storage.canvas_html import dump_canvas_html
 from pamet.storage.canvas_writes import (
-    PageMove,
     PageWrite,
     SaveRejected,
     check_page_path,
-    check_targets,
-    write_pages,
+    rename_cycles,
+    target,
+    write_changes,
 )
 from pamet.storage.disk_index import DiskEntry, Fingerprint, file_fingerprint
 from pamet.storage.file_storage_adapter import FileStorageAdapter, rebuild_file_index
@@ -46,6 +47,9 @@ from pamet.storage.service_utils import (
 )
 
 log = logging.getLogger(__name__)
+
+# Syncthing puts its marker before the last extension
+SYNC_CONFLICT_PATTERN = "*.canvas.sync-conflict-*.html"
 
 
 @dataclass
@@ -62,8 +66,8 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     """Blocking: migrate, read all .canvas files, rebuild the file index.
 
     Files that claim an id already loaded from a newer file are duplicates
-    and aren't loaded. Leftover temp files from interrupted writes are
-    deleted. Runs in a worker thread.
+    and aren't loaded. Syncthing conflict copies are listed as problems.
+    Runs in a worker thread.
     """
     MigrationManager(repo_root).do_all_migrations()
 
@@ -88,17 +92,16 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     for path in walk_project(
         repo_root, snapshot.exclude_patterns, onerror=on_list_error
     ):
-        is_temp = path.name.endswith(CANVAS_FILE_EXT + TEMP_SUFFIX)
-        if not (is_temp or path.name.endswith(CANVAS_FILE_EXT)) or path.is_dir():
-            continue
-        if is_temp:
-            try:
-                path.unlink()
-            except OSError as exc:
-                log.warning("Failed to delete leftover temp file %s: %s", path, exc)
+        is_conflict = fnmatchcase(path.name, SYNC_CONFLICT_PATTERN)
+        if not (is_conflict or path.name.endswith(CANVAS_FILE_EXT)) or path.is_dir():
             continue
 
         rel = path.relative_to(repo_root).as_posix()
+        if is_conflict:
+            snapshot.problems[rel] = ProjectProblem(
+                "sync_conflict", rel, "Syncthing conflict copy"
+            )
+            continue
         # Stat first: a change during the read then shows as a new fingerprint
         fingerprint = file_fingerprint(path)
         try:
@@ -215,28 +218,30 @@ class ProjectFolderManager:
         """Check, apply and write a wire-format delta, one save at a time.
 
         A rejected delta changes nothing. After a failed write the change
-        stays in the store and the error is raised.
+        stays in the store and the first error is raised.
         """
         async with self.mutation_lock:
             delta = Delta.from_data(delta_data)
-            moves = self._check_page_moves(delta)
-            if moves:
-                await asyncio.to_thread(check_targets, self.repo_root, moves)
+            self._check_page_moves(delta)
             applied = self.store.apply_delta(delta)
-            writes, deletes = self._serialize_changes(applied)
-            stats, error = await asyncio.to_thread(
-                write_pages, self.repo_root, writes, deletes
+            deletes, writes = self._serialize_changes(applied)
+            deleted, written = await write_changes(
+                self.repo_root, deletes, [change for change, _ in writes]
             )
-            self._update_disk_index(writes, stats)
+            results: list[tuple[ApplyResult, tuple[str, ...]]]
+            results = [(result, ()) for result in deleted]
+            results += [(result, ids) for result, (_, ids) in zip(written, writes)]
+            self._update_disk_index(results)
             if writes:
-                self.backup_service.mark_pages_changed({w.ids[0] for w in writes})
+                self.backup_service.mark_pages_changed({ids[0] for _, ids in writes})
             log.info("Saved %d pages, deleted %d", len(writes), len(deletes))
+            error = next((r.error for r, _ in results if r.error), None)
             if error is not None:
                 raise error
 
-    def _check_page_moves(self, delta: Delta) -> list[PageMove]:
+    def _check_page_moves(self, delta: Delta) -> None:
         """Refuse invalid or colliding page paths before the store changes."""
-        moves: list[PageMove] = []
+        moves: dict[str, Any] = {}  # page id → new path, checked below
         paths = {page.id: page.path for page in self.store.find(type=Page)}
         for change in delta.changes():
             forward = change.forward_component
@@ -244,26 +249,31 @@ class ProjectFolderManager:
             if change.is_delete():
                 paths.pop(change.entity_id, None)
             elif change.is_create() and forward.get("type_name") == "Page":
-                moves.append(PageMove(change.entity_id, forward.get("path"), None))
+                moves[change.entity_id] = forward.get("path")
             elif isinstance(current, Page) and "path" in forward:
                 if forward["path"] != current.path:
-                    old_rel = current.path or None
-                    moves.append(PageMove(change.entity_id, forward["path"], old_rel))
-        for move in moves:
-            check_page_path(move.rel, self._exclude_patterns)
-            paths[move.page_id] = move.rel
+                    moves[change.entity_id] = forward["path"]
+        for page_id, rel in moves.items():
+            check_page_path(rel, self._exclude_patterns)
+            paths[page_id] = rel
         # As a case-insensitive file system would see them
         counts = Counter(canonical_key(path) for path in paths.values())
-        for move in moves:
-            if counts[canonical_key(move.rel)] > 1:
-                raise SaveRejected(f"Two pages would share the path {move.rel!r}")
-        return moves
+        for rel in moves.values():
+            if counts[canonical_key(rel)] > 1:
+                raise SaveRejected(f"Two pages would share the path {rel!r}")
 
-    def _serialize_changes(self, applied: Delta) -> tuple[list[PageWrite], list[str]]:
-        """The pages an applied delta touched, serialized, and deleted pages' files."""
+    def _serialize_changes(
+        self, applied: Delta
+    ) -> tuple[list[Delete], list[tuple[PageWrite, tuple[str, ...]]]]:
+        """File changes for an applied delta, each write with its page's ids.
+
+        The disk index decides each page's change: without a file it's a
+        Create, with a file at another path a Rename, else a Replace. Pages
+        that swap paths replace each other's files. Only a page's own file
+        is deleted.
+        """
         pages_to_write: set[str] = set()
-        deleted_page_paths: dict[str, str] = {}
-        old_canvas_paths: dict[str, str] = {}  # page id → path before a rename
+        deleted_pages: set[str] = set()
 
         for change in applied.changes():
             if change.is_delete():
@@ -271,7 +281,7 @@ class ProjectFolderManager:
                 # (full old state from Change.delete → dump_to_dict).
                 rev = change.reverse_component
                 if rev.get("type_name") == "Page":
-                    deleted_page_paths[change.entity_id] = rev.get("path", "")
+                    deleted_pages.add(change.entity_id)
                 else:
                     parent_id = rev.get("parent_id", "")
                     if parent_id:
@@ -292,10 +302,6 @@ class ProjectFolderManager:
                     continue
                 if isinstance(entity, Page):
                     pages_to_write.add(entity.id)
-                    # Path rename: the old file is removed after the write
-                    old_path = change.reverse_component.get("path")
-                    if old_path and old_path != entity.path:
-                        old_canvas_paths[entity.id] = old_path
                 elif entity.parent_id:
                     pages_to_write.add(entity.parent_id)
                     # Reparented child: also rewrite old parent page
@@ -303,16 +309,40 @@ class ProjectFolderManager:
                     if old_parent_id:
                         pages_to_write.add(old_parent_id)
 
-        pages_to_write -= set(deleted_page_paths)
+        pages_to_write -= deleted_pages
 
-        writes = []
-        for page_id in pages_to_write:
-            write = self._serialize_page(page_id, old_canvas_paths.get(page_id))
-            if write is not None:
-                writes.append(write)
-        return writes, [path for path in deleted_page_paths.values() if path]
+        owners = {
+            entry.ids[0]: rel
+            for rel, entry in self.disk_index.items()
+            if entry.role == "owner" and entry.ids
+        }
+        deletes = [Delete(owners[p]) for p in deleted_pages if p in owners]
+        pages = [
+            serialized
+            for page_id in pages_to_write
+            if (serialized := self._serialize_page(page_id)) is not None
+        ]
+        renames = {
+            owners[ids[0]]: rel
+            for rel, _, ids in pages
+            if owners.get(ids[0], rel) != rel
+        }
+        swapped = rename_cycles(renames)
 
-    def _serialize_page(self, page_id: str, old_rel: str | None) -> PageWrite | None:
+        writes: list[tuple[PageWrite, tuple[str, ...]]] = []
+        for rel, data, ids in pages:
+            old = owners.get(ids[0])
+            if old is None:
+                writes.append((Create(rel, data), ids))
+            elif old == rel or old in swapped:
+                writes.append((Replace(rel, data), ids))
+            else:
+                writes.append((Rename(old, rel, data), ids))
+        return deletes, writes
+
+    def _serialize_page(
+        self, page_id: str
+    ) -> tuple[str, bytes, tuple[str, ...]] | None:
         page_entity = self.store.find_one(id=page_id)
         if page_entity is None:
             log.warning("Cannot write page %s: not found in store", page_id)
@@ -330,20 +360,50 @@ class ProjectFolderManager:
         ]
         data = dump_canvas_html(file_data).encode("utf-8")
         ids = (page_id, *(child.id for child in children))
-        return PageWrite(page_path, data, ids, old_rel)
+        return page_path, data, ids
 
     def _update_disk_index(
-        self, writes: list[PageWrite], stats: dict[str, Fingerprint | None]
+        self, results: list[tuple[ApplyResult, tuple[str, ...]]]
     ) -> None:
-        """Record the files a save touched as they are on disk now."""
-        for rel, fingerprint in stats.items():
-            if fingerprint is None:
-                self.disk_index.pop(rel, None)
-                self.problems.pop(rel, None)
-        for write in writes:
-            fingerprint = stats[write.rel]
-            entry = self.disk_index.get(write.rel)
-            if fingerprint is None or (entry and entry.fingerprint == fingerprint):
-                continue  # Not written
-            self.disk_index[write.rel] = DiskEntry(fingerprint, "owner", ids=write.ids)
-            self.problems.pop(write.rel, None)
+        """Record what each change left on disk. A refused change left nothing."""
+        # Vacated paths first: in a rename chain one page's old path is another's new
+        for result, _ in results:
+            change = result.change
+            if result.error is None and isinstance(change, Delete):
+                self._forget(change.rel)
+            elif result.error is None and isinstance(change, Rename):
+                self._forget(change.old)
+        for result, ids in results:
+            if isinstance(result.error, OSError):
+                self._restat(result.change, ids)
+            elif result.error is None and result.fingerprint is not None:
+                self._own(target(result.change), result.fingerprint, ids)
+
+    def _restat(self, change: PageWrite | Delete, ids: tuple[str, ...]) -> None:
+        """After an OSError the change's paths are unknown: stat them again."""
+        rel = target(change)
+        current = file_fingerprint(self.repo_root / rel)
+        entry = self.disk_index.get(rel)
+        written = False
+        if current is None:
+            self._forget(rel)
+        elif ids and (entry is None or entry.fingerprint != current):
+            self._own(rel, current, ids)
+            written = True
+        if isinstance(change, Rename):
+            old = file_fingerprint(self.repo_root / change.old)
+            old_entry = self.disk_index.get(change.old)
+            # The same file where names ignore case
+            if old is None or old == current:
+                self._forget(change.old)
+            elif written and old_entry and old_entry.ids[:1] == ids[:1]:
+                # The new file owns the page, as the next load would decide
+                old_entry.role = "duplicate"
+
+    def _own(self, rel: str, fingerprint: Fingerprint, ids: tuple[str, ...]) -> None:
+        self.disk_index[rel] = DiskEntry(fingerprint, "owner", ids=ids)
+        self.problems.pop(rel, None)
+
+    def _forget(self, rel: str) -> None:
+        self.disk_index.pop(rel, None)
+        self.problems.pop(rel, None)
