@@ -40,6 +40,7 @@ from pamet.services.full_change_history_service import (
     IntegrityRunningError,
     ParentMismatchError,
 )
+from pamet.storage.canvas_writes import SaveRejected
 from pamet.storage.project_walk import ProjectTooLargeError
 
 log = logging.getLogger(__name__)
@@ -615,11 +616,24 @@ async def find_entities(project_id: str):
     dependencies=[Depends(require_desktop_auth)],
 )
 async def apply_changes(project_id: str, payload: dict = Body(...)):
-    runtime = _project_runtime(project_id)
+    _validate_id(project_id, "project_id")
     delta_data = payload.get("delta")
     if not delta_data or not isinstance(delta_data, dict):
         raise HTTPException(
             status_code=400, detail="'delta' must be a non-empty object"
         )
-    runtime.apply_delta(delta_data)
+    try:
+        await pamet.desktop_storage_service().save_changes(project_id, delta_data)
+    except SaveRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except StorageClosingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProjectNotLoadedError as exc:
+        raise HTTPException(
+            status_code=412,
+            detail=f"Desktop project session is not loaded for '{project_id}'",
+        ) from exc
+    except OSError as exc:
+        log.error("Failed to save changes to %s: %s", project_id, exc)
+        raise HTTPException(status_code=500, detail=f"Save failed: {exc}") from exc
     return {"ok": True}

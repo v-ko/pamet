@@ -40,6 +40,7 @@ class _Project:
     pfm: ProjectFolderManager | None = None
     history: FullChangeHistoryService | None = None
     close_callbacks: set[Callable[[], None]] = field(default_factory=set)
+    saves: set[asyncio.Task] = field(default_factory=set)
 
 
 def _observe_task(task: asyncio.Task) -> None:
@@ -305,6 +306,8 @@ class DesktopStorageService:
 
     async def _release_project(self, project_id: str, project: _Project) -> None:
         self._end_project_streams(project)
+        if project.saves:
+            await asyncio.wait(list(project.saves))
         pfm, history = project.pfm, project.history
         if pfm is not None:
             try:
@@ -345,3 +348,13 @@ class DesktopStorageService:
         pfm = self._require_open_project(project_id).pfm
         assert pfm is not None
         return pfm
+
+    async def save_changes(self, project_id: str, delta_data: dict) -> None:
+        """Save a delta. Once admitted, the save finishes before the project unloads."""
+        project = self._require_open_project(project_id)
+        assert project.pfm is not None
+        task = asyncio.create_task(project.pfm.save(delta_data))
+        project.saves.add(task)
+        task.add_done_callback(project.saves.discard)
+        task.add_done_callback(_observe_task)
+        await asyncio.shield(task)

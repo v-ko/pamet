@@ -53,6 +53,9 @@
   "jest": {
     "preset": "ts-jest/presets/default-esm",
     "testEnvironment": "jsdom",
+    "setupFiles": [
+      "<rootDir>/web-app/src/jest-setup.ts"
+    ],
     "testMatch": [
       "<rootDir>/web-app/src/**/*.test.{ts,tsx}"
     ],

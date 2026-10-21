@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from "@/app/facade";
 import { getLogger } from 'sivkit/logging';
 import { DEFAULT_NEW_PAGE_PREFIX, PametTabIndex } from '@/app/constants';
+import { isPagePathTaken, normalizePageName, pagePath } from '@/model/pageNames';
 import "@/views/dialogs/Dialog.css";
 
 let log = getLogger('CreatePageDialog');
@@ -21,12 +22,10 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     if (!dialog) return;
 
     // Generate default name (new pages are created in root)
-    const existingNames = new Set(
-      Array.from(pamet.pages()).filter(p => p.folder === '').map(p => p.name)
-    );
+    const pages = Array.from(pamet.pages());
     let newName = DEFAULT_NEW_PAGE_PREFIX;
     let i = 1;
-    while (existingNames.has(newName)) {
+    while (isPagePathTaken(pages, pagePath('', newName))) {
       newName = `${DEFAULT_NEW_PAGE_PREFIX} ${i++}`;
     }
     setPageName(newName);
@@ -37,20 +36,20 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
     }
   }, []);
 
-  // Check if name is already taken in root folder
-  const isNameTaken = useMemo(() => {
-    const trimmed = pageName.trim();
-    if (!trimmed) return false;
-    return Array.from(pamet.pages()).some(p => p.folder === '' && p.name === trimmed);
-  }, [pageName]);
+  const { name, error } = useMemo(() => normalizePageName(pageName), [pageName]);
+
+  // Not memoized: other tabs may add pages while the dialog is open
+  const nameTaken = () => !error && isPagePathTaken(pamet.pages(), pagePath('', name));
+  const isNameTaken = nameTaken();
 
   function handleCreate(e: FormEvent) {
-    const trimmed = pageName.trim();
-    if (!isNameTaken && trimmed) {
-      log.info(`Creating new page: ${trimmed}`);
-      onCreate(trimmed);
-      onClose();
+    if (nameTaken() || error) {
+      e.preventDefault();
+      return;
     }
+    log.info(`Creating new page: ${name}`);
+    onCreate(name);
+    onClose();
   }
 
   const mouseDownOnBackdrop = useRef(false);
@@ -80,8 +79,9 @@ export function CreatePageDialog({ onClose, onCreate }: CreatePageDialogProps) {
             tabIndex={PametTabIndex.CreatePageDialog_NameInput}
           />
           {isNameTaken && <div className="dialog-error">This name is already taken.</div>}
+          {error && <div className="dialog-error">{error}</div>}
           <div className="dialog-actions">
-            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()} tabIndex={PametTabIndex.CreatePageDialog_Create}>
+            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !!error} tabIndex={PametTabIndex.CreatePageDialog_Create}>
               Create
             </button>
           </div>

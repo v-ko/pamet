@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { pamet } from '@/app/facade';
 import "@/views/dialogs/Dialog.css";
 import { Page } from '@/model/Page';
-import { CANVAS_EXT, PametTabIndex } from '@/app/constants';
+import { PametTabIndex } from '@/app/constants';
+import { isPagePathTaken, normalizePageName, pagePath } from '@/model/pageNames';
 
 interface PagePropertiesDialogProps {
   page: Page;
@@ -25,25 +26,28 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
     }
   }, []);
 
-  // Check if name is already taken by a different page in the same folder
-  const isNameTaken = useMemo(() => {
-    const trimmed = pageName.trim();
-    if (!trimmed || trimmed === page.name) return false;
-    const folder = page.folder;
-    return Array.from(pamet.pages()).some(p => p.id !== page.id && p.folder === folder && p.name === trimmed);
+  const { name, error } = useMemo(() => {
+    const normalized = normalizePageName(pageName);
+    // An unchanged name is kept even if it isn't portable
+    if (pageName.trim() === page.name || normalized.name === page.name) {
+      return { name: page.name, error: null };
+    }
+    return normalized;
   }, [pageName, page.name]);
 
+  // Not memoized: other tabs may add pages while the dialog is open
+  const nameTaken = () => name !== page.name && !error &&
+    isPagePathTaken(pamet.pages(), pagePath(page.folder, name), page.id);
+  const isNameTaken = nameTaken();
+
   function handleSave(e: FormEvent) {
-    const trimmed = pageName.trim();
-    if (isNameTaken || !trimmed) {
+    if (nameTaken() || error) {
       e.preventDefault();
       return;
     }
     const updatedPage = page;
     // Update path: replace the stem (name), keep folder and extension
-    const folder = updatedPage.folder;
-    const newPath = (folder ? folder + '/' : '') + trimmed + CANVAS_EXT;
-    updatedPage.path = newPath;
+    updatedPage.path = pagePath(updatedPage.folder, name);
     onSave(updatedPage);
     // Allow default submit to close the dialog (method="dialog")
   }
@@ -80,11 +84,12 @@ export function PagePropertiesDialog({ page, onClose, onSave, onDelete }: PagePr
             tabIndex={PametTabIndex.PagePropertiesDialog_NameInput}
           />
           {isNameTaken && <div className="dialog-error">This name is already taken.</div>}
+          {error && <div className="dialog-error">{error}</div>}
           <div className="dialog-actions row-between">
             <button className="btn btn-danger" type="button" onClick={handleDelete} tabIndex={PametTabIndex.PagePropertiesDialog_Delete}>
               Delete Page
             </button>
-            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !pageName.trim()} tabIndex={PametTabIndex.PagePropertiesDialog_Save}>
+            <button className="btn btn-primary" type="submit" disabled={isNameTaken || !!error} tabIndex={PametTabIndex.PagePropertiesDialog_Save}>
               Save
             </button>
           </div>

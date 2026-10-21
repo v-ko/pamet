@@ -9,6 +9,7 @@ import { getEntityId } from "sivkit/model/Entity";
 import { snapVectorToGrid } from "@/app/util";
 import { CardNote } from "@/model/CardNote";
 import { CANVAS_EXT } from "@/app/constants";
+import { normalizePageName, pagePath } from "@/model/pageNames";
 import {
     linkUpdatesForPageDelete,
 } from '@/model/correctness';
@@ -63,9 +64,13 @@ class ProjectActions {
     }
     let forwardLinkLocation = snapVectorToGrid(appViewState.focusPointOnDialogOpen);
 
+    let normalized = normalizePageName(name);
+    if (normalized.error) {
+      throw Error(`Invalid page name '${name}': ${normalized.error}`)
+    }
     let currentTimestamp = timestamp(currentTime());
     let newPage = new Page({
-      path: name + CANVAS_EXT,
+      path: pagePath('', normalized.name),
       id: getEntityId(),
       parent_id: '', // Pages are project scoped and don't need to point to a parent for now
       created: currentTimestamp,

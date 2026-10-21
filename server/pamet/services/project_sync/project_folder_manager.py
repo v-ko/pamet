@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
+from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterator
@@ -9,6 +11,7 @@ from typing import Any, Iterator
 from sivkit.libs.model import Entity, dump_to_dict
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
+from sivkit.storage.fs.names import canonical_key
 
 from pamet.desktop_app.config import (
     create_repo_settings,
@@ -20,8 +23,16 @@ from pamet.model.page import Page
 from pamet.services.backup import BackupService
 from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.services.file_system_watcher import FileSystemWatcher
-from pamet.storage.atomic_write import TEMP_SUFFIX, atomic_write
+from pamet.storage.atomic_write import TEMP_SUFFIX
 from pamet.storage.canvas_html import dump_canvas_html
+from pamet.storage.canvas_writes import (
+    PageMove,
+    PageWrite,
+    SaveRejected,
+    check_page_path,
+    check_targets,
+    write_pages,
+)
 from pamet.storage.disk_index import DiskEntry, Fingerprint, file_fingerprint
 from pamet.storage.file_storage_adapter import FileStorageAdapter, rebuild_file_index
 from pamet.storage.migrations.manager import MigrationManager
@@ -138,6 +149,7 @@ class ProjectFolderManager:
         self.repo_root = Path(repo_root)
         self.store = PametInMemoryStore()
         self.write_lock = threading.Lock()  # Held during writes to suppress watcher
+        self.mutation_lock = asyncio.Lock()  # One save or sweep at a time
         self.failed_watch_count: int = 0
         self.problems = dict(snapshot.problems)
         self.disk_index = dict(snapshot.disk_index)
@@ -197,45 +209,61 @@ class ProjectFolderManager:
         )
         return delta.asdict()
 
-    def write_page_canvas_file(
-        self,
-        page_path: str,
-        page_dict: dict[str, Any],
-        notes: list[dict[str, Any]],
-        arrows: list[dict[str, Any]],
-    ) -> Path:
-        """Assemble and write a .canvas file for the given page.
+    # -- Saving edits (user edits → filesystem) --------------------------------
 
-        *page_path* is the project-relative path (e.g. ``notes/my-page.canvas``).
-        The ``path`` key is stripped from the serialized data (inferred on read).
+    async def save(self, delta_data: dict[str, Any]) -> None:
+        """Check, apply and write a wire-format delta, one save at a time.
+
+        A rejected delta changes nothing. After a failed write the change
+        stays in the store and the error is raised.
         """
-        file_data = dict(page_dict)
-        file_data.pop("path", None)
-        file_data["notes"] = notes
-        file_data["arrows"] = arrows
-        canvas_path = self.repo_root / page_path
-        data = dump_canvas_html(file_data).encode("utf-8")
-        with self.write_lock:
-            atomic_write(canvas_path, data)
-        return canvas_path
+        async with self.mutation_lock:
+            delta = Delta.from_data(delta_data)
+            moves = self._check_page_moves(delta)
+            if moves:
+                await asyncio.to_thread(check_targets, self.repo_root, moves)
+            applied = self.store.apply_delta(delta)
+            writes, deletes = self._serialize_changes(applied)
+            stats, error = await asyncio.to_thread(
+                write_pages, self.repo_root, writes, deletes
+            )
+            self._update_disk_index(writes, stats)
+            if writes:
+                self.backup_service.mark_pages_changed({w.ids[0] for w in writes})
+            log.info("Saved %d pages, deleted %d", len(writes), len(deletes))
+            if error is not None:
+                raise error
 
-    def delete_page_canvas_file(self, page_path: str) -> None:
-        """Delete the .canvas file at the given project-relative *page_path*."""
-        canvas_path = self.repo_root / page_path
-        with self.write_lock:
-            if canvas_path.exists():
-                canvas_path.unlink()
+    def _check_page_moves(self, delta: Delta) -> list[PageMove]:
+        """Refuse invalid or colliding page paths before the store changes."""
+        moves: list[PageMove] = []
+        paths = {page.id: page.path for page in self.store.find(type=Page)}
+        for change in delta.changes():
+            forward = change.forward_component
+            current = self.store.find_one(id=change.entity_id)
+            if change.is_delete():
+                paths.pop(change.entity_id, None)
+            elif change.is_create() and forward.get("type_name") == "Page":
+                moves.append(PageMove(change.entity_id, forward.get("path"), None))
+            elif isinstance(current, Page) and "path" in forward:
+                if forward["path"] != current.path:
+                    old_rel = current.path or None
+                    moves.append(PageMove(change.entity_id, forward["path"], old_rel))
+        for move in moves:
+            check_page_path(move.rel, self._exclude_patterns)
+            paths[move.page_id] = move.rel
+        # As a case-insensitive file system would see them
+        counts = Counter(canonical_key(path) for path in paths.values())
+        for move in moves:
+            if counts[canonical_key(move.rel)] > 1:
+                raise SaveRejected(f"Two pages would share the path {move.rel!r}")
+        return moves
 
-    # -- Delta application (user edits → filesystem) --------------------------
-
-    def apply_delta(self, delta_data: dict[str, Any]) -> None:
-        """Apply a wire-format DeltaData dict to the store and write affected pages."""
-        delta = Delta.from_data(delta_data)
-        applied = self.store.apply_delta(delta)
-
+    def _serialize_changes(self, applied: Delta) -> tuple[list[PageWrite], list[str]]:
+        """The pages an applied delta touched, serialized, and deleted pages' files."""
         pages_to_write: set[str] = set()
         deleted_page_paths: dict[str, str] = {}
-        old_canvas_paths: list[str] = []
+        old_canvas_paths: dict[str, str] = {}  # page id → path before a rename
 
         for change in applied.changes():
             if change.is_delete():
@@ -264,10 +292,10 @@ class ProjectFolderManager:
                     continue
                 if isinstance(entity, Page):
                     pages_to_write.add(entity.id)
-                    # Path rename: schedule old canvas file for deletion
+                    # Path rename: the old file is removed after the write
                     old_path = change.reverse_component.get("path")
-                    if old_path:
-                        old_canvas_paths.append(old_path)
+                    if old_path and old_path != entity.path:
+                        old_canvas_paths[entity.id] = old_path
                 elif entity.parent_id:
                     pages_to_write.add(entity.parent_id)
                     # Reparented child: also rewrite old parent page
@@ -277,45 +305,45 @@ class ProjectFolderManager:
 
         pages_to_write -= set(deleted_page_paths)
 
+        writes = []
         for page_id in pages_to_write:
-            self._write_page_to_disk(page_id)
+            write = self._serialize_page(page_id, old_canvas_paths.get(page_id))
+            if write is not None:
+                writes.append(write)
+        return writes, [path for path in deleted_page_paths.values() if path]
 
-        for old_path in old_canvas_paths:
-            self.delete_page_canvas_file(old_path)
-
-        for path in deleted_page_paths.values():
-            if path:
-                self.delete_page_canvas_file(path)
-
-        log.info(
-            "Applied delta: %d changes, %d pages written, %d deleted",
-            sum(1 for _ in applied.changes()),
-            len(pages_to_write),
-            len(deleted_page_paths),
-        )
-
-        # Signal the backup service about written pages
-        if pages_to_write:
-            self.backup_service.mark_pages_changed(pages_to_write)
-
-    def _write_page_to_disk(self, page_id: str) -> None:
-        """Assemble a page's data from the store and write it as a .canvas file."""
+    def _serialize_page(self, page_id: str, old_rel: str | None) -> PageWrite | None:
         page_entity = self.store.find_one(id=page_id)
         if page_entity is None:
             log.warning("Cannot write page %s: not found in store", page_id)
-            return
+            return None
 
-        page_dict = dump_to_dict(page_entity)
-        page_path = page_dict.get("path", "")
+        # The path is inferred on read
+        file_data = dump_to_dict(page_entity)
+        page_path = file_data.pop("path", "")
+        children = list(self.store.find(parent_id=page_id))
+        file_data["notes"] = [
+            dump_to_dict(c) for c in children if not isinstance(c, Arrow)
+        ]
+        file_data["arrows"] = [
+            dump_to_dict(c) for c in children if isinstance(c, Arrow)
+        ]
+        data = dump_canvas_html(file_data).encode("utf-8")
+        ids = (page_id, *(child.id for child in children))
+        return PageWrite(page_path, data, ids, old_rel)
 
-        notes: list[dict[str, Any]] = []
-        arrows: list[dict[str, Any]] = []
-
-        for child in self.store.find(parent_id=page_id):
-            child_dict = dump_to_dict(child)
-            if isinstance(child, Arrow):
-                arrows.append(child_dict)
-            else:
-                notes.append(child_dict)
-
-        self.write_page_canvas_file(page_path, page_dict, notes, arrows)
+    def _update_disk_index(
+        self, writes: list[PageWrite], stats: dict[str, Fingerprint | None]
+    ) -> None:
+        """Record the files a save touched as they are on disk now."""
+        for rel, fingerprint in stats.items():
+            if fingerprint is None:
+                self.disk_index.pop(rel, None)
+                self.problems.pop(rel, None)
+        for write in writes:
+            fingerprint = stats[write.rel]
+            entry = self.disk_index.get(write.rel)
+            if fingerprint is None or (entry and entry.fingerprint == fingerprint):
+                continue  # Not written
+            self.disk_index[write.rel] = DiskEntry(fingerprint, "owner", ids=write.ids)
+            self.problems.pop(write.rel, None)
