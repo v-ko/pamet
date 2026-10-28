@@ -19,7 +19,10 @@ import pamet
 from pamet.model.card_note import CardNote
 from pamet.model.config import ProjectProperties, UserSettings
 from pamet.model.page import Page
-from pamet.services import desktop_storage_service as storage
+from pamet.services import (
+    config_file_manager as config,
+    desktop_storage_service as storage,
+)
 from pamet.services.project_sync.project_folder_manager import (
     ProjectSnapshot,
     scan_project,
@@ -93,6 +96,43 @@ def test_project_loading(dss, tmp_path, monkeypatch):
         properties.write_text(saved)
         await dss.load_project("p", tmp_path)
         assert dss.project_folder_manager("p").repo_root == tmp_path
+        await dss.close()
+
+    run(check())
+
+
+def test_config_write_order_and_close(dss, tmp_path, monkeypatch):
+    async def check():
+        await dss.load_project("p", tmp_path)
+        manager = dss._config_file_manager
+        await manager.flush()
+        path = tmp_path / ".pamet" / "properties.json"
+        previous = path.read_bytes()
+        props = dss.config_store.find_one(id=ProjectProperties.id_for_project("p"))
+        gate = WorkerGate()
+        write = config.write_config_file
+        writes = []
+
+        def blocked_write(target, data):
+            writes.append(json.loads(data)["title"])
+            if len(writes) == 1:
+                gate.wait()
+            write(target, data)
+
+        monkeypatch.setattr(config, "write_config_file", blocked_write)
+        props.title = "first"
+        dss.config_store.update_one(props)
+        await gate.started.wait()
+        props.title = "last"
+        dss.config_store.update_one(props)
+        closing = asyncio.create_task(dss.unload_project("p"))
+        await asyncio.sleep(0)
+        assert not closing.done()
+        assert path.read_bytes() == previous
+        gate.release.set()
+        await closing
+        assert writes == ["first", "last"]
+        assert json.loads(path.read_bytes())["title"] == "last"
         await dss.close()
 
     run(check())

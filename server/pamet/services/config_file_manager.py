@@ -7,21 +7,26 @@ persisted to the appropriate JSON file on disk.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TypedDict
 
-from sivkit.libs.model import dump_to_dict, load_from_dict
+from sivkit.libs.model import load_from_dict
 from sivkit.storage.delta import Delta
+from sivkit.storage.fs.ops import Conflict
 from sivkit.storage.in_memory_store import InMemoryStore
 
 from pamet.desktop_app.config import (
     PAMET_CONFIG_DIR,
     USER_SETTINGS_DIR,
+    config_bytes,
     get_repo_settings,
+    write_config_file,
 )
+from pamet.model.config import ProjectProperties
 
 log = logging.getLogger(__name__)
 
@@ -68,33 +73,69 @@ class ConfigFileManager:
         self._store = store
         self._resolve_project_path = resolve_project_path
         self._status_errors = status_errors if status_errors is not None else {}
+        self._lock = asyncio.Lock()
+        self._pending: dict[asyncio.Task[None], str] = {}
+        self._closed = False
 
     def on_changes(self, delta: Delta, origin: str | None = None) -> None:
         """Called by the config store whenever entities change.
 
-        Logic errors (entity not found, bad id pattern) propagate as exceptions.
-        I/O errors are logged and recorded in status — the operation is considered
-        applied in-memory even if persistence fails.
+        Resolve paths and serialize on the loop. File operations run in submission
+        order in a worker. I/O errors go to status; the store keeps the change.
         """
+        if self._closed:
+            raise RuntimeError("Config file manager is closed")
         for change in delta.changes():
             entity_id = change.entity_id
+            path = self._resolve_path(entity_id)
+            if path is None:
+                continue
             if change.is_delete():
-                self._delete_file(entity_id)
+                data = None
             else:
                 entity = self._store.find_one(id=entity_id)
                 if entity is None:
                     raise RuntimeError(
                         f"Entity {entity_id} not found in store after on_changes fired"
                     )
-                try:
-                    data = dump_to_dict(entity)
-                    self._write_file(entity_id, data)
-                    # Clear any previous I/O error for this service
-                    self._status_errors.pop("io", None)
-                except OSError as e:
-                    msg = f"Failed to write {entity_id}: {e}"
-                    log.error("ConfigFileManager: %s", msg)
-                    self._status_errors["io"] = msg
+                data = config_bytes(entity)
+            task = asyncio.create_task(self._write_file(entity_id, path, data))
+            self._pending[task] = entity_id
+            task.add_done_callback(self._write_finished)
+
+    async def _write_file(self, entity_id: str, path: Path, data: bytes | None) -> None:
+        async with self._lock:
+            try:
+                await asyncio.to_thread(write_config_file, path, data)
+                self._status_errors.pop("io", None)
+            except (OSError, Conflict) as exc:
+                msg = f"Failed to write {entity_id}: {exc}"
+                log.error("ConfigFileManager: %s", msg)
+                self._status_errors["io"] = msg
+
+    def _write_finished(self, task: asyncio.Task[None]) -> None:
+        self._pending.pop(task)
+        if not task.cancelled():
+            task.exception()
+
+    async def flush(self, entity_id: str | None = None) -> None:
+        """Wait for accepted write attempts; waiter cancellation leaves them running."""
+        pending = [
+            task
+            for task, owner in self._pending.items()
+            if entity_id is None or owner == entity_id
+        ]
+        if pending:
+            await asyncio.shield(asyncio.gather(*pending))
+
+    async def release_project(self, project_id: str) -> None:
+        """Finish accepted project writes before its runtime is released."""
+        await self.flush(ProjectProperties.id_for_project(project_id))
+
+    async def close(self) -> None:
+        """Stop accepting writes and finish all accepted file operations."""
+        self._closed = True
+        await self.flush()
 
     def load_app_config(self, store: InMemoryStore) -> None:
         """Read app-level config files from disk and populate the store."""
@@ -161,26 +202,6 @@ class ConfigFileManager:
                 f"ConfigFileManager: unknown entity id pattern: {entity_id}"
             )
 
-    def _write_file(self, entity_id: str, data: dict[str, Any]) -> None:
-        path = self._resolve_path(entity_id)
-        if path is None:
-            return
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Remove internal fields that shouldn't go to disk
-        data_to_write = {k: v for k, v in data.items() if k != "parent_id"}
-        path.write_text(
-            json.dumps(data_to_write, indent=4, ensure_ascii=False), encoding="utf-8"
-        )
-        log.info("ConfigFileManager: wrote %s", path)
-
-    def _delete_file(self, entity_id: str) -> None:
-        path = self._resolve_path(entity_id)
-        if path is None:
-            return
-        if path.exists():
-            path.unlink()
-            log.info("ConfigFileManager: deleted %s", path)
-
 
 # -- Standalone helpers (no store required) --------------------------------
 
@@ -205,12 +226,7 @@ def _read_config_entity(path: Path, entity_id: str):
 
 def _write_config_entity(path: Path, entity) -> None:
     """Write a config entity to a JSON file."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    data = dump_to_dict(entity)
-    data_to_write = {k: v for k, v in data.items() if k != "parent_id"}
-    path.write_text(
-        json.dumps(data_to_write, indent=4, ensure_ascii=False), encoding="utf-8"
-    )
+    write_config_file(path, config_bytes(entity))
 
 
 def load_user_settings():

@@ -5,7 +5,8 @@ import os
 from pathlib import Path
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths
-from sivkit.libs.model import dump_to_dict, load_from_dict
+from sivkit.libs.model import Entity, dump_to_dict, load_from_dict
+from sivkit.storage.fs.ops import atomic_replace, delete, make_folder
 from sivkit.util import get_new_id
 
 from pamet.model.config import ProjectProperties
@@ -78,6 +79,28 @@ def repo_settings_path(repo_path: Path) -> Path:
     return Path(repo_path) / ".pamet" / REPO_PROPERTIES_JSON
 
 
+def config_bytes(entity: Entity) -> bytes:
+    data = dump_to_dict(entity)
+    # parent_id is internal store structure, not a persisted setting.
+    data.pop("parent_id", None)
+    return json.dumps(data, indent=4, ensure_ascii=False).encode("utf-8")
+
+
+def write_config_file(path: Path, data: bytes | None) -> None:
+    """Blocking: atomically replace a config file, or durably delete it."""
+    if data is None:
+        delete(path)
+        return
+    missing = []
+    parent = path.parent
+    while not parent.exists():
+        missing.append(parent)
+        parent = parent.parent
+    for folder in reversed(missing):
+        make_folder(folder)
+    atomic_replace(path, data)
+
+
 def get_repo_settings(
     repo_path: Path, project_id: str | None = None
 ) -> ProjectProperties:
@@ -116,8 +139,5 @@ def create_repo_settings(
         project_id=project_id,
         title=title or Path(repo_path).name,
     )
-    path.parent.mkdir(parents=True, exist_ok=True)
-    data = dump_to_dict(settings)
-    data.pop("parent_id", None)
-    path.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
+    write_config_file(path, config_bytes(settings))
     return settings

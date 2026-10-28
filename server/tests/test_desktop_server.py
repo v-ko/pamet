@@ -183,7 +183,7 @@ def test_project_round_trip(tmp_path, run_on_qt, monkeypatch):
                 props_id = "project-props-p"
                 title = pushed[props_id]["title"]
 
-                # A client config edit is acknowledged and written to the project.
+                # The ACK accepts the edit in memory; disk persistence is queued.
                 change = [props_id, {"title": title}, {"title": "Renamed"}]
                 await ws.send(
                     json.dumps(
@@ -196,6 +196,7 @@ def test_project_round_trip(tmp_path, run_on_qt, monkeypatch):
                     )
                 )
                 assert await asyncio.wait_for(acks.get(), 5) == 1
+                await server._storage_service._config_file_manager.flush(props_id)
                 properties = (project / ".pamet" / "properties.json").read_text()
                 assert json.loads(properties)["title"] == "Renamed"
 

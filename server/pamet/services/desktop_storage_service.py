@@ -72,11 +72,11 @@ class DesktopStorageService:
             self._config_store, role="authority"
         )
 
-        # Wire persistence: store changes → file manager + backup config watcher
-        self._config_store.add_on_changes_callback(self._on_config_changes)
-
         # Load existing config from disk
         self._config_file_manager.load_app_config(self._config_store)
+
+        # Wire persistence after hydration; reads must not enqueue writes.
+        self._config_store.add_on_changes_callback(self._on_config_changes)
 
     def _require_open_project(self, project_id: str) -> _Project:
         project = self._projects.get(project_id)
@@ -309,6 +309,7 @@ class DesktopStorageService:
         self._end_project_streams(project)
         if project.pending_operations:
             await asyncio.wait(list(project.pending_operations))
+        await self._config_file_manager.release_project(project_id)
         pfm, history = project.pfm, project.history
         if pfm is not None:
             try:
@@ -344,6 +345,7 @@ class DesktopStorageService:
             except Exception:
                 log.exception("Failed to unload project %s", project_id)
         self._config_store.remove_on_changes_callback(self._on_config_changes)
+        await self._config_file_manager.close()
 
     def project_folder_manager(self, project_id: str) -> ProjectFolderManager:
         pfm = self._require_open_project(project_id).pfm
