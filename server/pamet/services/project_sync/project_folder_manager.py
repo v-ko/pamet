@@ -5,7 +5,6 @@ import logging
 import threading
 from collections import Counter
 from dataclasses import dataclass, field
-from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -48,9 +47,6 @@ from pamet.storage.service_utils import (
 
 log = logging.getLogger(__name__)
 
-# Syncthing puts its marker before the last extension
-SYNC_CONFLICT_PATTERN = "*.canvas.sync-conflict-*.html"
-
 
 @dataclass
 class ProjectSnapshot:
@@ -66,7 +62,7 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     """Blocking: migrate, read all .canvas files, rebuild the file index.
 
     Files that claim an id already loaded from a newer file are duplicates
-    and aren't loaded. Syncthing conflict copies are listed as problems.
+    and aren't loaded.
     Runs in a worker thread.
     """
     MigrationManager(repo_root).do_all_migrations()
@@ -92,16 +88,10 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     for path in walk_project(
         repo_root, snapshot.exclude_patterns, onerror=on_list_error
     ):
-        is_conflict = fnmatchcase(path.name, SYNC_CONFLICT_PATTERN)
-        if not (is_conflict or path.name.endswith(CANVAS_FILE_EXT)) or path.is_dir():
+        if not path.name.endswith(CANVAS_FILE_EXT) or path.is_dir():
             continue
 
         rel = path.relative_to(repo_root).as_posix()
-        if is_conflict:
-            snapshot.problems[rel] = ProjectProblem(
-                "sync_conflict", rel, "Syncthing conflict copy"
-            )
-            continue
         # Stat first: a change during the read then shows as a new fingerprint
         fingerprint = file_fingerprint(path)
         try:

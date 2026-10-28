@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication
 from sivkit.libs.model import dump_to_dict, load_from_dict
 from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
+from sivkit.storage.fs import changes as file_changes
 
 import pamet
 from pamet.model.card_note import CardNote
@@ -26,6 +27,7 @@ from pamet.services.project_sync.project_folder_manager import (
 from pamet.services.rest_api.routes import desktop as routes
 from pamet.storage import file_storage_adapter as media
 from pamet.storage.canvas_writes import SaveRejected
+from pamet.storage.service_utils import read_canvas_file
 
 
 @pytest.fixture
@@ -200,16 +202,153 @@ def test_media_drains_after_cancelled_request(dss, tmp_path, monkeypatch):
     run(check())
 
 
+def test_save_validation_and_conflicts(dss, tmp_path):
+    async def save(*changes):
+        return await routes.apply_changes(
+            "p", {"delta": Delta.from_changes(changes).asdict()}
+        )
+
+    async def check():
+        await dss.load_project("p", tmp_path)
+        store = dss.project_folder_manager("p").store
+        page = Page(path="page.canvas.html")
+        await save(Change.create(page))
+        original = (tmp_path / page.path).read_bytes()
+        invalid = [
+            [Page(path=f"{name}.canvas.html")]
+            for name in ("a:b", "CON", "cafe\u0301", "../escape", "/absolute")
+        ]
+        invalid.append([Page(path="Notes.canvas.html"), Page(path="notes.canvas.html")])
+        for pages in invalid:
+            edited = page.copy()
+            edited.modified = "rejected"
+            with pytest.raises(HTTPException) as error:
+                await save(
+                    Change.update(page, edited), *(Change.create(p) for p in pages)
+                )
+            assert error.value.status_code == 400
+            assert store.find_one(id=page.id).modified == page.modified
+            assert all(store.find_one(id=p.id) is None for p in pages)
+            assert (tmp_path / page.path).read_bytes() == original
+
+        for filename, status in (
+            ("foreign.canvas.html", 409),
+            ("FOREIGN.canvas.html", 400),
+        ):
+            foreign = tmp_path / filename
+            foreign.write_bytes(b"not a Pamet page")
+            refused = Page(path="foreign.canvas.html")
+            current = store.find_one(id=page.id)
+            edited = current.copy()
+            edited.modified = filename
+            with pytest.raises(HTTPException) as error:
+                await save(Change.create(refused), Change.update(current, edited))
+            assert error.value.status_code == status
+            assert foreign.read_bytes() == b"not a Pamet page"
+            assert store.find_one(id=refused.id) is not None
+            assert (
+                read_canvas_file(tmp_path / page.path, tmp_path)[page.id].modified
+                == filename
+            )
+            # Another edit must still refuse the foreign target, not overwrite it.
+            retry = refused.copy()
+            retry.modified = "retry"
+            with pytest.raises(HTTPException):
+                await save(Change.update(refused, retry))
+            assert foreign.read_bytes() == b"not a Pamet page"
+            await save(Change.delete(store.find_one(id=refused.id)))
+            assert foreign.exists()
+            foreign.unlink()
+
+        with pytest.raises(HTTPException) as error:
+            await routes.upload_file("u", "p", "a:b.png", UploadFile(BytesIO(b"image")))
+        assert error.value.status_code == 400
+        assert not (tmp_path / "a:b.png").exists()
+        await dss.close()
+
+    run(check())
+
+
+def test_save_moves_swaps_and_partial_failures(dss, tmp_path, monkeypatch):
+    async def save(*changes):
+        return await routes.apply_changes(
+            "p", {"delta": Delta.from_changes(changes).asdict()}
+        )
+
+    async def check():
+        await dss.load_project("p", tmp_path)
+        store = dss.project_folder_manager("p").store
+        first, second = Page(path="first.canvas.html"), Page(path="second.canvas.html")
+        await save(Change.create(first), Change.create(second))
+        moved = first.copy()
+        moved.path = "new/folder/moved.canvas.html"
+        await save(Change.update(first, moved))
+        assert not (tmp_path / first.path).exists()
+        assert moved.id in read_canvas_file(tmp_path / moved.path, tmp_path)
+
+        swapped_first, swapped_second = moved.copy(), second.copy()
+        swapped_first.path, swapped_second.path = second.path, moved.path
+        await save(
+            Change.update(moved, swapped_first), Change.update(second, swapped_second)
+        )
+        assert first.id in read_canvas_file(tmp_path / swapped_first.path, tmp_path)
+        assert second.id in read_canvas_file(tmp_path / swapped_second.path, tmp_path)
+
+        # Fail before and after a rename publishes its new file.
+        for after_publish in (False, True):
+            current = store.find_one(id=first.id)
+            renamed = current.copy()
+            renamed.path = f"renamed-{after_publish}.canvas.html"
+            other = store.find_one(id=second.id)
+            edited = other.copy()
+            edited.modified = str(after_publish)
+            function = "delete" if after_publish else "create_new"
+            original = getattr(file_changes, function)
+            failing_path = tmp_path / (current.path if after_publish else renamed.path)
+
+            def fail(path, *args, **kwargs):
+                if path == failing_path:
+                    raise OSError("write denied")
+                return original(path, *args, **kwargs)
+
+            with monkeypatch.context() as patch:
+                patch.setattr(file_changes, function, fail)
+                with pytest.raises(HTTPException) as error:
+                    await save(
+                        Change.update(current, renamed), Change.update(other, edited)
+                    )
+                assert error.value.status_code == 500
+            assert store.find_one(id=first.id).path == renamed.path
+            assert (
+                read_canvas_file(tmp_path / edited.path, tmp_path)[second.id].modified
+                == edited.modified
+            )
+            assert (tmp_path / current.path).exists()
+            assert (tmp_path / renamed.path).exists() == after_publish
+
+            retry = renamed.copy()
+            retry.modified = f"retry-{after_publish}"
+            await save(Change.update(renamed, retry))
+            assert (
+                read_canvas_file(tmp_path / retry.path, tmp_path)[first.id].modified
+                == retry.modified
+            )
+            assert (tmp_path / current.path).exists() == after_publish
+        await dss.close()
+
+    run(check())
+
+
 @pytest.mark.skipif(os.geteuid() == 0, reason="root can list any folder")
 def test_loading_with_problems(dss, tmp_path, monkeypatch):
     monkeypatch.setattr(storage, "scan_project", scan_project)
     page = Page()
     note = dump_to_dict(CardNote(parent_id=page.id, content={"text": "original"}))
     newer = {**note, "content": {"text": "newer"}}
-    # A sync conflict copy saved later wins; older files sharing its page or
+    # A copy saved later wins; older files sharing its page or
     # note id are listed.
     write_canvas(tmp_path / "page.canvas.html", page, [], mtime=2000)
-    write_canvas(tmp_path / "page.sync-conflict.canvas.html", page, [newer], 3000)
+    write_canvas(tmp_path / "page-copy.canvas.html", page, [newer], 3000)
     write_canvas(tmp_path / "other.canvas.html", Page(), [note], mtime=1000)
     write_canvas(tmp_path / "null-notes.canvas.html", Page(), None)
     untyped = dump_to_dict(CardNote(parent_id=page.id))
