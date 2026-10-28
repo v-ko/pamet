@@ -18,8 +18,8 @@ def test_file_index(tmp_path):
     hash_a = index.get_hash("a.txt")
     assert hash_a and index.get_hash("b.txt") and index.get_hash("gone.txt") is None
 
-    a.write_text("changed")
-    assert index.put("a.txt", a) == index.get_hash("a.txt") != hash_a
+    index.put("a.txt", "abc", 1)
+    assert index.get_hash("a.txt") == "abc"
 
     index.rebuild({"b.txt": b})
     assert index.get_hash("a.txt") is None and index.get_hash("b.txt")

@@ -6,7 +6,7 @@ import json
 import logging
 import re
 import threading
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from urllib.parse import unquote, urlparse
 from urllib.request import url2pathname
 
@@ -550,22 +550,19 @@ async def upload_file(
     file: UploadFile = File(...),
 ):
     _ = user_id
-    raw = file_path.strip()
-    if not raw:
-        raise HTTPException(status_code=400, detail="File path is required")
-    rel = PurePosixPath(raw)
-    if rel.is_absolute() or ".." in rel.parts:
-        raise HTTPException(status_code=400, detail=f"Invalid file path: {file_path}")
-
     pfm = _project_runtime(project_id)
     data = await file.read()
     if _project_runtime(project_id) is not pfm:
         raise HTTPException(status_code=409, detail="Desktop project session changed")
     try:
-        content_hash = pfm.file_storage.add(rel, data)
-    except (ValueError, FileExistsError) as exc:
+        content_hash = await pfm.file_storage.add(file_path, data)
+    except (UnsafeName, UnsafePath) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"ok": True, "hash": content_hash, "path": raw}
+    except Conflict as exc:
+        raise HTTPException(
+            status_code=409, detail=f"A file is already at {file_path}"
+        ) from exc
+    return {"ok": True, "hash": content_hash, "path": file_path}
 
 
 @desktop_router.delete(
@@ -579,7 +576,10 @@ async def delete_file(
 ):
     _ = user_id
     pfm = _project_runtime(project_id)
-    deleted = pfm.file_storage.remove_by_path(file_path)
+    try:
+        deleted = await pfm.file_storage.remove_by_path(file_path)
+    except UnsafePath as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail="File not found")
     return {"ok": True}

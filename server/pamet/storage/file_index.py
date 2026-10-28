@@ -60,22 +60,21 @@ class FileIndex:
             for rel, abs_path in referenced.items():
                 try:
                     st = abs_path.stat()
+                    cached_mtime_ns = s.scalar(
+                        select(FileIndexEntry.mtime_ns).where(
+                            FileIndexEntry.rel_path == rel
+                        )
+                    )
+                    if cached_mtime_ns == st.st_mtime_ns:
+                        continue
+                    # A file deleted during the scan is dropped, not a load error
+                    entry = _replace_entry(rel, _compute_hash(abs_path), st.st_mtime_ns)
                 except OSError:
                     s.execute(
                         delete(FileIndexEntry).where(FileIndexEntry.rel_path == rel)
                     )
                     continue
-
-                mtime_ns = st.st_mtime_ns
-                cached_mtime_ns = s.scalar(
-                    select(FileIndexEntry.mtime_ns).where(
-                        FileIndexEntry.rel_path == rel
-                    )
-                )
-                if cached_mtime_ns == mtime_ns:
-                    continue
-
-                s.execute(_replace_entry(rel, _compute_hash(abs_path), mtime_ns))
+                s.execute(entry)
 
     # -- Single-entry operations -----------------------------------------------
 
@@ -85,13 +84,9 @@ class FileIndex:
                 select(FileIndexEntry.hash).where(FileIndexEntry.rel_path == rel_path)
             )
 
-    def put(self, rel_path: str, abs_path: Path) -> str:
-        """Compute hash, store entry, return the hash."""
-        st = abs_path.stat()
-        content_hash = _compute_hash(abs_path)
+    def put(self, rel_path: str, content_hash: str, mtime_ns: int) -> None:
         with self._session.begin() as s:
-            s.execute(_replace_entry(rel_path, content_hash, st.st_mtime_ns))
-        return content_hash
+            s.execute(_replace_entry(rel_path, content_hash, mtime_ns))
 
     def remove(self, rel_path: str) -> None:
         with self._session.begin() as s:
@@ -106,5 +101,9 @@ def _replace_entry(rel_path: str, content_hash: str, mtime_ns: int) -> Insert:
     )
 
 
+def content_hash(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()[:CONTENT_HASH_HEX_LEN]
+
+
 def _compute_hash(path: Path) -> str:
-    return hashlib.sha256(path.read_bytes()).hexdigest()[:CONTENT_HASH_HEX_LEN]
+    return content_hash(path.read_bytes())

@@ -6,30 +6,29 @@ Composed into ``ProjectFolderManager`` as ``pfm.file_storage``.
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Iterable
 
 from sivkit.libs.model import Entity
+from sivkit.storage.fs.ops import (
+    UnsafePath,
+    check_new_path,
+    create_new,
+    delete,
+    make_folder,
+    resolve_in_root,
+)
 
 from pamet.model.note import Note
-from pamet.storage.file_index import FileIndex
+from pamet.storage.file_index import FileIndex, content_hash
 
 log = logging.getLogger(__name__)
 
 
 def _index_path(repo_root: Path) -> Path:
     return repo_root / ".pamet" / "file-index.db"
-
-
-def _resolve_path(repo_root: Path, relative_path: PurePosixPath) -> Path:
-    """Convert a repo-relative posix path to an absolute filesystem path.
-
-    Rejects absolute paths and directory traversals.
-    """
-    if relative_path.is_absolute() or ".." in relative_path.parts:
-        raise ValueError(f"Invalid file path (not pure relative): {relative_path}")
-    return repo_root / Path(*relative_path.parts)
 
 
 def rebuild_file_index(repo_root: Path, entities: Iterable[Entity]) -> None:
@@ -43,8 +42,8 @@ def rebuild_file_index(repo_root: Path, entities: Iterable[Entity]) -> None:
             continue
         rel = image_ref["path"]
         try:
-            abs_path = _resolve_path(repo_root, PurePosixPath(rel))
-        except ValueError:
+            abs_path = resolve_in_root(repo_root, rel)
+        except (UnsafePath, OSError):
             continue
         if abs_path.exists():
             referenced[rel] = abs_path
@@ -63,30 +62,30 @@ class FileStorageAdapter:
         self._repo_root = repo_root
         self._store = store
         self._index = FileIndex(_index_path(repo_root))
+        self._closed = False
+        # One media write at a time: keeps the case check, the disk and the index in order
+        self._lock = asyncio.Lock()
 
     # -- Lifecycle -------------------------------------------------------------
 
     def close(self) -> None:
+        self._closed = True
         self._index.close()
 
     # -- Blob I/O --------------------------------------------------------------
 
-    def add(
-        self,
-        relative_path: PurePosixPath,
-        data: bytes,
-    ) -> str:
-        """Write a file blob at the project-relative path.
+    async def add(self, rel: str, data: bytes) -> str:
+        """Write a new file blob at the project-relative path; returns its content hash.
 
-        Raises ``FileExistsError`` if a file already exists at that path.
-        Returns the content hash.
+        Raises `UnsafePath`, `UnsafeName`, or `Conflict` if a file is already there.
         """
-        dest = _resolve_path(self._repo_root, relative_path)
-        if dest.exists():
-            raise FileExistsError(f"File already exists at {relative_path}")
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.write_bytes(data)
-        return self._index.put(relative_path.as_posix(), dest)
+        async with self._lock:
+            hash_, mtime_ns = await asyncio.to_thread(
+                _write_new, self._repo_root, rel, data
+            )
+            if not self._closed:
+                self._index.put(rel, hash_, mtime_ns)
+        return hash_
 
     def get_path(self, relative_path: str) -> Path | None:
         """Resolve the on-disk path for a project-relative path.
@@ -94,8 +93,8 @@ class FileStorageAdapter:
         Returns ``None`` if the file doesn't exist on disk.
         """
         try:
-            path = _resolve_path(self._repo_root, PurePosixPath(relative_path))
-        except ValueError:
+            path = resolve_in_root(self._repo_root, relative_path)
+        except UnsafePath:
             return None
         if not path.exists():
             return None
@@ -105,14 +104,28 @@ class FileStorageAdapter:
         """Return the cached content hash for a project-relative path."""
         return self._index.get_hash(relative_path)
 
-    def remove_by_path(self, relative_path: str) -> bool:
+    async def remove_by_path(self, rel: str) -> bool:
         """Delete a file blob from disk by path. Returns ``True`` if deleted."""
-        try:
-            path = _resolve_path(self._repo_root, PurePosixPath(relative_path))
-        except ValueError:
-            return False
-        if not path.exists():
-            return False
-        path.unlink()
-        self._index.remove(relative_path)
-        return True
+        async with self._lock:
+            deleted = await asyncio.to_thread(_delete, self._repo_root, rel)
+            if deleted and not self._closed:
+                self._index.remove(rel)
+        return deleted
+
+
+def _write_new(root: Path, rel: str, data: bytes) -> tuple[str, int]:
+    """Blocking: create the file and its missing folders. Returns (hash, mtime_ns)."""
+    path = resolve_in_root(root, rel)
+    check_new_path(root, rel)
+    parts = rel.split("/")
+    for i in range(1, len(parts)):
+        make_folder(root.joinpath(*parts[:i]))
+    return content_hash(data), create_new(path, data).mtime_ns
+
+
+def _delete(root: Path, rel: str) -> bool:
+    path = resolve_in_root(root, rel)
+    if not path.is_file():
+        return False
+    delete(path)
+    return True

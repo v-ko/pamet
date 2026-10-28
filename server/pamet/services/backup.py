@@ -24,6 +24,7 @@ from datetime import datetime
 from pathlib import Path
 
 from sivkit.libs.model import dump_to_dict
+from sivkit.storage.fs.ops import Conflict, atomic_replace, create_new
 from sivkit.util import current_time, timestamp
 
 from pamet.model.arrow import Arrow
@@ -64,6 +65,10 @@ def _page_path_stem(page_path: str) -> str:
     if page_path.endswith(CANVAS_FILE_EXT):
         return page_path[: -len(CANVAS_FILE_EXT)]
     return page_path
+
+
+def _write_timestamp(path: Path) -> None:
+    atomic_replace(path, timestamp(current_time()).encode(), durable=False)
 
 
 def _remove_empty_parents(path: Path, stop_at: Path) -> None:
@@ -259,14 +264,14 @@ class BackupService:
             now = current_time()
             backup_file_path = self.recent_backup_path(page_path_stem, now)
             backup_file_path.parent.mkdir(parents=True, exist_ok=True)
-
-            if backup_file_path.exists():
+            try:
+                create_new(backup_file_path, page_str.encode("utf-8"), durable=False)
+            except Conflict:
                 log.warning("Backup file already exists at %s", backup_file_path)
-
-            backup_file_path.write_text(page_str, encoding="utf-8")
+                continue
             log.info("Backed up page %s → %s", page_id, backup_file_path)
 
-        self.last_backup_timestamp_path().write_text(timestamp(current_time()))
+        _write_timestamp(self.last_backup_timestamp_path())
 
     # -- Pruning ---------------------------------------------------------------
 
@@ -357,7 +362,7 @@ class BackupService:
         # Clean up empty directories
         self._cleanup_empty_dirs()
 
-        self.last_prune_timestamp_path().write_text(timestamp(current_time()))
+        _write_timestamp(self.last_prune_timestamp_path())
 
     def _cleanup_empty_dirs(self) -> None:
         """Remove empty subdirectories under the backups root."""
