@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 import attrs
 from sivkit import Entity, entity_type
@@ -54,6 +54,7 @@ class UserSettings(Entity):
     userName: str = ""
     projects: list[dict[str, Any]] = attrs.Factory(list)
     scripts: ScriptSettings = attrs.Factory(default_script_settings)
+    themePreference: Literal["light", "dark", "auto"] | None = None
 
 
 @entity_type
@@ -71,6 +72,8 @@ class ProjectProperties(Entity):
     home_page_id: str | None = None
     backups_enabled: bool = True
     record_all_changes: bool = False
+    canvas_palette: dict[str, dict[str, str]] | None = None
+    files_exclude: dict[str, bool] = attrs.Factory(lambda: {"**/.git": True})
 
     @staticmethod
     def id_for_project(project_id: str) -> str:

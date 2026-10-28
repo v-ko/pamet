@@ -10,7 +10,16 @@ export interface ProjectReference {
 
 export interface PametProjectData extends ProjectData {
     home_page_id?: string;
-    backups_enabled?: boolean;
+    backups_enabled: boolean;
+    record_all_changes: boolean;
     canvas_palette?: { [mode: string]: { [role: string]: string } };
-    'files.exclude'?: Record<string, boolean>;
+    files_exclude: Record<string, boolean>;
+}
+
+export function defaultProjectSettings() {
+    return {
+        backups_enabled: true,
+        record_all_changes: false,
+        files_exclude: { '**/.git': true },
+    };
 }

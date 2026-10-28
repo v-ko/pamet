@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { pamet } from '@/app/facade';
 import { timestamp, currentTime } from 'sivkit/util/base';
 import { createProject, navigateToProject } from "@/procedures/app";
-import { ProjectData } from '@/model/Project';
+import { PametProjectData, defaultProjectSettings } from '@/model/Project';
 import { PametTabIndex } from '@/app/constants';
 import "@/views/dialogs/Dialog.css";
 
@@ -85,7 +85,8 @@ export function CreateProjectDialog({ onClose }: CreateProjectDialogProps) {
       return;
     }
 
-    const newProject: ProjectData = {
+    const newProject: PametProjectData = {
+      ...defaultProjectSettings(),
       id,
       title,
       description,

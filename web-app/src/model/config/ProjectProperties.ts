@@ -6,8 +6,9 @@ export interface ProjectPropertiesData extends EntityData {
     description: string;
     created: string;
     home_page_id?: string;
-    backups_enabled?: boolean;
-    record_all_changes?: boolean;
+    backups_enabled: boolean;
+    record_all_changes: boolean;
+    files_exclude: Record<string, boolean>;
     canvas_palette?: { [mode: string]: { [role: string]: string } };
 }
 
@@ -30,11 +31,14 @@ export class ProjectProperties extends Entity<ProjectPropertiesData> {
     get homePageId(): string | undefined { return this._data.home_page_id; }
     set homePageId(value: string | undefined) { this._data.home_page_id = value; }
 
-    get backupsEnabled(): boolean { return this._data.backups_enabled ?? true; }
+    get backupsEnabled(): boolean { return this._data.backups_enabled; }
     set backupsEnabled(value: boolean) { this._data.backups_enabled = value; }
 
-    get recordAllChanges(): boolean { return this._data.record_all_changes ?? false; }
+    get recordAllChanges(): boolean { return this._data.record_all_changes; }
     set recordAllChanges(value: boolean) { this._data.record_all_changes = value; }
+
+    get filesExclude(): Record<string, boolean> { return this._data.files_exclude; }
+    set filesExclude(value: Record<string, boolean>) { this._data.files_exclude = value; }
 
     get canvasPalette(): { [mode: string]: { [role: string]: string } } | undefined { return this._data.canvas_palette; }
     set canvasPalette(value: { [mode: string]: { [role: string]: string } } | undefined) { this._data.canvas_palette = value; }

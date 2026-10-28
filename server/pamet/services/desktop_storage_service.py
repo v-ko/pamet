@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Coroutine
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, TypeVar
 
 from sivkit.storage.delta import Delta
 from sivkit.storage.in_memory_store import InMemoryStore
@@ -21,6 +21,7 @@ from pamet.services.project_sync.project_folder_manager import (
 )
 
 log = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class ProjectNotLoadedError(KeyError):
@@ -40,7 +41,7 @@ class _Project:
     pfm: ProjectFolderManager | None = None
     history: FullChangeHistoryService | None = None
     close_callbacks: set[Callable[[], None]] = field(default_factory=set)
-    saves: set[asyncio.Task] = field(default_factory=set)
+    pending_operations: set[asyncio.Task] = field(default_factory=set)
 
 
 def _observe_task(task: asyncio.Task) -> None:
@@ -306,8 +307,8 @@ class DesktopStorageService:
 
     async def _release_project(self, project_id: str, project: _Project) -> None:
         self._end_project_streams(project)
-        if project.saves:
-            await asyncio.wait(list(project.saves))
+        if project.pending_operations:
+            await asyncio.wait(list(project.pending_operations))
         pfm, history = project.pfm, project.history
         if pfm is not None:
             try:
@@ -353,8 +354,32 @@ class DesktopStorageService:
         """Save a delta. Once admitted, the save finishes before the project unloads."""
         project = self._require_open_project(project_id)
         assert project.pfm is not None
-        task = asyncio.create_task(project.pfm.save(delta_data))
-        project.saves.add(task)
-        task.add_done_callback(project.saves.discard)
+        await self._run_mutation(project, project.pfm.save(delta_data))
+
+    async def add_file(self, project_id: str, rel: str, data: bytes) -> str:
+        project = self._require_open_project(project_id)
+        assert project.pfm is not None
+        return await self._run_mutation(
+            project, project.pfm.file_storage.add(rel, data)
+        )
+
+    async def remove_file(self, project_id: str, rel: str) -> bool:
+        project = self._require_open_project(project_id)
+        assert project.pfm is not None
+        return await self._run_mutation(
+            project, project.pfm.file_storage.remove_by_path(rel)
+        )
+
+    async def _run_mutation(
+        self, project: _Project, operation: Coroutine[Any, Any, T]
+    ) -> T:
+        """Own an admitted mutation through completion, despite waiter cancellation.
+
+        The caller checks admission. The operation owns locking and worker
+        offloading; this task keeps its disk and loop-owned bookkeeping alive.
+        """
+        task = asyncio.create_task(operation)
+        project.pending_operations.add(task)
+        task.add_done_callback(project.pending_operations.discard)
         task.add_done_callback(_observe_task)
-        await asyncio.shield(task)
+        return await asyncio.shield(task)

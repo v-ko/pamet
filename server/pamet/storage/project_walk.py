@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Callable, Iterator
 
 from pamet.services.constants import CANVAS_FILE_EXT, MAX_WALK_ENTRIES
+from pamet.storage.content_paths import is_metadata_path
 from pamet.storage.migrations.manager import MIGRATION_BACKUP_DIR_NAMES
 
 IGNORED_DIRS = {".pamet"} | MIGRATION_BACKUP_DIR_NAMES
@@ -82,6 +83,8 @@ def walk_project(
             continue
 
         rel = entry.relative_to(repo_root).as_posix()
+        if is_metadata_path(rel):
+            continue
 
         if entry.is_dir():
             if entry.name in IGNORED_DIRS:

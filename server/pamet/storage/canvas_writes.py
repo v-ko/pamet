@@ -23,6 +23,7 @@ from sivkit.storage.fs.ops import (
 )
 
 from pamet.services.constants import CANVAS_FILE_EXT
+from pamet.storage.content_paths import is_metadata_path
 from pamet.storage.project_walk import IGNORED_DIRS, matches_exclude
 
 PageWrite = Create | Replace | Rename
@@ -40,6 +41,8 @@ def check_page_path(rel: object, exclude_patterns: list[str]) -> None:
     """
     if not isinstance(rel, str) or not rel.endswith(CANVAS_FILE_EXT) or "\\" in rel:
         raise SaveRejected(f"Invalid page path: {rel!r}")
+    if is_metadata_path(rel):
+        raise SaveRejected(f"Page path is in Pamet metadata: {rel!r}")
     parts = rel.split("/")
     for i, part in enumerate(parts):
         if part in ("", ".", ".."):

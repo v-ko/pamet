@@ -22,6 +22,7 @@ from sivkit.storage.fs.ops import (
 )
 
 from pamet.model.note import Note
+from pamet.storage.content_paths import check_media_path
 from pamet.storage.file_index import FileIndex, content_hash
 
 log = logging.getLogger(__name__)
@@ -42,6 +43,7 @@ def rebuild_file_index(repo_root: Path, entities: Iterable[Entity]) -> None:
             continue
         rel = image_ref["path"]
         try:
+            check_media_path(rel)
             abs_path = resolve_in_root(repo_root, rel)
         except (UnsafePath, OSError):
             continue
@@ -62,14 +64,13 @@ class FileStorageAdapter:
         self._repo_root = repo_root
         self._store = store
         self._index = FileIndex(_index_path(repo_root))
-        self._closed = False
         # One media write at a time: keeps the case check, the disk and the index in order
         self._lock = asyncio.Lock()
 
     # -- Lifecycle -------------------------------------------------------------
 
     def close(self) -> None:
-        self._closed = True
+        """Release the index after admitted operations have drained."""
         self._index.close()
 
     # -- Blob I/O --------------------------------------------------------------
@@ -79,13 +80,13 @@ class FileStorageAdapter:
 
         Raises `UnsafePath`, `UnsafeName`, or `Conflict` if a file is already there.
         """
+        check_media_path(rel)
         async with self._lock:
             hash_, mtime_ns = await asyncio.to_thread(
                 _write_new, self._repo_root, rel, data
             )
-            if not self._closed:
-                self._index.put(rel, hash_, mtime_ns)
-        return hash_
+            self._index.put(rel, hash_, mtime_ns)
+            return hash_
 
     def get_path(self, relative_path: str) -> Path | None:
         """Resolve the on-disk path for a project-relative path.
@@ -93,6 +94,7 @@ class FileStorageAdapter:
         Returns ``None`` if the file doesn't exist on disk.
         """
         try:
+            check_media_path(relative_path)
             path = resolve_in_root(self._repo_root, relative_path)
         except UnsafePath:
             return None
@@ -106,11 +108,12 @@ class FileStorageAdapter:
 
     async def remove_by_path(self, rel: str) -> bool:
         """Delete a file blob from disk by path. Returns ``True`` if deleted."""
+        check_media_path(rel)
         async with self._lock:
             deleted = await asyncio.to_thread(_delete, self._repo_root, rel)
-            if deleted and not self._closed:
+            if deleted:
                 self._index.remove(rel)
-        return deleted
+            return deleted
 
 
 def _write_new(root: Path, rel: str, data: bytes) -> tuple[str, int]:

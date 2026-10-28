@@ -46,7 +46,7 @@ def load_store(repo_path: Path) -> PametInMemoryStore:
     repo = repo_path.resolve()
     settings = get_repo_settings(repo)
     exclude_patterns = [
-        pat for pat, enabled in settings.get("files.exclude", {}).items() if enabled
+        pat for pat, enabled in settings.files_exclude.items() if enabled
     ]
     for canvas_path in iter_canvas_paths(repo, exclude_patterns):
         try:

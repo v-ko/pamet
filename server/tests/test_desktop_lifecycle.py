@@ -4,14 +4,19 @@ import asyncio
 import json
 import os
 import threading
+from io import BytesIO
 from types import SimpleNamespace
 
 import pytest
+from fastapi import HTTPException, UploadFile
 from PySide6.QtWidgets import QApplication
-from sivkit.libs.model import dump_to_dict
+from sivkit.libs.model import dump_to_dict, load_from_dict
+from sivkit.storage.change import Change
+from sivkit.storage.delta import Delta
 
 import pamet
 from pamet.model.card_note import CardNote
+from pamet.model.config import ProjectProperties, UserSettings
 from pamet.model.page import Page
 from pamet.services import desktop_storage_service as storage
 from pamet.services.project_sync.project_folder_manager import (
@@ -19,6 +24,8 @@ from pamet.services.project_sync.project_folder_manager import (
     scan_project,
 )
 from pamet.services.rest_api.routes import desktop as routes
+from pamet.storage import file_storage_adapter as media
+from pamet.storage.canvas_writes import SaveRejected
 
 
 @pytest.fixture
@@ -94,6 +101,103 @@ def write_canvas(path, page, notes, mtime=None):
     path.write_text(json.dumps({**dump_to_dict(page), "notes": notes, "arrows": []}))
     if mtime is not None:
         os.utime(path, (mtime, mtime))
+
+
+def test_content_boundaries(dss, tmp_path, monkeypatch):
+    monkeypatch.setattr(storage, "scan_project", scan_project)
+    visible = Page()
+    write_canvas(tmp_path / ".private" / "note.canvas.html", visible, [])
+    for folder in (".pamet", ".PAMET", ".git"):
+        write_canvas(tmp_path / folder / "hidden.canvas.html", Page(), [])
+
+    async def check():
+        await dss.load_project("p", tmp_path)
+        pfm = dss.project_folder_manager("p")
+        assert {e.id for e in pfm.store.find()} == {visible.id}
+        # Ordinary dot-folder attachments are not discovery permissions.
+        path = ".git/image.png"
+        result = await routes.upload_file("u", "p", path, UploadFile(BytesIO(b"image")))
+        assert result["hash"] == pfm.file_storage.get_hash(path)
+        assert (await routes.get_file("u", "p", path)).path == tmp_path / path
+        await routes.delete_file("u", "p", path)
+        assert not (tmp_path / path).exists()
+
+        for path in (".pamet/properties.json", ".private/note.canvas.html"):
+            target = tmp_path / path
+            before = target.read_bytes() if target.exists() else None
+            with pytest.raises(HTTPException) as get_error:
+                await routes.get_file("u", "p", path)
+            assert get_error.value.status_code == 404
+            with pytest.raises(HTTPException) as upload_error:
+                await routes.upload_file("u", "p", path, UploadFile(BytesIO(b"bad")))
+            assert upload_error.value.status_code == 400
+            with pytest.raises(HTTPException) as delete_error:
+                await routes.delete_file("u", "p", path)
+            assert delete_error.value.status_code == 400
+            assert (target.read_bytes() if target.exists() else None) == before
+
+        page = Page(path=".PAMET/new.canvas.html")
+        with pytest.raises(SaveRejected):
+            await dss.save_changes(
+                "p", Delta.from_changes([Change.create(page)]).asdict()
+            )
+        assert pfm.store.find_one(id=page.id) is None
+        props = dss.config_store.find_one(id=ProjectProperties.id_for_project("p"))
+        props.files_exclude = {".private": True}
+        props.canvas_palette = {"dark": {"background": "#123456"}}
+        dss.config_store.update_one(props)
+        # The explicit map replaces the default, and survives entity persistence.
+        await dss.unload_project("p")
+        await dss.load_project("p", tmp_path)
+        props = dss.config_store.find_one(id=ProjectProperties.id_for_project("p"))
+        assert props.files_exclude == {".private": True}
+        assert props.canvas_palette == {"dark": {"background": "#123456"}}
+        assert (
+            load_from_dict(
+                dump_to_dict(ProjectProperties(files_exclude={}))
+            ).files_exclude
+            == {}
+        )
+        pages = list(dss.project_folder_manager("p").store.find(type=Page))
+        assert [page.path for page in pages] == [".git/hidden.canvas.html"]
+        user = UserSettings(id="user-settings", themePreference="dark")
+        assert load_from_dict(dump_to_dict(user)).themePreference == "dark"
+        await dss.close()
+
+    run(check())
+
+
+def test_media_drains_after_cancelled_request(dss, tmp_path, monkeypatch):
+    async def check():
+        await dss.load_project("p", tmp_path)
+        gate = WorkerGate()
+        write_new = media._write_new
+
+        def blocked_write(*args):
+            gate.wait()
+            return write_new(*args)
+
+        monkeypatch.setattr(media, "_write_new", blocked_write)
+        upload = asyncio.create_task(dss.add_file("p", "images/a.png", b"image"))
+        await gate.started.wait()
+        upload.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await upload
+        deletion = asyncio.create_task(dss.remove_file("p", "images/a.png"))
+        await asyncio.sleep(0)
+        assert not deletion.done()
+        closing = asyncio.create_task(dss.unload_project("p"))
+        await asyncio.sleep(0)
+        assert not closing.done()
+        with pytest.raises(storage.StorageClosingError):
+            await dss.add_file("p", "late.png", b"late")
+        gate.release.set()
+        assert await deletion
+        await closing
+        assert not (tmp_path / "images/a.png").exists()
+        await dss.close()
+
+    run(check())
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="root can list any folder")

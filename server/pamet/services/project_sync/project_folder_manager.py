@@ -74,10 +74,10 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
     if not repo_settings_path(repo_root).exists():
         create_repo_settings(repo_root, repo_id=project_id, title=repo_root.name)
 
-    settings = get_repo_settings(repo_root)
+    settings = get_repo_settings(repo_root, project_id)
     snapshot = ProjectSnapshot(
         exclude_patterns=[
-            pat for pat, enabled in settings.get("files.exclude", {}).items() if enabled
+            pat for pat, enabled in settings.files_exclude.items() if enabled
         ]
     )
 
@@ -175,7 +175,7 @@ class ProjectFolderManager:
     # -- Lifecycle -------------------------------------------------------------
 
     async def stop(self) -> None:
-        """Stop producers and flush backups while the store is still available."""
+        """Stop producers and flush backups while the store is available."""
         try:
             self.fs_watcher.close_stream()
             self.fs_watcher.stop_watching()

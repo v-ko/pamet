@@ -16,7 +16,7 @@ import { ProjectStorageConfig } from "sivkit/storage/management/ProjectStorageMa
 import { RepoUpdateData } from "sivkit/storage/repository/Repository";
 import { Router } from "@/services/routing/Router";
 import { registerRootActionCompletedHook, setActionExceptionHandler } from "sivkit/registries/Action";
-import { PametProjectData, ProjectReference } from "@/model/Project";
+import { PametProjectData, ProjectReference, defaultProjectSettings } from "@/model/Project";
 import { Keybinding, KeybindingService } from "@/services/KeybindingService";
 import { FocusManager } from "@/services/FocusManager";
 import { Delta } from "sivkit/model/Delta";
@@ -861,7 +861,9 @@ export class PametFacade extends PametStore {
                 created: pp.created,
                 home_page_id: pp.homePageId,
                 backups_enabled: pp.backupsEnabled,
+                record_all_changes: pp.recordAllChanges,
                 canvas_palette: pp.canvasPalette,
+                files_exclude: pp.filesExclude,
             };
         }
         const recentProject = this.recentProject(trackedProject.id);
@@ -870,6 +872,7 @@ export class PametFacade extends PametStore {
             title: trackedProject.title || recentProject?.title || trackedProject.id,
             description: '',
             created: '',
+            ...defaultProjectSettings(),
         };
     }
 
@@ -881,10 +884,10 @@ export class PametFacade extends PametStore {
             pp.title = projectData.title;
             pp.description = projectData.description;
             pp.homePageId = projectData.home_page_id;
-            if (projectData.backups_enabled !== undefined) {
-                pp.backupsEnabled = projectData.backups_enabled;
-            }
+            pp.backupsEnabled = projectData.backups_enabled;
+            pp.recordAllChanges = projectData.record_all_changes;
             pp.canvasPalette = projectData.canvas_palette;
+            pp.filesExclude = projectData.files_exclude;
             this.appConfigStore.updateOne(pp);
         } else {
             const pp = new ProjectProperties({
@@ -896,7 +899,9 @@ export class PametFacade extends PametStore {
                 created: projectData.created,
                 home_page_id: projectData.home_page_id,
                 backups_enabled: projectData.backups_enabled,
+                record_all_changes: projectData.record_all_changes,
                 canvas_palette: projectData.canvas_palette,
+                files_exclude: projectData.files_exclude,
             });
             this.appConfigStore.insertOne(pp);
         }

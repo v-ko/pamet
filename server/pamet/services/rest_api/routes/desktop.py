@@ -555,7 +555,11 @@ async def upload_file(
     if _project_runtime(project_id) is not pfm:
         raise HTTPException(status_code=409, detail="Desktop project session changed")
     try:
-        content_hash = await pfm.file_storage.add(file_path, data)
+        content_hash = await pamet.desktop_storage_service().add_file(
+            project_id, file_path, data
+        )
+    except StorageClosingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except (UnsafeName, UnsafePath) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Conflict as exc:
@@ -575,9 +579,13 @@ async def delete_file(
     file_path: str,
 ):
     _ = user_id
-    pfm = _project_runtime(project_id)
+    _project_runtime(project_id)
     try:
-        deleted = await pfm.file_storage.remove_by_path(file_path)
+        deleted = await pamet.desktop_storage_service().remove_file(
+            project_id, file_path
+        )
+    except StorageClosingError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except UnsafePath as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     if not deleted:

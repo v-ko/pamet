@@ -17,7 +17,11 @@ from sivkit.libs.model import dump_to_dict, load_from_dict
 from sivkit.storage.delta import Delta
 from sivkit.storage.in_memory_store import InMemoryStore
 
-from pamet.desktop_app.config import PAMET_CONFIG_DIR, USER_SETTINGS_DIR
+from pamet.desktop_app.config import (
+    PAMET_CONFIG_DIR,
+    USER_SETTINGS_DIR,
+    get_repo_settings,
+)
 
 log = logging.getLogger(__name__)
 
@@ -125,22 +129,7 @@ class ConfigFileManager:
         path = self._resolve_path(f"project-props-{project_id}")
         if path is None or not path.exists():
             return
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            raise ValueError(
-                f"Expected dict in project properties {path}, got {type(data).__name__}"
-            )
-        entity_id = f"project-props-{project_id}"
-        # The on-disk file may be raw project data (no type_name) from
-        # migrations or older code paths.  Inject entity metadata so
-        # load_from_dict can deserialise it as a ProjectProperties entity.
-        data.setdefault("type_name", "ProjectProperties")
-        data.setdefault("parent_id", "")
-        # Always use the canonical project_id (the one DSS knows about),
-        # not whatever "id" the on-disk V4 file might contain.
-        data["project_id"] = project_id
-        data["id"] = entity_id
-        entity = load_from_dict(data)
+        entity = get_repo_settings(path.parent.parent, project_id)
         if store.find_one(id=entity.id):
             store.update_one(entity)
         else:

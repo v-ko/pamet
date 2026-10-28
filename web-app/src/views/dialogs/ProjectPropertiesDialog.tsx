@@ -17,7 +17,7 @@ interface ProjectPropertiesDialogProps {
 export function ProjectPropertiesDialog({ project, onClose }: ProjectPropertiesDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [title, setTitle] = useState(project.title);
-  const [backupsEnabled, setBackupsEnabled] = useState(project.backups_enabled ?? true);
+  const [backupsEnabled, setBackupsEnabled] = useState(project.backups_enabled);
   const [titleError, setTitleError] = useState<string | null>(null);
   const paletteRef = useRef(project.canvas_palette);
   const trackedProjects = pamet.appViewState.trackedProjects;

@@ -1,6 +1,6 @@
 import { getLogger } from "sivkit/logging";
 import { pamet } from "@/app/facade";
-import { ProjectData } from "@/model/Project";
+import { ProjectData, PametProjectData, defaultProjectSettings } from "@/model/Project";
 import { appActions } from "@/actions/app";
 import { PametRoute } from "@/services/routing/PametRoute";
 import { ProjectError, AppViewState } from "@/views/AppViewState";
@@ -227,7 +227,7 @@ export async function deleteProjectAndSwitch(project: ProjectData) {
 }
 
 
-export async function createProject(newProject: ProjectData): Promise<void> {
+export async function createProject(newProject: PametProjectData): Promise<void> {
     log.info('Creating project', newProject.id);
     const projectUri = await pamet.storageService.createProject(
         newProject.id,
@@ -247,8 +247,9 @@ export async function createProject(newProject: ProjectData): Promise<void> {
     log.info('Project created and added to config', newProject.id);
 }
 
-export async function createDefaultProject(): Promise<ProjectData> {
-    const newProject: ProjectData = {
+export async function createDefaultProject(): Promise<PametProjectData> {
+    const newProject: PametProjectData = {
+        ...defaultProjectSettings(),
         id: 'notebook',
         title: 'Notebook',
         description: 'Default project',

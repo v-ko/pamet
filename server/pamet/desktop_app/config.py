@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import os
-from copy import deepcopy
 from pathlib import Path
-from typing import Any, Mapping, NotRequired, TypedDict, cast
 
 from PySide6.QtCore import QCoreApplication, QStandardPaths
+from sivkit.libs.model import dump_to_dict, load_from_dict
 from sivkit.util import get_new_id
+
+from pamet.model.config import ProjectProperties
 
 QCoreApplication.setApplicationName("pamet")
 
@@ -69,65 +70,6 @@ def web_app_static_build_path() -> Path:
     return candidate
 
 
-class UserDesktopSettingsData(TypedDict):
-    id: str
-    name: str
-    projects: list[dict[str, Any]]
-
-
-# glob pattern → enabled (same notation as VS Code "files.exclude")
-RepoSettingsData = TypedDict(
-    "RepoSettingsData",
-    {
-        "id": str,
-        "title": str,
-        "description": str,
-        "created": str,
-        "home_page_id": NotRequired[str | None],
-        "files.exclude": NotRequired[dict[str, bool]],
-    },
-)
-
-REPO_SETTINGS_DEFAULTS: RepoSettingsData = {
-    "id": "",
-    "title": "",
-    "description": "",
-    "created": "",
-}
-
-
-class SettingsAdapter:
-    def __init__(
-        self,
-        path: Path,
-        defaults: Mapping[str, Any] | None = None,
-    ):
-        self.path = Path(path)
-        self._defaults = dict(deepcopy(defaults or {}))
-
-    def exists(self) -> bool:
-        return self.path.exists()
-
-    def read_raw(self) -> dict[str, Any]:
-        if not self.path.exists():
-            return {}
-        with self.path.open("r", encoding="utf-8") as file_obj:
-            data = json.load(file_obj)
-        if not isinstance(data, dict):
-            raise TypeError(f"Expected dict settings in {self.path}")
-        return cast(dict[str, Any], data)
-
-    def get(self) -> dict[str, Any]:
-        return {
-            **dict(deepcopy(self._defaults)),
-            **self.read_raw(),
-        }
-
-    def write(self, data: dict[str, Any]) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.write_text(json.dumps(deepcopy(data), indent=4))
-
-
 def user_settings_path() -> Path:
     return USER_SETTINGS_DIR / "settings.json"
 
@@ -136,14 +78,27 @@ def repo_settings_path(repo_path: Path) -> Path:
     return Path(repo_path) / ".pamet" / REPO_PROPERTIES_JSON
 
 
-def get_repo_settings(repo_path: Path) -> RepoSettingsData:
-    return cast(
-        RepoSettingsData,
-        SettingsAdapter(
-            repo_settings_path(repo_path),
-            defaults=REPO_SETTINGS_DEFAULTS,
-        ).get(),
+def get_repo_settings(
+    repo_path: Path, project_id: str | None = None
+) -> ProjectProperties:
+    """Read the project settings entity; missing fields use model defaults."""
+    path = repo_settings_path(repo_path)
+    data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    if not isinstance(data, dict):
+        raise ValueError(f"Expected dict settings in {path}")
+    # Always use the canonical project_id when supplied by DSS, not whatever
+    # "id" the on-disk V4 file might contain. Otherwise use the stored project_id.
+    project_id = project_id if project_id is not None else data.get("project_id", "")
+    # The on-disk file may be raw project data (no type_name) from migrations
+    # or older code paths. Inject entity metadata so load_from_dict can
+    # deserialise it as a ProjectProperties entity.
+    data.update(
+        type_name="ProjectProperties",
+        parent_id="",
+        id=ProjectProperties.id_for_project(project_id),
+        project_id=project_id,
     )
+    return load_from_dict(data)
 
 
 def create_repo_settings(
@@ -151,16 +106,18 @@ def create_repo_settings(
     *,
     repo_id: str | None = None,
     title: str | None = None,
-) -> RepoSettingsData:
-    adapter = SettingsAdapter(
-        repo_settings_path(repo_path),
-        defaults=REPO_SETTINGS_DEFAULTS,
+) -> ProjectProperties:
+    path = repo_settings_path(repo_path)
+    if path.exists():
+        return get_repo_settings(repo_path, repo_id)
+    project_id = repo_id or get_new_id()
+    settings = ProjectProperties(
+        id=ProjectProperties.id_for_project(project_id),
+        project_id=project_id,
+        title=title or Path(repo_path).name,
     )
-    if adapter.exists():
-        return cast(RepoSettingsData, adapter.get())
-
-    settings = cast(RepoSettingsData, adapter.get())
-    settings["id"] = repo_id or get_new_id()
-    settings["title"] = title or Path(repo_path).name
-    adapter.write(cast(dict[str, Any], settings))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = dump_to_dict(settings)
+    data.pop("parent_id", None)
+    path.write_text(json.dumps(data, indent=4, ensure_ascii=False), encoding="utf-8")
     return settings
