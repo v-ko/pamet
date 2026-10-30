@@ -11,11 +11,11 @@ from sivkit.storage.change import Change
 from sivkit.storage.delta import Delta
 
 from pamet.model.page import Page
+from pamet.model.service_state import ProjectProblem
 from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.storage.service_utils import (
     CanvasParseError,
     ForeignCanvasFile,
-    ProjectProblem,
     read_canvas_file,
 )
 
@@ -229,16 +229,20 @@ class FileSystemWatcher:
             return
 
         rel = canvas_path.relative_to(self.repo_root).as_posix()
-        problems = self.project_folder_manager.problems
+        problems = self.project_folder_manager.state["problems"]
         try:
             disk_entities = read_canvas_file(canvas_path, self.repo_root)
         except ForeignCanvasFile:
             return
         except CanvasParseError as exc:
             log.warning("Failed to parse canvas file %s: %s", canvas_path, exc)
-            problems[rel] = ProjectProblem("unreadable_file", rel, str(exc))
+            problems[rel] = ProjectProblem(
+                kind="unreadable_file", path=rel, reason=str(exc)
+            )
+            self.project_folder_manager.notify_state_changed()
             return
         problems.pop(rel, None)
+        self.project_folder_manager.notify_state_changed()
 
         # Extract page_id from the parsed entities (filename is no longer the id)
         page_id = None

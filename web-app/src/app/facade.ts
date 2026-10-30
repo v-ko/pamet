@@ -1,3 +1,4 @@
+import { DesktopStorageState, ProjectStorageState, isServiceStateId } from '@/model/config/ServiceState';
 import { AppViewState, SaveStatus } from "@/views/AppViewState";
 import { getLogger } from 'sivkit/logging';
 import { Change } from "sivkit/model/Change";
@@ -623,7 +624,8 @@ export class PametFacade extends PametStore {
 
         store.addOnChangesCallback((delta, origin) => {
             if (origin !== 'remote') {
-                syncService.pushDelta(delta).catch((e) => {
+                const configDelta = Delta.fromChanges(Array.from(delta.changes()).filter(change => !isServiceStateId(change.entityId)));
+                if (!configDelta.isEmpty()) syncService.pushDelta(configDelta).catch((e) => {
                     log.error('Error pushing config delta to sync service', e);
                 });
             }
@@ -631,10 +633,24 @@ export class PametFacade extends PametStore {
         });
 
         this._appConfigStore = store;
+        this._reflectBackendStorageState();
+    }
+
+    projectStorageState(projectId: string) {
+        return (this._appConfigStore?.findOne({ id: ProjectStorageState.idForProject(projectId) }) as ProjectStorageState | undefined)?.data() ?? null;
+    }
+
+    private _reflectBackendStorageState() {
+        const store = this.appConfigStore;
+        const backend = store.findOne({ id: DesktopStorageState.SINGLETON_ID }) as DesktopStorageState | undefined;
+        const projects = Array.from(store.find({ type: ProjectStorageState })) as ProjectStorageState[];
+        appActions.setBackendStorageState(this.appViewState, backend?.data() ?? null,
+            Object.fromEntries(Array.from(projects, entity => [entity.data().project_id, entity.data()])));
     }
 
     private _configUpdateReaction(delta: Delta) {
         const state = this.appViewState;
+        if (delta.entityIds().some(isServiceStateId)) this._reflectBackendStorageState();
         for (const entityId of delta.entityIds()) {
             if (entityId === DeviceState.SINGLETON_ID) {
                 appActions.applyDeviceState(

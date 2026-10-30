@@ -42,6 +42,7 @@ from pamet.services.full_change_history_service import (
     IntegrityRunningError,
     ParentMismatchError,
 )
+from pamet.services.project_sync.project_folder_manager import FileSaveError
 from pamet.storage.canvas_writes import SaveRejected
 from pamet.storage.project_walk import ProjectTooLargeError
 
@@ -142,7 +143,7 @@ async def get_version():
 @desktop_router.get("/status", dependencies=[Depends(require_desktop_auth)])
 async def get_status():
     dss = pamet.desktop_storage_service()
-    return {**dss.status, "problems": dss.project_problems()}
+    return dss.status
 
 
 def _run_command(command_name: str, payload: dict | None):
@@ -306,11 +307,7 @@ def _history_service(project_id: str) -> FullChangeHistoryService:
 
 
 def _set_history_error(project_id: str, message: str | None) -> None:
-    errors = pamet.desktop_storage_service().status["errors"]
-    if message is None:
-        errors.get("change_history", {}).pop(project_id, None)
-    else:
-        errors.setdefault("change_history", {})[project_id] = message
+    pamet.desktop_storage_service().set_history_error(project_id, message)
 
 
 @desktop_router.post(
@@ -634,6 +631,19 @@ async def apply_changes(project_id: str, payload: dict = Body(...)):
         )
     try:
         await pamet.desktop_storage_service().save_changes(project_id, delta_data)
+    except FileSaveError as exc:
+        status = (
+            409
+            if isinstance(exc.error, Conflict)
+            else (400 if isinstance(exc.error, (UnsafeName, UnsafePath)) else 500)
+        )
+        raise HTTPException(
+            status_code=status,
+            detail={
+                "message": str(exc),
+                "reported": True,
+            },
+        ) from exc
     except (SaveRejected, UnsafeName, UnsafePath) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Conflict as exc:
@@ -650,4 +660,15 @@ async def apply_changes(project_id: str, payload: dict = Body(...)):
     except OSError as exc:
         log.error("Failed to save changes to %s: %s", project_id, exc)
         raise HTTPException(status_code=500, detail=f"Save failed: {exc}") from exc
+    finally:
+        sync = pamet.desktop_storage_service().config_sync_service
+        if sync.running and sync.last_push_future is not None:
+            try:
+                await asyncio.shield(sync.last_push_future)
+            except asyncio.CancelledError:
+                if asyncio.current_task().cancelling():
+                    raise
+                raise HTTPException(
+                    status_code=503, detail="Backend state connection closed"
+                )
     return {"ok": True}

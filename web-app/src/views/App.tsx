@@ -50,7 +50,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
   const [debugInfoModalOpen, setDebugInfoModalOpen] = useState(false);
   const [showLoadingDialog, setShowLoadingDialog] = useState(false);
   const [mainMenuPos, setMainMenuPos] = useState<{ x: number, y: number } | null>(null);
-  const [lastSeenErrorCount, setLastSeenErrorCount] = useState(0);
+  const [seenErrors, setSeenErrors] = useState<string[]>([]);
 
   // Change the title when the current page changes
   useEffect(() => {
@@ -124,15 +124,22 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
   const currentPageVS = state.currentPageViewState
   const storageConnectionPhase = state.storageState.service.connectionPhase;
   const storageDegraded = state.storageState.service.degraded;
-  const storageErrors = state.storageState.service.errors;
-  const hasUnseenErrors = storageErrors.length > lastSeenErrorCount;
-  const saveStatus = state.storageState.saveStatus;
-  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase, storageDegraded, saveStatus);
+  const storageErrors = state.storageErrors;
+  const hasUnseenErrors = storageErrors.some(error => !seenErrors.includes(error));
+  const saveStatus = state.saveStatus;
+  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase, storageDegraded, storageErrors.length ? 'error' : saveStatus);
 
   const storageStatusTitle = (() => {
+    if (storageConnectionPhase === 'ready') {
+      if (storageErrors.length && saveStatus !== 'error') return 'Storage error';
+      switch (saveStatus) {
+        case 'error': return 'Save failed';
+        case 'saving': return 'Saving';
+        case 'unsaved': return 'Unsaved changes';
+        case 'saved': return 'Saved';
+      }
+    }
     switch (storageConnectionPhase) {
-      case 'ready':
-        return 'Storage connected';
       case 'connecting':
         return 'Storage connecting';
       case 'disconnected':
@@ -262,7 +269,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
           <button
             title={storageDegraded ? `${storageStatusTitle} (degraded)` : storageStatusTitle}
             onClick={() => {
-              setLastSeenErrorCount(storageErrors.length);
+              setSeenErrors(storageErrors);
               appActions.openStorageStatusDialog(state);
             }}
             tabIndex={PametTabIndex.Panel_StorageStatus}

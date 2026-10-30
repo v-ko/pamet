@@ -1,3 +1,4 @@
+import type { DesktopStorageStateData, ProjectStorageStateData } from '@/model/config/ServiceState';
 import { AppDialogMode, PageError, ProjectError, AppViewState, SaveStatus } from "@/views/AppViewState";
 import { LoadingDialogState } from "@/views/system-modal-dialog/state";
 import type { MouseState } from "@/views/AppViewState";
@@ -71,6 +72,25 @@ class AppActions {
     @action({ issuer: 'service' })
     setStorageServiceState(state: AppViewState, storageServiceState: StorageProxyState) {
         state.storageState.service = storageServiceState;
+    }
+
+    @action({ issuer: 'service' })
+    setBackendStorageConnected(state: AppViewState, connected: boolean) {
+        state.storageState.backendConnected = connected;
+    }
+
+    @action({ issuer: 'service' })
+    setBackendStorageState(state: AppViewState, backend: DesktopStorageStateData | null,
+                           projects: Record<string, ProjectStorageStateData>) {
+        state.storageState.backend = backend;
+        state.storageState.projects = projects;
+        const replay = state.replayPanelVS;
+        if (replay) replay.hasIntegrityError = state.currentStorageProject?.history_error?.includes('hash mismatch') ?? false;
+    }
+
+    @action({ issuer: 'service' })
+    setSaveError(state: AppViewState, message: string | null) {
+        state.storageState.saveError = message;
     }
 
     @action({ issuer: 'service' })

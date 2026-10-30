@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
 
 from sivkit.libs.model import Entity, load_from_dict
 
@@ -20,15 +18,6 @@ class CanvasParseError(Exception):
 
 class ProjectTooLargeError(Exception):
     """Raised when a project folder exceeds the walk budget."""
-
-
-@dataclass(frozen=True)
-class ProjectProblem:
-    """A problem with a project's files, listed in ``/status`` until cleared."""
-
-    kind: Literal["unreadable_file", "unlisted_folder", "duplicate_id"]
-    path: str  # Relative to the project root
-    reason: str
 
 
 def read_canvas_file(canvas_path: Path, repo_root: Path) -> dict[str, Entity]:

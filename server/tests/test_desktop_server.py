@@ -90,7 +90,17 @@ def test_desktop_server(tmp_path, run_on_qt):
                     else:
                         await asyncio.wait_for(server.stop(), 5)
                     with pytest.raises(ConnectionClosed):
-                        await ws.recv()
+                        async with asyncio.timeout(1):
+                            # Closing state may already be queued before the stream closes.
+                            while True:
+                                message = json.loads(await ws.recv())
+                                assert message["type"] == "delta"
+                                assert list(message["delta"]) == [
+                                    "desktop-storage-state"
+                                ]
+                                assert message["delta"]["desktop-storage-state"][2] == {
+                                    "closing": True
+                                }
                     assert not (tmp_path / ".local_server.lock").exists()
             finally:
                 await server.stop()
@@ -144,7 +154,11 @@ def test_project_round_trip(tmp_path, run_on_qt, monkeypatch):
                 f"ws://127.0.0.1:{port}/config/store/ws",
                 additional_headers=auth_cookie(server),
             ) as ws:
-                server_seq = json.loads(await ws.recv())["seq"]
+                initial = json.loads(await ws.recv())
+                assert "desktop-storage-state" in {
+                    entity["id"] for entity in initial["entities"]
+                }
+                server_seq = initial["seq"]
                 pushed = {}
                 acks = asyncio.Queue()
                 received_push, acking = asyncio.Event(), asyncio.Event()

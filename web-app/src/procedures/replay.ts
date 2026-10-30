@@ -10,36 +10,10 @@ const log = getLogger("ReplayProcedures");
 
 /** Check backend status for integrity errors and flag the replay panel. */
 export async function checkIntegrityStatus(): Promise<void> {
-    const baseUrl = (window as any).PAMET_DESKTOP_API_BASE_URL;
-    const token = (window as any).PAMET_DESKTOP_ACCESS_TOKEN;
-    if (!baseUrl || !token) return;
-
-    const vs = pamet.appViewState.replayPanelVS;
-    if (!vs) return;
-
-    try {
-        const resp = await fetch(`${baseUrl}/status`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        console.log("[INTEGRITY] /status response:", resp.status);
-        if (!resp.ok) {
-            console.log("[INTEGRITY] /status not OK");
-            return;
-        }
-        const status = await resp.json();
-        const changeHistoryErrors = status?.errors?.change_history;
-        console.log("[INTEGRITY] change_history errors:", changeHistoryErrors);
-        let hasIntegrity = false;
-        if (changeHistoryErrors && Object.keys(changeHistoryErrors).length > 0) {
-            hasIntegrity = Object.values(changeHistoryErrors).some(
-                (msg: any) => typeof msg === "string" && msg.includes("hash mismatch")
-            );
-        }
-        console.log("[INTEGRITY] hasIntegrity:", hasIntegrity, "vs:", vs);
-        replayActions.setIntegrityError(vs, hasIntegrity);
-        console.log("[INTEGRITY] vs.hasIntegrityError set to:", vs.hasIntegrityError);
-    } catch (e) {
-        console.error("[INTEGRITY] checkIntegrityStatus failed:", e);
+    const state = pamet.appViewState;
+    if (state.replayPanelVS) {
+        replayActions.setIntegrityError(state.replayPanelVS,
+            state.currentStorageProject?.history_error?.includes('hash mismatch') ?? false);
     }
 }
 

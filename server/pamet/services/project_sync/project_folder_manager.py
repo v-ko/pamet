@@ -6,7 +6,7 @@ import threading
 from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator, cast
 
 from sivkit.libs.model import Entity, dump_to_dict
 from sivkit.storage.change import Change
@@ -21,6 +21,7 @@ from pamet.desktop_app.config import (
 )
 from pamet.model.arrow import Arrow
 from pamet.model.page import Page
+from pamet.model.service_state import FileSystemState, ProjectProblem
 from pamet.services.backup import BackupService
 from pamet.services.constants import CANVAS_FILE_EXT
 from pamet.services.file_system_watcher import FileSystemWatcher
@@ -41,11 +42,18 @@ from pamet.storage.project_walk import iter_canvas_paths, walk_project
 from pamet.storage.service_utils import (
     CanvasParseError,
     ForeignCanvasFile,
-    ProjectProblem,
     read_canvas_file,
 )
 
 log = logging.getLogger(__name__)
+
+
+class FileSaveError(Exception):
+    """A file-operation failure already recorded in filesystem state."""
+
+    def __init__(self, error: Exception):
+        super().__init__(str(error))
+        self.error = error
 
 
 @dataclass
@@ -81,7 +89,7 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
         log.warning("Failed to list folder %s: %s", folder, exc)
         rel = folder.relative_to(repo_root).as_posix()
         snapshot.problems[rel] = ProjectProblem(
-            "unlisted_folder", rel, exc.strerror or str(exc)
+            kind="unlisted_folder", path=rel, reason=exc.strerror or str(exc)
         )
 
     parsed: list[tuple[str, Fingerprint | None, dict[str, Entity]]] = []
@@ -100,7 +108,9 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
             continue
         except CanvasParseError as exc:
             log.warning("Failed to parse canvas file %s: %s", path, exc)
-            snapshot.problems[rel] = ProjectProblem("unreadable_file", rel, str(exc))
+            snapshot.problems[rel] = ProjectProblem(
+                kind="unreadable_file", path=rel, reason=str(exc)
+            )
             snapshot.disk_index[rel] = DiskEntry(fingerprint, read_error=str(exc))
             continue
         parsed.append((rel, fingerprint, entities))
@@ -116,9 +126,9 @@ def scan_project(project_id: str, repo_root: Path) -> ProjectSnapshot:
             role = "owner"
         else:
             snapshot.problems[rel] = ProjectProblem(
-                "duplicate_id",
-                rel,
-                f"Id {taken} is already loaded from {owners[taken]}",
+                kind="duplicate_id",
+                path=rel,
+                reason=f"Id {taken} is already loaded from {owners[taken]}",
             )
             role = "duplicate"
         snapshot.disk_index[rel] = DiskEntry(fingerprint, role, ids=tuple(entities))
@@ -137,14 +147,25 @@ class ProjectFolderManager:
     ``FileSystemWatcher`` handles change detection.
     """
 
-    def __init__(self, project_id: str, repo_root: Path, snapshot: ProjectSnapshot):
+    def __init__(
+        self,
+        project_id: str,
+        repo_root: Path,
+        snapshot: ProjectSnapshot,
+        on_state_changed: Callable[[], None] | None = None,
+    ):
         self.project_id = project_id
         self.repo_root = Path(repo_root)
         self.store = PametInMemoryStore()
         self.write_lock = threading.Lock()  # Held during writes to suppress watcher
         self.mutation_lock = asyncio.Lock()  # One save or sweep at a time
         self.failed_watch_count: int = 0
-        self.problems = dict(snapshot.problems)
+        self.state: FileSystemState = {
+            "saving": False,
+            "errors": {},
+            "problems": dict(snapshot.problems),
+        }
+        self._on_state_changed = on_state_changed
         self.disk_index = dict(snapshot.disk_index)
         self._exclude_patterns = list(snapshot.exclude_patterns)
         for entity in snapshot.entities:
@@ -211,45 +232,90 @@ class ProjectFolderManager:
         stays in the store and the first error is raised.
         """
         async with self.mutation_lock:
-            delta = Delta.from_data(delta_data)
-            self._check_page_moves(delta)
-            applied = self.store.apply_delta(delta)
-            deletes, writes = self._serialize_changes(applied)
-            deleted, written = await write_changes(
-                self.repo_root, deletes, [change for change, _ in writes]
-            )
-            results: list[tuple[ApplyResult, tuple[str, ...]]]
-            results = [(result, ()) for result in deleted]
-            results += [(result, ids) for result, (_, ids) in zip(written, writes)]
-            self._update_disk_index(results)
-            if writes:
-                self.backup_service.mark_pages_changed({ids[0] for _, ids in writes})
-            log.info("Saved %d pages, deleted %d", len(writes), len(deletes))
-            error = next((r.error for r, _ in results if r.error), None)
-            if error is not None:
-                raise error
+            self.state["saving"] = True
+            self.notify_state_changed()
+            try:
+                delta = Delta.from_data(delta_data)
+                self._assert_valid_page_paths(delta)
+                applied = self.store.apply_delta(delta)
+                deletes, writes = self._serialize_changes(applied)
+                delete_owners = {
+                    rel: entry.ids[0]
+                    for rel, entry in self.disk_index.items()
+                    if entry.role == "owner" and entry.ids
+                }
+                deleted, written = await write_changes(
+                    self.repo_root, deletes, [change for change, _ in writes]
+                )
+                results: list[tuple[ApplyResult, tuple[str, ...]]]
+                results = [(result, ()) for result in deleted]
+                results += [(result, ids) for result, (_, ids) in zip(written, writes)]
+                self._update_disk_index(results)
+                for result, ids in results:
+                    page_id = ids[0] if ids else delete_owners.get(result.change.rel)
+                    if page_id is None:
+                        continue
+                    if result.error is None:
+                        self.state["errors"].pop(page_id, None)
+                    else:
+                        self.state["errors"][page_id] = {
+                            "id": page_id,
+                            "path": target(result.change),
+                            "message": str(result.error),
+                        }
+                # Removing an unsaved page resolves its error without deleting a foreign file.
+                for change in applied.changes():
+                    if (
+                        change.is_delete()
+                        and change.reverse_component.get("type_name") == "Page"
+                    ):
+                        if change.entity_id not in delete_owners.values():
+                            self.state["errors"].pop(change.entity_id, None)
+                if writes:
+                    self.backup_service.mark_pages_changed(
+                        {ids[0] for _, ids in writes}
+                    )
+                log.info("Saved %d pages, deleted %d", len(writes), len(deletes))
+                error = next((r.error for r, _ in results if r.error), None)
+                if error is not None:
+                    raise FileSaveError(error) from error
+            finally:
+                self.state["saving"] = False
+                self.notify_state_changed()
 
-    def _check_page_moves(self, delta: Delta) -> None:
-        """Refuse invalid or colliding page paths before the store changes."""
-        moves: dict[str, Any] = {}  # page id → new path, checked below
-        paths = {page.id: page.path for page in self.store.find(type=Page)}
+    def notify_state_changed(self) -> None:
+        if self._on_state_changed is not None:
+            self._on_state_changed()
+
+    def _assert_valid_page_paths(self, delta: Delta) -> None:
+        """Raise if a created or renamed page has an invalid or colliding path.
+
+        Neither the delta nor the store is modified. Build a temporary map of
+        paths after the whole delta, so swaps and reuse of deleted paths are
+        allowed. Existing collisions unrelated to these changes are left alone.
+        """
+        proposed_paths: dict[str, Any] = {}  # Unvalidated values from the delta.
+        pages = cast(Iterator[Page], self.store.find(type=Page))
+        final_paths_by_page = {page.id: page.path for page in pages}
         for change in delta.changes():
             forward = change.forward_component
             current = self.store.find_one(id=change.entity_id)
             if change.is_delete():
-                paths.pop(change.entity_id, None)
+                final_paths_by_page.pop(change.entity_id, None)
             elif change.is_create() and forward.get("type_name") == "Page":
-                moves[change.entity_id] = forward.get("path")
+                proposed_paths[change.entity_id] = forward.get("path")
             elif isinstance(current, Page) and "path" in forward:
                 if forward["path"] != current.path:
-                    moves[change.entity_id] = forward["path"]
-        for page_id, rel in moves.items():
+                    proposed_paths[change.entity_id] = forward["path"]
+        for page_id, rel in proposed_paths.items():
             check_page_path(rel, self._exclude_patterns)
-            paths[page_id] = rel
-        # As a case-insensitive file system would see them
-        counts = Counter(canonical_key(path) for path in paths.values())
-        for rel in moves.values():
-            if counts[canonical_key(rel)] > 1:
+            final_paths_by_page[page_id] = rel
+        # Compare final destinations using portable, case-insensitive path keys.
+        path_counts = Counter(
+            canonical_key(path) for path in final_paths_by_page.values()
+        )
+        for rel in proposed_paths.values():
+            if path_counts[canonical_key(rel)] > 1:
                 raise SaveRejected(f"Two pages would share the path {rel!r}")
 
     def _serialize_changes(
@@ -392,8 +458,8 @@ class ProjectFolderManager:
 
     def _own(self, rel: str, fingerprint: Fingerprint, ids: tuple[str, ...]) -> None:
         self.disk_index[rel] = DiskEntry(fingerprint, "owner", ids=ids)
-        self.problems.pop(rel, None)
+        self.state["problems"].pop(rel, None)
 
     def _forget(self, rel: str) -> None:
         self.disk_index.pop(rel, None)
-        self.problems.pop(rel, None)
+        self.state["problems"].pop(rel, None)

@@ -13,7 +13,6 @@ import { pamet } from "@/app/facade";
 let log = getLogger('OptimisticProjectSyncService');
 
 const FLUSH_DEBOUNCE_MS = 100;
-const COMMIT_SAFETY_TIMEOUT_MS = 10000;
 const CLOSE_TIMEOUT_MS = 5000;
 
 export type CloseOutcome = 'completed' | 'failed' | 'timed out';
@@ -32,7 +31,7 @@ export type CloseOutcome = 'completed' | 'failed' | 'timed out';
  * Commits are serialized (only one in-flight at a time) and debounced to
  * avoid races where a repo-update reverses not-yet-committed changes.
  *
- * Does NOT own the store. Does NOT touch the view model.
+ * Does NOT own the store. Reports save status through app actions.
  * The store's onChange callback is the view model's concern.
  */
 export class OptimisticProjectSyncService {
@@ -47,12 +46,11 @@ export class OptimisticProjectSyncService {
     private _stagedActionNames: string[] = [];
     private _expectedDelta: Delta = new Delta({});
 
-    private _commitInFlight = false;
-    private _pendingCommits = new Set<Promise<boolean>>();  // Until each commit request settles
+    private _requestError: string | null = null;
+    private _pendingCommit: Promise<boolean> | null = null;
     private _closing = false;
     private _disposed = false;
     private _flushTimer: ReturnType<typeof setTimeout> | null = null;
-    private _commitSafetyTimer: ReturnType<typeof setTimeout> | null = null;
 
     private _beforeUnloadHandler: ((e: BeforeUnloadEvent) => void) | null = null;
 
@@ -67,11 +65,12 @@ export class OptimisticProjectSyncService {
         this._projectId = projectId;
         this._currentBranch = currentBranch;
         this._localCommitGraph = new CommitGraph();
+        appActions.setSaveError(pamet.appViewState, null);
 
         this._beforeUnloadHandler = (e: BeforeUnloadEvent) => {
             if (!this._unstagedChanges.isEmpty() ||
                 !this._stagedChanges.isEmpty() ||
-                !this._expectedDelta.isEmpty()) {
+                !this._expectedDelta.isEmpty() || this._pendingCommit || this._hasSaveErrors()) {
                 e.preventDefault();
             }
         };
@@ -110,6 +109,7 @@ export class OptimisticProjectSyncService {
         }
 
         this._localCommitGraph = remoteGraph;
+        this._updateSaveStatus();
         log.info('OPSS initialized successfully');
         return syncDelta;
     }
@@ -124,6 +124,7 @@ export class OptimisticProjectSyncService {
         }
         if (!delta.isEmpty()) {
             this._unstagedChanges.mergeWithPriority(delta);
+            this._updateSaveStatus();
         }
     }
 
@@ -146,6 +147,7 @@ export class OptimisticProjectSyncService {
         if (actionName) this._stagedActionNames.push(actionName);
 
         this._scheduleFlush();
+        this._updateSaveStatus();
         return true;
     }
 
@@ -165,23 +167,25 @@ export class OptimisticProjectSyncService {
         if (this._disposed || this._stagedChanges.isEmpty()) {
             return;
         }
-        if (this._commitInFlight) {
-            // Will be retried when the current commit's repo-update arrives
+        if (this._pendingCommit) {
+            // The request completion sends any staged work next.
             return;
         }
 
-        this._commitInFlight = true;
         const delta = this._stagedChanges;
         this._stagedChanges = new Delta({});
         const actionNames = this._stagedActionNames;
         this._stagedActionNames = [];
         this._expectedDelta.mergeWithPriority(delta);
-
-        appActions.setSaveStatus(pamet.appViewState, 'saving');
+        const expected = this._expectedDelta;
 
         const pendingCommit = this._storageService.commit(this._projectId, delta.data, actionNames.join(', ') || 'Auto-commit')
             .then((result) => {
                 const appliedDeltaData = result.commit.delta_data;
+                const failed = result.domainSaveResult?.ok === false;
+                if (failed && !result.domainSaveResult?.reported && !this._disposed) {
+                    this._recordRequestError(result.domainSaveResult?.message ?? 'Save failed');
+                }
                 const unappliedDelta = delta.copy();
                 unappliedDelta.mergeWithPriority(new Delta(appliedDeltaData).reversed());
                 if (!unappliedDelta.isEmpty()) {
@@ -192,57 +196,63 @@ export class OptimisticProjectSyncService {
                         commit: result.commit,
                     });
                 }
-                return true;
+                return !failed;
             })
             .catch((error) => {
                 if (this._disposed) {
                     log.error('Save failed after the project was closed', { error, delta: delta.data });
                     return false;
                 }
-                // A removed project cannot accept retries. Other lifecycle or
-                // persistence failures remain visible and keep their normal policy.
+                // Removal discards local work; other failures remain visible.
                 if (error?.name === 'ProjectStorageLifecycleError' &&
                     !pamet.trackedProjects().some(project => project.id === this._projectId)) {
                     this._stopForRemoval();
                     return false;
                 }
-                log.error('Auto-commit failed. Returning delta to staged.', {
+                log.error('Save failed; the delta will not be resent.', {
                     error,
                     projectId: this._projectId,
                     delta: delta.data,
                 });
 
-                // Remove the failed delta from expectedDelta so reconciliation
-                // doesn't try to reverse changes that were never applied remotely.
-                const reversedFailed = delta.reversed();
-                this._expectedDelta.mergeWithPriority(reversedFailed);
-
-                // Put the failed changes back into staged so the next flush retries them.
-                delta.mergeWithPriority(this._stagedChanges);
-                this._stagedChanges = delta;
-                this._stagedActionNames = [...actionNames, ...this._stagedActionNames];
-
-                this._commitInFlight = false;
-                appActions.setSaveStatus(pamet.appViewState, 'error');
-
-                // Re-schedule flush for retry
-                this._scheduleFlush();
+                // A repo update replaces this accumulator after reconciliation.
+                if (this._expectedDelta === expected) {
+                    this._expectedDelta.mergeWithPriority(delta.reversed());
+                }
+                this._recordRequestError(error instanceof Error ? error.message : String(error));
                 return false;
             })
             .finally(() => {
-                this._pendingCommits.delete(pendingCommit);
+                this._pendingCommit = null;
+                if (!this._disposed && !this._closing) {
+                    this._flushStaged();
+                    this._updateSaveStatus();
+                }
             });
-        this._pendingCommits.add(pendingCommit);
+        this._pendingCommit = pendingCommit;
+        this._updateSaveStatus();
 
-        // Safety timeout: if we never receive a repoUpdate, unblock commits
-        if (this._commitSafetyTimer !== null) clearTimeout(this._commitSafetyTimer);
-        this._commitSafetyTimer = setTimeout(() => {
-            if (this._commitInFlight && !this._closing) {
-                log.warning('Commit safety timeout reached — clearing in-flight flag');
-                this._commitInFlight = false;
-                this._flushStaged();
-            }
-        }, COMMIT_SAFETY_TIMEOUT_MS);
+    }
+
+    private _recordRequestError(message: string) {
+        // An unrelated successful edit cannot recover a rejected/unknown save.
+        this._requestError = message;
+        appActions.setSaveError(pamet.appViewState, message);
+    }
+
+    private _hasSaveErrors(): boolean {
+        const fs = pamet.projectStorageState(this._projectId)?.filesystem;
+        return this._requestError !== null || Object.keys(fs?.errors ?? {}).length > 0
+            || pamet.appViewState.storageState.backendConnected === false;
+    }
+
+    private _updateSaveStatus() {
+        if (this._disposed) return;
+        const status = this._requestError ? 'error'
+            : this._pendingCommit ? 'saving'
+            : !this._unstagedChanges.isEmpty() || !this._stagedChanges.isEmpty() ? 'unsaved'
+            : 'saved';
+        appActions.setSaveStatus(pamet.appViewState, status);
     }
 
     /**
@@ -266,42 +276,39 @@ export class OptimisticProjectSyncService {
         if (outcome !== 'completed') {
             log.error(`Closing project ${this._projectId}: save ${outcome}`, {
                 unsent: this._stagedChanges.data,
-                requestsPending: this._pendingCommits.size,
+                requestPending: !!this._pendingCommit,
             });
         }
-        // Repo updates, which would normally set it, are ignored while closing
+        // Closing reports its final outcome before disposing status updates.
         appActions.setSaveStatus(pamet.appViewState, outcome === 'completed' ? 'saved' : 'error');
         this._dispose();
         return outcome;
     }
 
     private async _drain(): Promise<CloseOutcome> {
-        while (this._pendingCommits.size || !this._stagedChanges.isEmpty()) {
+        while (this._pendingCommit || !this._stagedChanges.isEmpty()) {
             if (this._disposed) return 'timed out';
-            if (this._pendingCommits.size) {
-                const results = await Promise.all(this._pendingCommits);
-                if (results.includes(false)) return 'failed';
+            if (this._pendingCommit) {
+                if (!await this._pendingCommit) return 'failed';
                 continue;
             }
             // Closing doesn't wait for the repo update, only for the request
-            this._commitInFlight = false;
             this._flushStaged();
         }
-        return 'completed';
+        return this._hasSaveErrors() ? 'failed' : 'completed';
     }
 
     private _dispose() {
         this._disposed = true;
         if (this._flushTimer !== null) clearTimeout(this._flushTimer);
-        if (this._commitSafetyTimer !== null) clearTimeout(this._commitSafetyTimer);
         if (this._beforeUnloadHandler) window.removeEventListener('beforeunload', this._beforeUnloadHandler);
-        this._flushTimer = this._commitSafetyTimer = null;
+        this._flushTimer = null;
         this._beforeUnloadHandler = null;
     }
 
     private _stopForRemoval() {
         this._dispose();
-        this._commitInFlight = false;
+        this._pendingCommit = null;
         this._expectedDelta = new Delta({});
         this._stagedChanges = new Delta({});
         this._unstagedChanges = new Delta({});
@@ -332,7 +339,6 @@ export class OptimisticProjectSyncService {
 
             if (!repoSyncDelta) {
                 log.info('No repo sync changes needed');
-                this._onCommitSettled();
                 return;
             }
 
@@ -353,21 +359,5 @@ export class OptimisticProjectSyncService {
             alert('Critical error (check the console). Please reload the page');
         }
 
-        this._onCommitSettled();
-    }
-
-    private _onCommitSettled() {
-        this._commitInFlight = false;
-        if (this._commitSafetyTimer !== null) {
-            clearTimeout(this._commitSafetyTimer);
-            this._commitSafetyTimer = null;
-        }
-
-        // If there's more staged work, flush it now
-        if (!this._stagedChanges.isEmpty()) {
-            this._flushStaged();
-        } else if (this._unstagedChanges.isEmpty()) {
-            appActions.setSaveStatus(pamet.appViewState, 'saved');
-        }
     }
 }

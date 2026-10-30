@@ -110,8 +110,10 @@ async function initializeDesktopApp() {
     const configSync = new WebSocketSyncService({
         role: 'receiver',
         url: wsUrl,
+        onDisconnected: () => appActions.setBackendStorageConnected(appViewState, false),
     });
     await pamet.setupConfigStore(configSync);
+    appActions.setBackendStorageConnected(appViewState, true);
 
     // Generate device if none
     let deviceId = pamet.getDeviceId();

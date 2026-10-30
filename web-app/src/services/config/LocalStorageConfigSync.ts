@@ -1,3 +1,4 @@
+import { isServiceStateId } from '@/model/config/ServiceState';
 import { getLogger } from "sivkit/logging";
 import { Delta } from "sivkit/model/Delta";
 import { Change, ChangeType } from "sivkit/model/Change";
@@ -22,6 +23,7 @@ export class LocalStorageConfigSync extends StoreSyncServiceBase {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (!key || !key.startsWith(CONFIG_KEY_PREFIX)) continue;
+            if (isServiceStateId(key.slice(CONFIG_KEY_PREFIX.length))) continue;
 
             const raw = localStorage.getItem(key);
             if (!raw) continue;
@@ -44,6 +46,7 @@ export class LocalStorageConfigSync extends StoreSyncServiceBase {
             if (!event.key || !event.key.startsWith(CONFIG_KEY_PREFIX)) return;
 
             const entityId = event.key.slice(CONFIG_KEY_PREFIX.length);
+            if (isServiceStateId(entityId)) return;
 
             if (event.newValue === null) {
                 // Key was removed — delete entity from store if it exists
@@ -76,6 +79,7 @@ export class LocalStorageConfigSync extends StoreSyncServiceBase {
 
     async pushDelta(delta: Delta): Promise<void> {
         for (const change of delta.changes()) {
+            if (isServiceStateId(change.entityId)) continue;
             const type = change.type();
             if (type === ChangeType.DELETE) {
                 // Reconstruct entity from reverse component to get the id

@@ -1,34 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { observer } from 'mobx-react-lite';
+import { useEffect, useRef } from "react";
 import "@/views/dialogs/Dialog.css";
 import { AppViewState } from "@/views/AppViewState";
 import { PametTabIndex } from '@/app/constants';
 import { getLogger } from "sivkit/logging";
 
 const log = getLogger("StorageStatusDialog");
-
-interface BackupServiceStatus {
-  present: boolean;
-  backups_enabled: boolean;
-  backup_folder: string;
-}
-
-interface ProjectProblem {
-  kind: "unreadable_file" | "unlisted_folder" | "duplicate_id";
-  path: string;
-  reason: string;
-}
-
-const PROBLEM_LABELS: Record<ProjectProblem["kind"], string> = {
-  unreadable_file: "Unreadable file",
-  unlisted_folder: "Folder can't be listed",
-  duplicate_id: "Not loaded (duplicate id)",
-};
-
-interface DSSStatus {
-  errors: Record<string, Record<string, string>>;
-  backup_service: Record<string, BackupServiceStatus>;
-  problems: Record<string, ProjectProblem[]>;
-}
 
 interface StorageStatusDialogProps {
   state: AppViewState;
@@ -51,16 +28,13 @@ function desktopFetch(path: string, options?: RequestInit): Promise<Response> {
   });
 }
 
-export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps) {
+export const StorageStatusDialog = observer(function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const s = state.storageState.service;
-  const [dssStatus, setDssStatus] = useState<DSSStatus | null>(null);
-  const [dssError, setDssError] = useState<string | null>(null);
-
   const projectId = s.activeProjectId;
-  const backupStatus = projectId && dssStatus?.backup_service?.[projectId];
-  const problems = (projectId && dssStatus?.problems?.[projectId]) || [];
-  const isDesktop = !!window.PAMET_DESKTOP_API_BASE_URL;
+  const project = state.currentStorageProject;
+  const backupStatus = project?.backup;
+  const errors = state.storageErrors;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -68,20 +42,6 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
       dialog.showModal();
     }
   }, []);
-
-  useEffect(() => {
-    if (!isDesktop) return;
-    desktopFetch("/status")
-      .then(r => {
-        if (!r.ok) throw new Error(`Status fetch failed: ${r.status}`);
-        return r.json();
-      })
-      .then(data => setDssStatus(data))
-      .catch(e => {
-        log.error("Failed to fetch DSS status", e);
-        setDssError(e.message);
-      });
-  }, [isDesktop]);
 
   function openBackupsFolder() {
     if (!projectId) return;
@@ -136,36 +96,7 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
           </>
         )}
 
-        {isDesktop && dssStatus && (
-          <>
-            <h4 style={{ margin: 0, color: 'var(--color-text)' }}>Desktop Storage Service</h4>
-            <hr style={{ border: 'none', borderTop: '1px solid var(--color-light-border)', width: '100%', margin: '0' }} />
-            {(() => {
-              const errorItems = Object.entries(dssStatus.errors).flatMap(([service, errors]) =>
-                Object.entries(errors).map(([errType, msg]) => ({ key: `${service}-${errType}`, service, msg }))
-              );
-              return errorItems.length > 0 || problems.length > 0 ? (
-                <>
-                  {errorItems.map(({ key, service, msg }) => (
-                    <div key={key} className="dialog-error">
-                      <strong>{service}:</strong> {msg}
-                    </div>
-                  ))}
-                  {problems.map(p => (
-                    <div key={p.path} className="dialog-error">
-                      <strong>{PROBLEM_LABELS[p.kind] ?? p.kind}:</strong> {p.path} ({p.reason})
-                    </div>
-                  ))}
-                </>
-              ) : (
-                <div>No errors.</div>
-              );
-            })()}
-          </>
-        )}
-
-        <h4 style={{ margin: 0, color: 'var(--color-text)' }}>Frontend Storage Service</h4>
-        <hr style={{ border: 'none', borderTop: '1px solid var(--color-light-border)', width: '100%', margin: '0' }} />
+        {project && <div><strong>Backend project:</strong> {project.phase}</div>}
 
         {s.degraded && (
           <div style={{
@@ -190,19 +121,10 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
           <strong>Active Project:</strong> {s.activeProjectId ?? "none"}
         </div>
 
-        {s.lastError ? (
-          <div>
-            <strong>Last Error:</strong> {s.lastError.message}
-          </div>
-        ) : (
-          <div>No errors recorded.</div>
-        )}
+        {errors.length > 0 ? errors.map((message, index) => (
+          <div key={index} className="dialog-error">{message}</div>
+        )) : <div>No errors recorded.</div>}
 
-        {isDesktop && dssError && (
-          <div className="dialog-error">
-            Failed to fetch backend status: {dssError}
-          </div>
-        )}
         <button
           type="button"
           className="icon-button dialog-close"
@@ -214,4 +136,4 @@ export function StorageStatusDialog({ state, onClose }: StorageStatusDialogProps
       </div>
     </dialog>
   );
-}
+});

@@ -19,6 +19,7 @@ import pamet
 from pamet.model.card_note import CardNote
 from pamet.model.config import ProjectProperties, UserSettings
 from pamet.model.page import Page
+from pamet.model.service_state import ProjectStorageState
 from pamet.services import (
     config_file_manager as config,
     desktop_storage_service as storage,
@@ -77,6 +78,9 @@ def test_project_loading(dss, tmp_path, monkeypatch):
         monkeypatch.setattr(storage, "scan_project", scan)
         first = asyncio.create_task(dss.load_project("p", tmp_path))
         await gate.started.wait()
+        assert (
+            dss.config_store.find_one(id="project-storage-state-p").phase == "loading"
+        )
         second = asyncio.create_task(dss.load_project("p", tmp_path))
         first.cancel()
         with pytest.raises(asyncio.CancelledError):
@@ -85,7 +89,9 @@ def test_project_loading(dss, tmp_path, monkeypatch):
         await second
         assert len(scans) == 1
         assert dss.project_folder_manager("p").repo_root == tmp_path
+        assert dss.config_store.find_one(id="project-storage-state-p").phase == "open"
         await dss.unload_project("p")
+        assert dss.config_store.find_one(id="project-storage-state-p") is None
 
         # A failed initialization must leave the project usable after repair.
         properties = tmp_path / ".pamet" / "properties.json"
@@ -284,6 +290,11 @@ def test_save_validation_and_conflicts(dss, tmp_path):
             with pytest.raises(HTTPException) as error:
                 await save(Change.create(refused), Change.update(current, edited))
             assert error.value.status_code == status
+            assert error.value.detail["reported"] is True
+            failed_state = dss.config_store.find_one(
+                id=ProjectStorageState.id_for_project("p")
+            )
+            assert list(failed_state.filesystem["errors"]) == [refused.id]
             assert foreign.read_bytes() == b"not a Pamet page"
             assert store.find_one(id=refused.id) is not None
             assert (
@@ -297,6 +308,11 @@ def test_save_validation_and_conflicts(dss, tmp_path):
                 await save(Change.update(refused, retry))
             assert foreign.read_bytes() == b"not a Pamet page"
             await save(Change.delete(store.find_one(id=refused.id)))
+            assert (await routes.get_status())["projects"]["p"]["filesystem"][
+                "errors"
+            ] == {}
+            # Publication takes a snapshot, rather than sharing the mutable runtime dict.
+            assert list(failed_state.filesystem["errors"]) == [refused.id]
             assert foreign.exists()
             foreign.unlink()
 
@@ -359,6 +375,9 @@ def test_save_moves_swaps_and_partial_failures(dss, tmp_path, monkeypatch):
                     )
                 assert error.value.status_code == 500
             assert store.find_one(id=first.id).path == renamed.path
+            assert list(
+                (await routes.get_status())["projects"]["p"]["filesystem"]["errors"]
+            ) == [first.id]
             assert (
                 read_canvas_file(tmp_path / edited.path, tmp_path)[second.id].modified
                 == edited.modified
@@ -369,6 +388,9 @@ def test_save_moves_swaps_and_partial_failures(dss, tmp_path, monkeypatch):
             retry = renamed.copy()
             retry.modified = f"retry-{after_publish}"
             await save(Change.update(renamed, retry))
+            assert (await routes.get_status())["projects"]["p"]["filesystem"][
+                "errors"
+            ] == {}
             assert (
                 read_canvas_file(tmp_path / retry.path, tmp_path)[first.id].modified
                 == retry.modified
@@ -405,7 +427,10 @@ def test_loading_with_problems(dss, tmp_path, monkeypatch):
         assert {e.id for e in pfm.store.find()} == {page.id, note["id"]}
         assert pfm.store.find_one(id=note["id"]).text == "newer"
         status = await routes.get_status()
-        problems = {p["path"]: p["kind"] for p in status["problems"]["p"]}
+        problems = {
+            p["path"]: p["kind"]
+            for p in status["projects"]["p"]["filesystem"]["problems"].values()
+        }
         assert problems == {
             "page.canvas.html": "duplicate_id",
             "other.canvas.html": "duplicate_id",
@@ -509,6 +534,68 @@ def test_project_teardown(dss, tmp_path, monkeypatch, backup_fails):
         assert list(pfm.store.find()) == []
         if not backup_fails:
             assert len(backup.recent_backups_for_page("page")) == 1
+        await dss.close()
+
+    run(check())
+
+
+def test_backend_state_is_read_only_and_not_persisted(dss, tmp_path):
+    async def check():
+        await dss.load_project("p", tmp_path)
+        try:
+            dss.set_history_error("p", "hash mismatch")
+            state = dss.config_store.find_one(id="project-storage-state-p")
+            assert state.history_error == "hash mismatch"
+            forged = state.copy()
+            forged.history_error = None
+            with pytest.raises(ValueError, match="read-only"):
+                dss.config_store.apply_delta(
+                    Delta.from_changes([Change.update(state, forged)]), origin="remote"
+                )
+            assert (
+                dss.config_store.find_one(id=state.id).history_error == "hash mismatch"
+            )
+            await dss._config_file_manager.flush()
+            # Only actual configuration is persisted; no service state files.
+            assert sorted(
+                path.name for path in (tmp_path / ".pamet").glob("*.json")
+            ) == ["properties.json"]
+        finally:
+            await dss.close()
+
+    run(check())
+
+
+def test_config_error_state_clears_only_the_recovered_entity(
+    dss, tmp_path, monkeypatch
+):
+    async def check():
+        await dss.load_project("p", tmp_path)
+        manager = dss._config_file_manager
+        await manager.flush()
+        write = config.write_config_file
+
+        def fail(*_):
+            raise OSError("disk refused")
+
+        monkeypatch.setattr(config, "write_config_file", fail)
+        props = dss.config_store.find_one(id="project-props-p")
+        props.title = "unsaved"
+        dss.config_store.update_one(props)
+        await manager.flush()
+        state = dss.config_store.find_one(id="desktop-storage-state")
+        assert "disk refused" in state.config_errors["project-props-p"]
+        monkeypatch.setattr(config, "write_config_file", write)
+        await dss.load_project("other", tmp_path / "other")
+        await manager.flush()
+        assert (
+            "project-props-p"
+            in dss.config_store.find_one(id="desktop-storage-state").config_errors
+        )
+        props.title = "recovered"
+        dss.config_store.update_one(props)
+        await manager.flush()
+        assert dss.config_store.find_one(id="desktop-storage-state").config_errors == {}
         await dss.close()
 
     run(check())

@@ -1,4 +1,5 @@
-import { makeObservable, observable } from "mobx";
+import type { DesktopStorageStateData, ProjectStorageStateData } from '@/model/config/ServiceState';
+import { computed, makeObservable, observable } from "mobx";
 import { PageViewState } from "@/views/page/PageViewState";
 import { PametProjectData, ProjectReference } from "@/model/Project";
 import { Point2D } from "sivkit/primitives/Point2D";
@@ -41,6 +42,10 @@ export type SaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
 export interface PametStorageState {
   service: StorageProxyState;
   saveStatus: SaveStatus;
+  saveError: string | null;
+  backend: DesktopStorageStateData | null;
+  backendConnected: boolean | null;
+  projects: Record<string, ProjectStorageStateData>;
 }
 
 
@@ -63,7 +68,36 @@ export class AppViewState {
   storageState: PametStorageState = {
     service: createInitialStorageProxyState(),
     saveStatus: 'saved',
+    saveError: null,
+    backend: null,
+    backendConnected: null,
+    projects: {},
   };
+
+  get currentStorageProject(): ProjectStorageStateData | null {
+    const id = this.storageState.service.activeProjectId;
+    return id ? this.storageState.projects[id] ?? null : null;
+  }
+
+  get saveStatus(): SaveStatus {
+    const fs = this.currentStorageProject?.filesystem;
+    if (this.storageState.backendConnected === false || this.storageState.saveError || Object.keys(fs?.errors ?? {}).length) return 'error';
+    if (fs?.saving) return 'saving';
+    return this.storageState.saveStatus;
+  }
+
+  get storageErrors(): string[] {
+    const project = this.currentStorageProject;
+    return [
+      ...(this.storageState.backendConnected === false ? ['Backend state connection lost; reload to reconnect.'] : []),
+      ...this.storageState.service.errors.map(error => error.message),
+      ...Object.values(this.storageState.backend?.config_errors ?? {}),
+      ...Object.values(project?.filesystem?.errors ?? {}).map(error => `${error.path}: ${error.message}`),
+      ...Object.values(project?.filesystem?.problems ?? {}).map(problem => `${problem.path}: ${problem.reason}`),
+      ...[project?.backup?.error, project?.history_error, this.storageState.saveError]
+        .filter((message): message is string => !!message),
+    ];
+  }
 
   dialogMode: AppDialogMode = AppDialogMode.Closed;
   focusPointOnDialogOpen: Point2D = new Point2D([0, 0]); // Either the mouse location or the center of the screen
@@ -109,6 +143,9 @@ export class AppViewState {
       recentProjects: observable,
       currentPageViewState: observable,
       storageState: observable,
+      currentStorageProject: computed,
+      saveStatus: computed,
+      storageErrors: computed,
       pageError: observable,
       projectError: observable,
       startupErrors: observable,

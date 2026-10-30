@@ -12,7 +12,6 @@ import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
-from typing import TypedDict
 
 from sivkit.libs.model import load_from_dict
 from sivkit.storage.delta import Delta
@@ -27,32 +26,12 @@ from pamet.desktop_app.config import (
     write_config_file,
 )
 from pamet.model.config import ProjectProperties
+from pamet.model.service_state import is_service_state_id
 
 log = logging.getLogger(__name__)
 
 DEVICE_STATE_PATH = PAMET_CONFIG_DIR / "device-state.json"
 USER_SETTINGS_PATH = USER_SETTINGS_DIR / "settings.json"
-
-
-class ServiceErrors(TypedDict, total=False):
-    """Error state for a single service. Keys are error type, values are messages."""
-
-    io: str  # e.g. "Permission denied: /path/to/file"
-
-
-class BackupServiceStatus(TypedDict):
-    """Per-project backup service status."""
-
-    present: bool
-    backups_enabled: bool
-    backup_folder: str  # Absolute path to the backups/ directory
-
-
-class DSSStatus(TypedDict):
-    """Status object for DesktopStorageService, exposed via /status endpoint."""
-
-    errors: dict[str, ServiceErrors]  # service_name → {error_type → message}
-    backup_service: dict[str, BackupServiceStatus]  # project_id → status
 
 
 class ConfigFileManager:
@@ -68,11 +47,12 @@ class ConfigFileManager:
         self,
         store: InMemoryStore,
         resolve_project_path: Callable[[str], Path | None] | None = None,
-        status_errors: ServiceErrors | None = None,
+        on_state_changed: Callable[[], None] | None = None,
     ) -> None:
         self._store = store
         self._resolve_project_path = resolve_project_path
-        self._status_errors = status_errors if status_errors is not None else {}
+        self.errors: dict[str, str] = {}
+        self._on_state_changed = on_state_changed
         self._lock = asyncio.Lock()
         self._pending: dict[asyncio.Task[None], str] = {}
         self._closed = False
@@ -83,13 +63,13 @@ class ConfigFileManager:
         Resolve paths and serialize on the loop. File operations run in submission
         order in a worker. I/O errors go to status; the store keeps the change.
         """
-        if self._closed:
-            raise RuntimeError("Config file manager is closed")
         for change in delta.changes():
             entity_id = change.entity_id
             path = self._resolve_path(entity_id)
             if path is None:
                 continue
+            if self._closed:
+                raise RuntimeError("Config file manager is closed")
             if change.is_delete():
                 data = None
             else:
@@ -107,11 +87,14 @@ class ConfigFileManager:
         async with self._lock:
             try:
                 await asyncio.to_thread(write_config_file, path, data)
-                self._status_errors.pop("io", None)
+                self.errors.pop(entity_id, None)
             except (OSError, Conflict) as exc:
                 msg = f"Failed to write {entity_id}: {exc}"
                 log.error("ConfigFileManager: %s", msg)
-                self._status_errors["io"] = msg
+                self.errors[entity_id] = msg
+            finally:
+                if self._on_state_changed is not None:
+                    self._on_state_changed()
 
     def _write_finished(self, task: asyncio.Task[None]) -> None:
         self._pending.pop(task)
@@ -177,6 +160,8 @@ class ConfigFileManager:
             store.insert_one(entity)
 
     def _resolve_path(self, entity_id: str) -> Path | None:
+        if is_service_state_id(entity_id):
+            return None
         if entity_id == "user-settings":
             return USER_SETTINGS_PATH
         elif entity_id == "device-state":

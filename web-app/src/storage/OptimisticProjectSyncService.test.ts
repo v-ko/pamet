@@ -1,23 +1,47 @@
+import { AppViewState } from '@/views/AppViewState';
 import { Delta } from 'sivkit/model/Delta';
 import { Change } from 'sivkit/model/Change';
 import { InMemoryStore } from 'sivkit/storage/domain-store/InMemoryStore';
-import type { StorageServiceProxy } from 'sivkit/storage/management/StorageServiceProxy';
-import { DummyPage } from 'sivkit/storage/test-utils';
+import { StorageServiceProxy } from 'sivkit/storage/management/StorageServiceProxy';
+import { Page } from '@/model/Page';
 import { OptimisticProjectSyncService } from './OptimisticProjectSyncService';
 import { pamet } from '@/app/facade';
 import { appActions } from '@/actions/app';
 
 jest.mock('@/app/facade', () => ({
-    pamet: { appViewState: {}, trackedProjects: jest.fn() },
+    pamet: { appViewState: {}, trackedProjects: jest.fn(), projectStorageState: jest.fn() },
 }));
 jest.mock('@/actions/app', () => ({
-    appActions: { setSaveStatus: jest.fn() },
+    appActions: {
+        setSaveStatus: jest.fn((state, status) => { state.storageState.saveStatus = status; }),
+        setSaveError: jest.fn((state, message) => { state.storageState.saveError = message; }),
+    },
 }));
 
 // jsdom lacks structuredClone; delta data is plain JSON.
 globalThis.structuredClone ??= value => JSON.parse(JSON.stringify(value));
 
-test('only lifecycle-rejected saves for removed projects stop retries and unload warnings', async () => {
+const pageEntity = (id: string) => new Page({
+    id, parent_id: '', path: `${id}.canvas.html`, created: '', modified: '',
+});
+
+beforeEach(() => {
+    Object.assign(pamet, { appViewState: new AppViewState({ userId: 'test' }) });
+    (pamet.projectStorageState as jest.Mock).mockReturnValue(null);
+    jest.clearAllMocks();
+});
+
+const proxies: StorageServiceProxy[] = [];
+function storageProxy(methods: object): StorageServiceProxy {
+    const proxy = Object.assign(new StorageServiceProxy(), methods);
+    proxies.push(proxy);
+    return proxy;
+}
+afterEach(() => {
+    for (const proxy of proxies.splice(0)) proxy.disconnect();
+});
+
+test('save failures do not retry and retain unload warnings unless the project was removed', async () => {
     jest.useFakeTimers();
     try {
         for (const scenario of [
@@ -30,10 +54,10 @@ test('only lifecycle-rejected saves for removed projects stop retries and unload
             const error = Object.assign(new Error('save failed'), { name: scenario.name });
             const commit = jest.fn().mockRejectedValue(error);
             const service = new OptimisticProjectSyncService(
-                new InMemoryStore(), { commit } as unknown as StorageServiceProxy, 'p1', 'main',
+                new InMemoryStore(), storageProxy({ commit }), 'p1', 'main',
             );
             const delta = Delta.fromChanges([
-                Change.create(new DummyPage({ id: 'page', parent_id: '', name: 'Page' })),
+                Change.create(pageEntity('page')),
             ]);
             try {
                 service.trackDelta(delta);
@@ -46,20 +70,18 @@ test('only lifecycle-rejected saves for removed projects stop retries and unload
 
                 if (scenario.discard) {
                     expect(appActions.setSaveStatus).not.toHaveBeenCalledWith(pamet.appViewState, 'error');
-                    expect(jest.getTimerCount()).toBe(0);
                     service.trackDelta(delta);
                     expect(service.saveUncommittedChanges('late edit')).toBe(false);
                     await jest.advanceTimersByTimeAsync(10000);
                     expect(commit).toHaveBeenCalledTimes(1);
                 } else {
                     expect(appActions.setSaveStatus).toHaveBeenCalledWith(pamet.appViewState, 'error');
-                    await jest.advanceTimersByTimeAsync(100);
-                    expect(commit).toHaveBeenCalledTimes(2);
+                    await jest.advanceTimersByTimeAsync(20000);
+                    expect(commit).toHaveBeenCalledTimes(1);
+                    expect(await service.flushAndDispose()).toBe('failed');
                 }
             } finally {
-                // General detach disposal belongs to the prepare-to-close work.
-                const handler = service['_beforeUnloadHandler'];
-                if (handler) window.removeEventListener('beforeunload', handler);
+                await service.flushAndDispose();
                 jest.clearAllTimers();
             }
         }
@@ -71,7 +93,7 @@ test('only lifecycle-rejected saves for removed projects stop retries and unload
 test('closing delivers the pending save, or gives up and disposes', async () => {
     jest.useFakeTimers();
     const page = (id: string) => Delta.fromChanges([
-        Change.create(new DummyPage({ id, parent_id: '', name: id })),
+        Change.create(pageEntity(id)),
     ]);
     const saved = (delta: Delta) => ({ commit: { delta_data: delta.data } });
     const logError = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -90,7 +112,7 @@ test('closing delivers the pending save, or gives up and disposes', async () => 
                 .mockImplementationOnce(() => new Promise(resolve => { finishFirst = resolve; }))
                 .mockImplementationOnce(secondResult);
             const service = new OptimisticProjectSyncService(
-                new InMemoryStore(), { commit } as unknown as StorageServiceProxy, 'p1', 'main',
+                new InMemoryStore(), storageProxy({ commit }), 'p1', 'main',
             );
 
             // A save is in flight and a newer edit is not staged yet.
@@ -116,7 +138,6 @@ test('closing delivers the pending save, or gives up and disposes', async () => 
             );
 
             // Disposed either way: no retry and no unload warning.
-            expect(jest.getTimerCount()).toBe(0);
             const beforeUnload = new Event('beforeunload', { cancelable: true });
             window.dispatchEvent(beforeUnload);
             expect(beforeUnload.defaultPrevented).toBe(false);
@@ -135,18 +156,18 @@ test('serializes commits and preserves newer local edits during reconciliation',
     const commit = jest.fn()
         .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }))
         .mockImplementationOnce(() => new Promise(resolve => { resolveSecond = resolve; }));
-    const storage = {
+    const storage = storageProxy({
         commit,
         getCommitGraph: jest.fn().mockResolvedValue(emptyGraph),
         getCommits: jest.fn().mockResolvedValue([]),
-    } as unknown as StorageServiceProxy;
+    });
     const store = new InMemoryStore();
     const service = new OptimisticProjectSyncService(store, storage, 'p1', 'main');
     const firstDelta = Delta.fromChanges([
-        Change.create(new DummyPage({ id: 'first', parent_id: '', name: 'First' })),
+        Change.create(pageEntity('first')),
     ]);
     const secondDelta = Delta.fromChanges([
-        Change.create(new DummyPage({ id: 'second', parent_id: '', name: 'Second' })),
+        Change.create(pageEntity('second')),
     ]);
 
     try {
@@ -174,10 +195,16 @@ test('serializes commits and preserves newer local edits during reconciliation',
             },
             upsertedCommits: [firstCommit],
         });
-        expect(commit).toHaveBeenCalledTimes(2);
-        expect(commit.mock.calls[1][2]).toBe('second edit');
+        expect(commit).toHaveBeenCalledTimes(1);
+        expect(appActions.setSaveStatus).not.toHaveBeenLastCalledWith(pamet.appViewState, 'saved');
+        await jest.advanceTimersByTimeAsync(10000);
+        expect(commit).toHaveBeenCalledTimes(1);
+        expect(appActions.setSaveStatus).toHaveBeenLastCalledWith(pamet.appViewState, 'saving');
 
         resolveFirst({ commit: firstCommit });
+        await jest.advanceTimersByTimeAsync(0);
+        expect(commit).toHaveBeenCalledTimes(2);
+        expect(commit.mock.calls[1][2]).toBe('second edit');
         resolveSecond({ commit: {
             id: 'c2', parent_id: 'c1', message: 'second edit', timestamp: 2,
             snapshot_hash: 'h2', delta_data: secondDelta.data,
@@ -195,14 +222,13 @@ test('serializes commits and preserves newer local edits during reconciliation',
                 snapshot_hash: 'h2', delta_data: secondDelta.data,
             }],
         });
-        await Promise.resolve();
+        await jest.advanceTimersByTimeAsync(0);
 
         expect(store.findOne({ id: 'first' })).toBeDefined();
         expect(store.findOne({ id: 'second' })).toBeDefined();
         expect(appActions.setSaveStatus).toHaveBeenLastCalledWith(pamet.appViewState, 'saved');
     } finally {
-        const handler = service['_beforeUnloadHandler'];
-        if (handler) window.removeEventListener('beforeunload', handler);
+        await service.flushAndDispose();
         jest.clearAllTimers();
         jest.useRealTimers();
     }

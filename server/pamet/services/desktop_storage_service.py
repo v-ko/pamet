@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 from collections.abc import Callable, Coroutine
-from dataclasses import asdict, dataclass, field
+from copy import deepcopy
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, TypeVar
 
@@ -13,7 +14,12 @@ from sivkit.storage.websocket_sync_service import WebSocketSyncService
 
 from pamet.model.config import ProjectProperties
 from pamet.model.page import Page
-from pamet.services.config_file_manager import ConfigFileManager, DSSStatus
+from pamet.model.service_state import (
+    DesktopStorageState,
+    ProjectStorageState,
+    is_service_state_id,
+)
+from pamet.services.config_file_manager import ConfigFileManager
 from pamet.services.full_change_history_service import FullChangeHistoryService
 from pamet.services.project_sync.project_folder_manager import (
     ProjectFolderManager,
@@ -40,6 +46,8 @@ class _Project:
     unload_task: asyncio.Task | None = None
     pfm: ProjectFolderManager | None = None
     history: FullChangeHistoryService | None = None
+    backup_error: str | None = None
+    history_error: str | None = None
     close_callbacks: set[Callable[[], None]] = field(default_factory=set)
     pending_operations: set[asyncio.Task] = field(default_factory=set)
 
@@ -57,16 +65,12 @@ class DesktopStorageService:
         self._close_callbacks: set[Callable[[], None]] = set()
         self._close_task: asyncio.Task | None = None
 
-        # Status object — services write errors here, exposed via /status
-        self.status: DSSStatus = {"errors": {}, "backup_service": {}}
-        self.status["errors"]["config_file_manager"] = {}
-
-        # Config store: holds UserSettings, DeviceState, ProjectProperties
+        # Config and transient backend state share the existing WebSocket store.
         self._config_store = InMemoryStore()
         self._config_file_manager = ConfigFileManager(
             store=self._config_store,
             resolve_project_path=self._resolve_project_path,
-            status_errors=self.status["errors"]["config_file_manager"],
+            on_state_changed=self._publish_app_state,
         )
         self._config_sync_service = WebSocketSyncService(
             self._config_store, role="authority"
@@ -77,6 +81,7 @@ class DesktopStorageService:
 
         # Wire persistence after hydration; reads must not enqueue writes.
         self._config_store.add_on_changes_callback(self._on_config_changes)
+        self._publish_app_state()
 
     def _require_open_project(self, project_id: str) -> _Project:
         project = self._projects.get(project_id)
@@ -91,12 +96,63 @@ class DesktopStorageService:
         assert history is not None
         return history
 
-    def project_problems(self) -> dict[str, list[dict]]:
-        """Problems of each open project, as listed in ``/status``."""
+    def _publish_app_state(self) -> None:
+        self._publish_state(
+            DesktopStorageState(
+                closing=self.closing,
+                config_errors=dict(self._config_file_manager.errors),
+            )
+        )
+
+    def _publish_state(self, state) -> None:
+        existing = self._config_store.find_one(id=state.id)
+        if existing is None:
+            self._config_store.insert_one(state)
+        elif existing.asdict() != state.asdict():
+            self._config_store.update_one(state)
+
+    def _publish_project_state(self, project_id: str) -> None:
+        project = self._projects[project_id]
+        pfm = project.pfm
+        self._publish_state(
+            ProjectStorageState(
+                id=ProjectStorageState.id_for_project(project_id),
+                project_id=project_id,
+                phase=project.state,
+                # Store a snapshot: later runtime mutations must produce a new delta.
+                filesystem=deepcopy(pfm.state) if pfm else None,
+                backup=(
+                    {
+                        "backups_enabled": pfm.backup_service.backups_enabled,
+                        "backup_folder": str(pfm.backup_service.backup_folder),
+                        "error": project.backup_error,
+                    }
+                    if pfm
+                    else None
+                ),
+                history_error=project.history_error,
+            )
+        )
+
+    def set_history_error(self, project_id: str, message: str | None) -> None:
+        project = self._projects.get(project_id)
+        if project is not None:
+            project.history_error = message
+            self._publish_project_state(project_id)
+
+    @property
+    def status(self) -> dict:
+        """Diagnostic HTTP snapshot of the same entities sent over config sync."""
+        from sivkit.libs.model import dump_to_dict
+
         return {
-            project_id: [asdict(problem) for problem in project.pfm.problems.values()]
-            for project_id, project in self._projects.items()
-            if project.state == "open" and project.pfm is not None
+            "service": dump_to_dict(
+                self._config_store.find_one(id="desktop-storage-state")
+            ),
+            "projects": {
+                state.project_id: dump_to_dict(state)
+                for state in self._config_store.find(type=ProjectStorageState)
+            },
         }
 
     def register_close_callback(
@@ -129,6 +185,7 @@ class DesktopStorageService:
     def begin_closing(self) -> None:
         """Close admission and streams before uvicorn waits for requests."""
         self.closing = True
+        self._publish_app_state()
         self._run_close_callbacks(self._close_callbacks)
         for project in self._projects.values():
             self._end_project_streams(project)
@@ -153,12 +210,13 @@ class DesktopStorageService:
 
     def _on_config_changes(self, delta: Delta, origin: str | None = None) -> None:
         """Chained config store callback: persist to disk + react to settings."""
-        if origin == "remote":
-            entity_ids = [c.entity_id for c in delta.changes()]
-            log.warning(
-                "_on_config_changes: REMOTE delta from client! entities=%s",
-                entity_ids,
-            )
+        if origin == "remote" and any(
+            is_service_state_id(change.entity_id)
+            or change.forward_component.get("type_name")
+            in {"DesktopStorageState", "ProjectStorageState"}
+            for change in delta.changes()
+        ):
+            raise ValueError("Backend service state is read-only")
         self._config_file_manager.on_changes(delta, origin)
         self._apply_backup_settings_from_delta(delta)
 
@@ -178,18 +236,11 @@ class DesktopStorageService:
             if entity is not None and isinstance(entity, ProjectProperties):
                 try:
                     pfm.backup_service.backups_enabled = entity.backups_enabled
-                    # Update status
-                    if project_id in self.status["backup_service"]:
-                        self.status["backup_service"][project_id][
-                            "backups_enabled"
-                        ] = entity.backups_enabled
+                    project.backup_error = None
                 except Exception as exc:
-                    msg = (
-                        f"Backup service toggle failed for project {project_id}: {exc}"
-                    )
-                    log.error(msg)
-                    self.status["errors"].setdefault("backup_service", {})
-                    self.status["errors"]["backup_service"][project_id] = msg
+                    project.backup_error = f"Backup service toggle failed: {exc}"
+                    log.error(project.backup_error)
+                self._publish_project_state(project_id)
 
     async def load_project(self, project_id: str, repo_root: Path) -> None:
         """Scan the project in a worker, then build it on the loop.
@@ -211,6 +262,7 @@ class DesktopStorageService:
         else:
             project = _Project(repo_root)
             self._projects[project_id] = project
+            self._publish_project_state(project_id)
             project.load_task = asyncio.create_task(
                 self._load_project(project_id, project)
             )
@@ -227,16 +279,23 @@ class DesktopStorageService:
             snapshot = await asyncio.to_thread(scan_project, project_id, project.root)
             if project.state == "closing" or self.closing:
                 return
-            project.pfm = ProjectFolderManager(project_id, project.root, snapshot)
+            project.pfm = ProjectFolderManager(
+                project_id,
+                project.root,
+                snapshot,
+                on_state_changed=lambda: self._publish_project_state(project_id),
+            )
             project.history = FullChangeHistoryService(
                 project.root / ".pamet" / "change-history.db"
             )
             self._load_project_config(project_id, project.pfm)
             project.state = "open"
+            self._publish_project_state(project_id)
             log.info("Loaded project %s from %s", project_id, project.root)
         except Exception:
             log.exception("Failed to load project %s", project_id)
             project.state = "closing"
+            self._publish_project_state(project_id)
             await self._release_project(project_id, project)
             if project.unload_task is None:
                 self._projects.pop(project_id, None)
@@ -272,13 +331,7 @@ class DesktopStorageService:
         except Exception as exc:
             msg = f"Backup service failed to start for project {project_id}: {exc}"
             log.error(msg)
-            self.status["errors"].setdefault("backup_service", {})[project_id] = msg
-
-        self.status["backup_service"][project_id] = {
-            "present": True,
-            "backups_enabled": backup.backups_enabled,
-            "backup_folder": str(backup.backup_folder),
-        }
+            self._projects[project_id].backup_error = msg
 
     async def unload_project(self, project_id: str) -> None:
         project = self._projects.get(project_id)
@@ -286,6 +339,7 @@ class DesktopStorageService:
             return
         if project.unload_task is None:
             project.state = "closing"
+            self._publish_project_state(project_id)
             self._end_project_streams(project)
             project.unload_task = asyncio.create_task(
                 self._unload_project(project_id, project)
@@ -328,7 +382,11 @@ class DesktopStorageService:
                 log.exception("Failed to close project %s", project_id)
         project.pfm = None
         project.history = None
-        self.status["backup_service"].pop(project_id, None)
+        state = self._config_store.find_one(
+            id=ProjectStorageState.id_for_project(project_id)
+        )
+        if state is not None:
+            self._config_store.remove_one(state)
 
     async def close(self) -> None:
         self.begin_closing()
@@ -344,8 +402,8 @@ class DesktopStorageService:
                 await self.unload_project(project_id)
             except Exception:
                 log.exception("Failed to unload project %s", project_id)
-        self._config_store.remove_on_changes_callback(self._on_config_changes)
         await self._config_file_manager.close()
+        self._config_store.remove_on_changes_callback(self._on_config_changes)
 
     def project_folder_manager(self, project_id: str) -> ProjectFolderManager:
         pfm = self._require_open_project(project_id).pfm
