@@ -294,8 +294,8 @@ export class PametFacade extends PametStore {
         return this._storageStatusIconSet;
     }
 
-    getStorageStatusIconUrl(connectionPhase: StorageConnectionPhase, degraded: boolean = false, saveStatus: SaveStatus = 'saved'): string {
-        if (connectionPhase === 'fatal' || connectionPhase === 'disconnected' || degraded) {
+    getStorageStatusIconUrl(connectionPhase: StorageConnectionPhase, saveStatus: SaveStatus = 'saved'): string {
+        if (connectionPhase === 'fatal' || connectionPhase === 'disconnected') {
             return this._storageStatusIconSet.failedIconUrl;
         }
         if (connectionPhase === 'uninitialized' || connectionPhase === 'connecting') {

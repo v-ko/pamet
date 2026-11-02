@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import threading
 import time
 from collections.abc import Callable
 from datetime import datetime
@@ -41,6 +42,14 @@ class ParentMismatchError(Exception):
 
 
 class HistoryClosedError(RuntimeError):
+    pass
+
+
+class HistoryCheckInProgressError(RuntimeError):
+    pass
+
+
+class HistoryVerificationError(ValueError):
     pass
 
 
@@ -77,6 +86,10 @@ class FullChangeHistoryService:
         self._adapter: SqliteVcsAdapter | None = None
         self._head_commit_id = ""
         self._integrity_task: asyncio.Task | None = None
+        self._verification_task: asyncio.Task | None = None
+        self._verification_snapshot_hash: str | None = None
+        self._verification_cancel: threading.Event | None = None
+        self._integrity_cancel: threading.Event | None = None
 
     def _start_worker_task(
         self, method: Callable[P, T], *args: P.args, **kwargs: P.kwargs
@@ -106,9 +119,28 @@ class FullChangeHistoryService:
     async def verify_and_reconcile(
         self, entities: list[dict[str, Any]], snapshot_hash: str
     ) -> dict[str, Any]:
-        return await asyncio.shield(
-            self._start_worker_task(self._verify_and_reconcile, entities, snapshot_hash)
-        )
+        if self._verification_task is not None and not self._verification_task.done():
+            if snapshot_hash != self._verification_snapshot_hash:
+                raise HistoryCheckInProgressError(
+                    "A check for a different project snapshot is already running"
+                )
+            task = self._verification_task
+        else:
+            cancel = threading.Event()
+            task = self._start_worker_task(
+                self._verify_and_reconcile, entities, snapshot_hash, cancel
+            )
+            self._verification_task = task
+            self._verification_snapshot_hash = snapshot_hash
+            self._verification_cancel = cancel
+            task.add_done_callback(self._verification_done)
+        return await asyncio.shield(task)
+
+    def _verification_done(self, task: asyncio.Task) -> None:
+        if self._verification_task is task:
+            self._verification_task = None
+            self._verification_snapshot_hash = None
+            self._verification_cancel = None
 
     async def commit_graph(self) -> CommitGraph:
         return await asyncio.shield(self._start_worker_task(self._commit_graph))
@@ -131,15 +163,26 @@ class FullChangeHistoryService:
             raise IntegrityRunningError("An integrity operation is already running")
         # Admission is synchronous so the route can reject a second run before
         # returning its StreamingResponse. The returned future is cancellation-safe.
+        cancel = threading.Event() if not fix else None
         self._integrity_task = self._start_worker_task(
-            self._run_integrity, fix, on_progress
+            self._run_integrity, fix, on_progress, cancel
         )
+        self._integrity_cancel = cancel
+        self._integrity_task.add_done_callback(self._integrity_done)
         return asyncio.shield(self._integrity_task)
+
+    def _integrity_done(self, task: asyncio.Task) -> None:
+        if self._integrity_task is task:
+            self._integrity_cancel = None
 
     async def close(self) -> None:
         """Refuse new work, drain admitted jobs and close SQLite. Safe to repeat."""
         if self._close_task is None:
             self._closing = True
+            if self._verification_cancel is not None:
+                self._verification_cancel.set()
+            if self._integrity_cancel is not None:
+                self._integrity_cancel.set()
             self._close_task = asyncio.create_task(self._drain_and_close())
             self._close_task.add_done_callback(self._task_done)
         await asyncio.shield(self._close_task)
@@ -201,17 +244,26 @@ class FullChangeHistoryService:
         return self._head_commit_id
 
     def _verify_stored_hashes(
-        self, adapter: SqliteVcsAdapter | None
+        self,
+        adapter: SqliteVcsAdapter | None,
+        cancel: threading.Event | None = None,
     ) -> tuple[int, str]:
         """Verify history hashes, or return the empty-store hash when adapter is None."""
         mismatch_count = 0
         computed_head_hash = None
         if adapter is not None:
-            for progress in verify_or_fix_hashes(adapter, BRANCH, fix=False):
-                if progress.status == "mismatch_reported":
-                    mismatch_count += 1
-                if progress.computed_hash is not None:
-                    computed_head_hash = progress.computed_hash
+            try:
+                for progress in verify_or_fix_hashes(adapter, BRANCH, fix=False):
+                    if cancel is not None and cancel.is_set():
+                        raise HistoryClosedError("Change history is closing")
+                    if progress.status == "mismatch_reported":
+                        mismatch_count += 1
+                    if progress.computed_hash is not None:
+                        computed_head_hash = progress.computed_hash
+            except HistoryClosedError:
+                raise
+            except Exception as exc:
+                raise HistoryVerificationError(f"History replay failed: {exc}") from exc
         if computed_head_hash is None:
             computed_head_hash = build_hash_tree(InMemoryStore()).root_hash()
         return mismatch_count, computed_head_hash
@@ -251,17 +303,24 @@ class FullChangeHistoryService:
         )
 
     def _verify_and_reconcile(
-        self, entities: list[dict[str, Any]], snapshot_hash: str
+        self,
+        entities: list[dict[str, Any]],
+        snapshot_hash: str,
+        cancel: threading.Event,
     ) -> dict:
         """Verify stored hashes and automatically append a History patch if needed."""
+        if cancel.is_set():
+            raise HistoryClosedError("Change history is closing")
         adapter = self._load_existing_history()
         graph = adapter.get_commit_graph() if adapter is not None else None
         history = (
             adapter if graph is not None and graph.branch(BRANCH) is not None else None
         )
-        mismatch_count, computed_head_hash = self._verify_stored_hashes(history)
+        mismatch_count, computed_head_hash = self._verify_stored_hashes(history, cancel)
         hashes_disagree = False
         if computed_head_hash != snapshot_hash:
+            if cancel.is_set():
+                raise HistoryClosedError("Change history is closing")
             commit_ids = (
                 [commit.id for commit in graph.branch_commits(BRANCH)]
                 if graph is not None and history is not None
@@ -273,10 +332,14 @@ class FullChangeHistoryService:
             if reconciliation_delta.is_empty():
                 hashes_disagree = True
             else:
-                adapter = self._ensure_history_created()
                 patch = self._build_reconciliation_commit(
                     reconciliation_delta, entities
                 )
+                if cancel.is_set():
+                    raise HistoryClosedError("Change history is closing")
+                # From here through append is one accepted history write; let
+                # it finish if shutdown starts while SQLite is being updated.
+                adapter = self._ensure_history_created()
                 self._append_commits(adapter, [patch])
                 hashes_disagree = patch.snapshot_hash != snapshot_hash
                 log.info("Patched change history with %s", patch.id)
@@ -315,7 +378,12 @@ class FullChangeHistoryService:
             [commit.id for commit in selected]
         ), start + count < len(commits)
 
-    def _run_integrity(self, fix: bool, on_progress: Callable[[dict], None]) -> dict:
+    def _run_integrity(
+        self,
+        fix: bool,
+        on_progress: Callable[[dict], None],
+        cancel: threading.Event | None = None,
+    ) -> dict:
         """Check (or repair) every hash, write a log file, return a summary."""
         adapter = self._load_existing_history()
         mismatch_status = "mismatch_fixed" if fix else "mismatch_reported"
@@ -328,6 +396,8 @@ class FullChangeHistoryService:
             else []
         )
         for progress in progress_events:
+            if not fix and cancel is not None and cancel.is_set():
+                raise HistoryClosedError("Change history is closing")
             total_commits = progress.total_commits
             if progress.status == mismatch_status:
                 mismatch_commits.append(
@@ -365,6 +435,8 @@ class FullChangeHistoryService:
         summary = {"total": total_commits, count_field: len(mismatch_commits)}
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         log_path = self.diagnostics_dir / f"integrity-{operation}-{timestamp}.json"
+        if not fix and cancel is not None and cancel.is_set():
+            raise HistoryClosedError("Change history is closing")
         log_path.write_text(
             json.dumps(
                 {**summary, "mismatch_commits": mismatch_commits},

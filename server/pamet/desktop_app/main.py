@@ -234,10 +234,7 @@ def main(
     from pamet.desktop_app.app import DesktopApp
     from pamet.desktop_app.init_config import setup_fonts_and_icons
     from pamet.services.rest_api.desktop_server import DesktopServer
-    from pamet.views.app_window.qml_backend import (
-        QmlAppBackend,
-        TitleBarDoubleClickFilter,
-    )
+    from pamet.views.app_window.qml_backend import QmlAppBackend
     from pamet.views.app_window.view_state import AppWindowViewState
 
     # The desktop server always serves the JSON API. It also serves the SPA
@@ -281,7 +278,8 @@ def main(
             await local_server.stop()
         except Exception:
             log.exception("Server shutdown failed")
-        app.exit(exit_code)
+        finally:
+            app.exit(exit_code)
 
     shutdown_task: asyncio.Task | None = None
 
@@ -339,9 +337,9 @@ def main(
             return
 
         # Install a native event filter for title-bar double-click → maximize
-        window = engine.rootObjects()[0]
-        title_bar_height = 42  # must match header height in AppWindow.qml
-        window.installEventFilter(TitleBarDoubleClickFilter(window, title_bar_height))
+        qml_backend.install_title_bar_double_click_filter(
+            engine.rootObjects()[0], title_bar_height=42  # matches AppWindow.qml
+        )
 
         # Open the initial tab deferred so QML Repeater bindings are wired
         QTimer.singleShot(0, lambda: open_tab(view_state, initial_project_url, True))

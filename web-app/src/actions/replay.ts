@@ -98,11 +98,6 @@ class ReplayActions {
     }
 
     @action({ issuer: 'service' })
-    setIntegrityError(state: ReplayPanelViewState, hasError: boolean) {
-        state.hasIntegrityError = hasError;
-    }
-
-    @action({ issuer: 'service' })
     setIntegrityOp(state: ReplayPanelViewState, op: IntegrityOpState) {
         state.integrityOp = op;
     }

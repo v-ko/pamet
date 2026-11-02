@@ -9,11 +9,15 @@ from sivkit.storage.delta import Delta
 from sivkit.storage.hash_tree import build_hash_tree
 from sivkit.storage.in_memory_store import InMemoryStore
 from sivkit.storage.sqlite_vcs_adapter import SqliteVcsAdapter
+from sivkit.storage.vcs_diagnostics import HashCheckProgress
 
 from pamet.model.page import Page
+from pamet.services import full_change_history_service as history_module
 from pamet.services.full_change_history_service import (
     FullChangeHistoryService,
+    HistoryCheckInProgressError,
     HistoryClosedError,
+    HistoryVerificationError,
     IntegrityRunningError,
     ParentMismatchError,
 )
@@ -75,11 +79,27 @@ def test_recording_and_recovery(tmp_path):
 
         # Reopening restores the head and preserves readable, ordered history.
         service = FullChangeHistoryService(db_path)
-        await service.append([_commit(project, Page(), "c4", patch.id)])
+        last = _commit(project, Page(), "c4", patch.id)
+        await service.append([last])
         first, has_more = await service.get_commits_page("main", None, 2)
         assert [commit.id for commit in first] == [seed["head_id"], "c1"] and has_more
         rest, has_more = await service.get_commits_page("main", "c1", 10)
         assert [commit.id for commit in rest] == ["c3", patch.id, "c4"] and not has_more
+        # Malformed history is reported without an implicit repair.
+        bad = Commit(
+            "bad", last.id, last.snapshot_hash, 0, "duplicate create", last.delta_data
+        )
+        await service.append([bad])
+        with pytest.raises(HistoryVerificationError, match="already exists"):
+            await service.verify_and_reconcile(
+                [dump_to_dict(e) for e in project.find()],
+                build_hash_tree(project).root_hash(),
+            )
+        assert (await service.commit_graph()).branch("main").head_commit_id == bad.id
+        assert [c.asdict() for c in await service.get_commits([last.id, bad.id])] == [
+            last.asdict(),
+            bad.asdict(),
+        ]
         await service.close()
 
     asyncio.run(check())
@@ -115,7 +135,7 @@ def test_history_shutdown(tmp_path, monkeypatch, integrity_fails):
         release = threading.Event()
         order = []
 
-        def integrity(fix, on_progress):
+        def integrity(fix, on_progress, cancel=None):
             loop.call_soon_threadsafe(started.set)
             assert release.wait(5), "integrity worker timed out"
             order.append("integrity")
@@ -156,6 +176,69 @@ def test_history_shutdown(tmp_path, monkeypatch, integrity_fails):
         # Neither a disconnected caller nor a failed earlier job loses the append.
         reopened = FullChangeHistoryService(tmp_path / "history.db")
         assert [commit.id for commit in await reopened.get_commits(["c1"])] == ["c1"]
+        await reopened.close()
+
+    asyncio.run(check())
+
+
+def test_history_retry_and_close_preserve_recorded_edits(tmp_path, monkeypatch):
+    async def check():
+        service = FullChangeHistoryService(tmp_path / "history.db")
+        project = InMemoryStore()
+        commit = _commit(project, Page(), "c1", "")
+        await service.append([commit])
+        state = [dump_to_dict(e) for e in project.find()]
+        started, release = asyncio.Event(), threading.Event()
+        loop = asyncio.get_running_loop()
+        replays = []
+
+        def replay(*args, **kwargs):
+            replays.append(commit.id)
+            loop.call_soon_threadsafe(started.set)
+            assert release.wait(5)
+            yield HashCheckProgress(0, 1, commit.id, "ok", commit.snapshot_hash)
+
+        monkeypatch.setattr(history_module, "verify_or_fix_hashes", replay)
+        try:
+            # A disconnected caller's retry shares its unfinished check.
+            request = asyncio.create_task(
+                service.verify_and_reconcile(state, commit.snapshot_hash)
+            )
+            await asyncio.wait_for(started.wait(), 5)
+            request.cancel()
+            with pytest.raises(asyncio.CancelledError):
+                await request
+            retry = asyncio.create_task(
+                service.verify_and_reconcile(state, commit.snapshot_hash)
+            )
+            await asyncio.sleep(0)
+            with pytest.raises(HistoryCheckInProgressError):
+                await service.verify_and_reconcile(state, "different snapshot")
+            release.set()
+            assert (await asyncio.wait_for(retry, 5))["head_id"] == commit.id
+            assert replays == [commit.id]
+
+            # Closing a later check stops real replay at its next boundary.
+            started.clear()
+            release.clear()
+            request = asyncio.create_task(
+                service.verify_and_reconcile(state, commit.snapshot_hash)
+            )
+            await asyncio.wait_for(started.wait(), 5)
+            closing = asyncio.create_task(service.close())
+            await asyncio.sleep(0)
+            release.set()
+            await asyncio.wait_for(closing, 5)
+            with pytest.raises(HistoryClosedError):
+                await request
+        finally:
+            release.set()
+            await service.close()
+
+        reopened = FullChangeHistoryService(tmp_path / "history.db")
+        assert [item.id for item in await reopened.get_commits([commit.id])] == [
+            commit.id
+        ]
         await reopened.close()
 
     asyncio.run(check())

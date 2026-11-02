@@ -25,6 +25,7 @@ export const ReplayPanel = observer(({
 
     const op = state.integrityOp;
     const opRunning = op.status === "running";
+    const integrityError = pamet.appViewState.currentStorageProject?.history_error;
 
     const historyOpen = pamet.appViewState.historyPageViewState !== null;
     const currentMarker = state.currentMarkerIdx >= 0
@@ -57,9 +58,17 @@ export const ReplayPanel = observer(({
                     Reindex
                 </button>
             )}
-            {state.hasIntegrityError && (
+            {(integrityError || op.status !== "idle") && (
                 <div className="replay-panel-integrity">
-                    <div className="integrity-label">⚠ Integrity error detected</div>
+                    <div className="integrity-label">
+                        ⚠ {integrityError ? 'History integrity error'
+                            : op.status === 'error' ? 'History operation failed' : 'History integrity check'}
+                    </div>
+                    {integrityError && <div className="integrity-error" role="alert">{integrityError}</div>}
+                    <div className="integrity-hint">
+                        Run Check All for diagnostics. Repair Hashes fixes hash mismatches;
+                        other replay errors may need separate repair.
+                    </div>
                     <div className="integrity-buttons">
                         <button
                             className="replay-panel-btn"

@@ -84,8 +84,6 @@ class AppActions {
                            projects: Record<string, ProjectStorageStateData>) {
         state.storageState.backend = backend;
         state.storageState.projects = projects;
-        const replay = state.replayPanelVS;
-        if (replay) replay.hasIntegrityError = state.currentStorageProject?.history_error?.includes('hash mismatch') ?? false;
     }
 
     @action({ issuer: 'service' })

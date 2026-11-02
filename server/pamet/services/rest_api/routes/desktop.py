@@ -29,7 +29,7 @@ from sivkit.storage.commit import Commit
 from sivkit.storage.fs.names import UnsafeName
 from sivkit.storage.fs.ops import Conflict, UnsafePath
 from sivkit.storage.starlette_sync import StarletteSyncEndpoint
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketState
 
 import pamet
 from pamet.services.desktop_storage_service import (
@@ -38,7 +38,10 @@ from pamet.services.desktop_storage_service import (
 )
 from pamet.services.full_change_history_service import (
     FullChangeHistoryService,
+    HistoryCheckInProgressError,
+    HistoryClosedError,
     HistoryCommitNotFoundError,
+    HistoryVerificationError,
     IntegrityRunningError,
     ParentMismatchError,
 )
@@ -282,7 +285,10 @@ async def config_store_ws(ws: WebSocket):
     except asyncio.CancelledError:
         if not ended_by_storage:
             raise
-        await ws.close(code=1001, reason="Desktop storage is closing")
+        # The ASGI server may already have sent a close frame as part of its
+        # shutdown sequence. Starlette rejects a second websocket.close send.
+        if ws.application_state is WebSocketState.CONNECTED:
+            await ws.close(code=1001, reason="Desktop storage is closing")
     finally:
         remove_close_callback()
     log.info("Config store WS client disconnected")
@@ -345,7 +351,15 @@ async def change_history_verify_and_reconcile(
         raise HTTPException(
             status_code=400, detail="Expected 'entities' list and 'snapshot_hash'"
         )
-    result = await history_service.verify_and_reconcile(entities, snapshot_hash)
+    try:
+        result = await history_service.verify_and_reconcile(entities, snapshot_hash)
+    except HistoryCheckInProgressError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except HistoryClosedError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except HistoryVerificationError as exc:
+        _set_history_error(project_id, str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if result["mismatches"]:
         _set_history_error(
             project_id, f"hash mismatch in {result['mismatches']} history commits"

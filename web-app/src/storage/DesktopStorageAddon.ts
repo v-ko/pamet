@@ -88,14 +88,18 @@ export class DesktopStorageAddon implements StorageAddon {
     // -- FS-change SSE stream ----------------------------------------------
 
     private async _connectStream(): Promise<void> {
+        let reported = false;
         while (this._abortController && !this._abortController.signal.aborted) {
             try {
                 await this._streamOnce();
             } catch (e) {
                 if (!this._abortController || this._abortController.signal.aborted) break;
-                log.error('DesktopStorageAddon: stream error', e);
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                if (!reported) log.error('DesktopStorageAddon: stream error', e);
+                reported = true;
             }
+            // EOF also needs a delay; an immediately closed stream must not spin.
+            if (this._abortController?.signal.aborted) break;
+            await new Promise(resolve => setTimeout(resolve, 2000));
         }
     }
 
@@ -108,7 +112,17 @@ export class DesktopStorageAddon implements StorageAddon {
         });
 
         if (!response.ok) {
-            throw new Error(`SSE connect failed (${response.status} ${response.statusText})`);
+            // Report HTTP rejections and stop this subscription. Other stream
+            // errors and EOF retain the reconnect loop above.
+            const payload = await response.json().catch(() => null);
+            if (!this._abortController || this._abortController.signal.aborted) return;
+            const detail = typeof payload?.detail === 'string' ? `: ${payload.detail}` : '';
+            const status = `${response.status} ${response.statusText}`.trim();
+            this._abortController?.abort();
+            this._psm.parentStorageService?.reportError(
+                `External file-change updates stopped (${status})${detail}`,
+            );
+            return;
         }
 
         const reader = response.body!.getReader();

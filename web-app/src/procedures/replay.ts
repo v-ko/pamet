@@ -8,15 +8,6 @@ import { ReplayPanelViewState } from "@/views/replay/ReplayViewState";
 
 const log = getLogger("ReplayProcedures");
 
-/** Check backend status for integrity errors and flag the replay panel. */
-export async function checkIntegrityStatus(): Promise<void> {
-    const state = pamet.appViewState;
-    if (state.replayPanelVS) {
-        replayActions.setIntegrityError(state.replayPanelVS,
-            state.currentStorageProject?.history_error?.includes('hash mismatch') ?? false);
-    }
-}
-
 /** Start a long-running integrity operation (check or repair) with progress tracking. */
 export function startIntegrityOp(
     state: ReplayPanelViewState,
@@ -37,7 +28,7 @@ export function startIntegrityOp(
             let summary: string;
             if (data.fixed !== undefined) {
                 summary = `Repaired ${data.fixed} of ${data.total} commits.`;
-                void checkIntegrityStatus().then(() => buildReplayIndex());
+                void buildReplayIndex();
             } else if (data.mismatches !== undefined) {
                 summary = `Checked ${data.total} commits: ${data.mismatches} mismatches found.`;
             } else {
@@ -74,11 +65,19 @@ export async function buildReplayIndex(): Promise<void> {
 
     const service = pamet.replayService;
     const appViewState = pamet.appViewState;
+    if (replayViewState.integrityOp.status === 'error') {
+        replayActions.setIntegrityOp(replayViewState, {
+            status: 'idle', progressIndex: 0, progressTotal: 0, resultSummary: null,
+        });
+    }
 
     // Clear old replay state (also stops any running playback)
     service.clear();
 
     const generation = ++_buildGeneration;
+    const isCurrentBuild = () => generation === _buildGeneration
+        && appViewState.replayPanelVS === replayViewState
+        && appViewState.currentProjectId === projectId;
 
     appActions.updateSystemDialogState(appViewState, {
         title: "Building replay index\u2026",
@@ -103,7 +102,7 @@ export async function buildReplayIndex(): Promise<void> {
         );
 
         // A newer build was started while we were fetching — discard results
-        if (generation !== _buildGeneration) {
+        if (!isCurrentBuild()) {
             log.info("Discarding stale index build (project changed during fetch)");
             return;
         }
@@ -119,12 +118,16 @@ export async function buildReplayIndex(): Promise<void> {
         log.info(`Replay index ready: ${index.allCommits.length} commits, ${markers.length} page-relevant`);
     } catch (err) {
         log.error("Failed to build replay index", err);
+        if (isCurrentBuild()) {
+            replayActions.setIntegrityOp(replayViewState, {
+                status: "error", progressIndex: 0, progressTotal: 0,
+                resultSummary: `Could not load history: ${err instanceof Error ? err.message : String(err)}`,
+            });
+        }
     } finally {
-        if (appViewState.loadingDialogState !== null) {
+        if (isCurrentBuild() && appViewState.loadingDialogState !== null) {
             appActions.updateSystemDialogState(appViewState, null);
         }
-        console.log("[INTEGRITY] buildReplayIndex finally: calling checkIntegrityStatus");
-        void checkIntegrityStatus();
     }
 }
 

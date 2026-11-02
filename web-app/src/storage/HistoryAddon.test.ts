@@ -234,3 +234,96 @@ test('local history erasure targets its IndexedDB store without opening it; back
     expect(initialize).not.toHaveBeenCalled();
     expect(historyAddonDescriptor({ check: 'backend' }).eraseLocalStorage).toBeUndefined();
 });
+
+test('history tolerates a slow check, stops on failure, and can recover or close', async () => {
+    jest.useFakeTimers();
+    const headStore = new InMemoryStore();
+    headStore.insertOne(page('working edit'));
+    const reportError = jest.fn();
+    const psm = {
+        config: { projectId: 'p1', domainStore: { args: {
+            projectId: 'p1', baseUrl: 'http://desktop.test', auth: { type: 'Bearer', token: 'test' },
+        } } },
+        onDeviceRepo: { headStore, hashTree: await buildHashTree(headStore) },
+        parentStorageService: { reportError },
+    } as unknown as ProjectStorageManager;
+    let finish!: (response: Response) => void;
+    let aborted = false;
+    const request = jest.spyOn(globalThis, 'fetch').mockImplementation((_url, init) =>
+        new Promise((resolve, reject) => {
+            finish = resolve;
+            init!.signal!.addEventListener('abort', () => {
+                aborted = true;
+                reject(new Error('aborted'));
+            }, { once: true });
+        }));
+    const addon = new HistoryAddon(psm, { check: 'backend' });
+    try {
+        addon.onMessage({ type: 'setEnabled', enabled: true });
+        await jest.advanceTimersByTimeAsync(30000);
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(addon.state).toBe('checking');
+
+        finish(new Response('History cannot replay a duplicate entity', { status: 409 }));
+        await jest.advanceTimersByTimeAsync(60000);
+        expect(request).toHaveBeenCalledTimes(1);
+        expect(reportError).toHaveBeenCalledTimes(1);
+
+        // Explicit recovery starts a new check; it is not retried on a timer.
+        addon.onMessage({ type: 'setEnabled', enabled: true });
+        await jest.advanceTimersByTimeAsync(0);
+        finish(new Response(JSON.stringify({ head_id: '', mismatches: 0 })));
+        await jest.advanceTimersByTimeAsync(0);
+        expect(addon.state).toBe('recording');
+
+        // A later pending check cannot prevent project close or restart afterward.
+        await addon.onMessage({ type: 'setEnabled', enabled: false });
+        addon.onMessage({ type: 'setEnabled', enabled: true });
+        await jest.advanceTimersByTimeAsync(0);
+        await addon.onProjectUnloading();
+        await jest.advanceTimersByTimeAsync(60000);
+        expect(aborted).toBe(true);
+        expect(request).toHaveBeenCalledTimes(3);
+        expect(reportError).toHaveBeenCalledTimes(1);
+    } finally {
+        await addon.onProjectUnloading();
+        jest.useRealTimers();
+    }
+});
+
+test('file-change streams throttle EOF reconnects and report backend rejection once', async () => {
+    jest.useFakeTimers();
+    try {
+        for (const rejected of [false, true]) {
+            const reportError = jest.fn();
+            const psm = {
+                config: { domainStore: { args: {
+                    projectId: 'p1', baseUrl: 'http://desktop.test', auth: { type: 'Bearer', token: 'test' },
+                } } }, parentStorageService: { reportError },
+            } as unknown as ProjectStorageManager;
+            let connections = 0;
+            jest.spyOn(globalThis, 'fetch').mockImplementation(async url => {
+                if (!String(url).endsWith('/changes/stream')) return new Response('{}');
+                connections++;
+                return rejected ? new Response(JSON.stringify({ detail: 'Project is not loaded' }), { status: 412 })
+                    : new Response(new ReadableStream({ start(controller) { controller.close(); } }));
+            });
+            const addon = new DesktopStorageAddon(psm);
+            try {
+                await addon.onProjectLoaded();
+                await jest.advanceTimersByTimeAsync(0);
+                expect(connections).toBe(1);
+                await jest.advanceTimersByTimeAsync(2000);
+                expect(connections).toBe(rejected ? 1 : 2);
+                expect(reportError.mock.calls).toEqual(rejected
+                    ? [['External file-change updates stopped (412): Project is not loaded']]
+                    : []);
+            } finally {
+                await addon.onProjectUnloading();
+                await jest.advanceTimersByTimeAsync(2000);
+            }
+        }
+    } finally {
+        jest.useRealTimers();
+    }
+});

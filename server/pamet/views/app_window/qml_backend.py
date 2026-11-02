@@ -63,8 +63,8 @@ class QmlAppBackend(QObject):
     """Controller that QML binds to.  Routes slot calls to @action functions.
 
     State is read from the separate AppWindowViewState object (also
-    exposed to QML as ``state``).  This object only holds the
-    injection script and URL-classification helpers.
+    exposed to QML as ``state``).  This object also owns the window's
+    Python event filters, injection script and URL-classification helpers.
     """
 
     devToolsVisibleChanged = Signal()
@@ -80,6 +80,7 @@ class QmlAppBackend(QObject):
         self._state = view_state
         self._dev_tools_visible = False
         self._endpoint = endpoint
+        self._title_bar_filter: TitleBarDoubleClickFilter | None = None
 
         # Collect internal hosts for URL classification
         self._internal_hosts: set[str] = set()
@@ -97,6 +98,13 @@ class QmlAppBackend(QObject):
             f"window.PAMET_DESKTOP_API_BASE_URL = {api_base_url_json};\n"
             "console.log('Desktop access token injected');\n"
         )
+
+    def install_title_bar_double_click_filter(
+        self, window: QWindow, title_bar_height: int
+    ) -> None:
+        # QML owns the C++ window, but its Python wrapper needs a live reference.
+        self._title_bar_filter = TitleBarDoubleClickFilter(window, title_bar_height)
+        window.installEventFilter(self._title_bar_filter)
 
     # -- Properties --
 

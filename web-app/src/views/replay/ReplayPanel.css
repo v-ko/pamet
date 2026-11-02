@@ -115,9 +115,19 @@
 .replay-panel-integrity {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
+    flex: 0 1 32rem;
+    min-width: 0;
     gap: var(--space-2, 8px);
-    padding: 0 var(--space-2, 8px);
+    padding: var(--space-1, 4px) var(--space-2, 8px);
     border-left: 1px solid var(--color-light-border);
+}
+
+.integrity-error,
+.integrity-hint {
+    width: 100%;
+    overflow-wrap: anywhere;
+    font-size: var(--type-sm, 12px);
 }
 
 .integrity-label {

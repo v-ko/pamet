@@ -67,6 +67,8 @@ export class HistoryAddon implements StorageAddon {
     private _failureReported = false;
     private _headId = '';
     private _queue: CommitData[] = [];
+    /** Cancels the active history-check HTTP request when the project unloads. */
+    private _historyCheckRequestAbortController: AbortController | null = null;
 
     constructor(psm: ProjectStorageManager, config: HistoryAddonConfig) {
         this._psm = psm;
@@ -84,6 +86,7 @@ export class HistoryAddon implements StorageAddon {
 
     async onProjectUnloading(): Promise<void> {
         this._disposed = true;
+        this._historyCheckRequestAbortController?.abort();
         await this._stop();
         // Keep the adapter across disable/re-enable, but never close it while
         // the worker is still acquiring or using it.
@@ -135,7 +138,10 @@ export class HistoryAddon implements StorageAddon {
             // An append may have succeeded despite a failed response. Reconcile
             // on the next attempt instead of replaying an uncertain batch.
             this._queue = [];
-            retry = true;
+            // A failed check/append needs an explicit re-enable. Replaying a
+            // large or damaged history on a timer can keep a CPU busy forever.
+            this._recordingRequested = false;
+            if (this._disposed) return;
             if (!this._failureReported) this._report(`Change history failed: ${error}`);
             this._failureReported = true;
         }).finally(() => {
@@ -196,7 +202,12 @@ export class HistoryAddon implements StorageAddon {
 
     private async _post<T>(path: string, body: string): Promise<T> {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+        const checking = path === 'check';
+        if (checking && this._disposed) throw new Error('History check stopped during unload');
+        // A full-history check can legitimately take longer than an append.
+        // Timing it out does not stop the backend's job, and used to queue retries.
+        if (checking) this._historyCheckRequestAbortController = controller;
+        const timeout = checking ? undefined : setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         try {
             const response = await fetch(`${this._historyUrl}/${path}`, {
                 method: 'POST', headers: this._headers, body, signal: controller.signal,
@@ -205,6 +216,7 @@ export class HistoryAddon implements StorageAddon {
             return await response.json() as T;
         } finally {
             clearTimeout(timeout);
+            if (this._historyCheckRequestAbortController === controller) this._historyCheckRequestAbortController = null;
         }
     }
 

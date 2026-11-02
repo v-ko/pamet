@@ -47,9 +47,6 @@ export class ReplayPanelViewState {
     /** Delay between animation steps in ms. */
     intervalMs: number = 300;
 
-    /** Whether an integrity error has been detected for this project. */
-    hasIntegrityError: boolean = false;
-
     /** State of the current integrity operation (locate/check/repair). */
     integrityOp: IntegrityOpState = {
         status: "idle",
@@ -68,7 +65,6 @@ export class ReplayPanelViewState {
             currentMarkerIdx: observable,
             playing: observable,
             intervalMs: observable,
-            hasIntegrityError: observable,
             integrityOp: observable.ref,
         });
     }

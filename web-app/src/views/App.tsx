@@ -127,16 +127,15 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
   const storageErrors = state.storageErrors;
   const hasUnseenErrors = storageErrors.some(error => !seenErrors.includes(error));
   const saveStatus = state.saveStatus;
-  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase, storageDegraded, storageErrors.length ? 'error' : saveStatus);
+  const storageStatusIconUrl = pamet.getStorageStatusIconUrl(storageConnectionPhase, saveStatus);
 
   const storageStatusTitle = (() => {
     if (storageConnectionPhase === 'ready') {
-      if (storageErrors.length && saveStatus !== 'error') return 'Storage error';
       switch (saveStatus) {
         case 'error': return 'Save failed';
         case 'saving': return 'Saving';
         case 'unsaved': return 'Unsaved changes';
-        case 'saved': return 'Saved';
+        case 'saved': return storageErrors.length ? 'Saved (see service warnings)' : 'Saved';
       }
     }
     switch (storageConnectionPhase) {
@@ -267,7 +266,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
             tabIndex={PametTabIndex.Panel_ProjectProperties}
           >{state.currentProjectState ? state.currentProjectState.title : '(no project open)'}</button>
           <button
-            title={storageDegraded ? `${storageStatusTitle} (degraded)` : storageStatusTitle}
+            title={storageDegraded ? `${storageStatusTitle} (limited tab sharing)` : storageStatusTitle}
             onClick={() => {
               setSeenErrors(storageErrors);
               appActions.openStorageStatusDialog(state);
@@ -278,7 +277,7 @@ const WebApp = observer(({ state }: { state: AppViewState }) => {
             <img
               src={storageStatusIconUrl}
               alt="Storage status"
-              className={(storageConnectionPhase === 'disconnected' || storageConnectionPhase === 'fatal' || storageDegraded) ? 'storage-icon-error' : undefined}
+              className={(storageConnectionPhase === 'disconnected' || storageConnectionPhase === 'fatal') ? 'storage-icon-error' : undefined}
             />
             {(storageDegraded || hasUnseenErrors) && (
               <span className="status-badge" />
